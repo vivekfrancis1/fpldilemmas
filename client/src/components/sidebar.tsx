@@ -62,7 +62,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       <aside 
         className={`fixed left-0 top-0 h-full bg-fpl-purple text-white z-50 transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 lg:static lg:z-auto w-80`}
+        } lg:translate-x-0 lg:static lg:z-auto w-80 max-w-[80vw] sm:max-w-80`}
       >
         {/* Header */}
         <div className="p-6 border-b border-purple-400/20">

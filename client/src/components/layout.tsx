@@ -15,13 +15,13 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-fpl-light flex">
+    <div className="min-h-screen bg-fpl-light flex overflow-x-hidden">
       <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
       
-      <div className="flex-1 flex flex-col lg:ml-0">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
         <Header onSidebarToggle={toggleSidebar} />
         
-        <main className="flex-1 lg:pl-80">
+        <main className="flex-1 lg:pl-80 min-w-0 overflow-x-hidden">
           {children}
         </main>
       </div>

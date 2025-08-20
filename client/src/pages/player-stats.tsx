@@ -29,8 +29,8 @@ export default function PlayerStats() {
   if (error) {
     return (
       <Layout>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50/30">
-          <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50/30 overflow-x-hidden">
+          <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
             <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8 shadow-sm" data-testid="error-state">
               <div className="flex items-center">
                 <i className="fas fa-exclamation-triangle text-red-500 mr-3"></i>
@@ -55,8 +55,8 @@ export default function PlayerStats() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
-        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 overflow-x-hidden">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
           {/* Header Section */}
           <div className="text-center mb-6 sm:mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">

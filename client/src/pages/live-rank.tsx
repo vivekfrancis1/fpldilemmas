@@ -107,8 +107,8 @@ export default function LiveRank() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30">
-        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30 overflow-x-hidden">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
           <div className="space-y-6">
             {/* Header Section */}
             <div className="text-center mb-6 sm:mb-8">
