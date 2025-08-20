@@ -332,68 +332,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get price change predictions
+  // Get price change predictions based on real FPL data
   app.get("/api/price-predictions", async (req, res) => {
     try {
-      // Mock price predictions based on ownership trends
-      // In real implementation, this would use machine learning models and real transfer data
-      
-      const mockPredictions = [
-        {
-          player_id: 350,
-          player_name: "Darwin Núñez",
-          team_name: "Liverpool",
-          position: "FWD",
-          current_price: 89,
-          predicted_change: 1,
-          confidence: 78,
-          ownership_percentage: 24.5,
-          net_transfers: 95000,
-          reason: "High net transfers in after good performance",
-          probability: "High"
-        },
-        {
-          player_id: 183,
-          player_name: "Phil Foden",
-          team_name: "Manchester City",
-          position: "MID",
-          current_price: 91,
-          predicted_change: -1,
-          confidence: 65,
-          ownership_percentage: 31.2,
-          net_transfers: -87000,
-          reason: "Many selling before difficult fixtures",
-          probability: "Medium"
-        },
-        {
-          player_id: 421,
-          player_name: "Alexander Isak",
-          team_name: "Newcastle",
-          position: "FWD",
-          current_price: 86,
-          predicted_change: 1,
-          confidence: 82,
-          ownership_percentage: 28.7,
-          net_transfers: 102000,
-          reason: "Strong form and easy fixtures driving demand",
-          probability: "Very High"
-        },
-        {
-          player_id: 294,
-          player_name: "Bukayo Saka",
-          team_name: "Arsenal",
-          position: "MID",
-          current_price: 105,
-          predicted_change: 0,
-          confidence: 45,
-          ownership_percentage: 45.6,
-          net_transfers: 12000,
-          reason: "Stable ownership with minimal net transfers",
-          probability: "Low"
-        }
-      ];
+      const currentData = await storage.getBootstrapData();
+      if (!currentData) {
+        return res.status(500).json({ message: "Bootstrap data not available" });
+      }
 
-      res.json(mockPredictions);
+      // Calculate price predictions based on real transfer data and ownership
+      const predictions = currentData.elements
+        .map(player => {
+          const team = currentData.teams.find(t => t.id === player.team);
+          const position = currentData.element_types.find(p => p.id === player.element_type);
+          
+          const transfersIn = player.transfers_in_event || 0;
+          const transfersOut = player.transfers_out_event || 0;
+          const netTransfers = transfersIn - transfersOut;
+          const ownership = parseFloat(player.selected_by_percent || '0');
+          
+          // Price prediction algorithm based on FPL mechanics
+          // Generally requires ~100k+ net transfers for price changes
+          let predictedChange = 0;
+          let confidence = 0;
+          let probability = "Low";
+          let reason = "Minimal transfer activity";
+          
+          if (netTransfers > 80000) {
+            predictedChange = 1;
+            confidence = Math.min(95, 60 + (netTransfers - 80000) / 2000);
+            probability = netTransfers > 120000 ? "Very High" : netTransfers > 100000 ? "High" : "Medium";
+            reason = `High net transfers in (${(netTransfers/1000).toFixed(0)}k) driving price rise`;
+          } else if (netTransfers < -80000) {
+            predictedChange = -1;
+            confidence = Math.min(95, 60 + Math.abs(netTransfers + 80000) / 2000);
+            probability = netTransfers < -120000 ? "Very High" : netTransfers < -100000 ? "High" : "Medium";
+            reason = `High net transfers out (${(Math.abs(netTransfers)/1000).toFixed(0)}k) likely to cause price drop`;
+          } else if (Math.abs(netTransfers) > 30000) {
+            confidence = Math.min(50, 20 + Math.abs(netTransfers) / 3000);
+            probability = Math.abs(netTransfers) > 50000 ? "Medium" : "Low";
+            reason = netTransfers > 0 
+              ? `Moderate demand but below price rise threshold` 
+              : `Some selling pressure but unlikely to trigger drop`;
+          }
+
+          // Adjust for ownership levels - higher owned players need more transfers
+          if (ownership > 30) {
+            confidence *= 0.8;
+            if (probability === "High") probability = "Medium";
+            if (probability === "Very High") probability = "High";
+          }
+
+          return {
+            player_id: player.id,
+            player_name: `${player.first_name} ${player.second_name}`,
+            team_name: team?.name || 'Unknown',
+            position: position?.singular_name_short || 'Unknown',
+            current_price: player.now_cost,
+            predicted_change: predictedChange,
+            confidence: Math.round(confidence),
+            ownership_percentage: ownership,
+            net_transfers: netTransfers,
+            transfers_in: transfersIn,
+            transfers_out: transfersOut,
+            reason: reason,
+            probability: probability
+          };
+        })
+        .filter(pred => 
+          // Only show players with significant transfer activity or likely changes
+          Math.abs(pred.net_transfers) > 25000 || pred.confidence > 30
+        )
+        .sort((a, b) => {
+          // Sort by confidence descending, then by net transfers
+          if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+          return Math.abs(b.net_transfers) - Math.abs(a.net_transfers);
+        })
+        .slice(0, 15); // Limit to top 15 predictions
+
+      res.json(predictions);
     } catch (error) {
       console.error("Error fetching price predictions:", error);
       res.status(500).json({ 

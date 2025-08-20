@@ -34,6 +34,8 @@ interface PricePrediction {
   confidence: number;
   ownership_percentage: number;
   net_transfers: number;
+  transfers_in: number;
+  transfers_out: number;
   reason: string;
   probability: string;
 }
@@ -66,7 +68,7 @@ export default function PriceTracker() {
     }));
   };
 
-  const filteredChanges = priceChanges?.filter((change: PriceChange) => {
+  const filteredChanges = Array.isArray(priceChanges) ? priceChanges.filter((change: PriceChange) => {
     const matchesSearch = change.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          change.team_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPosition = positionFilter === "all" || change.position === positionFilter;
@@ -74,14 +76,14 @@ export default function PriceTracker() {
                              (changeTypeFilter === "rise" && change.change > 0) ||
                              (changeTypeFilter === "fall" && change.change < 0);
     return matchesSearch && matchesPosition && matchesChangeType;
-  }) || [];
+  }) : [];
 
-  const filteredPredictions = predictions?.filter((pred: PricePrediction) => {
+  const filteredPredictions = Array.isArray(predictions) ? predictions.filter((pred: PricePrediction) => {
     const matchesSearch = pred.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          pred.team_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPosition = positionFilter === "all" || pred.position === positionFilter;
     return matchesSearch && matchesPosition;
-  }) || [];
+  }) : [];
 
   const formatPrice = (price: number) => {
     return `£${(price / 10).toFixed(1)}m`;
@@ -134,7 +136,7 @@ export default function PriceTracker() {
                 <DollarSign className="h-8 w-8 text-green-600 mr-3" />
                 <div>
                   <p className="text-2xl font-bold text-green-600" data-testid="text-total-rises">
-                    {priceChanges?.filter((c: PriceChange) => c.change > 0).length || 0}
+                    {Array.isArray(priceChanges) ? priceChanges.filter((c: PriceChange) => c.change > 0).length : 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Price Rises Today</p>
                 </div>
@@ -148,7 +150,7 @@ export default function PriceTracker() {
                 <TrendingDown className="h-8 w-8 text-red-600 mr-3" />
                 <div>
                   <p className="text-2xl font-bold text-red-600" data-testid="text-total-falls">
-                    {priceChanges?.filter((c: PriceChange) => c.change < 0).length || 0}
+                    {Array.isArray(priceChanges) ? priceChanges.filter((c: PriceChange) => c.change < 0).length : 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Price Falls Today</p>
                 </div>
@@ -162,7 +164,7 @@ export default function PriceTracker() {
                 <Target className="h-8 w-8 text-purple-600 mr-3" />
                 <div>
                   <p className="text-2xl font-bold text-purple-600" data-testid="text-predictions">
-                    {predictions?.filter((p: PricePrediction) => p.probability !== "Low").length || 0}
+                    {Array.isArray(predictions) ? predictions.filter((p: PricePrediction) => p.probability !== "Low").length : 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Likely Changes</p>
                 </div>
@@ -219,7 +221,7 @@ export default function PriceTracker() {
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              Failed to load price data. This feature requires real-time FPL API access.
+              Unable to load price data from FPL API. Please check your connection and try again.
             </AlertDescription>
           </Alert>
         )}
@@ -390,9 +392,10 @@ export default function PriceTracker() {
                               {prediction.confidence}% confidence
                             </span>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {prediction.ownership_percentage}% owned
-                          </p>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <p>{prediction.ownership_percentage}% owned</p>
+                            <p>In: {(prediction.transfers_in/1000).toFixed(0)}k | Out: {(prediction.transfers_out/1000).toFixed(0)}k</p>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -414,16 +417,16 @@ export default function PriceTracker() {
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <p>
-                  <strong>Price Rise Threshold:</strong> Players need net transfers in of approximately 100,000+ to trigger a £0.1m price rise
+                  <strong>Price Rise Threshold:</strong> Players typically need 80,000+ net transfers in to trigger a £0.1m price rise
                 </p>
                 <p>
-                  <strong>Price Fall Threshold:</strong> Players need net transfers out of approximately 100,000+ to trigger a £0.1m price fall
+                  <strong>Price Fall Threshold:</strong> Players typically need 80,000+ net transfers out to trigger a £0.1m price fall
                 </p>
                 <p>
-                  <strong>Confidence Levels:</strong> Based on current transfer trends, ownership percentages, and historical patterns
+                  <strong>Confidence Levels:</strong> Based on real FPL transfer data, ownership percentages, and established patterns
                 </p>
                 <p>
-                  <strong>Update Frequency:</strong> Predictions are recalculated every hour using real-time transfer data
+                  <strong>Data Source:</strong> Live data from the official Fantasy Premier League API, updated in real-time
                 </p>
               </CardContent>
             </Card>
