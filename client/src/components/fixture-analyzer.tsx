@@ -15,6 +15,7 @@ interface FixtureAnalyzerProps {
 export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProps) {
   const [selectedGameweeks, setSelectedGameweeks] = useState("5");
   const [selectedTeam, setSelectedTeam] = useState("all");
+  const [sortBy, setSortBy] = useState("easiest");
 
   const { data: fixtures, isLoading: fixturesLoading } = useQuery<Fixture[]>({
     queryKey: ["/api/fixtures"],
@@ -63,8 +64,19 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
   }, [teamFixtures, selectedTeam]);
 
   const sortedTeamFixtures = useMemo(() => {
-    return [...filteredTeamFixtures].sort((a, b) => a.avgDifficulty - b.avgDifficulty);
-  }, [filteredTeamFixtures]);
+    return [...filteredTeamFixtures].sort((a, b) => {
+      switch (sortBy) {
+        case "easiest":
+          return a.avgDifficulty - b.avgDifficulty;
+        case "hardest":
+          return b.avgDifficulty - a.avgDifficulty;
+        case "alphabetical":
+          return a.team.name.localeCompare(b.team.name);
+        default:
+          return a.avgDifficulty - b.avgDifficulty;
+      }
+    });
+  }, [filteredTeamFixtures, sortBy]);
 
   const getDifficultyColor = (difficulty: number): string => {
     if (difficulty <= 2) return "bg-green-100 text-green-800";
@@ -95,7 +107,11 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
             <Skeleton className="h-6 w-32" />
             <Skeleton className="h-4 w-16" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-10 w-full" />
+            </div>
             <div>
               <Skeleton className="h-4 w-24 mb-2" />
               <Skeleton className="h-10 w-full" />
@@ -144,7 +160,7 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
           </Badge>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Gameweeks Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2" data-testid="label-gameweeks">
@@ -179,6 +195,23 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
                     {team.name}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Sort Option */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2" data-testid="label-sort-by">
+              Sort Teams By
+            </label>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger data-testid="select-sort-by">
+                <SelectValue placeholder="Sort by difficulty" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="easiest">Easiest Fixtures First</SelectItem>
+                <SelectItem value="hardest">Hardest Fixtures First</SelectItem>
+                <SelectItem value="alphabetical">Team Name (A-Z)</SelectItem>
               </SelectContent>
             </Select>
           </div>
