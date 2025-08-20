@@ -60,6 +60,10 @@ export class MemStorage implements IStorage {
     const watchlistEntry: WatchlistEntry = {
       id,
       ...entry,
+      targetPrice: entry.targetPrice ?? null,
+      alertOnRise: entry.alertOnRise ?? null,
+      alertOnFall: entry.alertOnFall ?? null,
+      notes: entry.notes ?? null,
       createdAt: now,
       updatedAt: now,
     };
@@ -97,6 +101,7 @@ export class MemStorage implements IStorage {
     const priceAlert: PriceAlert = {
       id,
       ...alert,
+      alertTriggered: alert.alertTriggered ?? null,
       createdAt: new Date(),
     };
     this.priceAlerts.set(id, priceAlert);

@@ -267,7 +267,7 @@ export default function PriceTracker() {
                     ))}
                   </div>
                 ) : filteredChanges.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="space-y-3">
                     {filteredChanges.map((change: PriceChange, index: number) => (
                       <div 
                         key={`${change.player_id}-${index}`}
@@ -371,7 +371,7 @@ export default function PriceTracker() {
                     ))}
                   </div>
                 ) : filteredPredictions.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="space-y-3">
                     {filteredPredictions.map((prediction: PricePrediction, index: number) => (
                       <div 
                         key={`${prediction.player_id}-${index}`}
