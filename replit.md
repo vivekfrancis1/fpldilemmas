@@ -1,0 +1,82 @@
+# Fantasy Premier League Manager Tools
+
+## Overview
+
+This is a Fantasy Premier League (FPL) analytics application that provides comprehensive player statistics and insights to help fantasy football managers make informed decisions. The app fetches data from the official FPL API and presents it through an intuitive interface with filtering, sorting, and statistical analysis capabilities.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React with TypeScript using Vite as the build tool
+- **Routing**: Wouter for lightweight client-side routing
+- **State Management**: TanStack Query (React Query) for server state management
+- **UI Library**: shadcn/ui components built on Radix UI primitives
+- **Styling**: Tailwind CSS with a custom design system featuring FPL-themed colors
+- **Component Structure**: Modular components in `client/src/components/` with reusable UI components in `client/src/components/ui/`
+
+### Backend Architecture
+- **Runtime**: Node.js with Express.js framework
+- **API Design**: RESTful API endpoints prefixed with `/api/`
+- **Data Fetching**: Proxy server that fetches data from the official Fantasy Premier League API
+- **Caching Strategy**: In-memory caching using a custom storage interface to reduce API calls
+- **Development Setup**: Vite integration for hot module replacement in development
+
+### Data Storage Solutions
+- **Primary Storage**: In-memory storage using Map and object caching
+- **Database Configuration**: Drizzle ORM configured for PostgreSQL (via Neon Database) but currently using memory storage
+- **Caching Layer**: Custom `IStorage` interface with `MemStorage` implementation for bootstrap data and player summaries
+- **Data Persistence**: Temporary in-memory persistence with plans for database integration
+
+### API Integration
+- **External API**: Fantasy Premier League official API (`https://fantasy.premierleague.com/api`)
+- **Key Endpoints**:
+  - `/bootstrap-static/` - Complete player, team, and position data
+  - `/element-summary/:playerId` - Individual player fixtures and history
+- **Data Validation**: Zod schemas for type-safe API response parsing
+- **Error Handling**: Comprehensive error handling with user-friendly error messages
+
+### Type Safety & Validation
+- **Schema Validation**: Zod schemas in `shared/schema.ts` for API responses
+- **TypeScript Configuration**: Strict TypeScript with path mapping for clean imports
+- **Shared Types**: Common types and schemas shared between client and server
+
+### Development Workflow
+- **Build System**: Vite for frontend bundling, esbuild for server bundling
+- **Development Server**: Integrated Vite dev server with Express API proxy
+- **Code Organization**: Monorepo structure with shared utilities and clear separation of concerns
+
+## External Dependencies
+
+### Core Framework Dependencies
+- **React Ecosystem**: React 18+ with React DOM and TypeScript support
+- **Build Tools**: Vite for frontend development and building, esbuild for server bundling
+- **Routing**: Wouter for lightweight client-side routing
+
+### UI and Styling
+- **Component Library**: Radix UI primitives for accessible component foundations
+- **Styling**: Tailwind CSS with PostCSS for utility-first styling
+- **Icons**: Lucide React for consistent iconography
+- **Fonts**: Google Fonts integration for typography
+
+### Data Management
+- **Server State**: TanStack Query for caching and synchronizing server state
+- **Form Handling**: React Hook Form with Hookform Resolvers for form validation
+- **Validation**: Zod for runtime type checking and schema validation
+
+### Database and ORM
+- **ORM**: Drizzle ORM configured for PostgreSQL
+- **Database Provider**: Neon Database (serverless PostgreSQL)
+- **Migrations**: Drizzle Kit for database schema management
+
+### Development and Build Tools
+- **TypeScript**: Full TypeScript support with strict configuration
+- **Session Management**: Express session with connect-pg-simple (configured but not actively used)
+- **Development Utilities**: Replit-specific plugins for development environment integration
+
+### External APIs
+- **FPL API**: Official Fantasy Premier League API for all player and game data
+- **Data Source**: Real-time data from `https://fantasy.premierleague.com/api`
