@@ -28,9 +28,9 @@ export default function Header() {
             <Link href="/fixtures" className={`${isActive("/fixtures") ? "text-white border-b-2 border-fpl-green" : "text-purple-200 hover:text-white"} transition-colors font-medium`} data-testid="link-fixtures">
               Fixtures
             </Link>
-            <a href="#" className="text-purple-200 hover:text-white transition-colors font-medium" data-testid="link-transfers">
+            <Link href="/transfers" className={`${isActive("/transfers") ? "text-white border-b-2 border-fpl-green" : "text-purple-200 hover:text-white"} transition-colors font-medium`} data-testid="link-transfers">
               Transfers
-            </a>
+            </Link>
             <a href="#" className="text-purple-200 hover:text-white transition-colors font-medium" data-testid="link-leagues">
               Leagues
             </a>
