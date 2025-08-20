@@ -4,7 +4,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-
 import Fixtures from "./pages/fixtures";
 import Transfers from "./pages/transfers";
 import Captain from "./pages/captain";

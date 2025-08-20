@@ -8,16 +8,18 @@ FPL Dilemmas is a Fantasy Premier League (FPL) analytics application that provid
 
 Preferred communication style: Simple, everyday language.
 Site tagline: "Analytical tools to beat the deadline blues" (updated December 2024)
-Navigation priority: Easy switching between tools with prominence for Live Rank and Price Tracker (updated December 2024)
+Navigation priority: Player Statistics as default landing page, with side navigation for all tools (updated December 2024)
+Most popular tools: Player Statistics, Live Rank, and Price Tracker (updated December 2024)
 
 ## System Architecture
 
 ### Frontend Architecture
 - **Framework**: React with TypeScript using Vite as the build tool
-- **Routing**: Wouter for lightweight client-side routing
+- **Routing**: Wouter for lightweight client-side routing with Player Statistics as default route (/)
 - **State Management**: TanStack Query (React Query) for server state management
 - **UI Library**: shadcn/ui components built on Radix UI primitives
 - **Styling**: Tailwind CSS with a custom design system featuring FPL-themed colors
+- **Navigation**: Side navigation bar with Layout component wrapping all pages
 - **Component Structure**: Modular components in `client/src/components/` with reusable UI components in `client/src/components/ui/`
 
 ### Backend Architecture
