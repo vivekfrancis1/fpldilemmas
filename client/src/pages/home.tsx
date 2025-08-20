@@ -235,12 +235,12 @@ export default function Home() {
                   League Comparison
                 </CardTitle>
                 <CardDescription>
-                  Compare multiple mini-leagues side-by-side and analyze standings across different competitions.
+                  Analyze player performance and compare managers within a single FPL mini-league.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Compare performance</span>
+                  <span className="text-sm text-gray-600">Analyze league players</span>
                   <Link href="/league-comparison" className="inline-block">
                     <Button 
                       variant="outline" 
@@ -248,7 +248,7 @@ export default function Home() {
                       className="group-hover:bg-purple-600 group-hover:text-white transition-colors"
                       data-testid="button-view-league-comparison"
                     >
-                      Compare
+                      Analyze
                       <ArrowRight className="h-4 w-4 ml-1" />
                     </Button>
                   </Link>

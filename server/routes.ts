@@ -478,79 +478,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // League comparison API routes
+  // League analysis API routes
   
-  // Get multiple leagues for comparison
-  app.get("/api/leagues/compare", async (req, res) => {
+  // Get single league for player performance analysis
+  app.get("/api/leagues/:leagueId/analyze", async (req, res) => {
     try {
-      const { ids } = req.query;
-      if (!ids || typeof ids !== 'string') {
-        return res.status(400).json({ message: "League IDs are required" });
+      const leagueId = parseInt(req.params.leagueId);
+      if (isNaN(leagueId)) {
+        return res.status(400).json({ message: "Invalid league ID" });
       }
 
-      const leagueIds = ids.split(',').map(id => id.trim()).filter(id => id);
-      if (leagueIds.length === 0) {
-        return res.status(400).json({ message: "At least one valid league ID is required" });
+      const response = await fetch(`${FPL_BASE_URL}/leagues-classic/${leagueId}/standings/`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "League not found" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
       }
 
-      const leagues = await Promise.allSettled(
-        leagueIds.map(async (id) => {
-          const leagueId = parseInt(id);
-          if (isNaN(leagueId)) {
-            throw new Error(`Invalid league ID: ${id}`);
-          }
+      const data = await response.json();
+      const leagueData = {
+        id: leagueId,
+        name: data.league?.name || `League ${leagueId}`,
+        standings: data.standings?.results || [],
+        league_type: data.league?.league_type || 'x',
+        admin_entry: data.league?.admin_entry || null,
+        started: data.league?.started || false,
+        code_privacy: data.league?.code_privacy || 'p',
+        has_cup: data.league?.has_cup || false,
+        cup_league: data.league?.cup_league || null,
+        rank: data.league?.rank || null
+      };
 
-          const response = await fetch(`${FPL_BASE_URL}/leagues-classic/${leagueId}/standings/`);
-          if (!response.ok) {
-            if (response.status === 404) {
-              throw new Error(`League ${id} not found`);
-            }
-            throw new Error(`Failed to fetch league ${id}: ${response.status}`);
-          }
-
-          const data = await response.json();
-          return {
-            id: leagueId,
-            name: data.league?.name || `League ${leagueId}`,
-            standings: data.standings?.results || [],
-            league_type: data.league?.league_type || 'x',
-            admin_entry: data.league?.admin_entry || null,
-            started: data.league?.started || false,
-            code_privacy: data.league?.code_privacy || 'p',
-            has_cup: data.league?.has_cup || false,
-            cup_league: data.league?.cup_league || null,
-            rank: data.league?.rank || null
-          };
-        })
-      );
-
-      // Filter successful results and handle errors
-      const successfulLeagues = leagues
-        .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
-        .map(result => result.value);
-
-      const errors = leagues
-        .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
-        .map(result => result.reason.message);
-
-      if (successfulLeagues.length === 0) {
-        return res.status(404).json({ 
-          message: "No valid leagues found", 
-          errors 
-        });
-      }
-
-      // Include partial errors in response if some leagues failed
-      const response = successfulLeagues;
-      if (errors.length > 0) {
-        (response as any).warnings = errors;
-      }
-
-      res.json(response);
+      res.json(leagueData);
     } catch (error) {
-      console.error("Error fetching leagues for comparison:", error);
+      console.error("Error fetching league for analysis:", error);
       res.status(500).json({ 
-        message: "Failed to fetch league comparison data",
+        message: "Failed to fetch league analysis data",
         error: error instanceof Error ? error.message : "Unknown error"
       });
     }

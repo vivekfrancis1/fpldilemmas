@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Trophy, TrendingUp, BarChart3, Search, Plus, X, Target, Crown, Medal } from "lucide-react";
+import { Users, Trophy, TrendingUp, BarChart3, Search, Target, Crown, Medal, Star, Activity } from "lucide-react";
 import Header from "../components/header";
 import Footer from "../components/footer";
 
@@ -35,63 +35,41 @@ interface LeagueStanding {
   entry_name: string;
 }
 
-interface ComparedLeague {
-  id: number;
-  name: string;
-  data: LeagueData;
-  averageScore: number;
-  topScore: number;
-  totalManagers: number;
-  yourRank?: number;
-  yourPoints?: number;
+interface PlayerPerformanceData {
+  entry_id: number;
+  player_name: string;
+  entry_name: string;
+  total_points: number;
+  rank: number;
+  last_rank: number;
+  event_points: number;
+  bank: number;
+  value: number;
+  kit?: string;
+  region_name?: string;
+  region_id?: number;
+  region_code_short?: string;
+  region_code_long?: string;
+  years_active?: number;
+  summary_overall_points?: number;
+  summary_overall_rank?: number;
+  summary_event_points?: number;
+  summary_event_rank?: number;
 }
 
 export default function LeagueComparison() {
-  const [leagueIds, setLeagueIds] = useState<string[]>([]);
-  const [newLeagueId, setNewLeagueId] = useState("");
-  const [comparedLeagues, setComparedLeagues] = useState<ComparedLeague[]>([]);
+  const [leagueId, setLeagueId] = useState("");
+  const [analyzedLeague, setAnalyzedLeague] = useState<LeagueData | null>(null);
 
-  const addLeague = () => {
-    if (newLeagueId && !leagueIds.includes(newLeagueId)) {
-      setLeagueIds([...leagueIds, newLeagueId]);
-      setNewLeagueId("");
-    }
-  };
-
-  const removeLeague = (idToRemove: string) => {
-    setLeagueIds(leagueIds.filter(id => id !== idToRemove));
-    setComparedLeagues(comparedLeagues.filter(league => league.id.toString() !== idToRemove));
-  };
-
-  const { data: leaguesData, isLoading, error } = useQuery({
-    queryKey: ['/api/leagues/compare', leagueIds],
-    enabled: leagueIds.length > 0,
+  const { data: leagueData, isLoading, error } = useQuery({
+    queryKey: ['/api/leagues', leagueId, 'analyze'],
+    enabled: !!leagueId,
     refetchOnWindowFocus: false,
   });
 
-  const compareLeagues = () => {
-    if (leaguesData && Array.isArray(leaguesData)) {
-      const compared: ComparedLeague[] = leaguesData.map((league: LeagueData) => {
-        const standings = league.standings || [];
-        const averageScore = standings.length > 0 
-          ? standings.reduce((sum, standing) => sum + standing.total, 0) / standings.length 
-          : 0;
-        const topScore = standings.length > 0 
-          ? Math.max(...standings.map(s => s.total)) 
-          : 0;
-
-        return {
-          id: league.id,
-          name: league.name,
-          data: league,
-          averageScore: Math.round(averageScore),
-          topScore,
-          totalManagers: standings.length,
-          yourRank: standings.find(s => s.rank === 1)?.rank, // This would be determined by user's team
-          yourPoints: standings.find(s => s.rank === 1)?.total
-        };
-      });
-      setComparedLeagues(compared);
+  const analyzeLeague = () => {
+    if (leagueData) {
+      setAnalyzedLeague(leagueData as LeagueData);
     }
   };
 
@@ -109,6 +87,32 @@ export default function LeagueComparison() {
     return <Target className="h-4 w-4" />;
   };
 
+  // Calculate performance metrics
+  const getPerformanceMetrics = (standings: LeagueStanding[]) => {
+    if (!standings.length) return null;
+
+    const totalPoints = standings.reduce((sum, s) => sum + s.total, 0);
+    const averagePoints = Math.round(totalPoints / standings.length);
+    const topScore = Math.max(...standings.map(s => s.total));
+    const lastGwAvg = Math.round(standings.reduce((sum, s) => sum + s.event_total, 0) / standings.length);
+    
+    const rankChanges = standings.filter(s => s.rank !== s.last_rank);
+    const improvements = rankChanges.filter(s => s.rank < s.last_rank).length;
+    const declines = rankChanges.filter(s => s.rank > s.last_rank).length;
+
+    return {
+      totalManagers: standings.length,
+      averagePoints,
+      topScore,
+      lastGwAverage: lastGwAvg,
+      rankChanges: rankChanges.length,
+      improvements,
+      declines
+    };
+  };
+
+  const metrics = analyzedLeague ? getPerformanceMetrics(analyzedLeague.standings) : null;
+
   return (
     <div className="min-h-screen bg-fpl-light">
       <Header />
@@ -116,68 +120,47 @@ export default function LeagueComparison() {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-page-title">
-            League Comparison Tool
+            League Player Analysis
           </h1>
           <p className="text-muted-foreground" data-testid="text-page-description">
-            Compare performance across multiple FPL mini-leagues and analyze standings
+            Analyze player performance and compare managers within a single FPL mini-league
           </p>
         </div>
 
-        {/* Add Leagues Section */}
+        {/* League Input Section */}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Add Leagues to Compare
+              <Search className="h-5 w-5" />
+              Analyze League Performance
             </CardTitle>
             <CardDescription>
-              Enter league IDs to compare their standings and performance metrics
+              Enter a league ID to analyze player performance and compare managers
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2 mb-4">
               <Input
                 placeholder="Enter league ID..."
-                value={newLeagueId}
-                onChange={(e) => setNewLeagueId(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addLeague()}
+                value={leagueId}
+                onChange={(e) => setLeagueId(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && analyzeLeague()}
                 data-testid="input-league-id"
               />
-              <Button onClick={addLeague} data-testid="button-add-league">
-                <Plus className="h-4 w-4 mr-2" />
-                Add
+              <Button 
+                onClick={analyzeLeague} 
+                disabled={isLoading || !leagueId}
+                data-testid="button-analyze-league"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                {isLoading ? "Loading..." : "Analyze League"}
               </Button>
             </div>
 
-            {/* Selected Leagues */}
-            {leagueIds.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Selected Leagues:</p>
-                <div className="flex flex-wrap gap-2">
-                  {leagueIds.map((id) => (
-                    <Badge key={id} variant="secondary" className="flex items-center gap-2">
-                      League {id}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-4 w-4 p-0 hover:bg-transparent"
-                        onClick={() => removeLeague(id)}
-                        data-testid={`button-remove-${id}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-                <Button 
-                  onClick={compareLeagues} 
-                  disabled={isLoading}
-                  data-testid="button-compare-leagues"
-                >
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  {isLoading ? "Loading..." : "Compare Leagues"}
-                </Button>
-              </div>
+            {leagueId && (
+              <p className="text-sm text-muted-foreground">
+                Analyzing League ID: <span className="font-medium">{leagueId}</span>
+              </p>
             )}
           </CardContent>
         </Card>
@@ -187,193 +170,227 @@ export default function LeagueComparison() {
           <Alert variant="destructive" className="mb-6">
             <Search className="h-4 w-4" />
             <AlertDescription>
-              Failed to load league data. Please check the league IDs and try again.
+              Failed to load league data. Please check the league ID and try again.
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Comparison Results */}
-        {comparedLeagues.length > 0 && (
+        {/* Analysis Results */}
+        {analyzedLeague && metrics && (
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="overview">League Overview</TabsTrigger>
-              <TabsTrigger value="detailed">Detailed Comparison</TabsTrigger>
+              <TabsTrigger value="standings">Player Rankings</TabsTrigger>
+              <TabsTrigger value="performance">Performance Analysis</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
-              {/* Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {comparedLeagues.map((league) => (
-                  <Card key={league.id} data-testid={`league-overview-${league.id}`}>
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span className="truncate">{league.name}</span>
-                        <Users className="h-5 w-5 text-muted-foreground" />
-                      </CardTitle>
-                      <CardDescription>ID: {league.id}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center">
-                          <p className="text-2xl font-bold text-green-600">
-                            {league.topScore.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Top Score</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-2xl font-bold text-blue-600">
-                            {league.averageScore.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Average</p>
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xl font-semibold">
-                          {league.totalManagers}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Total Managers</p>
-                      </div>
-                      <div className="pt-2 border-t">
-                        <p className="text-sm font-medium text-center">League Type</p>
-                        <Badge variant="outline" className="w-full justify-center mt-1">
-                          {league.data.league_type === 'x' ? 'Classic' : 'Head-to-Head'}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Quick Stats Comparison */}
-              {comparedLeagues.length > 1 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Trophy className="h-5 w-5" />
-                      Quick Comparison
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <p className="font-medium mb-2">Highest Top Score</p>
-                        {(() => {
-                          const highest = comparedLeagues.reduce((prev, current) => 
-                            current.topScore > prev.topScore ? current : prev
-                          );
-                          return (
-                            <div className="flex items-center gap-2">
-                              <Trophy className="h-4 w-4 text-yellow-500" />
-                              <span className="font-semibold">{highest.name}</span>
-                              <Badge variant="default">{highest.topScore.toLocaleString()}</Badge>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                      <div>
-                        <p className="font-medium mb-2">Highest Average</p>
-                        {(() => {
-                          const highest = comparedLeagues.reduce((prev, current) => 
-                            current.averageScore > prev.averageScore ? current : prev
-                          );
-                          return (
-                            <div className="flex items-center gap-2">
-                              <TrendingUp className="h-4 w-4 text-green-500" />
-                              <span className="font-semibold">{highest.name}</span>
-                              <Badge variant="secondary">{highest.averageScore.toLocaleString()}</Badge>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                      <div>
-                        <p className="font-medium mb-2">Largest League</p>
-                        {(() => {
-                          const largest = comparedLeagues.reduce((prev, current) => 
-                            current.totalManagers > prev.totalManagers ? current : prev
-                          );
-                          return (
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-blue-500" />
-                              <span className="font-semibold">{largest.name}</span>
-                              <Badge variant="outline">{largest.totalManagers} managers</Badge>
-                            </div>
-                          );
-                        })()}
-                      </div>
+              {/* League Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="truncate">{analyzedLeague.name}</span>
+                    <Badge variant="outline">
+                      {analyzedLeague.league_type === 'x' ? 'Classic League' : 'Head-to-Head League'}
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>League ID: {analyzedLeague.id}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="text-center p-4 border rounded-lg">
+                      <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                      <p className="text-2xl font-bold">{metrics.totalManagers}</p>
+                      <p className="text-xs text-muted-foreground">Total Managers</p>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                    <div className="text-center p-4 border rounded-lg">
+                      <Trophy className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                      <p className="text-2xl font-bold">{metrics.topScore.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Highest Score</p>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg">
+                      <BarChart3 className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                      <p className="text-2xl font-bold">{metrics.averagePoints.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Average Score</p>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg">
+                      <Activity className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+                      <p className="text-2xl font-bold">{metrics.lastGwAverage}</p>
+                      <p className="text-xs text-muted-foreground">Last GW Average</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Rank Movement Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Rank Movement Summary
+                  </CardTitle>
+                  <CardDescription>Analysis of position changes from last gameweek</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center p-4 border rounded-lg bg-green-50">
+                      <p className="text-3xl font-bold text-green-600">{metrics.improvements}</p>
+                      <p className="text-sm text-muted-foreground">Managers Improved</p>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg bg-red-50">
+                      <p className="text-3xl font-bold text-red-600">{metrics.declines}</p>
+                      <p className="text-sm text-muted-foreground">Managers Declined</p>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg bg-gray-50">
+                      <p className="text-3xl font-bold text-gray-600">
+                        {metrics.totalManagers - metrics.rankChanges}
+                      </p>
+                      <p className="text-sm text-muted-foreground">No Change</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
-            <TabsContent value="detailed" className="space-y-6">
-              {comparedLeagues.map((league) => (
-                <Card key={league.id} data-testid={`league-detailed-${league.id}`}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      {league.name}
-                      <Badge variant="outline">
-                        {league.totalManagers} managers
-                      </Badge>
-                    </CardTitle>
-                    <CardDescription>
-                      League ID: {league.id} • Average: {league.averageScore} pts
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Top 10 Standings</h4>
-                      <div className="space-y-2">
-                        {league.data.standings.slice(0, 10).map((standing) => (
-                          <div 
-                            key={standing.entry}
-                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                            data-testid={`standing-${standing.entry}`}
-                          >
-                            <div className="flex items-center gap-3">
-                              {getRankIcon(standing.rank)}
-                              <div>
-                                <p className="font-medium">{standing.player_name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {standing.entry_name}
-                                </p>
+            <TabsContent value="standings" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5" />
+                    Complete League Standings
+                  </CardTitle>
+                  <CardDescription>
+                    All managers ranked by total points with gameweek performance
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {analyzedLeague.standings.map((standing) => (
+                      <div 
+                        key={standing.entry}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                        data-testid={`standing-${standing.entry}`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="text-center min-w-[60px]">
+                            <Badge variant={getBadgeVariant(standing.rank)} className="mb-1">
+                              #{standing.rank}
+                            </Badge>
+                            {standing.rank !== standing.last_rank && (
+                              <div className="text-xs">
+                                {standing.rank < standing.last_rank ? (
+                                  <span className="text-green-600 font-medium">
+                                    ↑{standing.last_rank - standing.rank}
+                                  </span>
+                                ) : (
+                                  <span className="text-red-600 font-medium">
+                                    ↓{standing.rank - standing.last_rank}
+                                  </span>
+                                )}
                               </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="flex items-center gap-2">
-                                <Badge variant={getBadgeVariant(standing.rank)}>
-                                  #{standing.rank}
-                                </Badge>
-                                <span className="font-semibold">
-                                  {standing.total.toLocaleString()} pts
-                                </span>
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                GW: {standing.event_total} pts
-                              </p>
-                            </div>
+                            )}
                           </div>
-                        ))}
+                          <div>
+                            <p className="font-medium text-lg">{standing.player_name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {standing.entry_name}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold">
+                            {standing.total.toLocaleString()}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            GW: {standing.event_total} pts
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="performance" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Star className="h-5 w-5" />
+                    Performance Categories
+                  </CardTitle>
+                  <CardDescription>
+                    Managers grouped by performance levels
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {/* Top Performers */}
+                    <div>
+                      <h4 className="font-medium mb-3 text-green-600">🏆 Top Performers (Top 20%)</h4>
+                      <div className="grid gap-2">
+                        {analyzedLeague.standings
+                          .slice(0, Math.ceil(analyzedLeague.standings.length * 0.2))
+                          .map((standing) => (
+                            <div key={standing.entry} className="flex justify-between items-center p-2 bg-green-50 rounded">
+                              <span className="font-medium">{standing.player_name}</span>
+                              <span className="text-sm">{standing.total.toLocaleString()} pts</span>
+                            </div>
+                          ))}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+
+                    {/* Mid-tier */}
+                    <div>
+                      <h4 className="font-medium mb-3 text-blue-600">📈 Mid-tier (21%-80%)</h4>
+                      <div className="text-sm text-muted-foreground mb-2">
+                        {Math.ceil(analyzedLeague.standings.length * 0.2)} to {Math.floor(analyzedLeague.standings.length * 0.8)} managers
+                      </div>
+                      <div className="p-3 bg-blue-50 rounded text-center">
+                        <p className="font-medium">
+                          Average: {Math.round(
+                            analyzedLeague.standings
+                              .slice(Math.ceil(analyzedLeague.standings.length * 0.2), Math.floor(analyzedLeague.standings.length * 0.8))
+                              .reduce((sum, s) => sum + s.total, 0) / 
+                              (Math.floor(analyzedLeague.standings.length * 0.8) - Math.ceil(analyzedLeague.standings.length * 0.2))
+                          ).toLocaleString()} pts
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Struggling */}
+                    <div>
+                      <h4 className="font-medium mb-3 text-red-600">🔄 Need Improvement (Bottom 20%)</h4>
+                      <div className="grid gap-2">
+                        {analyzedLeague.standings
+                          .slice(Math.floor(analyzedLeague.standings.length * 0.8))
+                          .map((standing) => (
+                            <div key={standing.entry} className="flex justify-between items-center p-2 bg-red-50 rounded">
+                              <span className="font-medium">{standing.player_name}</span>
+                              <span className="text-sm">{standing.total.toLocaleString()} pts</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         )}
 
         {/* Empty State */}
-        {leagueIds.length === 0 && (
+        {!analyzedLeague && !isLoading && (
           <Card>
             <CardContent className="text-center py-12">
               <Users className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h3 className="text-lg font-semibold mb-2">No Leagues Selected</h3>
+              <h3 className="text-lg font-semibold mb-2">No League Analyzed Yet</h3>
               <p className="text-muted-foreground mb-4">
-                Add league IDs above to start comparing league performance and standings
+                Enter a league ID above to analyze player performance and compare managers within that league
               </p>
               <div className="text-sm text-muted-foreground">
                 <p>Find league IDs in the FPL website under "Leagues & Cups"</p>
+                <p>Example league analysis includes standings, performance categories, and rank movements</p>
               </div>
             </CardContent>
           </Card>
