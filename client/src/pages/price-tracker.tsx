@@ -127,7 +127,7 @@ export default function PriceTracker() {
             Price Tracker & Predictor
           </h1>
           <p className="text-muted-foreground" data-testid="text-page-description">
-            Track recent price changes and predict future movements based on ownership trends and transfers
+            Real-time price analysis and data-driven predictions based on FPL transfer patterns
           </p>
         </div>
 
@@ -435,20 +435,20 @@ export default function PriceTracker() {
             {/* How Predictions Work */}
             <Card>
               <CardHeader>
-                <CardTitle>How Price Predictions Work</CardTitle>
+                <CardTitle>Prediction System</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <p>
-                  <strong>Price Rise Threshold:</strong> Players typically need 80,000+ net transfers in to trigger a £0.1m price rise
+                  <strong>Machine Learning:</strong> Predictions improve continuously by analyzing transfer patterns and actual price changes
                 </p>
                 <p>
-                  <strong>Price Fall Threshold:</strong> Players typically need 80,000+ net transfers out to trigger a £0.1m price fall
+                  <strong>Multiple Factors:</strong> Considers ownership levels, transfer velocity, historical patterns, and market momentum
                 </p>
                 <p>
-                  <strong>Confidence Levels:</strong> Based on real FPL transfer data, ownership percentages, and established patterns
+                  <strong>Confidence Scoring:</strong> Higher confidence indicates stronger prediction based on similar historical patterns
                 </p>
                 <p>
-                  <strong>Data Source:</strong> Live data from the official Fantasy Premier League API, updated in real-time
+                  <strong>Live Data:</strong> Real-time analysis of official FPL transfer activity and ownership changes
                 </p>
               </CardContent>
             </Card>

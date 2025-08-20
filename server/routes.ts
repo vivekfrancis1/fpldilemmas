@@ -377,37 +377,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const netTransfers = transfersIn - transfersOut;
           const ownership = parseFloat(player.selected_by_percent || '0');
           
-          // Price prediction algorithm based on FPL mechanics
-          // Generally requires ~100k+ net transfers for price changes
+          // Data-driven price prediction based on transfer patterns
           let predictedChange = 0;
           let confidence = 0;
           let probability = "Low";
-          let reason = "Minimal transfer activity";
+          let reason = "Analyzing patterns";
           
-          if (netTransfers > 80000) {
-            predictedChange = 1;
-            confidence = Math.min(95, 60 + (netTransfers - 80000) / 2000);
-            probability = netTransfers > 120000 ? "Very High" : netTransfers > 100000 ? "High" : "Medium";
-            reason = `High net transfers in (${(netTransfers/1000).toFixed(0)}k) driving price rise`;
-          } else if (netTransfers < -80000) {
-            predictedChange = -1;
-            confidence = Math.min(95, 60 + Math.abs(netTransfers + 80000) / 2000);
-            probability = netTransfers < -120000 ? "Very High" : netTransfers < -100000 ? "High" : "Medium";
-            reason = `High net transfers out (${(Math.abs(netTransfers)/1000).toFixed(0)}k) likely to cause price drop`;
-          } else if (Math.abs(netTransfers) > 30000) {
-            confidence = Math.min(50, 20 + Math.abs(netTransfers) / 3000);
-            probability = Math.abs(netTransfers) > 50000 ? "Medium" : "Low";
-            reason = netTransfers > 0 
-              ? `Moderate demand but below price rise threshold` 
-              : `Some selling pressure but unlikely to trigger drop`;
+          // Dynamic prediction based on multiple factors
+          const transferVelocity = Math.abs(netTransfers);
+          const ownershipFactor = Math.max(1, ownership / 10);
+          const adjustedThreshold = 45000 + (ownership * 800);
+          
+          if (transferVelocity > adjustedThreshold * 1.5) {
+            predictedChange = netTransfers > 0 ? 1 : -1;
+            const intensity = transferVelocity / adjustedThreshold;
+            confidence = Math.min(88, 45 + (intensity * 25));
+            
+            if (intensity > 2.5) probability = "Very High";
+            else if (intensity > 1.8) probability = "High";
+            else probability = "Medium";
+            
+            reason = `Strong activity (${(transferVelocity/1000).toFixed(0)}k)`;
+          } else if (transferVelocity > adjustedThreshold) {
+            predictedChange = netTransfers > 0 ? 1 : -1;
+            confidence = Math.min(65, 30 + (transferVelocity / adjustedThreshold * 20));
+            probability = "Medium";
+            reason = `Building momentum (${(transferVelocity/1000).toFixed(0)}k)`;
+          } else if (transferVelocity > adjustedThreshold * 0.6) {
+            predictedChange = netTransfers > 0 ? 1 : -1;
+            confidence = Math.min(45, 20 + (transferVelocity / adjustedThreshold * 15));
+            probability = "Low";
+            reason = `Early signals (${(transferVelocity/1000).toFixed(0)}k)`;
           }
-
-          // Adjust for ownership levels - higher owned players need more transfers
-          if (ownership > 30) {
-            confidence *= 0.8;
-            if (probability === "High") probability = "Medium";
-            if (probability === "Very High") probability = "High";
-          }
+          
+          // Ownership adjustment for prediction accuracy
+          if (ownership > 35) confidence *= 0.82;
+          else if (ownership < 2) confidence *= 0.9;
 
           return {
             player_id: player.id,
@@ -426,15 +431,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
         .filter(pred => 
-          // Only show players with significant transfer activity or likely changes
-          Math.abs(pred.net_transfers) > 25000 || pred.confidence > 30
+          // Show players with transfer activity or confidence score
+          Math.abs(pred.net_transfers) > 15000 || pred.confidence > 25
         )
         .sort((a, b) => {
           // Sort by confidence descending, then by net transfers
           if (b.confidence !== a.confidence) return b.confidence - a.confidence;
           return Math.abs(b.net_transfers) - Math.abs(a.net_transfers);
         })
-        .slice(0, 15); // Limit to top 15 predictions
+        .slice(0, 20); // Show top 20 predictions
 
       res.json(predictions);
     } catch (error) {
