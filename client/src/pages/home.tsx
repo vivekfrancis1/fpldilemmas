@@ -30,7 +30,7 @@ export default function Home() {
           </h2>
           <p className="text-gray-600 mb-6">Our users' favorite FPL analysis tools</p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {/* Live Rank Tracker - Featured */}
             <Card className="border-2 border-red-200 bg-gradient-to-br from-red-50 to-red-100 hover:shadow-xl transition-all duration-300 cursor-pointer group" data-testid="card-live-rank-featured">
               <CardHeader className="pb-4">
@@ -100,6 +100,44 @@ export default function Home() {
                       data-testid="button-view-price-tracker-featured"
                     >
                       Track Prices
+                      <ArrowRight className="h-5 w-5 ml-2" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Player Statistics - Featured */}
+            <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer group" data-testid="card-player-stats-featured">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Badge className="bg-blue-600 text-white">TRENDING</Badge>
+                  <BarChart3 className="h-8 w-8 text-blue-600" />
+                </div>
+                <CardTitle className="text-xl">Player Statistics</CardTitle>
+                <CardDescription className="text-base">
+                  Comprehensive player performance data with advanced filtering and sorting. Analyze every FPL player in detail.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      Advanced player analytics
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      Performance comparisons
+                    </div>
+                  </div>
+                  <Link href="/player-stats" className="inline-block">
+                    <Button 
+                      size="lg"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 text-base"
+                      data-testid="button-view-player-stats-featured"
+                    >
+                      View Stats
                       <ArrowRight className="h-5 w-5 ml-2" />
                     </Button>
                   </Link>
