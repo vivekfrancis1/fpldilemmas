@@ -192,6 +192,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manager rank API routes
+  
+  // Get manager basic info and current rank
+  app.get("/api/manager/:managerId", async (req, res) => {
+    try {
+      const managerId = req.params.managerId;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+
+      const response = await fetch(`${FPL_BASE_URL}/entry/${managerId}/`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "Manager not found" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching manager data:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch manager data from FPL API",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get manager history (gameweek by gameweek performance)
+  app.get("/api/manager/:managerId/history", async (req, res) => {
+    try {
+      const managerId = req.params.managerId;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+
+      const response = await fetch(`${FPL_BASE_URL}/entry/${managerId}/history/`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "Manager history not found" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching manager history:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch manager history from FPL API",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get manager gameweek picks
+  app.get("/api/manager/:managerId/event/:eventId/picks", async (req, res) => {
+    try {
+      const { managerId, eventId } = req.params;
+      
+      if (!managerId || isNaN(Number(managerId)) || !eventId || isNaN(Number(eventId))) {
+        return res.status(400).json({ message: "Invalid manager ID or event ID" });
+      }
+
+      const response = await fetch(`${FPL_BASE_URL}/entry/${managerId}/event/${eventId}/picks/`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "Manager picks not found for this gameweek" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching manager picks:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch manager picks from FPL API",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -34,6 +34,12 @@ export default function Header() {
             <Link href="/captain" className={`${isActive("/captain") ? "text-white border-b-2 border-fpl-green" : "text-purple-200 hover:text-white"} transition-colors font-medium`} data-testid="link-captain">
               Captain
             </Link>
+            <Link href="/watchlist" className={`${isActive("/watchlist") ? "text-white border-b-2 border-fpl-green" : "text-purple-200 hover:text-white"} transition-colors font-medium`} data-testid="link-watchlist">
+              Watchlist
+            </Link>
+            <Link href="/live-rank" className={`${isActive("/live-rank") ? "text-white border-b-2 border-fpl-green" : "text-purple-200 hover:text-white"} transition-colors font-medium`} data-testid="link-live-rank">
+              Live Rank
+            </Link>
           </nav>
           <button className="md:hidden text-white" data-testid="button-mobile-menu">
             <Menu className="h-6 w-6" />
