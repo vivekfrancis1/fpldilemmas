@@ -280,53 +280,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Price tracking API routes
   
-  // Get recent price changes (mock data since real price change API requires special access)
+  // Get recent price changes from real FPL API data
   app.get("/api/price-changes/recent", async (req, res) => {
     try {
-      // For demonstration purposes, we'll generate mock price changes
-      // In a real implementation, this would fetch from FPL price change APIs or databases
-      
-      const mockPriceChanges = [
-        {
-          player_id: 302,
-          player_name: "Mohamed Salah",
-          team_name: "Liverpool",
-          position: "MID",
-          old_price: 129,
-          new_price: 130,
-          change: 1,
-          date: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-          ownership_change: 15.2
-        },
-        {
-          player_id: 427,
-          player_name: "Erling Haaland",
-          team_name: "Manchester City",
-          position: "FWD",
-          old_price: 149,
-          new_price: 148,
-          change: -1,
-          date: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-          ownership_change: -8.7
-        },
-        {
-          player_id: 236,
-          player_name: "Bruno Fernandes",
-          team_name: "Manchester United",
-          position: "MID",
-          old_price: 84,
-          new_price: 85,
-          change: 1,
-          date: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-          ownership_change: 12.3
-        }
-      ];
+      // Fetch current bootstrap data to get player info and current prices
+      const currentData = await storage.getBootstrapData();
+      if (!currentData) {
+        return res.status(500).json({ message: "Bootstrap data not available" });
+      }
 
-      res.json(mockPriceChanges);
+      // Get actual price changes by looking at cost_change_event field
+      // This shows price changes from the last gameweek
+      const priceChanges = currentData.elements
+        .filter(player => {
+          // Filter players that have actually changed price this gameweek
+          return player.cost_change_event && player.cost_change_event !== 0;
+        })
+        .map(player => {
+          const team = currentData.teams.find(t => t.id === player.team);
+          const position = currentData.element_types.find(p => p.id === player.element_type);
+          
+          const priceChange = player.cost_change_event;
+          
+          return {
+            player_id: player.id,
+            player_name: `${player.first_name} ${player.second_name}`,
+            team_name: team?.name || 'Unknown',
+            position: position?.singular_name_short || 'Unknown',
+            old_price: player.now_cost - priceChange,
+            new_price: player.now_cost,
+            change: priceChange,
+            date: new Date().toISOString(),
+            ownership_change: parseFloat(player.selected_by_percent || '0'),
+            transfers_in: player.transfers_in_event || 0,
+            transfers_out: player.transfers_out_event || 0
+          };
+        })
+        .sort((a, b) => Math.abs(b.change) - Math.abs(a.change)); // Sort by magnitude of change
+
+      // If no recent price changes, show players with highest transfer activity instead
+      if (priceChanges.length === 0) {
+        const highActivityPlayers = currentData.elements
+          .filter(player => {
+            const netTransfers = (player.transfers_in_event || 0) - (player.transfers_out_event || 0);
+            return Math.abs(netTransfers) > 30000;
+          })
+          .slice(0, 10)
+          .map(player => {
+            const team = currentData.teams.find(t => t.id === player.team);
+            const position = currentData.element_types.find(p => p.id === player.element_type);
+            
+            return {
+              player_id: player.id,
+              player_name: `${player.first_name} ${player.second_name}`,
+              team_name: team?.name || 'Unknown',
+              position: position?.singular_name_short || 'Unknown',
+              old_price: player.now_cost,
+              new_price: player.now_cost,
+              change: 0, // No actual change, just high activity
+              date: new Date().toISOString(),
+              ownership_change: parseFloat(player.selected_by_percent || '0'),
+              transfers_in: player.transfers_in_event || 0,
+              transfers_out: player.transfers_out_event || 0
+            };
+          });
+        
+        return res.json(highActivityPlayers);
+      }
+
+      res.json(priceChanges);
     } catch (error) {
       console.error("Error fetching price changes:", error);
       res.status(500).json({ 
-        message: "Failed to fetch price changes",
+        message: "Failed to fetch price changes from FPL API",
         error: error instanceof Error ? error.message : "Unknown error"
       });
     }
