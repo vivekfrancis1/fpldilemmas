@@ -21,7 +21,7 @@ export default function Layout({ children }: LayoutProps) {
       <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
         <Header onSidebarToggle={toggleSidebar} />
         
-        <main className="flex-1 lg:pl-80 min-w-0 overflow-x-hidden">
+        <main className="flex-1 lg:pl-6 min-w-0 overflow-x-hidden">
           {children}
         </main>
       </div>
