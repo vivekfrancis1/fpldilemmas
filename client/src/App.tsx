@@ -10,6 +10,7 @@ import Transfers from "./pages/transfers";
 import Captain from "./pages/captain";
 import Watchlist from "./pages/watchlist";
 import LiveRank from "./pages/live-rank";
+import PriceTracker from "./pages/price-tracker";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/captain" component={Captain} />
       <Route path="/watchlist" component={Watchlist} />
       <Route path="/live-rank" component={LiveRank} />
+      <Route path="/price-tracker" component={PriceTracker} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -278,6 +278,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Price tracking API routes
+  
+  // Get recent price changes (mock data since real price change API requires special access)
+  app.get("/api/price-changes/recent", async (req, res) => {
+    try {
+      // For demonstration purposes, we'll generate mock price changes
+      // In a real implementation, this would fetch from FPL price change APIs or databases
+      
+      const mockPriceChanges = [
+        {
+          player_id: 302,
+          player_name: "Mohamed Salah",
+          team_name: "Liverpool",
+          position: "MID",
+          old_price: 129,
+          new_price: 130,
+          change: 1,
+          date: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+          ownership_change: 15.2
+        },
+        {
+          player_id: 427,
+          player_name: "Erling Haaland",
+          team_name: "Manchester City",
+          position: "FWD",
+          old_price: 149,
+          new_price: 148,
+          change: -1,
+          date: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+          ownership_change: -8.7
+        },
+        {
+          player_id: 236,
+          player_name: "Bruno Fernandes",
+          team_name: "Manchester United",
+          position: "MID",
+          old_price: 84,
+          new_price: 85,
+          change: 1,
+          date: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+          ownership_change: 12.3
+        }
+      ];
+
+      res.json(mockPriceChanges);
+    } catch (error) {
+      console.error("Error fetching price changes:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch price changes",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get price change predictions
+  app.get("/api/price-predictions", async (req, res) => {
+    try {
+      // Mock price predictions based on ownership trends
+      // In real implementation, this would use machine learning models and real transfer data
+      
+      const mockPredictions = [
+        {
+          player_id: 350,
+          player_name: "Darwin Núñez",
+          team_name: "Liverpool",
+          position: "FWD",
+          current_price: 89,
+          predicted_change: 1,
+          confidence: 78,
+          ownership_percentage: 24.5,
+          net_transfers: 95000,
+          reason: "High net transfers in after good performance",
+          probability: "High"
+        },
+        {
+          player_id: 183,
+          player_name: "Phil Foden",
+          team_name: "Manchester City",
+          position: "MID",
+          current_price: 91,
+          predicted_change: -1,
+          confidence: 65,
+          ownership_percentage: 31.2,
+          net_transfers: -87000,
+          reason: "Many selling before difficult fixtures",
+          probability: "Medium"
+        },
+        {
+          player_id: 421,
+          player_name: "Alexander Isak",
+          team_name: "Newcastle",
+          position: "FWD",
+          current_price: 86,
+          predicted_change: 1,
+          confidence: 82,
+          ownership_percentage: 28.7,
+          net_transfers: 102000,
+          reason: "Strong form and easy fixtures driving demand",
+          probability: "Very High"
+        },
+        {
+          player_id: 294,
+          player_name: "Bukayo Saka",
+          team_name: "Arsenal",
+          position: "MID",
+          current_price: 105,
+          predicted_change: 0,
+          confidence: 45,
+          ownership_percentage: 45.6,
+          net_transfers: 12000,
+          reason: "Stable ownership with minimal net transfers",
+          probability: "Low"
+        }
+      ];
+
+      res.json(mockPredictions);
+    } catch (error) {
+      console.error("Error fetching price predictions:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch price predictions",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

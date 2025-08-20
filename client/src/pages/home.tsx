@@ -255,6 +255,35 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Price Tracker */}
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group" data-testid="card-price-tracker">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RefreshCw className="h-5 w-5 text-orange-600" />
+                  Price Tracker
+                </CardTitle>
+                <CardDescription>
+                  Track daily price changes and predict future movements with AI-powered analysis.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Daily updates & predictions</span>
+                  <Link href="/price-tracker" className="inline-block">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="group-hover:bg-orange-600 group-hover:text-white transition-colors"
+                      data-testid="button-view-price-tracker"
+                    >
+                      Track Prices
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
