@@ -7,6 +7,7 @@ FPL Dilemmas is a Fantasy Premier League (FPL) analytics application that provid
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Site tagline: "Analytical tools to beat the deadline blues" (updated December 2024)
 
 ## System Architecture
 

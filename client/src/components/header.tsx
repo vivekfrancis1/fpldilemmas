@@ -17,7 +17,7 @@ export default function Header() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold" data-testid="text-site-title">FPL Dilemmas</h1>
-                <p className="text-purple-200 text-sm" data-testid="text-site-subtitle">Smart decisions for fantasy success</p>
+                <p className="text-purple-200 text-sm" data-testid="text-site-subtitle">Analytical tools to beat the deadline blues</p>
               </div>
             </div>
           </Link>
