@@ -1,18 +1,14 @@
 import { Link } from "wouter";
-import Header from "../components/header";
-import Footer from "../components/footer";
+import Layout from "../components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, BarChart3, Calendar, RefreshCw, Award, Eye, TrendingUp, Users, Star } from "lucide-react";
 
 export default function Home() {
-
   return (
-    <div className="min-h-screen bg-fpl-light">
-      <Header />
-      
-      <main className="container mx-auto px-4 py-8">
+    <Layout>
+      <div className="container mx-auto px-4 py-8">
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4" data-testid="text-main-title">
@@ -120,6 +116,34 @@ export default function Home() {
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Player Statistics */}
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group" data-testid="card-player-stats">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
+                  Player Statistics
+                </CardTitle>
+                <CardDescription>
+                  Comprehensive player performance data and statistics for informed FPL decisions.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">All player data & stats</span>
+                  <Link href="/player-stats" className="inline-block">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="group-hover:bg-blue-600 group-hover:text-white transition-colors"
+                      data-testid="button-view-player-stats"
+                    >
+                      View Stats
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
             {/* Player Stats */}
             <Card className="hover:shadow-lg transition-shadow cursor-pointer group" data-testid="card-player-stats">
               <CardHeader>
@@ -334,9 +358,7 @@ export default function Home() {
           <p className="text-gray-600 mb-4">Access detailed player performance data and statistics</p>
           <p className="text-sm text-gray-500 mt-2">Player statistics are now integrated within each tool for focused analysis</p>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </Layout>
   );
 }

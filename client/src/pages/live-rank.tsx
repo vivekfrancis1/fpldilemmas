@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Layout from "../components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -105,8 +106,9 @@ export default function LiveRank() {
   const error = managerError || historyError;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="space-y-6">
+    <Layout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="space-y-6">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-foreground mb-2">Live Rank Tracker</h1>
           <p className="text-muted-foreground">
@@ -378,7 +380,8 @@ export default function LiveRank() {
             </CardContent>
           </Card>
         )}
-      </div>
-    </div>
+          </div>
+        </div>
+    </Layout>
   );
 }
