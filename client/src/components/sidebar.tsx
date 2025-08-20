@@ -1,7 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { 
-  Home, 
   TrendingUp, 
   RefreshCw, 
   Users, 
@@ -29,22 +28,17 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   const navItems = [
     {
-      section: "Main",
-      items: [
-        { path: "/", label: "Home", icon: Home, description: "Tool directory", popular: false }
-      ]
-    },
-    {
       section: "Most Popular",
       items: [
+        { path: "/", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: true },
         { path: "/live-rank", label: "Live Rank", icon: TrendingUp, description: "Real-time FPL rank", popular: true },
-        { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: true },
-        { path: "/player-stats", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: true }
+        { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: true }
       ]
     },
     {
       section: "Analysis Tools", 
       items: [
+        { path: "/player-stats", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
         { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
         { path: "/watchlist", label: "Watchlist", icon: Heart, description: "Track favorite players", popular: false },
         { path: "/fixtures", label: "Fixtures", icon: Calendar, description: "Match schedules", popular: false },
@@ -116,7 +110,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                             ? 'bg-fpl-green text-fpl-purple font-medium'
                             : 'text-purple-100 hover:bg-white/10 hover:text-white'
                         }`}
-                        data-testid={`sidebar-link-${item.path.slice(1) || 'home'}`}
+                        data-testid={`sidebar-link-${item.path.slice(1) || 'player-stats'}`}
                       >
                         <item.icon className={`h-5 w-5 ${isActive(item.path) ? 'text-fpl-purple' : ''}`} />
                         <div className="flex-1 min-w-0">
