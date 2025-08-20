@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import StatsCards from "../components/stats-cards";
 import FiltersPanel from "../components/filters-panel";
 import PlayerStatsTable from "../components/player-stats-table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, BarChart3, Calendar, RefreshCw, Award, Eye, TrendingUp } from "lucide-react";
 import { FilterState, SortState } from "@/lib/types";
 import { BootstrapData } from "@shared/schema";
 
@@ -58,17 +62,224 @@ export default function Home() {
       <Header />
       
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2" data-testid="text-page-title">
-            Player Stats Dashboard
-          </h2>
-          <p className="text-gray-600" data-testid="text-page-description">
-            Analyze player performance, value, and upcoming fixtures to make informed FPL decisions
+        {/* Hero Section */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4" data-testid="text-main-title">
+            FPL Dilemmas
+          </h1>
+          <p className="text-xl text-gray-600 mb-2" data-testid="text-main-subtitle">
+            Your Complete Fantasy Premier League Analysis Suite
+          </p>
+          <p className="text-gray-600 max-w-2xl mx-auto" data-testid="text-main-description">
+            Make smarter FPL decisions with our comprehensive set of analysis tools. From player stats to transfer planning, we've got everything you need to dominate your leagues.
           </p>
         </div>
 
-        <StatsCards data={bootstrapData} isLoading={isLoading} />
-        
+        {/* FPL Tools Grid */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+            Choose Your Analysis Tool
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Player Stats */}
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group" data-testid="card-player-stats">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-fpl-purple" />
+                  Player Performance
+                </CardTitle>
+                <CardDescription>
+                  Analyze detailed player statistics, form, and value to find the best picks for your team.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Advanced filters & sorting</span>
+                  <Link href="/" className="inline-block">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="group-hover:bg-fpl-purple group-hover:text-white transition-colors"
+                      data-testid="button-view-player-stats"
+                    >
+                      View Stats
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Fixture Difficulty */}
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group" data-testid="card-fixture-analyzer">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                  Fixture Analyzer
+                </CardTitle>
+                <CardDescription>
+                  Check upcoming fixtures and difficulty ratings to plan your transfers and captaincy choices.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Next 5 gameweeks</span>
+                  <Link href="/fixtures" className="inline-block">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="group-hover:bg-blue-600 group-hover:text-white transition-colors"
+                      data-testid="button-view-fixtures"
+                    >
+                      Analyze
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Transfer Planner */}
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group" data-testid="card-transfer-planner">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RefreshCw className="h-5 w-5 text-green-600" />
+                  Transfer Planner
+                </CardTitle>
+                <CardDescription>
+                  Smart transfer recommendations based on form, fixtures, and value. Make the perfect moves.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Buy & sell recommendations</span>
+                  <Link href="/transfers" className="inline-block">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="group-hover:bg-green-600 group-hover:text-white transition-colors"
+                      data-testid="button-view-transfers"
+                    >
+                      Plan Now
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Captain Selector */}
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group" data-testid="card-captain-selector">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-yellow-600" />
+                  Captain Selector
+                </CardTitle>
+                <CardDescription>
+                  Find the perfect captain and vice-captain with intelligent recommendations and strategy analysis.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Multiple strategies</span>
+                  <Link href="/captain" className="inline-block">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="group-hover:bg-yellow-600 group-hover:text-white transition-colors"
+                      data-testid="button-view-captain"
+                    >
+                      Choose
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Watchlist */}
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group" data-testid="card-watchlist">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Eye className="h-5 w-5 text-indigo-600" />
+                  Watchlist & Alerts
+                </CardTitle>
+                <CardDescription>
+                  Track your favorite players and get notified about price changes and key updates.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Price alerts & notes</span>
+                  <Link href="/watchlist" className="inline-block">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="group-hover:bg-indigo-600 group-hover:text-white transition-colors"
+                      data-testid="button-view-watchlist"
+                    >
+                      Track
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Live Rank */}
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group" data-testid="card-live-rank">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-red-600" />
+                  Live Rank Tracker
+                </CardTitle>
+                <CardDescription>
+                  Check your current FPL rank, track progress, and see how you're performing this season.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Overall & gameweek ranks</span>
+                  <Link href="/live-rank" className="inline-block">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="group-hover:bg-red-600 group-hover:text-white transition-colors"
+                      data-testid="button-view-live-rank"
+                    >
+                      Check Rank
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Quick Stats Overview */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4" data-testid="text-quick-stats-title">
+            Quick Stats Overview
+          </h2>
+          <StatsCards data={bootstrapData} isLoading={isLoading} />
+        </div>
+
+        {/* Featured Player Table */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-gray-900" data-testid="text-featured-players-title">
+              Top Performing Players
+            </h2>
+            <Link href="/">
+              <Button variant="outline" data-testid="button-view-all-players">
+                View All Players
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
+          </div>
+        </div>
         <FiltersPanel 
           filters={filters}
           setFilters={setFilters}
