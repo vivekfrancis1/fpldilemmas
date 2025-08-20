@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { bootstrapDataSchema, playerSummarySchema } from "@shared/schema";
+import { bootstrapDataSchema, playerSummarySchema, insertWatchlistEntrySchema, insertPriceAlertSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // FPL API base URL
@@ -86,6 +86,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching fixtures:", error);
       res.status(500).json({ 
         message: "Failed to fetch fixtures from FPL API",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Watchlist API routes
+  
+  // Get all watchlist entries
+  app.get("/api/watchlist", async (req, res) => {
+    try {
+      const entries = await storage.getWatchlistEntries();
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching watchlist:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch watchlist",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Add player to watchlist
+  app.post("/api/watchlist", async (req, res) => {
+    try {
+      const validatedData = insertWatchlistEntrySchema.parse(req.body);
+      const entry = await storage.addWatchlistEntry(validatedData);
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error("Error adding to watchlist:", error);
+      res.status(400).json({ 
+        message: "Failed to add player to watchlist",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Remove player from watchlist
+  app.delete("/api/watchlist/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid watchlist entry ID" });
+      }
+      
+      await storage.removeWatchlistEntry(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing from watchlist:", error);
+      res.status(500).json({ 
+        message: "Failed to remove player from watchlist",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Update watchlist entry
+  app.patch("/api/watchlist/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid watchlist entry ID" });
+      }
+
+      const updateData = insertWatchlistEntrySchema.partial().parse(req.body);
+      const updatedEntry = await storage.updateWatchlistEntry(id, updateData);
+      res.json(updatedEntry);
+    } catch (error) {
+      console.error("Error updating watchlist entry:", error);
+      res.status(400).json({ 
+        message: "Failed to update watchlist entry",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Price alerts API routes
+  
+  // Get all price alerts
+  app.get("/api/price-alerts", async (req, res) => {
+    try {
+      const alerts = await storage.getPriceAlerts();
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching price alerts:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch price alerts",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Add price alert
+  app.post("/api/price-alerts", async (req, res) => {
+    try {
+      const validatedData = insertPriceAlertSchema.parse(req.body);
+      const alert = await storage.addPriceAlert(validatedData);
+      res.status(201).json(alert);
+    } catch (error) {
+      console.error("Error adding price alert:", error);
+      res.status(400).json({ 
+        message: "Failed to add price alert",
         error: error instanceof Error ? error.message : "Unknown error"
       });
     }
