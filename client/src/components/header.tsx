@@ -43,6 +43,9 @@ export default function Header() {
             <Link href="/price-tracker" className={`${isActive("/price-tracker") ? "text-white border-b-2 border-fpl-green" : "text-purple-200 hover:text-white"} transition-colors font-medium`} data-testid="link-price-tracker">
               Price Tracker
             </Link>
+            <Link href="/league-comparison" className={`${isActive("/league-comparison") ? "text-white border-b-2 border-fpl-green" : "text-purple-200 hover:text-white"} transition-colors font-medium`} data-testid="link-league-comparison">
+              League Comparison
+            </Link>
           </nav>
           <button className="md:hidden text-white" data-testid="button-mobile-menu">
             <Menu className="h-6 w-6" />

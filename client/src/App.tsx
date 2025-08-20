@@ -11,6 +11,7 @@ import Captain from "./pages/captain";
 import Watchlist from "./pages/watchlist";
 import LiveRank from "./pages/live-rank";
 import PriceTracker from "./pages/price-tracker";
+import LeagueComparison from "./pages/league-comparison";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/watchlist" component={Watchlist} />
       <Route path="/live-rank" component={LiveRank} />
       <Route path="/price-tracker" component={PriceTracker} />
+      <Route path="/league-comparison" component={LeagueComparison} />
       <Route component={NotFound} />
     </Switch>
   );

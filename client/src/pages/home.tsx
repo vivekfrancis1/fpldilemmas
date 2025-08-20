@@ -8,7 +8,7 @@ import FiltersPanel from "../components/filters-panel";
 import PlayerStatsTable from "../components/player-stats-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, BarChart3, Calendar, RefreshCw, Award, Eye, TrendingUp } from "lucide-react";
+import { ArrowRight, BarChart3, Calendar, RefreshCw, Award, Eye, TrendingUp, Users } from "lucide-react";
 import { FilterState, SortState } from "@/lib/types";
 import { BootstrapData } from "@shared/schema";
 
@@ -220,6 +220,35 @@ export default function Home() {
                       data-testid="button-view-watchlist"
                     >
                       Track
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* League Comparison */}
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group" data-testid="card-league-comparison">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-purple-600" />
+                  League Comparison
+                </CardTitle>
+                <CardDescription>
+                  Compare multiple mini-leagues side-by-side and analyze standings across different competitions.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Compare performance</span>
+                  <Link href="/league-comparison" className="inline-block">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="group-hover:bg-purple-600 group-hover:text-white transition-colors"
+                      data-testid="button-view-league-comparison"
+                    >
+                      Compare
                       <ArrowRight className="h-4 w-4 ml-1" />
                     </Button>
                   </Link>
