@@ -1,8 +1,8 @@
-# Fantasy Premier League Manager Tools
+# FPL Dilemmas
 
 ## Overview
 
-This is a Fantasy Premier League (FPL) analytics application that provides comprehensive player statistics and insights to help fantasy football managers make informed decisions. The app fetches data from the official FPL API and presents it through an intuitive interface with filtering, sorting, and statistical analysis capabilities.
+FPL Dilemmas is a Fantasy Premier League (FPL) analytics application that provides comprehensive player statistics and insights to help fantasy football managers make informed decisions. The app fetches data from the official FPL API and presents it through an intuitive interface with filtering, sorting, and statistical analysis capabilities.
 
 ## User Preferences
 

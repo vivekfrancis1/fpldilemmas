@@ -10,7 +10,7 @@ export default function Header() {
               <i className="fas fa-futbol text-fpl-purple text-xl"></i>
             </div>
             <div>
-              <h1 className="text-2xl font-bold" data-testid="text-site-title">FPL Manager Tools</h1>
+              <h1 className="text-2xl font-bold" data-testid="text-site-title">FPL Dilemmas</h1>
               <p className="text-purple-200 text-sm" data-testid="text-site-subtitle">Smart decisions for fantasy success</p>
             </div>
           </div>

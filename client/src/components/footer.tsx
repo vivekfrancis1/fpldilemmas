@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-lg font-semibold mb-4" data-testid="text-footer-title">FPL Manager Tools</h3>
+            <h3 className="text-lg font-semibold mb-4" data-testid="text-footer-title">FPL Dilemmas</h3>
             <p className="text-purple-200 text-sm" data-testid="text-footer-description">
               Advanced analytics and insights for Fantasy Premier League managers. Make smarter decisions with real-time data.
             </p>
@@ -26,7 +26,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="border-t border-purple-600 mt-8 pt-8 text-center text-sm text-purple-200">
-          <p data-testid="text-copyright">&copy; 2024 FPL Manager Tools. Not affiliated with the Premier League or Fantasy Premier League.</p>
+          <p data-testid="text-copyright">&copy; 2024 FPL Dilemmas. Not affiliated with the Premier League or Fantasy Premier League.</p>
         </div>
       </div>
     </footer>
