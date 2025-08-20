@@ -302,6 +302,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const priceChange = player.cost_change_event;
           
+          // Calculate when the price change likely occurred
+          // FPL typically updates prices daily around 1:30 AM GMT
+          const today = new Date();
+          const priceChangeDate = new Date(today);
+          priceChangeDate.setHours(1, 30, 0, 0); // 1:30 AM today
+          
+          // If current time is before 1:30 AM, the change was likely yesterday
+          if (today.getHours() < 1 || (today.getHours() === 1 && today.getMinutes() < 30)) {
+            priceChangeDate.setDate(priceChangeDate.getDate() - 1);
+          }
+          
           return {
             player_id: player.id,
             player_name: `${player.first_name} ${player.second_name}`,
@@ -310,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             old_price: player.now_cost - priceChange,
             new_price: player.now_cost,
             change: priceChange,
-            date: new Date().toISOString(),
+            date: priceChangeDate.toISOString(),
             ownership_change: parseFloat(player.selected_by_percent || '0'),
             transfers_in: player.transfers_in_event || 0,
             transfers_out: player.transfers_out_event || 0
@@ -414,6 +425,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (ownership > 35) confidence *= 0.82;
           else if (ownership < 2) confidence *= 0.9;
 
+          // Calculate expected price change date
+          // FPL price changes occur daily around 1:30 AM GMT
+          const nextPriceUpdate = new Date();
+          nextPriceUpdate.setDate(nextPriceUpdate.getDate() + 1);
+          nextPriceUpdate.setHours(1, 30, 0, 0);
+          
+          // If it's already past 1:30 AM today, next update is tomorrow
+          const now = new Date();
+          if (now.getHours() > 1 || (now.getHours() === 1 && now.getMinutes() >= 30)) {
+            // Already past today's update, so next is tomorrow at 1:30 AM
+          } else {
+            // Before today's update, so next update is today at 1:30 AM
+            nextPriceUpdate.setDate(nextPriceUpdate.getDate() - 1);
+          }
+          
           return {
             player_id: player.id,
             player_name: `${player.first_name} ${player.second_name}`,
@@ -427,7 +453,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             transfers_in: transfersIn,
             transfers_out: transfersOut,
             reason: reason,
-            probability: probability
+            probability: probability,
+            expected_date: nextPriceUpdate.toISOString()
           };
         })
         .filter(pred => 

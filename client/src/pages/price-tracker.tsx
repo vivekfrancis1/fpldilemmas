@@ -41,6 +41,7 @@ interface PricePrediction {
   transfers_out: number;
   reason: string;
   probability: string;
+  expected_date: string;
 }
 
 export default function PriceTracker() {
@@ -321,6 +322,9 @@ export default function PriceTracker() {
                           <div className="text-xs text-muted-foreground mt-1">
                             <p>In: {(change.transfers_in/1000).toFixed(0)}k | Out: {(change.transfers_out/1000).toFixed(0)}k</p>
                             <p>{change.ownership_change}% owned</p>
+                            <p className="text-blue-600 font-medium">
+                              {change.change !== 0 ? `Changed: ${formatDate(change.date)}` : `Activity: ${formatDate(change.date)}`}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -417,6 +421,9 @@ export default function PriceTracker() {
                           <div className="text-xs text-muted-foreground space-y-1">
                             <p>{prediction.ownership_percentage}% owned</p>
                             <p>In: {(prediction.transfers_in/1000).toFixed(0)}k | Out: {(prediction.transfers_out/1000).toFixed(0)}k</p>
+                            <p className="text-purple-600 font-medium">
+                              Expected: {formatDate(prediction.expected_date)}
+                            </p>
                           </div>
                         </div>
                       </div>
