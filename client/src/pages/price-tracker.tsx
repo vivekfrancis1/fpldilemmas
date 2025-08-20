@@ -7,9 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, Target, BarChart3 } from "lucide-react";
-import Header from "../components/header";
-import Footer from "../components/footer";
+import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, Target, BarChart3, RefreshCw } from "lucide-react";
+import Layout from "../components/layout";
 import { BootstrapData } from "@shared/schema";
 
 interface PriceChange {
@@ -119,63 +118,72 @@ export default function PriceTracker() {
   };
 
   return (
-    <div className="min-h-screen bg-fpl-light">
-      <Header />
-      
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-page-title">
-            Price Tracker & Predictor
-          </h1>
-          <p className="text-muted-foreground" data-testid="text-page-description">
-            Real-time price analysis and data-driven predictions based on FPL transfer patterns
-          </p>
-        </div>
+    <Layout>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50/30">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+          {/* Header Section */}
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4">
+              <RefreshCw className="h-8 w-8 text-orange-600" />
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4" data-testid="text-page-title">
+              Price Tracker
+            </h1>
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed" data-testid="text-page-description">
+              Real-time price analysis and data-driven predictions based on FPL transfer patterns
+            </p>
+          </div>
 
-        {/* Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <DollarSign className="h-8 w-8 text-green-600 mr-3" />
-                <div>
-                  <p className="text-2xl font-bold text-green-600" data-testid="text-total-rises">
-                    {Array.isArray(priceChanges) ? priceChanges.filter((c: PriceChange) => c.change > 0).length : 0}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Price Rises Today</p>
+          {/* Info Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 sm:mb-8">
+            <Card className="bg-white shadow-sm border border-gray-100">
+              <CardContent className="pt-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-green-100 rounded-full mr-3">
+                    <DollarSign className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xl sm:text-2xl font-bold text-green-600" data-testid="text-total-rises">
+                      {Array.isArray(priceChanges) ? priceChanges.filter((c: PriceChange) => c.change > 0).length : 0}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-600">Price Rises Today</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <TrendingDown className="h-8 w-8 text-red-600 mr-3" />
-                <div>
-                  <p className="text-2xl font-bold text-red-600" data-testid="text-total-falls">
-                    {Array.isArray(priceChanges) ? priceChanges.filter((c: PriceChange) => c.change < 0).length : 0}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Price Falls Today</p>
+            <Card className="bg-white shadow-sm border border-gray-100">
+              <CardContent className="pt-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-red-100 rounded-full mr-3">
+                    <TrendingDown className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-xl sm:text-2xl font-bold text-red-600" data-testid="text-total-falls">
+                      {Array.isArray(priceChanges) ? priceChanges.filter((c: PriceChange) => c.change < 0).length : 0}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-600">Price Falls Today</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <Target className="h-8 w-8 text-purple-600 mr-3" />
-                <div>
-                  <p className="text-2xl font-bold text-purple-600" data-testid="text-predictions">
-                    {Array.isArray(predictions) ? predictions.filter((p: PricePrediction) => p.probability !== "Low").length : 0}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Likely Changes</p>
+            <Card className="bg-white shadow-sm border border-gray-100">
+              <CardContent className="pt-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-purple-100 rounded-full mr-3">
+                    <Target className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-xl sm:text-2xl font-bold text-purple-600" data-testid="text-predictions">
+                      {Array.isArray(predictions) ? predictions.filter((p: PricePrediction) => p.probability !== "Low").length : 0}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-600">Likely Changes</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
 
         {/* Search and Filters */}
         <Card className="mb-6">
@@ -461,9 +469,8 @@ export default function PriceTracker() {
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
-
-      <Footer />
-    </div>
+        </div>
+      </div>
+    </Layout>
   );
 }

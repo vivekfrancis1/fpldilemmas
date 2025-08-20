@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { BarChart3 } from "lucide-react";
 import Layout from "../components/layout";
 import StatsCards from "../components/stats-cards";
 import FiltersPanel from "../components/filters-panel";
@@ -28,20 +29,22 @@ export default function PlayerStats() {
   if (error) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8" data-testid="error-state">
-            <div className="flex items-center">
-              <i className="fas fa-exclamation-triangle text-red-500 mr-3"></i>
-              <div>
-                <h3 className="text-red-800 font-medium">Failed to load player data</h3>
-                <p className="text-red-600 text-sm mt-1">Unable to connect to FPL API. Please check your connection and try again.</p>
-                <button 
-                  className="mt-3 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
-                  onClick={() => window.location.reload()}
-                  data-testid="button-retry"
-                >
-                  Retry
-                </button>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50/30">
+          <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8 shadow-sm" data-testid="error-state">
+              <div className="flex items-center">
+                <i className="fas fa-exclamation-triangle text-red-500 mr-3"></i>
+                <div>
+                  <h3 className="text-red-800 font-medium">Failed to load player data</h3>
+                  <p className="text-red-600 text-sm mt-1">Unable to connect to FPL API. Please check your connection and try again.</p>
+                  <button 
+                    className="mt-3 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+                    onClick={() => window.location.reload()}
+                    data-testid="button-retry"
+                  >
+                    Retry
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -52,53 +55,65 @@ export default function PlayerStats() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2" data-testid="text-page-title">
-            Player Statistics
-          </h1>
-          <p className="text-gray-600" data-testid="text-page-description">
-            Comprehensive player performance data and statistics for informed FPL decisions
-          </p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+          {/* Header Section */}
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+              <BarChart3 className="h-8 w-8 text-blue-600" />
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4" data-testid="text-page-title">
+              Player Statistics
+            </h1>
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed" data-testid="text-page-description">
+              Comprehensive player performance data and analytics for informed FPL decisions. 
+              Filter, sort, and analyze every player in the Premier League.
+            </p>
+          </div>
 
-        {/* Quick Stats Overview */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4" data-testid="text-quick-stats-title">
-            Quick Stats Overview
-          </h2>
-          <StatsCards data={bootstrapData} isLoading={isLoading} />
-        </div>
-
-        {/* Filters */}
-        <div className="mb-6">
-          <FiltersPanel 
-            filters={filters}
-            setFilters={setFilters}
-            teams={bootstrapData?.teams}
-            elementTypes={bootstrapData?.element_types}
-            isLoading={isLoading}
-          />
-        </div>
-        
-        {/* Player Statistics Table */}
-        <PlayerStatsTable 
-          data={bootstrapData}
-          filters={filters}
-          sort={sort}
-          setSort={setSort}
-          isLoading={isLoading}
-        />
-
-        {isLoading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="loading-state">
-            <div className="bg-white rounded-lg p-8 flex items-center space-x-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fpl-purple"></div>
-              <span className="text-gray-700 font-medium">Loading player data...</span>
+          {/* Quick Stats Overview */}
+          <div className="mb-6 sm:mb-8">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4" data-testid="text-quick-stats-title">
+                Quick Stats Overview
+              </h2>
+              <StatsCards data={bootstrapData} isLoading={isLoading} />
             </div>
           </div>
-        )}
+
+          {/* Filters */}
+          <div className="mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+              <FiltersPanel 
+                filters={filters}
+                setFilters={setFilters}
+                teams={bootstrapData?.teams}
+                elementTypes={bootstrapData?.element_types}
+                isLoading={isLoading}
+              />
+            </div>
+          </div>
+          
+          {/* Player Statistics Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <PlayerStatsTable 
+              data={bootstrapData}
+              filters={filters}
+              sort={sort}
+              setSort={setSort}
+              isLoading={isLoading}
+            />
+          </div>
+
+          {isLoading && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="loading-state">
+              <div className="bg-white rounded-lg p-8 flex items-center space-x-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fpl-purple"></div>
+                <span className="text-gray-700 font-medium">Loading player data...</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </Layout>
   );

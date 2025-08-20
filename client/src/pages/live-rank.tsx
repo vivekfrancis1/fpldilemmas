@@ -107,40 +107,46 @@ export default function LiveRank() {
 
   return (
     <Layout>
-        <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
           <div className="space-y-6">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Live Rank Tracker</h1>
-          <p className="text-muted-foreground">
-            Track your FPL rank in real-time. Enter your manager ID to see your current position.
-          </p>
-        </div>
+            {/* Header Section */}
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4">
+                <TrendingUp className="h-8 w-8 text-emerald-600" />
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">Live Rank Tracker</h1>
+              <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+                Track your FPL rank in real-time. Enter your manager ID to see your current position.
+              </p>
+            </div>
 
-        {/* Search Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Manager Search
-            </CardTitle>
-            <CardDescription>
-              Enter your FPL Manager ID. You can find this in your FPL URL when logged in.
-            </CardDescription>
-          </CardHeader>
+            {/* Search Section */}
+            <Card className="bg-white shadow-sm border border-gray-100">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-emerald-600" />
+                  Manager Search
+                </CardTitle>
+                <CardDescription>
+                  Enter your FPL Manager ID. You can find this in your FPL URL when logged in.
+                </CardDescription>
+              </CardHeader>
           <CardContent>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 data-testid="input-manager-id"
                 placeholder="Enter Manager ID (e.g., 123456)"
                 value={managerId}
                 onChange={(e) => setManagerId(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="flex-1"
+                className="flex-1 text-base"
               />
               <Button 
                 data-testid="button-search-manager"
                 onClick={handleSearch} 
                 disabled={!managerId.trim() || isLoading}
+                className="sm:px-6"
               >
                 {isLoading ? "Searching..." : "Search"}
               </Button>
@@ -166,17 +172,17 @@ export default function LiveRank() {
           </Alert>
         )}
 
-        {/* Manager Info and Ranks */}
-        {manager && (
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Manager Profile */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5" />
-                  Manager Profile
-                </CardTitle>
-              </CardHeader>
+            {/* Manager Info and Ranks */}
+            {manager && (
+              <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+              {/* Manager Profile */}
+              <Card className="bg-white shadow-sm border border-gray-100">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-amber-600" />
+                    Manager Profile
+                  </CardTitle>
+                </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <h3 className="text-lg font-semibold" data-testid="text-manager-name">
@@ -188,30 +194,30 @@ export default function LiveRank() {
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-primary" data-testid="text-total-points">
+                  <div className="text-center p-3 bg-emerald-50 rounded-lg">
+                    <p className="text-xl sm:text-2xl font-bold text-emerald-600" data-testid="text-total-points">
                       {manager.summary_overall_points.toLocaleString()}
                     </p>
-                    <p className="text-sm text-muted-foreground">Total Points</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Total Points</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-lg font-semibold" data-testid="text-current-gameweek">
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <p className="text-lg sm:text-xl font-semibold text-blue-600" data-testid="text-current-gameweek">
                       GW {manager.current_event}
                     </p>
-                    <p className="text-sm text-muted-foreground">Current Gameweek</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Current Gameweek</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Current Ranks */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Current Rankings
-                </CardTitle>
-              </CardHeader>
+              {/* Current Ranks */}
+              <Card className="bg-white shadow-sm border border-gray-100">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-blue-600" />
+                    Current Rankings
+                  </CardTitle>
+                </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -382,6 +388,7 @@ export default function LiveRank() {
         )}
           </div>
         </div>
+      </div>
     </Layout>
   );
 }

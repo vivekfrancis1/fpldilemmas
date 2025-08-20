@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Trophy, TrendingUp, BarChart3, Search, Target, Crown, Medal, Star, Activity } from "lucide-react";
-import Header from "../components/header";
-import Footer from "../components/footer";
+import Layout from "../components/layout";
 
 interface LeagueData {
   id: number;
@@ -114,18 +113,21 @@ export default function LeagueComparison() {
   const metrics = analyzedLeague ? getPerformanceMetrics(analyzedLeague.standings) : null;
 
   return (
-    <div className="min-h-screen bg-fpl-light">
-      <Header />
-      
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-page-title">
-            League Player Analysis
-          </h1>
-          <p className="text-muted-foreground" data-testid="text-page-description">
-            Analyze player performance and compare managers within a single FPL mini-league
-          </p>
-        </div>
+    <Layout>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50/30">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+          {/* Header Section */}
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+              <Users className="h-8 w-8 text-blue-600" />
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4" data-testid="text-page-title">
+              League Analysis
+            </h1>
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed" data-testid="text-page-description">
+              Analyze player performance and compare managers within a single FPL mini-league
+            </p>
+          </div>
 
         {/* League Input Section */}
         <Card className="mb-8">
@@ -395,9 +397,8 @@ export default function LeagueComparison() {
             </CardContent>
           </Card>
         )}
-      </main>
-
-      <Footer />
-    </div>
+        </div>
+      </div>
+    </Layout>
   );
 }
