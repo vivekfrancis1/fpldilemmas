@@ -29,16 +29,34 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    let url: string;
+    if (Array.isArray(queryKey) && queryKey.length > 1) {
+      // Handle parameterized URLs like ["/api/players/historical", "2023/24"]
+      const [baseUrl, ...params] = queryKey;
+      if (params.length > 0) {
+        url = `${baseUrl}/${params.map(p => encodeURIComponent(p as string)).join('/')}`;
+      } else {
+        url = baseUrl as string;
+      }
+    } else {
+      url = queryKey.join("/") as string;
+    }
+    
+    console.log("Fetching URL:", url);
+    const res = await fetch(url, {
       credentials: "include",
     });
+    
+    console.log("Response status:", res.status, "headers:", Object.fromEntries(res.headers));
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    const data = await res.json();
+    console.log("Query response for", url, "- data length:", Array.isArray(data) ? data.length : 'not array', typeof data);
+    return data;
   };
 
 export const queryClient = new QueryClient({

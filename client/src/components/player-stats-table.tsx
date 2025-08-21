@@ -33,14 +33,22 @@ export default function PlayerStatsTable({
     // Use historical data if available, otherwise use current season data
     let players: any[] = [];
     
-    if (historicalData && historicalData.length > 0) {
-      console.log(`Using historical data: ${historicalData.length} players`);
+    console.log("Data check - historicalData:", !!historicalData, historicalData?.length, "data:", !!data);
+    
+    if (historicalData && Array.isArray(historicalData) && historicalData.length > 0) {
+      console.log(`✓ Using historical data: ${historicalData.length} players`);
       players = [...historicalData];
-    } else if (data && data.elements) {
-      console.log(`Using current data: ${data.elements.length} players`);
+    } else if (data && data.elements && Array.isArray(data.elements)) {
+      console.log(`✓ Using current data: ${data.elements.length} players`);
       players = [...data.elements];
     } else {
-      console.log("No data available - historicalData:", !!historicalData, historicalData?.length, "data:", !!data);
+      console.log("❌ No valid data available");
+      console.log("Historical data details:", {
+        exists: !!historicalData,
+        isArray: Array.isArray(historicalData),
+        length: historicalData?.length,
+        sample: historicalData?.slice(0, 1)
+      });
       return [];
     }
 
@@ -212,6 +220,8 @@ export default function PlayerStatsTable({
     return null;
   };
 
+  console.log("Table render - isLoading:", isLoading, "players count:", filteredAndSortedPlayers.length);
+  
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
