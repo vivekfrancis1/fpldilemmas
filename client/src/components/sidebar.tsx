@@ -31,8 +31,13 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Most Popular",
       items: [
         { path: "/", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: true },
-        { path: "/live-rank", label: "Live Rank", icon: TrendingUp, description: "Real-time FPL rank", popular: true },
         { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: true }
+      ]
+    },
+    {
+      section: "My FPL",
+      items: [
+        { path: "/live-rank", label: "My Live Rank", icon: TrendingUp, description: "Real-time FPL rank", popular: false }
       ]
     },
     {
