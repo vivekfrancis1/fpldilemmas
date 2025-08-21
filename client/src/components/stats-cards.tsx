@@ -13,14 +13,26 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
     const players = data.elements;
     const totalPlayers = players.length;
     const avgPrice = (players.reduce((sum, p) => sum + p.now_cost, 0) / totalPlayers / 10).toFixed(1);
-    const mostOwned = Math.max(...players.map(p => parseFloat(p.selected_by_percent))).toFixed(1);
-    const bestValue = Math.max(...players.map(p => parseFloat(p.value_season) || 0)).toFixed(1);
+    
+    // Find most owned player
+    const mostOwnedPlayer = players.reduce((max, player) => 
+      parseFloat(player.selected_by_percent) > parseFloat(max.selected_by_percent) ? player : max
+    );
+    const mostOwnedPercent = parseFloat(mostOwnedPlayer.selected_by_percent).toFixed(1);
+    
+    // Find best value player
+    const bestValuePlayer = players.reduce((max, player) => 
+      (parseFloat(player.value_season) || 0) > (parseFloat(max.value_season) || 0) ? player : max
+    );
+    const bestValueScore = (parseFloat(bestValuePlayer.value_season) || 0).toFixed(1);
     
     return {
       totalPlayers,
       avgPrice: `£${avgPrice}m`,
-      mostOwned: `${mostOwned}%`,
-      bestValue: `${bestValue} pts/£m`
+      mostOwned: `${mostOwnedPercent}%`,
+      bestValue: `${bestValueScore} pts/£m`,
+      mostOwnedPlayer: `${mostOwnedPlayer.first_name} ${mostOwnedPlayer.second_name}`,
+      bestValuePlayer: `${bestValuePlayer.first_name} ${bestValuePlayer.second_name}`
     };
   };
 
@@ -77,6 +89,7 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
           <div>
             <p className="text-sm text-gray-600 mb-1" data-testid="text-most-owned-label">Most Owned</p>
             <p className="text-2xl font-bold text-gray-900" data-testid="text-most-owned-value">{stats.mostOwned}</p>
+            <p className="text-xs text-gray-500 mt-1" data-testid="text-most-owned-player">{stats.mostOwnedPlayer}</p>
           </div>
           <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center">
             <Star className="text-fpl-pink h-6 w-6" />
@@ -89,6 +102,7 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
           <div>
             <p className="text-sm text-gray-600 mb-1" data-testid="text-best-value-label">Best Value</p>
             <p className="text-2xl font-bold text-gray-900" data-testid="text-best-value-value">{stats.bestValue}</p>
+            <p className="text-xs text-gray-500 mt-1" data-testid="text-best-value-player">{stats.bestValuePlayer}</p>
           </div>
           <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
             <TrendingUp className="text-orange-500 h-6 w-6" />

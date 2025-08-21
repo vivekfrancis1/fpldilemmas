@@ -26,4 +26,6 @@ export interface StatsData {
   avgPrice: string;
   mostOwned: string;
   bestValue: string;
+  mostOwnedPlayer: string;
+  bestValuePlayer: string;
 }
