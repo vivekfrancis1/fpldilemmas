@@ -17,28 +17,6 @@ import Layout from "./components/layout";
 import { useAuth } from "./hooks/useAuth";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-fpl-purple mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <Switch>
-        <Route path="/login" component={Login} />
-        <Route component={Login} />
-      </Switch>
-    );
-  }
-
   return (
     <Layout>
       <Switch>
@@ -51,6 +29,7 @@ function Router() {
         <Route path="/price-tracker" component={PriceTracker} />
         <Route path="/league-comparison" component={LeagueComparison} />
         <Route path="/player-stats" component={PlayerStats} />
+        <Route path="/login" component={Login} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

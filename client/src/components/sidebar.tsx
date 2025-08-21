@@ -141,17 +141,16 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
         {/* User Actions */}
         <div className="mt-auto p-4">
-          <Button
-            onClick={() => {
-              window.location.href = '/api/logout';
-            }}
-            variant="ghost"
-            className="w-full text-purple-100 hover:bg-white/10 hover:text-white flex items-center gap-2"
-            data-testid="button-logout"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
+          <Link href="/login">
+            <Button
+              variant="ghost"
+              className="w-full text-purple-100 hover:bg-white/10 hover:text-white flex items-center gap-2"
+              data-testid="button-login"
+            >
+              <LogOut className="h-4 w-4" />
+              Login
+            </Button>
+          </Link>
         </div>
 
         {/* Footer */}

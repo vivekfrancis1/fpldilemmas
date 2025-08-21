@@ -11,7 +11,7 @@ Site tagline: "Analytical tools to beat the deadline blues" (updated December 20
 Navigation priority: Player Statistics as default landing page, with side navigation for all tools (updated December 2024)
 Most popular tools: Player Statistics, Live Rank, and Price Tracker (updated December 2024)
 Historical data: Added year selection functionality for player statistics from 2016/17 season onwards with full data coverage of 300-400+ players per season (fully functional August 2025)
-Authentication: Google OAuth login preferred over email+OTP for simplicity (January 2025)
+Authentication: Google OAuth available but app is publicly accessible (January 2025)
 
 ## System Architecture
 
