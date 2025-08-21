@@ -49,16 +49,16 @@ export function Sidebar() {
             return (
               <li key={item.name}>
                 <Link href={item.href}>
-                  <a
+                  <span
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer",
                       isActive && "bg-accent text-accent-foreground font-medium"
                     )}
                     data-testid={`nav-link-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                   >
                     <Icon className="h-4 w-4" />
                     {item.name}
-                  </a>
+                  </span>
                 </Link>
               </li>
             );
