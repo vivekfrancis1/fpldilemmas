@@ -5,8 +5,6 @@ import { FilterState, SortState, SortableField } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface PlayerStatsTableProps {
   data?: BootstrapData;
@@ -235,411 +233,121 @@ export default function PlayerStatsTable({
         </div>
       </div>
 
-      {/* Comprehensive Stats Tabs */}
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 bg-gray-50">
-          <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
-          <TabsTrigger value="attacking" data-testid="tab-attacking">Attacking</TabsTrigger>
-          <TabsTrigger value="defending" data-testid="tab-defending">Defending</TabsTrigger>
-          <TabsTrigger value="transfers" data-testid="tab-transfers">Transfers</TabsTrigger>
-          <TabsTrigger value="advanced" data-testid="tab-advanced">Advanced</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab - Key metrics */}
-        <TabsContent value="overview" className="mt-0">
-          <ScrollArea className="w-full h-[600px]">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1200px]">
-                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left">
-                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Player</div>
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="total_points" label="Total Pts" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="minutes" label="Minutes" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="form" label="Form" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="points_per_game" label="PPG" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="selected_by_percent" label="Owned %" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="now_cost" label="Price" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="value_form" label="Value (F)" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="value_season" label="Value (S)" />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedPlayers.map((player) => {
-                    const position = getPositionName(player.element_type);
-                    const teamName = getTeamName(player.team);
-                    
-                    return (
-                      <tr key={player.id} className="hover:bg-gray-50 transition-colors" data-testid={`row-player-${player.id}`}>
-                        <td className="px-4 py-4 whitespace-nowrap min-w-[200px]">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-8 w-8">
-                              <div className="h-8 w-8 rounded-full bg-fpl-purple flex items-center justify-center text-white font-semibold text-xs">
-                                {player.first_name[0]}{player.second_name[0]}
-                              </div>
-                            </div>
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">{player.web_name}</div>
-                              <div className="text-xs text-gray-500">
-                                <Badge variant="outline" className={`mr-1 ${getPositionColor(position)}`}>
-                                  {position}
-                                </Badge>
-                                {teamName}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-2 py-4 text-center text-sm font-bold text-gray-900">{player.total_points}</td>
-                        <td className="px-2 py-4 text-center text-sm text-gray-900">{player.minutes}</td>
-                        <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.form, 'decimal')}</td>
-                        <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.points_per_game, 'decimal')}</td>
-                        <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.selected_by_percent, 'percent')}</td>
-                        <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">
-                          <div className="flex items-center justify-center">
-                            {formatPrice(player.now_cost)}
-                            {getPriceChangeIcon(player.cost_change_event)}
-                          </div>
-                        </td>
-                        <td className="px-2 py-4 text-center text-sm text-fpl-green font-medium">{formatValue(player.value_form, 'decimal')}</td>
-                        <td className="px-2 py-4 text-center text-sm text-fpl-green font-medium">{formatValue(player.value_season, 'decimal')}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </ScrollArea>
-        </TabsContent>
-
-        {/* Attacking Tab - Goals, assists, attacking stats */}
-        <TabsContent value="attacking" className="mt-0">
-          <ScrollArea className="w-full h-[600px]">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1000px]">
-                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left">
-                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Player</div>
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="goals_scored" label="Goals" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="assists" label="Assists" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="bonus" label="Bonus" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="bps" label="BPS" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="creativity" label="Creativity" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="threat" label="Threat" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="influence" label="Influence" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="ict_index" label="ICT" />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedPlayers.map((player) => {
-                    const position = getPositionName(player.element_type);
-                    const teamName = getTeamName(player.team);
-                    
-                    return (
-                      <tr key={player.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-4 whitespace-nowrap min-w-[200px]">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-8 w-8">
-                              <div className="h-8 w-8 rounded-full bg-fpl-purple flex items-center justify-center text-white font-semibold text-xs">
-                                {player.first_name[0]}{player.second_name[0]}
-                              </div>
-                            </div>
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">{player.web_name}</div>
-                              <div className="text-xs text-gray-500">
-                                <Badge variant="outline" className={`mr-1 ${getPositionColor(position)}`}>
-                                  {position}
-                                </Badge>
-                                {teamName}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-2 py-4 text-center text-sm font-bold text-green-600">{player.goals_scored}</td>
-                        <td className="px-2 py-4 text-center text-sm font-bold text-blue-600">{player.assists}</td>
-                        <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bonus}</td>
-                        <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bps}</td>
-                        <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.creativity, 'decimal')}</td>
-                        <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.threat, 'decimal')}</td>
-                        <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.influence, 'decimal')}</td>
-                        <td className="px-2 py-4 text-center text-sm font-medium text-fpl-purple">{formatValue(player.ict_index, 'decimal')}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </ScrollArea>
-        </TabsContent>
-
-        {/* Defending Tab - Clean sheets, goals conceded, defensive stats */}
-        <TabsContent value="defending" className="mt-0">
-          <ScrollArea className="w-full h-[600px]">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1000px]">
-                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left">
-                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Player</div>
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="clean_sheets" label="Clean Sheets" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="goals_conceded" label="Goals Conceded" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="saves" label="Saves" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="penalties_saved" label="Pen Saved" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="penalties_missed" label="Pen Missed" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="yellow_cards" label="Yellow Cards" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="red_cards" label="Red Cards" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="own_goals" label="Own Goals" />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedPlayers.map((player) => {
-                    const position = getPositionName(player.element_type);
-                    const teamName = getTeamName(player.team);
-                    
-                    return (
-                      <tr key={player.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-4 whitespace-nowrap min-w-[200px]">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-8 w-8">
-                              <div className="h-8 w-8 rounded-full bg-fpl-purple flex items-center justify-center text-white font-semibold text-xs">
-                                {player.first_name[0]}{player.second_name[0]}
-                              </div>
-                            </div>
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">{player.web_name}</div>
-                              <div className="text-xs text-gray-500">
-                                <Badge variant="outline" className={`mr-1 ${getPositionColor(position)}`}>
-                                  {position}
-                                </Badge>
-                                {teamName}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-2 py-4 text-center text-sm font-bold text-green-600">{player.clean_sheets}</td>
-                        <td className="px-2 py-4 text-center text-sm font-bold text-red-600">{player.goals_conceded}</td>
-                        <td className="px-2 py-4 text-center text-sm text-gray-900">{player.saves}</td>
-                        <td className="px-2 py-4 text-center text-sm text-green-600">{player.penalties_saved}</td>
-                        <td className="px-2 py-4 text-center text-sm text-red-600">{player.penalties_missed}</td>
-                        <td className="px-2 py-4 text-center text-sm text-yellow-600">{player.yellow_cards}</td>
-                        <td className="px-2 py-4 text-center text-sm text-red-600">{player.red_cards}</td>
-                        <td className="px-2 py-4 text-center text-sm text-red-600">{player.own_goals}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </ScrollArea>
-        </TabsContent>
-
-        {/* Transfers Tab - Transfer stats */}
-        <TabsContent value="transfers" className="mt-0">
-          <ScrollArea className="w-full h-[600px]">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
-                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left">
-                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Player</div>
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[100px]">
-                      <SortableHeader field="transfers_in" label="Total In" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[100px]">
-                      <SortableHeader field="transfers_out" label="Total Out" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[100px]">
-                      <SortableHeader field="transfers_in_event" label="GW In" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[100px]">
-                      <SortableHeader field="transfers_out_event" label="GW Out" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[100px]">
-                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Net GW</div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedPlayers.map((player) => {
-                    const position = getPositionName(player.element_type);
-                    const teamName = getTeamName(player.team);
-                    const netTransfers = player.transfers_in_event - player.transfers_out_event;
-                    
-                    return (
-                      <tr key={player.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-4 whitespace-nowrap min-w-[200px]">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-8 w-8">
-                              <div className="h-8 w-8 rounded-full bg-fpl-purple flex items-center justify-center text-white font-semibold text-xs">
-                                {player.first_name[0]}{player.second_name[0]}
-                              </div>
-                            </div>
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">{player.web_name}</div>
-                              <div className="text-xs text-gray-500">
-                                <Badge variant="outline" className={`mr-1 ${getPositionColor(position)}`}>
-                                  {position}
-                                </Badge>
-                                {teamName}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-2 py-4 text-center text-sm text-green-600">{player.transfers_in.toLocaleString()}</td>
-                        <td className="px-2 py-4 text-center text-sm text-red-600">{player.transfers_out.toLocaleString()}</td>
-                        <td className="px-2 py-4 text-center text-sm text-green-600">{player.transfers_in_event.toLocaleString()}</td>
-                        <td className="px-2 py-4 text-center text-sm text-red-600">{player.transfers_out_event.toLocaleString()}</td>
-                        <td className="px-2 py-4 text-center text-sm font-bold">
-                          <span className={netTransfers > 0 ? 'text-green-600' : netTransfers < 0 ? 'text-red-600' : 'text-gray-900'}>
-                            {netTransfers > 0 ? '+' : ''}{netTransfers.toLocaleString()}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </ScrollArea>
-        </TabsContent>
-
-        {/* Advanced Tab - Dream team, event points, etc */}
-        <TabsContent value="advanced" className="mt-0">
-          <ScrollArea className="w-full h-[600px]">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
-                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left">
-                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Player</div>
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="event_points" label="GW Pts" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <SortableHeader field="dreamteam_count" label="Dreamteam" />
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[80px]">
-                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Status</div>
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[100px]">
-                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Availability</div>
-                    </th>
-                    <th className="px-2 py-3 text-center min-w-[100px]">
-                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">News</div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedPlayers.map((player) => {
-                    const position = getPositionName(player.element_type);
-                    const teamName = getTeamName(player.team);
-                    
-                    return (
-                      <tr key={player.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-4 whitespace-nowrap min-w-[200px]">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-8 w-8">
-                              <div className="h-8 w-8 rounded-full bg-fpl-purple flex items-center justify-center text-white font-semibold text-xs">
-                                {player.first_name[0]}{player.second_name[0]}
-                              </div>
-                            </div>
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">{player.web_name}</div>
-                              <div className="text-xs text-gray-500">
-                                <Badge variant="outline" className={`mr-1 ${getPositionColor(position)}`}>
-                                  {position}
-                                </Badge>
-                                {teamName}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{player.event_points}</td>
-                        <td className="px-2 py-4 text-center text-sm text-yellow-600">{player.dreamteam_count}</td>
-                        <td className="px-2 py-4 text-center text-sm">
-                          <Badge variant={player.status === "a" ? "default" : player.status === "d" ? "secondary" : "destructive"}>
-                            {player.status === "a" ? "Available" : player.status === "d" ? "Doubtful" : "Unavailable"}
+      {/* Comprehensive Player Statistics Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1600px]">
+          <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+            <tr>
+              <th className="px-4 py-3 text-left min-w-[200px]">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Player</div>
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="total_points" label="Total Pts" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="minutes" label="Minutes" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="goals_scored" label="Goals" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="assists" label="Assists" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="clean_sheets" label="CS" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="goals_conceded" label="GC" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="saves" label="Saves" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="bonus" label="Bonus" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="bps" label="BPS" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="transfers_in_event" label="Trans In" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="transfers_out_event" label="Trans Out" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="form" label="Form" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="points_per_game" label="PPG" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="selected_by_percent" label="Own%" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="now_cost" label="Price" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="value_season" label="Value" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="ict_index" label="ICT" />
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {paginatedPlayers.map((player) => {
+              const position = getPositionName(player.element_type);
+              const teamName = getTeamName(player.team);
+              const netTransfers = player.transfers_in_event - player.transfers_out_event;
+              
+              return (
+                <tr key={player.id} className="hover:bg-gray-50 transition-colors" data-testid={`row-player-${player.id}`}>
+                  <td className="px-4 py-4 whitespace-nowrap min-w-[200px]">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-8 w-8">
+                        <div className="h-8 w-8 rounded-full bg-fpl-purple flex items-center justify-center text-white font-semibold text-xs">
+                          {player.first_name[0]}{player.second_name[0]}
+                        </div>
+                      </div>
+                      <div className="ml-3">
+                        <div className="text-sm font-medium text-gray-900">{player.web_name}</div>
+                        <div className="text-xs text-gray-500">
+                          <Badge variant="outline" className={`mr-1 ${getPositionColor(position)}`}>
+                            {position}
                           </Badge>
-                        </td>
-                        <td className="px-2 py-4 text-center text-xs">
-                          {player.chance_of_playing_this_round !== null && (
-                            <div className="text-gray-600">
-                              {player.chance_of_playing_this_round}% this GW
-                            </div>
-                          )}
-                          {player.chance_of_playing_next_round !== null && (
-                            <div className="text-gray-600">
-                              {player.chance_of_playing_next_round}% next GW
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-2 py-4 text-center text-xs text-gray-600 max-w-[150px]">
-                          <div className="truncate" title={player.news || "No news"}>
-                            {player.news || "-"}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
+                          {teamName}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{player.total_points}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.minutes}</td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-green-600">{player.goals_scored}</td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-blue-600">{player.assists}</td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-green-600">{player.clean_sheets}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.goals_conceded}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.saves}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bonus}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bps}</td>
+                  <td className="px-2 py-4 text-center text-sm text-green-600">{player.transfers_in_event.toLocaleString()}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.transfers_out_event.toLocaleString()}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.form, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.points_per_game, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.selected_by_percent, 'decimal')}%</td>
+                  <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">
+                    <div className="flex items-center justify-center">
+                      {formatPrice(player.now_cost)}
+                      {getPriceChangeIcon(player.cost_change_event)}
+                    </div>
+                  </td>
+                  <td className="px-2 py-4 text-center text-sm text-fpl-green font-medium">{formatValue(player.value_season, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm font-medium text-fpl-purple">{formatValue(player.ict_index, 'decimal')}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {/* Table Footer with Pagination */}
       <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
