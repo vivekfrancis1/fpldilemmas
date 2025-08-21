@@ -106,6 +106,12 @@ export default function MyTeam() {
     enabled: !!searchedId,
   });
 
+  // Get fixtures for teams
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    enabled: !!bootstrapData && !!teamData,
+  });
+
   const handleSearch = () => {
     if (managerId.trim()) {
       const trimmedId = managerId.trim();
@@ -129,9 +135,64 @@ export default function MyTeam() {
     return position?.singular_name || "Unknown";
   };
 
+  const getTeamById = (teamId: number) => {
+    return bootstrapData?.teams.find(t => t.id === teamId);
+  };
+
   const getTeamName = (player: Player): string => {
     const team = bootstrapData?.teams.find(t => t.id === player.team_name as any);
     return team?.short_name || player.team_name;
+  };
+
+  const getPlayerTeam = (player: Player) => {
+    return bootstrapData?.teams.find(t => t.id === player.team_name as any);
+  };
+
+  const getNextFixtures = (teamId: number, count: number = 5) => {
+    if (!fixturesData || !Array.isArray(fixturesData)) return [];
+    
+    return fixturesData
+      .filter((fixture: any) => 
+        (fixture.team_h === teamId || fixture.team_a === teamId) && 
+        !fixture.finished &&
+        fixture.event > getCurrentGameweek()
+      )
+      .slice(0, count)
+      .map((fixture: any) => {
+        const isHome = fixture.team_h === teamId;
+        const opponentId = isHome ? fixture.team_a : fixture.team_h;
+        const opponent = getTeamById(opponentId);
+        const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+        
+        return {
+          opponent: opponent?.short_name || 'TBD',
+          isHome,
+          difficulty,
+          gameweek: fixture.event
+        };
+      });
+  };
+
+  const getDifficultyColor = (difficulty: number): string => {
+    switch (difficulty) {
+      case 1: return 'bg-green-500';
+      case 2: return 'bg-green-400';
+      case 3: return 'bg-yellow-400';
+      case 4: return 'bg-orange-400';
+      case 5: return 'bg-red-500';
+      default: return 'bg-gray-400';
+    }
+  };
+
+  const getDifficultyTextColor = (difficulty: number): string => {
+    switch (difficulty) {
+      case 1: return 'text-green-700';
+      case 2: return 'text-green-600';
+      case 3: return 'text-yellow-700';
+      case 4: return 'text-orange-700';
+      case 5: return 'text-red-700';
+      default: return 'text-gray-700';
+    }
   };
 
   const getCurrentGameweek = (): number => {
@@ -351,6 +412,28 @@ export default function MyTeam() {
               </div>
             )}
 
+            {/* Legend */}
+            {teamData && (
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-blue-900 mb-2">Fixture Difficulty Legend:</h4>
+                    <div className="flex gap-2 items-center">
+                      {[1, 2, 3, 4, 5].map(diff => (
+                        <div key={diff} className="flex items-center gap-1">
+                          <div className={`w-3 h-3 rounded ${getDifficultyColor(diff)}`}></div>
+                          <span className="text-xs font-medium text-gray-700">{diff}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    Each fixture shows opponent team (H for Home, A for Away) with difficulty rating from 1 (easiest) to 5 (hardest)
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Starting XI */}
             {teamData && (
               <div className="grid gap-6 lg:grid-cols-2">
@@ -417,14 +500,41 @@ export default function MyTeam() {
                                           <Badge variant="outline" className="border-blue-300 text-blue-700 text-xs px-2 py-1">VC</Badge>
                                         )}
                                       </div>
-                                      <div className="text-sm text-gray-600 mt-1">
-                                        {getTeamName(player)} • Form: {player.form}
+                                      <div className="space-y-2 mt-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-medium text-gray-700">{getTeamName(player)}</span>
+                                          <span className="text-xs text-gray-500">Form: {player.form}</span>
+                                        </div>
+                                        
+                                        {/* Next 5 fixtures */}
+                                        <div className="space-y-1">
+                                          <div className="text-xs font-medium text-gray-600">Next 5 fixtures:</div>
+                                          <div className="flex gap-1">
+                                            {getNextFixtures(getPlayerTeam(player)?.id || 0, 5).map((fixture, idx) => (
+                                              <div 
+                                                key={idx}
+                                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} text-white`}
+                                                title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
+                                              >
+                                                <span>{fixture.opponent}</span>
+                                                <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
+                                              </div>
+                                            ))}
+                                            {getNextFixtures(getPlayerTeam(player)?.id || 0, 5).length === 0 && (
+                                              <span className="text-xs text-gray-400">No upcoming fixtures</span>
+                                            )}
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="text-right">
+                                  <div className="text-right space-y-1">
                                     <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
                                     <p className="text-sm text-gray-600">{player.total_points} pts</p>
+                                    <div className="text-xs text-gray-500">
+                                      <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                                      <div>PPG: {((player.total_points / Math.max(parseInt(player.form) || 1, 1)) || 0).toFixed(1)}</div>
+                                    </div>
                                   </div>
                                 </div>
                               );
@@ -471,14 +581,41 @@ export default function MyTeam() {
                                   <span className="font-semibold text-gray-800">{player.web_name}</span>
                                   <Badge variant="outline" className="text-xs px-2 py-1">{getPositionName(player.element_type)}</Badge>
                                 </div>
-                                <div className="text-sm text-gray-600 mt-1">
-                                  {getTeamName(player)} • Form: {player.form}
+                                <div className="space-y-2 mt-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-gray-700">{getTeamName(player)}</span>
+                                    <span className="text-xs text-gray-500">Form: {player.form}</span>
+                                  </div>
+                                  
+                                  {/* Next 5 fixtures */}
+                                  <div className="space-y-1">
+                                    <div className="text-xs font-medium text-gray-600">Next 5 fixtures:</div>
+                                    <div className="flex gap-1 flex-wrap">
+                                      {getNextFixtures(getPlayerTeam(player)?.id || 0, 5).map((fixture, idx) => (
+                                        <div 
+                                          key={idx}
+                                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} text-white`}
+                                          title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
+                                        >
+                                          <span>{fixture.opponent}</span>
+                                          <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
+                                        </div>
+                                      ))}
+                                      {getNextFixtures(getPlayerTeam(player)?.id || 0, 5).length === 0 && (
+                                        <span className="text-xs text-gray-400">No upcoming fixtures</span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right space-y-1">
                               <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
                               <p className="text-sm text-gray-600">{player.total_points} pts</p>
+                              <div className="text-xs text-gray-500">
+                                <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                                <div>PPG: {((player.total_points / Math.max(parseInt(player.form) || 1, 1)) || 0).toFixed(1)}</div>
+                              </div>
                             </div>
                           </div>
                         );
