@@ -210,6 +210,15 @@ function MyLeagues() {
         const privateLeagues = leaguesData.leagues.classic.filter((league: any) => league.id > 1000);
         const publicLeagues = leaguesData.leagues.classic.filter((league: any) => league.id <= 1000);
         
+        // Sort public leagues: Overall first, then country leagues, then others
+        publicLeagues.sort((a: any, b: any) => {
+          if (a.name.toLowerCase().includes('overall')) return -1;
+          if (b.name.toLowerCase().includes('overall')) return 1;
+          if (a.name.toLowerCase().includes('india') || a.name.toLowerCase().includes('country')) return -1;
+          if (b.name.toLowerCase().includes('india') || b.name.toLowerCase().includes('country')) return 1;
+          return a.name.localeCompare(b.name);
+        });
+        
         return (
           <div className="space-y-6">
             {/* Private Leagues */}
@@ -287,7 +296,7 @@ function PublicLeagueCard({ league, managerId, managerName }: {
   });
 
   const userEntry = standingsData?.standings?.results?.find(
-    (entry) => entry.player_name === managerName || entry.entry === parseInt(managerId)
+    (entry) => entry.entry === parseInt(managerId)
   );
 
   const userRank = userEntry?.rank || 0;
