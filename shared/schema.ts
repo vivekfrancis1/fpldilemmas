@@ -1,12 +1,4 @@
 import { z } from "zod";
-import { sql } from 'drizzle-orm';
-import {
-  index,
-  jsonb,
-  pgTable,
-  timestamp,
-  varchar,
-} from "drizzle-orm/pg-core";
 
 export const playerSchema = z.object({
   id: z.number(),
@@ -167,32 +159,6 @@ export type ElementType = z.infer<typeof elementTypeSchema>;
 export type Fixture = z.infer<typeof fixtureSchema>;
 export type BootstrapData = z.infer<typeof bootstrapDataSchema>;
 export type PlayerSummary = z.infer<typeof playerSummarySchema>;
-
-// Session storage table for authentication
-export const sessions = pgTable(
-  "sessions",
-  {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
-  },
-  (table) => [index("IDX_session_expire").on(table.expire)],
-);
-
-// User storage table for social authentication
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey(),
-  email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
-  provider: varchar("provider"), // google, facebook, twitter, apple
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export type UpsertUser = typeof users.$inferInsert;
-export type User = typeof users.$inferSelect;
 
 // Re-export watchlist types
 export * from "./watchlist-schema";
