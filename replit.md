@@ -10,6 +10,7 @@ Preferred communication style: Simple, everyday language.
 Site tagline: "Analytical tools to beat the deadline blues" (updated December 2024)
 Navigation priority: Player Statistics as default landing page, with side navigation for all tools (updated December 2024)
 Manager ID caching: My Live Rank now automatically saves and pre-loads the last searched Manager ID for convenience (implemented January 2025)
+My Team section: Added comprehensive team display under My FPL showing formation, squad value, transfers, and detailed player lineup with enhanced UI design (January 2025)
 Most popular tools: Player Statistics, My Live Rank, and Price Tracker (updated December 2024)
 Historical data: Added year selection functionality for player statistics from 2016/17 season onwards with full data coverage of 300-400+ players per season (fully functional August 2025)
 
