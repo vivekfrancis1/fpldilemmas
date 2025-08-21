@@ -75,7 +75,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get historical player data aggregated by season
   app.get("/api/players/historical/:season", async (req, res) => {
     try {
-      const season = req.params.season;
+      const season = decodeURIComponent(req.params.season);
+      console.log(`Fetching historical data for season: ${season}`);
       
       // Get bootstrap data first to get all current players
       const bootstrapResponse = await fetch(`${FPL_BASE_URL}/bootstrap-static/`);
@@ -104,6 +105,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const playerData = await playerResponse.json();
             
             if (playerData.history_past && playerData.history_past.length > 0) {
+              // Log available seasons for debugging
+              if (player.id <= 5) { // Only log for first few players to avoid spam
+                console.log(`Player ${player.web_name} available seasons:`, 
+                  playerData.history_past.map((h: any) => h.season_name));
+              }
+              
               // Find data for the requested season
               const seasonData = playerData.history_past.find((h: any) => 
                 h.season_name === season
@@ -137,12 +144,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Add a small delay to avoid overwhelming the API
-          await new Promise(resolve => setTimeout(resolve, 50));
+          await new Promise(resolve => setTimeout(resolve, 100));
         } catch (playerError) {
           console.warn(`Failed to fetch data for player ${player.id}:`, playerError);
         }
       }
       
+      console.log(`Found ${historicalPlayers.length} players with ${season} data`);
       res.json(historicalPlayers);
     } catch (error) {
       console.error("Error fetching historical player data:", error);
@@ -156,17 +164,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available seasons
   app.get("/api/seasons", async (req, res) => {
     try {
-      // Return available seasons based on typical FPL seasons
+      // Return available seasons based on typical FPL seasons (excluding current)
       const currentYear = new Date().getFullYear();
       const seasons = [];
       
-      // Generate seasons from 2016/17 to current
-      for (let year = 2016; year < currentYear; year++) {
+      // Generate seasons from 2016/17 to current season (since 2025/26 is actually the 2024-25 season)
+      for (let year = 2016; year < currentYear - 1; year++) {
         seasons.push(`${year}/${(year + 1).toString().slice(-2)}`);
       }
-      
-      // Add current season
-      seasons.push(`${currentYear}/${(currentYear + 1).toString().slice(-2)}`);
       
       res.json(seasons.reverse()); // Most recent first
     } catch (error) {

@@ -10,6 +10,7 @@ Preferred communication style: Simple, everyday language.
 Site tagline: "Analytical tools to beat the deadline blues" (updated December 2024)
 Navigation priority: Player Statistics as default landing page, with side navigation for all tools (updated December 2024)
 Most popular tools: Player Statistics, Live Rank, and Price Tracker (updated December 2024)
+Historical data: Added year selection functionality for player statistics from 2016/17 season onwards (updated August 2025)
 
 ## System Architecture
 
@@ -40,7 +41,10 @@ Most popular tools: Player Statistics, Live Rank, and Price Tracker (updated Dec
 - **Key Endpoints**:
   - `/bootstrap-static/` - Complete player, team, and position data
   - `/element-summary/:playerId` - Individual player fixtures and history
+  - `/api/players/historical/:season` - Historical player statistics by season
+  - `/api/seasons` - Available historical seasons list
 - **Data Validation**: Zod schemas for type-safe API response parsing
+- **Historical Data**: Fetches previous seasons data from `history_past` field in player summaries
 - **Error Handling**: Comprehensive error handling with user-friendly error messages
 
 ### Type Safety & Validation

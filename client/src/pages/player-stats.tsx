@@ -40,7 +40,7 @@ export default function PlayerStats() {
 
   // Get historical season data
   const { data: historicalData, isLoading: historicalLoading, error: historicalError } = useQuery<any[]>({
-    queryKey: ["/api/players/historical", selectedSeason],
+    queryKey: [`/api/players/historical/${encodeURIComponent(selectedSeason)}`],
     staleTime: 30 * 60 * 1000, // 30 minutes
     enabled: selectedSeason !== "current",
   });
@@ -127,7 +127,7 @@ export default function PlayerStats() {
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4" data-testid="text-quick-stats-title">
                 Quick Stats Overview
               </h2>
-              <StatsCards data={selectedSeason === "current" ? bootstrapData : null} isLoading={isLoading} />
+              <StatsCards data={selectedSeason === "current" ? bootstrapData : undefined} isLoading={isLoading} />
             </div>
           </div>
 
@@ -137,8 +137,8 @@ export default function PlayerStats() {
               <FiltersPanel 
                 filters={filters}
                 setFilters={setFilters}
-                teams={bootstrapData?.teams}
-                elementTypes={bootstrapData?.element_types}
+                teams={selectedSeason === "current" ? bootstrapData?.teams : undefined}
+                elementTypes={selectedSeason === "current" ? bootstrapData?.element_types : undefined}
                 isLoading={isLoading}
                 isHistorical={selectedSeason !== "current"}
               />
@@ -148,8 +148,8 @@ export default function PlayerStats() {
           {/* Player Statistics Table */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <PlayerStatsTable 
-              data={selectedSeason === "current" ? bootstrapData : null}
-              historicalData={selectedSeason !== "current" ? historicalData : null}
+              data={selectedSeason === "current" ? bootstrapData : undefined}
+              historicalData={selectedSeason !== "current" ? historicalData : undefined}
               filters={filters}
               sort={sort}
               setSort={setSort}
