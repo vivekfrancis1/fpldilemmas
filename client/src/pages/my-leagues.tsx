@@ -102,24 +102,6 @@ export default function MyLeagues() {
     });
   };
 
-  const getPositionIcon = (rank: number) => {
-    if (rank === 1) return <Crown className="h-4 w-4 text-yellow-500" />;
-    if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />;
-    if (rank === 3) return <Award className="h-4 w-4 text-amber-600" />;
-    return null;
-  };
-
-  const getRankChange = (rank: number, lastRank: number) => {
-    if (lastRank === 0) return null;
-    const change = lastRank - rank;
-    if (change > 0) {
-      return <span className="text-green-600 text-xs">↑{change}</span>;
-    } else if (change < 0) {
-      return <span className="text-red-600 text-xs">↓{Math.abs(change)}</span>;
-    }
-    return <span className="text-gray-500 text-xs">-</span>;
-  };
-
   const getLeagueTypeDisplay = (leagueType: string) => {
     switch (leagueType) {
       case 'c': return 'Classic';
@@ -260,6 +242,24 @@ function LeagueCard({ league, managerId, managerName }: {
     queryKey: ["/api/league", league.id, "standings"],
     enabled: !!league.id,
   });
+
+  const getPositionIcon = (rank: number) => {
+    if (rank === 1) return <Crown className="h-4 w-4 text-yellow-500" />;
+    if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />;
+    if (rank === 3) return <Award className="h-4 w-4 text-amber-600" />;
+    return null;
+  };
+
+  const getRankChange = (rank: number, lastRank: number) => {
+    if (lastRank === 0) return null;
+    const change = lastRank - rank;
+    if (change > 0) {
+      return <span className="text-green-600 text-xs">↑{change}</span>;
+    } else if (change < 0) {
+      return <span className="text-red-600 text-xs">↓{Math.abs(change)}</span>;
+    }
+    return <span className="text-gray-500 text-xs">-</span>;
+  };
 
   const userEntry = standingsData?.standings.results.find(
     entry => entry.entry.toString() === managerId
