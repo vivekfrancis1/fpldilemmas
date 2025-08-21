@@ -16,6 +16,7 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
   const [selectedGameweeks, setSelectedGameweeks] = useState("5");
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [sortBy, setSortBy] = useState("easiest");
+  const [viewMode, setViewMode] = useState<"teams" | "gameweeks">("teams");
 
   const { data: fixtures, isLoading: fixturesLoading } = useQuery<Fixture[]>({
     queryKey: ["/api/fixtures"],
@@ -77,6 +78,50 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
       }
     });
   }, [filteredTeamFixtures, sortBy]);
+
+  // Gameweek-wise fixtures grouping
+  const gameweekFixtures = useMemo(() => {
+    if (!data || !fixtures) return [];
+
+    const upcomingFixtures = fixtures.filter(fixture => !fixture.finished);
+    const gameweekMap = new Map();
+
+    upcomingFixtures.forEach(fixture => {
+      const gameweek = fixture.event || 0;
+      if (gameweek === 0) return;
+
+      if (!gameweekMap.has(gameweek)) {
+        gameweekMap.set(gameweek, []);
+      }
+
+      const homeTeam = data.teams.find(t => t.id === fixture.team_h);
+      const awayTeam = data.teams.find(t => t.id === fixture.team_a);
+
+      if (homeTeam && awayTeam) {
+        gameweekMap.get(gameweek).push({
+          ...fixture,
+          homeTeam,
+          awayTeam,
+          gameweek
+        });
+      }
+    });
+
+    // Convert to array and sort by gameweek, limit to selected gameweeks
+    return Array.from(gameweekMap.entries())
+      .sort(([a], [b]) => a - b)
+      .slice(0, parseInt(selectedGameweeks))
+      .map(([gameweek, fixtures]) => ({
+        gameweek,
+        fixtures: fixtures.sort((a: any, b: any) => {
+          if (a.kickoff_time && b.kickoff_time) {
+            return new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime();
+          }
+          return 0;
+        }),
+        avgDifficulty: fixtures.reduce((sum: number, f: any) => sum + f.team_h_difficulty + f.team_a_difficulty, 0) / (fixtures.length * 2)
+      }));
+  }, [data, fixtures, selectedGameweeks]);
 
   const getDifficultyColor = (difficulty: number): string => {
     if (difficulty <= 2) return "bg-green-100 text-green-800";
@@ -160,6 +205,29 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
           </Badge>
         </div>
         
+        {/* View Mode Toggle */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">View Mode</label>
+          <div className="flex space-x-2">
+            <Button
+              variant={viewMode === "teams" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("teams")}
+              data-testid="button-teams-view"
+            >
+              By Teams
+            </Button>
+            <Button
+              variant={viewMode === "gameweeks" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("gameweeks")}
+              data-testid="button-gameweeks-view"
+            >
+              By Gameweeks
+            </Button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Gameweeks Selection */}
           <div>
@@ -218,8 +286,10 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
         </div>
       </div>
 
-      {/* Team Fixtures Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Conditional Rendering Based on View Mode */}
+      {viewMode === "teams" ? (
+        // Team Fixtures Grid
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sortedTeamFixtures.map((teamFixture) => (
           <div 
             key={teamFixture.team.id} 
@@ -296,9 +366,95 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
             )}
           </div>
         ))}
-      </div>
+        </div>
+      ) : (
+        // Gameweek Fixtures Grid
+        <div className="space-y-6">
+          {gameweekFixtures.map((gwFixtures) => (
+            <div 
+              key={gwFixtures.gameweek} 
+              className="bg-white rounded-lg shadow-md p-6"
+              data-testid={`card-gameweek-${gwFixtures.gameweek}`}
+            >
+              {/* Gameweek Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h4 className="text-xl font-bold text-gray-900" data-testid={`text-gameweek-${gwFixtures.gameweek}`}>
+                    Gameweek {gwFixtures.gameweek}
+                  </h4>
+                  <p className="text-sm text-gray-600">{gwFixtures.fixtures.length} fixtures</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {getAvgDifficultyIcon(gwFixtures.avgDifficulty)}
+                  <Badge 
+                    variant="outline" 
+                    className={getDifficultyColor(gwFixtures.avgDifficulty)}
+                    data-testid={`badge-gw-avg-difficulty-${gwFixtures.gameweek}`}
+                  >
+                    Avg: {gwFixtures.avgDifficulty.toFixed(1)}
+                  </Badge>
+                </div>
+              </div>
 
-      {sortedTeamFixtures.length === 0 && (
+              {/* Fixtures List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {gwFixtures.fixtures.map((fixture: any) => (
+                  <div 
+                    key={fixture.id} 
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                    data-testid={`fixture-gw-${fixture.id}`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="text-center min-w-[60px]">
+                        <div className="text-sm font-semibold text-gray-900">{fixture.homeTeam.short_name}</div>
+                        <div className="text-xs text-gray-500">Home</div>
+                      </div>
+                      <div className="text-gray-400 text-sm">vs</div>
+                      <div className="text-center min-w-[60px]">
+                        <div className="text-sm font-semibold text-gray-900">{fixture.awayTeam.short_name}</div>
+                        <div className="text-xs text-gray-500">Away</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge 
+                        variant="outline" 
+                        className={getDifficultyColor(fixture.team_h_difficulty)}
+                        data-testid={`badge-home-difficulty-${fixture.id}`}
+                      >
+                        H:{fixture.team_h_difficulty}
+                      </Badge>
+                      <Badge 
+                        variant="outline" 
+                        className={getDifficultyColor(fixture.team_a_difficulty)}
+                        data-testid={`badge-away-difficulty-${fixture.id}`}
+                      >
+                        A:{fixture.team_a_difficulty}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Kickoff Times (if available) */}
+              {gwFixtures.fixtures[0]?.kickoff_time && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <p className="text-xs text-gray-500">
+                    First fixture: {new Date(gwFixtures.fixtures[0].kickoff_time).toLocaleDateString('en-GB', {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(viewMode === "teams" ? sortedTeamFixtures.length === 0 : gameweekFixtures.length === 0) && (
         <div className="text-center py-12" data-testid="text-no-data">
           <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-400" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No fixture data available</h3>
