@@ -241,5 +241,5 @@ export class FplClient {
   }
 }
 
-// Singleton instance
+// Create and export a singleton instance
 export const fplClient = new FplClient();
