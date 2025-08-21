@@ -308,6 +308,9 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
             <CardTitle className="flex items-center gap-2">
               {getPositionIcon(userRank)}
               <span className="truncate">{league.name}</span>
+              <Badge variant="outline" className="text-xs font-mono">
+                #{league.id}
+              </Badge>
               <Badge variant="secondary" className="text-xs">
                 {getLeagueTypeDisplay(league.league_type)}
               </Badge>
