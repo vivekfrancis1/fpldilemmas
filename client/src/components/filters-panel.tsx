@@ -12,6 +12,7 @@ interface FiltersPanelProps {
   teams?: Team[];
   elementTypes?: ElementType[];
   isLoading: boolean;
+  isHistorical?: boolean;
 }
 
 export default function FiltersPanel({ 
@@ -19,7 +20,8 @@ export default function FiltersPanel({
   setFilters, 
   teams, 
   elementTypes, 
-  isLoading 
+  isLoading,
+  isHistorical = false
 }: FiltersPanelProps) {
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     setFilters({ ...filters, [key]: value });

@@ -8,27 +8,38 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface PlayerStatsTableProps {
   data?: BootstrapData;
+  historicalData?: any[];
   filters: FilterState;
   sort: SortState;
   setSort: (sort: SortState) => void;
   isLoading: boolean;
+  season?: string;
 }
 
 const ITEMS_PER_PAGE = 20;
 
 export default function PlayerStatsTable({ 
   data, 
+  historicalData,
   filters, 
   sort, 
   setSort, 
-  isLoading 
+  isLoading,
+  season 
 }: PlayerStatsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredAndSortedPlayers = useMemo(() => {
-    if (!data) return [];
-
-    let players = [...data.elements];
+    // Use historical data if available, otherwise use current season data
+    let players: any[] = [];
+    
+    if (historicalData) {
+      players = [...historicalData];
+    } else if (data) {
+      players = [...data.elements];
+    } else {
+      return [];
+    }
 
     // Apply filters
     if (filters.search) {
@@ -40,16 +51,20 @@ export default function PlayerStatsTable({
     }
 
     if (filters.position && filters.position !== "all") {
-      players = players.filter(player => player.element_type.toString() === filters.position);
+      players = players.filter(player => player.element_type?.toString() === filters.position);
     }
 
     if (filters.team && filters.team !== "all") {
-      players = players.filter(player => player.team.toString() === filters.team);
+      // For historical data, use team_id, for current data use team
+      const teamId = filters.team;
+      players = players.filter(player => 
+        player.team?.toString() === teamId || player.team_id?.toString() === teamId
+      );
     }
 
     if (filters.maxPrice && filters.maxPrice !== "all") {
       const maxPrice = parseInt(filters.maxPrice);
-      players = players.filter(player => player.now_cost <= maxPrice);
+      players = players.filter(player => (player.now_cost || player.end_cost) <= maxPrice);
     }
 
     // Apply sorting with comprehensive field support

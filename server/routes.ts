@@ -72,6 +72,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get historical player data aggregated by season
+  app.get("/api/players/historical/:season", async (req, res) => {
+    try {
+      const season = req.params.season;
+      
+      // Get bootstrap data first to get all current players
+      const bootstrapResponse = await fetch(`${FPL_BASE_URL}/bootstrap-static/`);
+      if (!bootstrapResponse.ok) {
+        throw new Error(`FPL API responded with status: ${bootstrapResponse.status}`);
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const players = bootstrapData.elements;
+      const teams = bootstrapData.teams;
+      const elementTypes = bootstrapData.element_types;
+      
+      // Create team and position lookup maps
+      const teamMap = new Map(teams.map((t: any) => [t.id, t]));
+      const positionMap = new Map(elementTypes.map((et: any) => [et.id, et]));
+      
+      const historicalPlayers = [];
+      
+      // Fetch historical data for each player (limiting to first 100 for better coverage)
+      const playerSubset = players.slice(0, 100);
+      
+      for (const player of playerSubset) {
+        try {
+          const playerResponse = await fetch(`${FPL_BASE_URL}/element-summary/${player.id}/`);
+          if (playerResponse.ok) {
+            const playerData = await playerResponse.json();
+            
+            if (playerData.history_past && playerData.history_past.length > 0) {
+              // Find data for the requested season
+              const seasonData = playerData.history_past.find((h: any) => 
+                h.season_name === season
+              );
+              
+              if (seasonData) {
+                const team = teamMap.get(player.team) as any;
+                const position = positionMap.get(player.element_type) as any;
+                
+                historicalPlayers.push({
+                  ...seasonData,
+                  id: player.id,
+                  first_name: player.first_name,
+                  second_name: player.second_name,
+                  web_name: player.web_name,
+                  team_name: team?.name || 'Unknown',
+                  team_short_name: team?.short_name || 'UNK',
+                  position: position?.singular_name || 'Unknown',
+                  element_type: player.element_type,
+                  team_id: player.team,
+                  // Convert string values to numbers for calculations
+                  now_cost: seasonData.end_cost,
+                  form: (seasonData.total_points / 38).toFixed(1), // Average points per game approximation
+                  points_per_game: (seasonData.total_points / Math.max(seasonData.minutes / 90, 1)).toFixed(1),
+                  selected_by_percent: "0.0", // Historical ownership not available
+                  value_season: (seasonData.total_points / (seasonData.end_cost / 10)).toFixed(1),
+                  value_form: (seasonData.total_points / (seasonData.end_cost / 10)).toFixed(1),
+                });
+              }
+            }
+          }
+          
+          // Add a small delay to avoid overwhelming the API
+          await new Promise(resolve => setTimeout(resolve, 50));
+        } catch (playerError) {
+          console.warn(`Failed to fetch data for player ${player.id}:`, playerError);
+        }
+      }
+      
+      res.json(historicalPlayers);
+    } catch (error) {
+      console.error("Error fetching historical player data:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch historical player data",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get available seasons
+  app.get("/api/seasons", async (req, res) => {
+    try {
+      // Return available seasons based on typical FPL seasons
+      const currentYear = new Date().getFullYear();
+      const seasons = [];
+      
+      // Generate seasons from 2016/17 to current
+      for (let year = 2016; year < currentYear; year++) {
+        seasons.push(`${year}/${(year + 1).toString().slice(-2)}`);
+      }
+      
+      // Add current season
+      seasons.push(`${currentYear}/${(currentYear + 1).toString().slice(-2)}`);
+      
+      res.json(seasons.reverse()); // Most recent first
+    } catch (error) {
+      console.error("Error fetching available seasons:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch available seasons",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Get fixtures
   app.get("/api/fixtures", async (req, res) => {
     try {

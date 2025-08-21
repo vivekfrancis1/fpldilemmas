@@ -54,6 +54,41 @@ export const playerSchema = z.object({
   transfers_out_event: z.number(),
 });
 
+// Historical player data schema for previous seasons
+export const historicalPlayerDataSchema = z.object({
+  season_name: z.string(),
+  element_code: z.number(),
+  start_cost: z.number(),
+  end_cost: z.number(),
+  total_points: z.number(),
+  minutes: z.number(),
+  goals_scored: z.number(),
+  assists: z.number(),
+  clean_sheets: z.number(),
+  goals_conceded: z.number(),
+  own_goals: z.number(),
+  penalties_saved: z.number(),
+  penalties_missed: z.number(),
+  yellow_cards: z.number(),
+  red_cards: z.number(),
+  saves: z.number(),
+  bonus: z.number(),
+  bps: z.number(),
+  influence: z.string(),
+  creativity: z.string(),
+  threat: z.string(),
+  ict_index: z.string(),
+});
+
+// Extended player schema with historical data
+export const playerWithHistorySchema = playerSchema.extend({
+  history_past: z.array(historicalPlayerDataSchema).optional(),
+  first_name: z.string(),
+  second_name: z.string(),
+  team_name: z.string().optional(),
+  position: z.string().optional(),
+});
+
 export const teamSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -117,6 +152,8 @@ export const playerSummarySchema = z.object({
 });
 
 export type Player = z.infer<typeof playerSchema>;
+export type HistoricalPlayerData = z.infer<typeof historicalPlayerDataSchema>;
+export type PlayerWithHistory = z.infer<typeof playerWithHistorySchema>;
 export type Team = z.infer<typeof teamSchema>;
 export type ElementType = z.infer<typeof elementTypeSchema>;
 export type Fixture = z.infer<typeof fixtureSchema>;
