@@ -95,10 +95,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const historicalPlayers = [];
       
-      // Fetch historical data for each player (limiting to first 100 for better coverage)
-      const playerSubset = players.slice(0, 100);
+      // Fetch historical data for all players to get comprehensive data
+      const playerSubset = players;
       
-      for (const player of playerSubset) {
+      console.log(`Processing ${players.length} players for historical data...`);
+      
+      for (const player of players) {
         try {
           const playerResponse = await fetch(`${FPL_BASE_URL}/element-summary/${player.id}/`);
           if (playerResponse.ok) {
@@ -144,7 +146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Add a small delay to avoid overwhelming the API
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 50));
         } catch (playerError) {
           console.warn(`Failed to fetch data for player ${player.id}:`, playerError);
         }

@@ -40,7 +40,7 @@ export default function PlayerStatsTable({
       console.log(`Using current data: ${data.elements.length} players`);
       players = [...data.elements];
     } else {
-      console.log("No data available - historicalData:", !!historicalData, "data:", !!data);
+      console.log("No data available - historicalData:", !!historicalData, historicalData?.length, "data:", !!data);
       return [];
     }
 
