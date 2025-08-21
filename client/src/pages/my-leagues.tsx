@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Trophy, Users, TrendingUp, Target, Search, Crown, Medal, Award } from "lucide-react";
+import { Trophy, Users, TrendingUp, Target, Search, Crown, Medal, Award, AlertTriangle } from "lucide-react";
 
 interface LeagueEntry {
   id: number;
@@ -262,6 +262,15 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
     enabled: !!league.id,
   });
 
+  const { data: userTeamData } = useQuery<any>({
+    queryKey: ["/api/manager", managerId, "team"],
+    enabled: !!managerId,
+  });
+
+  const { data: bootstrapData } = useQuery<any>({
+    queryKey: ["/api/bootstrap-static"],
+  });
+
   const getPositionIcon = (rank: number) => {
     if (rank === 1) return <Crown className="h-4 w-4 text-yellow-500" />;
     if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />;
@@ -299,6 +308,52 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
     : 0;
 
   const pointsAboveAverage = userPoints - averagePoints;
+
+  // Calculate differentials and threats
+  const getDifferentialsAndThreats = () => {
+    if (!userTeamData?.picks || !standingsData?.standings?.results || !bootstrapData?.elements) {
+      return { differentials: [], threats: [] };
+    }
+
+    // Get current user's players
+    const userPlayers = new Set(userTeamData.picks.map((pick: any) => pick.element));
+    
+    // Get all other teams in the league (we'd need to fetch their teams)
+    // For now, we'll use a simplified approach with ownership percentages from bootstrap data
+    const players = bootstrapData.elements;
+    
+    // Find differentials (user owns, low ownership)
+    const differentials = userTeamData.picks
+      .map((pick: any) => {
+        const player = players.find((p: any) => p.id === pick.element);
+        return player ? {
+          ...player,
+          ownership: parseFloat(player.selected_by_percent),
+          isOwned: true
+        } : null;
+      })
+      .filter((p: any) => p && p.ownership < 15) // Low ownership threshold
+      .sort((a: any, b: any) => a.ownership - b.ownership)
+      .slice(0, 3);
+
+    // Find threats (user doesn't own, high ownership)  
+    const threats = players
+      .filter((player: any) => 
+        !userPlayers.has(player.id) && 
+        parseFloat(player.selected_by_percent) > 30 // High ownership threshold
+      )
+      .map((player: any) => ({
+        ...player,
+        ownership: parseFloat(player.selected_by_percent),
+        isOwned: false
+      }))
+      .sort((a: any, b: any) => b.ownership - a.ownership)
+      .slice(0, 3);
+
+    return { differentials, threats };
+  };
+
+  const { differentials, threats } = getDifferentialsAndThreats();
 
   return (
     <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
@@ -418,6 +473,47 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Differentials and Threats */}
+            {(differentials.length > 0 || threats.length > 0) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                {/* Differentials */}
+                {differentials.length > 0 && (
+                  <div>
+                    <h5 className="font-semibold text-sm text-green-700 mb-2 flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      Differentials (Low Ownership)
+                    </h5>
+                    <div className="space-y-1">
+                      {differentials.map((player: any) => (
+                        <div key={player.id} className="flex justify-between items-center text-xs bg-green-50 p-2 rounded">
+                          <span className="font-medium text-green-900">{player.web_name}</span>
+                          <span className="text-green-600">{player.ownership.toFixed(1)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Threats */}
+                {threats.length > 0 && (
+                  <div>
+                    <h5 className="font-semibold text-sm text-red-700 mb-2 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Threats (High Ownership)
+                    </h5>
+                    <div className="space-y-1">
+                      {threats.map((player: any) => (
+                        <div key={player.id} className="flex justify-between items-center text-xs bg-red-50 p-2 rounded">
+                          <span className="font-medium text-red-900">{player.web_name}</span>
+                          <span className="text-red-600">{player.ownership.toFixed(1)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
