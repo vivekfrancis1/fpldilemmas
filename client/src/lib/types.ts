@@ -28,4 +28,12 @@ export interface StatsData {
   bestValue: string;
   mostOwnedPlayer: string;
   bestValuePlayer: string;
+  mostPoints: string;
+  mostPointsPlayer: string;
+  bestForm: string;
+  bestFormPlayer: string;
+  mostGoals: string;
+  mostGoalsPlayer: string;
+  mostAssists: string;
+  mostAssistsPlayer: string;
 }
