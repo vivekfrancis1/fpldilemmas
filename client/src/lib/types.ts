@@ -12,7 +12,9 @@ export type SortableField =
   | "selected_by_percent" | "now_cost" | "value_form" | "value_season" 
   | "transfers_in" | "transfers_out" | "transfers_in_event" | "transfers_out_event"
   | "influence" | "creativity" | "threat" | "ict_index" | "event_points" 
-  | "dreamteam_count" | "own_goals";
+  | "dreamteam_count" | "own_goals" | "cost_change_event" | "cost_change_event_fall"
+  | "cost_change_start" | "cost_change_start_fall" | "ep_next" | "ep_this"
+  | "squad_number";
 
 export interface SortState {
   field: SortableField;

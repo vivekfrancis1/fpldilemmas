@@ -86,6 +86,13 @@ export default function PlayerStatsTable({
           case "creativity": return parseFloat(player.creativity) || 0;
           case "threat": return parseFloat(player.threat) || 0;
           case "ict_index": return parseFloat(player.ict_index) || 0;
+          case "cost_change_event": return player.cost_change_event;
+          case "cost_change_event_fall": return player.cost_change_event_fall;
+          case "cost_change_start": return player.cost_change_start;
+          case "cost_change_start_fall": return player.cost_change_start_fall;
+          case "ep_next": return parseFloat(player.ep_next || "0") || 0;
+          case "ep_this": return parseFloat(player.ep_this || "0") || 0;
+          case "squad_number": return player.squad_number || 0;
           default: return player.total_points;
         }
       };
@@ -223,7 +230,7 @@ export default function PlayerStatsTable({
       <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900" data-testid="text-table-title">
-            Comprehensive Player Statistics
+            Complete Player Statistics - All Data Points
           </h3>
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600" data-testid="text-results-count">
@@ -235,14 +242,30 @@ export default function PlayerStatsTable({
 
       {/* Comprehensive Player Statistics Table */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1600px]">
+        <table className="w-full min-w-[2400px]">
           <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
             <tr>
               <th className="px-4 py-3 text-left min-w-[200px]">
                 <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Player</div>
               </th>
+              {/* Priority columns first */}
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="now_cost" label="Price" />
+              </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="total_points" label="Total Pts" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="value_season" label="Value" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="points_per_game" label="Pts/Match" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="form" label="Form" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="selected_by_percent" label="Own%" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="minutes" label="Minutes" />
@@ -256,12 +279,14 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="clean_sheets" label="CS" />
               </th>
+              {/* Defensive contributions */}
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="goals_conceded" label="GC" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="saves" label="Saves" />
               </th>
+              {/* All other data points */}
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="bonus" label="Bonus" />
               </th>
@@ -269,28 +294,70 @@ export default function PlayerStatsTable({
                 <SortableHeader field="bps" label="BPS" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="transfers_in_event" label="Trans In" />
+                <SortableHeader field="event_points" label="GW Pts" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="transfers_out_event" label="Trans Out" />
+                <SortableHeader field="transfers_in_event" label="GW In" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="form" label="Form" />
+                <SortableHeader field="transfers_out_event" label="GW Out" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="points_per_game" label="PPG" />
+                <SortableHeader field="transfers_in" label="Total In" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="selected_by_percent" label="Own%" />
+                <SortableHeader field="transfers_out" label="Total Out" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="now_cost" label="Price" />
+                <SortableHeader field="value_form" label="Val Form" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="value_season" label="Value" />
+                <SortableHeader field="influence" label="Influence" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="creativity" label="Creativity" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="threat" label="Threat" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="ict_index" label="ICT" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="dreamteam_count" label="Dream Team" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="penalties_saved" label="Pen Saved" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="penalties_missed" label="Pen Missed" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="yellow_cards" label="Yellow" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="red_cards" label="Red" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="own_goals" label="Own Goals" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="cost_change_event" label="Price Δ GW" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="cost_change_start" label="Price Δ Start" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">EP This</div>
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">EP Next</div>
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Squad #</div>
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Status</div>
               </th>
             </tr>
           </thead>
@@ -320,28 +387,66 @@ export default function PlayerStatsTable({
                       </div>
                     </div>
                   </td>
-                  <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{player.total_points}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.minutes}</td>
-                  <td className="px-2 py-4 text-center text-sm font-bold text-green-600">{player.goals_scored}</td>
-                  <td className="px-2 py-4 text-center text-sm font-bold text-blue-600">{player.assists}</td>
-                  <td className="px-2 py-4 text-center text-sm font-bold text-green-600">{player.clean_sheets}</td>
-                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.goals_conceded}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.saves}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bonus}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bps}</td>
-                  <td className="px-2 py-4 text-center text-sm text-green-600">{player.transfers_in_event.toLocaleString()}</td>
-                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.transfers_out_event.toLocaleString()}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.form, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.points_per_game, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.selected_by_percent, 'decimal')}%</td>
+                  {/* Priority columns first */}
                   <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">
                     <div className="flex items-center justify-center">
                       {formatPrice(player.now_cost)}
                       {getPriceChangeIcon(player.cost_change_event)}
                     </div>
                   </td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{player.total_points}</td>
                   <td className="px-2 py-4 text-center text-sm text-fpl-green font-medium">{formatValue(player.value_season, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.points_per_game, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.form, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.selected_by_percent, 'decimal')}%</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.minutes}</td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-green-600">{player.goals_scored}</td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-blue-600">{player.assists}</td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-green-600">{player.clean_sheets}</td>
+                  {/* Defensive contributions */}
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.goals_conceded}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.saves}</td>
+                  {/* All other data points */}
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bonus}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bps}</td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{player.event_points}</td>
+                  <td className="px-2 py-4 text-center text-sm text-green-600">{player.transfers_in_event.toLocaleString()}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.transfers_out_event.toLocaleString()}</td>
+                  <td className="px-2 py-4 text-center text-sm text-green-600">{player.transfers_in.toLocaleString()}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.transfers_out.toLocaleString()}</td>
+                  <td className="px-2 py-4 text-center text-sm text-fpl-green font-medium">{formatValue(player.value_form, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.influence, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.creativity, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.threat, 'decimal')}</td>
                   <td className="px-2 py-4 text-center text-sm font-medium text-fpl-purple">{formatValue(player.ict_index, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-yellow-600">{player.dreamteam_count}</td>
+                  <td className="px-2 py-4 text-center text-sm text-green-600">{player.penalties_saved}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.penalties_missed}</td>
+                  <td className="px-2 py-4 text-center text-sm text-yellow-600">{player.yellow_cards}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.red_cards}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.own_goals}</td>
+                  <td className="px-2 py-4 text-center text-sm">
+                    <div className="flex items-center justify-center">
+                      <span className={player.cost_change_event > 0 ? 'text-green-600' : player.cost_change_event < 0 ? 'text-red-600' : 'text-gray-900'}>
+                        {player.cost_change_event > 0 ? '+' : ''}{formatValue(player.cost_change_event / 10, 'decimal')}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-2 py-4 text-center text-sm">
+                    <div className="flex items-center justify-center">
+                      <span className={player.cost_change_start > 0 ? 'text-green-600' : player.cost_change_start < 0 ? 'text-red-600' : 'text-gray-900'}>
+                        {player.cost_change_start > 0 ? '+' : ''}{formatValue(player.cost_change_start / 10, 'decimal')}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.ep_this || '-'}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.ep_next || '-'}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.squad_number || '-'}</td>
+                  <td className="px-2 py-4 text-center text-sm">
+                    <Badge variant={player.status === "a" ? "default" : player.status === "d" ? "secondary" : "destructive"}>
+                      {player.status === "a" ? "Available" : player.status === "d" ? "Doubtful" : "Unavailable"}
+                    </Badge>
+                  </td>
                 </tr>
               );
             })}
