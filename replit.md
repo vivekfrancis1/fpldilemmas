@@ -11,6 +11,7 @@ Site tagline: "Analytical tools to beat the deadline blues" (updated December 20
 Navigation priority: Player Statistics as default landing page, with side navigation for all tools (updated December 2024)
 Most popular tools: Player Statistics, Live Rank, and Price Tracker (updated December 2024)
 Historical data: Added year selection functionality for player statistics from 2016/17 season onwards with full data coverage of 300-400+ players per season (fully functional August 2025)
+Authentication: Google OAuth login preferred over email+OTP for simplicity (January 2025)
 
 ## System Architecture
 
@@ -26,15 +27,17 @@ Historical data: Added year selection functionality for player statistics from 2
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js framework
 - **API Design**: RESTful API endpoints prefixed with `/api/`
+- **Authentication**: Google OAuth 2.0 using Passport.js with PostgreSQL session storage
 - **Data Fetching**: Proxy server that fetches data from the official Fantasy Premier League API
 - **Caching Strategy**: In-memory caching using a custom storage interface to reduce API calls
 - **Development Setup**: Vite integration for hot module replacement in development
 
 ### Data Storage Solutions
 - **Primary Storage**: In-memory storage using Map and object caching
-- **Database Configuration**: Drizzle ORM configured for PostgreSQL (via Neon Database) but currently using memory storage
+- **Database Configuration**: Drizzle ORM configured for PostgreSQL (via Neon Database) with sessions table for authentication
+- **Authentication Storage**: Database-backed user storage and session management via PostgreSQL
 - **Caching Layer**: Custom `IStorage` interface with `MemStorage` implementation for bootstrap data and player summaries
-- **Data Persistence**: Temporary in-memory persistence with plans for database integration
+- **Data Persistence**: Temporary in-memory persistence with database authentication storage
 
 ### API Integration
 - **External API**: Fantasy Premier League official API (`https://fantasy.premierleague.com/api`)

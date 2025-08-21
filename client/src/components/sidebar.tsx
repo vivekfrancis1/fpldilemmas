@@ -142,14 +142,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         {/* User Actions */}
         <div className="mt-auto p-4">
           <Button
-            onClick={async () => {
-              try {
-                await fetch('/api/logout');
-                window.location.href = '/login';
-              } catch (error) {
-                console.error('Logout error:', error);
-                window.location.href = '/login';
-              }
+            onClick={() => {
+              window.location.href = '/api/logout';
             }}
             variant="ghost"
             className="w-full text-purple-100 hover:bg-white/10 hover:text-white flex items-center gap-2"

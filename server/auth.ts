@@ -1,11 +1,9 @@
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
-import crypto from "crypto";
-
-// Store OTPs temporarily (in production, use Redis or database)
-const otpStore = new Map<string, { otp: string; expires: Date; attempts: number }>();
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -29,129 +27,64 @@ export function getSession() {
   });
 }
 
-function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-function sendOTPEmail(email: string, otp: string): Promise<boolean> {
-  // In production, integrate with SendGrid, AWS SES, or similar
-  console.log(`📧 OTP for ${email}: ${otp}`);
-  console.log(`🔗 For development: Use OTP ${otp} to login with ${email}`);
-  return Promise.resolve(true);
-}
-
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
+  app.use(passport.initialize());
+  app.use(passport.session());
 
-  // Send OTP to email
-  app.post("/api/auth/send-otp", async (req, res) => {
+  // Google Strategy
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "/api/auth/google/callback"
+    }, async (accessToken, refreshToken, profile, done) => {
+      try {
+        const user = await storage.upsertUser({
+          id: `google_${profile.id}`,
+          email: profile.emails?.[0]?.value || null,
+          firstName: profile.name?.givenName || null,
+          lastName: profile.name?.familyName || null,
+          profileImageUrl: profile.photos?.[0]?.value || null,
+          provider: "google"
+        });
+        return done(null, user);
+      } catch (error) {
+        return done(error, false);
+      }
+    }));
+  }
+
+  passport.serializeUser((user: any, done) => {
+    done(null, user.id);
+  });
+
+  passport.deserializeUser(async (id: string, done) => {
     try {
-      const { email } = req.body;
-      
-      if (!email || !email.includes('@')) {
-        return res.status(400).json({ message: "Valid email is required" });
-      }
-
-      // Generate OTP
-      const otp = generateOTP();
-      const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-      // Store OTP
-      otpStore.set(email, { otp, expires, attempts: 0 });
-
-      // Send OTP via email
-      const sent = await sendOTPEmail(email, otp);
-      
-      if (sent) {
-        res.json({ message: "OTP sent successfully" });
-      } else {
-        res.status(500).json({ message: "Failed to send OTP" });
-      }
+      const user = await storage.getUser(id);
+      done(null, user);
     } catch (error) {
-      console.error("Error sending OTP:", error);
-      res.status(500).json({ message: "Internal server error" });
+      done(error, null);
     }
   });
 
-  // Verify OTP and login
-  app.post("/api/auth/verify-otp", async (req, res) => {
-    try {
-      const { email, otp } = req.body;
-      
-      if (!email || !otp) {
-        return res.status(400).json({ message: "Email and OTP are required" });
-      }
-
-      const storedOTP = otpStore.get(email);
-      
-      if (!storedOTP) {
-        return res.status(400).json({ message: "OTP not found or expired" });
-      }
-
-      if (storedOTP.expires < new Date()) {
-        otpStore.delete(email);
-        return res.status(400).json({ message: "OTP expired" });
-      }
-
-      if (storedOTP.attempts >= 3) {
-        otpStore.delete(email);
-        return res.status(400).json({ message: "Too many attempts. Request a new OTP." });
-      }
-
-      if (storedOTP.otp !== otp) {
-        storedOTP.attempts++;
-        return res.status(400).json({ message: "Invalid OTP" });
-      }
-
-      // OTP is valid, create or get user
-      const user = await storage.upsertUser({
-        id: `email_${email}`,
-        email: email,
-        firstName: null,
-        lastName: null,
-        profileImageUrl: null,
-        provider: "email"
-      });
-
-      // Clean up OTP
-      otpStore.delete(email);
-
-      // Set user session
-      (req.session as any).userId = user.id;
-      (req.session as any).user = user;
-
-      res.json({ user, message: "Login successful" });
-    } catch (error) {
-      console.error("Error verifying OTP:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
+  // Auth routes
+  app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+  app.get("/api/auth/google/callback", passport.authenticate("google", { failureRedirect: "/login" }), (req, res) => {
+    res.redirect("/");
   });
 
   app.get("/api/logout", (req, res) => {
-    req.session.destroy(() => {
-      res.json({ message: "Logged out successfully" });
+    req.logout(() => {
+      res.redirect("/");
     });
   });
 }
 
-export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  try {
-    const userId = (req.session as any)?.userId;
-    
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const user = await storage.getUser(userId);
-    if (!user) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    (req as any).user = user;
-    next();
-  } catch (error) {
-    console.error("Auth error:", error);
-    res.status(401).json({ message: "Unauthorized" });
+export const isAuthenticated: RequestHandler = (req, res, next) => {
+  if (req.isAuthenticated()) {
+    return next();
   }
+  res.status(401).json({ message: "Unauthorized" });
 };
