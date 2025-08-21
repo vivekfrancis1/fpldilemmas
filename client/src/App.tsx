@@ -9,6 +9,7 @@ import Transfers from "./pages/transfers";
 import Captain from "./pages/captain";
 import Watchlist from "./pages/watchlist";
 import LiveRank from "./pages/live-rank";
+import MyTeam from "./pages/my-team";
 import PriceTracker from "./pages/price-tracker";
 import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/captain" component={Captain} />
       <Route path="/watchlist" component={Watchlist} />
       <Route path="/live-rank" component={LiveRank} />
+      <Route path="/my-team" component={MyTeam} />
       <Route path="/price-tracker" component={PriceTracker} />
       <Route path="/league-comparison" component={LeagueComparison} />
       <Route path="/player-stats" component={PlayerStats} />

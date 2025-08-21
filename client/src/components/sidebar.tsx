@@ -37,7 +37,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "My FPL",
       items: [
-        { path: "/live-rank", label: "My Live Rank", icon: TrendingUp, description: "Real-time FPL rank", popular: false }
+        { path: "/live-rank", label: "My Live Rank", icon: TrendingUp, description: "Real-time FPL rank", popular: false },
+        { path: "/my-team", label: "My Team", icon: Users, description: "View your current team", popular: false }
       ]
     },
     {

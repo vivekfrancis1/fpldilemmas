@@ -744,6 +744,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get manager current team (current gameweek picks)
+  app.get("/api/manager/:managerId/team", async (req, res) => {
+    try {
+      const managerId = req.params.managerId;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+
+      // Cache the manager ID
+      await storage.setLastManagerId(managerId);
+
+      // Get current gameweek from bootstrap data
+      const bootstrapResponse = await fetch(`${FPL_BASE_URL}/bootstrap-static/`);
+      if (!bootstrapResponse.ok) {
+        throw new Error(`Bootstrap API responded with status: ${bootstrapResponse.status}`);
+      }
+      const bootstrapData = await bootstrapResponse.json();
+      
+      const currentEvent = bootstrapData.events.find((event: any) => event.is_current);
+      const currentGameweek = currentEvent ? currentEvent.id : 1;
+
+      // Get team picks for current gameweek
+      const response = await fetch(`${FPL_BASE_URL}/entry/${managerId}/event/${currentGameweek}/picks/`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "Manager team not found" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching manager team:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch manager team from FPL API",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Manager ID caching endpoints
   app.get("/api/manager/cache/last", async (req, res) => {
     try {
