@@ -160,9 +160,28 @@ export default function FiltersPanel({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Any Price</SelectItem>
+              <SelectItem value="40">Under £4.0m</SelectItem>
+              <SelectItem value="45">Under £4.5m</SelectItem>
               <SelectItem value="50">Under £5.0m</SelectItem>
+              <SelectItem value="55">Under £5.5m</SelectItem>
+              <SelectItem value="60">Under £6.0m</SelectItem>
+              <SelectItem value="65">Under £6.5m</SelectItem>
               <SelectItem value="70">Under £7.0m</SelectItem>
+              <SelectItem value="75">Under £7.5m</SelectItem>
+              <SelectItem value="80">Under £8.0m</SelectItem>
+              <SelectItem value="85">Under £8.5m</SelectItem>
+              <SelectItem value="90">Under £9.0m</SelectItem>
+              <SelectItem value="95">Under £9.5m</SelectItem>
               <SelectItem value="100">Under £10.0m</SelectItem>
+              <SelectItem value="105">Under £10.5m</SelectItem>
+              <SelectItem value="110">Under £11.0m</SelectItem>
+              <SelectItem value="115">Under £11.5m</SelectItem>
+              <SelectItem value="120">Under £12.0m</SelectItem>
+              <SelectItem value="125">Under £12.5m</SelectItem>
+              <SelectItem value="130">Under £13.0m</SelectItem>
+              <SelectItem value="135">Under £13.5m</SelectItem>
+              <SelectItem value="140">Under £14.0m</SelectItem>
+              <SelectItem value="145">Under £14.5m</SelectItem>
               <SelectItem value="150">Under £15.0m</SelectItem>
             </SelectContent>
           </Select>
