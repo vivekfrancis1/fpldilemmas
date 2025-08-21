@@ -204,73 +204,36 @@ function MyLeagues() {
         </Card>
       )}
 
-      {/* Leagues List */}
+      {/* Private Leagues Only */}
       {leaguesData && leaguesData.leagues && (() => {
-        // Separate private and public leagues
+        // Filter to only show private leagues (ID > 1000)
         const privateLeagues = leaguesData.leagues.classic.filter((league: any) => league.id > 1000);
-        const publicLeagues = leaguesData.leagues.classic.filter((league: any) => league.id <= 1000);
-        
-        // Sort public leagues: Overall first, then country leagues, then others
-        publicLeagues.sort((a: any, b: any) => {
-          if (a.name.toLowerCase().includes('overall')) return -1;
-          if (b.name.toLowerCase().includes('overall')) return 1;
-          if (a.name.toLowerCase().includes('india') || a.name.toLowerCase().includes('country')) return -1;
-          if (b.name.toLowerCase().includes('india') || b.name.toLowerCase().includes('country')) return 1;
-          return a.name.localeCompare(b.name);
-        });
         
         return (
-          <div className="space-y-6">
-            {/* Private Leagues */}
-            {privateLeagues.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-2xl font-bold text-gray-900">Private Leagues ({privateLeagues.length})</h2>
-                </div>
-                
-                <div className="grid gap-4">
-                  {privateLeagues.map((league: any) => (
-                    <LeagueCard 
-                      key={league.id}
-                      league={league}
-                      managerId={searchedId}
-                      managerName={managerData?.name}
-                      formatDate={formatDate}
-                      getLeagueTypeDisplay={getLeagueTypeDisplay}
-                    />
-                  ))}
-                </div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-600" />
+              <h2 className="text-2xl font-bold text-gray-900">Your Leagues ({privateLeagues.length})</h2>
+            </div>
+            
+            {privateLeagues.length > 0 ? (
+              <div className="grid gap-4">
+                {privateLeagues.map((league: any) => (
+                  <LeagueCard 
+                    key={league.id}
+                    league={league}
+                    managerId={searchedId}
+                    managerName={managerData?.name}
+                    formatDate={formatDate}
+                    getLeagueTypeDisplay={getLeagueTypeDisplay}
+                  />
+                ))}
               </div>
-            )}
-
-            {/* Public Leagues */}
-            {publicLeagues.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-green-600" />
-                  <h2 className="text-2xl font-bold text-gray-900">Public Leagues ({publicLeagues.length})</h2>
-                </div>
-                
-                <div className="grid gap-3">
-                  {publicLeagues.map((league: any) => (
-                    <PublicLeagueCard 
-                      key={league.id}
-                      league={league}
-                      managerId={searchedId}
-                      managerName={managerData?.name}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* No leagues message */}
-            {leaguesData.leagues.classic.length === 0 && (
+            ) : (
               <Card className="bg-gray-50">
                 <CardContent className="text-center py-8">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No leagues found for this manager.</p>
+                  <p className="text-gray-600">No private leagues found for this manager.</p>
                 </CardContent>
               </Card>
             )}
@@ -284,67 +247,7 @@ function MyLeagues() {
 
 export default MyLeagues;
 
-// Public League Card Component (simplified)
-function PublicLeagueCard({ league, managerId, managerName }: { 
-  league: any; 
-  managerId: string; 
-  managerName: string;
-}) {
-  const { data: standingsData, isLoading } = useQuery<LeagueStandings>({
-    queryKey: ["/api/league", league.id, "standings"],
-    enabled: !!league.id,
-  });
 
-  const userEntry = standingsData?.standings?.results?.find(
-    (entry) => entry.entry === parseInt(managerId)
-  );
-
-  const userRank = userEntry?.rank || 0;
-  const totalMembers = standingsData?.standings?.results?.length || 0;
-
-  const getPositionIcon = (rank: number) => {
-    if (rank === 1) return <Crown className="h-4 w-4 text-yellow-500" />;
-    if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />;
-    if (rank === 3) return <Award className="h-4 w-4 text-amber-600" />;
-    return null;
-  };
-
-  if (isLoading) {
-    return (
-      <Card className="bg-gray-50 border-gray-200">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded animate-pulse mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
-            </div>
-            <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="bg-white hover:shadow-md transition-shadow border-gray-200">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              {getPositionIcon(userRank)}
-              <h3 className="font-semibold text-gray-900 truncate">{league.name}</h3>
-            </div>
-            <p className="text-sm text-gray-600">{totalMembers.toLocaleString()} members</p>
-          </div>
-          <div className="text-right">
-            <div className="text-lg font-bold text-gray-900">#{userRank}</div>
-            <div className="text-xs text-gray-500">Rank</div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 // Private League Card Component (detailed analysis)
 function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeDisplay }: { 
