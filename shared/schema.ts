@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { pgTable, text, integer, serial, timestamp, jsonb } from "drizzle-orm/pg-core";
 
 export const playerSchema = z.object({
   id: z.number(),
@@ -160,48 +159,6 @@ export type ElementType = z.infer<typeof elementTypeSchema>;
 export type Fixture = z.infer<typeof fixtureSchema>;
 export type BootstrapData = z.infer<typeof bootstrapDataSchema>;
 export type PlayerSummary = z.infer<typeof playerSummarySchema>;
-
-// OAuth Users table
-export const users = pgTable("users", {
-  id: text("id").primaryKey(), // OAuth provider ID like 'google_123456'
-  email: text("email"),
-  firstName: text("first_name"),
-  lastName: text("last_name"),
-  profileImage: text("profile_image"),
-  provider: text("provider").notNull(), // 'google', 'facebook', 'apple'
-  providerId: text("provider_id").notNull(), // Original ID from OAuth provider
-  fplTeamId: integer("fpl_team_id"), // User's FPL Team ID (entered by user)
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;
-
-// FPL Team data cache
-export const fplTeams = pgTable("fpl_teams", {
-  id: serial("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id),
-  teamId: integer("team_id").notNull().unique(), // FPL Team ID
-  teamName: text("team_name").notNull(),
-  lastUpdated: timestamp("last_updated").defaultNow(),
-  // Store complete team data as JSON for flexibility
-  teamData: jsonb("team_data"),
-  // Cache frequently accessed data for quick queries
-  overallPoints: integer("overall_points"),
-  overallRank: integer("overall_rank"),
-  gameweekPoints: integer("gameweek_points"),
-  gameweekRank: integer("gameweek_rank"),
-  teamValue: integer("team_value"), // in tenths (100.5m = 1005)
-  bank: integer("bank"), // in tenths (1.5m = 15)
-  freeTransfers: integer("free_transfers").default(1),
-  activeChip: text("active_chip"), // current active chip if any
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export type FplTeam = typeof fplTeams.$inferSelect;
-export type InsertFplTeam = typeof fplTeams.$inferInsert;
 
 // Re-export watchlist types
 export * from "./watchlist-schema";

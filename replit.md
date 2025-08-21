@@ -11,7 +11,7 @@ Site tagline: "Analytical tools to beat the deadline blues" (updated December 20
 Navigation priority: Player Statistics as default landing page, with side navigation for all tools (updated December 2024)
 Most popular tools: Player Statistics, Live Rank, and Price Tracker (updated December 2024)
 Historical data: Added year selection functionality for player statistics from 2016/17 season onwards with full data coverage of 300-400+ players per season (fully functional August 2025)
-FPL Team Integration: Complete OAuth authentication system (Google, Facebook, Apple) combined with FPL Team ID input to fetch real user team data using secure user storage and session management - no FPL credentials required (fully implemented August 2025)
+FPL Team Integration: User can login with FPL credentials, view team stats, transfers, and squad details that sync with official FPL app (implemented January 2025)
 
 ## System Architecture
 
@@ -32,12 +32,10 @@ FPL Team Integration: Complete OAuth authentication system (Google, Facebook, Ap
 - **Development Setup**: Vite integration for hot module replacement in development
 
 ### Data Storage Solutions
-- **Primary Storage**: In-memory storage using Map and object caching for FPL data
-- **User Storage**: Custom `UserStorageSystem` class for OAuth users and FPL team connections
+- **Primary Storage**: In-memory storage using Map and object caching
 - **Database Configuration**: Drizzle ORM configured for PostgreSQL (via Neon Database) but currently using memory storage
 - **Caching Layer**: Custom `IStorage` interface with `MemStorage` implementation for bootstrap data and player summaries
-- **Session Management**: In-memory session storage with automatic cleanup and expiration
-- **Data Persistence**: Temporary in-memory persistence for both FPL data and user accounts
+- **Data Persistence**: Temporary in-memory persistence with plans for database integration
 
 ### API Integration
 - **External API**: Fantasy Premier League official API (`https://fantasy.premierleague.com/api`)
@@ -46,15 +44,9 @@ FPL Team Integration: Complete OAuth authentication system (Google, Facebook, Ap
   - `/element-summary/:playerId` - Individual player fixtures and history
   - `/api/players/historical/:season` - Historical player statistics by season
   - `/api/seasons` - Available historical seasons list
-  - `/auth/google` - Google OAuth authentication flow
-  - `/auth/facebook` - Facebook OAuth authentication flow  
-  - `/auth/apple` - Apple OAuth authentication flow
-  - `/api/auth/setup-team` - FPL Team ID setup after OAuth authentication
-  - `/api/auth/user` - Current authenticated user information
-  - `/api/auth/logout` - User logout and session cleanup
-  - `/api/fpl/team` - Current user's FPL team data using Team ID
-  - `/api/fpl/transfers` - User's transfer history via Team ID
-  - `/api/fpl/status` - Authentication and FPL connection status
+  - `/api/fpl/login` - FPL account authentication via session cookies
+  - `/api/fpl/team` - Current user's FPL team data and squad
+  - `/api/fpl/transfers` - User's transfer history and activity
 - **Authentication**: Session-based FPL authentication using axios-cookiejar-support for cookie management
 - **Data Validation**: Zod schemas for type-safe API response parsing
 - **Historical Data**: Fetches previous seasons data from `history_past` field in player summaries

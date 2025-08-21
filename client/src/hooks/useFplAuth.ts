@@ -44,20 +44,8 @@ export function useFplAuth() {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
-      const response = await fetch('/api/fpl/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Login failed');
-      }
-      
-      return response.json();
+      const response = await apiRequest('/api/fpl/login', 'POST', credentials);
+      return response;
     },
     onSuccess: (data: any) => {
       if (data.success && data.sessionId) {

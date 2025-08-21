@@ -1,357 +1,365 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { Shield, TrendingUp, TrendingDown, Users, Trophy, Clock } from "lucide-react";
-import { useEffect } from "react";
-
-interface FplTeam {
-  id: number;
-  name: string;
-  teamName: string;
-  gameweek: number;
-  totalPoints: number;
-  gameweekPoints: number;
-  rank: number;
-  lastRank: number;
-  bank: number;
-  teamValue: number;
-  transfers: number;
-  transfersRemaining: number;
-}
-
-interface Transfer {
-  id: number;
-  gameweek: number;
-  playerIn: string;
-  playerOut: string;
-  cost: number;
-  date: string;
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Users, 
+  Trophy, 
+  TrendingUp, 
+  DollarSign, 
+  RefreshCw, 
+  LogOut,
+  Shield,
+  Target,
+  Star,
+  ArrowUpDown
+} from "lucide-react";
+import { useFplAuth } from "@/hooks/useFplAuth";
+import { FplLoginForm } from "@/components/fpl-login-form";
+import type { FplTeam } from "@shared/fpl-auth-schema";
 
 export default function FplTeamPage() {
-  const { user, isAuthenticated, sessionId } = useAuth();
+  const { isAuthenticated, user, isLoading, logout, sessionId } = useFplAuth();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated && sessionId === null) {
-      window.location.href = "/auth/login";
-    }
-  }, [isAuthenticated, sessionId]);
-
-  const { data: teamData, isLoading: teamLoading, error: teamError } = useQuery({
-    queryKey: ['/api/fpl/team'],
-    queryFn: async (): Promise<{ success: boolean; team: FplTeam }> => {
-      const response = await fetch('/api/fpl/team', {
-        headers: {
-          'X-Session-ID': sessionId || '',
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to fetch team');
-      }
-
-      return response.json();
-    },
-    enabled: !!sessionId && !!user?.fplTeamId,
+  // Fetch team data
+  const { 
+    data: teamData, 
+    isLoading: teamLoading, 
+    error: teamError,
+    refetch: refetchTeam
+  } = useQuery<{ success: boolean; team: FplTeam }>({
+    queryKey: ["/api/fpl/team"],
+    enabled: isAuthenticated && !!sessionId,
     retry: false,
+    staleTime: 30000, // 30 seconds
   });
 
-  const { data: transferData, isLoading: transfersLoading } = useQuery({
-    queryKey: ['/api/fpl/transfers'],
-    queryFn: async (): Promise<{ success: boolean; transfers: Transfer[] }> => {
-      const response = await fetch('/api/fpl/transfers', {
-        headers: {
-          'X-Session-ID': sessionId || '',
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to fetch transfers');
-      }
-
-      return response.json();
-    },
-    enabled: !!sessionId && !!user?.fplTeamId,
+  // Fetch transfer history
+  const { 
+    data: transfersData, 
+    isLoading: transfersLoading 
+  } = useQuery<{ success: boolean; transfers: any[] }>({
+    queryKey: ["/api/fpl/transfers"],
+    enabled: isAuthenticated && !!sessionId,
+    retry: false,
+    staleTime: 60000, // 1 minute
   });
 
-  const { data: statusData } = useQuery({
-    queryKey: ['/api/fpl/status'],
-    queryFn: async () => {
-      const response = await fetch('/api/fpl/status', {
-        headers: {
-          'X-Session-ID': sessionId || '',
-        },
-      });
-      return response.json();
-    },
-    enabled: !!sessionId,
-  });
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetchTeam();
+    setRefreshing(false);
+  };
 
-  if (!isAuthenticated) {
+  const handleLogout = () => {
+    logout();
+  };
+
+  // Show login form if not authenticated
+  if (!isAuthenticated && !isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <Shield className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold">Authentication Required</h3>
-              <p className="text-muted-foreground mt-2">Please login to view your FPL team.</p>
-              <Button 
-                className="mt-4" 
-                onClick={() => window.location.href = "/auth/login"}
-              >
-                Login to Continue
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-4">My FPL Team</h1>
+          <p className="text-lg text-muted-foreground">
+            Connect your Fantasy Premier League account to view and manage your team
+          </p>
+        </div>
+        
+        <FplLoginForm onSuccess={() => {
+          // Optional: Show success message or redirect
+        }} />
       </div>
     );
   }
 
-  if (!user?.fplTeamId) {
+  // Show loading state
+  if (isLoading || teamLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold">FPL Team Not Connected</h3>
-              <p className="text-muted-foreground mt-2">Connect your FPL team to view your data.</p>
-              <Button 
-                className="mt-4" 
-                onClick={() => window.location.href = "/auth/setup-team"}
-              >
-                Connect FPL Team
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-lg text-muted-foreground">Loading your FPL team...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if team fetch failed
+  if (teamError && !teamData) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <Alert variant="destructive" data-testid="team-error">
+          <AlertDescription>
+            Failed to load your FPL team. Please try refreshing or login again.
+          </AlertDescription>
+        </Alert>
+        <div className="mt-4 flex gap-2">
+          <Button onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+        </div>
       </div>
     );
   }
 
   const team = teamData?.team;
-  const transfers = transferData?.transfers || [];
-
-  if (teamError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-red-500">
-                <Trophy className="mx-auto h-12 w-12 mb-4" />
-              </div>
-              <h3 className="text-lg font-semibold">Error Loading Team</h3>
-              <p className="text-muted-foreground mt-2">{teamError.message}</p>
-              <Button 
-                className="mt-4" 
-                onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/fpl/team'] })}
-              >
-                Try Again
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-4 py-8 max-w-6xl" data-testid="fpl-team-page">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">My FPL Team</h1>
-        <p className="text-muted-foreground">
-          Connected as {user?.firstName} {user?.lastName} • {user?.provider}
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-4xl font-bold mb-2" data-testid="team-name">
+            {team?.name || user?.teamName || 'My Team'}
+          </h1>
+          <p className="text-muted-foreground">
+            Welcome back, {user?.firstName || 'Manager'}! 
+            {team && (
+              <span className="ml-2">
+                Gameweek {team.event}
+              </span>
+            )}
+          </p>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            variant="outline"
+            size="sm"
+            data-testid="refresh-button"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            size="sm"
+            data-testid="logout-button"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+        </div>
       </div>
 
-      {teamLoading ? (
-        <div className="grid gap-6 md:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="animate-pulse space-y-2">
-                  <div className="h-4 bg-muted rounded w-1/2"></div>
-                  <div className="h-8 bg-muted rounded"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : team ? (
+      {team && (
         <>
-          {/* Team Overview */}
-          <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Team Name</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{team.teamName}</div>
-                <p className="text-sm text-muted-foreground">Manager: {team.name}</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Points</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{team.totalPoints?.toLocaleString()}</div>
-                <p className="text-sm text-muted-foreground">Gameweek: {team.gameweekPoints}</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Overall Rank</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{team.rank?.toLocaleString()}</div>
-                <div className="flex items-center text-sm">
-                  {team.rank < team.lastRank ? (
-                    <>
-                      <TrendingUp className="mr-1 h-3 w-3 text-green-600" />
-                      <span className="text-green-600">↗ {(team.lastRank - team.rank).toLocaleString()}</span>
-                    </>
-                  ) : team.rank > team.lastRank ? (
-                    <>
-                      <TrendingDown className="mr-1 h-3 w-3 text-red-600" />
-                      <span className="text-red-600">↘ {(team.rank - team.lastRank).toLocaleString()}</span>
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground">No change</span>
-                  )}
+          {/* Key Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <Card data-testid="card-overall-points">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Overall Points</p>
+                    <p className="text-2xl font-bold">{team.overallPoints.toLocaleString()}</p>
+                  </div>
+                  <Trophy className="w-8 h-8 text-yellow-600" />
                 </div>
               </CardContent>
             </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Team Value</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">£{(team.teamValue / 10).toFixed(1)}m</div>
-                <p className="text-sm text-muted-foreground">Bank: £{(team.bank / 10).toFixed(1)}m</p>
+            
+            <Card data-testid="card-overall-rank">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Overall Rank</p>
+                    <p className="text-2xl font-bold">{team.overallRank.toLocaleString()}</p>
+                  </div>
+                  <TrendingUp className="w-8 h-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card data-testid="card-gameweek-points">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">GW Points</p>
+                    <p className="text-2xl font-bold">{team.gameweekPoints}</p>
+                  </div>
+                  <Star className="w-8 h-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card data-testid="card-team-value">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Team Value</p>
+                    <p className="text-2xl font-bold">£{(team.teamValue / 10).toFixed(1)}m</p>
+                  </div>
+                  <DollarSign className="w-8 h-8 text-purple-600" />
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Transfer Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Transfer Information</CardTitle>
-              <CardDescription>Your transfer activity and remaining transfers</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Transfers Made</div>
-                  <div className="text-2xl font-bold">{team.transfers}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Transfers Remaining</div>
-                  <div className="text-2xl font-bold text-green-600">{team.transfersRemaining}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Team Management Tabs */}
+          <Tabs defaultValue="squad" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="squad" data-testid="tab-squad">
+                <Users className="w-4 h-4 mr-2" />
+                Squad
+              </TabsTrigger>
+              <TabsTrigger value="transfers" data-testid="tab-transfers">
+                <ArrowUpDown className="w-4 h-4 mr-2" />
+                Transfers
+              </TabsTrigger>
+              <TabsTrigger value="stats" data-testid="tab-stats">
+                <Target className="w-4 h-4 mr-2" />
+                Statistics
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Recent Transfers */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Transfers</CardTitle>
-              <CardDescription>Your latest transfer activity</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {transfersLoading ? (
-                <div className="space-y-3">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse space-y-2">
-                      <div className="h-4 bg-muted rounded w-full"></div>
-                      <div className="h-3 bg-muted rounded w-3/4"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : transfers.length > 0 ? (
-                <div className="space-y-4">
-                  {transfers.slice(0, 5).map((transfer, index) => (
-                    <div key={index} className="flex items-center justify-between py-2">
-                      <div className="flex-1">
-                        <div className="text-sm">
-                          <span className="font-medium text-green-600">{transfer.playerIn}</span>
-                          <span className="text-muted-foreground"> → </span>
-                          <span className="font-medium text-red-600">{transfer.playerOut}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Gameweek {transfer.gameweek} • {new Date(transfer.date).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <Badge variant={transfer.cost > 0 ? "destructive" : "secondary"}>
-                        {transfer.cost > 0 ? `-${transfer.cost}pt` : 'Free'}
+            <TabsContent value="squad" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    Current Squad
+                  </CardTitle>
+                  <CardDescription>
+                    Your 15-player squad for Gameweek {team.event}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <Badge variant="outline">
+                        Free Transfers: {team.freeTransfers}
+                      </Badge>
+                      <Badge variant="outline">
+                        Bank: £{(team.bank / 10).toFixed(1)}m
+                      </Badge>
+                      <Badge variant="outline">
+                        Total Transfers: {team.totalTransfers}
                       </Badge>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Clock className="mx-auto h-8 w-8 mb-2" />
-                  No transfers yet this season
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    
+                    {team.picks && team.picks.length > 0 ? (
+                      <div className="text-center py-8">
+                        <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">Squad Details</h3>
+                        <p className="text-muted-foreground">
+                          Found {team.picks.length} players in your squad
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Detailed player information will be integrated with our player database
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">No squad data available</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          {/* Status Info */}
-          {statusData && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Connection Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Authentication:</span>
-                    <Badge variant={statusData.authenticated ? "default" : "destructive"}>
-                      {statusData.authenticated ? "Connected" : "Disconnected"}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>FPL Team:</span>
-                    <Badge variant={statusData.fplTeamConnected ? "default" : "secondary"}>
-                      {statusData.fplTeamConnected ? "Connected" : "Not Connected"}
-                    </Badge>
-                  </div>
-                  {statusData.fplTeam && (
-                    <div className="flex justify-between">
-                      <span>Team ID:</span>
-                      <span className="font-mono text-sm">{statusData.fplTeam.teamId}</span>
+            <TabsContent value="transfers" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ArrowUpDown className="w-5 h-5" />
+                    Transfer History
+                  </CardTitle>
+                  <CardDescription>
+                    Your transfer activity this season
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {transfersLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+                      <p className="text-muted-foreground">Loading transfers...</p>
+                    </div>
+                  ) : transfersData?.transfers && transfersData.transfers.length > 0 ? (
+                    <div className="text-center py-8">
+                      <ArrowUpDown className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Transfer History</h3>
+                      <p className="text-muted-foreground">
+                        Found {transfersData.transfers.length} transfers this season
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Detailed transfer analysis coming soon
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <ArrowUpDown className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No transfers found</p>
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="stats" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Season Performance</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Overall Points</span>
+                      <span className="font-semibold">{team.overallPoints.toLocaleString()}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Overall Rank</span>
+                      <span className="font-semibold">{team.overallRank.toLocaleString()}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Gameweek Rank</span>
+                      <span className="font-semibold">{team.gameweekRank.toLocaleString()}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Team Economics</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Team Value</span>
+                      <span className="font-semibold">£{(team.teamValue / 10).toFixed(1)}m</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Bank</span>
+                      <span className="font-semibold">£{(team.bank / 10).toFixed(1)}m</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Free Transfers</span>
+                      <span className="font-semibold">{team.freeTransfers}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
         </>
-      ) : (
-        <div className="text-center py-8">
-          <Trophy className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Team Data</h3>
-          <p className="text-muted-foreground">Unable to load your FPL team data.</p>
-        </div>
       )}
     </div>
   );

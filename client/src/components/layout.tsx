@@ -1,33 +1,30 @@
-import { ReactNode } from "react";
-import { Sidebar } from "./sidebar";
-import { ProfileHeader } from "./profile-header";
+import { useState } from "react";
+import Sidebar from "./sidebar";
+import Header from "./header";
+import Footer from "./footer";
 
 interface LayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex">
-        {/* Sidebar */}
-        <div className="hidden md:block">
-          <Sidebar />
-        </div>
-        
-        {/* Main content */}
-        <div className="flex-1 flex flex-col">
-          {/* Profile Header */}
-          <ProfileHeader />
-          
-          {/* Page content */}
-          <main className="flex-1 p-4 md:p-6">
-            {children}
-          </main>
-        </div>
-      </div>
+    <div className="min-h-screen bg-fpl-light flex overflow-x-hidden">
+      <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
       
-      {/* Mobile sidebar overlay - can be added later */}
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
+        <Header onSidebarToggle={toggleSidebar} />
+        
+        <main className="flex-1 lg:pl-6 min-w-0 overflow-x-hidden">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
