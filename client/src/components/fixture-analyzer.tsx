@@ -384,16 +384,18 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
                   </h4>
                   <p className="text-sm text-gray-600">{gwFixtures.fixtures.length} fixtures</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {getAvgDifficultyIcon(gwFixtures.avgDifficulty)}
-                  <Badge 
-                    variant="outline" 
-                    className={getDifficultyColor(gwFixtures.avgDifficulty)}
-                    data-testid={`badge-gw-avg-difficulty-${gwFixtures.gameweek}`}
-                  >
-                    Avg: {gwFixtures.avgDifficulty.toFixed(1)}
-                  </Badge>
-                </div>
+                {gwFixtures.fixtures[0]?.kickoff_time && (
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {new Date(gwFixtures.fixtures[0].kickoff_time).toLocaleDateString(undefined, {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short'
+                      })}
+                    </p>
+                    <p className="text-xs text-gray-500">First fixture date</p>
+                  </div>
+                )}
               </div>
 
               {/* Fixtures List */}
@@ -415,40 +417,44 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
                         <div className="text-xs text-gray-500">Away</div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge 
-                        variant="outline" 
-                        className={getDifficultyColor(fixture.team_h_difficulty)}
-                        data-testid={`badge-home-difficulty-${fixture.id}`}
-                      >
-                        H:{fixture.team_h_difficulty}
-                      </Badge>
-                      <Badge 
-                        variant="outline" 
-                        className={getDifficultyColor(fixture.team_a_difficulty)}
-                        data-testid={`badge-away-difficulty-${fixture.id}`}
-                      >
-                        A:{fixture.team_a_difficulty}
-                      </Badge>
+                    <div className="text-right">
+                      {fixture.kickoff_time ? (
+                        <div>
+                          <div className="text-sm font-medium text-gray-900" data-testid={`text-fixture-date-${fixture.id}`}>
+                            {new Date(fixture.kickoff_time).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </div>
+                          <div className="text-xs text-gray-500" data-testid={`text-fixture-time-${fixture.id}`}>
+                            {new Date(fixture.kickoff_time).toLocaleTimeString(undefined, {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: false
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-gray-400">TBD</div>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Kickoff Times (if available) */}
-              {gwFixtures.fixtures[0]?.kickoff_time && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <p className="text-xs text-gray-500">
-                    First fixture: {new Date(gwFixtures.fixtures[0].kickoff_time).toLocaleDateString('en-GB', {
-                      weekday: 'short',
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
+              {/* Summary Information */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <span>Fixtures: {gwFixtures.fixtures.length}</span>
+                  {gwFixtures.fixtures[0]?.kickoff_time && (
+                    <span>
+                      {new Date(gwFixtures.fixtures[0].kickoff_time).toLocaleDateString(undefined, {
+                        weekday: 'long'
+                      })}
+                    </span>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           ))}
         </div>
