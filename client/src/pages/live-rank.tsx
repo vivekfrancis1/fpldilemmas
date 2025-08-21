@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "../components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +56,34 @@ export default function LiveRank() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
 
+  // Cache manager ID functionality
+  const saveManagerIdToCache = (id: string) => {
+    try {
+      localStorage.setItem('fpl-manager-id', id);
+    } catch (error) {
+      console.warn('Failed to save manager ID to localStorage:', error);
+    }
+  };
+
+  const getManagerIdFromCache = (): string | null => {
+    try {
+      return localStorage.getItem('fpl-manager-id');
+    } catch (error) {
+      console.warn('Failed to get manager ID from localStorage:', error);
+      return null;
+    }
+  };
+
+  // Load cached manager ID on component mount
+  useEffect(() => {
+    const cachedId = getManagerIdFromCache();
+    if (cachedId) {
+      setManagerId(cachedId);
+      // Auto-load the data for cached manager
+      setSearchedId(cachedId);
+    }
+  }, []);
+
   const { data: managerData, isLoading: isLoadingManager, error: managerError } = useQuery({
     queryKey: ["/api/manager", searchedId],
     enabled: !!searchedId,
@@ -68,7 +96,10 @@ export default function LiveRank() {
 
   const handleSearch = () => {
     if (managerId.trim()) {
-      setSearchedId(managerId.trim());
+      const trimmedId = managerId.trim();
+      setSearchedId(trimmedId);
+      // Save to cache for future use
+      saveManagerIdToCache(trimmedId);
     }
   };
 
@@ -159,6 +190,11 @@ export default function LiveRank() {
                 <li>Sign in and go to "Pick Team" or "Points"</li>
                 <li>Your Manager ID is the number in the URL (e.g., /entry/123456/)</li>
               </ol>
+              {getManagerIdFromCache() && (
+                <p className="mt-3 text-green-600 font-medium">
+                  ✓ Your last searched Manager ID ({getManagerIdFromCache()}) is automatically loaded
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

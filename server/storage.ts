@@ -27,6 +27,10 @@ export interface IStorage {
   getHistoricalPlayers(season: string): Promise<HistoricalPlayer[]>;
   insertHistoricalPlayers(players: InsertHistoricalPlayer[]): Promise<void>;
   hasHistoricalData(season: string): Promise<boolean>;
+  
+  // Manager ID caching operations
+  getLastManagerId(): Promise<string | undefined>;
+  setLastManagerId(managerId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -36,6 +40,7 @@ export class MemStorage implements IStorage {
   private priceAlerts: Map<number, PriceAlert>;
   private priceChangeHistory: Map<string, { playerId: number; changeAmount: number; date: string; }>;
   private historicalPlayerCache: Map<string, HistoricalPlayer[]>;
+  private lastManagerId: string | undefined;
   private nextWatchlistId: number;
   private nextAlertId: number;
 
@@ -155,6 +160,15 @@ export class MemStorage implements IStorage {
 
   async hasHistoricalData(season: string): Promise<boolean> {
     return this.historicalPlayerCache.has(season);
+  }
+
+  // Manager ID caching operations
+  async getLastManagerId(): Promise<string | undefined> {
+    return this.lastManagerId;
+  }
+
+  async setLastManagerId(managerId: string): Promise<void> {
+    this.lastManagerId = managerId;
   }
 }
 
@@ -323,6 +337,15 @@ export class DatabaseStorage implements IStorage {
       console.warn('Database check failed, using memory fallback:', error);
       return this.memFallback.hasHistoricalData(season);
     }
+  }
+
+  // Manager ID caching operations (delegate to memory for simplicity)
+  async getLastManagerId(): Promise<string | undefined> {
+    return this.memFallback.getLastManagerId();
+  }
+
+  async setLastManagerId(managerId: string): Promise<void> {
+    return this.memFallback.setLastManagerId(managerId);
   }
 }
 

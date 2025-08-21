@@ -374,6 +374,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid manager ID" });
       }
 
+      // Cache the manager ID for future use
+      await storage.setLastManagerId(managerId);
+
       const response = await fetch(`${FPL_BASE_URL}/entry/${managerId}/`);
       if (!response.ok) {
         if (response.status === 404) {
@@ -736,6 +739,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching league standings:", error);
       res.status(500).json({ 
         message: "Failed to fetch league standings from FPL API",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Manager ID caching endpoints
+  app.get("/api/manager/cache/last", async (req, res) => {
+    try {
+      const lastManagerId = await storage.getLastManagerId();
+      res.json({ managerId: lastManagerId });
+    } catch (error) {
+      console.error("Error fetching cached manager ID:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch cached manager ID",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/manager/cache/last", async (req, res) => {
+    try {
+      const { managerId } = req.body;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+
+      await storage.setLastManagerId(managerId);
+      res.json({ success: true, managerId });
+    } catch (error) {
+      console.error("Error caching manager ID:", error);
+      res.status(500).json({ 
+        message: "Failed to cache manager ID",
         error: error instanceof Error ? error.message : "Unknown error"
       });
     }
