@@ -1,17 +1,18 @@
-# FPL Authentication Implementation Guide
+# FPL OAuth + Team ID Implementation Guide
 
 ## Current Status
 
-The FPL Team integration feature is now **fully functional using a demo system** that simulates the complete authentication and team management flow. This demonstrates exactly how the integration will work once the real FPL authentication is resolved.
+The FPL Team integration feature is now **fully functional using OAuth + Team ID approach**. Users can authenticate via social login (Google, Facebook, Apple) and then connect their FPL team using just their Team ID - no FPL credentials required!
 
 ## What's Working Now
 
-✅ **Complete FPL Team Integration Demo**
-- Login form with email/password authentication
-- Team dashboard showing stats, squad, and performance
-- Transfer history and team management
-- Session management and logout functionality
-- All UI components and data flow working perfectly
+✅ **OAuth + Team ID Authentication System**
+- Social login with Google, Facebook, and Apple (demo mode)
+- Team ID setup page with validation and instructions
+- Real FPL team data fetching using Team ID only
+- Team dashboard with authentic FPL data
+- Transfer history and performance metrics
+- No FPL credentials required - much more secure!
 
 ## The Authentication Challenge
 

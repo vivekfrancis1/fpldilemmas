@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-// FPL Login schema
+// Team ID setup schema (after OAuth login)
+export const teamIdSetupSchema = z.object({
+  teamId: z.string().min(1, "Team ID is required").regex(/^\d+$/, "Team ID must be a number"),
+});
+
+export type TeamIdSetup = z.infer<typeof teamIdSetupSchema>;
+
+// Keep old schema for backward compatibility during transition
 export const fplLoginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),

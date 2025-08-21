@@ -39,7 +39,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "My FPL",
       items: [
-        { path: "/fpl-team", label: "My Team", icon: Shield, description: "View your FPL team", popular: false, new: true }
+        { path: "/auth/login", label: "My Team", icon: Shield, description: "Connect your FPL team", popular: false, new: true }
       ]
     },
     {

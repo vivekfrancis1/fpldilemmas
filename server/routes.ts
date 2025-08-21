@@ -4,11 +4,74 @@ import { storage } from "./storage";
 import { bootstrapDataSchema, playerSummarySchema, insertWatchlistEntrySchema, insertPriceAlertSchema } from "@shared/schema";
 import { fplClient } from "./fpl-client";
 import { fplDemoClient } from "./fpl-demo";
-import { fplLoginSchema } from "@shared/fpl-auth-schema";
+import { fplLoginSchema, teamIdSetupSchema } from "@shared/fpl-auth-schema";
+import { fplTeamFetcher } from "./fpl-team-fetcher";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // FPL API base URL
   const FPL_BASE_URL = "https://fantasy.premierleague.com/api";
+
+  // OAuth Authentication Routes (Demo Implementation)
+  
+  // Demo OAuth routes (simulate social login)
+  app.get('/auth/google', (req, res) => {
+    console.log('🔐 Google OAuth initiated (demo mode)');
+    res.redirect('/auth/setup-team?provider=google&demo=true');
+  });
+  
+  app.get('/auth/facebook', (req, res) => {
+    console.log('🔐 Facebook OAuth initiated (demo mode)');
+    res.redirect('/auth/setup-team?provider=facebook&demo=true');
+  });
+  
+  app.get('/auth/apple', (req, res) => {
+    console.log('🔐 Apple OAuth initiated (demo mode)');
+    res.redirect('/auth/setup-team?provider=apple&demo=true');
+  });
+
+  // Team ID setup after OAuth
+  app.post('/api/auth/setup-team', async (req, res) => {
+    try {
+      const setupData = teamIdSetupSchema.parse(req.body);
+      const teamId = parseInt(setupData.teamId);
+      
+      console.log(`🎯 Setting up team connection for Team ID: ${teamId}`);
+      
+      // Fetch team data to validate the ID
+      const teamData = await fplTeamFetcher.fetchTeamData(teamId);
+      
+      // Store the team connection (for demo, just return success)
+      res.json({
+        success: true,
+        message: "Team connected successfully",
+        team: teamData,
+      });
+      
+    } catch (error: any) {
+      console.error("Team setup error:", error.message);
+      res.status(400).json({
+        success: false,
+        message: error.message || "Failed to connect team",
+      });
+    }
+  });
+
+  // Check authentication status
+  app.get('/api/auth/user', (req, res) => {
+    // For demo, return demo user if session exists
+    const sessionId = req.header('X-Session-ID');
+    if (sessionId && sessionId !== 'undefined') {
+      res.json({
+        id: 'demo_user',
+        provider: 'demo',
+        firstName: 'Demo',
+        lastName: 'User',
+        email: 'demo@fpldilemmas.com',
+      });
+    } else {
+      res.status(401).json({ message: 'Not authenticated' });
+    }
+  });
 
   // Get bootstrap data (all players, teams, positions)
   app.get("/api/bootstrap-static", async (req, res) => {
@@ -753,8 +816,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`🔐 FPL login attempt for ${loginData.email}...`);
       
-      // Use demo client for now - replace with fplClient once authentication is fixed
-      const user = await fplDemoClient.login(sessionId, loginData);
+      // Use real Team ID fetcher for OAuth flow
+      const teamId = parseInt(loginData.email); // For demo, use email as team ID
+      const teamData = await fplTeamFetcher.fetchTeamData(teamId);
+      
+      const user = {
+        id: teamId,
+        email: loginData.email,
+        firstName: teamData.name.split(' ')[0],
+        lastName: teamData.name.split(' ').slice(1).join(' '),
+        teamId: teamId,
+        teamName: teamData.teamName,
+      };
       
       // Store session info in response
       res.json({ 

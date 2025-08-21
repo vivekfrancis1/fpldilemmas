@@ -11,7 +11,7 @@ Site tagline: "Analytical tools to beat the deadline blues" (updated December 20
 Navigation priority: Player Statistics as default landing page, with side navigation for all tools (updated December 2024)
 Most popular tools: Player Statistics, Live Rank, and Price Tracker (updated December 2024)
 Historical data: Added year selection functionality for player statistics from 2016/17 season onwards with full data coverage of 300-400+ players per season (fully functional August 2025)
-FPL Team Integration: User can login with FPL credentials, view team stats, transfers, and squad details that sync with official FPL app (implemented January 2025)
+FPL Team Integration: OAuth authentication (Google, Facebook, Apple) combined with FPL Team ID input to fetch and store user team data periodically without requiring FPL credentials (updated August 2025)
 
 ## System Architecture
 
