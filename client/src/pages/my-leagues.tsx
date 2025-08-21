@@ -263,7 +263,6 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
   });
 
   const [showLeagueTable, setShowLeagueTable] = useState(false);
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
   const getPositionIcon = (rank: number) => {
     if (rank === 1) return <Crown className="h-4 w-4 text-yellow-500" />;
@@ -303,15 +302,7 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
 
   const pointsAboveAverage = userPoints - averagePoints;
 
-  // Query for selected team data
-  const { data: selectedTeamData } = useQuery<any>({
-    queryKey: ["/api/manager", selectedTeamId, "team"],
-    enabled: !!selectedTeamId,
-  });
 
-  const { data: bootstrapData } = useQuery<any>({
-    queryKey: ["/api/bootstrap-static"],
-  });
 
   return (
     <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
@@ -455,10 +446,9 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
                   {standingsData.standings.results.map((entry: LeagueEntry) => (
                     <div 
                       key={entry.id} 
-                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-gray-50 transition-colors ${
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
                         entry.entry.toString() === managerId ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
                       }`}
-                      onClick={() => setSelectedTeamId(selectedTeamId === entry.entry.toString() ? null : entry.entry.toString())}
                       data-testid={`team-row-${entry.entry}`}
                     >
                       <div className="flex items-center gap-3">
@@ -495,64 +485,7 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
                   ))}
                 </div>
 
-                {/* Selected Team Details */}
-                {selectedTeamId && selectedTeamData && (
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex justify-between items-center mb-3">
-                      <h5 className="font-semibold text-blue-900">
-                        {selectedTeamId === managerId ? 'Your Team' : `${standingsData?.standings?.results?.find((e: any) => e.entry.toString() === selectedTeamId)?.entry_name}'s Team`}
-                      </h5>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setSelectedTeamId(null)}
-                        data-testid={`button-close-team-${selectedTeamId}`}
-                      >
-                        ×
-                      </Button>
-                    </div>
-                    
-                    {selectedTeamData.picks && bootstrapData?.elements && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                        {selectedTeamData.picks.slice(0, 11).map((pick: any) => {
-                          const player = bootstrapData.elements.find((p: any) => p.id === pick.element);
-                          const isCaptain = pick.is_captain;
-                          const isViceCaptain = pick.is_vice_captain;
-                          
-                          return player ? (
-                            <div 
-                              key={player.id} 
-                              className={`p-2 rounded text-xs border ${
-                                isCaptain ? 'bg-yellow-100 border-yellow-300' : 
-                                isViceCaptain ? 'bg-orange-100 border-orange-300' : 
-                                'bg-white border-gray-200'
-                              }`}
-                              data-testid={`player-card-${player.id}`}
-                            >
-                              <div className="font-medium text-gray-900">
-                                {player.web_name}
-                                {isCaptain && ' (C)'}
-                                {isViceCaptain && ' (VC)'}
-                              </div>
-                              <div className="text-gray-600">
-                                £{(player.now_cost / 10).toFixed(1)}m • {player.total_points}pts
-                              </div>
-                            </div>
-                          ) : null;
-                        })}
-                      </div>
-                    )}
-                    
-                    <div className="mt-3 text-xs text-blue-700">
-                      Team Value: £{selectedTeamData.entry_history ? 
-                        (selectedTeamData.entry_history.value / 10).toFixed(1) : 
-                        '0.0'}m • 
-                      Bank: £{selectedTeamData.entry_history ? 
-                        (selectedTeamData.entry_history.bank / 10).toFixed(1) : 
-                        '0.0'}m
-                    </div>
-                  </div>
-                )}
+
               </div>
             )}
           </div>
