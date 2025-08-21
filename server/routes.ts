@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { bootstrapDataSchema, playerSummarySchema, insertWatchlistEntrySchema, insertPriceAlertSchema } from "@shared/schema";
+import { fplClient } from "./fpl-client";
+import { fplLoginSchema } from "@shared/fpl-auth-schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // FPL API base URL
@@ -736,6 +738,190 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         message: "Failed to fetch league standings from FPL API",
         error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // FPL Authentication endpoints
+  
+  // Login to FPL account
+  app.post("/api/fpl/login", async (req, res) => {
+    try {
+      const loginData = fplLoginSchema.parse(req.body);
+      const sessionId = req.sessionID || `session_${Date.now()}_${Math.random()}`;
+      
+      console.log(`🔐 FPL login attempt for ${loginData.email}...`);
+      
+      const user = await fplClient.login(sessionId, loginData);
+      
+      // Store session info in response
+      res.json({ 
+        success: true,
+        user,
+        sessionId,
+        message: `Successfully logged in as ${user.teamName}`
+      });
+      
+    } catch (error: any) {
+      console.error("FPL login error:", error.message);
+      res.status(400).json({ 
+        success: false,
+        message: error.message || "Login failed"
+      });
+    }
+  });
+
+  // Get current user's FPL team
+  app.get("/api/fpl/team", async (req, res) => {
+    try {
+      const sessionId = req.header('X-Session-ID') || req.sessionID;
+      
+      if (!sessionId || !fplClient.isAuthenticated(sessionId)) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Please login to view your team" 
+        });
+      }
+      
+      const team = await fplClient.getTeam(sessionId);
+      res.json({ success: true, team });
+      
+    } catch (error: any) {
+      console.error("Error fetching FPL team:", error.message);
+      
+      if (error.message.includes('Session expired')) {
+        res.status(401).json({ 
+          success: false,
+          message: error.message 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false,
+          message: error.message || "Failed to fetch team data"
+        });
+      }
+    }
+  });
+
+  // Get user's transfer history
+  app.get("/api/fpl/transfers", async (req, res) => {
+    try {
+      const sessionId = req.header('X-Session-ID') || req.sessionID;
+      
+      if (!sessionId || !fplClient.isAuthenticated(sessionId)) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Please login to view transfers" 
+        });
+      }
+      
+      const transfers = await fplClient.getTransfers(sessionId);
+      res.json({ success: true, transfers });
+      
+    } catch (error: any) {
+      console.error("Error fetching FPL transfers:", error.message);
+      
+      if (error.message.includes('Session expired')) {
+        res.status(401).json({ 
+          success: false,
+          message: error.message 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false,
+          message: error.message || "Failed to fetch transfers"
+        });
+      }
+    }
+  });
+
+  // Get user's picks for specific gameweek
+  app.get("/api/fpl/picks/:gameweek", async (req, res) => {
+    try {
+      const sessionId = req.header('X-Session-ID') || req.sessionID;
+      const gameweek = parseInt(req.params.gameweek);
+      
+      if (!sessionId || !fplClient.isAuthenticated(sessionId)) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Please login to view picks" 
+        });
+      }
+      
+      if (isNaN(gameweek) || gameweek < 1 || gameweek > 38) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Invalid gameweek number" 
+        });
+      }
+      
+      const picks = await fplClient.getGameweekPicks(sessionId, gameweek);
+      res.json({ success: true, picks });
+      
+    } catch (error: any) {
+      console.error("Error fetching FPL picks:", error.message);
+      
+      if (error.message.includes('Session expired')) {
+        res.status(401).json({ 
+          success: false,
+          message: error.message 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false,
+          message: error.message || "Failed to fetch picks"
+        });
+      }
+    }
+  });
+
+  // Check FPL authentication status
+  app.get("/api/fpl/status", async (req, res) => {
+    try {
+      const sessionId = req.header('X-Session-ID') || req.sessionID;
+      
+      if (!sessionId || !fplClient.isAuthenticated(sessionId)) {
+        return res.json({ 
+          authenticated: false,
+          user: null 
+        });
+      }
+      
+      const user = fplClient.getUserInfo(sessionId);
+      res.json({ 
+        authenticated: true,
+        user 
+      });
+      
+    } catch (error: any) {
+      console.error("Error checking FPL status:", error.message);
+      res.status(500).json({ 
+        authenticated: false,
+        user: null,
+        error: error.message
+      });
+    }
+  });
+
+  // Logout from FPL
+  app.post("/api/fpl/logout", async (req, res) => {
+    try {
+      const sessionId = req.header('X-Session-ID') || req.sessionID;
+      
+      if (sessionId) {
+        fplClient.logout(sessionId);
+      }
+      
+      res.json({ 
+        success: true,
+        message: "Logged out successfully" 
+      });
+      
+    } catch (error: any) {
+      console.error("Error during FPL logout:", error.message);
+      res.status(500).json({ 
+        success: false,
+        message: "Logout failed" 
       });
     }
   });

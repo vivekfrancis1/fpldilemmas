@@ -12,6 +12,7 @@ import LiveRank from "./pages/live-rank";
 import PriceTracker from "./pages/price-tracker";
 import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
+import FplTeam from "./pages/fpl-team";
 
 function Router() {
   return (
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/price-tracker" component={PriceTracker} />
       <Route path="/league-comparison" component={LeagueComparison} />
       <Route path="/player-stats" component={PlayerStats} />
+      <Route path="/fpl-team" component={FplTeam} />
       <Route component={NotFound} />
     </Switch>
   );

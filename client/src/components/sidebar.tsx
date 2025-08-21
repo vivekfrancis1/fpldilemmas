@@ -11,7 +11,8 @@ import {
   BarChart3,
   Menu,
   X,
-  Star
+  Star,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: true },
         { path: "/live-rank", label: "Live Rank", icon: TrendingUp, description: "Real-time FPL rank", popular: true },
         { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: true }
+      ]
+    },
+    {
+      section: "My FPL",
+      items: [
+        { path: "/fpl-team", label: "My Team", icon: Shield, description: "View your FPL team", popular: false, new: true }
       ]
     },
     {
@@ -119,6 +126,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                             {item.popular && (
                               <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 h-auto">
                                 HOT
+                              </Badge>
+                            )}
+                            {(item as any).new && (
+                              <Badge className="bg-blue-500 text-white text-xs px-1.5 py-0.5 h-auto">
+                                NEW
                               </Badge>
                             )}
                           </div>
