@@ -33,22 +33,11 @@ export default function PlayerStatsTable({
     // Use historical data if available, otherwise use current season data
     let players: any[] = [];
     
-    console.log("Data check - historicalData:", !!historicalData, historicalData?.length, "data:", !!data);
-    
     if (historicalData && Array.isArray(historicalData) && historicalData.length > 0) {
-      console.log(`✓ Using historical data: ${historicalData.length} players`);
       players = [...historicalData];
     } else if (data && data.elements && Array.isArray(data.elements)) {
-      console.log(`✓ Using current data: ${data.elements.length} players`);
       players = [...data.elements];
     } else {
-      console.log("❌ No valid data available");
-      console.log("Historical data details:", {
-        exists: !!historicalData,
-        isArray: Array.isArray(historicalData),
-        length: historicalData?.length,
-        sample: historicalData?.slice(0, 1)
-      });
       return [];
     }
 
@@ -75,7 +64,10 @@ export default function PlayerStatsTable({
 
     if (filters.maxPrice && filters.maxPrice !== "all") {
       const maxPrice = parseInt(filters.maxPrice);
-      players = players.filter(player => (player.now_cost || player.end_cost) <= maxPrice);
+      players = players.filter(player => {
+        const cost = player.now_cost || player.end_cost || 0;
+        return cost <= maxPrice;
+      });
     }
 
     // Apply sorting with comprehensive field support
@@ -130,7 +122,7 @@ export default function PlayerStatsTable({
     });
 
     return players;
-  }, [data, filters, sort]);
+  }, [data, historicalData, filters, sort]);
 
   const paginatedPlayers = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -220,8 +212,6 @@ export default function PlayerStatsTable({
     return null;
   };
 
-  console.log("Table render - isLoading:", isLoading, "players count:", filteredAndSortedPlayers.length);
-  
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow-md overflow-hidden">

@@ -41,18 +41,15 @@ export default function PlayerStats() {
   // Get historical season data
   const { data: historicalData, isLoading: historicalLoading, error: historicalError } = useQuery<any[]>({
     queryKey: ["/api/players/historical", selectedSeason],
-    staleTime: 0, // No cache for debugging
+    staleTime: 30 * 60 * 1000, // 30 minutes
     enabled: selectedSeason !== "current",
     retry: 1,
-    refetchOnMount: 'always',
   });
 
   const isLoading = selectedSeason === "current" ? currentLoading : historicalLoading;
   const error = selectedSeason === "current" ? currentError : historicalError;
   
-  console.log('Selected season:', selectedSeason);
-  console.log('Historical data:', historicalData ? historicalData.length : 'none');
-  console.log('Bootstrap data:', bootstrapData ? bootstrapData.elements.length : 'none');
+
 
   if (error) {
     return (

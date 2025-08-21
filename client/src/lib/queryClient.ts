@@ -42,21 +42,16 @@ export const getQueryFn: <T>(options: {
       url = queryKey.join("/") as string;
     }
     
-    console.log("Fetching URL:", url);
     const res = await fetch(url, {
       credentials: "include",
     });
-    
-    console.log("Response status:", res.status, "headers:", Object.fromEntries(res.headers));
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
     }
 
     await throwIfResNotOk(res);
-    const data = await res.json();
-    console.log("Query response for", url, "- data length:", Array.isArray(data) ? data.length : 'not array', typeof data);
-    return data;
+    return await res.json();
   };
 
 export const queryClient = new QueryClient({
