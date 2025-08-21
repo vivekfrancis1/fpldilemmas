@@ -514,11 +514,11 @@ export default function MyTeam() {
                                           <span className="text-xs text-gray-500">Form: {player.form}</span>
                                         </div>
                                         
-                                        {/* Next 5 fixtures */}
+                                        {/* Next 3 fixtures */}
                                         <div className="space-y-1">
-                                          <div className="text-xs font-medium text-gray-600">Next 5 fixtures:</div>
+                                          <div className="text-xs font-medium text-gray-600">Next 3 fixtures:</div>
                                           <div className="flex gap-1">
-                                            {getNextFixtures(getPlayerTeam(player)?.id || 0, 5).map((fixture, idx) => (
+                                            {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
                                               <div 
                                                 key={idx}
                                                 className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} text-white`}
@@ -528,7 +528,7 @@ export default function MyTeam() {
                                                 <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
                                               </div>
                                             ))}
-                                            {getNextFixtures(getPlayerTeam(player)?.id || 0, 5).length === 0 && (
+                                            {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
                                               <span className="text-xs text-gray-400">No upcoming fixtures</span>
                                             )}
                                           </div>
@@ -541,7 +541,6 @@ export default function MyTeam() {
                                     <p className="text-sm text-gray-600">{player.total_points} pts</p>
                                     <div className="text-xs text-gray-500">
                                       <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
-                                      <div>PPG: {((player.total_points / Math.max(parseInt(player.form) || 1, 1)) || 0).toFixed(1)}</div>
                                     </div>
                                   </div>
                                 </div>
@@ -595,11 +594,11 @@ export default function MyTeam() {
                                     <span className="text-xs text-gray-500">Form: {player.form}</span>
                                   </div>
                                   
-                                  {/* Next 5 fixtures */}
+                                  {/* Next 3 fixtures */}
                                   <div className="space-y-1">
-                                    <div className="text-xs font-medium text-gray-600">Next 5 fixtures:</div>
+                                    <div className="text-xs font-medium text-gray-600">Next 3 fixtures:</div>
                                     <div className="flex gap-1 flex-wrap">
-                                      {getNextFixtures(getPlayerTeam(player)?.id || 0, 5).map((fixture, idx) => (
+                                      {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
                                         <div 
                                           key={idx}
                                           className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} text-white`}
@@ -609,7 +608,7 @@ export default function MyTeam() {
                                           <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
                                         </div>
                                       ))}
-                                      {getNextFixtures(getPlayerTeam(player)?.id || 0, 5).length === 0 && (
+                                      {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
                                         <span className="text-xs text-gray-400">No upcoming fixtures</span>
                                       )}
                                     </div>
@@ -622,7 +621,6 @@ export default function MyTeam() {
                               <p className="text-sm text-gray-600">{player.total_points} pts</p>
                               <div className="text-xs text-gray-500">
                                 <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
-                                <div>PPG: {((player.total_points / Math.max(parseInt(player.form) || 1, 1)) || 0).toFixed(1)}</div>
                               </div>
                             </div>
                           </div>
