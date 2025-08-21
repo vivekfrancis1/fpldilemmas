@@ -58,6 +58,10 @@ export class FplClient {
         }
       );
 
+      console.log('Login response status:', loginResponse.status);
+      console.log('Login response headers:', loginResponse.headers);
+      console.log('Cookies in jar:', session.jar.getCookiesSync('https://fantasy.premierleague.com'));
+
       // Check if login was successful by trying to access profile
       console.log(`📋 Checking login status...`);
       const profileResponse = await session.client.get(
