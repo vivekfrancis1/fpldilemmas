@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
+import FormData from 'form-data';
 
 import { FplLoginData, FplUser, FplTeam } from '@shared/fpl-auth-schema';
 
@@ -36,24 +37,22 @@ export class FplClient {
     const session = this.createSession();
     
     try {
-      // Login payload (updated 2025 method)
-      const loginData = {
-        login: credentials.email,
-        password: credentials.password,
-        app: 'plfpl-web',
-        redirect_uri: 'https://fantasy.premierleague.com/a/login'
-      };
+      // Create FormData as per working examples
+      const form = new FormData();
+      form.append('login', credentials.email);
+      form.append('password', credentials.password);
+      form.append('app', 'plfpl-web');
+      form.append('redirect_uri', 'https://fantasy.premierleague.com/a/login');
 
       // Perform login
       console.log(`🔐 Attempting FPL login for ${credentials.email}...`);
       const loginResponse = await session.client.post(
         'https://users.premierleague.com/accounts/login/',
-        loginData,
+        form,
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            ...form.getHeaders(),
             'Referer': 'https://fantasy.premierleague.com/',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
           },
           maxRedirects: 5,
         }
@@ -65,7 +64,7 @@ export class FplClient {
         'https://fantasy.premierleague.com/api/me/'
       );
 
-      console.log('Profile response:', profileResponse.status, profileResponse.data);
+      console.log('Profile response:', profileResponse.status, JSON.stringify(profileResponse.data, null, 2));
 
       if (!profileResponse.data || !profileResponse.data.player) {
         console.log('❌ No player data found, login failed');
