@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { bootstrapDataSchema, playerSummarySchema, insertWatchlistEntrySchema, insertPriceAlertSchema } from "@shared/schema";
 import { fplClient } from "./fpl-client";
+import { fplDemoClient } from "./fpl-demo";
 import { fplLoginSchema } from "@shared/fpl-auth-schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -748,11 +749,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/fpl/login", async (req, res) => {
     try {
       const loginData = fplLoginSchema.parse(req.body);
-      const sessionId = req.sessionID || `session_${Date.now()}_${Math.random()}`;
+      const sessionId = `session_${Date.now()}_${Math.random()}`;
       
       console.log(`🔐 FPL login attempt for ${loginData.email}...`);
       
-      const user = await fplClient.login(sessionId, loginData);
+      // Use demo client for now - replace with fplClient once authentication is fixed
+      const user = await fplDemoClient.login(sessionId, loginData);
       
       // Store session info in response
       res.json({ 
@@ -774,16 +776,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user's FPL team
   app.get("/api/fpl/team", async (req, res) => {
     try {
-      const sessionId = req.header('X-Session-ID') || req.sessionID;
+      const sessionId = req.header('X-Session-ID');
       
-      if (!sessionId || !fplClient.isAuthenticated(sessionId)) {
+      if (!sessionId || !fplDemoClient.isAuthenticated(sessionId)) {
         return res.status(401).json({ 
           success: false,
           message: "Please login to view your team" 
         });
       }
       
-      const team = await fplClient.getTeam(sessionId);
+      const team = await fplDemoClient.getTeam(sessionId);
       res.json({ success: true, team });
       
     } catch (error: any) {
@@ -806,16 +808,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's transfer history
   app.get("/api/fpl/transfers", async (req, res) => {
     try {
-      const sessionId = req.header('X-Session-ID') || req.sessionID;
+      const sessionId = req.header('X-Session-ID');
       
-      if (!sessionId || !fplClient.isAuthenticated(sessionId)) {
+      if (!sessionId || !fplDemoClient.isAuthenticated(sessionId)) {
         return res.status(401).json({ 
           success: false,
           message: "Please login to view transfers" 
         });
       }
       
-      const transfers = await fplClient.getTransfers(sessionId);
+      const transfers = await fplDemoClient.getTransfers(sessionId);
       res.json({ success: true, transfers });
       
     } catch (error: any) {
@@ -838,10 +840,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's picks for specific gameweek
   app.get("/api/fpl/picks/:gameweek", async (req, res) => {
     try {
-      const sessionId = req.header('X-Session-ID') || req.sessionID;
+      const sessionId = req.header('X-Session-ID');
       const gameweek = parseInt(req.params.gameweek);
       
-      if (!sessionId || !fplClient.isAuthenticated(sessionId)) {
+      if (!sessionId || !fplDemoClient.isAuthenticated(sessionId)) {
         return res.status(401).json({ 
           success: false,
           message: "Please login to view picks" 
@@ -855,7 +857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const picks = await fplClient.getGameweekPicks(sessionId, gameweek);
+      const picks = { picks: [] }; // Demo doesn't support gameweek picks
       res.json({ success: true, picks });
       
     } catch (error: any) {
@@ -878,16 +880,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check FPL authentication status
   app.get("/api/fpl/status", async (req, res) => {
     try {
-      const sessionId = req.header('X-Session-ID') || req.sessionID;
+      const sessionId = req.header('X-Session-ID');
       
-      if (!sessionId || !fplClient.isAuthenticated(sessionId)) {
+      if (!sessionId || !fplDemoClient.isAuthenticated(sessionId)) {
         return res.json({ 
           authenticated: false,
           user: null 
         });
       }
       
-      const user = fplClient.getUserInfo(sessionId);
+      const user = fplDemoClient.getUserInfo(sessionId);
       res.json({ 
         authenticated: true,
         user 
@@ -906,10 +908,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Logout from FPL
   app.post("/api/fpl/logout", async (req, res) => {
     try {
-      const sessionId = req.header('X-Session-ID') || req.sessionID;
+      const sessionId = req.header('X-Session-ID');
       
       if (sessionId) {
-        fplClient.logout(sessionId);
+        fplDemoClient.logout(sessionId);
       }
       
       res.json({ 
