@@ -819,6 +819,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manager leagues endpoint
+  app.get('/api/manager/:managerId/leagues', async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
+      
+      if (!response.ok) {
+        return res.status(404).json({ error: 'Manager not found' });
+      }
+      
+      const data = await response.json();
+      res.json({ leagues: data.leagues });
+    } catch (error) {
+      console.error('Manager leagues error:', error);
+      res.status(500).json({ error: 'Failed to fetch manager leagues' });
+    }
+  });
+
+  // League standings endpoint
+  app.get('/api/league/:leagueId/standings', async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      const page = req.query.page || 1;
+      const pageSize = req.query.page_size || 50;
+      
+      const response = await fetch(
+        `https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_standings=${page}&page_new_entries=1&phase=1`
+      );
+      
+      if (!response.ok) {
+        return res.status(404).json({ error: 'League not found' });
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('League standings error:', error);
+      res.status(500).json({ error: 'Failed to fetch league standings' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
