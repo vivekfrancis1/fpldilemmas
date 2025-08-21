@@ -37,7 +37,7 @@ export class MemStorage implements IStorage {
   private bootstrapData: BootstrapData | undefined;
   private playerSummaries: Map<number, PlayerSummary>;
   private watchlistEntries: Map<number, WatchlistEntry>;
-  private users: Map<string, User>;
+  private users: Map<string, User> = new Map();
   private priceAlerts: Map<number, PriceAlert>;
   private priceChangeHistory: Map<string, { playerId: number; changeAmount: number; date: string; }>;
   private historicalPlayerCache: Map<string, HistoricalPlayer[]>;

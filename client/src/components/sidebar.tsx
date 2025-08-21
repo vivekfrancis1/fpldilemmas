@@ -11,10 +11,12 @@ import {
   BarChart3,
   Menu,
   X,
-  Star
+  Star,
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -136,6 +138,27 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             </div>
           ))}
         </nav>
+
+        {/* User Actions */}
+        <div className="mt-auto p-4">
+          <Button
+            onClick={async () => {
+              try {
+                await fetch('/api/logout');
+                window.location.href = '/login';
+              } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/login';
+              }
+            }}
+            variant="ghost"
+            className="w-full text-purple-100 hover:bg-white/10 hover:text-white flex items-center gap-2"
+            data-testid="button-logout"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
+        </div>
 
         {/* Footer */}
         <div className="p-4 border-t border-purple-400/20">
