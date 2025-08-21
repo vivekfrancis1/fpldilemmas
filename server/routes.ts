@@ -78,6 +78,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const season = decodeURIComponent(req.params.season);
       console.log(`Fetching historical data for season: ${season}`);
       
+      // First check if we have this data in the database
+      const hasData = await storage.hasHistoricalData(season);
+      
+      if (hasData) {
+        console.log(`✓ Loading ${season} data from database (fast)`);
+        const historicalPlayers = await storage.getHistoricalPlayers(season);
+        res.json(historicalPlayers);
+        return;
+      }
+      
+      console.log(`⚠ ${season} data not in database, fetching from FPL API (slow)`);
+      
       // Get bootstrap data first to get all current players
       const bootstrapResponse = await fetch(`${FPL_BASE_URL}/bootstrap-static/`);
       if (!bootstrapResponse.ok) {
@@ -94,9 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const positionMap = new Map(elementTypes.map((et: any) => [et.id, et]));
       
       const historicalPlayers = [];
-      
-      // Fetch historical data for all players to get comprehensive data
-      const playerSubset = players;
+      const dbInsertData: any[] = [];
       
       console.log(`Processing ${players.length} players for historical data...`);
       
@@ -122,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const team = teamMap.get(player.team) as any;
                 const position = positionMap.get(player.element_type) as any;
                 
-                historicalPlayers.push({
+                const playerRecord = {
                   ...seasonData,
                   id: player.id,
                   first_name: player.first_name,
@@ -140,6 +150,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   selected_by_percent: "0.0", // Historical ownership not available
                   value_season: (seasonData.total_points / (seasonData.end_cost / 10)).toFixed(1),
                   value_form: (seasonData.total_points / (seasonData.end_cost / 10)).toFixed(1),
+                };
+                
+                historicalPlayers.push(playerRecord);
+                
+                // Prepare for database insertion
+                dbInsertData.push({
+                  id: `${player.id}_${season}`,
+                  playerId: player.id,
+                  season: season,
+                  firstName: player.first_name,
+                  secondName: player.second_name,
+                  webName: player.web_name,
+                  teamName: team?.name || 'Unknown',
+                  teamShortName: team?.short_name || 'UNK', 
+                  positionName: position?.singular_name || 'Unknown',
+                  seasonName: seasonData.season_name,
+                  elementCode: seasonData.element_code,
+                  startCost: seasonData.start_cost,
+                  endCost: seasonData.end_cost,
+                  totalPoints: seasonData.total_points,
+                  minutes: seasonData.minutes,
+                  goalsScored: seasonData.goals_scored,
+                  assists: seasonData.assists,
+                  cleanSheets: seasonData.clean_sheets,
+                  goalsConceded: seasonData.goals_conceded,
+                  ownGoals: seasonData.own_goals,
+                  penaltiesSaved: seasonData.penalties_saved,
+                  penaltiesMissed: seasonData.penalties_missed,
+                  yellowCards: seasonData.yellow_cards,
+                  redCards: seasonData.red_cards,
+                  saves: seasonData.saves,
+                  bonus: seasonData.bonus,
+                  bps: seasonData.bps,
+                  influence: seasonData.influence?.toString() || '0',
+                  creativity: seasonData.creativity?.toString() || '0',
+                  threat: seasonData.threat?.toString() || '0',
+                  ictIndex: seasonData.ict_index?.toString() || '0',
                 });
               }
             }
@@ -149,6 +196,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await new Promise(resolve => setTimeout(resolve, 50));
         } catch (playerError) {
           console.warn(`Failed to fetch data for player ${player.id}:`, playerError);
+        }
+      }
+      
+      // Store in database for future fast access
+      if (dbInsertData.length > 0) {
+        console.log(`💾 Storing ${dbInsertData.length} players in database for ${season}`);
+        try {
+          await storage.insertHistoricalPlayers(dbInsertData);
+        } catch (dbError) {
+          console.warn('Failed to store historical data in database:', dbError);
         }
       }
       
