@@ -11,6 +11,7 @@ Site tagline: "Analytical tools to beat the deadline blues" (updated December 20
 Navigation priority: Player Statistics as default landing page, with side navigation for all tools (updated December 2024)
 Most popular tools: Player Statistics, Live Rank, and Price Tracker (updated December 2024)
 Historical data: Added year selection functionality for player statistics from 2016/17 season onwards with full data coverage of 300-400+ players per season (fully functional August 2025)
+FPL Team Integration: User can login with FPL credentials, view team stats, transfers, and squad details that sync with official FPL app (implemented January 2025)
 
 ## System Architecture
 
@@ -43,8 +44,13 @@ Historical data: Added year selection functionality for player statistics from 2
   - `/element-summary/:playerId` - Individual player fixtures and history
   - `/api/players/historical/:season` - Historical player statistics by season
   - `/api/seasons` - Available historical seasons list
+  - `/api/fpl/login` - FPL account authentication via session cookies
+  - `/api/fpl/team` - Current user's FPL team data and squad
+  - `/api/fpl/transfers` - User's transfer history and activity
+- **Authentication**: Session-based FPL authentication using axios-cookiejar-support for cookie management
 - **Data Validation**: Zod schemas for type-safe API response parsing
 - **Historical Data**: Fetches previous seasons data from `history_past` field in player summaries
+- **FPL Integration**: Secure proxy system for FPL authentication due to CORS restrictions
 - **Error Handling**: Comprehensive error handling with user-friendly error messages
 
 ### Type Safety & Validation
