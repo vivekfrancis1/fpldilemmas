@@ -398,58 +398,55 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
                 )}
               </div>
 
-              {/* Fixtures List - Vertical Layout */}
-              <div className="space-y-3">
+              {/* Fixtures List - Compact Vertical Layout */}
+              <div className="space-y-1">
                 {gwFixtures.fixtures.map((fixture: any) => (
                   <div 
                     key={fixture.id} 
-                    className="flex items-center justify-between p-5 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200"
+                    className="flex items-center justify-between py-2 px-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:shadow-sm transition-all duration-200"
                     data-testid={`fixture-gw-${fixture.id}`}
                   >
                     {/* Teams Section */}
-                    <div className="flex items-center space-x-6 flex-1">
+                    <div className="flex items-center space-x-3 flex-1">
                       {/* Home Team */}
-                      <div className="flex items-center space-x-3 min-w-[120px]">
+                      <div className="flex items-center space-x-2 min-w-[80px]">
                         <div className="text-right">
-                          <div className="text-base font-bold text-gray-900">{fixture.homeTeam.short_name}</div>
-                          <div className="text-xs text-gray-500 uppercase tracking-wide">{fixture.homeTeam.name}</div>
+                          <div className="text-sm font-semibold text-gray-900">{fixture.homeTeam.short_name}</div>
                         </div>
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
                           <span className="text-blue-600 text-xs font-bold">H</span>
                         </div>
                       </div>
                       
                       {/* VS Divider */}
                       <div className="flex items-center justify-center">
-                        <div className="w-12 h-8 bg-white rounded-lg border border-gray-300 flex items-center justify-center shadow-sm">
-                          <span className="text-gray-600 font-semibold text-sm">VS</span>
+                        <div className="w-8 h-5 bg-white rounded border border-gray-300 flex items-center justify-center">
+                          <span className="text-gray-600 font-medium text-xs">vs</span>
                         </div>
                       </div>
                       
                       {/* Away Team */}
-                      <div className="flex items-center space-x-3 min-w-[120px]">
-                        <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                      <div className="flex items-center space-x-2 min-w-[80px]">
+                        <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
                           <span className="text-red-600 text-xs font-bold">A</span>
                         </div>
                         <div className="text-left">
-                          <div className="text-base font-bold text-gray-900">{fixture.awayTeam.short_name}</div>
-                          <div className="text-xs text-gray-500 uppercase tracking-wide">{fixture.awayTeam.name}</div>
+                          <div className="text-sm font-semibold text-gray-900">{fixture.awayTeam.short_name}</div>
                         </div>
                       </div>
                     </div>
                     
                     {/* Match Info Section */}
-                    <div className="text-right ml-4">
+                    <div className="text-right ml-3">
                       {fixture.kickoff_time ? (
-                        <div className="bg-white px-4 py-2 rounded-lg border border-gray-200">
-                          <div className="text-sm font-semibold text-gray-900" data-testid={`text-fixture-date-${fixture.id}`}>
+                        <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                          <div className="text-xs font-medium text-gray-700" data-testid={`text-fixture-date-${fixture.id}`}>
                             {new Date(fixture.kickoff_time).toLocaleDateString(undefined, {
-                              weekday: 'short',
                               month: 'short',
                               day: 'numeric'
                             })}
                           </div>
-                          <div className="text-lg font-bold text-purple-600" data-testid={`text-fixture-time-${fixture.id}`}>
+                          <div className="text-sm font-bold text-purple-600" data-testid={`text-fixture-time-${fixture.id}`}>
                             {new Date(fixture.kickoff_time).toLocaleTimeString(undefined, {
                               hour: '2-digit',
                               minute: '2-digit',
@@ -458,9 +455,8 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
                           </div>
                         </div>
                       ) : (
-                        <div className="bg-gray-100 px-4 py-2 rounded-lg border border-gray-200">
-                          <div className="text-sm font-medium text-gray-500">Date & Time</div>
-                          <div className="text-lg font-bold text-gray-400">TBD</div>
+                        <div className="bg-gray-100 px-2 py-1 rounded border border-gray-200">
+                          <div className="text-xs font-medium text-gray-400">TBD</div>
                         </div>
                       )}
                     </div>
@@ -468,17 +464,17 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
                 ))}
               </div>
 
-              {/* Summary Information */}
-              <div className="mt-6 pt-4 border-t border-gray-200">
+              {/* Compact Summary Information */}
+              <div className="mt-3 pt-3 border-t border-gray-200">
                 <div className="flex items-center justify-center">
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-2">
-                    <span className="text-purple-700 font-medium text-sm">
-                      {gwFixtures.fixtures.length} matches in this gameweek
+                  <div className="bg-purple-50 border border-purple-200 rounded px-3 py-1">
+                    <span className="text-purple-700 font-medium text-xs">
+                      {gwFixtures.fixtures.length} matches
                       {gwFixtures.fixtures[0]?.kickoff_time && (
                         <span className="ml-2 text-purple-600">
-                          • Starting {new Date(gwFixtures.fixtures[0].kickoff_time).toLocaleDateString(undefined, {
-                            weekday: 'long',
-                            month: 'long',
+                          • {new Date(gwFixtures.fixtures[0].kickoff_time).toLocaleDateString(undefined, {
+                            weekday: 'short',
+                            month: 'short',
                             day: 'numeric'
                           })}
                         </span>
