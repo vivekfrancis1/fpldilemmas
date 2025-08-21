@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Layout from "../components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,7 @@ interface LeagueStandings {
   };
 }
 
-export default function MyLeagues() {
+function MyLeagues() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
 
@@ -83,13 +84,13 @@ export default function MyLeagues() {
   };
 
   // Get manager details
-  const { data: managerData, isLoading: isLoadingManager, error: managerError } = useQuery({
+  const { data: managerData, isLoading: isLoadingManager, error: managerError } = useQuery<any>({
     queryKey: ["/api/manager", searchedId],
     enabled: !!searchedId,
   });
 
   // Get manager's leagues
-  const { data: leaguesData, isLoading: isLoadingLeagues, error: leaguesError } = useQuery({
+  const { data: leaguesData, isLoading: isLoadingLeagues, error: leaguesError } = useQuery<any>({
     queryKey: ["/api/manager", searchedId, "leagues"],
     enabled: !!searchedId,
   });
@@ -111,13 +112,14 @@ export default function MyLeagues() {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">My Leagues</h1>
-          <p className="text-gray-600 mt-1">Track your performance across all leagues</p>
+    <Layout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">My Leagues</h1>
+            <p className="text-gray-600 mt-1">Track your performance across all leagues</p>
+          </div>
         </div>
-      </div>
 
       {/* Manager Search */}
       <Card className="bg-white shadow-sm border border-gray-200">
@@ -214,6 +216,8 @@ export default function MyLeagues() {
                 league={league}
                 managerId={searchedId}
                 managerName={managerData?.name}
+                formatDate={formatDate}
+                getLeagueTypeDisplay={getLeagueTypeDisplay}
               />
             ))}
             
@@ -228,15 +232,20 @@ export default function MyLeagues() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </Layout>
   );
 }
 
+export default MyLeagues;
+
 // League Card Component
-function LeagueCard({ league, managerId, managerName }: { 
+function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeDisplay }: { 
   league: any; 
   managerId: string; 
   managerName: string;
+  formatDate: (dateString: string) => string;
+  getLeagueTypeDisplay: (leagueType: string) => string;
 }) {
   const { data: standingsData, isLoading } = useQuery<LeagueStandings>({
     queryKey: ["/api/league", league.id, "standings"],
@@ -275,7 +284,7 @@ function LeagueCard({ league, managerId, managerName }: {
   const isTop10 = topPercentile <= 10;
 
   // Get average points for comparison
-  const averagePoints = standingsData?.standings.results.length > 0 
+  const averagePoints = standingsData?.standings?.results && standingsData.standings.results.length > 0 
     ? standingsData.standings.results.reduce((sum, entry) => sum + entry.total, 0) / standingsData.standings.results.length
     : 0;
 
