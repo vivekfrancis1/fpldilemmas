@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { bootstrapDataSchema, playerSummarySchema, insertWatchlistEntrySchema, insertPriceAlertSchema } from "@shared/schema";
-import { fplClient } from "./fpl-client";
+
 import { teamIdSetupSchema } from "@shared/fpl-auth-schema";
 import { fplTeamFetcher } from "./fpl-team-fetcher";
 import { userStorage } from "./user-storage";
@@ -26,7 +26,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       profileImage: 'https://via.placeholder.com/100',
     });
     const session = userStorage.createSession(user.id);
-    res.redirect(`/auth/setup-team?sessionId=${session.sessionId}`);
+    res.redirect(`/auth/callback?sessionId=${session.sessionId}`);
   });
   
   app.get('/auth/facebook', (req, res) => {
@@ -40,7 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       profileImage: 'https://via.placeholder.com/100',
     });
     const session = userStorage.createSession(user.id);
-    res.redirect(`/auth/setup-team?sessionId=${session.sessionId}`);
+    res.redirect(`/auth/callback?sessionId=${session.sessionId}`);
   });
   
   app.get('/auth/apple', (req, res) => {
@@ -53,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       lastName: 'User',
     });
     const session = userStorage.createSession(user.id);
-    res.redirect(`/auth/setup-team?sessionId=${session.sessionId}`);
+    res.redirect(`/auth/callback?sessionId=${session.sessionId}`);
   });
 
   // Team ID setup after OAuth

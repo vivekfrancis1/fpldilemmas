@@ -15,6 +15,7 @@ import PlayerStats from "./pages/player-stats";
 import FplTeam from "./pages/fpl-team";
 import AuthLogin from "./pages/auth-login";
 import AuthSetupTeam from "./pages/auth-setup-team";
+import OAuthCallback from "./pages/oauth-callback";
 
 function Router() {
   return (
@@ -30,6 +31,7 @@ function Router() {
       <Route path="/player-stats" component={PlayerStats} />
       <Route path="/fpl-team" component={FplTeam} />
       <Route path="/auth/login" component={AuthLogin} />
+      <Route path="/auth/callback" component={OAuthCallback} />
       <Route path="/auth/setup-team" component={AuthSetupTeam} />
       <Route component={NotFound} />
     </Switch>

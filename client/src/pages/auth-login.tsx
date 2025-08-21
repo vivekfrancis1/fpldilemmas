@@ -53,16 +53,9 @@ export default function AuthLogin() {
           
           {/* Demo login for testing */}
           <div className="mt-8 pt-4 border-t">
-            <p className="text-xs text-muted-foreground text-center mb-3">
-              Demo Mode (for testing)
+            <p className="text-xs text-muted-foreground text-center mb-2">
+              All login options create real accounts with session management
             </p>
-            <Button
-              variant="secondary"
-              className="w-full"
-              onClick={() => window.location.href = '/auth/setup-team?demo=true'}
-            >
-              Continue as Demo User
-            </Button>
           </div>
         </CardContent>
       </Card>

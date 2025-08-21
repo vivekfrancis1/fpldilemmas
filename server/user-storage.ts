@@ -160,7 +160,9 @@ class UserStorageSystem {
     const now = new Date();
     let deletedCount = 0;
 
-    for (const [sessionId, session] of this.sessions.entries()) {
+    // Convert to array to avoid iteration issues
+    const sessionsArray = Array.from(this.sessions.entries());
+    for (const [sessionId, session] of sessionsArray) {
       if (now > session.expiresAt) {
         this.deleteSession(sessionId);
         deletedCount++;

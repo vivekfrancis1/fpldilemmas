@@ -19,20 +19,17 @@ export default function AuthSetupTeam() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get sessionId from URL params
+  // Get sessionId from localStorage (set by OAuth callback)
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const sessionParam = urlParams.get('sessionId');
-    const providerParam = urlParams.get('provider');
-    
-    if (sessionParam) {
-      setSessionId(sessionParam);
-      localStorage.setItem('fpl-session-id', sessionParam);
+    const storedSessionId = localStorage.getItem('fpl-session-id');
+    if (storedSessionId) {
+      setSessionId(storedSessionId);
+      console.log('📱 Found stored session:', storedSessionId);
+    } else {
+      console.log('❌ No session found, redirecting to login');
+      navigate('/auth/login');
     }
-    if (providerParam) {
-      setProvider(providerParam);
-    }
-  }, [location]);
+  }, [navigate]);
   
   const form = useForm<TeamIdSetup>({
     resolver: zodResolver(teamIdSetupSchema),
