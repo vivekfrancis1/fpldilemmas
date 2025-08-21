@@ -1,20 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { teamIdSetupSchema, type TeamIdSetup } from "@shared/fpl-auth-schema";
-import { apiRequest } from "@/lib/queryClient";
 import { User, ExternalLink, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function AuthSetupTeam() {
+  const [provider, setProvider] = useState<string>("");
+  const [sessionId, setSessionId] = useState<string>("");
+  const [location, navigate] = useLocation();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Get sessionId from URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionParam = urlParams.get('sessionId');
+    const providerParam = urlParams.get('provider');
+    
+    if (sessionParam) {
+      setSessionId(sessionParam);
+      localStorage.setItem('fpl-session-id', sessionParam);
+    }
+    if (providerParam) {
+      setProvider(providerParam);
+    }
+  }, [location]);
   
   const form = useForm<TeamIdSetup>({
     resolver: zodResolver(teamIdSetupSchema),
@@ -29,6 +47,7 @@ export default function AuthSetupTeam() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Session-ID": sessionId || localStorage.getItem('fpl-session-id') || '',
         },
         body: JSON.stringify(data),
       });
@@ -46,7 +65,7 @@ export default function AuthSetupTeam() {
         description: "Your FPL team has been successfully connected.",
       });
       // Redirect to team page
-      window.location.href = "/fpl-team";
+      navigate("/fpl-team");
     },
     onError: (error: any) => {
       toast({

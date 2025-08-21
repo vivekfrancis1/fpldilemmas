@@ -3,30 +3,57 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { bootstrapDataSchema, playerSummarySchema, insertWatchlistEntrySchema, insertPriceAlertSchema } from "@shared/schema";
 import { fplClient } from "./fpl-client";
-import { fplDemoClient } from "./fpl-demo";
-import { fplLoginSchema, teamIdSetupSchema } from "@shared/fpl-auth-schema";
+import { teamIdSetupSchema } from "@shared/fpl-auth-schema";
 import { fplTeamFetcher } from "./fpl-team-fetcher";
+import { userStorage } from "./user-storage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // FPL API base URL
   const FPL_BASE_URL = "https://fantasy.premierleague.com/api";
 
-  // OAuth Authentication Routes (Demo Implementation)
+  // OAuth Authentication Routes
   
-  // Demo OAuth routes (simulate social login)
+  // OAuth routes (simulate social login for demo)
   app.get('/auth/google', (req, res) => {
-    console.log('🔐 Google OAuth initiated (demo mode)');
-    res.redirect('/auth/setup-team?provider=google&demo=true');
+    console.log('🔐 Google OAuth initiated');
+    // Create a demo user for Google
+    const user = userStorage.createUser({
+      provider: 'google',
+      providerId: `google_${Date.now()}`,
+      email: 'user@gmail.com',
+      firstName: 'Google',
+      lastName: 'User',
+      profileImage: 'https://via.placeholder.com/100',
+    });
+    const session = userStorage.createSession(user.id);
+    res.redirect(`/auth/setup-team?sessionId=${session.sessionId}`);
   });
   
   app.get('/auth/facebook', (req, res) => {
-    console.log('🔐 Facebook OAuth initiated (demo mode)');
-    res.redirect('/auth/setup-team?provider=facebook&demo=true');
+    console.log('🔐 Facebook OAuth initiated');
+    const user = userStorage.createUser({
+      provider: 'facebook',
+      providerId: `facebook_${Date.now()}`,
+      email: 'user@facebook.com',
+      firstName: 'Facebook',
+      lastName: 'User',
+      profileImage: 'https://via.placeholder.com/100',
+    });
+    const session = userStorage.createSession(user.id);
+    res.redirect(`/auth/setup-team?sessionId=${session.sessionId}`);
   });
   
   app.get('/auth/apple', (req, res) => {
-    console.log('🔐 Apple OAuth initiated (demo mode)');
-    res.redirect('/auth/setup-team?provider=apple&demo=true');
+    console.log('🔐 Apple OAuth initiated');
+    const user = userStorage.createUser({
+      provider: 'apple',
+      providerId: `apple_${Date.now()}`,
+      email: 'user@icloud.com',
+      firstName: 'Apple',
+      lastName: 'User',
+    });
+    const session = userStorage.createSession(user.id);
+    res.redirect(`/auth/setup-team?sessionId=${session.sessionId}`);
   });
 
   // Team ID setup after OAuth
@@ -34,17 +61,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const setupData = teamIdSetupSchema.parse(req.body);
       const teamId = parseInt(setupData.teamId);
+      const sessionId = req.header('X-Session-ID') || req.body.sessionId;
       
+      if (!sessionId) {
+        return res.status(401).json({
+          success: false,
+          message: "No session found. Please login again.",
+        });
+      }
+
       console.log(`🎯 Setting up team connection for Team ID: ${teamId}`);
       
       // Fetch team data to validate the ID
       const teamData = await fplTeamFetcher.fetchTeamData(teamId);
       
-      // Store the team connection (for demo, just return success)
+      // Get user from session and connect FPL team
+      const user = userStorage.getUserFromSession(sessionId);
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid session. Please login again.",
+        });
+      }
+
+      // Connect the FPL team to the user
+      userStorage.connectFplTeam(user.id, teamId, teamData.teamName);
+      
       res.json({
         success: true,
         message: "Team connected successfully",
         team: teamData,
+        user: userStorage.getUser(user.id),
       });
       
     } catch (error: any) {
@@ -58,19 +105,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Check authentication status
   app.get('/api/auth/user', (req, res) => {
-    // For demo, return demo user if session exists
     const sessionId = req.header('X-Session-ID');
-    if (sessionId && sessionId !== 'undefined') {
-      res.json({
-        id: 'demo_user',
-        provider: 'demo',
-        firstName: 'Demo',
-        lastName: 'User',
-        email: 'demo@fpldilemmas.com',
-      });
+    if (!sessionId) {
+      return res.status(401).json({ message: 'No session provided' });
+    }
+
+    const user = userStorage.getUserFromSession(sessionId);
+    if (user) {
+      res.json(user);
     } else {
       res.status(401).json({ message: 'Not authenticated' });
     }
+  });
+
+  // Logout
+  app.post('/api/auth/logout', (req, res) => {
+    const sessionId = req.header('X-Session-ID');
+    if (sessionId) {
+      userStorage.deleteSession(sessionId);
+    }
+    res.json({ success: true, message: 'Logged out successfully' });
   });
 
   // Get bootstrap data (all players, teams, positions)
@@ -806,75 +860,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // FPL Authentication endpoints
-  
-  // Login to FPL account
-  app.post("/api/fpl/login", async (req, res) => {
-    try {
-      const loginData = fplLoginSchema.parse(req.body);
-      const sessionId = `session_${Date.now()}_${Math.random()}`;
-      
-      console.log(`🔐 FPL login attempt for ${loginData.email}...`);
-      
-      // Use real Team ID fetcher for OAuth flow
-      const teamId = parseInt(loginData.email); // For demo, use email as team ID
-      const teamData = await fplTeamFetcher.fetchTeamData(teamId);
-      
-      const user = {
-        id: teamId,
-        email: loginData.email,
-        firstName: teamData.name.split(' ')[0],
-        lastName: teamData.name.split(' ').slice(1).join(' '),
-        teamId: teamId,
-        teamName: teamData.teamName,
-      };
-      
-      // Store session info in response
-      res.json({ 
-        success: true,
-        user,
-        sessionId,
-        message: `Successfully logged in as ${user.teamName}`
-      });
-      
-    } catch (error: any) {
-      console.error("FPL login error:", error.message);
-      res.status(400).json({ 
-        success: false,
-        message: error.message || "Login failed"
-      });
-    }
-  });
+  // FPL Team Data Routes (using OAuth authentication)
 
   // Get current user's FPL team
   app.get("/api/fpl/team", async (req, res) => {
     try {
       const sessionId = req.header('X-Session-ID');
       
-      if (!sessionId || !fplDemoClient.isAuthenticated(sessionId)) {
+      if (!sessionId) {
         return res.status(401).json({ 
           success: false,
           message: "Please login to view your team" 
         });
       }
+
+      const teamInfo = userStorage.getUserFplTeam(sessionId);
+      if (!teamInfo) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Please connect your FPL team first" 
+        });
+      }
       
-      const team = await fplDemoClient.getTeam(sessionId);
+      // Fetch fresh team data from FPL API
+      const team = await fplTeamFetcher.fetchTeamData(teamInfo.teamId);
       res.json({ success: true, team });
       
     } catch (error: any) {
       console.error("Error fetching FPL team:", error.message);
-      
-      if (error.message.includes('Session expired')) {
-        res.status(401).json({ 
-          success: false,
-          message: error.message 
-        });
-      } else {
-        res.status(500).json({ 
-          success: false,
-          message: error.message || "Failed to fetch team data"
-        });
-      }
+      res.status(500).json({ 
+        success: false,
+        message: error.message || "Failed to fetch team data"
+      });
     }
   });
 
@@ -883,30 +900,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const sessionId = req.header('X-Session-ID');
       
-      if (!sessionId || !fplDemoClient.isAuthenticated(sessionId)) {
+      if (!sessionId) {
         return res.status(401).json({ 
           success: false,
           message: "Please login to view transfers" 
         });
       }
+
+      const teamInfo = userStorage.getUserFplTeam(sessionId);
+      if (!teamInfo) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Please connect your FPL team first" 
+        });
+      }
       
-      const transfers = await fplDemoClient.getTransfers(sessionId);
+      const transfers = await fplTeamFetcher.fetchTransferHistory(teamInfo.teamId);
       res.json({ success: true, transfers });
       
     } catch (error: any) {
       console.error("Error fetching FPL transfers:", error.message);
-      
-      if (error.message.includes('Session expired')) {
-        res.status(401).json({ 
-          success: false,
-          message: error.message 
-        });
-      } else {
-        res.status(500).json({ 
-          success: false,
-          message: error.message || "Failed to fetch transfers"
-        });
-      }
+      res.status(500).json({ 
+        success: false,
+        message: error.message || "Failed to fetch transfers"
+      });
     }
   });
 
@@ -916,10 +933,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionId = req.header('X-Session-ID');
       const gameweek = parseInt(req.params.gameweek);
       
-      if (!sessionId || !fplDemoClient.isAuthenticated(sessionId)) {
+      if (!sessionId) {
         return res.status(401).json({ 
           success: false,
           message: "Please login to view picks" 
+        });
+      }
+
+      const teamInfo = userStorage.getUserFplTeam(sessionId);
+      if (!teamInfo) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Please connect your FPL team first" 
         });
       }
       
@@ -930,23 +955,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const picks = { picks: [] }; // Demo doesn't support gameweek picks
+      const picks = await fplTeamFetcher.fetchGameweekPicks(teamInfo.teamId, gameweek);
       res.json({ success: true, picks });
       
     } catch (error: any) {
       console.error("Error fetching FPL picks:", error.message);
-      
-      if (error.message.includes('Session expired')) {
-        res.status(401).json({ 
-          success: false,
-          message: error.message 
-        });
-      } else {
-        res.status(500).json({ 
-          success: false,
-          message: error.message || "Failed to fetch picks"
-        });
-      }
+      res.status(500).json({ 
+        success: false,
+        message: error.message || "Failed to fetch picks"
+      });
     }
   });
 
@@ -955,17 +972,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const sessionId = req.header('X-Session-ID');
       
-      if (!sessionId || !fplDemoClient.isAuthenticated(sessionId)) {
+      if (!sessionId) {
         return res.json({ 
           authenticated: false,
           user: null 
         });
       }
+
+      const user = userStorage.getUserFromSession(sessionId);
+      const teamInfo = userStorage.getUserFplTeam(sessionId);
       
-      const user = fplDemoClient.getUserInfo(sessionId);
       res.json({ 
-        authenticated: true,
-        user 
+        authenticated: !!user,
+        user: user,
+        fplTeamConnected: !!teamInfo,
+        fplTeam: teamInfo
       });
       
     } catch (error: any) {
@@ -974,29 +995,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authenticated: false,
         user: null,
         error: error.message
-      });
-    }
-  });
-
-  // Logout from FPL
-  app.post("/api/fpl/logout", async (req, res) => {
-    try {
-      const sessionId = req.header('X-Session-ID');
-      
-      if (sessionId) {
-        fplDemoClient.logout(sessionId);
-      }
-      
-      res.json({ 
-        success: true,
-        message: "Logged out successfully" 
-      });
-      
-    } catch (error: any) {
-      console.error("Error during FPL logout:", error.message);
-      res.status(500).json({ 
-        success: false,
-        message: "Logout failed" 
       });
     }
   });
