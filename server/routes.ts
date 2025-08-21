@@ -168,8 +168,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentYear = new Date().getFullYear();
       const seasons = [];
       
-      // Generate seasons from 2016/17 to current season (since 2025/26 is actually the 2024-25 season)
-      for (let year = 2016; year < currentYear - 1; year++) {
+      // Generate seasons from 2016/17 to include 2024/25
+      for (let year = 2016; year <= 2024; year++) {
         seasons.push(`${year}/${(year + 1).toString().slice(-2)}`);
       }
       

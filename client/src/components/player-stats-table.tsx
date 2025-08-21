@@ -36,11 +36,11 @@ export default function PlayerStatsTable({
     if (historicalData && historicalData.length > 0) {
       console.log(`Using historical data: ${historicalData.length} players`);
       players = [...historicalData];
-    } else if (data) {
+    } else if (data && data.elements) {
       console.log(`Using current data: ${data.elements.length} players`);
       players = [...data.elements];
     } else {
-      console.log("No data available");
+      console.log("No data available - historicalData:", !!historicalData, "data:", !!data);
       return [];
     }
 

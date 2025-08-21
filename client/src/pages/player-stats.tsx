@@ -47,7 +47,10 @@ export default function PlayerStats() {
 
   const isLoading = selectedSeason === "current" ? currentLoading : historicalLoading;
   const error = selectedSeason === "current" ? currentError : historicalError;
-  const data = selectedSeason === "current" ? bootstrapData : null;
+  
+  console.log('Selected season:', selectedSeason);
+  console.log('Historical data:', historicalData ? historicalData.length : 'none');
+  console.log('Bootstrap data:', bootstrapData ? bootstrapData.elements.length : 'none');
 
   if (error) {
     return (
@@ -149,7 +152,7 @@ export default function PlayerStats() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <PlayerStatsTable 
               data={selectedSeason === "current" ? bootstrapData : undefined}
-              historicalData={selectedSeason !== "current" ? historicalData : undefined}
+              historicalData={selectedSeason !== "current" ? (historicalData || []) : undefined}
               filters={filters}
               sort={sort}
               setSort={setSort}
