@@ -140,23 +140,31 @@ export default function MyTeam() {
   };
 
   const getTeamName = (player: Player): string => {
-    const team = bootstrapData?.teams.find(t => t.id === player.team_name as any);
-    return team?.short_name || player.team_name;
+    const teamId = (player as any).team || player.team_name;
+    const team = bootstrapData?.teams.find(t => t.id === teamId);
+    return team?.short_name || 'Unknown';
   };
 
   const getPlayerTeam = (player: Player) => {
-    return bootstrapData?.teams.find(t => t.id === player.team_name as any);
+    // The Player type from FPL API has team as a number field, not team_name
+    const teamId = (player as any).team || player.team_name;
+    return bootstrapData?.teams.find(t => t.id === teamId);
   };
 
   const getNextFixtures = (teamId: number, count: number = 5) => {
-    if (!fixturesData || !Array.isArray(fixturesData)) return [];
+    if (!fixturesData || !Array.isArray(fixturesData)) {
+      return [];
+    }
+    
+    const currentGW = getCurrentGameweek();
     
     return fixturesData
-      .filter((fixture: any) => 
-        (fixture.team_h === teamId || fixture.team_a === teamId) && 
-        !fixture.finished &&
-        fixture.event > getCurrentGameweek()
-      )
+      .filter((fixture: any) => {
+        const isTeamInFixture = fixture.team_h === teamId || fixture.team_a === teamId;
+        const isUpcoming = !fixture.finished && fixture.event >= currentGW;
+        return isTeamInFixture && isUpcoming;
+      })
+      .sort((a: any, b: any) => a.event - b.event)
       .slice(0, count)
       .map((fixture: any) => {
         const isHome = fixture.team_h === teamId;
@@ -167,7 +175,7 @@ export default function MyTeam() {
         return {
           opponent: opponent?.short_name || 'TBD',
           isHome,
-          difficulty,
+          difficulty: difficulty || 3,
           gameweek: fixture.event
         };
       });
