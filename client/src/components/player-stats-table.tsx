@@ -33,11 +33,14 @@ export default function PlayerStatsTable({
     // Use historical data if available, otherwise use current season data
     let players: any[] = [];
     
-    if (historicalData) {
+    if (historicalData && historicalData.length > 0) {
+      console.log(`Using historical data: ${historicalData.length} players`);
       players = [...historicalData];
     } else if (data) {
+      console.log(`Using current data: ${data.elements.length} players`);
       players = [...data.elements];
     } else {
+      console.log("No data available");
       return [];
     }
 
@@ -379,8 +382,8 @@ export default function PlayerStatsTable({
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedPlayers.map((player) => {
               const position = getPositionName(player.element_type);
-              const teamName = getTeamName(player.team);
-              const netTransfers = player.transfers_in_event - player.transfers_out_event;
+              const teamName = getTeamName(player.team || player.team_id);
+              const netTransfers = (player.transfers_in_event || 0) - (player.transfers_out_event || 0);
               
               return (
                 <tr key={player.id} className="hover:bg-gray-50 transition-colors" data-testid={`row-player-${player.id}`}>
@@ -405,52 +408,52 @@ export default function PlayerStatsTable({
                   {/* Priority columns first */}
                   <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">
                     <div className="flex items-center justify-center">
-                      {formatPrice(player.now_cost)}
-                      {getPriceChangeIcon(player.cost_change_event)}
+                      {formatPrice(player.now_cost || player.end_cost || 0)}
+                      {getPriceChangeIcon(player.cost_change_event || 0)}
                     </div>
                   </td>
-                  <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{player.total_points}</td>
-                  <td className="px-2 py-4 text-center text-sm text-fpl-green font-medium">{formatValue(player.value_season, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.points_per_game, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.form, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.selected_by_percent, 'decimal')}%</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.minutes}</td>
-                  <td className="px-2 py-4 text-center text-sm font-bold text-green-600">{player.goals_scored}</td>
-                  <td className="px-2 py-4 text-center text-sm font-bold text-blue-600">{player.assists}</td>
-                  <td className="px-2 py-4 text-center text-sm font-bold text-green-600">{player.clean_sheets}</td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{player.total_points || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-fpl-green font-medium">{formatValue(player.value_season || player.value_form || 0, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.points_per_game || player.form || 0, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.form || 0, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.selected_by_percent || 0, 'decimal')}%</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.minutes || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-green-600">{player.goals_scored || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-blue-600">{player.assists || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-green-600">{player.clean_sheets || 0}</td>
                   {/* Defensive contributions */}
-                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.goals_conceded}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.saves}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.goals_conceded || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.saves || 0}</td>
                   {/* All other data points */}
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bonus}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bps}</td>
-                  <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{player.event_points}</td>
-                  <td className="px-2 py-4 text-center text-sm text-green-600">{player.transfers_in_event.toLocaleString()}</td>
-                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.transfers_out_event.toLocaleString()}</td>
-                  <td className="px-2 py-4 text-center text-sm text-green-600">{player.transfers_in.toLocaleString()}</td>
-                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.transfers_out.toLocaleString()}</td>
-                  <td className="px-2 py-4 text-center text-sm text-fpl-green font-medium">{formatValue(player.value_form, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.influence, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.creativity, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.threat, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-sm font-medium text-fpl-purple">{formatValue(player.ict_index, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-sm text-yellow-600">{player.dreamteam_count}</td>
-                  <td className="px-2 py-4 text-center text-sm text-green-600">{player.penalties_saved}</td>
-                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.penalties_missed}</td>
-                  <td className="px-2 py-4 text-center text-sm text-yellow-600">{player.yellow_cards}</td>
-                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.red_cards}</td>
-                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.own_goals}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bonus || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bps || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{player.event_points || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-green-600">{(player.transfers_in_event || 0).toLocaleString()}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{(player.transfers_out_event || 0).toLocaleString()}</td>
+                  <td className="px-2 py-4 text-center text-sm text-green-600">{(player.transfers_in || 0).toLocaleString()}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{(player.transfers_out || 0).toLocaleString()}</td>
+                  <td className="px-2 py-4 text-center text-sm text-fpl-green font-medium">{formatValue(player.value_form || 0, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.influence || 0, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.creativity || 0, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.threat || 0, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm font-medium text-fpl-purple">{formatValue(player.ict_index || 0, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-yellow-600">{player.dreamteam_count || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-green-600">{player.penalties_saved || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.penalties_missed || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-yellow-600">{player.yellow_cards || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.red_cards || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-red-600">{player.own_goals || 0}</td>
                   <td className="px-2 py-4 text-center text-sm">
                     <div className="flex items-center justify-center">
-                      <span className={player.cost_change_event > 0 ? 'text-green-600' : player.cost_change_event < 0 ? 'text-red-600' : 'text-gray-900'}>
-                        {player.cost_change_event > 0 ? '+' : ''}{formatValue(player.cost_change_event / 10, 'decimal')}
+                      <span className={(player.cost_change_event || 0) > 0 ? 'text-green-600' : (player.cost_change_event || 0) < 0 ? 'text-red-600' : 'text-gray-900'}>
+                        {(player.cost_change_event || 0) > 0 ? '+' : ''}{formatValue((player.cost_change_event || 0) / 10, 'decimal')}
                       </span>
                     </div>
                   </td>
                   <td className="px-2 py-4 text-center text-sm">
                     <div className="flex items-center justify-center">
-                      <span className={player.cost_change_start > 0 ? 'text-green-600' : player.cost_change_start < 0 ? 'text-red-600' : 'text-gray-900'}>
-                        {player.cost_change_start > 0 ? '+' : ''}{formatValue(player.cost_change_start / 10, 'decimal')}
+                      <span className={(player.cost_change_start || 0) > 0 ? 'text-green-600' : (player.cost_change_start || 0) < 0 ? 'text-red-600' : 'text-gray-900'}>
+                        {(player.cost_change_start || 0) > 0 ? '+' : ''}{formatValue((player.cost_change_start || 0) / 10, 'decimal')}
                       </span>
                     </div>
                   </td>
@@ -458,8 +461,8 @@ export default function PlayerStatsTable({
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{player.ep_next || '-'}</td>
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{player.squad_number || '-'}</td>
                   <td className="px-2 py-4 text-center text-sm">
-                    <Badge variant={player.status === "a" ? "default" : player.status === "d" ? "secondary" : "destructive"}>
-                      {player.status === "a" ? "Available" : player.status === "d" ? "Doubtful" : "Unavailable"}
+                    <Badge variant={(player.status === "a" || !player.status) ? "default" : player.status === "d" ? "secondary" : "destructive"}>
+                      {player.status === "a" ? "Available" : player.status === "d" ? "Doubtful" : player.status ? "Unavailable" : "Available"}
                     </Badge>
                   </td>
                 </tr>
