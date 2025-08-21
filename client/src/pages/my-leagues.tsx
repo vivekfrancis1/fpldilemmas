@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Trophy, Users, TrendingUp, Target, Search, Crown, Medal, Award, AlertTriangle } from "lucide-react";
+import { Trophy, Users, TrendingUp, Target, Search, Crown, Medal, Award, AlertTriangle, Eye, ChevronDown, ChevronUp } from "lucide-react";
 
 interface LeagueEntry {
   id: number;
@@ -262,14 +262,8 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
     enabled: !!league.id,
   });
 
-  const { data: userTeamData } = useQuery<any>({
-    queryKey: ["/api/manager", managerId, "team"],
-    enabled: !!managerId,
-  });
-
-  const { data: bootstrapData } = useQuery<any>({
-    queryKey: ["/api/bootstrap-static"],
-  });
+  const [showLeagueTable, setShowLeagueTable] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
   const getPositionIcon = (rank: number) => {
     if (rank === 1) return <Crown className="h-4 w-4 text-yellow-500" />;
@@ -309,68 +303,15 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
 
   const pointsAboveAverage = userPoints - averagePoints;
 
-  // Calculate league-specific differentials and threats
-  const getDifferentialsAndThreats = () => {
-    if (!userTeamData?.picks || !standingsData?.standings?.results || !bootstrapData?.elements) {
-      return { differentials: [], threats: [] };
-    }
+  // Query for selected team data
+  const { data: selectedTeamData } = useQuery<any>({
+    queryKey: ["/api/manager", selectedTeamId, "team"],
+    enabled: !!selectedTeamId,
+  });
 
-    // Get current user's players
-    const userPlayers = new Set(userTeamData.picks.map((pick: any) => pick.element));
-    const players = bootstrapData.elements;
-    
-    // For demonstration, we'll use a league-specific calculation based on team size
-    // In a real implementation, we'd need to fetch all team data for the league
-    const leagueSize = standingsData.standings.results.length;
-    const baseOwnership = leagueSize > 50 ? 0.8 : 0.6; // Adjust for league size
-    
-    // Find differentials (user owns, estimated low league ownership)
-    const differentials = userTeamData.picks
-      .map((pick: any) => {
-        const player = players.find((p: any) => p.id === pick.element);
-        if (!player) return null;
-        
-        // Estimate league ownership based on global ownership and league characteristics
-        const globalOwnership = parseFloat(player.selected_by_percent);
-        const estimatedLeagueOwnership = Math.min(globalOwnership * baseOwnership, 90);
-        
-        return {
-          ...player,
-          ownership: estimatedLeagueOwnership,
-          globalOwnership: globalOwnership,
-          isOwned: true
-        };
-      })
-      .filter((p: any) => p && p.ownership < 25) // League-specific low ownership threshold
-      .sort((a: any, b: any) => a.ownership - b.ownership)
-      .slice(0, 3);
-
-    // Find threats (user doesn't own, estimated high league ownership)  
-    const threats = players
-      .filter((player: any) => {
-        if (userPlayers.has(player.id)) return false;
-        const globalOwnership = parseFloat(player.selected_by_percent);
-        const estimatedLeagueOwnership = Math.min(globalOwnership * baseOwnership, 90);
-        return estimatedLeagueOwnership > 40; // League-specific high ownership threshold
-      })
-      .map((player: any) => {
-        const globalOwnership = parseFloat(player.selected_by_percent);
-        const estimatedLeagueOwnership = Math.min(globalOwnership * baseOwnership, 90);
-        
-        return {
-          ...player,
-          ownership: estimatedLeagueOwnership,
-          globalOwnership: globalOwnership,
-          isOwned: false
-        };
-      })
-      .sort((a: any, b: any) => b.ownership - a.ownership)
-      .slice(0, 3);
-
-    return { differentials, threats };
-  };
-
-  const { differentials, threats } = getDifferentialsAndThreats();
+  const { data: bootstrapData } = useQuery<any>({
+    queryKey: ["/api/bootstrap-static"],
+  });
 
   return (
     <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
@@ -493,52 +434,122 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
               </div>
             )}
 
-            {/* Differentials and Threats */}
-            {(differentials.length > 0 || threats.length > 0) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-                <div className="col-span-full mb-2">
-                  <p className="text-xs text-gray-600 italic">
-                    League ownership estimated based on league size ({standingsData.standings.results.length} teams) and global patterns
-                  </p>
-                </div>
-                {/* Differentials */}
-                {differentials.length > 0 && (
-                  <div>
-                    <h5 className="font-semibold text-sm text-green-700 mb-2 flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3" />
-                      Differentials (Low Ownership)
-                    </h5>
-                    <div className="space-y-1">
-                      {differentials.map((player: any) => (
-                        <div key={player.id} className="flex justify-between items-center text-xs bg-green-50 p-2 rounded">
-                          <span className="font-medium text-green-900">{player.web_name}</span>
-                          <div className="text-right">
-                            <div className="text-green-600 font-medium">~{player.ownership.toFixed(0)}% league</div>
-                            <div className="text-gray-500 text-xs">{player.globalOwnership.toFixed(1)}% global</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            {/* League Table Action */}
+            <div className="pt-4 border-t border-gray-200">
+              <Button 
+                onClick={() => setShowLeagueTable(!showLeagueTable)}
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                data-testid={`button-view-table-${league.id}`}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                {showLeagueTable ? 'Hide League Table' : 'View League Table'}
+              </Button>
+            </div>
 
-                {/* Threats */}
-                {threats.length > 0 && (
-                  <div>
-                    <h5 className="font-semibold text-sm text-red-700 mb-2 flex items-center gap-1">
-                      <AlertTriangle className="h-3 w-3" />
-                      Threats (High Ownership)
-                    </h5>
-                    <div className="space-y-1">
-                      {threats.map((player: any) => (
-                        <div key={player.id} className="flex justify-between items-center text-xs bg-red-50 p-2 rounded">
-                          <span className="font-medium text-red-900">{player.web_name}</span>
-                          <div className="text-right">
-                            <div className="text-red-600 font-medium">~{player.ownership.toFixed(0)}% league</div>
-                            <div className="text-gray-500 text-xs">{player.globalOwnership.toFixed(1)}% global</div>
+            {/* League Table */}
+            {showLeagueTable && standingsData?.standings?.results && (
+              <div className="mt-4 border-t border-gray-200 pt-4">
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {standingsData.standings.results.map((entry: LeagueEntry) => (
+                    <div 
+                      key={entry.id} 
+                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-gray-50 transition-colors ${
+                        entry.entry.toString() === managerId ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
+                      }`}
+                      onClick={() => setSelectedTeamId(selectedTeamId === entry.entry.toString() ? null : entry.entry.toString())}
+                      data-testid={`team-row-${entry.entry}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          {getPositionIcon(entry.rank)}
+                          <span className="font-medium text-sm text-gray-900">
+                            {entry.rank}
+                          </span>
+                        </div>
+                        <div>
+                          <div className={`font-medium text-sm ${
+                            entry.entry.toString() === managerId ? 'text-blue-900' : 'text-gray-900'
+                          }`}>
+                            {entry.entry.toString() === managerId ? 'You' : entry.entry_name}
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {entry.player_first_name} {entry.player_last_name}
                           </div>
                         </div>
-                      ))}
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-gray-900">{entry.total} pts</div>
+                        <div className="text-xs text-gray-600">
+                          {entry.rank > entry.last_rank ? (
+                            <span className="text-red-600">↓ {entry.rank - entry.last_rank}</span>
+                          ) : entry.rank < entry.last_rank ? (
+                            <span className="text-green-600">↑ {entry.last_rank - entry.rank}</span>
+                          ) : (
+                            <span className="text-gray-500">→</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Selected Team Details */}
+                {selectedTeamId && selectedTeamData && (
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex justify-between items-center mb-3">
+                      <h5 className="font-semibold text-blue-900">
+                        {selectedTeamId === managerId ? 'Your Team' : `${standingsData?.standings?.results?.find((e: any) => e.entry.toString() === selectedTeamId)?.entry_name}'s Team`}
+                      </h5>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setSelectedTeamId(null)}
+                        data-testid={`button-close-team-${selectedTeamId}`}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                    
+                    {selectedTeamData.picks && bootstrapData?.elements && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {selectedTeamData.picks.slice(0, 11).map((pick: any) => {
+                          const player = bootstrapData.elements.find((p: any) => p.id === pick.element);
+                          const isCaptain = pick.is_captain;
+                          const isViceCaptain = pick.is_vice_captain;
+                          
+                          return player ? (
+                            <div 
+                              key={player.id} 
+                              className={`p-2 rounded text-xs border ${
+                                isCaptain ? 'bg-yellow-100 border-yellow-300' : 
+                                isViceCaptain ? 'bg-orange-100 border-orange-300' : 
+                                'bg-white border-gray-200'
+                              }`}
+                              data-testid={`player-card-${player.id}`}
+                            >
+                              <div className="font-medium text-gray-900">
+                                {player.web_name}
+                                {isCaptain && ' (C)'}
+                                {isViceCaptain && ' (VC)'}
+                              </div>
+                              <div className="text-gray-600">
+                                £{(player.now_cost / 10).toFixed(1)}m • {player.total_points}pts
+                              </div>
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                    
+                    <div className="mt-3 text-xs text-blue-700">
+                      Team Value: £{selectedTeamData.entry_history ? 
+                        (selectedTeamData.entry_history.value / 10).toFixed(1) : 
+                        '0.0'}m • 
+                      Bank: £{selectedTeamData.entry_history ? 
+                        (selectedTeamData.entry_history.bank / 10).toFixed(1) : 
+                        '0.0'}m
                     </div>
                   </div>
                 )}
