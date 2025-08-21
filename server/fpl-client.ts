@@ -37,30 +37,53 @@ export class FplClient {
     const session = this.createSession();
     
     try {
-      // Create FormData as per working examples
-      const form = new FormData();
-      form.append('login', credentials.email);
-      form.append('password', credentials.password);
-      form.append('app', 'plfpl-web');
-      form.append('redirect_uri', 'https://fantasy.premierleague.com/a/login');
+      // First, get the login page to retrieve CSRF token if needed
+      console.log(`🔐 Getting login page for CSRF token...`);
+      const loginPageResponse = await session.client.get(
+        'https://fantasy.premierleague.com/a/login',
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
+        }
+      );
 
-      // Perform login
+      // Create payload as regular object, not FormData (based on working Python examples)
+      const payload = {
+        login: credentials.email,
+        password: credentials.password,
+        app: 'plfpl-web',
+        redirect_uri: 'https://fantasy.premierleague.com/a/login'
+      };
+
+      // Perform login with regular form data
       console.log(`🔐 Attempting FPL login for ${credentials.email}...`);
       const loginResponse = await session.client.post(
         'https://users.premierleague.com/accounts/login/',
-        form,
+        payload,
         {
           headers: {
-            ...form.getHeaders(),
-            'Referer': 'https://fantasy.premierleague.com/',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Referer': 'https://fantasy.premierleague.com/a/login',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
           },
-          maxRedirects: 5,
+          maxRedirects: 0, // Don't follow redirects automatically to see what happens
         }
       );
 
       console.log('Login response status:', loginResponse.status);
-      console.log('Login response headers:', loginResponse.headers);
+      console.log('Login response data length:', loginResponse.data?.length);
+      console.log('Set-Cookie headers:', loginResponse.headers['set-cookie']);
+      console.log('Location header:', loginResponse.headers['location']);
       console.log('Cookies in jar:', session.jar.getCookiesSync('https://fantasy.premierleague.com'));
+      console.log('All cookies:', session.jar.getCookiesSync('https://users.premierleague.com'));
+
+      // If we got a redirect (302), follow it manually
+      if (loginResponse.status === 302 && loginResponse.headers['location']) {
+        console.log('Following redirect to:', loginResponse.headers['location']);
+        const redirectResponse = await session.client.get(loginResponse.headers['location']);
+        console.log('Redirect response status:', redirectResponse.status);
+      }
 
       // Check if login was successful by trying to access profile
       console.log(`📋 Checking login status...`);
