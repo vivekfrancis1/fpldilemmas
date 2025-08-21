@@ -21,9 +21,18 @@ export interface SortState {
   direction: 'asc' | 'desc';
 }
 
+export interface PlayerStat {
+  value: string;
+  player: string;
+}
+
 export interface StatsData {
   totalPlayers: number;
   avgPrice: string;
-  mostOwned: string;
-  bestValue: string;
+  mostOwned: PlayerStat;
+  bestValue: PlayerStat;
+  mostPoints: PlayerStat;
+  mostGoals: PlayerStat;
+  mostAssists: PlayerStat;
+  bestForm: PlayerStat;
 }
