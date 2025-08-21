@@ -1,5 +1,7 @@
 import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert } from "@shared/schema";
-import { type HistoricalPlayer, type InsertHistoricalPlayer } from "@shared/watchlist-schema";
+import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
+import { db } from "./db";
+import { eq, sql } from "drizzle-orm";
 
 export interface IStorage {
   getBootstrapData(): Promise<BootstrapData | undefined>;
@@ -220,8 +222,65 @@ export class DatabaseStorage implements IStorage {
   // Historical player methods (use database for persistence)
   async getHistoricalPlayers(season: string): Promise<HistoricalPlayer[]> {
     try {
-      // Try database first (commented out for now - will implement database operations)
-      return this.memFallback.getHistoricalPlayers(season);
+      console.log(`🔍 Checking database for ${season} data...`);
+      const dbPlayers = await db
+        .select()
+        .from(historicalPlayers)
+        .where(eq(historicalPlayers.season, season))
+        .orderBy(sql`${historicalPlayers.totalPoints} DESC`);
+      
+      if (dbPlayers.length > 0) {
+        console.log(`✅ Found ${dbPlayers.length} players in database for ${season}`);
+        
+        // Convert database format to API format for compatibility
+        return dbPlayers.map(player => ({
+          ...player,
+          // Add fields expected by frontend
+          id: player.playerId || 0,
+          first_name: player.firstName,
+          second_name: player.secondName,
+          web_name: player.webName,
+          team_name: player.teamName,
+          team_short_name: player.teamShortName,
+          position: player.positionName,
+          season_name: player.seasonName,
+          element_code: player.elementCode,
+          start_cost: player.startCost,
+          end_cost: player.endCost,
+          total_points: player.totalPoints,
+          minutes: player.minutes,
+          goals_scored: player.goalsScored,
+          assists: player.assists,
+          clean_sheets: player.cleanSheets,
+          goals_conceded: player.goalsConceded,
+          own_goals: player.ownGoals,
+          penalties_saved: player.penaltiesSaved,
+          penalties_missed: player.penaltiesMissed,
+          yellow_cards: player.yellowCards,
+          red_cards: player.redCards,
+          saves: player.saves,
+          bonus: player.bonus,
+          bps: player.bps,
+          influence: player.influence,
+          creativity: player.creativity,
+          threat: player.threat,
+          ict_index: player.ictIndex,
+          // Computed fields for frontend
+          now_cost: player.endCost || 0,
+          form: ((player.totalPoints || 0) / 38).toFixed(1),
+          points_per_game: ((player.totalPoints || 0) / Math.max((player.minutes || 0) / 90, 1)).toFixed(1),
+          selected_by_percent: "0.0",
+          value_season: ((player.totalPoints || 0) / ((player.endCost || 1) / 10)).toFixed(1),
+          value_form: ((player.totalPoints || 0) / ((player.endCost || 1) / 10)).toFixed(1),
+          element_type: player.positionName === 'Goalkeeper' ? 1 : 
+                       player.positionName === 'Defender' ? 2 : 
+                       player.positionName === 'Midfielder' ? 3 : 4,
+          team_id: 1 // Default team ID
+        }));
+      }
+      
+      console.log(`❌ No data found in database for ${season}`);
+      return [];
     } catch (error) {
       console.warn('Database fetch failed, using memory fallback:', error);
       return this.memFallback.getHistoricalPlayers(season);
@@ -230,24 +289,39 @@ export class DatabaseStorage implements IStorage {
 
   async insertHistoricalPlayers(players: InsertHistoricalPlayer[]): Promise<void> {
     try {
-      // Store in memory cache for immediate use
-      await this.memFallback.insertHistoricalPlayers(players);
+      if (players.length === 0) return;
       
-      // TODO: Also store in database for persistence
-      console.log(`Stored ${players.length} historical players in memory cache`);
+      console.log(`💾 Inserting ${players.length} players into database...`);
+      
+      // Insert into database with conflict resolution
+      await db.insert(historicalPlayers)
+        .values(players)
+        .onConflictDoNothing();
+        
+      console.log(`✅ Successfully stored ${players.length} players in database`);
+      
+      // Also cache in memory for immediate use
+      await this.memFallback.insertHistoricalPlayers(players);
     } catch (error) {
-      console.warn('Failed to store historical data:', error);
-      throw error;
+      console.error('Failed to store historical data in database:', error);
+      // Still try to store in memory as fallback
+      await this.memFallback.insertHistoricalPlayers(players);
     }
   }
 
   async hasHistoricalData(season: string): Promise<boolean> {
     try {
-      // Check memory cache first
-      return this.memFallback.hasHistoricalData(season);
+      const [result] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(historicalPlayers)
+        .where(eq(historicalPlayers.season, season));
+      
+      const hasData = result.count > 0;
+      console.log(`🔍 Database check for ${season}: ${hasData ? `${result.count} records` : 'no data'}`);
+      return hasData;
     } catch (error) {
-      console.warn('Failed to check historical data:', error);
-      return false;
+      console.warn('Database check failed, using memory fallback:', error);
+      return this.memFallback.hasHistoricalData(season);
     }
   }
 }
