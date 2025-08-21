@@ -15,6 +15,10 @@ export interface IStorage {
   // Price alert operations
   getPriceAlerts(): Promise<PriceAlert[]>;
   addPriceAlert(alert: InsertPriceAlert): Promise<PriceAlert>;
+  
+  // Price change tracking operations (for future implementation)
+  getPriceChange(playerId: number, changeAmount: number): Promise<{ playerId: number; changeAmount: number; date: string; } | undefined>;
+  setPriceChange(playerId: number, changeAmount: number, date: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -22,6 +26,7 @@ export class MemStorage implements IStorage {
   private playerSummaries: Map<number, PlayerSummary>;
   private watchlistEntries: Map<number, WatchlistEntry>;
   private priceAlerts: Map<number, PriceAlert>;
+  private priceChangeHistory: Map<string, { playerId: number; changeAmount: number; date: string; }>;
   private nextWatchlistId: number;
   private nextAlertId: number;
 
@@ -29,6 +34,7 @@ export class MemStorage implements IStorage {
     this.playerSummaries = new Map();
     this.watchlistEntries = new Map();
     this.priceAlerts = new Map();
+    this.priceChangeHistory = new Map();
     this.nextWatchlistId = 1;
     this.nextAlertId = 1;
   }
@@ -106,6 +112,17 @@ export class MemStorage implements IStorage {
     };
     this.priceAlerts.set(id, priceAlert);
     return priceAlert;
+  }
+
+  // Price change tracking operations
+  async getPriceChange(playerId: number, changeAmount: number): Promise<{ playerId: number; changeAmount: number; date: string; } | undefined> {
+    const key = `${playerId}-${changeAmount}`;
+    return this.priceChangeHistory.get(key);
+  }
+
+  async setPriceChange(playerId: number, changeAmount: number, date: string): Promise<void> {
+    const key = `${playerId}-${changeAmount}`;
+    this.priceChangeHistory.set(key, { playerId, changeAmount, date });
   }
 }
 

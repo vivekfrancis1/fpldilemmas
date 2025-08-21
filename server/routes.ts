@@ -302,39 +302,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const priceChange = player.cost_change_event;
           
-          // Calculate when the price change likely occurred
-          // Since FPL API doesn't provide historical dates, we'll map known recent changes
-          // based on the specific players and their typical price change patterns
-          let priceChangeDate = new Date();
-          const playerName = `${player.first_name} ${player.second_name}`.toLowerCase();
+          // Set all historical price changes to Aug 21, 2024
+          // This provides consistent baseline for existing data
+          const baselineDate = new Date('2024-08-21T01:30:00.000Z');
+          let priceChangeDate = baselineDate;
           
-          // Map known recent price changes based on user feedback
-          if (playerName.includes('reijnders') || playerName.includes('semenyo') || playerName.includes('ekitike')) {
-            // These players changed on Aug 18, 2024
-            priceChangeDate = new Date('2024-08-18T01:30:00.000Z');
-          } else if (playerName.includes('chris wood') || playerName.includes('wood')) {
-            // Chris Wood changed on Aug 19, 2024
-            priceChangeDate = new Date('2024-08-19T01:30:00.000Z');
-          } else {
-            // For other players, estimate based on transfer activity and current date
-            const transferActivity = Math.abs((player.transfers_in_event || 0) - (player.transfers_out_event || 0));
-            const now = new Date();
-            
-            // FPL typically updates prices daily around 1:30 AM GMT
-            if (transferActivity > 100000) {
-              // High activity - likely very recent
-              priceChangeDate = new Date(now);
-              priceChangeDate.setHours(1, 30, 0, 0);
-              if (now.getHours() < 1 || (now.getHours() === 1 && now.getMinutes() < 30)) {
-                priceChangeDate.setDate(priceChangeDate.getDate() - 1);
-              }
-            } else {
-              // Lower activity - likely 1-3 days ago
-              priceChangeDate = new Date(now);
-              priceChangeDate.setDate(priceChangeDate.getDate() - Math.min(3, Math.floor(transferActivity / 30000) + 1));
-              priceChangeDate.setHours(1, 30, 0, 0);
-            }
-          }
+          // For now, use baseline date. In future versions, we can check stored data
+          // TODO: Implement async data lookup for stored price change dates
           
           return {
             player_id: player.id,
@@ -496,6 +470,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching price predictions:", error);
       res.status(500).json({ 
         message: "Failed to fetch price predictions",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Store a new price change for future tracking
+  app.post("/api/price-changes/record", async (req, res) => {
+    try {
+      const { playerId, changeAmount, date } = req.body;
+      
+      if (!playerId || !changeAmount || !date) {
+        return res.status(400).json({ message: "playerId, changeAmount, and date are required" });
+      }
+
+      await storage.setPriceChange(parseInt(playerId), parseInt(changeAmount), date);
+      
+      res.json({ 
+        message: "Price change recorded successfully",
+        playerId: parseInt(playerId),
+        changeAmount: parseInt(changeAmount),
+        date 
+      });
+    } catch (error) {
+      console.error("Error recording price change:", error);
+      res.status(500).json({ 
+        message: "Failed to record price change",
         error: error instanceof Error ? error.message : "Unknown error"
       });
     }
