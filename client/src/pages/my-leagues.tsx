@@ -205,22 +205,58 @@ function MyLeagues() {
       )}
 
       {/* Leagues List */}
-      {leaguesData && leaguesData.leagues && (
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-900">Your Leagues ({leaguesData.leagues.classic.length})</h2>
-          
-          <div className="grid gap-4">
-            {leaguesData.leagues.classic.map((league: any) => (
-              <LeagueCard 
-                key={league.id}
-                league={league}
-                managerId={searchedId}
-                managerName={managerData?.name}
-                formatDate={formatDate}
-                getLeagueTypeDisplay={getLeagueTypeDisplay}
-              />
-            ))}
-            
+      {leaguesData && leaguesData.leagues && (() => {
+        // Separate private and public leagues
+        const privateLeagues = leaguesData.leagues.classic.filter((league: any) => league.id > 1000);
+        const publicLeagues = leaguesData.leagues.classic.filter((league: any) => league.id <= 1000);
+        
+        return (
+          <div className="space-y-6">
+            {/* Private Leagues */}
+            {privateLeagues.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-2xl font-bold text-gray-900">Private Leagues ({privateLeagues.length})</h2>
+                </div>
+                
+                <div className="grid gap-4">
+                  {privateLeagues.map((league: any) => (
+                    <LeagueCard 
+                      key={league.id}
+                      league={league}
+                      managerId={searchedId}
+                      managerName={managerData?.name}
+                      formatDate={formatDate}
+                      getLeagueTypeDisplay={getLeagueTypeDisplay}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Public Leagues */}
+            {publicLeagues.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-green-600" />
+                  <h2 className="text-2xl font-bold text-gray-900">Public Leagues ({publicLeagues.length})</h2>
+                </div>
+                
+                <div className="grid gap-3">
+                  {publicLeagues.map((league: any) => (
+                    <PublicLeagueCard 
+                      key={league.id}
+                      league={league}
+                      managerId={searchedId}
+                      managerName={managerData?.name}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* No leagues message */}
             {leaguesData.leagues.classic.length === 0 && (
               <Card className="bg-gray-50">
                 <CardContent className="text-center py-8">
@@ -230,8 +266,8 @@ function MyLeagues() {
               </Card>
             )}
           </div>
-        </div>
-      )}
+        );
+      })()}
       </div>
     </Layout>
   );
@@ -239,7 +275,69 @@ function MyLeagues() {
 
 export default MyLeagues;
 
-// League Card Component
+// Public League Card Component (simplified)
+function PublicLeagueCard({ league, managerId, managerName }: { 
+  league: any; 
+  managerId: string; 
+  managerName: string;
+}) {
+  const { data: standingsData, isLoading } = useQuery<LeagueStandings>({
+    queryKey: ["/api/league", league.id, "standings"],
+    enabled: !!league.id,
+  });
+
+  const userEntry = standingsData?.standings?.results?.find(
+    (entry) => entry.player_name === managerName || entry.entry === parseInt(managerId)
+  );
+
+  const userRank = userEntry?.rank || 0;
+  const totalMembers = standingsData?.standings?.results?.length || 0;
+
+  const getPositionIcon = (rank: number) => {
+    if (rank === 1) return <Crown className="h-4 w-4 text-yellow-500" />;
+    if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />;
+    if (rank === 3) return <Award className="h-4 w-4 text-amber-600" />;
+    return null;
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="bg-gray-50 border-gray-200">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="h-4 bg-gray-200 rounded animate-pulse mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
+            </div>
+            <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="bg-white hover:shadow-md transition-shadow border-gray-200">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              {getPositionIcon(userRank)}
+              <h3 className="font-semibold text-gray-900 truncate">{league.name}</h3>
+            </div>
+            <p className="text-sm text-gray-600">{totalMembers.toLocaleString()} members</p>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-bold text-gray-900">#{userRank}</div>
+            <div className="text-xs text-gray-500">Rank</div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Private League Card Component (detailed analysis)
 function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeDisplay }: { 
   league: any; 
   managerId: string; 
