@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth, useLogout } from "@/hooks/useAuth";
-import { Shield, TrendingUp, TrendingDown, Users, Trophy, Clock, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Shield, TrendingUp, TrendingDown, Users, Trophy, Clock } from "lucide-react";
 import { useEffect } from "react";
 
 interface FplTeam {
@@ -34,7 +34,7 @@ interface Transfer {
 
 export default function FplTeamPage() {
   const { user, isAuthenticated, sessionId } = useAuth();
-  const logout = useLogout();
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -169,19 +169,13 @@ export default function FplTeamPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">My FPL Team</h1>
-          <p className="text-muted-foreground">
-            Connected as {user?.firstName} {user?.lastName} • {user?.provider}
-          </p>
-        </div>
-        <Button variant="outline" onClick={logout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Logout
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold">My FPL Team</h1>
+        <p className="text-muted-foreground">
+          Connected as {user?.firstName} {user?.lastName} • {user?.provider}
+        </p>
       </div>
 
       {teamLoading ? (
