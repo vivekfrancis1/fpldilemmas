@@ -1,4 +1,4 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type User, type UpsertUser } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
@@ -27,12 +27,17 @@ export interface IStorage {
   getHistoricalPlayers(season: string): Promise<HistoricalPlayer[]>;
   insertHistoricalPlayers(players: InsertHistoricalPlayer[]): Promise<void>;
   hasHistoricalData(season: string): Promise<boolean>;
+  
+  // User operations for authentication
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
 }
 
 export class MemStorage implements IStorage {
   private bootstrapData: BootstrapData | undefined;
   private playerSummaries: Map<number, PlayerSummary>;
   private watchlistEntries: Map<number, WatchlistEntry>;
+  private users: Map<string, User>;
   private priceAlerts: Map<number, PriceAlert>;
   private priceChangeHistory: Map<string, { playerId: number; changeAmount: number; date: string; }>;
   private historicalPlayerCache: Map<string, HistoricalPlayer[]>;
@@ -155,6 +160,28 @@ export class MemStorage implements IStorage {
 
   async hasHistoricalData(season: string): Promise<boolean> {
     return this.historicalPlayerCache.has(season);
+  }
+
+  // User operations for authentication
+  async getUser(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const now = new Date();
+    const user: User = {
+      id: userData.id || `user_${Date.now()}`,
+      email: userData.email || null,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: userData.profileImageUrl || null,
+      provider: userData.provider || null,
+      createdAt: this.users.has(userData.id || '') ? this.users.get(userData.id || '')!.createdAt : now,
+      updatedAt: now,
+    };
+    
+    this.users.set(user.id, user);
+    return user;
   }
 }
 
@@ -322,6 +349,39 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.warn('Database check failed, using memory fallback:', error);
       return this.memFallback.hasHistoricalData(season);
+    }
+  }
+
+  // User operations - use database for persistence
+  async getUser(id: string): Promise<User | undefined> {
+    try {
+      const { users } = await import("@shared/schema");
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user || undefined;
+    } catch (error) {
+      console.warn('Database user fetch failed, using memory fallback:', error);
+      return this.memFallback.getUser(id);
+    }
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    try {
+      const { users } = await import("@shared/schema");
+      const [user] = await db
+        .insert(users)
+        .values(userData)
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            ...userData,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      return user;
+    } catch (error) {
+      console.warn('Database user upsert failed, using memory fallback:', error);
+      return this.memFallback.upsertUser(userData);
     }
   }
 }
