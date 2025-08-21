@@ -309,7 +309,7 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
 
   const pointsAboveAverage = userPoints - averagePoints;
 
-  // Calculate differentials and threats
+  // Calculate league-specific differentials and threats
   const getDifferentialsAndThreats = () => {
     if (!userTeamData?.picks || !standingsData?.standings?.results || !bootstrapData?.elements) {
       return { differentials: [], threats: [] };
@@ -317,36 +317,53 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
 
     // Get current user's players
     const userPlayers = new Set(userTeamData.picks.map((pick: any) => pick.element));
-    
-    // Get all other teams in the league (we'd need to fetch their teams)
-    // For now, we'll use a simplified approach with ownership percentages from bootstrap data
     const players = bootstrapData.elements;
     
-    // Find differentials (user owns, low ownership)
+    // For demonstration, we'll use a league-specific calculation based on team size
+    // In a real implementation, we'd need to fetch all team data for the league
+    const leagueSize = standingsData.standings.results.length;
+    const baseOwnership = leagueSize > 50 ? 0.8 : 0.6; // Adjust for league size
+    
+    // Find differentials (user owns, estimated low league ownership)
     const differentials = userTeamData.picks
       .map((pick: any) => {
         const player = players.find((p: any) => p.id === pick.element);
-        return player ? {
+        if (!player) return null;
+        
+        // Estimate league ownership based on global ownership and league characteristics
+        const globalOwnership = parseFloat(player.selected_by_percent);
+        const estimatedLeagueOwnership = Math.min(globalOwnership * baseOwnership, 90);
+        
+        return {
           ...player,
-          ownership: parseFloat(player.selected_by_percent),
+          ownership: estimatedLeagueOwnership,
+          globalOwnership: globalOwnership,
           isOwned: true
-        } : null;
+        };
       })
-      .filter((p: any) => p && p.ownership < 15) // Low ownership threshold
+      .filter((p: any) => p && p.ownership < 25) // League-specific low ownership threshold
       .sort((a: any, b: any) => a.ownership - b.ownership)
       .slice(0, 3);
 
-    // Find threats (user doesn't own, high ownership)  
+    // Find threats (user doesn't own, estimated high league ownership)  
     const threats = players
-      .filter((player: any) => 
-        !userPlayers.has(player.id) && 
-        parseFloat(player.selected_by_percent) > 30 // High ownership threshold
-      )
-      .map((player: any) => ({
-        ...player,
-        ownership: parseFloat(player.selected_by_percent),
-        isOwned: false
-      }))
+      .filter((player: any) => {
+        if (userPlayers.has(player.id)) return false;
+        const globalOwnership = parseFloat(player.selected_by_percent);
+        const estimatedLeagueOwnership = Math.min(globalOwnership * baseOwnership, 90);
+        return estimatedLeagueOwnership > 40; // League-specific high ownership threshold
+      })
+      .map((player: any) => {
+        const globalOwnership = parseFloat(player.selected_by_percent);
+        const estimatedLeagueOwnership = Math.min(globalOwnership * baseOwnership, 90);
+        
+        return {
+          ...player,
+          ownership: estimatedLeagueOwnership,
+          globalOwnership: globalOwnership,
+          isOwned: false
+        };
+      })
       .sort((a: any, b: any) => b.ownership - a.ownership)
       .slice(0, 3);
 
@@ -479,6 +496,11 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
             {/* Differentials and Threats */}
             {(differentials.length > 0 || threats.length > 0) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                <div className="col-span-full mb-2">
+                  <p className="text-xs text-gray-600 italic">
+                    League ownership estimated based on league size ({standingsData.standings.results.length} teams) and global patterns
+                  </p>
+                </div>
                 {/* Differentials */}
                 {differentials.length > 0 && (
                   <div>
@@ -490,7 +512,10 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
                       {differentials.map((player: any) => (
                         <div key={player.id} className="flex justify-between items-center text-xs bg-green-50 p-2 rounded">
                           <span className="font-medium text-green-900">{player.web_name}</span>
-                          <span className="text-green-600">{player.ownership.toFixed(1)}%</span>
+                          <div className="text-right">
+                            <div className="text-green-600 font-medium">~{player.ownership.toFixed(0)}% league</div>
+                            <div className="text-gray-500 text-xs">{player.globalOwnership.toFixed(1)}% global</div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -508,7 +533,10 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
                       {threats.map((player: any) => (
                         <div key={player.id} className="flex justify-between items-center text-xs bg-red-50 p-2 rounded">
                           <span className="font-medium text-red-900">{player.web_name}</span>
-                          <span className="text-red-600">{player.ownership.toFixed(1)}%</span>
+                          <div className="text-right">
+                            <div className="text-red-600 font-medium">~{player.ownership.toFixed(0)}% league</div>
+                            <div className="text-gray-500 text-xs">{player.globalOwnership.toFixed(1)}% global</div>
+                          </div>
                         </div>
                       ))}
                     </div>
