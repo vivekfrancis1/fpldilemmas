@@ -172,8 +172,8 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // League standings endpoint
-  app.get("/api/league/:leagueId/standings", async (req, res) => {
+  // League standings endpoint (corrected to match frontend)
+  app.get("/api/leagues-classic/:leagueId/standings", async (req, res) => {
     try {
       const { leagueId } = req.params;
       const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
