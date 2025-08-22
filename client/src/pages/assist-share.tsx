@@ -55,8 +55,9 @@ export default function AssistShare() {
       const awayTeam = teams.find((t: any) => t.name === match.awayTeam);
 
       if (homeTeam && awayTeam && match.homeExpectedGoals && match.awayExpectedGoals) {
-        // Home team assist share (assists typically ~65% of goals)
-        const homeExpectedAssists = match.homeExpectedGoals * 0.65;
+        // Home team assist share - ensure assists ≤ goals
+        const homeMaxAssists = match.homeExpectedGoals;
+        const homeExpectedAssists = Math.min(homeMaxAssists, match.homeExpectedGoals * 0.65);
         const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
         const homePlayerShares = distributeAssistShares(homePlayersInSquad, bootstrapData.element_types);
         
@@ -69,8 +70,9 @@ export default function AssistShare() {
           players: homePlayerShares
         });
 
-        // Away team assist share
-        const awayExpectedAssists = match.awayExpectedGoals * 0.65;
+        // Away team assist share - ensure assists ≤ goals
+        const awayMaxAssists = match.awayExpectedGoals;
+        const awayExpectedAssists = Math.min(awayMaxAssists, match.awayExpectedGoals * 0.65);
         const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
         const awayPlayerShares = distributeAssistShares(awayPlayersInSquad, bootstrapData.element_types);
         
@@ -318,7 +320,7 @@ export default function AssistShare() {
                   <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
                     <li>• Based on Match Odds expected goals data</li>
-                    <li>• Assists calculated as ~65% of team goals</li>
+                    <li>• Assists calculated as ~65% of team goals (max = goals)</li>
                     <li>• Weighted by creativity and assist history</li>
                     <li>• Midfielders prioritized for assist distribution</li>
                     <li>• All players in a team total 100%</li>

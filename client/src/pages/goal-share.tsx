@@ -315,6 +315,7 @@ export default function GoalShare() {
                     <li>• Position-weighted goal distribution</li>
                     <li>• Adjusted by current form and performance</li>
                     <li>• All players in a team total 100%</li>
+                    <li>• Assists always ≤ goals for logical consistency</li>
                   </ul>
                 </div>
                 <div>
