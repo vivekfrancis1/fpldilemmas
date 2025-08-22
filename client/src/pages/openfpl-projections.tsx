@@ -189,26 +189,26 @@ export default function OpenFPLProjections() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 md:p-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-6">
-                  <div className="text-center p-3 md:p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div className="text-xl md:text-2xl lg:text-3xl font-bold text-green-600">{(modelMetrics as any).rmse_overall?.toFixed(3)}</div>
-                    <div className="text-xs md:text-sm text-green-700 font-medium">Overall RMSE</div>
+                <div className="grid grid-cols-5 gap-2 md:gap-4">
+                  <div className="text-center p-2 md:p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="text-lg md:text-xl font-bold text-green-600">{(modelMetrics as any).rmse_overall?.toFixed(3)}</div>
+                    <div className="text-xs text-green-700 font-medium">Overall RMSE</div>
                   </div>
-                  <div className="text-center p-3 md:p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">{(modelMetrics as any).rmse_haulers?.toFixed(3)}</div>
-                    <div className="text-xs md:text-sm text-blue-700 font-medium">Haulers (5+ pts)</div>
+                  <div className="text-center p-2 md:p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-lg md:text-xl font-bold text-blue-600">{(modelMetrics as any).rmse_haulers?.toFixed(3)}</div>
+                    <div className="text-xs text-blue-700 font-medium">Haulers (5+ pts)</div>
                   </div>
-                  <div className="text-center p-3 md:p-4 bg-purple-50 rounded-lg border border-purple-200">
-                    <div className="text-xl md:text-2xl lg:text-3xl font-bold text-purple-600">{(modelMetrics as any).rmse_tickers?.toFixed(3)}</div>
-                    <div className="text-xs md:text-sm text-purple-700 font-medium">Tickers (3-4 pts)</div>
+                  <div className="text-center p-2 md:p-3 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="text-lg md:text-xl font-bold text-purple-600">{(modelMetrics as any).rmse_tickers?.toFixed(3)}</div>
+                    <div className="text-xs text-purple-700 font-medium">Tickers (3-4 pts)</div>
                   </div>
-                  <div className="text-center p-3 md:p-4 bg-orange-50 rounded-lg border border-orange-200">
-                    <div className="text-xl md:text-2xl lg:text-3xl font-bold text-orange-600">{(modelMetrics as any).rmse_blanks?.toFixed(3)}</div>
-                    <div className="text-xs md:text-sm text-orange-700 font-medium">Blanks (≤2 pts)</div>
+                  <div className="text-center p-2 md:p-3 bg-orange-50 rounded-lg border border-orange-200">
+                    <div className="text-lg md:text-xl font-bold text-orange-600">{(modelMetrics as any).rmse_blanks?.toFixed(3)}</div>
+                    <div className="text-xs text-orange-700 font-medium">Blanks (≤2 pts)</div>
                   </div>
-                  <div className="col-span-2 sm:col-span-3 lg:col-span-1 text-center p-3 md:p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                    <div className="text-xl md:text-2xl lg:text-3xl font-bold text-indigo-600">{((modelMetrics as any).accuracy_rate * 100)?.toFixed(1)}%</div>
-                    <div className="text-xs md:text-sm text-indigo-700 font-medium">Accuracy Rate</div>
+                  <div className="text-center p-2 md:p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                    <div className="text-lg md:text-xl font-bold text-indigo-600">{((modelMetrics as any).accuracy_rate * 100)?.toFixed(1)}%</div>
+                    <div className="text-xs text-indigo-700 font-medium">Accuracy Rate</div>
                   </div>
                 </div>
                 <div className="mt-4 md:mt-6 text-center text-xs md:text-sm text-gray-600 bg-gray-50 p-2 md:p-3 rounded-lg">
