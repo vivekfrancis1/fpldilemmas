@@ -1009,13 +1009,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = await fixturesResponse.json();
       
       const teams = bootstrapData.teams;
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      // Find current gameweek - if none current, use next upcoming
+      let currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id;
+      if (!currentGameweek) {
+        // Find next gameweek that hasn't finished
+        const nextEvent = bootstrapData.events.find((event: any) => !event.finished);
+        currentGameweek = nextEvent?.id || 2;
+      }
       const targetGameweek = selectedGameweek === "current" ? currentGameweek : parseInt(selectedGameweek);
       
       // Get fixtures for the selected gameweek
       const gameweekFixtures = fixturesData
         .filter((fixture: any) => 
-          !fixture.finished && 
           fixture.event === targetGameweek
         );
       
