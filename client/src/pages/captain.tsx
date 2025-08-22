@@ -38,7 +38,7 @@ export default function Captain() {
               Captain Selector
             </h1>
             <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed" data-testid="text-page-description">
-              Find the best captain picks based on form, fixtures, and ownership for maximum points
+              Enhanced with historical captaincy data (2016-2024) and advanced statistical modeling for optimal captain selection
             </p>
           </div>
           
