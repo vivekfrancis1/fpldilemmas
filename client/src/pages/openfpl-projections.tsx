@@ -67,6 +67,13 @@ export default function OpenFPLProjections() {
   const [gameweekFilter, setGameweekFilter] = useState("next");
   const [minOwnership, setMinOwnership] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [viewMode, setViewMode] = useState<"list" | "table">("table");
+  const [activeTab, setActiveTab] = useState("predicted_points");
+  const [tableSortBy, setTableSortBy] = useState<{ gameweek: string; metric: string; direction: "asc" | "desc" }>({
+    gameweek: "next",
+    metric: "predicted_points", 
+    direction: "desc"
+  });
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -76,6 +83,20 @@ export default function OpenFPLProjections() {
   const { data: projections, isLoading: isLoadingProjections, error: projectionsError } = useQuery({
     queryKey: ["/api/openfpl-projections", horizonFilter, gameweekFilter],
     refetchInterval: 300000, // 5 minutes
+  });
+
+  // Fetch data for multiple gameweeks for table view
+  const { data: multiGwData, isLoading: isLoadingMultiGw } = useQuery({
+    queryKey: ["/api/openfpl-projections-multi", horizonFilter],
+    queryFn: async () => {
+      const gameweeks = ["current", "next", "upcoming"];
+      const promises = gameweeks.map(gw => 
+        fetch(`/api/openfpl-projections/${horizonFilter}/${gw}`).then(res => res.json())
+      );
+      const results = await Promise.all(promises);
+      return gameweeks.map((gw, index) => ({ gameweek: gw, data: results[index] }));
+    },
+    refetchInterval: 300000,
   });
 
   const { data: modelMetrics, isLoading: isLoadingMetrics } = useQuery({
@@ -89,6 +110,90 @@ export default function OpenFPLProjections() {
       id: position.id,
       name: position.singular_name_short
     }));
+  };
+
+  // Get actual gameweek numbers from bootstrap data
+  const getGameweekNumber = (gwType: string) => {
+    if (!bootstrapData?.events) return gwType;
+    
+    const currentGW = bootstrapData.events.find(event => event.is_current)?.id || 1;
+    const nextGW = bootstrapData.events.find(event => event.is_next)?.id || currentGW + 1;
+    
+    switch (gwType) {
+      case "current":
+        return `GW${currentGW}`;
+      case "next":
+        return `GW${nextGW}`;
+      case "upcoming":
+        return `GW${nextGW + 1}`;
+      default:
+        return gwType;
+    }
+  };
+
+  // Create table data structure
+  const getTableData = () => {
+    if (!multiGwData || !Array.isArray(multiGwData)) return [];
+    
+    const playerMap = new Map();
+    
+    multiGwData.forEach(({ gameweek, data }) => {
+      if (Array.isArray(data)) {
+        data.forEach((projection: OpenFPLProjection) => {
+          if (!playerMap.has(projection.player_id)) {
+            playerMap.set(projection.player_id, {
+              player_id: projection.player_id,
+              player_name: projection.player_name,
+              team_name: projection.team_name,
+              position: projection.position,
+              current_price: projection.current_price,
+              ownership_percentage: projection.ownership_percentage,
+              injury_risk: projection.injury_risk,
+              rotation_risk: projection.rotation_risk,
+              ensemble_confidence: projection.ensemble_confidence,
+              gameweeks: {}
+            });
+          }
+          
+          playerMap.get(projection.player_id).gameweeks[gameweek] = projection;
+        });
+      }
+    });
+    
+    return Array.from(playerMap.values()).filter(player => {
+      const matchesSearch = !searchTerm || 
+        player.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        player.team_name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesPosition = positionFilter === "all" || player.position === positionFilter;
+      
+      const matchesOwnership = !minOwnership || player.ownership_percentage >= parseFloat(minOwnership);
+      
+      const matchesPrice = !maxPrice || player.current_price <= parseFloat(maxPrice) * 10;
+      
+      return matchesSearch && matchesPosition && matchesOwnership && matchesPrice;
+    }).sort((a, b) => {
+      // Table view uses its own sorting
+      if (viewMode === "table") {
+        const aValue = a.gameweeks[tableSortBy.gameweek]?.[tableSortBy.metric as keyof OpenFPLProjection] || 0;
+        const bValue = b.gameweeks[tableSortBy.gameweek]?.[tableSortBy.metric as keyof OpenFPLProjection] || 0;
+        
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return tableSortBy.direction === "desc" ? bValue - aValue : aValue - bValue;
+        }
+        return 0;
+      }
+      
+      // List view uses original sorting
+      const aData = a.gameweeks[gameweekFilter];
+      const bData = b.gameweeks[gameweekFilter];
+      if (!aData || !bData) return 0;
+      
+      if (bData.predicted_points !== aData.predicted_points) {
+        return bData.predicted_points - aData.predicted_points;
+      }
+      return bData.ensemble_confidence - aData.ensemble_confidence;
+    });
   };
 
   const filteredProjections = Array.isArray(projections) ? projections.filter((projection: OpenFPLProjection) => {
@@ -111,7 +216,45 @@ export default function OpenFPLProjections() {
     return b.ensemble_confidence - a.ensemble_confidence;
   }) : [];
 
+  const tableData = getTableData();
+  const gameweekLabels = ["current", "next", "upcoming"];
+
   const formatPrice = (price: number) => `£${(price / 10).toFixed(1)}m`;
+
+  const getRiskBadgeColor = (risk: string) => {
+    if (risk === "Low") return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+    if (risk === "Medium") return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+    return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+  };
+
+  const handleTableSort = (gameweek: string, metric: string) => {
+    setTableSortBy(prev => ({
+      gameweek,
+      metric,
+      direction: prev.gameweek === gameweek && prev.metric === metric && prev.direction === "desc" ? "asc" : "desc"
+    }));
+  };
+
+  const getSortIcon = (gameweek: string, metric: string) => {
+    if (tableSortBy.gameweek === gameweek && tableSortBy.metric === metric) {
+      return tableSortBy.direction === "desc" ? "↓" : "↑";
+    }
+    return "⇅";
+  };
+
+  const getMetricValue = (player: any, gameweek: string, metric: string) => {
+    const playerData = player.gameweeks[gameweek];
+    if (!playerData) return "-";
+    
+    const value = playerData[metric];
+    if (typeof value === 'number') {
+      if (metric.includes('confidence') || metric.includes('percentage')) {
+        return value.toFixed(1);
+      }
+      return value.toFixed(1);
+    }
+    return value || "-";
+  };
   
   const getAvailabilityColor = (status: number) => {
     if (status === 100) return "bg-green-100 text-green-800";
@@ -263,6 +406,16 @@ export default function OpenFPLProjections() {
                 max="15.0"
                 data-testid="input-price"
               />
+
+              <Select value={viewMode} onValueChange={(value: "list" | "table") => setViewMode(value)}>
+                <SelectTrigger data-testid="select-view-mode">
+                  <SelectValue placeholder="View Mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="table">Table View</SelectItem>
+                  <SelectItem value="list">List View</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -280,10 +433,122 @@ export default function OpenFPLProjections() {
               )}
             </CardTitle>
             <CardDescription>
-              Position-specific ensemble models trained on 4 seasons of FPL + Understat data
+              {viewMode === "table" ? 
+                "Multi-gameweek table view with tabbed metrics for comprehensive ML analysis" :
+                "Position-specific ensemble models trained on 4 seasons of FPL + Understat data"
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {viewMode === "table" ? (
+              // Table View with Tabs
+              <div className="space-y-4">
+                {isLoadingMultiGw ? (
+                  <div className="text-center py-8">
+                    <RefreshCw className="h-8 w-8 mx-auto mb-4 animate-spin" />
+                    <p>Loading multi-gameweek ML projections...</p>
+                  </div>
+                ) : tableData.length > 0 ? (
+                  <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList className="grid w-full grid-cols-6">
+                      <TabsTrigger value="predicted_points">Predicted Points</TabsTrigger>
+                      <TabsTrigger value="predicted_minutes">Minutes</TabsTrigger>
+                      <TabsTrigger value="predicted_goals">Goals</TabsTrigger>
+                      <TabsTrigger value="predicted_assists">Assists</TabsTrigger>
+                      <TabsTrigger value="predicted_clean_sheets">Clean Sheets</TabsTrigger>
+                      <TabsTrigger value="predicted_bonus">Bonus</TabsTrigger>
+                    </TabsList>
+                    
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-200 dark:border-gray-700">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            <th className="border border-gray-200 dark:border-gray-700 p-3 text-left sticky left-0 bg-muted/50 min-w-[200px]">
+                              Player Info
+                            </th>
+                            {gameweekLabels.map(gw => (
+                              <th key={gw} className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[100px]">
+                                <button
+                                  onClick={() => handleTableSort(gw, activeTab)}
+                                  className="w-full text-center hover:bg-muted/50 rounded px-2 py-1 transition-colors"
+                                  title={`Sort by ${activeTab} for ${getGameweekNumber(gw)}`}
+                                >
+                                  <div className="flex items-center justify-center gap-1">
+                                    <span>{getGameweekNumber(gw)}</span>
+                                    <span className="text-xs opacity-60">
+                                      {getSortIcon(gw, activeTab)}
+                                    </span>
+                                  </div>
+                                </button>
+                              </th>
+                            ))}
+                            <th className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[120px]">
+                              ML Stats
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tableData.slice(0, 50).map((player, index) => (
+                            <tr key={player.player_id} className="hover:bg-muted/30">
+                              <td className="border border-gray-200 dark:border-gray-700 p-3 sticky left-0 bg-background">
+                                <div className="space-y-1">
+                                  <div className="font-medium">{player.player_name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {player.team_name} • {player.position} • {formatPrice(player.current_price)}
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Badge className={`text-xs ${getRiskBadgeColor(player.injury_risk)}`}>
+                                      {player.injury_risk[0]}I
+                                    </Badge>
+                                    <Badge className={`text-xs ${getRiskBadgeColor(player.rotation_risk)}`}>
+                                      {player.rotation_risk[0]}R
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </td>
+                              {gameweekLabels.map(gw => (
+                                <td key={gw} className="border border-gray-200 dark:border-gray-700 p-3 text-center">
+                                  <div className="font-medium">
+                                    {getMetricValue(player, gw, activeTab)}
+                                  </div>
+                                  {player.gameweeks[gw] && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      H{horizonFilter}
+                                    </div>
+                                  )}
+                                </td>
+                              ))}
+                              <td className="border border-gray-200 dark:border-gray-700 p-3">
+                                <div className="space-y-1 text-xs">
+                                  <div>Own: {player.ownership_percentage?.toFixed(1)}%</div>
+                                  <div className="text-green-600">
+                                    Conf: {player.ensemble_confidence?.toFixed(0)}%
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    <div className="text-sm text-muted-foreground mt-4">
+                      <p><strong>Legend:</strong> I = Injury Risk, R = Rotation Risk, H{horizonFilter} = {horizonFilter} Gameweek{horizonFilter !== "1" ? "s" : ""} Horizon, Conf = ML Ensemble Confidence</p>
+                      <p>Table shows top 50 players. Click gameweek headers to sort by that metric. Switch tabs to view different ML predictions across gameweeks.</p>
+                      <p><strong>Current sort:</strong> {getGameweekNumber(tableSortBy.gameweek)} - {activeTab} ({tableSortBy.direction === "desc" ? "Highest first" : "Lowest first"})</p>
+                    </div>
+                  </Tabs>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No players found matching your criteria</p>
+                    <p className="text-sm">Try adjusting your filters</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // List View (Original)
+              <div>
             {isLoadingProjections ? (
               <div className="space-y-3">
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -395,6 +660,8 @@ export default function OpenFPLProjections() {
                 <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No projections found matching your criteria</p>
                 <p className="text-sm">Try adjusting your filters or search terms</p>
+              </div>
+            )}
               </div>
             )}
           </CardContent>
