@@ -48,9 +48,9 @@ export default function Fixtures() {
     const firstUnfinished = bootstrapData.events.find(event => !event.finished);
     const current = firstUnfinished ? firstUnfinished.id : 1;
     
-    // Show gameweeks 3-12 (next 10 gameweeks) regardless of finished status
+    // Show all gameweeks from 3 to 38 for user selection
     const available = bootstrapData.events
-      .filter(event => event.id >= 3 && event.id <= 12)
+      .filter(event => event.id >= 3 && event.id <= 38)
       .map(event => event.id)
       .sort((a, b) => a - b);
     
@@ -193,7 +193,7 @@ export default function Fixtures() {
               Fixture Difficulty Table
             </h1>
             <p className="text-sm sm:text-lg text-gray-600 max-w-2xl mx-auto px-2" data-testid="text-page-description">
-              Next 10 gameweeks (GW3-GW12) fixture difficulty ratings for all Premier League teams
+              Fixture difficulty ratings showing 10 gameweeks by default (customizable up to GW38)
             </p>
           </div>
 
@@ -208,7 +208,7 @@ export default function Fixtures() {
                 data-testid="select-start-gameweek"
               >
                 {availableGameweeks.map(gw => (
-                  <option key={gw} value={gw}>{gw}</option>
+                  <option key={gw} value={gw}>GW{gw}</option>
                 ))}
               </select>
               <span className="text-gray-500">to</span>
@@ -218,8 +218,8 @@ export default function Fixtures() {
                 className="px-3 py-1 border border-gray-300 rounded text-sm"
                 data-testid="select-end-gameweek"
               >
-                {availableGameweeks.map(gw => (
-                  <option key={gw} value={gw}>{gw}</option>
+                {availableGameweeks.filter(gw => gw >= gameweekRange.start).map(gw => (
+                  <option key={gw} value={gw}>GW{gw}</option>
                 ))}
               </select>
             </div>
