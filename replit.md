@@ -27,6 +27,7 @@ My Leagues functionality: Fixed data structure issues and API endpoints, now pro
 Price Tracker: Enhanced with sophisticated ownership percentage-based price prediction algorithm using transfer velocity, dynamic thresholds (5% of owned players with minimums), price tier multipliers, and authentic FPL price change data from cost_change_event field sorted by recency (August 2025)
 Historical data: Added year selection functionality for player statistics from 2016/17 season onwards with full data coverage of 300-400+ players per season (fully functional August 2025)
 Player Expected Minutes: New projection tool showing expected playing time for players across next 6 gameweeks with start probability percentages, using deterministic statistical modeling for consistent predictions (August 2025)
+Player Projected Goals: New projection tool displaying expected goals for players across next 6 gameweeks with scoring probability percentages, using position-specific algorithms and deterministic calculations (August 2025)
 
 
 ## System Architecture
