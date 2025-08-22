@@ -2080,10 +2080,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const horizon = parseInt(req.query.horizon as string) || 1;
       const gameweekParam = req.query.gameweek as string || "next";
       
-      const bootstrapData = await storage.getBootstrapData();
-      if (!bootstrapData) {
-        return res.status(500).json({ error: "Bootstrap data not available" });
+      console.log(`Fetching OpenFPL projections for horizon=${horizon}, gameweek=${gameweekParam}`);
+      
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        console.error("Failed to fetch FPL API data");
+        throw new Error("Failed to fetch FPL data");
       }
+      const bootstrapData = await bootstrapResponse.json();
+      
+      console.log(`Loaded ${bootstrapData.elements?.length || 0} players from FPL API`);
 
       const elements = bootstrapData.elements;
       const teams = bootstrapData.teams;
