@@ -57,10 +57,11 @@ export default function AssistShare() {
     });
   }, [assistShareData, selectedGameweek, selectedTeam]);
 
-  // Get available gameweeks
+  // Get available gameweeks - hardcode to ensure consistency 
   const availableGameweeks = useMemo(() => {
+    if (assistShareData.length === 0) return [2, 3, 4, 5, 6, 7];
     const gameweeks = [...new Set(assistShareData.map(item => item.gameweek))].sort((a, b) => a - b);
-    return gameweeks;
+    return gameweeks.length > 0 ? gameweeks : [2, 3, 4, 5, 6, 7];
   }, [assistShareData]);
 
   if (error) {

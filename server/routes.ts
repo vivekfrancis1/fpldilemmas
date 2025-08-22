@@ -786,9 +786,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate goal share data for all upcoming 6 gameweeks (GW2-GW7)
       const allGoalShareData: any[] = [];
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
       
-      for (let gameweek = Math.max(2, currentGameweek + 1); gameweek <= Math.max(2, currentGameweek + 1) + 5; gameweek++) {
+      // Fixed range: always generate GW2 through GW7 (6 gameweeks)
+      for (let gameweek = 2; gameweek <= 7; gameweek++) {
         // Generate team goal projections data using the same logic as the endpoint
         const teams = bootstrapData.teams;
         const teamProjections: any[] = [];
@@ -895,10 +895,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Generate goal share data using Team Goal Projections expected goals for this gameweek
         const weekGoalShareData = generateGoalShareFromTeamProjections(bootstrapData, fixturesData, teamProjections, gameweek);
+        console.log(`DEBUG: Generated ${weekGoalShareData.length} entries for GW${gameweek}`);
         allGoalShareData.push(...weekGoalShareData);
       }
       
       console.log(`DEBUG: Generated ${allGoalShareData.length} total team entries for GW2-GW7 using Team Goal Projections`);
+      
+      // Debug: Check gameweeks in data
+      const uniqueGameweeks = [...new Set(allGoalShareData.map(item => item.gameweek))];
+      console.log(`DEBUG: Unique gameweeks in data: ${uniqueGameweeks.join(', ')}`);
       
       // Filter to requested gameweek if specific, otherwise return all
       const filteredData = targetGameweek === 0 ? allGoalShareData : 
@@ -988,9 +993,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate assist share data for all upcoming 6 gameweeks (GW2-GW7)
       const allAssistShareData: any[] = [];
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
       
-      for (let gw = Math.max(2, currentGameweek + 1); gw <= Math.max(2, currentGameweek + 1) + 5; gw++) {
+      // Fixed range: always generate GW2 through GW7 (6 gameweeks)
+      for (let gw = 2; gw <= 7; gw++) {
         const weekData = generateAssistShareData(bootstrapData, fixturesData, 1, gw);
         allAssistShareData.push(...weekData);
       }
@@ -1011,10 +1016,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const data: any[] = [];
     const teams = bootstrapData.teams;
     
-    // Get fixtures for the target gameweek
+    // Get fixtures for the target gameweek (include all fixtures, not just unfinished ones)
     const gwFixtures = fixturesData.filter((fixture: any) => 
-      !fixture.finished && fixture.event === targetGameweek
+      fixture.event === targetGameweek
     );
+    
+    console.log(`DEBUG: Found ${gwFixtures.length} fixtures for GW${targetGameweek}`);
     
     gwFixtures.forEach((fixture: any) => {
       const homeTeam = teams.find((t: any) => t.id === fixture.team_h);

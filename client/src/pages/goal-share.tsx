@@ -51,11 +51,12 @@ export default function GoalShare() {
     });
   }, [processedGoalShareData, selectedGameweek, selectedTeam]);
 
-  // Get available gameweeks
+  // Get available gameweeks - hardcode to ensure consistency
   const availableGameweeks = useMemo(() => {
+    if (processedGoalShareData.length === 0) return [2, 3, 4, 5, 6, 7];
     const gameweekSet = new Set(processedGoalShareData.map(item => item.gameweek));
     const gameweeks = Array.from(gameweekSet).sort((a, b) => a - b);
-    return gameweeks;
+    return gameweeks.length > 0 ? gameweeks : [2, 3, 4, 5, 6, 7];
   }, [processedGoalShareData]);
 
   if (error) {
