@@ -108,6 +108,21 @@ export default function PlayerStatsTable({
           case "interceptions": return player.interceptions || 0;
           case "tackles": return player.tackles || 0;
           case "recoveries": return player.recoveries || 0;
+          case "defensive_contributions": {
+            const clearances = player.clearances || 0;
+            const blocks = player.blocks || 0;
+            const interceptions = player.interceptions || 0;
+            const tackles = player.tackles || 0;
+            const recoveries = player.recoveries || 0;
+            
+            // For defenders: Clearances + Blocks + Interceptions + Tackles
+            // For midfielders/forwards: Clearances + Blocks + Interceptions + Tackles + Recoveries
+            if (player.element_type === 2) { // Defenders
+              return clearances + blocks + interceptions + tackles;
+            } else { // Midfielders and Forwards
+              return clearances + blocks + interceptions + tackles + recoveries;
+            }
+          }
           case "ict_index": return parseFloat(player.ict_index) || 0;
           case "cost_change_event": return player.cost_change_event;
           case "cost_change_event_fall": return player.cost_change_event_fall;
@@ -325,6 +340,9 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="recoveries" label="Recov" />
               </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="defensive_contributions" label="Def Contrib" />
+              </th>
               {/* All other data points */}
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="bonus" label="Bonus" />
@@ -451,6 +469,23 @@ export default function PlayerStatsTable({
                   <td className="px-2 py-4 text-center text-sm text-blue-600 font-medium">{player.interceptions || 0}</td>
                   <td className="px-2 py-4 text-center text-sm text-blue-600 font-medium">{player.tackles || 0}</td>
                   <td className="px-2 py-4 text-center text-sm text-blue-600 font-medium">{player.recoveries || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-purple-600 font-bold">
+                    {(() => {
+                      const clearances = player.clearances || 0;
+                      const blocks = player.blocks || 0;
+                      const interceptions = player.interceptions || 0;
+                      const tackles = player.tackles || 0;
+                      const recoveries = player.recoveries || 0;
+                      
+                      // For defenders: Clearances + Blocks + Interceptions + Tackles
+                      // For midfielders/forwards: Clearances + Blocks + Interceptions + Tackles + Recoveries
+                      if (player.element_type === 2) { // Defenders
+                        return clearances + blocks + interceptions + tackles;
+                      } else { // Midfielders and Forwards
+                        return clearances + blocks + interceptions + tackles + recoveries;
+                      }
+                    })()}
+                  </td>
                   {/* All other data points */}
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bonus || 0}</td>
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bps || 0}</td>
