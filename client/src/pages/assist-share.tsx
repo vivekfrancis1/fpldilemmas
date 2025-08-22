@@ -17,7 +17,9 @@ interface AssistShareData {
     id: number;
     name: string;
     position: string;
+    rawShare: number;
     assistShare: number; // Percentage
+    projectedAssists: number;
   }[];
 }
 
@@ -30,113 +32,24 @@ export default function AssistShare() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: matchOddsData, isLoading: matchOddsLoading } = useQuery({
-    queryKey: ["/api/results-projections"],
-    staleTime: 10 * 60 * 1000,
-  });
-
-  // Generate assist share data based on match odds
-  const assistShareData = useMemo(() => {
-    if (!bootstrapData?.elements || !matchOddsData) return [];
-
-    const data: AssistShareData[] = [];
-    const teams = bootstrapData.teams;
+  // Get current gameweek for the API call
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 2;
     
-    // Get current gameweek for filtering
-    let currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id;
-    if (!currentGameweek) {
+    let gameweek = bootstrapData.events.find((event: any) => event.is_current)?.id;
+    if (!gameweek) {
       const nextEvent = bootstrapData.events.find((event: any) => !event.finished);
-      currentGameweek = nextEvent?.id || 2;
+      gameweek = nextEvent?.id || 2;
     }
+    return gameweek;
+  }, [bootstrapData]);
 
-    // Process match odds data to create assist share breakdowns
-    matchOddsData.forEach((match: any) => {
-      const homeTeam = teams.find((t: any) => t.name === match.homeTeam);
-      const awayTeam = teams.find((t: any) => t.name === match.awayTeam);
-
-      if (homeTeam && awayTeam && match.homeExpectedGoals && match.awayExpectedGoals) {
-        // Home team assist share - ensure assists ≤ goals
-        const homeMaxAssists = match.homeExpectedGoals;
-        const homeExpectedAssists = Math.min(homeMaxAssists, match.homeExpectedGoals * 0.65);
-        const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
-        const homePlayerShares = distributeAssistShares(homePlayersInSquad, bootstrapData.element_types);
-        
-        data.push({
-          gameweek: match.gameweek,
-          teamId: homeTeam.id,
-          teamName: match.homeTeam,
-          teamShort: match.homeTeamShort,
-          expectedAssists: Math.round(homeExpectedAssists * 100) / 100,
-          players: homePlayerShares
-        });
-
-        // Away team assist share - ensure assists ≤ goals
-        const awayMaxAssists = match.awayExpectedGoals;
-        const awayExpectedAssists = Math.min(awayMaxAssists, match.awayExpectedGoals * 0.65);
-        const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
-        const awayPlayerShares = distributeAssistShares(awayPlayersInSquad, bootstrapData.element_types);
-        
-        data.push({
-          gameweek: match.gameweek,
-          teamId: awayTeam.id,
-          teamName: match.awayTeam,
-          teamShort: match.awayTeamShort,
-          expectedAssists: Math.round(awayExpectedAssists * 100) / 100,
-          players: awayPlayerShares
-        });
-      }
-    });
-
-    return data;
-  }, [bootstrapData, matchOddsData]);
-
-  // Function to distribute assist shares among players
-  function distributeAssistShares(players: any[], positions: any[]) {
-    const playerShares: any[] = [];
-    let totalShare = 0;
-
-    // Calculate base shares based on position and creativity
-    players.forEach((player: any) => {
-      const position = positions.find((p: any) => p.id === player.element_type);
-      const positionName = position?.singular_name;
-
-      // Position-specific base assist shares (different from goals)
-      const positionShares = {
-        'Goalkeeper': 0.5,
-        'Defender': 8,
-        'Midfielder': 25,
-        'Forward': 12
-      };
-
-      const baseShare = positionShares[positionName as keyof typeof positionShares] || 15;
-      
-      // Adjust based on creativity and current performance
-      const creativityAdjustment = Math.max(0.5, Math.min(2.0, (player.creativity || 0) / 50 + 0.5));
-      const formAdjustment = parseFloat(player.form) || 0;
-      const assistsAdjustment = Math.max(0.5, Math.min(2.0, (player.assists || 0) * 2 + 0.5));
-      
-      const performanceMultiplier = Math.max(0.3, Math.min(2.5, 
-        (creativityAdjustment + (formAdjustment / 10) + assistsAdjustment) / 3
-      ));
-      
-      const adjustedShare = baseShare * performanceMultiplier;
-      
-      playerShares.push({
-        id: player.id,
-        name: `${player.first_name} ${player.second_name}`,
-        position: position?.singular_name_short || '',
-        rawShare: adjustedShare
-      });
-      
-      totalShare += adjustedShare;
-    });
-
-    // Normalize to 100%
-    return playerShares.map(player => ({
-      ...player,
-      assistShare: Math.round((player.rawShare / totalShare) * 100)
-    })).filter(p => p.assistShare > 0).sort((a, b) => b.assistShare - a.assistShare);
-  }
+  // Use the dedicated assist-share API endpoint
+  const { data: assistShareData = [], isLoading: assistShareLoading } = useQuery<AssistShareData[]>({
+    queryKey: ["/api/assist-share", currentGameweek],
+    staleTime: 10 * 60 * 1000,
+    enabled: !!currentGameweek
+  });
 
   // Filter data
   const filteredData = useMemo(() => {
@@ -188,7 +101,7 @@ export default function AssistShare() {
               Assist Involvement Share
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Team expected assists breakdown by player percentage share based on Match Odds data
+              Team expected assists breakdown by player percentage share with data consistency
             </p>
           </div>
 
@@ -232,14 +145,14 @@ export default function AssistShare() {
           </Card>
 
           {/* Loading State */}
-          {(isLoading || matchOddsLoading) && (
+          {(isLoading || assistShareLoading) && (
             <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
             </div>
           )}
 
           {/* Assist Share Cards */}
-          {!isLoading && !matchOddsLoading && (
+          {!isLoading && !assistShareLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredData.map((teamData, index) => (
                 <Card key={`${teamData.teamId}_${teamData.gameweek}`} className="overflow-hidden">
@@ -284,6 +197,9 @@ export default function AssistShare() {
                             }`}>
                               {player.assistShare.toFixed(1)}%
                             </span>
+                            <span className="text-xs text-gray-500">
+                              {player.projectedAssists.toFixed(2)}
+                            </span>
                           </div>
                         </div>
                       ))}
@@ -299,7 +215,7 @@ export default function AssistShare() {
             </div>
           )}
 
-          {!isLoading && !matchOddsLoading && filteredData.length === 0 && (
+          {!isLoading && !assistShareLoading && filteredData.length === 0 && (
             <Card>
               <CardContent className="p-12 text-center">
                 <Zap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -319,9 +235,9 @@ export default function AssistShare() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Based on Match Odds expected goals data</li>
-                    <li>• Assists calculated as ~65% of team goals (max = goals)</li>
-                    <li>• Weighted by creativity and assist history</li>
+                    <li>• Based on deterministic expected assists calculations</li>
+                    <li>• Weighted by creativity, form, and assist history</li>
+                    <li>• Ensures assists ≤ goals constraint for logical consistency</li>
                     <li>• Midfielders prioritized for assist distribution</li>
                     <li>• All players in a team total 100%</li>
                   </ul>
