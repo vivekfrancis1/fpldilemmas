@@ -44,14 +44,13 @@ export default function Fixtures() {
   const { currentGameweek, availableGameweeks } = useMemo(() => {
     if (!bootstrapData?.events) return { currentGameweek: 1, availableGameweeks: [] };
     
-    const currentEvent = bootstrapData.events.find(event => 
-      event.is_current || (!event.finished && !event.is_next)
-    );
-    const current = currentEvent ? currentEvent.id : 1;
+    // Find the first unfinished gameweek as the "current" gameweek
+    const firstUnfinished = bootstrapData.events.find(event => !event.finished);
+    const current = firstUnfinished ? firstUnfinished.id : 1;
     
-    // Only show upcoming gameweeks (current and future)
+    // Only show upcoming gameweeks (unfinished gameweeks only)
     const available = bootstrapData.events
-      .filter(event => event.id >= current)
+      .filter(event => !event.finished)
       .map(event => event.id)
       .sort((a, b) => a - b);
     
@@ -60,13 +59,14 @@ export default function Fixtures() {
 
   // Update gameweek range when current gameweek changes
   useEffect(() => {
-    if (currentGameweek > 1 && gameweekRange.start === 1) {
+    if (availableGameweeks.length > 0 && gameweekRange.start === 1) {
+      const firstAvailable = availableGameweeks[0];
       setGameweekRange({
-        start: currentGameweek,
-        end: Math.min(currentGameweek + 9, 38)
+        start: firstAvailable,
+        end: Math.min(firstAvailable + 9, Math.max(...availableGameweeks))
       });
     }
-  }, [currentGameweek, gameweekRange.start]);
+  }, [availableGameweeks, gameweekRange.start]);
 
   // Get difficulty rating color class
   const getDifficultyColor = (difficulty: number) => {
@@ -92,9 +92,9 @@ export default function Fixtures() {
       matrix[team.id] = {};
     });
 
-    // Fill matrix with fixtures (only upcoming/current fixtures)
+    // Fill matrix with fixtures (only unfinished fixtures)
     fixturesData.forEach(fixture => {
-      if (fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end && fixture.event >= currentGameweek) {
+      if (fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end && !fixture.finished) {
         const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
         const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
         
@@ -130,7 +130,7 @@ export default function Fixtures() {
     });
 
     return { fixtureMatrix: matrix, teamAverageFDR: avgFDR };
-  }, [bootstrapData, fixturesData, gameweekRange, currentGameweek]);
+  }, [bootstrapData, fixturesData, gameweekRange]);
 
   const gameweeks = useMemo(() => {
     const gws = [];
@@ -191,7 +191,7 @@ export default function Fixtures() {
               Fixture Difficulty Table
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Complete fixture matrix showing difficulty ratings for all teams across gameweeks
+              Upcoming fixture matrix showing difficulty ratings for all teams across future gameweeks
             </p>
           </div>
 
