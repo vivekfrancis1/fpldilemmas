@@ -156,8 +156,12 @@ export default function Projections() {
         // Handle gameweek-specific sorting
         if (sortBy.startsWith('gw')) {
           const gwNumber = parseInt(sortBy.replace('gw', ''));
-          const aValue = a.weeklyProjections[gwNumber]?.[activeTab as keyof typeof a.weeklyProjections[gwNumber]] || 0;
-          const bValue = b.weeklyProjections[gwNumber]?.[activeTab as keyof typeof b.weeklyProjections[gwNumber]] || 0;
+          const aWeekData = a.weeklyProjections[gwNumber];
+          const bWeekData = b.weeklyProjections[gwNumber];
+          if (!aWeekData || !bWeekData) return 0;
+          
+          const aValue = aWeekData[activeTab as keyof typeof aWeekData] || 0;
+          const bValue = bWeekData[activeTab as keyof typeof bWeekData] || 0;
           return typeof aValue === 'number' && typeof bValue === 'number' ? bValue - aValue : 0;
         }
         
@@ -298,28 +302,28 @@ export default function Projections() {
               </CardHeader>
               <CardContent className="p-0">
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                  <TabsList className="grid w-full grid-cols-6 bg-gray-50 p-1 m-4 rounded-lg">
-                    <TabsTrigger value="points" className="flex items-center gap-1">
+                  <TabsList className="grid w-full grid-cols-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-2 m-4 rounded-lg border border-blue-200">
+                    <TabsTrigger value="points" className="flex items-center gap-2 font-semibold data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                       <Star className="h-4 w-4" />
                       Points
                     </TabsTrigger>
-                    <TabsTrigger value="goals" className="flex items-center gap-1">
+                    <TabsTrigger value="goals" className="flex items-center gap-2 font-semibold data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                       <Target className="h-4 w-4" />
                       Goals
                     </TabsTrigger>
-                    <TabsTrigger value="assists" className="flex items-center gap-1">
+                    <TabsTrigger value="assists" className="flex items-center gap-2 font-semibold data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                       <Users className="h-4 w-4" />
                       Assists
                     </TabsTrigger>
-                    <TabsTrigger value="cleanSheets" className="flex items-center gap-1">
+                    <TabsTrigger value="cleanSheets" className="flex items-center gap-2 font-semibold data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                       <Trophy className="h-4 w-4" />
-                      CS
+                      Clean Sheets
                     </TabsTrigger>
-                    <TabsTrigger value="bonus" className="flex items-center gap-1">
+                    <TabsTrigger value="bonus" className="flex items-center gap-2 font-semibold data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                       <Zap className="h-4 w-4" />
                       Bonus
                     </TabsTrigger>
-                    <TabsTrigger value="cbit" className="flex items-center gap-1">
+                    <TabsTrigger value="cbit" className="flex items-center gap-2 font-semibold data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                       <TrendingUp className="h-4 w-4" />
                       CBIT%
                     </TabsTrigger>
@@ -329,42 +333,50 @@ export default function Projections() {
                     <TabsContent key={metric} value={metric} className="m-0">
                       <div className="overflow-x-auto">
                         <table className="w-full">
-                          <thead className="bg-gray-50 border-b">
+                          <thead className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-blue-200">
                             <tr>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
-                                Player
-                              </th>
-                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-48 bg-gray-50">
-                                <div className="flex items-center justify-center gap-1">
-                                  <PoundSterling className="h-3 w-3" />
-                                  Price
+                              <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider sticky left-0 bg-gradient-to-r from-blue-50 to-indigo-50 border-r border-blue-200">
+                                <div className="flex items-center gap-2">
+                                  <Users className="h-4 w-4 text-blue-600" />
+                                  Player
                                 </div>
                               </th>
-                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-72 bg-gray-50">
-                                <div className="flex items-center justify-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  Avg Min
+                              <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 uppercase tracking-wider sticky left-48 bg-gradient-to-r from-blue-50 to-indigo-50 border-r border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
+                                  onClick={() => setSortBy('price')}>
+                                <div className="flex items-center justify-center gap-2">
+                                  <PoundSterling className="h-4 w-4 text-green-600" />
+                                  <span>Price</span>
+                                  {sortBy === 'price' && <ArrowUpDown className="h-4 w-4 text-blue-600" />}
+                                </div>
+                              </th>
+                              <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 uppercase tracking-wider sticky left-72 bg-gradient-to-r from-blue-50 to-indigo-50 border-r border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
+                                  onClick={() => setSortBy('minutes')}>
+                                <div className="flex items-center justify-center gap-2">
+                                  <Clock className="h-4 w-4 text-orange-600" />
+                                  <span>Avg Min</span>
+                                  {sortBy === 'minutes' && <ArrowUpDown className="h-4 w-4 text-blue-600" />}
                                 </div>
                               </th>
                               {Array.from({ length: weeks }, (_, i) => (
                                 <th 
                                   key={i} 
-                                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                                  className="px-4 py-4 text-center text-sm font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100 transition-colors border-r border-blue-100"
                                   onClick={() => setSortBy(`gw${i + 2}`)}
                                 >
-                                  <div className="flex items-center justify-center gap-1">
-                                    GW {i + 2}
-                                    {sortBy === `gw${i + 2}` && <ArrowUpDown className="h-3 w-3" />}
+                                  <div className="flex items-center justify-center gap-2">
+                                    <span>GW {i + 2}</span>
+                                    {sortBy === `gw${i + 2}` && <ArrowUpDown className="h-4 w-4 text-blue-600" />}
                                   </div>
                                 </th>
                               ))}
                               <th 
-                                className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors"
+                                className="px-4 py-4 text-center text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-blue-500 to-indigo-600 cursor-pointer hover:from-blue-600 hover:to-indigo-700 transition-colors"
                                 onClick={() => setSortBy(activeTab)}
                               >
-                                <div className="flex items-center justify-center gap-1">
-                                  Total
-                                  {sortBy === activeTab && <ArrowUpDown className="h-3 w-3" />}
+                                <div className="flex items-center justify-center gap-2">
+                                  <Trophy className="h-4 w-4" />
+                                  <span>Total {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</span>
+                                  {sortBy === activeTab && <ArrowUpDown className="h-4 w-4" />}
                                 </div>
                               </th>
                             </tr>
@@ -406,9 +418,9 @@ export default function Projections() {
                                     </td>
                                   );
                                 })}
-                                <td className="px-4 py-4 text-center bg-blue-50">
+                                <td className="px-4 py-4 text-center bg-gradient-to-r from-blue-500 to-indigo-600">
                                   {metric === 'cbit' ? (
-                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    <span className={`inline-flex px-3 py-1 text-sm font-bold rounded-full ${
                                       player.averageCbit >= 70 ? 'bg-green-100 text-green-800' :
                                       player.averageCbit >= 40 ? 'bg-yellow-100 text-yellow-800' :
                                       'bg-red-100 text-red-800'
@@ -416,7 +428,7 @@ export default function Projections() {
                                       {player.averageCbit}%
                                     </span>
                                   ) : (
-                                    <span className="text-sm font-semibold text-gray-900">
+                                    <span className="text-lg font-bold text-white">
                                       {(() => {
                                         const key = `total${metric.charAt(0).toUpperCase() + metric.slice(1)}` as keyof PlayerProjection;
                                         const value = player[key];
