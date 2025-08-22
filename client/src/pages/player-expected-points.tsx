@@ -83,6 +83,8 @@ export default function PlayerExpectedPoints() {
   const [priceRangeMax, setPriceRangeMax] = useState("");
   const [minOwnership, setMinOwnership] = useState("");
   const [sortBy, setSortBy] = useState("expected_points");
+  const [viewMode, setViewMode] = useState<"list" | "table">("table");
+  const [activeTab, setActiveTab] = useState("expected_points");
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -92,6 +94,20 @@ export default function PlayerExpectedPoints() {
   const { data: expectedPoints, isLoading: isLoadingExpectedPoints, error: expectedPointsError } = useQuery({
     queryKey: ["/api/player-expected-points", gameweekFilter],
     refetchInterval: 300000, // 5 minutes
+  });
+
+  // Fetch data for multiple gameweeks for table view
+  const { data: multiGwData, isLoading: isLoadingMultiGw } = useQuery({
+    queryKey: ["/api/player-expected-points-multi"],
+    queryFn: async () => {
+      const gameweeks = ["next", "current", "upcoming"];
+      const promises = gameweeks.map(gw => 
+        fetch(`/api/player-expected-points/${gw}`).then(res => res.json())
+      );
+      const results = await Promise.all(promises);
+      return gameweeks.map((gw, index) => ({ gameweek: gw, data: results[index] }));
+    },
+    refetchInterval: 300000,
   });
 
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery({
@@ -155,6 +171,84 @@ export default function PlayerExpectedPoints() {
     if (ratio >= 1.2) return "text-green-600";
     if (ratio >= 0.8) return "text-yellow-600";
     return "text-red-600";
+  };
+
+  // Create table data structure
+  const getTableData = () => {
+    if (!multiGwData || !Array.isArray(multiGwData)) return [];
+    
+    const playerMap = new Map();
+    
+    multiGwData.forEach(({ gameweek, data }) => {
+      if (Array.isArray(data)) {
+        data.forEach((player: PlayerExpectedPoints) => {
+          if (!playerMap.has(player.player_id)) {
+            playerMap.set(player.player_id, {
+              player_id: player.player_id,
+              player_name: player.player_name,
+              team_name: player.team_name,
+              position: player.position,
+              current_price: player.current_price,
+              ownership_percentage: player.ownership_percentage,
+              form_rating: player.form_rating,
+              injury_risk: player.injury_risk,
+              rotation_risk: player.rotation_risk,
+              confidence_score: player.confidence_score,
+              price_value_ratio: player.price_value_ratio,
+              gameweeks: {}
+            });
+          }
+          
+          playerMap.get(player.player_id).gameweeks[gameweek] = player;
+        });
+      }
+    });
+    
+    return Array.from(playerMap.values()).filter(player => {
+      const matchesSearch = !searchTerm || 
+        player.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        player.team_name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesPosition = positionFilter === "all" || player.position === positionFilter;
+      
+      const matchesPriceMin = !priceRangeMin || player.current_price >= parseFloat(priceRangeMin) * 10;
+      const matchesPriceMax = !priceRangeMax || player.current_price <= parseFloat(priceRangeMax) * 10;
+      
+      const matchesOwnership = !minOwnership || player.ownership_percentage >= parseFloat(minOwnership);
+      
+      return matchesSearch && matchesPosition && matchesPriceMin && matchesPriceMax && matchesOwnership;
+    }).sort((a, b) => {
+      const aValue = a.gameweeks[gameweekFilter]?.[sortBy as keyof PlayerExpectedPoints] || 0;
+      const bValue = b.gameweeks[gameweekFilter]?.[sortBy as keyof PlayerExpectedPoints] || 0;
+      
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return bValue - aValue;
+      }
+      return 0;
+    });
+  };
+
+  const tableData = getTableData();
+  const gameweekLabels = ["current", "next", "upcoming"];
+
+  const getMetricValue = (player: any, gameweek: string, metric: string) => {
+    const playerData = player.gameweeks[gameweek];
+    if (!playerData) return "-";
+    
+    const value = playerData[metric];
+    if (typeof value === 'number') {
+      if (metric.includes('probability') || metric.includes('ratio')) {
+        return value.toFixed(2);
+      }
+      return value.toFixed(1);
+    }
+    return value || "-";
+  };
+
+  const getRiskBadgeColor = (risk: string) => {
+    if (risk === "Low") return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+    if (risk === "Medium") return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+    return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
   };
 
   return (
@@ -296,6 +390,16 @@ export default function PlayerExpectedPoints() {
                   <SelectItem value="price">Price (Low to High)</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Select value={viewMode} onValueChange={(value: "list" | "table") => setViewMode(value)}>
+                <SelectTrigger data-testid="select-view-mode">
+                  <SelectValue placeholder="View Mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="table">Table View</SelectItem>
+                  <SelectItem value="list">List View</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -314,10 +418,114 @@ export default function PlayerExpectedPoints() {
               )}
             </CardTitle>
             <CardDescription>
-              Comprehensive expected points with detailed scoring breakdown and probability analysis
+              {viewMode === "table" ? 
+                "Multi-gameweek table view with tabbed metrics for comprehensive analysis" :
+                "Comprehensive expected points with detailed scoring breakdown and probability analysis"
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {viewMode === "table" ? (
+              // Table View with Tabs
+              <div className="space-y-4">
+                {isLoadingMultiGw ? (
+                  <div className="text-center py-8">
+                    <RefreshCw className="h-8 w-8 mx-auto mb-4 animate-spin" />
+                    <p>Loading multi-gameweek data...</p>
+                  </div>
+                ) : tableData.length > 0 ? (
+                  <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList className="grid w-full grid-cols-6">
+                      <TabsTrigger value="expected_points">Expected Points</TabsTrigger>
+                      <TabsTrigger value="appearance_points">Appearance</TabsTrigger>
+                      <TabsTrigger value="goal_points">Goals</TabsTrigger>
+                      <TabsTrigger value="assist_points">Assists</TabsTrigger>
+                      <TabsTrigger value="clean_sheet_points">Clean Sheets</TabsTrigger>
+                      <TabsTrigger value="bonus_points">Bonus</TabsTrigger>
+                    </TabsList>
+                    
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-200 dark:border-gray-700">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            <th className="border border-gray-200 dark:border-gray-700 p-3 text-left sticky left-0 bg-muted/50 min-w-[200px]">
+                              Player Info
+                            </th>
+                            {gameweekLabels.map(gw => (
+                              <th key={gw} className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[100px]">
+                                {gw === "current" ? "Current GW" : gw === "next" ? "Next GW" : "Upcoming GWs"}
+                              </th>
+                            ))}
+                            <th className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[120px]">
+                              Player Stats
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tableData.slice(0, 50).map((player, index) => (
+                            <tr key={player.player_id} className="hover:bg-muted/30">
+                              <td className="border border-gray-200 dark:border-gray-700 p-3 sticky left-0 bg-background">
+                                <div className="space-y-1">
+                                  <div className="font-medium">{player.player_name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {player.team_name} • {player.position} • {formatPrice(player.current_price)}
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Badge className={`text-xs ${getRiskBadgeColor(player.injury_risk)}`}>
+                                      {player.injury_risk[0]}I
+                                    </Badge>
+                                    <Badge className={`text-xs ${getRiskBadgeColor(player.rotation_risk)}`}>
+                                      {player.rotation_risk[0]}R
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </td>
+                              {gameweekLabels.map(gw => (
+                                <td key={gw} className="border border-gray-200 dark:border-gray-700 p-3 text-center">
+                                  <div className="font-medium">
+                                    {getMetricValue(player, gw, activeTab)}
+                                  </div>
+                                  {player.gameweeks[gw] && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      {Math.round(player.gameweeks[gw].expected_minutes)}min
+                                    </div>
+                                  )}
+                                </td>
+                              ))}
+                              <td className="border border-gray-200 dark:border-gray-700 p-3">
+                                <div className="space-y-1 text-xs">
+                                  <div>Form: {player.form_rating?.toFixed(1)}</div>
+                                  <div>Own: {player.ownership_percentage?.toFixed(1)}%</div>
+                                  <div className={getConfidenceColor(player.confidence_score)}>
+                                    Conf: {player.confidence_score}%
+                                  </div>
+                                  <div className={getValueColor(player.price_value_ratio)}>
+                                    Value: {player.price_value_ratio?.toFixed(2)}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    <div className="text-sm text-muted-foreground mt-4">
+                      <p><strong>Legend:</strong> I = Injury Risk, R = Rotation Risk, Conf = Confidence Score, Value = Price/Performance Ratio</p>
+                      <p>Table shows top 50 players. Switch tabs to view different scoring metrics across gameweeks.</p>
+                    </div>
+                  </Tabs>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calculator className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No players found matching your criteria</p>
+                    <p className="text-sm">Try adjusting your filters</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // List View (Original)
+              <div>
             {isLoadingExpectedPoints ? (
               <div className="space-y-3">
                 {Array.from({ length: 10 }).map((_, i) => (
@@ -478,6 +686,8 @@ export default function PlayerExpectedPoints() {
                 <p>No players found matching your criteria</p>
                 <p className="text-sm">Try adjusting your filters or search terms</p>
               </div>
+            )}
+            </div>
             )}
           </CardContent>
         </Card>
