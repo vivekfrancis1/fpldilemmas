@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { priceScheduler } from "./price-scheduler";
 import { insertPriceAlertSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1983,13 +1984,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Price scheduler status and manual trigger endpoints
   app.get("/api/price-scheduler/status", (req, res) => {
-    const { priceScheduler } = require("./price-scheduler");
-    res.json(priceScheduler.getStatus());
+    try {
+      res.json(priceScheduler.getStatus());
+    } catch (error) {
+      console.error("Error getting scheduler status:", error);
+      res.status(500).json({ error: "Failed to get scheduler status" });
+    }
   });
 
   app.post("/api/price-scheduler/trigger", async (req, res) => {
     try {
-      const { priceScheduler } = require("./price-scheduler");
       await priceScheduler.triggerManualFetch();
       res.json({ success: true, message: "Price data fetch triggered successfully" });
     } catch (error) {
