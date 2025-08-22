@@ -15,10 +15,11 @@ interface PlayerDefensiveData {
   team: string;
   position: string;
   gameweek: number;
-  tackles_2plus: number;
-  interceptions_2plus: number;
-  clearances_3plus: number;
-  defensive_actions_5plus: number;
+  clean_sheet_probability: number;
+  bonus_probability: number;
+  ict_threshold: number;
+  transfer_appeal: number;
+  red_card_risk: number; // Only for MID/FWD
 }
 
 interface BootstrapData {
@@ -46,7 +47,7 @@ export default function PlayerDefensiveContributions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"name" | "tackles" | "interceptions" | "clearances" | "actions">("actions");
+  const [sortBy, setSortBy] = useState<"name" | "cleansheet" | "bonus" | "ict" | "transfer" | "redcard">("bonus");
 
   // Get bootstrap data for player and team info
   const { data: bootstrapData, isLoading: isBootstrapLoading } = useQuery<BootstrapData>({
@@ -54,50 +55,58 @@ export default function PlayerDefensiveContributions() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Generate player defensive data using deterministic approach
+  // Generate player CBIT/CBITR data using deterministic approach
   const generatePlayerDefensiveData = (gameweek: number, playerData: any) => {
-    const seed = playerData.id * gameweek * 1789; // Different multiplier for defensive stats
+    const seed = playerData.id * gameweek * 1789;
     const random1 = (seed * 9301 + 49297) % 233280 / 233280;
     const random2 = ((seed + 1234) * 9301 + 49297) % 233280 / 233280;
     const random3 = ((seed + 5678) * 9301 + 49297) % 233280 / 233280;
     const random4 = ((seed + 9012) * 9301 + 49297) % 233280 / 233280;
+    const random5 = ((seed + 3456) * 9301 + 49297) % 233280 / 233280;
     
-    // Base defensive probabilities based on position
-    let baseTackles = 0.2;
-    let baseInterceptions = 0.15;
-    let baseClearances = 0.1;
+    // Position-based CBIT/CBITR metrics
+    let baseCleanSheet = 0.3;
+    let baseBonus = 0.15;
+    let baseICT = 0.4;
+    let baseTransfer = 0.2;
+    let baseRedCard = 0.0;
     
     if (playerData.element_type === 1) { // Goalkeepers
-      baseTackles = 0.05;
-      baseInterceptions = 0.1;
-      baseClearances = 0.15;
-    } else if (playerData.element_type === 2) { // Defenders
-      baseTackles = 0.4;
-      baseInterceptions = 0.35;
-      baseClearances = 0.5;
-    } else if (playerData.element_type === 3) { // Midfielders
-      baseTackles = 0.3;
-      baseInterceptions = 0.25;
-      baseClearances = 0.15;
-    } else if (playerData.element_type === 4) { // Forwards
-      baseTackles = 0.1;
-      baseInterceptions = 0.05;
-      baseClearances = 0.02;
+      baseCleanSheet = 0.4;
+      baseBonus = 0.2;
+      baseICT = 0.3;
+      baseTransfer = 0.15;
+    } else if (playerData.element_type === 2) { // Defenders (CBIT)
+      baseCleanSheet = 0.35;
+      baseBonus = 0.25;
+      baseICT = 0.4;
+      baseTransfer = 0.3;
+    } else if (playerData.element_type === 3) { // Midfielders (CBITR)
+      baseCleanSheet = 0.25;
+      baseBonus = 0.2;
+      baseICT = 0.5;
+      baseTransfer = 0.35;
+      baseRedCard = 0.05;
+    } else if (playerData.element_type === 4) { // Forwards (CBITR)
+      baseCleanSheet = 0.0; // Forwards don't get clean sheet points
+      baseBonus = 0.3;
+      baseICT = 0.45;
+      baseTransfer = 0.4;
+      baseRedCard = 0.03;
     }
     
-    // Add variance for individual player tendencies
-    const tackleVariance = random1 * 0.3 - 0.15;
-    const interceptionVariance = random2 * 0.3 - 0.15;
-    const clearanceVariance = random3 * 0.3 - 0.15;
+    // Add variance for individual player performance
+    const cleanSheetVariance = random1 * 0.3 - 0.15;
+    const bonusVariance = random2 * 0.3 - 0.15;
+    const ictVariance = random3 * 0.3 - 0.15;
+    const transferVariance = random4 * 0.3 - 0.15;
+    const redCardVariance = random5 * 0.02 - 0.01;
     
-    const tackles2Plus = Math.max(0, Math.min(1, baseTackles + tackleVariance));
-    const interceptions2Plus = Math.max(0, Math.min(1, baseInterceptions + interceptionVariance));
-    const clearances3Plus = Math.max(0, Math.min(1, baseClearances + clearanceVariance));
-    
-    // Combined defensive actions (5+ tackles + interceptions + clearances)
-    const combinedBase = (tackles2Plus + interceptions2Plus + clearances3Plus) / 3;
-    const combinedVariance = random4 * 0.2 - 0.1;
-    const defensiveActions5Plus = Math.max(0, Math.min(1, combinedBase + combinedVariance));
+    const cleanSheetProb = Math.max(0, Math.min(1, baseCleanSheet + cleanSheetVariance));
+    const bonusProb = Math.max(0, Math.min(1, baseBonus + bonusVariance));
+    const ictThreshold = Math.max(0, Math.min(1, baseICT + ictVariance));
+    const transferAppeal = Math.max(0, Math.min(1, baseTransfer + transferVariance));
+    const redCardRisk = Math.max(0, Math.min(1, baseRedCard + redCardVariance));
     
     return {
       player_id: playerData.id,
@@ -105,10 +114,11 @@ export default function PlayerDefensiveContributions() {
       team: getTeamShortName(playerData.team),
       position: getPositionShortName(playerData.element_type),
       gameweek,
-      tackles_2plus: Math.round(tackles2Plus * 100),
-      interceptions_2plus: Math.round(interceptions2Plus * 100),
-      clearances_3plus: Math.round(clearances3Plus * 100),
-      defensive_actions_5plus: Math.round(defensiveActions5Plus * 100)
+      clean_sheet_probability: Math.round(cleanSheetProb * 100),
+      bonus_probability: Math.round(bonusProb * 100),
+      ict_threshold: Math.round(ictThreshold * 100),
+      transfer_appeal: Math.round(transferAppeal * 100),
+      red_card_risk: Math.round(redCardRisk * 100)
     };
   };
 
@@ -181,14 +191,16 @@ export default function PlayerDefensiveContributions() {
       switch (sortBy) {
         case "name":
           return a.web_name.localeCompare(b.web_name);
-        case "tackles":
-          return getPlayerAverageMetric(b.id, "tackles_2plus") - getPlayerAverageMetric(a.id, "tackles_2plus");
-        case "interceptions":
-          return getPlayerAverageMetric(b.id, "interceptions_2plus") - getPlayerAverageMetric(a.id, "interceptions_2plus");
-        case "clearances":
-          return getPlayerAverageMetric(b.id, "clearances_3plus") - getPlayerAverageMetric(a.id, "clearances_3plus");
-        case "actions":
-          return getPlayerAverageMetric(b.id, "defensive_actions_5plus") - getPlayerAverageMetric(a.id, "defensive_actions_5plus");
+        case "cleansheet":
+          return getPlayerAverageMetric(b.id, "clean_sheet_probability") - getPlayerAverageMetric(a.id, "clean_sheet_probability");
+        case "bonus":
+          return getPlayerAverageMetric(b.id, "bonus_probability") - getPlayerAverageMetric(a.id, "bonus_probability");
+        case "ict":
+          return getPlayerAverageMetric(b.id, "ict_threshold") - getPlayerAverageMetric(a.id, "ict_threshold");
+        case "transfer":
+          return getPlayerAverageMetric(b.id, "transfer_appeal") - getPlayerAverageMetric(a.id, "transfer_appeal");
+        case "redcard":
+          return getPlayerAverageMetric(b.id, "red_card_risk") - getPlayerAverageMetric(a.id, "red_card_risk");
         default:
           return 0;
       }
@@ -236,20 +248,22 @@ export default function PlayerDefensiveContributions() {
               <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-slate-600" />
             </div>
             <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-4 px-2" data-testid="text-page-title">
-              Player Defensive Contributions
+              Player Defensive Contributions (CBIT/CBITR)
             </h1>
             <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed px-2" data-testid="text-page-description">
-              Percentage chance of players hitting key defensive thresholds across upcoming gameweeks
+              CBIT metrics for defenders and CBITR metrics for midfielders/forwards across upcoming gameweeks
             </p>
           </div>
 
-          {/* Threshold Explanation */}
+          {/* CBIT/CBITR Explanation */}
           <Alert className="mb-4 sm:mb-6">
             <Info className="h-4 w-4" />
             <AlertDescription className="text-xs sm:text-sm">
-              <strong>Thresholds:</strong> 2+ Tackles | 2+ Interceptions | 3+ Clearances | 5+ Total Defensive Actions
+              <strong>CBIT (Defenders):</strong> Clean sheets, Bonus, ICT index, Transfers
               <br />
-              <strong>Best for:</strong> Identifying defensive players likely to earn bonus points and ICT index contributions.
+              <strong>CBITR (MID/FWD):</strong> Clean sheets, Bonus, ICT index, Transfers, Red cards
+              <br />
+              <strong>Purpose:</strong> Key FPL defensive metrics for identifying consistent performers and bonus point earners.
             </AlertDescription>
           </Alert>
 
@@ -301,10 +315,11 @@ export default function PlayerDefensiveContributions() {
                     <SelectValue placeholder="Sort by..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="actions">Total Actions</SelectItem>
-                    <SelectItem value="tackles">Tackles</SelectItem>
-                    <SelectItem value="interceptions">Interceptions</SelectItem>
-                    <SelectItem value="clearances">Clearances</SelectItem>
+                    <SelectItem value="bonus">Bonus Probability</SelectItem>
+                    <SelectItem value="ict">ICT Threshold</SelectItem>
+                    <SelectItem value="cleansheet">Clean Sheet</SelectItem>
+                    <SelectItem value="transfer">Transfer Appeal</SelectItem>
+                    <SelectItem value="redcard">Red Card Risk</SelectItem>
                     <SelectItem value="name">Player Name</SelectItem>
                   </SelectContent>
                 </Select>
@@ -348,9 +363,9 @@ export default function PlayerDefensiveContributions() {
           {/* Results Table */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base sm:text-lg">Defensive Threshold Probabilities</CardTitle>
+              <CardTitle className="text-base sm:text-lg">CBIT/CBITR Performance Matrix</CardTitle>
               <CardDescription>
-                Average percentage chance of hitting defensive thresholds across next 6 gameweeks
+                Average CBIT (defenders) and CBITR (midfielders/forwards) metrics across next 6 gameweeks
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -361,27 +376,33 @@ export default function PlayerDefensiveContributions() {
                       <th className="px-2 sm:px-4 py-2 sm:py-3 text-left min-w-[120px] sm:min-w-[180px] sticky left-0 bg-muted/50 z-10">
                         Player
                       </th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[70px] sm:min-w-[90px]">
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
                         <div className="text-center">
-                          <div className="font-medium">2+ Tackles</div>
+                          <div className="font-medium">Clean Sheet</div>
                           <div className="text-xs text-muted-foreground">Avg %</div>
                         </div>
                       </th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[70px] sm:min-w-[90px]">
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
                         <div className="text-center">
-                          <div className="font-medium">2+ Interceptions</div>
+                          <div className="font-medium">Bonus</div>
                           <div className="text-xs text-muted-foreground">Avg %</div>
                         </div>
                       </th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[70px] sm:min-w-[90px]">
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
                         <div className="text-center">
-                          <div className="font-medium">3+ Clearances</div>
+                          <div className="font-medium">ICT Index</div>
                           <div className="text-xs text-muted-foreground">Avg %</div>
                         </div>
                       </th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[70px] sm:min-w-[90px]">
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
                         <div className="text-center">
-                          <div className="font-medium">5+ Total Actions</div>
+                          <div className="font-medium">Transfer</div>
+                          <div className="text-xs text-muted-foreground">Avg %</div>
+                        </div>
+                      </th>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <div className="text-center">
+                          <div className="font-medium">Red Risk</div>
                           <div className="text-xs text-muted-foreground">Avg %</div>
                         </div>
                       </th>
@@ -404,24 +425,33 @@ export default function PlayerDefensiveContributions() {
                           </div>
                         </td>
                         <td className="px-2 sm:px-3 py-2 text-center">
-                          <div className={`inline-flex items-center justify-center min-w-[40px] sm:min-w-[50px] h-7 sm:h-8 px-2 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "tackles_2plus"))}`}>
-                            {getPlayerAverageMetric(player.id, "tackles_2plus")}%
+                          <div className={`inline-flex items-center justify-center min-w-[35px] sm:min-w-[45px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "clean_sheet_probability"))}`}>
+                            {getPlayerAverageMetric(player.id, "clean_sheet_probability")}%
                           </div>
                         </td>
                         <td className="px-2 sm:px-3 py-2 text-center">
-                          <div className={`inline-flex items-center justify-center min-w-[40px] sm:min-w-[50px] h-7 sm:h-8 px-2 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "interceptions_2plus"))}`}>
-                            {getPlayerAverageMetric(player.id, "interceptions_2plus")}%
+                          <div className={`inline-flex items-center justify-center min-w-[35px] sm:min-w-[45px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "bonus_probability"))}`}>
+                            {getPlayerAverageMetric(player.id, "bonus_probability")}%
                           </div>
                         </td>
                         <td className="px-2 sm:px-3 py-2 text-center">
-                          <div className={`inline-flex items-center justify-center min-w-[40px] sm:min-w-[50px] h-7 sm:h-8 px-2 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "clearances_3plus"))}`}>
-                            {getPlayerAverageMetric(player.id, "clearances_3plus")}%
+                          <div className={`inline-flex items-center justify-center min-w-[35px] sm:min-w-[45px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "ict_threshold"))}`}>
+                            {getPlayerAverageMetric(player.id, "ict_threshold")}%
                           </div>
                         </td>
                         <td className="px-2 sm:px-3 py-2 text-center">
-                          <div className={`inline-flex items-center justify-center min-w-[40px] sm:min-w-[50px] h-7 sm:h-8 px-2 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "defensive_actions_5plus"))}`}>
-                            {getPlayerAverageMetric(player.id, "defensive_actions_5plus")}%
+                          <div className={`inline-flex items-center justify-center min-w-[35px] sm:min-w-[45px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "transfer_appeal"))}`}>
+                            {getPlayerAverageMetric(player.id, "transfer_appeal")}%
                           </div>
+                        </td>
+                        <td className="px-2 sm:px-3 py-2 text-center">
+                          {player.element_type === 2 ? (
+                            <div className="text-xs text-muted-foreground">N/A</div>
+                          ) : (
+                            <div className={`inline-flex items-center justify-center min-w-[35px] sm:min-w-[45px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getPlayerAverageMetric(player.id, "red_card_risk") <= 2 ? 'bg-green-600 text-white' : getPlayerAverageMetric(player.id, "red_card_risk") <= 5 ? 'bg-yellow-500 text-gray-900' : 'bg-red-500 text-white'}`}>
+                              {getPlayerAverageMetric(player.id, "red_card_risk")}%
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -441,8 +471,8 @@ export default function PlayerDefensiveContributions() {
           <Alert className="mt-4 sm:mt-6">
             <Shield className="h-4 w-4" />
             <AlertDescription className="text-xs sm:text-sm">
-              Defensive thresholds help identify players likely to earn bonus points through ICT index contributions. 
-              Defenders typically have the highest probabilities, followed by defensive midfielders.
+              CBIT (defenders) and CBITR (midfielders/forwards) are key FPL metrics for identifying consistent performers. 
+              Higher percentages indicate better potential for bonus points and overall FPL value.
             </AlertDescription>
           </Alert>
         </div>
