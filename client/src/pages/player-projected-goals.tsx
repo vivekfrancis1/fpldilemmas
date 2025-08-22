@@ -104,6 +104,13 @@ export default function PlayerProjectedGoals() {
     return allData;
   }, [bootstrapData]);
 
+  // Get goals data for filtered players
+  const getPlayerGameweekData = (playerId: number, gameweek: number) => {
+    return playerGoalsData.find(data => 
+      data.player_id === playerId && data.gameweek === gameweek
+    );
+  };
+
   // Calculate average goals for each player
   const getPlayerAverageGoals = (playerId: number): number => {
     const playerData = playerGoalsData.filter(data => data.player_id === playerId);
@@ -164,13 +171,6 @@ export default function PlayerProjectedGoals() {
     
     return players.slice(0, 50); // Limit to 50 players for performance
   }, [bootstrapData, searchTerm, positionFilter, teamFilter, sortBy, playerGoalsData]);
-
-  // Get goals data for filtered players
-  const getPlayerGameweekData = (playerId: number, gameweek: number) => {
-    return playerGoalsData.find(data => 
-      data.player_id === playerId && data.gameweek === gameweek
-    );
-  };
 
   const getGoalsColor = (goals: number) => {
     if (goals >= 0.4) return "bg-green-600 text-white";
