@@ -89,8 +89,21 @@ export default function PriceTracker() {
     return matchesSearch && matchesPosition;
   }) : [];
 
-  const formatPrice = (price: number) => {
-    return `£${(price / 10).toFixed(1)}m`;
+  const formatPrice = (price: number | string | undefined | null) => {
+    // Handle undefined, null, or invalid values
+    if (price === null || price === undefined) {
+      return "£?.?m";
+    }
+    
+    // Convert to number if it's a string
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    
+    // Check if conversion resulted in NaN
+    if (isNaN(numPrice)) {
+      return "£?.?m";
+    }
+    
+    return `£${(numPrice / 10).toFixed(1)}m`;
   };
 
   const formatDate = (dateString: string) => {
