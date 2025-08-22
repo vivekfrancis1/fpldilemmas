@@ -71,11 +71,9 @@ export default function TeamCSProjections() {
     return 'bg-red-50 text-red-800';
   };
 
-  // Ensure we start from GW 7
+  // Show gameweeks 2-7 for 6 weeks
   const getGameweeks = () => {
-    if (!bootstrapData?.events) return [];
-    const currentGW = Math.max(bootstrapData.events.find((event: any) => event.is_current)?.id || 7, 7);
-    return Array.from({ length: weeks }, (_, i) => currentGW + i);
+    return Array.from({ length: weeks }, (_, i) => 2 + i);
   };
 
   if (isLoading || projectionsLoading) {

@@ -558,7 +558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = await fixturesResponse.json();
       
       const teams = bootstrapData.teams;
-      const currentGameweek = Math.max(bootstrapData.events.find((event: any) => event.is_current)?.id || 7, 7);
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       const bettingData = getSpreadBettingData();
       
       const teamProjections = teams.map((team: any) => {
@@ -566,8 +566,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .filter((f: any) => 
             (f.team_h === team.id || f.team_a === team.id) && 
             !f.finished && 
-            f.event >= currentGameweek && 
-            f.event < currentGameweek + weeks
+            f.event >= 2 && 
+            f.event <= 7
           )
           .slice(0, weeks);
         
