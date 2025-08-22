@@ -567,58 +567,31 @@ export default function PlayerExpectedPoints() {
 
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <TabsList className="grid w-full grid-cols-6">
-                      <TabsTrigger value="expected_points">Total Points</TabsTrigger>
-                      <TabsTrigger value="appearance_points">Appearance Points</TabsTrigger>
-                      <TabsTrigger value="goal_points">Goal Points</TabsTrigger>
-                      <TabsTrigger value="assist_points">Assist Points</TabsTrigger>
-                      <TabsTrigger value="clean_sheet_points">Clean Sheet Points</TabsTrigger>
-                      <TabsTrigger value="bonus_points">Bonus Points</TabsTrigger>
+                      <TabsTrigger value="expected_points">Expected Points</TabsTrigger>
+                      <TabsTrigger value="appearance_points">Appearance</TabsTrigger>
+                      <TabsTrigger value="goal_points">Goals</TabsTrigger>
+                      <TabsTrigger value="assist_points">Assists</TabsTrigger>
+                      <TabsTrigger value="clean_sheet_points">Clean Sheets</TabsTrigger>
+                      <TabsTrigger value="bonus_points">Bonus</TabsTrigger>
                     </TabsList>
                     
                     <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/30 dark:to-blue-900/30">
-                            <th className="border-r border-gray-200 dark:border-gray-700 p-3 text-left sticky left-0 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/30 dark:to-blue-900/30 min-w-[180px] z-10">
-                              <div className="font-semibold">Player</div>
-                              <div className="text-xs text-muted-foreground mt-1">Name • Team</div>
-                            </th>
-                            <th className="border-r border-gray-200 dark:border-gray-700 p-3 text-center min-w-[80px]">
-                              <div className="font-semibold">Pos</div>
-                            </th>
-                            <th className="border-r border-gray-200 dark:border-gray-700 p-3 text-center min-w-[80px]">
-                              <div className="font-semibold">Price</div>
-                            </th>
-                            <th className="border-r border-gray-200 dark:border-gray-700 p-3 text-center min-w-[90px]">
-                              <div className="font-semibold">Avg Min</div>
-                            </th>
-                            <th className="border-r border-gray-200 dark:border-gray-700 p-3 text-center min-w-[80px]">
-                              <div className="font-semibold">Form</div>
-                            </th>
-                            <th className="border-r border-gray-200 dark:border-gray-700 p-3 text-center min-w-[90px]">
-                              <div className="font-semibold">Own %</div>
-                            </th>
-                            <th className="border-r border-gray-200 dark:border-gray-700 p-3 text-center min-w-[80px]">
-                              <div className="font-semibold">Value</div>
-                            </th>
-                            <th className="border-r border-gray-200 dark:border-gray-700 p-3 text-center min-w-[90px]">
-                              <div className="font-semibold">Injury</div>
-                            </th>
-                            <th className="border-r border-gray-200 dark:border-gray-700 p-3 text-center min-w-[90px]">
-                              <div className="font-semibold">Rotation</div>
-                            </th>
-                            <th className="border-r border-gray-200 dark:border-gray-700 p-3 text-center min-w-[90px]">
-                              <div className="font-semibold">Conf %</div>
+                            <th className="border-r border-gray-200 dark:border-gray-700 p-4 text-left sticky left-0 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/30 dark:to-blue-900/30 min-w-[220px] z-10">
+                              <div className="font-semibold">Player Info</div>
+                              <div className="text-xs text-muted-foreground mt-1">Name • Team • Position • Price</div>
                             </th>
                             {gameweekLabels.map(gw => (
-                              <th key={gw} className="border-r border-gray-200 dark:border-gray-700 p-3 text-center min-w-[90px]">
+                              <th key={gw} className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[100px]">
                                 <button
                                   onClick={() => handleTableSort(gw, activeTab)}
-                                  className="w-full text-center hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-md px-2 py-2 transition-all duration-200 hover:scale-105"
+                                  className="w-full text-center hover:bg-muted/50 rounded px-2 py-1 transition-colors"
                                   title={`Sort by ${activeTab} for ${getGameweekNumber(gw)}`}
                                 >
                                   <div className="flex items-center justify-center gap-1">
-                                    <span className="font-medium">{getGameweekNumber(gw)}</span>
+                                    <span>{getGameweekNumber(gw)}</span>
                                     <span className="text-xs opacity-60">
                                       {getSortIcon(gw, activeTab)}
                                     </span>
@@ -626,66 +599,46 @@ export default function PlayerExpectedPoints() {
                                 </button>
                               </th>
                             ))}
-                            <th className="p-3 text-center min-w-[90px] bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/50 dark:to-purple-900/50">
+                            <th className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[100px] bg-blue-50 dark:bg-blue-900/20">
                               <button
                                 onClick={() => handleTableSort("total", activeTab)}
-                                className="w-full text-center hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-md px-2 py-2 transition-all duration-200 hover:scale-105"
+                                className="w-full text-center hover:bg-muted/50 rounded px-2 py-1 transition-colors font-semibold"
                                 title={`Sort by total ${activeTab} across all gameweeks`}
                               >
                                 <div className="flex items-center justify-center gap-1">
-                                  <span className="font-bold">Total</span>
+                                  <span>Total</span>
                                   <span className="text-xs opacity-60">
                                     {getSortIcon("total", activeTab)}
                                   </span>
                                 </div>
                               </button>
                             </th>
+                            <th className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[120px]">
+                              Player Stats
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {paginatedTableData.map((player, index) => (
                             <tr key={player.player_id} className="hover:bg-muted/30">
-                              <td className="border-r border-gray-200 dark:border-gray-700 p-3 sticky left-0 bg-background">
+                              <td className="border border-gray-200 dark:border-gray-700 p-3 sticky left-0 bg-background">
                                 <div className="space-y-1">
                                   <div className="font-medium">{player.player_name}</div>
                                   <div className="text-sm text-muted-foreground">
-                                    {player.team_name}
+                                    {player.team_name} • {player.position} • {formatPrice(player.current_price)}
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Badge className={`text-xs ${getRiskBadgeColor(player.injury_risk)}`}>
+                                      {player.injury_risk[0]}I
+                                    </Badge>
+                                    <Badge className={`text-xs ${getRiskBadgeColor(player.rotation_risk)}`}>
+                                      {player.rotation_risk[0]}R
+                                    </Badge>
                                   </div>
                                 </div>
                               </td>
-                              <td className="border-r border-gray-200 dark:border-gray-700 p-3 text-center">
-                                <span className="font-medium">{player.position}</span>
-                              </td>
-                              <td className="border-r border-gray-200 dark:border-gray-700 p-3 text-center">
-                                <span className="font-medium">{formatPrice(player.current_price)}</span>
-                              </td>
-                              <td className="border-r border-gray-200 dark:border-gray-700 p-3 text-center">
-                                <span className="font-medium">{player.expected_minutes?.toFixed(0) || 'N/A'}</span>
-                              </td>
-                              <td className="border-r border-gray-200 dark:border-gray-700 p-3 text-center">
-                                <span className="font-medium">{player.form || 'N/A'}</span>
-                              </td>
-                              <td className="border-r border-gray-200 dark:border-gray-700 p-3 text-center">
-                                <span className="font-medium">{player.ownership_percentage?.toFixed(1)}%</span>
-                              </td>
-                              <td className="border-r border-gray-200 dark:border-gray-700 p-3 text-center">
-                                <span className="font-medium">{player.value_ratio?.toFixed(1) || 'N/A'}</span>
-                              </td>
-                              <td className="border-r border-gray-200 dark:border-gray-700 p-3 text-center">
-                                <Badge className={`text-xs ${getRiskBadgeColor(player.injury_risk)}`}>
-                                  {player.injury_risk}
-                                </Badge>
-                              </td>
-                              <td className="border-r border-gray-200 dark:border-gray-700 p-3 text-center">
-                                <Badge className={`text-xs ${getRiskBadgeColor(player.rotation_risk)}`}>
-                                  {player.rotation_risk}
-                                </Badge>
-                              </td>
-                              <td className="border-r border-gray-200 dark:border-gray-700 p-3 text-center">
-                                <span className="font-medium text-green-600">{player.confidence_score?.toFixed(0)}%</span>
-                              </td>
                               {gameweekLabels.map(gw => (
-                                <td key={gw} className="border-r border-gray-200 dark:border-gray-700 p-3 text-center">
+                                <td key={gw} className="border border-gray-200 dark:border-gray-700 p-3 text-center">
                                   <div className="font-medium">
                                     {getMetricValue(player, gw, activeTab)}
                                   </div>
@@ -696,12 +649,24 @@ export default function PlayerExpectedPoints() {
                                   )}
                                 </td>
                               ))}
-                              <td className="p-3 text-center bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/50 dark:to-purple-900/50">
+                              <td className="border border-gray-200 dark:border-gray-700 p-3 text-center bg-blue-50 dark:bg-blue-900/20">
                                 <div className="font-bold text-blue-600 dark:text-blue-400">
                                   {getMetricValue(player, "total", activeTab)}
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-1">
                                   6 GWs
+                                </div>
+                              </td>
+                              <td className="border border-gray-200 dark:border-gray-700 p-3">
+                                <div className="space-y-1 text-xs">
+                                  <div>Form: {player.form_rating?.toFixed(1)}</div>
+                                  <div>Own: {player.ownership_percentage?.toFixed(1)}%</div>
+                                  <div className={getConfidenceColor(player.confidence_score)}>
+                                    Conf: {player.confidence_score}%
+                                  </div>
+                                  <div className={getValueColor(player.price_value_ratio)}>
+                                    Value: {player.price_value_ratio?.toFixed(2)}
+                                  </div>
                                 </div>
                               </td>
                             </tr>
@@ -711,7 +676,7 @@ export default function PlayerExpectedPoints() {
                     </div>
                     
                     <div className="text-sm text-muted-foreground mt-4">
-                      <p><strong>New Column Structure:</strong> Position, Price, Average minutes, Form, Ownership %, Value ratio, Injury risk, Rotation risk, and Confidence level now displayed as individual columns for better analysis.</p>
+                      <p><strong>Legend:</strong> I = Injury Risk, R = Rotation Risk, Conf = Confidence Score, Value = Price/Performance Ratio</p>
                       <p>Showing {filteredTableData.length} players from all 699 analyzed with 6 gameweeks of projections plus totals. Click gameweek headers to sort by that metric. Switch tabs to view different scoring metrics across gameweeks.</p>
                       <p><strong>Current sort:</strong> {getGameweekNumber(tableSortBy.gameweek)} - {activeTab} ({tableSortBy.direction === "desc" ? "Highest first" : "Lowest first"})</p>
                     </div>
