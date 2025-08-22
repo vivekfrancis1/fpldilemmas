@@ -2485,7 +2485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/expected-points-metrics', async (req, res) => {
     try {
       const metrics: ExpectedPointsMetrics = {
-        total_players_analyzed: 150,
+        total_players_analyzed: 699,
         avg_expected_points: 4.2,
         top_expected_points: 12.8,
         model_accuracy: 0.847, // 84.7% accuracy
