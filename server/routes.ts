@@ -826,7 +826,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = await fixturesResponse.json();
       
       const teams = bootstrapData.teams;
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       const bettingData = getSpreadBettingData();
       
       
@@ -1161,8 +1161,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate goal share data for all upcoming 6 gameweeks (GW2-GW7)
       const allGoalShareData: any[] = [];
       
-      // Fixed range: always generate GW2 through GW7 (6 gameweeks)
-      for (let gameweek = 2; gameweek <= 7; gameweek++) {
+      // Dynamic range: start from next unfinished gameweek (6 gameweeks total)
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      const startGameweek = currentGameweek + 1; // Start from next gameweek
+      const endGameweek = startGameweek + 5; // 6 gameweeks total
+      
+      for (let gameweek = startGameweek; gameweek <= endGameweek; gameweek++) {
         // Generate team goal projections data using the same logic as the endpoint
         const teams = bootstrapData.teams;
         const teamProjections: any[] = [];
