@@ -2103,7 +2103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const projections = [];
       
-      for (const player of elements.slice(0, 100)) { // Limit for performance
+      for (const player of elements) { // Process all 699 players
         try {
           const position = positions.find((p: any) => p.id === player.element_type);
           const positionName = position?.singular_name_short || "Unknown";
@@ -2282,7 +2282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const expectedPointsData = [];
       
-      for (const player of elements.slice(0, 150)) { // Analyze top 150 players for performance
+      for (const player of elements) { // Process all 699 players
         try {
           const position = positions.find((p: any) => p.id === player.element_type);
           const positionName = position?.singular_name_short || "Unknown";

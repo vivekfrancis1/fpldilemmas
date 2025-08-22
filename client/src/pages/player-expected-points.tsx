@@ -570,7 +570,7 @@ export default function PlayerExpectedPoints() {
                           </tr>
                         </thead>
                         <tbody>
-                          {tableData.slice(0, 50).map((player, index) => (
+                          {tableData.slice(0, 100).map((player, index) => (
                             <tr key={player.player_id} className="hover:bg-muted/30">
                               <td className="border border-gray-200 dark:border-gray-700 p-3 sticky left-0 bg-background">
                                 <div className="space-y-1">
@@ -628,7 +628,7 @@ export default function PlayerExpectedPoints() {
                     
                     <div className="text-sm text-muted-foreground mt-4">
                       <p><strong>Legend:</strong> I = Injury Risk, R = Rotation Risk, Conf = Confidence Score, Value = Price/Performance Ratio</p>
-                      <p>Table shows top 50 players with 6 gameweeks of projections plus totals. Click gameweek headers to sort by that metric. Switch tabs to view different scoring metrics across gameweeks.</p>
+                      <p>Table shows top 100 players from all 699 analyzed with 6 gameweeks of projections plus totals. Click gameweek headers to sort by that metric. Switch tabs to view different scoring metrics across gameweeks.</p>
                       <p><strong>Current sort:</strong> {getGameweekNumber(tableSortBy.gameweek)} - {activeTab} ({tableSortBy.direction === "desc" ? "Highest first" : "Lowest first"})</p>
                     </div>
                   </Tabs>
