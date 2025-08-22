@@ -32,16 +32,13 @@ export default function AssistShare() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Get current gameweek for the API call
+  // Get current gameweek for the API call - use next unfinished gameweek
   const currentGameweek = useMemo(() => {
     if (!bootstrapData?.events) return 2;
     
-    let gameweek = bootstrapData.events.find((event: any) => event.is_current)?.id;
-    if (!gameweek) {
-      const nextEvent = bootstrapData.events.find((event: any) => !event.finished);
-      gameweek = nextEvent?.id || 2;
-    }
-    return gameweek;
+    // Find the next unfinished gameweek for forward-looking projections
+    const nextEvent = bootstrapData.events.find((event: any) => !event.finished && !event.is_current);
+    return nextEvent?.id || 2;
   }, [bootstrapData]);
 
   // Use the dedicated assist-share API endpoint
