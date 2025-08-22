@@ -34,6 +34,7 @@ interface PricePrediction {
   position: string;
   current_price: number;
   predicted_change: number;
+  predicted_price?: number;
   confidence: number;
   ownership_percentage: number;
   net_transfers: number;
@@ -41,7 +42,7 @@ interface PricePrediction {
   transfers_out: number;
   reason: string;
   probability: string;
-  expected_date: string;
+  expected_date?: string;
 }
 
 export default function PriceTracker() {
@@ -434,9 +435,20 @@ export default function PriceTracker() {
                               {formatPrice(prediction.current_price)}
                             </span>
                             <span className="text-muted-foreground">→</span>
-                            <Badge variant={prediction.predicted_change > 0 ? "success" : "destructive"}>
-                              {prediction.predicted_change > 0 ? "+" : ""}{formatPrice(Math.abs(prediction.predicted_change))}
-                            </Badge>
+                            {prediction.predicted_change !== 0 ? (
+                              <>
+                                <span className="font-medium">
+                                  {formatPrice(prediction.current_price + prediction.predicted_change)}
+                                </span>
+                                <Badge variant={prediction.predicted_change > 0 ? "success" : "destructive"}>
+                                  {prediction.predicted_change > 0 ? "+" : ""}{formatPrice(Math.abs(prediction.predicted_change))}
+                                </Badge>
+                              </>
+                            ) : (
+                              <Badge variant="secondary">
+                                Stable
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge 
