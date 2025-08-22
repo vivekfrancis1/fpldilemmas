@@ -768,7 +768,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Goal Share endpoint - uses Team Goal Projections for consistency, supports multiple gameweeks
   app.get("/api/goal-share/:gameweek", async (req, res) => {
     try {
-      const targetGameweek = parseInt(req.params.gameweek) || 2;
+      const gameweekParam = req.params.gameweek;
+      const targetGameweek = gameweekParam === "0" ? 0 : (parseInt(gameweekParam) || 2);
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -782,7 +783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const fixturesData = await fixturesResponse.json();
       
-      console.log(`DEBUG: Goal Share API called for gameweek=${targetGameweek}`);
+      console.log(`DEBUG: Goal Share API called for gameweek=${targetGameweek} (0 means all gameweeks)`);
       
       // Generate goal share data for all upcoming 6 gameweeks (GW2-GW7)
       const allGoalShareData: any[] = [];
@@ -909,9 +910,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filteredData = targetGameweek === 0 ? allGoalShareData : 
         allGoalShareData.filter(item => item.gameweek === targetGameweek);
       
+      console.log(`DEBUG: Returning ${filteredData.length} entries for targetGameweek=${targetGameweek}`);
+      
+      // Debug: Show first few entries to verify data structure
+      if (filteredData.length > 0) {
+        console.log(`DEBUG: First entry gameweek: ${filteredData[0].gameweek}`);
+        if (filteredData.length > 20) {
+          console.log(`DEBUG: Entry 21 gameweek: ${filteredData[20].gameweek}`);
+        }
+      }
+      
       // Debug logging for key players
       filteredData.forEach(team => {
-        if (team.players && team.gameweek === targetGameweek) {
+        if (team.players && (targetGameweek === 0 || team.gameweek === targetGameweek)) {
           team.players.forEach(player => {
             if (player.name && (player.name.includes('Bowen') || player.name.includes('Salah') || player.name.includes('Haaland'))) {
               console.log(`GOAL_SHARE_API ${player.name} GW${team.gameweek}: goalShare=${player.goalShare}%, projectedGoals=${player.projectedGoals}, teamGoals=${team.expectedGoals}`);
@@ -977,7 +988,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Assist Share endpoint - supports multiple gameweeks
   app.get("/api/assist-share/:gameweek", async (req, res) => {
     try {
-      const targetGameweek = parseInt(req.params.gameweek) || 2;
+      const gameweekParam = req.params.gameweek;
+      const targetGameweek = gameweekParam === "0" ? 0 : (parseInt(gameweekParam) || 2);
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -1003,6 +1015,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter to requested gameweek if specific, otherwise return all
       const filteredData = targetGameweek === 0 ? allAssistShareData : 
         allAssistShareData.filter(item => item.gameweek === targetGameweek);
+      
+      console.log(`DEBUG: Assist Share returning ${filteredData.length} entries for targetGameweek=${targetGameweek}`);
       
       res.json(filteredData);
     } catch (error) {
