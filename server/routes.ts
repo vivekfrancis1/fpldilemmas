@@ -507,105 +507,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const consistencyBonus = Math.min(0.2, selectedByPercent / 50); // Popular players get slight bonus
         const projectedMinutes = Math.round(basePlayingTime * weeks * statusMultiplier * formConsistency * (1 + consistencyBonus));
         
-        // Enhanced goals projection using fixture-based calculations for consistency
+        // Store player data for later normalization
+        const playerData = {
+          id: player.id,
+          team: player.team,
+          position: position?.singular_name,
+          currentGoalRate: player.goals_scored / Math.max(player.minutes, 90),
+          expectedGoalsData: player.expected_goals || player.goals_scored * 1.1,
+          formConsistency,
+          projectedMinutes,
+          fixtures: playerTeamFixtures
+        };
+        
+        // Initial projection will be normalized later to ensure team consistency
         let projectedGoals = 0;
         
-        // Calculate goals based on team's expected goals in each fixture (consistent with team projections)
-        playerTeamFixtures.forEach((fixture: any) => {
-          const isHome = fixture.team_h === player.team;
-          const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
-          
-          if (opponent) {
-            // Use same expected goals calculation as team projections
-            let teamExpectedGoals;
-            if (isHome) {
-              const homeAttackStrength = (team?.strength_attack_home || 1000) / 1000;
-              const awayDefenseStrength = (opponent.strength_defence_away || 1000) / 1000;
-              teamExpectedGoals = (homeAttackStrength * (2.2 - awayDefenseStrength)) * 1.15;
-            } else {
-              const awayAttackStrength = (team?.strength_attack_away || 1000) / 1000;
-              const homeDefenseStrength = (opponent.strength_defence_home || 1000) / 1000;
-              teamExpectedGoals = awayAttackStrength * (2.2 - homeDefenseStrength);
-            }
-            
-            // Player's share of team goals based on position and current performance
-            const currentGoalRate = player.goals_scored / Math.max(player.minutes, 90);
-            const expectedGoalsData = player.expected_goals || player.goals_scored * 1.1;
-            
-            // Position-specific goal distribution within team
-            const positionGoalShare = {
-              'Goalkeeper': 0.01,
-              'Defender': 0.06,
-              'Midfielder': 0.15,
-              'Forward': 0.35
-            };
-            
-            const baseShare = positionGoalShare[position?.singular_name as keyof typeof positionGoalShare] || 0.15;
-            const performanceAdjustment = Math.max(0.3, Math.min(2.0, (currentGoalRate + expectedGoalsData/90) * 5));
-            const playerGoalShare = baseShare * performanceAdjustment * formConsistency;
-            
-            projectedGoals += teamExpectedGoals * playerGoalShare;
-          }
-        });
+        // Fallback calculation for now - will be replaced by normalized values
+        const currentGoalRate = player.goals_scored / Math.max(player.minutes, 90);
+        const blendedGoalRate = historicalGoalRate > 0 ? 
+          (currentGoalRate * 0.7 + historicalGoalRate * 0.3) : currentGoalRate;
+        projectedGoals = blendedGoalRate * (projectedMinutes / 90) * formConsistency;
         
-        // Fallback if no fixtures available
-        if (totalFixtures === 0) {
-          const currentGoalRate = player.goals_scored / Math.max(player.minutes, 90);
-          const blendedGoalRate = historicalGoalRate > 0 ? 
-            (currentGoalRate * 0.7 + historicalGoalRate * 0.3) : currentGoalRate;
-          projectedGoals = blendedGoalRate * (projectedMinutes / 90) * formConsistency;
-        }
+        // Store assist data for normalization
+        playerData.currentAssistRate = player.assists / Math.max(player.minutes, 90);
+        playerData.creativityScore = (player.creativity || 0) / 100;
         
-        // Enhanced assists projection based on team attacking output (consistent with goals)
+        // Initial projection will be normalized later
         let projectedAssists = 0;
         
-        // Calculate assists based on team's attacking output in each fixture
-        playerTeamFixtures.forEach((fixture: any) => {
-          const isHome = fixture.team_h === player.team;
-          const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
-          
-          if (opponent) {
-            // Use same expected goals calculation as team projections for consistency
-            let teamExpectedGoals;
-            if (isHome) {
-              const homeAttackStrength = (team?.strength_attack_home || 1000) / 1000;
-              const awayDefenseStrength = (opponent.strength_defence_away || 1000) / 1000;
-              teamExpectedGoals = (homeAttackStrength * (2.2 - awayDefenseStrength)) * 1.15;
-            } else {
-              const awayAttackStrength = (team?.strength_attack_away || 1000) / 1000;
-              const homeDefenseStrength = (opponent.strength_defence_home || 1000) / 1000;
-              teamExpectedGoals = awayAttackStrength * (2.2 - homeDefenseStrength);
-            }
-            
-            // Player's share of team assists based on position and creativity
-            const currentAssistRate = player.assists / Math.max(player.minutes, 90);
-            const creativityScore = (player.creativity || 0) / 100;
-            
-            // Position-specific assist distribution within team
-            const positionAssistShare = {
-              'Goalkeeper': 0.005,
-              'Defender': 0.04,
-              'Midfielder': 0.12,
-              'Forward': 0.08
-            };
-            
-            const baseShare = positionAssistShare[position?.singular_name as keyof typeof positionAssistShare] || 0.08;
-            const creativityAdjustment = Math.max(0.5, Math.min(2.0, 1 + creativityScore * 2));
-            const performanceAdjustment = Math.max(0.3, Math.min(2.0, currentAssistRate * 10 + 0.5));
-            const playerAssistShare = baseShare * creativityAdjustment * performanceAdjustment * formConsistency;
-            
-            // Assists typically 60% of goals for team attacking output
-            projectedAssists += teamExpectedGoals * 0.6 * playerAssistShare;
-          }
-        });
-        
-        // Fallback if no fixtures available
-        if (totalFixtures === 0) {
-          const currentAssistRate = player.assists / Math.max(player.minutes, 90);
-          const blendedAssistRate = historicalAssistRate > 0 ? 
-            (currentAssistRate * 0.7 + historicalAssistRate * 0.3) : currentAssistRate;
-          projectedAssists = blendedAssistRate * (projectedMinutes / 90) * formConsistency * teamStrength;
-        }
+        // Fallback calculation for now
+        const currentAssistRate = player.assists / Math.max(player.minutes, 90);
+        const blendedAssistRate = historicalAssistRate > 0 ? 
+          (currentAssistRate * 0.7 + historicalAssistRate * 0.3) : currentAssistRate;
+        projectedAssists = blendedAssistRate * (projectedMinutes / 90) * formConsistency * teamStrength;
         
         // Enhanced clean sheet projection based on team defensive strength
         const isDefensive = position?.singular_name === 'Goalkeeper' || position?.singular_name === 'Defender';
@@ -744,19 +678,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalBonus: Math.round(totalBonus * 10) / 10,
           averageCbit: Math.round(totalCbit / weeks),
           totalPoints: Math.round(totalPoints * 10) / 10,
-          confidence
+          confidence,
+          playerData // Store for normalization
         };
       });
       
-      // Sort by projected points descending
-      projections.sort((a: any, b: any) => b.points - a.points);
+      // NORMALIZE PROJECTIONS TO ENSURE TEAM CONSISTENCY
+      const normalizedProjections = await normalizePlayerProjections(projections, bootstrapData, fixturesData, weeks);
       
-      res.json(projections);
+      // Sort by projected points descending
+      normalizedProjections.sort((a: any, b: any) => b.totalPoints - a.totalPoints);
+      
+      res.json(normalizedProjections);
     } catch (error) {
       console.error("Error generating projections:", error);
       res.status(500).json({ error: "Failed to generate projections" });
     }
   });
+
+  // Function to normalize player projections to match team totals
+  async function normalizePlayerProjections(projections: any[], bootstrapData: any, fixturesData: any, weeks: number) {
+    const teams = bootstrapData.teams;
+    let currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id;
+    if (!currentGameweek) {
+      const nextEvent = bootstrapData.events.find((event: any) => !event.finished);
+      currentGameweek = nextEvent?.id || 2;
+    }
+    
+    const startGameweek = currentGameweek + 1;
+    
+    // Calculate team expected goals for each gameweek using same logic as team projections
+    const teamGameweekGoals = new Map();
+    
+    teams.forEach((team: any) => {
+      const teamFixtures = fixturesData.filter((fixture: any) => 
+        !fixture.finished && 
+        fixture.event >= startGameweek && 
+        fixture.event <= startGameweek + weeks - 1 &&
+        (fixture.team_h === team.id || fixture.team_a === team.id)
+      );
+      
+      for (let gw = startGameweek; gw < startGameweek + weeks; gw++) {
+        const gwFixtures = teamFixtures.filter((f: any) => f.event === gw);
+        
+        if (gwFixtures.length > 0) {
+          const fixture = gwFixtures[0];
+          const isHome = fixture.team_h === team.id;
+          const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
+          
+          if (opponent) {
+            let expectedGoals;
+            if (isHome) {
+              const homeAttackStrength = (team.strength_attack_home || 1000) / 1000;
+              const awayDefenseStrength = (opponent.strength_defence_away || 1000) / 1000;
+              expectedGoals = (homeAttackStrength * (2.2 - awayDefenseStrength)) * 1.15;
+            } else {
+              const awayAttackStrength = (team.strength_attack_away || 1000) / 1000;
+              const homeDefenseStrength = (opponent.strength_defence_home || 1000) / 1000;
+              expectedGoals = awayAttackStrength * (2.2 - homeDefenseStrength);
+            }
+            
+            teamGameweekGoals.set(`${team.id}_${gw}`, Math.round(expectedGoals * 100) / 100);
+          }
+        }
+      }
+    });
+    
+    // Group players by team and normalize their projections
+    const teamPlayers = new Map();
+    projections.forEach((player: any) => {
+      const teamId = bootstrapData.elements.find((p: any) => p.id === player.id)?.team;
+      if (!teamPlayers.has(teamId)) {
+        teamPlayers.set(teamId, []);
+      }
+      teamPlayers.get(teamId).push(player);
+    });
+    
+    // Normalize each team's player projections
+    teamPlayers.forEach((players: any[], teamId: number) => {
+      for (let gw = startGameweek; gw < startGameweek + weeks; gw++) {
+        const teamExpectedGoals = teamGameweekGoals.get(`${teamId}_${gw}`) || 0;
+        
+        if (teamExpectedGoals > 0) {
+          // Calculate relative goal shares for players
+          let totalPlayerGoalShare = 0;
+          const playerGoalShares = new Map();
+          
+          players.forEach((player: any) => {
+            const playerData = player.playerData;
+            if (playerData) {
+              // Position-specific goal distribution within team
+              const positionGoalShare = {
+                'Goalkeeper': 0.01,
+                'Defender': 0.06,
+                'Midfielder': 0.15,
+                'Forward': 0.35
+              };
+              
+              const baseShare = positionGoalShare[playerData.position as keyof typeof positionGoalShare] || 0.15;
+              const performanceAdjustment = Math.max(0.3, Math.min(2.0, (playerData.currentGoalRate + playerData.expectedGoalsData/90) * 5));
+              const playerGoalShare = baseShare * performanceAdjustment * playerData.formConsistency;
+              
+              playerGoalShares.set(player.id, playerGoalShare);
+              totalPlayerGoalShare += playerGoalShare;
+            }
+          });
+          
+          // Normalize and assign goals to maintain team total
+          if (totalPlayerGoalShare > 0) {
+            players.forEach((player: any) => {
+              const playerShare = playerGoalShares.get(player.id) || 0;
+              const normalizedGoals = (playerShare / totalPlayerGoalShare) * teamExpectedGoals;
+              
+              // Update weekly projections
+              if (player.weeklyProjections[gw]) {
+                player.weeklyProjections[gw].goals = Math.round(normalizedGoals * 100) / 100;
+              }
+            });
+          }
+        }
+      }
+      
+      // Recalculate totals based on normalized weekly projections
+      players.forEach((player: any) => {
+        let totalGoals = 0;
+        let totalAssists = 0;
+        let totalCleanSheets = 0;
+        let totalBonus = 0;
+        let totalCbit = 0;
+        let totalPoints = 0;
+        
+        for (let gw = startGameweek; gw < startGameweek + weeks; gw++) {
+          const weekData = player.weeklyProjections[gw];
+          if (weekData) {
+            totalGoals += weekData.goals || 0;
+            totalAssists += weekData.assists || 0;
+            totalCleanSheets += weekData.cleanSheets || 0;
+            totalBonus += weekData.bonus || 0;
+            totalCbit += weekData.cbit || 0;
+            totalPoints += weekData.points || 0;
+          }
+        }
+        
+        player.totalGoals = Math.round(totalGoals * 100) / 100;
+        player.totalAssists = Math.round(totalAssists * 100) / 100;
+        player.averageCleanSheets = Math.round(totalCleanSheets / weeks);
+        player.totalBonus = Math.round(totalBonus * 100) / 100;
+        player.averageCbit = Math.round(totalCbit / weeks);
+        player.totalPoints = Math.round(totalPoints * 100) / 100;
+        
+        // Remove playerData from final output
+        delete player.playerData;
+      });
+    });
+    
+    return projections;
+  }
 
   // Results Projections endpoint
   app.get("/api/results-projections", async (req, res) => {
