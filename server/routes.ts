@@ -836,26 +836,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Home team goal share
           const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
           const homePlayerShares = distributeGoalShares(homePlayersInSquad, bootstrapData.element_types);
+          const homeExpectedGoalsRounded = Math.round(homeExpectedGoals * 100) / 100;
+          
+          // Calculate projected goals for each player
+          homePlayerShares.forEach(player => {
+            player.projectedGoals = Math.round((homeExpectedGoalsRounded * player.goalShare / 100) * 100) / 100;
+          });
           
           data.push({
             gameweek: gw,
             teamId: homeTeam.id,
             teamName: homeTeam.name,
             teamShort: homeTeam.short_name,
-            expectedGoals: Math.round(homeExpectedGoals * 100) / 100,
+            expectedGoals: homeExpectedGoalsRounded,
             players: homePlayerShares
           });
           
           // Away team goal share
           const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
           const awayPlayerShares = distributeGoalShares(awayPlayersInSquad, bootstrapData.element_types);
+          const awayExpectedGoalsRounded = Math.round(awayExpectedGoals * 100) / 100;
+          
+          // Calculate projected goals for each player
+          awayPlayerShares.forEach(player => {
+            player.projectedGoals = Math.round((awayExpectedGoalsRounded * player.goalShare / 100) * 100) / 100;
+          });
           
           data.push({
             gameweek: gw,
             teamId: awayTeam.id,
             teamName: awayTeam.name,
             teamShort: awayTeam.short_name,
-            expectedGoals: Math.round(awayExpectedGoals * 100) / 100,
+            expectedGoals: awayExpectedGoalsRounded,
             players: awayPlayerShares
           });
         }
@@ -966,11 +978,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       totalShare += adjustedShare;
     });
 
-    // Normalize to 100%
-    return playerShares.map(player => ({
-      ...player,
-      goalShare: Math.round((player.rawShare / totalShare) * 100)
-    })).filter(p => p.goalShare > 0).sort((a, b) => b.goalShare - a.goalShare);
+    // Normalize to 100% and add projected goals calculation
+    return playerShares.map(player => {
+      const goalShare = Math.round((player.rawShare / totalShare) * 100);
+      return {
+        ...player,
+        goalShare,
+        projectedGoals: 0 // Will be calculated when team expected goals are known
+      };
+    }).filter(p => p.goalShare > 0).sort((a, b) => b.goalShare - a.goalShare);
   }
 
   // Helper function to distribute assist shares among players (same logic as assist-share page)
