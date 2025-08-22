@@ -77,6 +77,11 @@ export default function PlayerDefensiveContributions() {
 
   // Generate player CBIT/CBITR threshold data using historical performance
   const generatePlayerDefensiveData = (gameweek: number, playerData: any) => {
+    // Skip goalkeepers - they don't contribute to CBIT/CBITR thresholds
+    if (playerData.element_type === 1) {
+      return null; // Exclude goalkeepers
+    }
+    
     const seed = playerData.id * gameweek * 1789;
     const random1 = (seed * 9301 + 49297) % 233280 / 233280;
     
@@ -90,11 +95,6 @@ export default function PlayerDefensiveContributions() {
       historicalRate = historicalDefensivePerformers.midfielders[playerName];
     } else if (playerData.element_type === 4) { // Forwards
       historicalRate = historicalDefensivePerformers.forwards[playerName];
-    }
-    
-    // Skip goalkeepers - they don't contribute to CBIT/CBITR thresholds
-    if (playerData.element_type === 1) {
-      return null; // Exclude goalkeepers
     }
     
     // Position-based base probability of hitting thresholds
@@ -149,11 +149,8 @@ export default function PlayerDefensiveContributions() {
     
     for (let gw = 2; gw <= 7; gw++) {
       for (const player of bootstrapData.elements) {
-        // Skip goalkeepers completely
-        if (player.element_type === 1) continue;
-        
         const data = generatePlayerDefensiveData(gw, player);
-        if (data) { // Only add if data is not null
+        if (data) { // Only add if data is not null (excludes goalkeepers)
           allData.push(data);
         }
       }
