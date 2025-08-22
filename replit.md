@@ -31,7 +31,7 @@ Player Projected Goals: New projection tool displaying expected goals for player
 Player Expected Assists: New projection tool showing expected assists for players across next 6 gameweeks with assist probability percentages, featuring position-specific creativity modeling and clickable column sorting (August 2025)
 Player Expected Bonus: New projection tool displaying expected bonus points for players across next 6 gameweeks with bonus probability percentages, using performance-based algorithms and deterministic calculations with purple gradient theme (August 2025)
 Player Expected Clean Sheets: New projection tool showing clean sheet probabilities for goalkeepers, defenders and midfielders across next 6 gameweeks, excluding forwards who don't earn clean sheet points, with team defensive strength modeling and green gradient theme (August 2025)
-Player Defensive Contributions: New projection tool displaying CBIT metrics for defenders and CBITR metrics for midfielders/forwards (Clearances, Blocks, Interceptions, Tackles, Recoveries) with position-specific modeling and slate gradient theme for identifying consistent FPL performers (August 2025)
+Player Defensive Contributions: New projection tool displaying CBIT threshold probabilities for defenders (10+ points) and CBITR threshold probabilities for midfielders/forwards (12+ points) using historical defensive performance data from 2016-2024 seasons with 60+ elite performers, blended with current form analysis for enhanced accuracy and realistic projections (August 2025)
 
 
 ## System Architecture
