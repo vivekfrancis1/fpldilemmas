@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "../components/layout";
-import { TrendingUp, Filter, Users, Clock, Target, Trophy, Zap, Star, PoundSterling } from "lucide-react";
+import { TrendingUp, Filter, Users, Clock, Target, Trophy, Zap, Star, PoundSterling, ArrowUpDown } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -275,27 +275,7 @@ export default function Projections() {
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Sort by:</label>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="points">Total Points</SelectItem>
-                      <SelectItem value="goals">Total Goals</SelectItem>
-                      <SelectItem value="assists">Total Assists</SelectItem>
-                      <SelectItem value="minutes">Total Minutes</SelectItem>
-                      <SelectItem value="cleanSheets">Total CS</SelectItem>
-                      <SelectItem value="bonus">Total Bonus</SelectItem>
-                      <SelectItem value="cbit">CBIT %</SelectItem>
-                      <SelectItem value="price">Price</SelectItem>
-                      {Array.from({ length: weeks }, (_, i) => (
-                        <SelectItem key={`gw${i + 2}`} value={`gw${i + 2}`}>GW{i + 2} {activeTab === 'points' ? 'Points' : activeTab === 'goals' ? 'Goals' : activeTab === 'assists' ? 'Assists' : activeTab === 'cleanSheets' ? 'CS' : activeTab === 'bonus' ? 'Bonus' : activeTab === 'cbit' ? 'CBIT%' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+
               </div>
             </CardContent>
           </Card>
@@ -367,12 +347,25 @@ export default function Projections() {
                                 </div>
                               </th>
                               {Array.from({ length: weeks }, (_, i) => (
-                                <th key={i} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  GW {i + 2}
+                                <th 
+                                  key={i} 
+                                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                                  onClick={() => setSortBy(`gw${i + 2}`)}
+                                >
+                                  <div className="flex items-center justify-center gap-1">
+                                    GW {i + 2}
+                                    {sortBy === `gw${i + 2}` && <ArrowUpDown className="h-3 w-3" />}
+                                  </div>
                                 </th>
                               ))}
-                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold">
-                                Total
+                              <th 
+                                className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors"
+                                onClick={() => setSortBy(activeTab)}
+                              >
+                                <div className="flex items-center justify-center gap-1">
+                                  Total
+                                  {sortBy === activeTab && <ArrowUpDown className="h-3 w-3" />}
+                                </div>
                               </th>
                             </tr>
                           </thead>
