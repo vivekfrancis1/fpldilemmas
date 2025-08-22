@@ -28,7 +28,7 @@ export default function Fixtures() {
     // Will be updated when we get current gameweek data
     return { start: 1, end: 10 };
   });
-  const [sortBy, setSortBy] = useState<'team' | 'fdr-asc' | 'fdr-desc'>('team');
+  const [sortBy, setSortBy] = useState<'team' | 'fdr-asc' | 'fdr-desc'>('fdr-asc');
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
