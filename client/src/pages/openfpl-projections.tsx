@@ -175,48 +175,6 @@ export default function OpenFPLProjections() {
         </div>
 
         <div className="w-full space-y-4 md:space-y-6">
-          {/* Responsive Model Performance Metrics */}
-          {modelMetrics && (
-            <Card className="border-2 border-gradient shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 p-4 md:p-6">
-                <CardTitle className="flex items-center gap-2 text-lg md:text-xl lg:text-2xl">
-                  <BarChart3 className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
-                  <span className="hidden sm:inline">Model Performance vs Commercial Benchmarks</span>
-                  <span className="sm:hidden">Model Performance</span>
-                </CardTitle>
-                <CardDescription className="text-sm md:text-base lg:text-lg">
-                  Real-time accuracy metrics compared to leading FPL services
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 md:p-6">
-                <div className="grid grid-cols-5 gap-2 md:gap-4">
-                  <div className="text-center p-2 md:p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div className="text-lg md:text-xl font-bold text-green-600">{(modelMetrics as any).rmse_overall?.toFixed(3)}</div>
-                    <div className="text-xs text-green-700 font-medium">Overall RMSE</div>
-                  </div>
-                  <div className="text-center p-2 md:p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="text-lg md:text-xl font-bold text-blue-600">{(modelMetrics as any).rmse_haulers?.toFixed(3)}</div>
-                    <div className="text-xs text-blue-700 font-medium">Haulers (5+ pts)</div>
-                  </div>
-                  <div className="text-center p-2 md:p-3 bg-purple-50 rounded-lg border border-purple-200">
-                    <div className="text-lg md:text-xl font-bold text-purple-600">{(modelMetrics as any).rmse_tickers?.toFixed(3)}</div>
-                    <div className="text-xs text-purple-700 font-medium">Tickers (3-4 pts)</div>
-                  </div>
-                  <div className="text-center p-2 md:p-3 bg-orange-50 rounded-lg border border-orange-200">
-                    <div className="text-lg md:text-xl font-bold text-orange-600">{(modelMetrics as any).rmse_blanks?.toFixed(3)}</div>
-                    <div className="text-xs text-orange-700 font-medium">Blanks (≤2 pts)</div>
-                  </div>
-                  <div className="text-center p-2 md:p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-                    <div className="text-lg md:text-xl font-bold text-indigo-600">{((modelMetrics as any).accuracy_rate * 100)?.toFixed(1)}%</div>
-                    <div className="text-xs text-indigo-700 font-medium">Accuracy Rate</div>
-                  </div>
-                </div>
-                <div className="mt-4 md:mt-6 text-center text-xs md:text-sm text-gray-600 bg-gray-50 p-2 md:p-3 rounded-lg">
-                  Last updated: {(modelMetrics as any).last_updated} • Models retrained weekly with latest data • Lower RMSE = Better accuracy
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Responsive Filters */}
           <Card className="shadow-lg">
@@ -609,6 +567,49 @@ export default function OpenFPLProjections() {
               )}
             </CardContent>
           </Card>
+
+          {/* Responsive Model Performance Metrics - Moved to Bottom */}
+          {modelMetrics && (
+            <Card className="border-2 border-gradient shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 p-4 md:p-6">
+                <CardTitle className="flex items-center gap-2 text-lg md:text-xl lg:text-2xl">
+                  <BarChart3 className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
+                  <span className="hidden sm:inline">Model Performance vs Commercial Benchmarks</span>
+                  <span className="sm:hidden">Model Performance</span>
+                </CardTitle>
+                <CardDescription className="text-sm md:text-base lg:text-lg">
+                  Real-time accuracy metrics compared to leading FPL services
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 md:p-6">
+                <div className="grid grid-cols-5 gap-2 md:gap-4">
+                  <div className="text-center p-2 md:p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="text-lg md:text-xl font-bold text-green-600">{(modelMetrics as any).rmse_overall?.toFixed(3)}</div>
+                    <div className="text-xs text-green-700 font-medium">Overall RMSE</div>
+                  </div>
+                  <div className="text-center p-2 md:p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-lg md:text-xl font-bold text-blue-600">{(modelMetrics as any).rmse_haulers?.toFixed(3)}</div>
+                    <div className="text-xs text-blue-700 font-medium">Haulers (5+ pts)</div>
+                  </div>
+                  <div className="text-center p-2 md:p-3 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="text-lg md:text-xl font-bold text-purple-600">{(modelMetrics as any).rmse_tickers?.toFixed(3)}</div>
+                    <div className="text-xs text-purple-700 font-medium">Tickers (3-4 pts)</div>
+                  </div>
+                  <div className="text-center p-2 md:p-3 bg-orange-50 rounded-lg border border-orange-200">
+                    <div className="text-lg md:text-xl font-bold text-orange-600">{(modelMetrics as any).rmse_blanks?.toFixed(3)}</div>
+                    <div className="text-xs text-orange-700 font-medium">Blanks (≤2 pts)</div>
+                  </div>
+                  <div className="text-center p-2 md:p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                    <div className="text-lg md:text-xl font-bold text-indigo-600">{((modelMetrics as any).accuracy_rate * 100)?.toFixed(1)}%</div>
+                    <div className="text-xs text-indigo-700 font-medium">Accuracy Rate</div>
+                  </div>
+                </div>
+                <div className="mt-4 md:mt-6 text-center text-xs md:text-sm text-gray-600 bg-gray-50 p-2 md:p-3 rounded-lg">
+                  Last updated: {(modelMetrics as any).last_updated} • Models retrained weekly with latest data • Lower RMSE = Better accuracy
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </Layout>
