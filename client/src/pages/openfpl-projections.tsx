@@ -157,7 +157,7 @@ export default function OpenFPLProjections() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-6">
+      <div className="w-full max-w-full px-2 md:px-4 py-4 md:py-6 overflow-x-hidden">
         {/* Responsive Header with gradient */}
         <div className="text-center mb-6 md:mb-8">
           <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white rounded-xl md:rounded-2xl p-4 md:p-8 shadow-2xl">
@@ -174,7 +174,7 @@ export default function OpenFPLProjections() {
           </div>
         </div>
 
-        <div className="grid gap-6">
+        <div className="w-full space-y-4 md:space-y-6">
           {/* Responsive Model Performance Metrics */}
           {modelMetrics && (
             <Card className="border-2 border-gradient shadow-lg">
@@ -370,8 +370,8 @@ export default function OpenFPLProjections() {
                   </div>
 
                   {/* Enhanced Scrollable Table - Full Width */}
-                  <div className="overflow-x-auto overflow-y-auto max-h-[600px] md:max-h-[800px] bg-white rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg">
-                    <table className="w-full text-xs md:text-sm min-w-[1200px]">
+                  <div className="w-full overflow-x-auto overflow-y-auto max-h-[70vh] bg-white rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg">
+                    <table className="text-xs md:text-sm min-w-[1000px] w-max">
                       <thead className="sticky top-0 z-10">
                         <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
                           <th className="px-2 md:px-3 py-2 text-left min-w-[140px]">
