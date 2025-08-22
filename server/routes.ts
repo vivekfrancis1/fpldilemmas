@@ -8,7 +8,7 @@ const FPL_BASE_URL = "https://fantasy.premierleague.com/api";
 export function registerRoutes(app: Express): Server {
 
   // Bootstrap data endpoint
-  app.get("/api/bootstrap", async (req, res) => {
+  app.get("/api/bootstrap-static", async (req, res) => {
     try {
       // Try to get from cache first
       let bootstrapData = await storage.getBootstrapData();
