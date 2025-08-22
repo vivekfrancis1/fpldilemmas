@@ -514,23 +514,23 @@ export default function OpenFPLProjections() {
                       <TabsTrigger value="predicted_bonus">Bonus</TabsTrigger>
                     </TabsList>
                     
-                    <div className="overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-[80vh]">
+                    <div className="overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-[80vh]">
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30">
-                            <th className="border-r border-gray-200 dark:border-gray-700 p-4 text-left sticky left-0 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 min-w-[220px] z-10">
-                              <div className="font-semibold">Player Info</div>
-                              <div className="text-xs text-muted-foreground mt-1">Name • Team • Position • Price</div>
+                            <th className="border-r border-gray-200 dark:border-gray-700 p-2 text-left bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 w-48">
+                              <div className="font-semibold text-sm">Player</div>
+                              <div className="text-xs text-muted-foreground">Team • Pos • £</div>
                             </th>
                             {gameweekLabels.map(gw => (
-                              <th key={gw} className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[100px]">
+                              <th key={gw} className="border-r border-gray-200 dark:border-gray-700 p-2 text-center w-16">
                                 <button
                                   onClick={() => handleTableSort(gw, activeTab)}
-                                  className="w-full text-center hover:bg-muted/50 rounded px-2 py-1 transition-colors"
+                                  className="w-full text-center hover:bg-white/50 dark:hover:bg-gray-800/50 rounded px-1 py-1 transition-all text-xs"
                                   title={`Sort by ${activeTab} for ${getGameweekNumber(gw)}`}
                                 >
-                                  <div className="flex items-center justify-center gap-1">
-                                    <span>{getGameweekNumber(gw)}</span>
+                                  <div className="flex flex-col items-center">
+                                    <span className="font-medium">{getGameweekNumber(gw)}</span>
                                     <span className="text-xs opacity-60">
                                       {getSortIcon(gw, activeTab)}
                                     </span>
@@ -538,32 +538,33 @@ export default function OpenFPLProjections() {
                                 </button>
                               </th>
                             ))}
-                            <th className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[100px] bg-blue-50 dark:bg-blue-900/20">
+                            <th className="border-r border-gray-200 dark:border-gray-700 p-2 text-center w-20 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50">
                               <button
                                 onClick={() => handleTableSort("total", activeTab)}
-                                className="w-full text-center hover:bg-muted/50 rounded px-2 py-1 transition-colors font-semibold"
+                                className="w-full text-center hover:bg-white/50 dark:hover:bg-gray-800/50 rounded px-1 py-1 transition-all text-xs"
                                 title={`Sort by total ${activeTab} across all gameweeks`}
                               >
-                                <div className="flex items-center justify-center gap-1">
-                                  <span>Total</span>
+                                <div className="flex flex-col items-center">
+                                  <span className="font-bold">Total</span>
                                   <span className="text-xs opacity-60">
                                     {getSortIcon("total", activeTab)}
                                   </span>
                                 </div>
                               </button>
                             </th>
-                            <th className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[120px]">
-                              ML Stats
+                            <th className="p-2 text-center w-20">
+                              <div className="font-semibold text-sm">ML</div>
+                              <div className="text-xs text-muted-foreground">Risk•Acc</div>
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredTableData.map((player, index) => (
                             <tr key={player.player_id} className="hover:bg-muted/30">
-                              <td className="border border-gray-200 dark:border-gray-700 p-3 sticky left-0 bg-background">
+                              <td className="border-r border-gray-200 dark:border-gray-700 p-2 bg-background">
                                 <div className="space-y-1">
-                                  <div className="font-medium">{player.player_name}</div>
-                                  <div className="text-sm text-muted-foreground">
+                                  <div className="font-medium text-sm truncate">{player.player_name}</div>
+                                  <div className="text-xs text-muted-foreground">
                                     {player.team_name} • {player.position} • {formatPrice(player.current_price)}
                                   </div>
                                   <div className="flex gap-1">
@@ -577,30 +578,24 @@ export default function OpenFPLProjections() {
                                 </div>
                               </td>
                               {gameweekLabels.map(gw => (
-                                <td key={gw} className="border border-gray-200 dark:border-gray-700 p-3 text-center">
-                                  <div className="font-medium">
+                                <td key={gw} className="border-r border-gray-200 dark:border-gray-700 p-1 text-center">
+                                  <div className="font-medium text-sm">
                                     {getMetricValue(player, gw, activeTab)}
                                   </div>
-                                  {player.gameweeks[gw] && (
-                                    <div className="text-xs text-muted-foreground mt-1">
-                                      H{horizonFilter}
-                                    </div>
-                                  )}
                                 </td>
                               ))}
-                              <td className="border border-gray-200 dark:border-gray-700 p-3 text-center bg-blue-50 dark:bg-blue-900/20">
-                                <div className="font-bold text-blue-600 dark:text-blue-400">
+                              <td className="border-r border-gray-200 dark:border-gray-700 p-1 text-center bg-purple-50 dark:bg-purple-900/20">
+                                <div className="font-bold text-purple-600 dark:text-purple-400 text-sm">
                                   {getMetricValue(player, "total", activeTab)}
                                 </div>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  6 GWs
-                                </div>
                               </td>
-                              <td className="border border-gray-200 dark:border-gray-700 p-3">
-                                <div className="space-y-1 text-xs">
-                                  <div>Own: {player.ownership_percentage?.toFixed(1)}%</div>
-                                  <div className="text-green-600">
-                                    Conf: {player.ensemble_confidence?.toFixed(0)}%
+                              <td className="p-1 text-center">
+                                <div className="text-xs">
+                                  <div className="text-orange-600">
+                                    {player.risk_score?.toFixed(1)}
+                                  </div>
+                                  <div className="text-blue-600">
+                                    {(player.model_accuracy * 100)?.toFixed(0)}%
                                   </div>
                                 </div>
                               </td>
