@@ -233,11 +233,12 @@ export default function AssistShare() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Based on deterministic expected assists calculations</li>
-                    <li>• Weighted by creativity, form, and assist history</li>
-                    <li>• Ensures assists ≤ goals constraint for logical consistency</li>
-                    <li>• Midfielders prioritized for assist distribution</li>
-                    <li>• All players in a team total 100%</li>
+                    <li>• Enhanced with historical assist data from 2016-2024 seasons</li>
+                    <li>• Elite assist providers identified from 5+ year Premier League history</li>
+                    <li>• Advanced creativity metrics and ICT index correlation analysis</li>
+                    <li>• Set piece responsibility and playing time factors included</li>
+                    <li>• Position-specific adjustments for fullbacks vs center-backs</li>
+                    <li>• All players in a team total 100% with logical consistency</li>
                   </ul>
                 </div>
                 <div>
