@@ -444,7 +444,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             new_price: player.now_cost,
             current_price: player.now_cost,
             change: priceChange,
-            date: new Date().toISOString(),
             ownership_change: ((transfersIn - transfersOut) / 10000000) * 100,
             transfers_in: transfersIn,
             transfers_out: transfersOut
@@ -522,8 +521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             transfers_in: transfersIn,
             transfers_out: transfersOut,
             reason: reason,
-            probability: probability,
-            expected_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // Tomorrow
+            probability: probability
           };
         });
       
