@@ -24,8 +24,6 @@ import PlayerMinutes from "./pages/player-minutes";
 import PlayerProjectedGoals from "./pages/player-projected-goals";
 import PlayerExpectedAssists from "./pages/player-expected-assists";
 import PlayerExpectedBonus from "./pages/player-expected-bonus";
-import PlayerExpectedCleanSheets from "./pages/player-expected-cleansheets";
-import PlayerDefensiveContributions from "./pages/player-defensive-contributions";
 
 function Router() {
   return (
@@ -51,8 +49,6 @@ function Router() {
       <Route path="/player-projected-goals" component={PlayerProjectedGoals} />
       <Route path="/player-expected-assists" component={PlayerExpectedAssists} />
       <Route path="/player-expected-bonus" component={PlayerExpectedBonus} />
-      <Route path="/player-expected-cleansheets" component={PlayerExpectedCleanSheets} />
-      <Route path="/player-defensive-contributions" component={PlayerDefensiveContributions} />
       <Route component={NotFound} />
     </Switch>
   );
