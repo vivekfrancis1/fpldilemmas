@@ -16,7 +16,7 @@ import MyLeagues from "./pages/my-leagues";
 import PriceTracker from "./pages/price-tracker";
 import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
-import Projections from "./pages/projections";
+
 import ProjectedGoalsCS from "./pages/projected-goals-cs";
 import TeamGoalProjections from "./pages/team-goal-projections";
 import TeamCSProjections from "./pages/team-cs-projections";
@@ -35,7 +35,7 @@ function Router() {
       <Route path="/price-tracker" component={PriceTracker} />
       <Route path="/league-comparison" component={LeagueComparison} />
       <Route path="/player-stats" component={PlayerStats} />
-      <Route path="/projections" component={Projections} />
+
       <Route path="/results-projections" component={ProjectedGoalsCS} />
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
       <Route path="/team-cs-projections" component={TeamCSProjections} />

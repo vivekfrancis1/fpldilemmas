@@ -1,0 +1,678 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { bootstrapDataSchema, playerSummarySchema, insertWatchlistEntrySchema, insertPriceAlertSchema } from "@shared/schema";
+
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // FPL API base URL
+  const FPL_BASE_URL = "https://fantasy.premierleague.com/api";
+
+  // Get bootstrap data (all players, teams, positions)
+  app.get("/api/bootstrap-static", async (req, res) => {
+    try {
+      // Try to get from cache first
+      let data = await storage.getBootstrapData();
+      
+      if (!data) {
+        // Fetch from FPL API
+        const response = await fetch(`${FPL_BASE_URL}/bootstrap-static/`);
+        if (!response.ok) {
+          throw new Error(`FPL API responded with status: ${response.status}`);
+        }
+        
+        const rawData = await response.json();
+        data = bootstrapDataSchema.parse(rawData);
+        
+        // Cache the data
+        await storage.setBootstrapData(data);
+      }
+      
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching bootstrap data:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch player data from FPL API",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get player summary (fixtures, history)
+  app.get("/api/element-summary/:playerId", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.playerId);
+      if (isNaN(playerId)) {
+        return res.status(400).json({ message: "Invalid player ID" });
+      }
+
+      // Try to get from cache first
+      let data = await storage.getPlayerSummary(playerId);
+      
+      if (!data) {
+        // Fetch from FPL API
+        const response = await fetch(`${FPL_BASE_URL}/element-summary/${playerId}/`);
+        if (!response.ok) {
+          throw new Error(`FPL API responded with status: ${response.status}`);
+        }
+        
+        const rawData = await response.json();
+        data = playerSummarySchema.parse(rawData);
+        
+        // Cache the data
+        await storage.setPlayerSummary(playerId, data);
+      }
+      
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching player summary:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch player details from FPL API",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get historical player data aggregated by season
+  app.get("/api/players/historical/:season", async (req, res) => {
+    try {
+      const season = decodeURIComponent(req.params.season);
+      console.log(`Fetching historical data for season: ${season}`);
+      
+      // First check if we have this data in the database
+      const hasData = await storage.hasHistoricalData(season);
+      
+      if (hasData) {
+        console.log(`✓ Loading ${season} data from database (fast)`);
+        const historicalPlayers = await storage.getHistoricalPlayers(season);
+        res.json(historicalPlayers);
+        return;
+      }
+      
+      console.log(`⚠ ${season} data not in database, fetching from FPL API (slow)`);
+      
+      // Get bootstrap data first to get all current players
+      const bootstrapResponse = await fetch(`${FPL_BASE_URL}/bootstrap-static/`);
+      if (!bootstrapResponse.ok) {
+        throw new Error(`FPL API responded with status: ${bootstrapResponse.status}`);
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const players = bootstrapData.elements;
+      const teams = bootstrapData.teams;
+      const elementTypes = bootstrapData.element_types;
+      
+      // Create team and position lookup maps
+      const teamMap = new Map(teams.map((t: any) => [t.id, t]));
+      const positionMap = new Map(elementTypes.map((et: any) => [et.id, et]));
+      
+      const historicalPlayers = [];
+      const dbInsertData: any[] = [];
+      
+      console.log(`Processing ${players.length} players for historical data...`);
+      
+      for (const player of players) {
+        try {
+          const playerResponse = await fetch(`${FPL_BASE_URL}/element-summary/${player.id}/`);
+          if (playerResponse.ok) {
+            const playerData = await playerResponse.json();
+            
+            if (playerData.history_past && playerData.history_past.length > 0) {
+              // Log available seasons for debugging
+              if (player.id <= 5) { // Only log for first few players to avoid spam
+                console.log(`Player ${player.web_name} available seasons:`, 
+                  playerData.history_past.map((h: any) => h.season_name));
+              }
+              
+              // Find data for the requested season
+              const seasonData = playerData.history_past.find((h: any) => 
+                h.season_name === season
+              );
+              
+              if (seasonData) {
+                const team = teamMap.get(player.team) as any;
+                const position = positionMap.get(player.element_type) as any;
+                
+                const playerRecord = {
+                  ...seasonData,
+                  id: player.id,
+                  first_name: player.first_name,
+                  second_name: player.second_name,
+                  web_name: player.web_name,
+                  team_name: team?.name || 'Unknown',
+                  team_short_name: team?.short_name || 'UNK',
+                  position: position?.singular_name || 'Unknown',
+                  element_type: player.element_type,
+                  team_id: player.team,
+                  // Convert string values to numbers for calculations
+                  now_cost: seasonData.end_cost,
+                  form: (seasonData.total_points / 38).toFixed(1), // Average points per game approximation
+                  points_per_game: (seasonData.total_points / Math.max(seasonData.minutes / 90, 1)).toFixed(1),
+                  selected_by_percent: "0.0", // Historical ownership not available
+                  value_season: (seasonData.total_points / (seasonData.end_cost / 10)).toFixed(1),
+                  value_form: (seasonData.total_points / (seasonData.end_cost / 10)).toFixed(1),
+                };
+                
+                historicalPlayers.push(playerRecord);
+                
+                // Prepare for database insertion
+                dbInsertData.push({
+                  id: `${player.id}_${season}`,
+                  playerId: player.id,
+                  season: season,
+                  firstName: player.first_name,
+                  secondName: player.second_name,
+                  webName: player.web_name,
+                  teamName: team?.name || 'Unknown',
+                  teamShortName: team?.short_name || 'UNK', 
+                  positionName: position?.singular_name || 'Unknown',
+                  seasonName: seasonData.season_name,
+                  elementCode: seasonData.element_code,
+                  startCost: seasonData.start_cost,
+                  endCost: seasonData.end_cost,
+                  totalPoints: seasonData.total_points,
+                  minutes: seasonData.minutes,
+                  goalsScored: seasonData.goals_scored,
+                  assists: seasonData.assists,
+                  cleanSheets: seasonData.clean_sheets,
+                  goalsConceded: seasonData.goals_conceded,
+                  ownGoals: seasonData.own_goals,
+                  penaltiesSaved: seasonData.penalties_saved,
+                  penaltiesMissed: seasonData.penalties_missed,
+                  yellowCards: seasonData.yellow_cards,
+                  redCards: seasonData.red_cards,
+                  saves: seasonData.saves,
+                  bonus: seasonData.bonus,
+                  bps: seasonData.bps,
+                  influence: seasonData.influence?.toString() || '0',
+                  creativity: seasonData.creativity?.toString() || '0',
+                  threat: seasonData.threat?.toString() || '0',
+                  ictIndex: seasonData.ict_index?.toString() || '0',
+                });
+              }
+            }
+          }
+          
+          // Add a small delay to avoid overwhelming the API
+          await new Promise(resolve => setTimeout(resolve, 50));
+        } catch (playerError) {
+          console.warn(`Failed to fetch data for player ${player.id}:`, playerError);
+        }
+      }
+      
+      // Store in database for future fast access
+      if (dbInsertData.length > 0) {
+        console.log(`💾 Storing ${dbInsertData.length} players in database for ${season}`);
+        try {
+          await storage.insertHistoricalPlayers(dbInsertData);
+        } catch (dbError) {
+          console.warn('Failed to store historical data in database:', dbError);
+        }
+      }
+      
+      console.log(`Found ${historicalPlayers.length} players with ${season} data`);
+      res.json(historicalPlayers);
+    } catch (error) {
+      console.error("Error fetching historical player data:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch historical player data",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get available seasons
+  app.get("/api/seasons", async (req, res) => {
+    try {
+      // Return available seasons based on typical FPL seasons (excluding current)
+      const currentYear = new Date().getFullYear();
+      const seasons = [];
+      
+      // Generate seasons from 2016/17 to include 2024/25
+      for (let year = 2016; year <= 2024; year++) {
+        seasons.push(`${year}/${(year + 1).toString().slice(-2)}`);
+      }
+      
+      res.json(seasons.reverse()); // Most recent first
+    } catch (error) {
+      console.error("Error fetching available seasons:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch available seasons",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get fixtures
+  app.get("/api/fixtures", async (req, res) => {
+    try {
+      const response = await fetch(`${FPL_BASE_URL}/fixtures/`);
+      if (!response.ok) {
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching fixtures:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch fixtures from FPL API",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Watchlist API routes
+  
+  // Get all watchlist entries
+  app.get("/api/watchlist", async (req, res) => {
+    try {
+      const entries = await storage.getWatchlistEntries();
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching watchlist:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch watchlist",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Add player to watchlist
+  app.post("/api/watchlist", async (req, res) => {
+    try {
+      const validatedData = insertWatchlistEntrySchema.parse(req.body);
+      const entry = await storage.addWatchlistEntry(validatedData);
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error("Error adding to watchlist:", error);
+      res.status(400).json({ 
+        message: "Failed to add player to watchlist",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Remove player from watchlist
+  app.delete("/api/watchlist/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid watchlist entry ID" });
+      }
+      
+      await storage.removeWatchlistEntry(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing from watchlist:", error);
+      res.status(500).json({ 
+        message: "Failed to remove player from watchlist",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Update watchlist entry
+  app.patch("/api/watchlist/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid watchlist entry ID" });
+      }
+
+      const updateData = insertWatchlistEntrySchema.partial().parse(req.body);
+      const updatedEntry = await storage.updateWatchlistEntry(id, updateData);
+      res.json(updatedEntry);
+    } catch (error) {
+      console.error("Error updating watchlist entry:", error);
+      res.status(400).json({ 
+        message: "Failed to update watchlist entry",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Price alerts API routes
+  
+  // Get all price alerts
+  app.get("/api/price-alerts", async (req, res) => {
+    try {
+      const alerts = await storage.getPriceAlerts();
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching price alerts:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch price alerts",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Add price alert
+  app.post("/api/price-alerts", async (req, res) => {
+    try {
+      const validatedData = insertPriceAlertSchema.parse(req.body);
+      const alert = await storage.addPriceAlert(validatedData);
+      res.status(201).json(alert);
+    } catch (error) {
+      console.error("Error adding price alert:", error);
+      res.status(400).json({ 
+        message: "Failed to add price alert",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+        );
+        
+
+        
+        if (goalShare) {
+          // Apply goal projections from Goal Share tool - use the projectedGoals directly
+          players.forEach((player: any) => {
+            const playerGoalShare = goalShare.players.find((p: any) => p.id === player.id);
+            if (playerGoalShare && player.weeklyProjections[gw]) {
+              // Use the projectedGoals field that was calculated in the Goal Share tool
+              player.weeklyProjections[gw].goals = playerGoalShare.projectedGoals || 0;
+              
+              // Validation: Check if projectedGoals matches manual calculation
+              const manualCalculation = (goalShare.expectedGoals * playerGoalShare.goalShare) / 100;
+              const calculatedGoals = Math.round(manualCalculation * 100) / 100;
+              
+              if (Math.abs(playerGoalShare.projectedGoals - calculatedGoals) > 0.01) {
+                console.log(`VALIDATION ERROR ${player.name} GW${gw}: projectedGoals=${playerGoalShare.projectedGoals} vs calculated=${calculatedGoals}`);
+              }
+              
+              // Debug logging for validation with 10+ players
+              if (player.name.includes('Bowen') || player.name.includes('Salah') || player.name.includes('Haaland') || 
+                  player.name.includes('Kane') || player.name.includes('Son') || player.name.includes('Palmer') ||
+                  player.name.includes('Saka') || player.name.includes('Watkins') || player.name.includes('Isak') || 
+                  player.name.includes('Mbeumo') || player.name.includes('Wood') || player.name.includes('Solanke')) {
+                console.log(`VALIDATION ${player.name} GW${gw}: goalShare=${playerGoalShare.goalShare}%, projectedGoals=${playerGoalShare.projectedGoals}, teamGoals=${goalShare.expectedGoals}`);
+              }
+            }
+          });
+        }
+        
+        if (assistShare) {
+          // Apply assist projections from Assist Share tool
+          players.forEach((player: any) => {
+            const playerAssistShare = assistShare.players.find((p: any) => p.id === player.id);
+            if (playerAssistShare && player.weeklyProjections[gw]) {
+              const playerExpectedAssists = (assistShare.expectedAssists * playerAssistShare.assistShare) / 100;
+              player.weeklyProjections[gw].assists = Math.round(playerExpectedAssists * 100) / 100;
+            }
+          });
+        }
+      }
+      
+      // Recalculate totals based on normalized weekly projections
+      players.forEach((player: any) => {
+        let totalGoals = 0;
+        let totalAssists = 0;
+        let totalCleanSheets = 0;
+        let totalBonus = 0;
+        let totalCbit = 0;
+        let totalPoints = 0;
+
+        
+        for (let gw = startGameweek; gw < startGameweek + weeks; gw++) {
+          const weekData = player.weeklyProjections[gw];
+          if (weekData) {
+            totalGoals += weekData.goals || 0;
+            totalAssists += weekData.assists || 0;
+            totalCleanSheets += weekData.cleanSheets || 0;
+            totalBonus += weekData.bonus || 0;
+            totalCbit += weekData.cbit || 0;
+            totalPoints += weekData.points || 0;
+          }
+        }
+        
+        player.totalGoals = Math.round(totalGoals * 100) / 100;
+        player.totalAssists = Math.round(totalAssists * 100) / 100;
+        player.averageCleanSheets = Math.round(totalCleanSheets / weeks);
+        player.totalBonus = Math.round(totalBonus * 100) / 100;
+        player.averageCbit = Math.round(totalCbit / weeks);
+        player.totalPoints = Math.round(totalPoints * 100) / 100;
+
+        
+        // Remove playerData from final output
+        delete player.playerData;
+      });
+    });
+    
+      return projections;
+    } catch (error) {
+      console.error("Error in deriveProjectionsFromShareTools:", error);
+      throw error;
+    }
+  }
+
+  // Helper function to generate Goal Share data (same logic as goal-share page)
+  function generateGoalShareData(bootstrapData: any, fixturesData: any, weeks: number, startGameweek: number) {
+    const data: any[] = [];
+    const teams = bootstrapData.teams;
+    
+    // Process upcoming fixtures to create goal share breakdowns
+    for (let gw = startGameweek; gw < startGameweek + weeks; gw++) {
+      const gwFixtures = fixturesData.filter((fixture: any) => 
+        !fixture.finished && fixture.event === gw
+      );
+      
+      gwFixtures.forEach((fixture: any) => {
+        const homeTeam = teams.find((t: any) => t.id === fixture.team_h);
+        const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
+        
+        if (homeTeam && awayTeam) {
+          // Calculate expected goals using same logic as team projections
+          const homeAttackStrength = (homeTeam.strength_attack_home || 1000) / 1000;
+          const awayDefenseStrength = (awayTeam.strength_defence_away || 1000) / 1000;
+          const homeExpectedGoals = (homeAttackStrength * (2.2 - awayDefenseStrength)) * 1.15;
+          
+          const awayAttackStrength = (awayTeam.strength_attack_away || 1000) / 1000;
+          const homeDefenseStrength = (homeTeam.strength_defence_home || 1000) / 1000;
+          const awayExpectedGoals = awayAttackStrength * (2.2 - homeDefenseStrength);
+          
+          // Home team goal share
+          const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
+          const homePlayerShares = distributeGoalShares(homePlayersInSquad, bootstrapData.element_types);
+          const homeExpectedGoalsRounded = Math.round(homeExpectedGoals * 100) / 100;
+          
+          // Calculate projected goals for each player
+          homePlayerShares.forEach(player => {
+            player.projectedGoals = Math.round((homeExpectedGoalsRounded * player.goalShare / 100) * 100) / 100;
+          });
+          
+          data.push({
+            gameweek: gw,
+            teamId: homeTeam.id,
+            teamName: homeTeam.name,
+            teamShort: homeTeam.short_name,
+            expectedGoals: homeExpectedGoalsRounded,
+            players: homePlayerShares
+          });
+          
+          // Away team goal share
+          const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
+          const awayPlayerShares = distributeGoalShares(awayPlayersInSquad, bootstrapData.element_types);
+          const awayExpectedGoalsRounded = Math.round(awayExpectedGoals * 100) / 100;
+          
+          // Calculate projected goals for each player
+          awayPlayerShares.forEach(player => {
+            player.projectedGoals = Math.round((awayExpectedGoalsRounded * player.goalShare / 100) * 100) / 100;
+          });
+          
+          data.push({
+            gameweek: gw,
+            teamId: awayTeam.id,
+            teamName: awayTeam.name,
+            teamShort: awayTeam.short_name,
+            expectedGoals: awayExpectedGoalsRounded,
+            players: awayPlayerShares
+          });
+        }
+      });
+    }
+    
+    return data;
+  }
+
+  // Helper function to generate Assist Share data (same logic as assist-share page)
+  function generateAssistShareData(bootstrapData: any, fixturesData: any, weeks: number, startGameweek: number) {
+    const data: any[] = [];
+    const teams = bootstrapData.teams;
+    
+    // Process upcoming fixtures to create assist share breakdowns
+    for (let gw = startGameweek; gw < startGameweek + weeks; gw++) {
+      const gwFixtures = fixturesData.filter((fixture: any) => 
+        !fixture.finished && fixture.event === gw
+      );
+      
+      gwFixtures.forEach((fixture: any) => {
+        const homeTeam = teams.find((t: any) => t.id === fixture.team_h);
+        const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
+        
+        if (homeTeam && awayTeam) {
+          // Calculate expected goals using same logic as team projections
+          const homeAttackStrength = (homeTeam.strength_attack_home || 1000) / 1000;
+          const awayDefenseStrength = (awayTeam.strength_defence_away || 1000) / 1000;
+          const homeExpectedGoals = (homeAttackStrength * (2.2 - awayDefenseStrength)) * 1.15;
+          
+          const awayAttackStrength = (awayTeam.strength_attack_away || 1000) / 1000;
+          const homeDefenseStrength = (homeTeam.strength_defence_home || 1000) / 1000;
+          const awayExpectedGoals = awayAttackStrength * (2.2 - homeDefenseStrength);
+          
+          // Home team assist share - ensure assists ≤ goals
+          const homeMaxAssists = homeExpectedGoals;
+          const homeExpectedAssists = Math.min(homeMaxAssists, homeExpectedGoals * 0.65);
+          const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
+          const homePlayerShares = distributeAssistShares(homePlayersInSquad, bootstrapData.element_types);
+          
+          data.push({
+            gameweek: gw,
+            teamId: homeTeam.id,
+            teamName: homeTeam.name,
+            teamShort: homeTeam.short_name,
+            expectedAssists: Math.round(homeExpectedAssists * 100) / 100,
+            players: homePlayerShares
+          });
+          
+          // Away team assist share - ensure assists ≤ goals
+          const awayMaxAssists = awayExpectedGoals;
+          const awayExpectedAssists = Math.min(awayMaxAssists, awayExpectedGoals * 0.65);
+          const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
+          const awayPlayerShares = distributeAssistShares(awayPlayersInSquad, bootstrapData.element_types);
+          
+          data.push({
+            gameweek: gw,
+            teamId: awayTeam.id,
+            teamName: awayTeam.name,
+            teamShort: awayTeam.short_name,
+            expectedAssists: Math.round(awayExpectedAssists * 100) / 100,
+            players: awayPlayerShares
+          });
+        }
+      });
+    }
+    
+    return data;
+  }
+
+  // Helper function to distribute goal shares among players (same logic as goal-share page)
+  function distributeGoalShares(players: any[], positions: any[]) {
+    const playerShares: any[] = [];
+    let totalShare = 0;
+
+    // Calculate base shares based on position and performance
+    players.forEach((player: any) => {
+      const position = positions.find((p: any) => p.id === player.element_type);
+      const positionName = position?.singular_name;
+
+      // Position-specific base goal shares
+      const positionShares = {
+        'Goalkeeper': 0.5,
+        'Defender': 5,
+        'Midfielder': 15,
+        'Forward': 30
+      };
+
+      const baseShare = positionShares[positionName as keyof typeof positionShares] || 15;
+      
+      // Adjust based on form and current performance
+      const formAdjustment = parseFloat(player.form) || 0;
+      const goalsAdjustment = Math.max(0.5, Math.min(2.0, (player.goals_scored || 0) * 3 + 0.5));
+      
+      const performanceMultiplier = Math.max(0.3, Math.min(2.5, 
+        (formAdjustment / 10 + goalsAdjustment) / 2
+      ));
+      
+      const adjustedShare = baseShare * performanceMultiplier;
+      
+      playerShares.push({
+        id: player.id,
+        name: `${player.first_name} ${player.second_name}`,
+        position: position?.singular_name_short || '',
+        rawShare: adjustedShare
+      });
+      
+      totalShare += adjustedShare;
+    });
+
+    // Normalize to 100% and add projected goals calculation
+    return playerShares.map(player => {
+      const goalShare = Math.round((player.rawShare / totalShare) * 1000) / 10; // One decimal place
+      return {
+        ...player,
+        goalShare,
+        projectedGoals: 0 // Will be calculated when team expected goals are known
+      };
+    }).filter(p => p.goalShare > 0).sort((a, b) => b.goalShare - a.goalShare);
+  }
+
+  // Helper function to distribute assist shares among players (same logic as assist-share page)
+  function distributeAssistShares(players: any[], positions: any[]) {
+    const playerShares: any[] = [];
+    let totalShare = 0;
+
+    // Calculate base shares based on position and creativity
+    players.forEach((player: any) => {
+      const position = positions.find((p: any) => p.id === player.element_type);
+      const positionName = position?.singular_name;
+
+      // Position-specific base assist shares (different from goals)
+      const positionShares = {
+        'Goalkeeper': 0.5,
+        'Defender': 8,
+        'Midfielder': 25,
+        'Forward': 12
+      };
+
+      const baseShare = positionShares[positionName as keyof typeof positionShares] || 15;
+      
+      // Adjust based on creativity and current performance
+      const creativityAdjustment = Math.max(0.5, Math.min(2.0, (player.creativity || 0) / 50 + 0.5));
+      const formAdjustment = parseFloat(player.form) || 0;
+      const assistsAdjustment = Math.max(0.5, Math.min(2.0, (player.assists || 0) * 2 + 0.5));
+      
+      const performanceMultiplier = Math.max(0.3, Math.min(2.5, 
+        (creativityAdjustment + (formAdjustment / 10) + assistsAdjustment) / 3
+      ));
+      
+      const adjustedShare = baseShare * performanceMultiplier;
+      
+      playerShares.push({
+        id: player.id,
+        name: `${player.first_name} ${player.second_name}`,
+        position: position?.singular_name_short || '',
+        rawShare: adjustedShare
+      });
+      
+      totalShare += adjustedShare;
+    });
+
+    // Normalize to 100%
+    return playerShares.map(player => ({
+      ...player,
+      assistShare: Math.round((player.rawShare / totalShare) * 1000) / 10 // One decimal place
+    })).filter(p => p.assistShare > 0).sort((a, b) => b.assistShare - a.assistShare);
+  }
+
