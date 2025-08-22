@@ -618,7 +618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             minutes: weekMinutes,
             goals: Math.round(weekGoals * 10) / 10,
             assists: Math.round(weekAssists * 10) / 10,
-            cleanSheets: Math.round(weekCleanSheets * 10) / 10,
+            cleanSheets: Math.round(weekCleanSheets * 100),
             bonus: Math.round(weekBonus * 10) / 10,
             cbit: weekCbit,
             points: Math.round(weekPoints * 10) / 10
@@ -643,7 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalMinutes: Math.round(totalMinutes),
           totalGoals: Math.round(totalGoals * 10) / 10,
           totalAssists: Math.round(totalAssists * 10) / 10,
-          totalCleanSheets: Math.round(totalCleanSheets * 10) / 10,
+          totalCleanSheets: Math.round(totalCleanSheets * 100),
           totalBonus: Math.round(totalBonus * 10) / 10,
           averageCbit: Math.round(totalCbit / weeks),
           totalPoints: Math.round(totalPoints * 10) / 10,

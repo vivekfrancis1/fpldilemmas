@@ -96,14 +96,14 @@ export default function Projections() {
             position?.singular_name === 'Midfielder' ? 1.5 : 1.1) * (0.7 + Math.random() * 0.6);
           
           const isDefensive = position?.singular_name === 'Goalkeeper' || position?.singular_name === 'Defender';
-          const weekCleanSheets = isDefensive ? (0.2 + Math.random() * 0.3) : 0;
+          const weekCleanSheets = isDefensive ? Math.round((20 + Math.random() * 30)) : 0;
           
-          const weekBonus = (weekGoals * 2 + weekAssists * 1.5 + weekCleanSheets * 0.8) * 0.25;
+          const weekBonus = (weekGoals * 2 + weekAssists * 1.5 + (weekCleanSheets/100) * 0.8) * 0.25;
           
           const weekPoints = Math.floor(weekMinutes / 60) * 2 + 
             weekGoals * (isDefensive ? 6 : position?.singular_name === 'Midfielder' ? 5 : 4) +
             weekAssists * 3 +
-            weekCleanSheets * (isDefensive ? 4 : 1) +
+            (weekCleanSheets/100) * (isDefensive ? 4 : 1) +
             weekBonus;
           
           const weekCbit = Math.min(95, Math.max(1, Math.round(weekPoints * 3.5)));
@@ -112,7 +112,7 @@ export default function Projections() {
             minutes: weekMinutes,
             goals: Math.round(weekGoals * 10) / 10,
             assists: Math.round(weekAssists * 10) / 10,
-            cleanSheets: Math.round(weekCleanSheets * 10) / 10,
+            cleanSheets: weekCleanSheets,
             bonus: Math.round(weekBonus * 10) / 10,
             cbit: weekCbit,
             points: Math.round(weekPoints * 10) / 10
@@ -137,7 +137,7 @@ export default function Projections() {
           totalMinutes: Math.round(totalMinutes),
           totalGoals: Math.round(totalGoals * 10) / 10,
           totalAssists: Math.round(totalAssists * 10) / 10,
-          totalCleanSheets: Math.round(totalCleanSheets * 10) / 10,
+          totalCleanSheets: Math.round(totalCleanSheets),
           totalBonus: Math.round(totalBonus * 10) / 10,
           averageCbit: Math.round(totalCbit / weeks),
           totalPoints: Math.round(totalPoints * 10) / 10,
@@ -412,6 +412,19 @@ export default function Projections() {
                                       </td>
                                     );
                                   }
+                                  if (metric === 'cleanSheets') {
+                                    return (
+                                      <td key={weekIndex} className="px-4 py-4 text-center">
+                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                          value >= 50 ? 'bg-green-100 text-green-800' :
+                                          value >= 25 ? 'bg-yellow-100 text-yellow-800' :
+                                          'bg-red-100 text-red-800'
+                                        }`}>
+                                          {value}%
+                                        </span>
+                                      </td>
+                                    );
+                                  }
                                   return (
                                     <td key={weekIndex} className="px-4 py-4 text-center text-sm text-gray-900">
                                       {value}
@@ -426,6 +439,14 @@ export default function Projections() {
                                       'bg-red-100 text-red-800'
                                     }`}>
                                       {player.averageCbit}%
+                                    </span>
+                                  ) : metric === 'cleanSheets' ? (
+                                    <span className={`inline-flex px-3 py-1 text-sm font-bold rounded-full ${
+                                      player.totalCleanSheets >= 50 ? 'bg-green-100 text-green-800' :
+                                      player.totalCleanSheets >= 25 ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-red-100 text-red-800'
+                                    }`}>
+                                      {player.totalCleanSheets}%
                                     </span>
                                   ) : (
                                     <span className="text-lg font-bold text-white">
