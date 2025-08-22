@@ -36,6 +36,7 @@ function Router() {
       <Route path="/league-comparison" component={LeagueComparison} />
       <Route path="/player-stats" component={PlayerStats} />
 
+      <Route path="/projected-goals-cs" component={ProjectedGoalsCS} />
       <Route path="/results-projections" component={ProjectedGoalsCS} />
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
       <Route path="/team-cs-projections" component={TeamCSProjections} />
