@@ -126,6 +126,7 @@ export default function LiveRank() {
     if (!manager?.leagues?.classic) return [];
     
     return manager.leagues.classic
+      .filter((league: any) => league.id > 1000) // Only show private leagues
       .filter((league: any) => league.entry_rank <= 100) // Only show top 100 positions
       .sort((a: any, b: any) => a.entry_rank - b.entry_rank)
       .slice(0, 5); // Top 5 leagues
@@ -300,10 +301,10 @@ export default function LiveRank() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Trophy className="h-5 w-5" />
-                Top League Positions
+                Top Private League Positions
               </CardTitle>
               <CardDescription>
-                Your best positions in leagues you've joined
+                Your best positions in private leagues (top 100 only)
               </CardDescription>
             </CardHeader>
             <CardContent>
