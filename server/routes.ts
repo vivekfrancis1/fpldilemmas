@@ -513,7 +513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const positions = bootstrapData.element_types;
       
       // Advanced price prediction algorithm based on authentic FPL mechanics and data
-      const predictions = [];
+      const validPredictions = [];
       
       for (const player of elements) {
         try {
@@ -521,10 +521,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let transfersIn = player.transfers_in_event || 0;
           let transfersOut = player.transfers_out_event || 0;
           
-          const latestData = await storage.getLatestPriceData(player.id);
-          if (latestData) {
-            transfersIn = latestData.dailyTransfersIn || transfersIn;
-            transfersOut = latestData.dailyTransfersOut || transfersOut;
+          try {
+            const latestData = await storage.getLatestPriceData(player.id);
+            if (latestData) {
+              transfersIn = latestData.dailyTransfersIn || transfersIn;
+              transfersOut = latestData.dailyTransfersOut || transfersOut;
+            }
+          } catch (error) {
+            // Use FPL API data as fallback
           }
           
           const netTransfers = transfersIn - transfersOut;
@@ -640,7 +644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          return {
+          const prediction = {
             player_id: player.id,
             player_name: player.web_name,
             team_name: teams.find((t: any) => t.id === player.team)?.short_name || "Unknown",
@@ -658,9 +662,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fall_threshold: Math.round(adjustedFallThreshold),
             transfer_velocity: Math.round(transferVelocity)
           };
+          
+          validPredictions.push(prediction);
         } catch (error) {
-          // Skip individual player errors
-          return null;
+          // Skip individual player errors and continue
+          console.error(`Error processing prediction for player ${player.id}:`, error);
         }
       }
       
