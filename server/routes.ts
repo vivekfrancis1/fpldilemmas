@@ -2214,8 +2214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const filteredProjections = projections
         .filter(p => p.predicted_points > 0.5 && p.availability_status >= 25)
-        .sort((a, b) => b.predicted_points - a.predicted_points)
-        .slice(0, 100); // Show top 100 predictions
+        .sort((a, b) => b.predicted_points - a.predicted_points); // Show all predictions
       
       console.log(`Generated ${projections.length} total projections, filtered to ${filteredProjections.length}`);
       
@@ -2224,8 +2223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Return some basic projections to show data
         const basicProjections = projections
           .filter(p => p.predicted_points > 0)
-          .sort((a, b) => b.predicted_points - a.predicted_points)
-          .slice(0, 100); // Show top 100 basic projections
+          .sort((a, b) => b.predicted_points - a.predicted_points); // Show all basic projections
         res.json(basicProjections);
       } else {
         res.json(filteredProjections);
