@@ -784,11 +784,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Goal Share API called for gameweek=${gameweek}`);
       
-      // Generate team goal projections data to get exact expected goals
-      const teamGoalProjections = generateTeamGoalProjections(bootstrapData, fixturesData, 6, gameweek);
+      // Generate team goal projections data using the same logic as the endpoint
+      const teams = bootstrapData.teams;
+      const teamProjections: any[] = [];
+      
+      teams.forEach((team: any) => {
+        const gameweekProjections: any = {};
+        
+        // Generate projections for next 6 gameweeks (same as team-goal-projections endpoint)
+        for (let gw = gameweek; gw < gameweek + 6; gw++) {
+          const gwFixtures = fixturesData.filter((fixture: any) => 
+            !fixture.finished && 
+            fixture.event === gw &&
+            (fixture.team_h === team.id || fixture.team_a === team.id)
+          );
+          
+          if (gwFixtures.length > 0) {
+            const fixture = gwFixtures[0];
+            const isHome = fixture.team_h === team.id;
+            
+            // Use deterministic calculation with same logic as team-goal-projections
+            const teamSeed = (team.id * gw * 13) % 100;
+            let baseExpectedGoals;
+            
+            if (isHome) {
+              const homeStrength = (team.strength_attack_home || 1000) / 1000;
+              const opponentTeam = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
+              const opponentDefense = ((opponentTeam?.strength_defence_away || 1000) / 1000);
+              baseExpectedGoals = (homeStrength * (2.5 - opponentDefense)) * 1.1;
+            } else {
+              const awayStrength = (team.strength_attack_away || 1000) / 1000;
+              const opponentTeam = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
+              const opponentDefense = ((opponentTeam?.strength_defence_home || 1000) / 1000);
+              baseExpectedGoals = awayStrength * (2.3 - opponentDefense);
+            }
+            
+            // Apply deterministic variance
+            const variance = (teamSeed - 50) / 100 * 0.3;
+            let expectedGoals = baseExpectedGoals * (1 + variance);
+            
+            // Apply bounds and round
+            expectedGoals = Math.max(0.3, Math.min(4.5, expectedGoals));
+            gameweekProjections[gw.toString()] = Math.round(expectedGoals * 100) / 100;
+          }
+        }
+        
+        teamProjections.push({
+          id: team.id,
+          team: team.short_name,
+          teamShort: team.short_name,
+          teamName: team.name,
+          gameweekProjections
+        });
+      });
       
       // Generate goal share data using Team Goal Projections expected goals
-      const goalShareData = generateGoalShareFromTeamProjections(bootstrapData, fixturesData, teamGoalProjections, gameweek);
+      const goalShareData = generateGoalShareFromTeamProjections(bootstrapData, fixturesData, teamProjections, gameweek);
       
       console.log(`DEBUG: Generated ${goalShareData.length} team entries for GW${gameweek} using Team Goal Projections`);
       
