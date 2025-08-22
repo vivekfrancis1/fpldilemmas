@@ -372,7 +372,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       const bootstrapData = await bootstrapResponse.json();
       
-      // Generate projections based on current player data and form
+      // Fetch historical data for enhanced projections (sample of players for performance)
+      const historicalData = new Map();
+      const sampleSize = Math.min(100, bootstrapData.elements.length);
+      const playerSummaryPromises = bootstrapData.elements.slice(0, sampleSize).map(async (player: any) => {
+        try {
+          const summaryResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+          const summaryData = await summaryResponse.json();
+          historicalData.set(player.id, summaryData.history_past || []);
+        } catch (error) {
+          historicalData.set(player.id, []);
+        }
+      });
+      
+      await Promise.all(playerSummaryPromises);
+      
+      // Generate projections based on current player data, form, and historical performance
       const projections = bootstrapData.elements.map((player: any) => {
         const team = bootstrapData.teams.find((t: any) => t.id === player.team);
         const position = bootstrapData.element_types.find((p: any) => p.id === player.element_type);
@@ -389,9 +404,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pointsPerGame = parseFloat(player.points_per_game) || 0;
         const selectedByPercent = player.selected_by_percent || 0;
         
-        // Enhanced form analysis with recency bias
+        // Historical performance analysis with recency weighting
+        const playerHistory = historicalData.get(player.id) || [];
+        let historicalGoalRate = 0, historicalAssistRate = 0, historicalMinutesPerGame = 0, historicalPPG = 0;
+        let historicalCleanSheetRate = 0, historicalBonusRate = 0;
+        
+        if (playerHistory.length > 0) {
+          // Weight recent seasons more heavily: current season weight = 1.0, last season = 0.7, older = 0.4
+          let totalWeight = 0;
+          
+          playerHistory.forEach((season: any, index: number) => {
+            const weight = index === 0 ? 0.7 : index === 1 ? 0.4 : 0.2; // Most recent non-current season gets highest weight
+            const seasonMinutes = season.minutes || 0;
+            const gamesPlayed = Math.max(1, seasonMinutes / 70); // Approximate games played
+            
+            if (seasonMinutes > 500) { // Only consider seasons with significant playing time
+              historicalGoalRate += (season.goals_scored / seasonMinutes * 90) * weight;
+              historicalAssistRate += (season.assists / seasonMinutes * 90) * weight;
+              historicalMinutesPerGame += (seasonMinutes / gamesPlayed) * weight;
+              historicalPPG += (season.total_points / gamesPlayed) * weight;
+              historicalCleanSheetRate += (season.clean_sheets / gamesPlayed) * weight;
+              historicalBonusRate += (season.bonus / gamesPlayed) * weight;
+              totalWeight += weight;
+            }
+          });
+          
+          if (totalWeight > 0) {
+            historicalGoalRate /= totalWeight;
+            historicalAssistRate /= totalWeight;
+            historicalMinutesPerGame /= totalWeight;
+            historicalPPG /= totalWeight;
+            historicalCleanSheetRate /= totalWeight;
+            historicalBonusRate /= totalWeight;
+          }
+        }
+        
+        // Enhanced form analysis with recency bias and historical context
+        const historicalFormAdjustment = historicalPPG > 0 ? (historicalPPG / 6) * 0.2 : 0; // Small boost from historical PPG
         const formConsistency = Math.max(0.3, Math.min(1.5, 
-          (currentForm * 0.6 + pointsPerGame * 0.4) / 6 + 0.7
+          (currentForm * 0.6 + pointsPerGame * 0.4) / 6 + 0.7 + historicalFormAdjustment
         ));
         
         // Team strength based on average points and clean sheet potential
@@ -402,18 +453,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fixture analysis based on team strengths (simplified but more realistic)
         const fixtureStrength = Math.max(0.6, Math.min(1.4, teamStrength * (0.85 + Math.random() * 0.3)));
         
-        // Enhanced minutes projection based on recent playing time and status
+        // Enhanced minutes projection combining current and historical playing time
         const recentMinutesPerGame = player.minutes > 0 ? player.minutes / Math.max(1, 10) : 20; // Assume 10 games played
         const statusMultiplier = player.status === 'a' ? 1.0 : player.status === 'd' ? 0.3 : 0.8; // Available, Doubtful, Injured
         
+        // Blend current and historical minutes per game (80% current, 20% historical for playing time)
+        const blendedMinutesPerGame = historicalMinutesPerGame > 0 ? 
+          (recentMinutesPerGame * 0.8 + historicalMinutesPerGame * 0.2) : recentMinutesPerGame;
+        
         // Playing time probability based on recent performance and selection
-        const basePlayingTime = Math.min(90, Math.max(15, recentMinutesPerGame));
+        const basePlayingTime = Math.min(90, Math.max(15, blendedMinutesPerGame));
         const consistencyBonus = Math.min(0.2, selectedByPercent / 50); // Popular players get slight bonus
         const projectedMinutes = Math.round(basePlayingTime * weeks * statusMultiplier * formConsistency * (1 + consistencyBonus));
         
-        // Enhanced goals projection with position-specific analysis
+        // Enhanced goals projection combining current and historical data
         const currentGoalRate = player.goals_scored / Math.max(player.minutes, 90); // Goals per 90 minutes
         const expectedGoalsData = player.expected_goals || player.goals_scored * 1.1; // Use xG if available
+        
+        // Blend current season performance with historical trends (70% current, 30% historical)
+        const blendedGoalRate = historicalGoalRate > 0 ? 
+          (currentGoalRate * 0.7 + historicalGoalRate * 0.3) : currentGoalRate;
         
         // Position-specific multipliers based on real FPL patterns
         const positionGoalData = {
@@ -425,13 +484,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const posData = positionGoalData[position?.singular_name as keyof typeof positionGoalData] || positionGoalData['Midfielder'];
         const enhancedGoalRate = Math.max(posData.base - posData.variance, 
-          Math.min(posData.base + posData.variance, currentGoalRate * 1.2 + posData.base * 0.3));
+          Math.min(posData.base + posData.variance, blendedGoalRate * 1.2 + posData.base * 0.2));
         
         const projectedGoals = enhancedGoalRate * (projectedMinutes / 90) * formConsistency * fixtureStrength;
         
-        // Enhanced assists projection with creativity metrics
+        // Enhanced assists projection with creativity metrics and historical data
         const currentAssistRate = player.assists / Math.max(player.minutes, 90);
         const creativityScore = (player.creativity || 0) / 100; // FPL creativity stat
+        
+        // Blend current and historical assist rates (70% current, 30% historical)
+        const blendedAssistRate = historicalAssistRate > 0 ? 
+          (currentAssistRate * 0.7 + historicalAssistRate * 0.3) : currentAssistRate;
         
         // Position-specific assist expectations
         const positionAssistData = {
@@ -443,7 +506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const assistData = positionAssistData[position?.singular_name as keyof typeof positionAssistData] || positionAssistData['Midfielder'];
         const enhancedAssistRate = Math.max(0.01, 
-          Math.min(assistData.base * 2, currentAssistRate * 1.1 + (creativityScore * assistData.creativity * 0.1)));
+          Math.min(assistData.base * 2, blendedAssistRate * 1.1 + (creativityScore * assistData.creativity * 0.1)));
         
         const projectedAssists = enhancedAssistRate * (projectedMinutes / 90) * formConsistency * teamStrength;
         
@@ -461,18 +524,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           projectedCleanSheets = teamCleanSheetRate * weeks * fixtureStrength * positionMultiplier;
         }
         
-        // Enhanced bonus points based on historical BPS patterns
+        // Enhanced bonus points based on historical BPS patterns and current performance
         const bpsPerformance = (player.bonus || 0) / Math.max(1, 10); // Bonus points per game
         const threatScore = (player.threat || 0) / 100; // FPL threat metric
         const influenceScore = (player.influence || 0) / 100; // FPL influence metric
         
-        // More sophisticated bonus calculation
+        // Factor in historical bonus rate (60% current trend, 40% historical)
+        const blendedBonusRate = historicalBonusRate > 0 ? 
+          (bpsPerformance * 0.6 + historicalBonusRate * 0.4) : bpsPerformance;
+        
+        // More sophisticated bonus calculation with historical context
         const expectedBps = (projectedGoals * 24 + projectedAssists * 18 + 
           projectedCleanSheets * (isDefensive ? 12 : 0) + 
           (projectedMinutes / 90) * 2) * (1 + threatScore * 0.1 + influenceScore * 0.1);
         
-        // Convert BPS to actual bonus points (rough approximation)
-        const projectedBonus = Math.max(0, (expectedBps - 15) / 10) * 0.4;
+        // Convert BPS to actual bonus points with historical adjustment
+        const projectedBonus = Math.max(0, ((expectedBps - 15) / 10) * 0.4 + blendedBonusRate * weeks * 0.3);
         
         // Accurate FPL points calculation
         const minutesPoints = Math.floor(projectedMinutes / 60) * 2; // 2 points per 60+ minutes
@@ -498,7 +565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const cbitScore = Math.max(0, (projectedPPG - threshold + 2) / 4);
         const cbitPercentage = Math.min(95, Math.max(1, Math.round(cbitScore * 100)));
         
-        // Advanced confidence scoring based on multiple reliability factors
+        // Advanced confidence scoring with historical data reliability
         const gamesSample = Math.min(1, player.minutes / 450); // At least 5 full games for good sample
         const formConsistencyScore = 1 - Math.abs(currentForm - pointsPerGame) / Math.max(pointsPerGame, 2);
         const selectionStability = Math.min(1, selectedByPercent / 20); // Popular = more reliable data
@@ -506,20 +573,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position?.singular_name === 'Defender' ? 0.8 :
           position?.singular_name === 'Midfielder' ? 0.7 : 0.6; // Forwards more volatile
         
+        // Historical data reliability boost
+        const historicalReliability = playerHistory.length > 0 ? Math.min(0.2, playerHistory.length * 0.1) : 0;
+        
         // Injury and availability factor
         const availabilityScore = player.status === 'a' ? 1.0 : 
           player.status === 'd' ? 0.6 : 0.2;
         
-        // Combined confidence score (0-1 scale)
-        const confidenceScore = (
-          gamesSample * 0.25 +
-          formConsistencyScore * 0.25 +
+        // Combined confidence score with historical boost (0-1 scale)
+        const confidenceScore = Math.min(1, (
+          gamesSample * 0.22 +
+          formConsistencyScore * 0.22 +
           selectionStability * 0.15 +
-          positionReliability * 0.20 +
-          availabilityScore * 0.15
-        );
+          positionReliability * 0.18 +
+          availabilityScore * 0.15 +
+          historicalReliability * 0.08
+        ));
         
-        const confidence = confidenceScore > 0.75 ? 'High' : confidenceScore > 0.5 ? 'Medium' : 'Low';
+        const confidence = confidenceScore > 0.78 ? 'High' : confidenceScore > 0.55 ? 'Medium' : 'Low';
         
         // Generate weekly breakdown
         const weeklyProjections: { [gameweek: number]: any } = {};
