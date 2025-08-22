@@ -2282,6 +2282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const expectedPointsData = [];
       
+      console.log(`Processing ${elements.length} players for Expected Points analysis`);
       for (const player of elements) { // Process all 699 players
         try {
           const position = positions.find((p: any) => p.id === player.element_type);

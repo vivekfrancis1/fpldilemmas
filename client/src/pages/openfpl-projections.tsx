@@ -247,9 +247,9 @@ export default function OpenFPLProjections() {
            player.team_name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  const totalPages = Math.ceil(filteredTableData.length / playersPerPage);
+  const totalPages = playersPerPage === 699 ? 1 : Math.ceil(filteredTableData.length / playersPerPage);
   const startIndex = (currentPage - 1) * playersPerPage;
-  const paginatedTableData = filteredTableData.slice(startIndex, startIndex + playersPerPage);
+  const paginatedTableData = playersPerPage === 699 ? filteredTableData : filteredTableData.slice(startIndex, startIndex + playersPerPage);
 
   const formatPrice = (price: number) => `£${(price / 10).toFixed(1)}m`;
 
@@ -523,7 +523,10 @@ export default function OpenFPLProjections() {
                       </Select>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      Showing {startIndex + 1}-{Math.min(startIndex + playersPerPage, filteredTableData.length)} of {filteredTableData.length} players
+                      {playersPerPage === 699 ? 
+                        `Showing all ${filteredTableData.length} players` :
+                        `Showing ${startIndex + 1}-${Math.min(startIndex + playersPerPage, filteredTableData.length)} of ${filteredTableData.length} players`
+                      }
                     </div>
                   </div>
 

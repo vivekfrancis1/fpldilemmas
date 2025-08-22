@@ -268,9 +268,9 @@ export default function PlayerExpectedPoints() {
            player.team_name.toLowerCase().includes(tableSearchQuery.toLowerCase());
   });
 
-  const totalPages = Math.ceil(filteredTableData.length / playersPerPage);
+  const totalPages = playersPerPage === 699 ? 1 : Math.ceil(filteredTableData.length / playersPerPage);
   const startIndex = (currentPage - 1) * playersPerPage;
-  const paginatedTableData = filteredTableData.slice(startIndex, startIndex + playersPerPage);
+  const paginatedTableData = playersPerPage === 699 ? filteredTableData : filteredTableData.slice(startIndex, startIndex + playersPerPage);
 
   // Get actual gameweek numbers from bootstrap data
   const getGameweekNumber = (gwType: string) => {
@@ -561,7 +561,10 @@ export default function PlayerExpectedPoints() {
                       </Select>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      Showing {startIndex + 1}-{Math.min(startIndex + playersPerPage, filteredTableData.length)} of {filteredTableData.length} players
+                      {playersPerPage === 699 ? 
+                        `Showing all ${filteredTableData.length} players` :
+                        `Showing ${startIndex + 1}-${Math.min(startIndex + playersPerPage, filteredTableData.length)} of ${filteredTableData.length} players`
+                      }
                     </div>
                   </div>
 
