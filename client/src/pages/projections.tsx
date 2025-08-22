@@ -57,7 +57,7 @@ export default function Projections() {
   const projections = useMemo(() => {
     if (!bootstrapData?.elements || !projectionsData) {
       // Generate weekly projections for demonstration
-      return bootstrapData?.elements?.slice(0, 50).map(player => {
+      return bootstrapData?.elements?.map(player => {
         const team = bootstrapData.teams.find(t => t.id === player.team);
         const position = bootstrapData.element_types.find(p => p.id === player.element_type);
         
@@ -66,7 +66,7 @@ export default function Projections() {
         
         // Generate projections for each week
         for (let week = 1; week <= weeks; week++) {
-          const baseMinutes = Math.max(20, Math.min(90, player.minutes / Math.max(player.starts, 1) || 45));
+          const baseMinutes = Math.max(20, Math.min(90, player.minutes / Math.max(1, 1) || 45));
           const weekMinutes = Math.round(baseMinutes * (0.85 + Math.random() * 0.3));
           
           const goalsPerMinute = player.goals_scored / Math.max(player.minutes, 1);
@@ -395,7 +395,11 @@ export default function Projections() {
                                       </span>
                                     ) : (
                                       <span className="text-sm font-semibold text-gray-900">
-                                        {player[`total${metric.charAt(0).toUpperCase() + metric.slice(1)}` as keyof PlayerProjection]}
+                                        {(() => {
+                                          const key = `total${metric.charAt(0).toUpperCase() + metric.slice(1)}` as keyof PlayerProjection;
+                                          const value = player[key];
+                                          return typeof value === 'number' ? value : 0;
+                                        })()}
                                       </span>
                                     )}
                                   </td>

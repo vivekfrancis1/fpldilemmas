@@ -373,7 +373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       
       // Generate projections based on current player data and form
-      const projections = bootstrapData.elements.slice(0, 100).map((player: any) => {
+      const projections = bootstrapData.elements.map((player: any) => {
         const team = bootstrapData.teams.find((t: any) => t.id === player.team);
         const position = bootstrapData.element_types.find((p: any) => p.id === player.element_type);
         
@@ -386,9 +386,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const formMultiplier = Math.max(0.5, Math.min(2.0, (player.form || 0) / 5 + 0.8));
         const fixtureStrength = Math.random() * 0.4 + 0.8; // Placeholder for fixture analysis
         
-        // Base minutes projection
-        const avgMinutes = player.minutes > 0 ? player.minutes / Math.max(player.starts, 1) : 45;
-        const playTimeProb = Math.min(0.95, Math.max(0.1, player.minutes / (90 * Math.max(player.starts, 1)) || 0.5));
+        // Base minutes projection  
+        const avgMinutes = player.minutes > 0 ? Math.min(90, player.minutes / Math.max(1, 1)) : 45;
+        const playTimeProb = Math.min(0.95, Math.max(0.1, player.minutes / (90 * Math.max(1, 1)) || 0.5));
         const projectedMinutes = Math.round(avgMinutes * weeks * playTimeProb * formMultiplier);
         
         // Goals projection based on position and current rate
@@ -425,7 +425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const cbitPercentage = Math.min(95, Math.max(1, Math.round(playerValue * 3.5)));
         
         // Confidence based on consistency and sample size
-        const consistency = 1 - (Math.abs(player.form - (player.total_points / Math.max(player.starts, 1))) / 10);
+        const consistency = 1 - (Math.abs(parseFloat(player.form) - (player.total_points / Math.max(1, 1))) / 10);
         const sampleSize = Math.min(1, player.minutes / 500);
         const confidenceScore = consistency * sampleSize;
         
