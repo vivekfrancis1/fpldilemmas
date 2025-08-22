@@ -20,7 +20,6 @@ import PlayerStats from "./pages/player-stats";
 import ProjectedGoalsCS from "./pages/projected-goals-cs";
 import TeamGoalProjections from "./pages/team-goal-projections";
 import TeamCSProjections from "./pages/team-cs-projections";
-import PlayerMinutes from "./pages/player-minutes";
 
 function Router() {
   return (
@@ -42,7 +41,6 @@ function Router() {
       <Route path="/team-cs-projections" component={TeamCSProjections} />
       <Route path="/goal-share" component={GoalShare} />
       <Route path="/assist-share" component={AssistShare} />
-      <Route path="/player-minutes" component={PlayerMinutes} />
       <Route component={NotFound} />
     </Switch>
   );
