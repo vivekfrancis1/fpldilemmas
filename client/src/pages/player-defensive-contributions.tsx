@@ -15,11 +15,7 @@ interface PlayerDefensiveData {
   team: string;
   position: string;
   gameweek: number;
-  clearances_probability: number;
-  blocks_probability: number;
-  interceptions_probability: number;
-  tackles_probability: number;
-  recoveries_probability: number; // Only for MID/FWD
+  threshold_probability: number; // Chance of hitting 10+ CBIT or 12+ CBITR
 }
 
 interface BootstrapData {
@@ -47,7 +43,7 @@ export default function PlayerDefensiveContributions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"name" | "clearances" | "blocks" | "interceptions" | "tackles" | "recoveries">("tackles");
+  const [sortBy, setSortBy] = useState<"name" | "avg-desc" | "avg-asc" | "gw2" | "gw3" | "gw4" | "gw5" | "gw6" | "gw7">("avg-desc");
 
   // Get bootstrap data for player and team info
   const { data: bootstrapData, isLoading: isBootstrapLoading } = useQuery<BootstrapData>({
@@ -55,60 +51,27 @@ export default function PlayerDefensiveContributions() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Generate player CBIT/CBITR data using deterministic approach
+  // Generate player CBIT/CBITR threshold data using deterministic approach
   const generatePlayerDefensiveData = (gameweek: number, playerData: any) => {
     const seed = playerData.id * gameweek * 1789;
     const random1 = (seed * 9301 + 49297) % 233280 / 233280;
-    const random2 = ((seed + 1234) * 9301 + 49297) % 233280 / 233280;
-    const random3 = ((seed + 5678) * 9301 + 49297) % 233280 / 233280;
-    const random4 = ((seed + 9012) * 9301 + 49297) % 233280 / 233280;
-    const random5 = ((seed + 3456) * 9301 + 49297) % 233280 / 233280;
     
-    // Position-based CBIT/CBITR defensive actions
-    let baseClearances = 0.2;
-    let baseBlocks = 0.15;
-    let baseInterceptions = 0.25;
-    let baseTackles = 0.3;
-    let baseRecoveries = 0.35;
+    // Position-based base probability of hitting thresholds
+    let baseThreshold = 0.2;
     
     if (playerData.element_type === 1) { // Goalkeepers
-      baseClearances = 0.4; // GKs clear a lot
-      baseBlocks = 0.3;
-      baseInterceptions = 0.15;
-      baseTackles = 0.05; // GKs rarely tackle
-      baseRecoveries = 0.25;
-    } else if (playerData.element_type === 2) { // Defenders (CBIT)
-      baseClearances = 0.6; // Defenders clear the most
-      baseBlocks = 0.4;
-      baseInterceptions = 0.35;
-      baseTackles = 0.5;
-      baseRecoveries = 0.0; // Not part of CBIT for defenders
-    } else if (playerData.element_type === 3) { // Midfielders (CBITR)
-      baseClearances = 0.25;
-      baseBlocks = 0.2;
-      baseInterceptions = 0.4; // Midfielders intercept well
-      baseTackles = 0.45;
-      baseRecoveries = 0.5; // Good at recoveries
-    } else if (playerData.element_type === 4) { // Forwards (CBITR)
-      baseClearances = 0.1; // Forwards rarely clear
-      baseBlocks = 0.05;
-      baseInterceptions = 0.15;
-      baseTackles = 0.2;
-      baseRecoveries = 0.25;
+      baseThreshold = 0.15; // GKs less likely to hit defensive thresholds
+    } else if (playerData.element_type === 2) { // Defenders (10+ CBIT)
+      baseThreshold = 0.45; // Defenders most likely to hit 10+ CBIT
+    } else if (playerData.element_type === 3) { // Midfielders (12+ CBITR)
+      baseThreshold = 0.35; // Midfielders good chance for 12+ CBITR
+    } else if (playerData.element_type === 4) { // Forwards (12+ CBITR)
+      baseThreshold = 0.15; // Forwards least likely to hit 12+ CBITR
     }
     
-    // Add variance for individual player performance
-    const clearancesVariance = random1 * 0.3 - 0.15;
-    const blocksVariance = random2 * 0.3 - 0.15;
-    const interceptionsVariance = random3 * 0.3 - 0.15;
-    const tacklesVariance = random4 * 0.3 - 0.15;
-    const recoveriesVariance = random5 * 0.3 - 0.15;
-    
-    const clearancesProb = Math.max(0, Math.min(1, baseClearances + clearancesVariance));
-    const blocksProb = Math.max(0, Math.min(1, baseBlocks + blocksVariance));
-    const interceptionsProb = Math.max(0, Math.min(1, baseInterceptions + interceptionsVariance));
-    const tacklesProb = Math.max(0, Math.min(1, baseTackles + tacklesVariance));
-    const recoveriesProb = Math.max(0, Math.min(1, baseRecoveries + recoveriesVariance));
+    // Add individual player variance
+    const playerVariance = random1 * 0.4 - 0.2; // -0.2 to +0.2
+    const finalThreshold = Math.max(0.05, Math.min(0.8, baseThreshold + playerVariance));
     
     return {
       player_id: playerData.id,
@@ -116,11 +79,7 @@ export default function PlayerDefensiveContributions() {
       team: getTeamShortName(playerData.team),
       position: getPositionShortName(playerData.element_type),
       gameweek,
-      clearances_probability: Math.round(clearancesProb * 100),
-      blocks_probability: Math.round(blocksProb * 100),
-      interceptions_probability: Math.round(interceptionsProb * 100),
-      tackles_probability: Math.round(tacklesProb * 100),
-      recoveries_probability: Math.round(recoveriesProb * 100)
+      threshold_probability: Math.round(finalThreshold * 100)
     };
   };
 
@@ -154,11 +113,11 @@ export default function PlayerDefensiveContributions() {
     );
   };
 
-  // Calculate average for each metric
-  const getPlayerAverageMetric = (playerId: number, metric: keyof PlayerDefensiveData): number => {
+  // Calculate average threshold probability
+  const getPlayerAverageThreshold = (playerId: number): number => {
     const playerData = playerDefensiveData.filter(data => data.player_id === playerId);
     if (playerData.length === 0) return 0;
-    const total = playerData.reduce((sum, data) => sum + (data[metric] as number), 0);
+    const total = playerData.reduce((sum, data) => sum + data.threshold_probability, 0);
     return Math.round((total / playerData.length));
   };
 
@@ -193,16 +152,20 @@ export default function PlayerDefensiveContributions() {
       switch (sortBy) {
         case "name":
           return a.web_name.localeCompare(b.web_name);
-        case "clearances":
-          return getPlayerAverageMetric(b.id, "clearances_probability") - getPlayerAverageMetric(a.id, "clearances_probability");
-        case "blocks":
-          return getPlayerAverageMetric(b.id, "blocks_probability") - getPlayerAverageMetric(a.id, "blocks_probability");
-        case "interceptions":
-          return getPlayerAverageMetric(b.id, "interceptions_probability") - getPlayerAverageMetric(a.id, "interceptions_probability");
-        case "tackles":
-          return getPlayerAverageMetric(b.id, "tackles_probability") - getPlayerAverageMetric(a.id, "tackles_probability");
-        case "recoveries":
-          return getPlayerAverageMetric(b.id, "recoveries_probability") - getPlayerAverageMetric(a.id, "recoveries_probability");
+        case "avg-desc":
+          return getPlayerAverageThreshold(b.id) - getPlayerAverageThreshold(a.id);
+        case "avg-asc":
+          return getPlayerAverageThreshold(a.id) - getPlayerAverageThreshold(b.id);
+        case "gw2":
+        case "gw3":
+        case "gw4":
+        case "gw5":
+        case "gw6":
+        case "gw7":
+          const gameweek = parseInt(sortBy.replace("gw", ""));
+          const aData = getPlayerGameweekData(a.id, gameweek);
+          const bData = getPlayerGameweekData(b.id, gameweek);
+          return (bData?.threshold_probability || 0) - (aData?.threshold_probability || 0);
         default:
           return 0;
       }
@@ -253,7 +216,7 @@ export default function PlayerDefensiveContributions() {
               Player Defensive Contributions (CBIT/CBITR)
             </h1>
             <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed px-2" data-testid="text-page-description">
-              CBIT metrics for defenders and CBITR metrics for midfielders/forwards across upcoming gameweeks
+              Percentage chance of hitting CBIT/CBITR thresholds for defensive bonus points across upcoming gameweeks
             </p>
           </div>
 
@@ -261,11 +224,11 @@ export default function PlayerDefensiveContributions() {
           <Alert className="mb-4 sm:mb-6">
             <Info className="h-4 w-4" />
             <AlertDescription className="text-xs sm:text-sm">
-              <strong>CBIT (Defenders):</strong> Clearances, Blocks, Interceptions, Tackles
+              <strong>Defenders need 10+ CBIT:</strong> Clearances + Blocks + Interceptions + Tackles = 10 points for defensive bonus
               <br />
-              <strong>CBITR (MID/FWD):</strong> Clearances, Blocks, Interceptions, Tackles, Recoveries
+              <strong>Midfielders/Forwards need 12+ CBITR:</strong> Clearances + Blocks + Interceptions + Tackles + Recoveries = 12 points for defensive bonus
               <br />
-              <strong>Purpose:</strong> Key FPL defensive actions that contribute to ICT index and bonus point potential.
+              <strong>Purpose:</strong> Shows percentage chance of hitting these thresholds for defensive contribution points.
             </AlertDescription>
           </Alert>
 
@@ -312,19 +275,10 @@ export default function PlayerDefensiveContributions() {
                   </SelectContent>
                 </Select>
 
-                <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-                  <SelectTrigger data-testid="select-sort-by">
-                    <SelectValue placeholder="Sort by..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tackles">Tackles</SelectItem>
-                    <SelectItem value="clearances">Clearances</SelectItem>
-                    <SelectItem value="interceptions">Interceptions</SelectItem>
-                    <SelectItem value="blocks">Blocks</SelectItem>
-                    <SelectItem value="recoveries">Recoveries</SelectItem>
-                    <SelectItem value="name">Player Name</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                  <Shield className="h-4 w-4 mr-1" />
+                  Showing threshold probabilities
+                </div>
 
                 <div className="flex items-center text-xs sm:text-sm text-gray-600">
                   <Filter className="h-4 w-4 mr-1" />
@@ -365,9 +319,9 @@ export default function PlayerDefensiveContributions() {
           {/* Results Table */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base sm:text-lg">CBIT/CBITR Performance Matrix</CardTitle>
+              <CardTitle className="text-base sm:text-lg">CBIT/CBITR Threshold Probabilities</CardTitle>
               <CardDescription>
-                Average CBIT (defenders) and CBITR (midfielders/forwards) metrics across next 6 gameweeks
+                Percentage chance of hitting 10+ CBIT (defenders) or 12+ CBITR (midfielders/forwards) thresholds
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -375,38 +329,86 @@ export default function PlayerDefensiveContributions() {
                 <table className="w-full text-xs sm:text-sm">
                   <thead>
                     <tr className="border-b bg-muted/50">
-                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-left min-w-[120px] sm:min-w-[180px] sticky left-0 bg-muted/50 z-10">
-                        Player
+                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-left min-w-[120px] sm:min-w-[200px] sticky left-0 bg-muted/50 z-10">
+                        <button 
+                          onClick={() => setSortBy(sortBy === "name" ? "name" : "name")}
+                          className="flex items-center gap-1 hover:text-primary transition-colors"
+                          data-testid="sort-player-name"
+                        >
+                          Player
+                          {sortBy === "name" && <ChevronUp className="h-3 w-3" />}
+                        </button>
                       </th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[50px] sm:min-w-[70px]">
-                        <div className="text-center">
-                          <div className="font-medium">Clearances</div>
-                          <div className="text-xs text-muted-foreground">Avg %</div>
-                        </div>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy(sortBy === "avg-desc" ? "avg-asc" : "avg-desc")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-avg-threshold"
+                        >
+                          Avg
+                          {sortBy === "avg-desc" && <ChevronDown className="h-3 w-3" />}
+                          {sortBy === "avg-asc" && <ChevronUp className="h-3 w-3" />}
+                        </button>
                       </th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[50px] sm:min-w-[70px]">
-                        <div className="text-center">
-                          <div className="font-medium">Blocks</div>
-                          <div className="text-xs text-muted-foreground">Avg %</div>
-                        </div>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy("gw2")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-gw2"
+                        >
+                          GW2
+                          {sortBy === "gw2" && <ChevronDown className="h-3 w-3" />}
+                        </button>
                       </th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[50px] sm:min-w-[70px]">
-                        <div className="text-center">
-                          <div className="font-medium">Interceptions</div>
-                          <div className="text-xs text-muted-foreground">Avg %</div>
-                        </div>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy("gw3")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-gw3"
+                        >
+                          GW3
+                          {sortBy === "gw3" && <ChevronDown className="h-3 w-3" />}
+                        </button>
                       </th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[50px] sm:min-w-[70px]">
-                        <div className="text-center">
-                          <div className="font-medium">Tackles</div>
-                          <div className="text-xs text-muted-foreground">Avg %</div>
-                        </div>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy("gw4")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-gw4"
+                        >
+                          GW4
+                          {sortBy === "gw4" && <ChevronDown className="h-3 w-3" />}
+                        </button>
                       </th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[50px] sm:min-w-[70px]">
-                        <div className="text-center">
-                          <div className="font-medium">Recoveries</div>
-                          <div className="text-xs text-muted-foreground">Avg %</div>
-                        </div>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy("gw5")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-gw5"
+                        >
+                          GW5
+                          {sortBy === "gw5" && <ChevronDown className="h-3 w-3" />}
+                        </button>
+                      </th>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy("gw6")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-gw6"
+                        >
+                          GW6
+                          {sortBy === "gw6" && <ChevronDown className="h-3 w-3" />}
+                        </button>
+                      </th>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy("gw7")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-gw7"
+                        >
+                          GW7
+                          {sortBy === "gw7" && <ChevronDown className="h-3 w-3" />}
+                        </button>
                       </th>
                     </tr>
                   </thead>
@@ -427,34 +429,22 @@ export default function PlayerDefensiveContributions() {
                           </div>
                         </td>
                         <td className="px-2 sm:px-3 py-2 text-center">
-                          <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "clearances_probability"))}`}>
-                            {getPlayerAverageMetric(player.id, "clearances_probability")}%
+                          <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageThreshold(player.id))}`}>
+                            {getPlayerAverageThreshold(player.id)}%
                           </div>
                         </td>
-                        <td className="px-2 sm:px-3 py-2 text-center">
-                          <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "blocks_probability"))}`}>
-                            {getPlayerAverageMetric(player.id, "blocks_probability")}%
-                          </div>
-                        </td>
-                        <td className="px-2 sm:px-3 py-2 text-center">
-                          <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "interceptions_probability"))}`}>
-                            {getPlayerAverageMetric(player.id, "interceptions_probability")}%
-                          </div>
-                        </td>
-                        <td className="px-2 sm:px-3 py-2 text-center">
-                          <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "tackles_probability"))}`}>
-                            {getPlayerAverageMetric(player.id, "tackles_probability")}%
-                          </div>
-                        </td>
-                        <td className="px-2 sm:px-3 py-2 text-center">
-                          {player.element_type === 2 ? (
-                            <div className="text-xs text-muted-foreground">N/A</div>
-                          ) : (
-                            <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageMetric(player.id, "recoveries_probability"))}`}>
-                              {getPlayerAverageMetric(player.id, "recoveries_probability")}%
-                            </div>
-                          )}
-                        </td>
+                        {[2, 3, 4, 5, 6, 7].map((gw) => {
+                          const data = getPlayerGameweekData(player.id, gw);
+                          return (
+                            <td key={gw} className="px-2 sm:px-3 py-2 text-center">
+                              {data && (
+                                <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(data.threshold_probability)}`}>
+                                  {data.threshold_probability}%
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>
@@ -473,8 +463,8 @@ export default function PlayerDefensiveContributions() {
           <Alert className="mt-4 sm:mt-6">
             <Shield className="h-4 w-4" />
             <AlertDescription className="text-xs sm:text-sm">
-              CBIT (defenders) and CBITR (midfielders/forwards) show probability of completing defensive actions. 
-              These metrics directly contribute to ICT index performance and bonus point potential in FPL.
+              Shows percentage chance of hitting defensive thresholds: 10+ CBIT for defenders, 12+ CBITR for midfielders/forwards.
+              These thresholds are key for earning defensive contribution points in FPL.
             </AlertDescription>
           </Alert>
         </div>
