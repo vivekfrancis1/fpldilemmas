@@ -145,8 +145,9 @@ export default function TeamGoalProjections() {
                       <SelectItem value="total">Total Goals</SelectItem>
                       <SelectItem value="average">Goals/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
-                      {Array.from({ length: weeks }, (_, i) => {
-                        const gwNumber = i + 2;
+                      {bootstrapData?.events && Array.from({ length: weeks }, (_, i) => {
+                        const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+                        const gwNumber = currentGW + i + 1;
                         return (
                           <SelectItem key={`gw${gwNumber}`} value={`gw${gwNumber}`}>GW{gwNumber}</SelectItem>
                         );
@@ -180,8 +181,9 @@ export default function TeamGoalProjections() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
                         Team
                       </th>
-                      {Array.from({ length: weeks }, (_, i) => {
-                        const gwNumber = i + 2;
+                      {bootstrapData?.events && Array.from({ length: weeks }, (_, i) => {
+                        const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+                        const gwNumber = currentGW + i + 1;
                         return (
                           <th 
                             key={gwNumber} 
@@ -234,24 +236,25 @@ export default function TeamGoalProjections() {
                           </div>
                         </td>
                         
-                        {Array.from({ length: weeks }, (_, weekIndex) => {
-                          const gwNumber = weekIndex + 2; // Start from GW2
+                        {bootstrapData?.events && Array.from({ length: weeks }, (_, weekIndex) => {
+                          const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+                          const gwNumber = currentGW + weekIndex + 1;
                           const goals = team.gameweekProjections[gwNumber] || 0;
                           return (
                             <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsColor(goals)}`}>
-                              {goals.toFixed(1)}
+                              {goals.toFixed(2)}
                             </td>
                           );
                         })}
                         
                         <td className="px-4 py-4 text-center bg-orange-50">
                           <span className="text-lg font-bold text-orange-900">
-                            {team.totalGoals.toFixed(1)}
+                            {team.totalGoals.toFixed(2)}
                           </span>
                         </td>
                         
                         <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
-                          {team.averageGoalsPerGame.toFixed(1)}
+                          {team.averageGoalsPerGame.toFixed(2)}
                         </td>
                         
                         <td className="px-4 py-4 text-center">
