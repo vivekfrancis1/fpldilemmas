@@ -991,6 +991,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Projected Goals & CS Odds endpoint
+  app.get("/api/projected-goals-cs", async (req, res) => {
+    try {
+      const selectedGameweek = req.query.gameweek as string || "current";
+      
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      
+      const teams = bootstrapData.teams;
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      const targetGameweek = selectedGameweek === "current" ? currentGameweek : parseInt(selectedGameweek);
+      
+      // Get fixtures for the selected gameweek
+      const gameweekFixtures = fixturesData
+        .filter((fixture: any) => 
+          !fixture.finished && 
+          fixture.event === targetGameweek
+        );
+      
+      const teamProjections: any[] = [];
+      
+      gameweekFixtures.forEach((fixture: any) => {
+        const homeTeam = teams.find((t: any) => t.id === fixture.team_h);
+        const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
+        
+        if (!homeTeam || !awayTeam) return;
+        
+        const kickoffDate = new Date(fixture.kickoff_time);
+        const dayOfWeek = kickoffDate.toLocaleDateString('en-US', { weekday: 'short' });
+        const date = kickoffDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' });
+        
+        // Calculate projections for home team
+        const homeAttackStrength = (homeTeam.strength_attack_home || 1000) / 1000;
+        const awayDefenseStrength = (awayTeam.strength_defence_away || 1000) / 1000;
+        const homeExpectedGoals = (homeAttackStrength * (2.2 - awayDefenseStrength)) * 1.15; // Home advantage
+        
+        const homeDefenseStrength = (homeTeam.strength_defence_home || 1000) / 1000;
+        const awayAttackStrength = (awayTeam.strength_attack_away || 1000) / 1000;
+        const homeCSProbability = Math.max(5, Math.min(65, homeDefenseStrength * (2.0 - awayAttackStrength) * 45));
+        
+        // Calculate projections for away team
+        const awayAttackStrengthCalc = (awayTeam.strength_attack_away || 1000) / 1000;
+        const homeDefenseStrengthCalc = (homeTeam.strength_defence_home || 1000) / 1000;
+        const awayExpectedGoals = awayAttackStrengthCalc * (2.2 - homeDefenseStrengthCalc);
+        
+        const awayDefenseStrengthCalc = (awayTeam.strength_defence_away || 1000) / 1000;
+        const homeAttackStrengthCalc = (homeTeam.strength_attack_home || 1000) / 1000;
+        const awayCSProbability = Math.max(5, Math.min(65, awayDefenseStrengthCalc * (2.0 - homeAttackStrengthCalc) * 35));
+        
+        // Add home team projection
+        teamProjections.push({
+          id: homeTeam.id,
+          team: homeTeam.name,
+          teamShort: homeTeam.short_name,
+          opponent: awayTeam.name,
+          opponentShort: awayTeam.short_name,
+          isHome: true,
+          gameweek: targetGameweek,
+          kickoffTime: fixture.kickoff_time,
+          projectedGoals: Math.round(homeExpectedGoals * 100) / 100,
+          cleanSheetOdds: Math.round(homeCSProbability),
+          dayOfWeek,
+          date,
+          confidence: 'High'
+        });
+        
+        // Add away team projection
+        teamProjections.push({
+          id: awayTeam.id,
+          team: awayTeam.name,
+          teamShort: awayTeam.short_name,
+          opponent: homeTeam.name,
+          opponentShort: homeTeam.short_name,
+          isHome: false,
+          gameweek: targetGameweek,
+          kickoffTime: fixture.kickoff_time,
+          projectedGoals: Math.round(awayExpectedGoals * 100) / 100,
+          cleanSheetOdds: Math.round(awayCSProbability),
+          dayOfWeek,
+          date,
+          confidence: 'High'
+        });
+      });
+      
+      res.json(teamProjections);
+    } catch (error) {
+      console.error("Error fetching projected goals & CS:", error);
+      res.status(500).json({ error: "Failed to fetch projected goals & CS" });
+    }
+  });
+
   // Manager rank API routes
   
   // Get manager basic info and current rank
