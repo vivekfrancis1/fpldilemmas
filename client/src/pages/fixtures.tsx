@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "../components/layout";
 import { Calendar, Home, Plane, Info } from "lucide-react";
@@ -25,7 +25,7 @@ interface Team {
 
 export default function Fixtures() {
   const [gameweekRange, setGameweekRange] = useState(() => {
-    // Start from current gameweek, default to 1-10 for now
+    // Will be updated when we get current gameweek data
     return { start: 1, end: 10 };
   });
 
@@ -39,14 +39,33 @@ export default function Fixtures() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Get current gameweek
-  const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 1;
+  // Get current gameweek and available gameweeks
+  const { currentGameweek, availableGameweeks } = useMemo(() => {
+    if (!bootstrapData?.events) return { currentGameweek: 1, availableGameweeks: [] };
+    
     const currentEvent = bootstrapData.events.find(event => 
       event.is_current || (!event.finished && !event.is_next)
     );
-    return currentEvent ? currentEvent.id : 1;
+    const current = currentEvent ? currentEvent.id : 1;
+    
+    // Only show upcoming gameweeks (current and future)
+    const available = bootstrapData.events
+      .filter(event => event.id >= current)
+      .map(event => event.id)
+      .sort((a, b) => a - b);
+    
+    return { currentGameweek: current, availableGameweeks: available };
   }, [bootstrapData]);
+
+  // Update gameweek range when current gameweek changes
+  useEffect(() => {
+    if (currentGameweek > 1 && gameweekRange.start === 1) {
+      setGameweekRange({
+        start: currentGameweek,
+        end: Math.min(currentGameweek + 9, 38)
+      });
+    }
+  }, [currentGameweek, gameweekRange.start]);
 
   // Get difficulty rating color class
   const getDifficultyColor = (difficulty: number) => {
@@ -71,9 +90,9 @@ export default function Fixtures() {
       matrix[team.id] = {};
     });
 
-    // Fill matrix with fixtures
+    // Fill matrix with fixtures (only upcoming/current fixtures)
     fixturesData.forEach(fixture => {
-      if (fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end) {
+      if (fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end && fixture.event >= currentGameweek) {
         const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
         const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
         
@@ -157,7 +176,7 @@ export default function Fixtures() {
                 className="px-3 py-1 border border-gray-300 rounded text-sm"
                 data-testid="select-start-gameweek"
               >
-                {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
+                {availableGameweeks.map(gw => (
                   <option key={gw} value={gw}>{gw}</option>
                 ))}
               </select>
@@ -168,7 +187,7 @@ export default function Fixtures() {
                 className="px-3 py-1 border border-gray-300 rounded text-sm"
                 data-testid="select-end-gameweek"
               >
-                {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
+                {availableGameweeks.map(gw => (
                   <option key={gw} value={gw}>{gw}</option>
                 ))}
               </select>
@@ -192,11 +211,11 @@ export default function Fixtures() {
                 <span>5 Very Hard</span>
               </div>
               <div className="flex items-center gap-1">
-                <Home className="h-3 w-3 text-gray-600" />
+                <span className="font-medium">H</span>
                 <span>Home</span>
               </div>
               <div className="flex items-center gap-1">
-                <Plane className="h-3 w-3 text-gray-600" />
+                <span className="font-medium">A</span>
                 <span>Away</span>
               </div>
             </div>
@@ -246,11 +265,9 @@ export default function Fixtures() {
                                   data-testid={`fixture-${team.id}-${gw}`}
                                 >
                                   <div className="flex items-center justify-center gap-1">
-                                    {fixture.isHome ? (
-                                      <Home className="h-2 w-2" />
-                                    ) : (
-                                      <Plane className="h-2 w-2" />
-                                    )}
+                                    <span className="text-xs font-bold">
+                                      {fixture.isHome ? 'H' : 'A'}
+                                    </span>
                                     <span className="truncate max-w-8">{fixture.opponent}</span>
                                   </div>
                                 </div>
@@ -305,14 +322,14 @@ export default function Fixtures() {
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Icons</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">Venue Indicators</h4>
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
-                      <Home className="h-4 w-4 text-gray-600" />
+                      <span className="font-bold text-lg">H</span>
                       <span className="text-sm">Home fixture</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Plane className="h-4 w-4 text-gray-600" />
+                      <span className="font-bold text-lg">A</span>
                       <span className="text-sm">Away fixture</span>
                     </div>
                   </div>
