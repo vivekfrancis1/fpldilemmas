@@ -169,7 +169,7 @@ export default function OpenFPLProjections() {
               🤖 Advanced ML ensemble predictions using XGBoost + Random Forest models
             </p>
             <p className="text-blue-200 text-xs sm:text-sm">
-              Based on peer-reviewed OpenFPL research • Rivaling commercial FPL services • Processing all 699 players
+              Based on peer-reviewed OpenFPL research
             </p>
           </div>
         </div>
