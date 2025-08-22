@@ -16,14 +16,15 @@ interface PriceChange {
   player_name: string;
   team_name: string;
   position: string;
-  old_price: number;
-  new_price: number;
-  current_price?: number;
-  change: number;
-  date: string;
+  start_price: number;
+  current_price: number;
+  total_change: number;
+  gameweek_change: number;
   ownership_change: number;
+  ownership: number;
   transfers_in: number;
   transfers_out: number;
+  recency_score?: number;
 }
 
 interface PricePrediction {
@@ -76,8 +77,8 @@ export default function PriceTracker() {
                          change.team_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPosition = positionFilter === "all" || change.position === positionFilter;
     const matchesChangeType = changeTypeFilter === "all" || 
-                             (changeTypeFilter === "rise" && change.change > 0) ||
-                             (changeTypeFilter === "fall" && change.change < 0);
+                             (changeTypeFilter === "rise" && change.total_change > 0) ||
+                             (changeTypeFilter === "fall" && change.total_change < 0);
     return matchesSearch && matchesPosition && matchesChangeType;
   }) : [];
 
@@ -144,9 +145,9 @@ export default function PriceTracker() {
                   </div>
                   <div>
                     <p className="text-xl sm:text-2xl font-bold text-green-600" data-testid="text-total-rises">
-                      {Array.isArray(priceChanges) ? priceChanges.filter((c: PriceChange) => c.change > 0).length : 0}
+                      {Array.isArray(priceChanges) ? priceChanges.filter((c: PriceChange) => c.total_change > 0).length : 0}
                     </p>
-                    <p className="text-xs sm:text-sm text-gray-600">Price Rises Today</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Price Rises This Season</p>
                   </div>
                 </div>
               </CardContent>
@@ -160,9 +161,9 @@ export default function PriceTracker() {
                   </div>
                   <div>
                     <p className="text-xl sm:text-2xl font-bold text-red-600" data-testid="text-total-falls">
-                      {Array.isArray(priceChanges) ? priceChanges.filter((c: PriceChange) => c.change < 0).length : 0}
+                      {Array.isArray(priceChanges) ? priceChanges.filter((c: PriceChange) => c.total_change < 0).length : 0}
                     </p>
-                    <p className="text-xs sm:text-sm text-gray-600">Price Falls Today</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Price Falls This Season</p>
                   </div>
                 </div>
               </CardContent>
@@ -254,7 +255,7 @@ export default function PriceTracker() {
                   Recent Price Changes
                 </CardTitle>
                 <CardDescription>
-                  Latest player price movements and ownership changes
+                  All season price changes ordered by recency and significance
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -284,19 +285,30 @@ export default function PriceTracker() {
                         data-testid={`price-change-${change.player_id}`}
                       >
                         <div className="flex items-center gap-3">
-                          {change.change > 0 ? (
+                          {change.total_change > 0 ? (
                             <TrendingUp className="h-4 w-4 text-green-600" />
-                          ) : change.change < 0 ? (
+                          ) : change.total_change < 0 ? (
                             <TrendingDown className="h-4 w-4 text-red-600" />
+                          ) : change.gameweek_change !== 0 ? (
+                            change.gameweek_change > 0 ? (
+                              <TrendingUp className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <TrendingDown className="h-4 w-4 text-red-600" />
+                            )
                           ) : (
                             <BarChart3 className="h-4 w-4 text-blue-600" />
                           )}
                           <div>
                             <p className="font-medium">{change.player_name}</p>
                             <p className="text-sm text-muted-foreground">
-                              {change.team_name} • {change.position}
+                              {change.team_name} • {change.position} • {change.ownership}% owned
                             </p>
-                            {change.change === 0 && (
+                            {change.gameweek_change !== 0 && (
+                              <p className="text-xs text-orange-600 font-medium">
+                                Recent GW change: {change.gameweek_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.gameweek_change))}
+                              </p>
+                            )}
+                            {change.total_change === 0 && change.gameweek_change === 0 && (
                               <p className="text-xs text-blue-600 font-medium">
                                 High transfer activity ({((change.transfers_in - change.transfers_out)/1000).toFixed(0)}k net)
                               </p>
@@ -304,32 +316,32 @@ export default function PriceTracker() {
                           </div>
                         </div>
                         <div className="text-right">
-                          {change.change !== 0 ? (
+                          {change.total_change !== 0 ? (
                             <div className="flex items-center gap-2">
                               <span className="text-sm text-muted-foreground">
-                                {formatPrice(change.old_price)}
+                                {formatPrice(change.start_price)}
                               </span>
                               <span>→</span>
                               <span className="font-medium">
-                                {formatPrice(change.new_price)}
+                                {formatPrice(change.current_price)}
                               </span>
-                              <Badge variant={change.change > 0 ? "success" : "destructive"}>
-                                {change.change > 0 ? "+" : ""}{formatPrice(Math.abs(change.change))}
+                              <Badge variant={change.total_change > 0 ? "success" : "destructive"}>
+                                {change.total_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.total_change))}
                               </Badge>
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
                               <span className="font-medium">
-                                {formatPrice(change.current_price || change.new_price)}
+                                {formatPrice(change.current_price)}
                               </span>
                               <Badge variant="secondary">
-                                Watch
+                                Active
                               </Badge>
                             </div>
                           )}
                           <div className="text-xs text-muted-foreground mt-1">
                             <p>In: {(change.transfers_in/1000).toFixed(0)}k | Out: {(change.transfers_out/1000).toFixed(0)}k</p>
-                            <p>{change.ownership_change}% owned</p>
+                            <p>Net: {((change.transfers_in - change.transfers_out)/1000).toFixed(0)}k transfers</p>
                           </div>
                         </div>
                       </div>
@@ -338,8 +350,8 @@ export default function PriceTracker() {
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No recent price changes in current gameweek</p>
-                    <p className="text-sm">Players with high transfer activity are shown instead</p>
+                    <p>No price changes found matching your filters</p>
+                    <p className="text-sm">Try adjusting your search criteria or change type filter</p>
                   </div>
                 )}
               </CardContent>

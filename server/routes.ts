@@ -420,15 +420,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get price changes using historical daily tracking data when available
       const recentChanges = [];
       
-      // Only show players with ACTUAL price changes using authentic FPL data
+      // Show ALL price changes from this season using authentic FPL data and historical tracking
       for (const player of elements) {
-        const priceChange = player.cost_change_event || 0;
+        const team = teams.find((t: any) => t.id === player.team);
+        const position = positions.find((p: any) => p.id === player.element_type);
         
-        // Only include players who have actually changed price this gameweek
-        if (priceChange !== 0) {
-          const team = teams.find((t: any) => t.id === player.team);
-          const position = positions.find((p: any) => p.id === player.element_type);
-          
+        // Get all season price changes using cost_change_start (total change from season start)
+        const totalSeasonChange = player.cost_change_start || 0;
+        const currentGameweekChange = player.cost_change_event || 0;
+        
+        // Check if player has any price changes this season OR has price change event data
+        const hasSeasonChange = totalSeasonChange !== 0;
+        const hasGameweekChange = currentGameweekChange !== 0;
+        const hasSignificantActivity = (player.transfers_in_event || 0) > 10000 || (player.transfers_out_event || 0) > 10000;
+        
+        if (hasSeasonChange || hasGameweekChange || hasSignificantActivity) {
           // Get transfer data from daily tracking if available
           let dailyTransfersIn = player.transfers_in_event || 0;
           let dailyTransfersOut = player.transfers_out_event || 0;
@@ -443,31 +449,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Use event data as fallback
           }
           
+          // Calculate start-of-season price
+          const startPrice = player.now_cost - totalSeasonChange;
+          
           recentChanges.push({
             player_id: player.id,
             player_name: player.web_name,
             team_name: team?.short_name || "Unknown",
             position: position?.singular_name_short || "Unknown",
-            old_price: player.now_cost - priceChange,
-            new_price: player.now_cost,
+            start_price: startPrice,
             current_price: player.now_cost,
-            change: priceChange,
+            total_change: totalSeasonChange,
+            gameweek_change: currentGameweekChange,
             ownership_change: ((dailyTransfersIn - dailyTransfersOut) / 10000000) * 100,
             transfers_in: dailyTransfersIn,
             transfers_out: dailyTransfersOut,
-            // Price changes are most recent, so high recency score
-            recency_score: Math.abs(priceChange) * 100000 + Math.abs(dailyTransfersIn - dailyTransfersOut)
+            ownership: parseFloat(player.selected_by_percent || "0"),
+            // Sort by most recent activity - current gameweek changes first, then by transfer activity
+            recency_score: Math.abs(currentGameweekChange) * 100000 + Math.abs(dailyTransfersIn - dailyTransfersOut) + Math.abs(totalSeasonChange) * 10000
           });
         }
       }
       
-      // Sort and limit the results
+      // Sort by recency - most recent gameweek changes first, then by total season change magnitude
       recentChanges.sort((a: any, b: any) => {
-        // Sort by recency score (descending) - most recent/active changes first
+        // First priority: current gameweek changes (most recent)
+        if (Math.abs(b.gameweek_change) !== Math.abs(a.gameweek_change)) {
+          return Math.abs(b.gameweek_change) - Math.abs(a.gameweek_change);
+        }
+        // Second priority: largest total season changes
+        if (Math.abs(b.total_change) !== Math.abs(a.total_change)) {
+          return Math.abs(b.total_change) - Math.abs(a.total_change);
+        }
+        // Third priority: transfer activity (most active)
         return b.recency_score - a.recency_score;
       });
       
-      const limitedChanges = recentChanges.slice(0, 20); // Limit to 20 most recent changes
+      // Show top 30 most significant price movements and transfer activities this season
+      const limitedChanges = recentChanges.slice(0, 30);
       
       res.json(limitedChanges);
     } catch (error) {
