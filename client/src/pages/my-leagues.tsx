@@ -205,9 +205,9 @@ function MyLeagues() {
       )}
 
       {/* Private Leagues Only */}
-      {leaguesData && leaguesData.leagues && (() => {
+      {leaguesData && leaguesData.classic && (() => {
         // Filter to only show private leagues (ID > 1000)
-        const privateLeagues = leaguesData.leagues.classic.filter((league: any) => league.id > 1000);
+        const privateLeagues = leaguesData.classic.filter((league: any) => league.id > 1000);
         
         return (
           <div className="space-y-4">
@@ -258,7 +258,7 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
   getLeagueTypeDisplay: (leagueType: string) => string;
 }) {
   const { data: standingsData, isLoading } = useQuery<LeagueStandings>({
-    queryKey: ["/api/league", league.id, "standings"],
+    queryKey: ["/api/leagues-classic", league.id, "standings"],
     enabled: !!league.id,
   });
 

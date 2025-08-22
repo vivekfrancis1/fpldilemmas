@@ -255,6 +255,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Manager API routes for Live Rank, My Team, and My Leagues
   
+  // Get cached manager ID (for convenience)
+  app.get("/api/manager/cache/last", async (req, res) => {
+    // For now, return empty as we don't have server-side caching
+    // The frontend uses localStorage for this
+    res.json({ managerId: null });
+  });
+
   // Get manager data
   app.get("/api/manager/:managerId", async (req, res) => {
     try {
