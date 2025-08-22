@@ -622,15 +622,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             baseCSProbability *= 0.86; // Rivalry games typically more open and emotional
           }
           
-          // Phase 5: Advanced market-based performance modeling
-          const teamTier = team.id <= 4 ? 'elite' : team.id <= 10 ? 'upper' : team.id <= 16 ? 'mid' : 'lower';
-          const tierMultipliers = {
-            elite: 1.12 + (Math.random() * 0.06), // 112-118% based on consistent quality
-            upper: 1.04 + (Math.random() * 0.08), // 104-112% solid but variable
-            mid: 0.98 + (Math.random() * 0.10),   // 98-108% inconsistent
-            lower: 0.89 + (Math.random() * 0.12)  // 89-101% struggling
-          };
-          baseCSProbability *= tierMultipliers[teamTier];
+          // Phase 5: Realistic performance tier adjustments
+          let tierMultiplier = 1.0;
+          if ([1, 12, 13].includes(team.id)) { // Top 3 defensive teams
+            tierMultiplier = 1.05 + (Math.random() * 0.04); // 105-109%
+          } else if ([2, 15, 16, 5].includes(team.id)) { // Strong defensive units
+            tierMultiplier = 1.02 + (Math.random() * 0.03); // 102-105%
+          } else if ([4, 3, 8, 14].includes(team.id)) { // Average defenses
+            tierMultiplier = 0.98 + (Math.random() * 0.04); // 98-102%
+          } else { // Weaker defensive units
+            tierMultiplier = 0.94 + (Math.random() * 0.06); // 94-100%
+          }
+          baseCSProbability *= tierMultiplier;
           
           // Phase 6: Market momentum and sentiment factors
           const marketMomentum = 0.96 + (Math.random() * 0.08); // 96-104% market sentiment
@@ -642,9 +645,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.8); // Higher confidence = less variance
           baseCSProbability *= marketVolatility * confidenceAdjustment;
           
-          // Phase 8: Professional betting market bounds with statistical distribution
-          const marketFloor = Math.max(3, teamBettingData.baseCleanSheetRate * 50); // Dynamic floor
-          const marketCeiling = Math.min(75, teamBettingData.baseCleanSheetRate * 180); // Dynamic ceiling
+          // Phase 8: Realistic Premier League clean sheet bounds
+          const marketFloor = Math.max(5, teamBettingData.baseCleanSheetRate * 60); // Minimum realistic CS%
+          const marketCeiling = Math.min(55, teamBettingData.baseCleanSheetRate * 150); // Maximum realistic CS%
           baseCSProbability = Math.max(marketFloor, Math.min(marketCeiling, baseCSProbability));
           
           // Final probability with market precision
@@ -686,14 +689,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                                    (volumeConfidence * 0.20) + // Sample size adequacy
                                    (qualityBonus * 0.15); // Performance excellence bonus
         
-        // Premium confidence thresholds for professional-grade analysis
-        if (compositeConfidence >= 0.85 && averageCleanSheetOdds >= 32) {
-          confidence = 'High'; // Elite defensive prospects
-        } else if (compositeConfidence >= 0.78 && averageCleanSheetOdds >= 24) {
-          confidence = 'High'; // Strong defensive prospects
-        } else if (compositeConfidence >= 0.72 && averageCleanSheetOdds >= 20) {
-          confidence = 'High'; // Solid defensive prospects with good market backing
-        } else if (compositeConfidence <= 0.50 || averageCleanSheetOdds < 12) {
+        // Realistic confidence thresholds based on Premier League standards
+        if (compositeConfidence >= 0.80 && averageCleanSheetOdds >= 28) {
+          confidence = 'High'; // Elite defensive prospects (Top 3-4 teams)
+        } else if (compositeConfidence >= 0.72 && averageCleanSheetOdds >= 22) {
+          confidence = 'High'; // Strong defensive prospects (Top 6-8 teams)
+        } else if (compositeConfidence <= 0.55 || averageCleanSheetOdds < 15) {
           confidence = 'Low';  // Poor defensive prospects or insufficient market confidence
         }
         
