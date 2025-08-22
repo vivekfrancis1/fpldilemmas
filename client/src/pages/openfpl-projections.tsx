@@ -74,6 +74,9 @@ export default function OpenFPLProjections() {
     metric: "predicted_points", 
     direction: "desc"
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [playersPerPage, setPlayersPerPage] = useState(50);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -236,6 +239,17 @@ export default function OpenFPLProjections() {
 
   const tableData = getTableData();
   const gameweekLabels = ["current", "next", "upcoming", "gw+3", "gw+4", "gw+5"];
+
+  // Filter and paginate table data
+  const filteredTableData = tableData.filter(player => {
+    if (!searchQuery) return true;
+    return player.player_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           player.team_name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const totalPages = Math.ceil(filteredTableData.length / playersPerPage);
+  const startIndex = (currentPage - 1) * playersPerPage;
+  const paginatedTableData = filteredTableData.slice(startIndex, startIndex + playersPerPage);
 
   const formatPrice = (price: number) => `£${(price / 10).toFixed(1)}m`;
 
@@ -479,6 +493,40 @@ export default function OpenFPLProjections() {
                     <p>Loading multi-gameweek ML projections...</p>
                   </div>
                 ) : tableData.length > 0 ? (
+                  <div>
+                  {/* Table Controls */}
+                  <div className="flex flex-wrap gap-4 mb-4 items-center justify-between">
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        placeholder="Search players or teams..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="w-64"
+                        data-testid="input-table-search"
+                      />
+                      <Select value={playersPerPage.toString()} onValueChange={(value) => {
+                        setPlayersPerPage(parseInt(value));
+                        setCurrentPage(1);
+                      }}>
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="25">25 per page</SelectItem>
+                          <SelectItem value="50">50 per page</SelectItem>
+                          <SelectItem value="100">100 per page</SelectItem>
+                          <SelectItem value="699">All players</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Showing {startIndex + 1}-{Math.min(startIndex + playersPerPage, filteredTableData.length)} of {filteredTableData.length} players
+                    </div>
+                  </div>
+
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <TabsList className="grid w-full grid-cols-6">
                       <TabsTrigger value="predicted_points">Predicted Points</TabsTrigger>
@@ -489,12 +537,13 @@ export default function OpenFPLProjections() {
                       <TabsTrigger value="predicted_bonus">Bonus</TabsTrigger>
                     </TabsList>
                     
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border border-gray-200 dark:border-gray-700">
+                    <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                      <table className="w-full border-collapse">
                         <thead>
-                          <tr className="bg-muted/50">
-                            <th className="border border-gray-200 dark:border-gray-700 p-3 text-left sticky left-0 bg-muted/50 min-w-[200px]">
-                              Player Info
+                          <tr className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30">
+                            <th className="border-r border-gray-200 dark:border-gray-700 p-4 text-left sticky left-0 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 min-w-[220px] z-10">
+                              <div className="font-semibold">Player Info</div>
+                              <div className="text-xs text-muted-foreground mt-1">Name • Team • Position • Price</div>
                             </th>
                             {gameweekLabels.map(gw => (
                               <th key={gw} className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[100px]">
@@ -532,7 +581,7 @@ export default function OpenFPLProjections() {
                           </tr>
                         </thead>
                         <tbody>
-                          {tableData.slice(0, 100).map((player, index) => (
+                          {paginatedTableData.map((player, index) => (
                             <tr key={player.player_id} className="hover:bg-muted/30">
                               <td className="border border-gray-200 dark:border-gray-700 p-3 sticky left-0 bg-background">
                                 <div className="space-y-1">
@@ -586,10 +635,34 @@ export default function OpenFPLProjections() {
                     
                     <div className="text-sm text-muted-foreground mt-4">
                       <p><strong>Legend:</strong> I = Injury Risk, R = Rotation Risk, H{horizonFilter} = {horizonFilter} Gameweek{horizonFilter !== "1" ? "s" : ""} Horizon, Conf = ML Ensemble Confidence</p>
-                      <p>Table shows top 100 players from all 699 analyzed with 6 gameweeks of projections plus totals. Click gameweek headers to sort by that metric. Switch tabs to view different ML predictions across gameweeks.</p>
+                      <p>Showing {filteredTableData.length} players from all 699 analyzed with 6 gameweeks of projections plus totals. Click gameweek headers to sort by that metric. Switch tabs to view different ML predictions across gameweeks.</p>
                       <p><strong>Current sort:</strong> {getGameweekNumber(tableSortBy.gameweek)} - {activeTab} ({tableSortBy.direction === "desc" ? "Highest first" : "Lowest first"})</p>
                     </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="flex justify-center items-center gap-2 mt-4">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          className="px-3 py-1 rounded border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
+                        >
+                          Previous
+                        </button>
+                        <span className="text-sm text-muted-foreground">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                          className="px-3 py-1 rounded border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
                   </Tabs>
+                  </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
