@@ -482,8 +482,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Phase 2: Advanced venue-specific market adjustments with dynamic factors
           const venueMultiplier = isHome ? 
-            (1.12 + (Math.random() * 0.06)) : // Home advantage 112-118%
-            (0.85 + (Math.random() * 0.06)); // Away factor 85-91%
+            (1.12 + ((team.id * fixture.event * 7) % 100) / 1667) : // Home advantage 112-118%
+            (0.85 + ((team.id * fixture.event * 11) % 100) / 1667); // Away factor 85-91%
           baseExpectedGoals *= venueMultiplier;
           
           // Phase 3: Sophisticated opponent defensive resistance matrix
@@ -510,26 +510,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Phase 5: Advanced attacking tier performance modeling
           let tierMultiplier = 1.0;
+          const tierSeed = (team.id * fixture.event * 13) % 100;
           if ([13, 1, 12].includes(team.id)) { // Elite attacking units
-            tierMultiplier = 1.06 + (Math.random() * 0.04); // 106-110%
+            tierMultiplier = 1.06 + (tierSeed / 2500); // 106-110%
           } else if ([18, 6, 5, 15].includes(team.id)) { // Strong attacking teams
-            tierMultiplier = 1.03 + (Math.random() * 0.03); // 103-106%
+            tierMultiplier = 1.03 + (tierSeed / 3333); // 103-106%
           } else if ([2, 14, 3, 9].includes(team.id)) { // Average attacking output
-            tierMultiplier = 0.99 + (Math.random() * 0.04); // 99-103%
+            tierMultiplier = 0.99 + (tierSeed / 2500); // 99-103%
           } else { // Weaker attacking units
-            tierMultiplier = 0.95 + (Math.random() * 0.06); // 95-101%
+            tierMultiplier = 0.95 + (tierSeed / 1667); // 95-101%
           }
           baseExpectedGoals *= tierMultiplier;
           
           // Phase 6: Market momentum and fixture complexity factors
-          const marketMomentum = 0.97 + (Math.random() * 0.06); // 97-103% market sentiment
+          const marketMomentum = 0.97 + ((team.id * fixture.event * 17) % 100) / 1667; // 97-103% market sentiment
           const fixtureComplexity = fixture.event <= 10 ? 1.01 : fixture.event <= 20 ? 1.0 : 0.99; // Season stage
           baseExpectedGoals *= marketMomentum * fixtureComplexity;
           
           // Phase 7: Statistical variance modeling with confidence weighting
-          const marketVolatility = 0.96 + (Math.random() * 0.08); // 96-104% natural variation
+          const marketVolatility = 0.96 + ((team.id * fixture.event * 19) % 100) / 1250; // 96-104% natural variation
           const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.75); // Higher confidence = less variance
-          const varianceImpact = 1 + ((Math.random() - 0.5) * teamBettingData.variance * 0.8);
+          const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamBettingData.variance * 0.8;
           baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
           
           // Phase 8: Realistic Premier League goal bounds with market precision
@@ -637,8 +638,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Phase 2: Advanced venue-specific market adjustments
           const venueMultiplier = isHome ? 
-            (1 + teamBettingData.homeBonus + (0.08 + Math.random() * 0.06)) : // Dynamic home advantage 8-14%
-            (0.78 + Math.random() * 0.08); // Away factor 78-86%
+            (1 + teamBettingData.homeBonus + (0.08 + ((team.id * fixture.event * 7) % 100) / 1667)) : // Dynamic home advantage 8-14%
+            (0.78 + ((team.id * fixture.event * 11) % 100) / 1250); // Away factor 78-86%
           baseCSProbability *= venueMultiplier;
           
           // Phase 3: Sophisticated opponent attacking threat matrix
@@ -665,24 +666,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Phase 5: Realistic performance tier adjustments
           let tierMultiplier = 1.0;
+          const tierSeed = (team.id * fixture.event * 13) % 100;
           if ([1, 12, 13].includes(team.id)) { // Top 3 defensive teams
-            tierMultiplier = 1.05 + (Math.random() * 0.04); // 105-109%
+            tierMultiplier = 1.05 + (tierSeed / 2500); // 105-109%
           } else if ([2, 15, 16, 5].includes(team.id)) { // Strong defensive units
-            tierMultiplier = 1.02 + (Math.random() * 0.03); // 102-105%
+            tierMultiplier = 1.02 + (tierSeed / 3333); // 102-105%
           } else if ([4, 3, 8, 14].includes(team.id)) { // Average defenses
-            tierMultiplier = 0.98 + (Math.random() * 0.04); // 98-102%
+            tierMultiplier = 0.98 + (tierSeed / 2500); // 98-102%
           } else { // Weaker defensive units
-            tierMultiplier = 0.94 + (Math.random() * 0.06); // 94-100%
+            tierMultiplier = 0.94 + (tierSeed / 1667); // 94-100%
           }
           baseCSProbability *= tierMultiplier;
           
           // Phase 6: Market momentum and sentiment factors
-          const marketMomentum = 0.96 + (Math.random() * 0.08); // 96-104% market sentiment
+          const marketMomentum = 0.96 + ((team.id * fixture.event * 17) % 100) / 1250; // 96-104% market sentiment
           const fixtureComplexity = fixture.event <= 10 ? 1.02 : fixture.event <= 20 ? 1.0 : 0.98; // Season stage
           baseCSProbability *= marketMomentum * fixtureComplexity;
           
           // Phase 7: Statistical variance modeling for realism
-          const marketVolatility = 0.94 + (Math.random() * 0.12); // 94-106% natural variation
+          const marketVolatility = 0.94 + ((team.id * fixture.event * 19) % 100) / 833; // 94-106% natural variation
           const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.8); // Higher confidence = less variance
           baseCSProbability *= marketVolatility * confidenceAdjustment;
           
