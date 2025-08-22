@@ -49,7 +49,6 @@ export default function Projections() {
     // Map tab names to sort keys
     const sortMapping: { [key: string]: string } = {
       'points': 'points',
-      'price': 'price',
       'minutes': 'minutes',
       'goals': 'goals',
       'assists': 'assists',
@@ -306,14 +305,10 @@ export default function Projections() {
               </CardHeader>
               <CardContent className="p-0">
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                  <TabsList className="grid w-full grid-cols-8 bg-gray-50 p-1 m-4 rounded-lg">
+                  <TabsList className="grid w-full grid-cols-7 bg-gray-50 p-1 m-4 rounded-lg">
                     <TabsTrigger value="points" className="flex items-center gap-1">
                       <Star className="h-4 w-4" />
                       Points
-                    </TabsTrigger>
-                    <TabsTrigger value="price" className="flex items-center gap-1">
-                      <PoundSterling className="h-4 w-4" />
-                      Price
                     </TabsTrigger>
                     <TabsTrigger value="minutes" className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
@@ -341,7 +336,7 @@ export default function Projections() {
                     </TabsTrigger>
                   </TabsList>
 
-                  {['points', 'price', 'minutes', 'goals', 'assists', 'cleanSheets', 'bonus', 'cbit'].map(metric => (
+                  {['points', 'minutes', 'goals', 'assists', 'cleanSheets', 'bonus', 'cbit'].map(metric => (
                     <TabsContent key={metric} value={metric} className="m-0">
                       <div className="overflow-x-auto">
                         <table className="w-full">
@@ -350,22 +345,20 @@ export default function Projections() {
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
                                 Player
                               </th>
-                              {metric === 'price' ? (
-                                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Current Price
+                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-48 bg-gray-50">
+                                <div className="flex items-center justify-center gap-1">
+                                  <PoundSterling className="h-3 w-3" />
+                                  Price
+                                </div>
+                              </th>
+                              {Array.from({ length: weeks }, (_, i) => (
+                                <th key={i} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  GW {i + 1}
                                 </th>
-                              ) : (
-                                Array.from({ length: weeks }, (_, i) => (
-                                  <th key={i} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    GW {i + 1}
-                                  </th>
-                                ))
-                              )}
-                              {metric !== 'price' && (
-                                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold">
-                                  Total
-                                </th>
-                              )}
+                              ))}
+                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold">
+                                Total
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
@@ -377,53 +370,50 @@ export default function Projections() {
                                     <div className="text-sm text-gray-500">{player.team} • {player.position}</div>
                                   </div>
                                 </td>
-                                {metric === 'price' ? (
-                                  <td className="px-4 py-4 text-center text-sm text-gray-900">£{player.price}m</td>
-                                ) : (
-                                  Array.from({ length: weeks }, (_, weekIndex) => {
-                                    const weekData = player.weeklyProjections[weekIndex + 1];
-                                    let value = weekData?.[metric as keyof typeof weekData] || 0;
-                                    if (metric === 'cbit') {
-                                      return (
-                                        <td key={weekIndex} className="px-4 py-4 text-center">
-                                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                            value >= 70 ? 'bg-green-100 text-green-800' :
-                                            value >= 40 ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-red-100 text-red-800'
-                                          }`}>
-                                            {value}%
-                                          </span>
-                                        </td>
-                                      );
-                                    }
+                                <td className="px-4 py-4 text-center text-sm font-medium text-gray-900 sticky left-48 bg-white">
+                                  £{player.price}m
+                                </td>
+                                {Array.from({ length: weeks }, (_, weekIndex) => {
+                                  const weekData = player.weeklyProjections[weekIndex + 1];
+                                  let value = weekData?.[metric as keyof typeof weekData] || 0;
+                                  if (metric === 'cbit') {
                                     return (
-                                      <td key={weekIndex} className="px-4 py-4 text-center text-sm text-gray-900">
-                                        {value}
+                                      <td key={weekIndex} className="px-4 py-4 text-center">
+                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                          value >= 70 ? 'bg-green-100 text-green-800' :
+                                          value >= 40 ? 'bg-yellow-100 text-yellow-800' :
+                                          'bg-red-100 text-red-800'
+                                        }`}>
+                                          {value}%
+                                        </span>
                                       </td>
                                     );
-                                  })
-                                )}
-                                {metric !== 'price' && (
-                                  <td className="px-4 py-4 text-center bg-blue-50">
-                                    {metric === 'cbit' ? (
-                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                        player.averageCbit >= 70 ? 'bg-green-100 text-green-800' :
-                                        player.averageCbit >= 40 ? 'bg-yellow-100 text-yellow-800' :
-                                        'bg-red-100 text-red-800'
-                                      }`}>
-                                        {player.averageCbit}%
-                                      </span>
-                                    ) : (
-                                      <span className="text-sm font-semibold text-gray-900">
-                                        {(() => {
-                                          const key = `total${metric.charAt(0).toUpperCase() + metric.slice(1)}` as keyof PlayerProjection;
-                                          const value = player[key];
-                                          return typeof value === 'number' ? value : 0;
-                                        })()}
-                                      </span>
-                                    )}
-                                  </td>
-                                )}
+                                  }
+                                  return (
+                                    <td key={weekIndex} className="px-4 py-4 text-center text-sm text-gray-900">
+                                      {value}
+                                    </td>
+                                  );
+                                })}
+                                <td className="px-4 py-4 text-center bg-blue-50">
+                                  {metric === 'cbit' ? (
+                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                      player.averageCbit >= 70 ? 'bg-green-100 text-green-800' :
+                                      player.averageCbit >= 40 ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-red-100 text-red-800'
+                                    }`}>
+                                      {player.averageCbit}%
+                                    </span>
+                                  ) : (
+                                    <span className="text-sm font-semibold text-gray-900">
+                                      {(() => {
+                                        const key = `total${metric.charAt(0).toUpperCase() + metric.slice(1)}` as keyof PlayerProjection;
+                                        const value = player[key];
+                                        return typeof value === 'number' ? value : 0;
+                                      })()}
+                                    </span>
+                                  )}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
