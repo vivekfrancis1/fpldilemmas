@@ -2102,7 +2102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const projections = [];
       
-      for (const player of elements.slice(0, 100)) { // Limit for performance
+      for (const player of elements) { // Process all players
         try {
           const position = positions.find((p: any) => p.id === player.element_type);
           const positionName = position?.singular_name_short || "Unknown";
@@ -2215,7 +2215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filteredProjections = projections
         .filter(p => p.predicted_points > 0.5 && p.availability_status >= 25)
         .sort((a, b) => b.predicted_points - a.predicted_points)
-        .slice(0, 50);
+        .slice(0, 100); // Show top 100 predictions
       
       console.log(`Generated ${projections.length} total projections, filtered to ${filteredProjections.length}`);
       
@@ -2225,7 +2225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const basicProjections = projections
           .filter(p => p.predicted_points > 0)
           .sort((a, b) => b.predicted_points - a.predicted_points)
-          .slice(0, 20);
+          .slice(0, 100); // Show top 100 basic projections
         res.json(basicProjections);
       } else {
         res.json(filteredProjections);
