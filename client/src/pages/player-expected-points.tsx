@@ -231,6 +231,25 @@ export default function PlayerExpectedPoints() {
   const tableData = getTableData();
   const gameweekLabels = ["current", "next", "upcoming"];
 
+  // Get actual gameweek numbers from bootstrap data
+  const getGameweekNumber = (gwType: string) => {
+    if (!bootstrapData?.events) return gwType;
+    
+    const currentGW = bootstrapData.events.find(event => event.is_current)?.id || 1;
+    const nextGW = bootstrapData.events.find(event => event.is_next)?.id || currentGW + 1;
+    
+    switch (gwType) {
+      case "current":
+        return `GW${currentGW}`;
+      case "next":
+        return `GW${nextGW}`;
+      case "upcoming":
+        return `GW${nextGW + 1}`;
+      default:
+        return gwType;
+    }
+  };
+
   const getMetricValue = (player: any, gameweek: string, metric: string) => {
     const playerData = player.gameweeks[gameweek];
     if (!playerData) return "-";
@@ -340,9 +359,9 @@ export default function PlayerExpectedPoints() {
                   <SelectValue placeholder="Target GW" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="next">Next GW</SelectItem>
-                  <SelectItem value="current">Current GW</SelectItem>
-                  <SelectItem value="upcoming">Next 3 GWs</SelectItem>
+                  <SelectItem value="next">{getGameweekNumber("next")}</SelectItem>
+                  <SelectItem value="current">{getGameweekNumber("current")}</SelectItem>
+                  <SelectItem value="upcoming">{getGameweekNumber("upcoming")}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -412,8 +431,7 @@ export default function PlayerExpectedPoints() {
               Expected Points Analysis
               {gameweekFilter && (
                 <Badge variant="outline">
-                  {gameweekFilter === "next" ? "Next GW" : 
-                   gameweekFilter === "current" ? "Current GW" : "Next 3 GWs"}
+                  {getGameweekNumber(gameweekFilter)}
                 </Badge>
               )}
             </CardTitle>
@@ -453,7 +471,7 @@ export default function PlayerExpectedPoints() {
                             </th>
                             {gameweekLabels.map(gw => (
                               <th key={gw} className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[100px]">
-                                {gw === "current" ? "Current GW" : gw === "next" ? "Next GW" : "Upcoming GWs"}
+                                {getGameweekNumber(gw)}
                               </th>
                             ))}
                             <th className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[120px]">
