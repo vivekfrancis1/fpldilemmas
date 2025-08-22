@@ -456,13 +456,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
       const bettingData = getSpreadBettingData();
       
+      // Debug: Log gameweek range
+      console.log(`DEBUG: Team Goal Projections - Current GW: ${currentGameweek}, Weeks: ${weeks}, Range: GW${currentGameweek} to GW${currentGameweek + weeks - 1}`);
+      
       const teamProjections = teams.map((team: any) => {
         const upcomingFixtures = fixturesData
           .filter((f: any) => 
             (f.team_h === team.id || f.team_a === team.id) && 
             !f.finished && 
             f.event >= currentGameweek && 
-            f.event < currentGameweek + weeks
+            f.event <= currentGameweek + weeks - 1
           )
           .slice(0, weeks);
         
