@@ -43,6 +43,23 @@ export default function Projections() {
   const [weeks, setWeeks] = useState<number>(4);
   const [activeTab, setActiveTab] = useState<string>("points");
 
+  // Auto-sort based on active tab
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    // Map tab names to sort keys
+    const sortMapping: { [key: string]: string } = {
+      'points': 'points',
+      'price': 'price',
+      'minutes': 'minutes',
+      'goals': 'goals',
+      'assists': 'assists',
+      'cleanSheets': 'cleanSheets',
+      'bonus': 'bonus',
+      'cbit': 'cbit'
+    };
+    setSortBy(sortMapping[tab] || 'points');
+  };
+
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000,
@@ -142,6 +159,9 @@ export default function Projections() {
           case "points": return b.totalPoints - a.totalPoints;
           case "goals": return b.totalGoals - a.totalGoals;
           case "assists": return b.totalAssists - a.totalAssists;
+          case "minutes": return b.totalMinutes - a.totalMinutes;
+          case "cleanSheets": return b.totalCleanSheets - a.totalCleanSheets;
+          case "bonus": return b.totalBonus - a.totalBonus;
           case "cbit": return b.averageCbit - a.averageCbit;
           case "price": return a.price - b.price;
           default: return b.totalPoints - a.totalPoints;
@@ -285,7 +305,7 @@ export default function Projections() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
                   <TabsList className="grid w-full grid-cols-8 bg-gray-50 p-1 m-4 rounded-lg">
                     <TabsTrigger value="points" className="flex items-center gap-1">
                       <Star className="h-4 w-4" />

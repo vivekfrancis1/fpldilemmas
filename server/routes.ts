@@ -450,6 +450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Enhanced clean sheet projection based on team defensive strength
         const isDefensive = position?.singular_name === 'Goalkeeper' || position?.singular_name === 'Defender';
         
+        let projectedCleanSheets = 0;
         if (isDefensive) {
           // Team defensive strength based on FPL strength ratings
           const defensiveStrength = (team?.strength_defence_home + team?.strength_defence_away) / 2 || 1000;
@@ -457,9 +458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Goalkeeper gets slight bonus over defenders
           const positionMultiplier = position?.singular_name === 'Goalkeeper' ? 1.05 : 1.0;
-          const projectedCleanSheets = teamCleanSheetRate * weeks * fixtureStrength * positionMultiplier;
-        } else {
-          const projectedCleanSheets = 0;
+          projectedCleanSheets = teamCleanSheetRate * weeks * fixtureStrength * positionMultiplier;
         }
         
         // Enhanced bonus points based on historical BPS patterns
@@ -535,7 +534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const weekMinutes = Math.round((projectedMinutes / weeks) * weeklyMultiplier);
           const weekGoals = (projectedGoals / weeks) * weeklyMultiplier;
           const weekAssists = (projectedAssists / weeks) * weeklyMultiplier;
-          const weekCleanSheets = (projectedCleanSheets || 0 / weeks) * weeklyMultiplier;
+          const weekCleanSheets = (projectedCleanSheets / weeks) * weeklyMultiplier;
           const weekBonus = (projectedBonus / weeks) * weeklyMultiplier;
           const weekPoints = (projectedPoints / weeks) * weeklyMultiplier;
           
