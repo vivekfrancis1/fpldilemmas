@@ -120,7 +120,10 @@ export default function PlayerDefensiveContributions() {
       finalThreshold = baseThreshold + playerVariance;
     }
     
-    // Ensure realistic bounds
+    // Ensure realistic bounds and handle NaN
+    if (isNaN(finalThreshold)) {
+      finalThreshold = baseThreshold;
+    }
     finalThreshold = Math.max(0.05, Math.min(0.8, finalThreshold));
     
     return {
@@ -170,8 +173,9 @@ export default function PlayerDefensiveContributions() {
   const getPlayerAverageThreshold = (playerId: number): number => {
     const playerData = playerDefensiveData.filter(data => data.player_id === playerId);
     if (playerData.length === 0) return 0;
-    const total = playerData.reduce((sum, data) => sum + data.threshold_probability, 0);
-    return Math.round((total / playerData.length));
+    const total = playerData.reduce((sum, data) => sum + (data.threshold_probability || 0), 0);
+    const average = total / playerData.length;
+    return isNaN(average) ? 0 : Math.round(average);
   };
 
   // Filter and search players
@@ -489,9 +493,10 @@ export default function PlayerDefensiveContributions() {
                         <td className="px-2 sm:px-3 py-2 text-center">
                           {(() => {
                             const avgThreshold = getPlayerAverageThreshold(player.id);
+                            const displayValue = isNaN(avgThreshold) ? 0 : avgThreshold;
                             return (
-                              <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(avgThreshold)}`}>
-                                {avgThreshold}%
+                              <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(displayValue)}`}>
+                                {displayValue}%
                               </div>
                             );
                           })()}
@@ -501,8 +506,8 @@ export default function PlayerDefensiveContributions() {
                           return (
                             <td key={gw} className="px-2 sm:px-3 py-2 text-center">
                               {data ? (
-                                <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(data.threshold_probability)}`}>
-                                  {data.threshold_probability}%
+                                <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(data.threshold_probability || 0)}`}>
+                                  {isNaN(data.threshold_probability) ? 0 : data.threshold_probability}%
                                 </div>
                               ) : (
                                 <span className="text-xs text-muted-foreground">-</span>
