@@ -18,6 +18,7 @@ interface GoalShareData {
     name: string;
     position: string;
     goalShare: number; // Percentage
+    projectedGoals: number; // Calculated goals based on share
   }[];
 }
 
@@ -50,14 +51,15 @@ export default function GoalShare() {
     }
 
     // Process match odds data to create goal share breakdowns
-    matchOddsData.forEach((match: any) => {
+    if (Array.isArray(matchOddsData)) {
+      matchOddsData.forEach((match: any) => {
       const homeTeam = teams.find((t: any) => t.name === match.homeTeam);
       const awayTeam = teams.find((t: any) => t.name === match.awayTeam);
 
       if (homeTeam && awayTeam && match.homeExpectedGoals && match.awayExpectedGoals) {
         // Home team goal share
         const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
-        const homePlayerShares = distributeGoalShares(homePlayersInSquad, bootstrapData.element_types);
+        const homePlayerShares = distributeGoalShares(homePlayersInSquad, bootstrapData.element_types, match.homeExpectedGoals);
         
         data.push({
           gameweek: match.gameweek,
@@ -70,7 +72,7 @@ export default function GoalShare() {
 
         // Away team goal share
         const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
-        const awayPlayerShares = distributeGoalShares(awayPlayersInSquad, bootstrapData.element_types);
+        const awayPlayerShares = distributeGoalShares(awayPlayersInSquad, bootstrapData.element_types, match.awayExpectedGoals);
         
         data.push({
           gameweek: match.gameweek,
@@ -81,13 +83,14 @@ export default function GoalShare() {
           players: awayPlayerShares
         });
       }
-    });
+      });
+    }
 
     return data;
   }, [bootstrapData, matchOddsData]);
 
   // Function to distribute goal shares among players
-  function distributeGoalShares(players: any[], positions: any[]) {
+  function distributeGoalShares(players: any[], positions: any[], teamExpectedGoals: number) {
     const playerShares: any[] = [];
     let totalShare = 0;
 
@@ -123,11 +126,16 @@ export default function GoalShare() {
       totalShare += adjustedShare;
     });
 
-    // Normalize to 100%
-    return playerShares.map(player => ({
-      ...player,
-      goalShare: Math.round((player.rawShare / totalShare) * 100)
-    })).filter(p => p.goalShare > 0).sort((a, b) => b.goalShare - a.goalShare);
+    // Normalize to 100% and calculate projected goals
+    return playerShares.map(player => {
+      const goalShare = Math.round((player.rawShare / totalShare) * 100);
+      const projectedGoals = Math.round((goalShare / 100) * teamExpectedGoals * 100) / 100; // Round to 2 decimal places
+      return {
+        ...player,
+        goalShare,
+        projectedGoals
+      };
+    }).filter(p => p.goalShare > 0).sort((a, b) => b.goalShare - a.goalShare);
   }
 
   // Filter data
@@ -141,7 +149,8 @@ export default function GoalShare() {
 
   // Get available gameweeks
   const availableGameweeks = useMemo(() => {
-    const gameweeks = [...new Set(goalShareData.map(item => item.gameweek))].sort((a, b) => a - b);
+    const gameweekSet = new Set(goalShareData.map(item => item.gameweek));
+    const gameweeks = Array.from(gameweekSet).sort((a, b) => a - b);
     return gameweeks;
   }, [goalShareData]);
 
@@ -250,6 +259,15 @@ export default function GoalShare() {
                     </div>
                   </CardHeader>
                   <CardContent className="p-4">
+                    {/* Column Headers */}
+                    <div className="flex justify-between items-center text-xs text-gray-500 mb-3 pb-2 border-b">
+                      <span>Player</span>
+                      <div className="flex items-center gap-4">
+                        <span>Goals</span>
+                        <span>Share</span>
+                      </div>
+                    </div>
+                    
                     <div className="space-y-3">
                       {teamData.players.slice(0, 8).map((player, playerIndex) => (
                         <div key={player.id} className="flex items-center justify-between">
@@ -268,6 +286,9 @@ export default function GoalShare() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-700">
+                              {player.projectedGoals}
+                            </span>
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                               player.goalShare >= 20 ? 'bg-blue-100 text-blue-800' :
                               player.goalShare >= 10 ? 'bg-green-100 text-green-800' :
