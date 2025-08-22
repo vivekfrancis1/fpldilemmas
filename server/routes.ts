@@ -730,13 +730,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                                    (volumeConfidence * 0.20) + // Sample size adequacy
                                    (qualityBonus * 0.15); // Performance excellence bonus
         
-        // Realistic confidence thresholds based on Premier League standards
-        if (compositeConfidence >= 0.80 && averageCleanSheetOdds >= 28) {
-          confidence = 'High'; // Elite defensive prospects (Top 3-4 teams)
-        } else if (compositeConfidence >= 0.72 && averageCleanSheetOdds >= 22) {
-          confidence = 'High'; // Strong defensive prospects (Top 6-8 teams)
-        } else if (compositeConfidence <= 0.55 || averageCleanSheetOdds < 15) {
-          confidence = 'Low';  // Poor defensive prospects or insufficient market confidence
+        // Confidence based purely on composite score
+        if (compositeConfidence >= 0.80) {
+          confidence = 'High'; // Elite market confidence and statistical reliability
+        } else if (compositeConfidence <= 0.55) {
+          confidence = 'Low';  // Poor market confidence or statistical reliability
         }
         
         return {
