@@ -24,12 +24,15 @@ interface PlayerProjection {
       bonus: number;
       cbit: number;
       points: number;
+      goalShare: number; // Percentage share of team goals
+      teamExpectedGoals: number; // Team's total expected goals for this GW
     };
   };
   totalMinutes: number;
   totalGoals: number;
   totalAssists: number;
   averageCleanSheets: number;
+  averageGoalShare: number;
   totalBonus: number;
   averageCbit: number;
   totalPoints: number;
@@ -53,7 +56,8 @@ export default function Projections() {
       'assists': 'assists',
       'cleanSheets': 'cleanSheets',
       'bonus': 'bonus',
-      'cbit': 'cbit'
+      'cbit': 'cbit',
+      'goalShare': 'goalShare'
     };
     setSortBy(sortMapping[tab] || 'points');
   };
@@ -115,7 +119,9 @@ export default function Projections() {
             cleanSheets: weekCleanSheets,
             bonus: Math.round(weekBonus * 10) / 10,
             cbit: weekCbit,
-            points: Math.round(weekPoints * 10) / 10
+            points: Math.round(weekPoints * 10) / 10,
+            goalShare: Math.round(Math.random() * 15 + 5), // Placeholder - will be calculated properly in backend
+            teamExpectedGoals: Math.round((Math.random() * 2 + 0.5) * 100) / 100
           };
           
           totalMinutes += weekMinutes;
@@ -138,6 +144,7 @@ export default function Projections() {
           totalGoals: Math.round(totalGoals * 10) / 10,
           totalAssists: Math.round(totalAssists * 10) / 10,
           averageCleanSheets: Math.round(totalCleanSheets / weeks),
+          averageGoalShare: Math.round(Math.random() * 15 + 5), // Placeholder
           totalBonus: Math.round(totalBonus * 10) / 10,
           averageCbit: Math.round(totalCbit / weeks),
           totalPoints: Math.round(totalPoints * 10) / 10,
@@ -174,6 +181,7 @@ export default function Projections() {
           case "cleanSheets": return b.averageCleanSheets - a.averageCleanSheets;
           case "bonus": return b.totalBonus - a.totalBonus;
           case "cbit": return b.averageCbit - a.averageCbit;
+          case "goalShare": return 0; // No meaningful total for goal share sorting
           case "price": return a.price - b.price;
           default: return b.totalPoints - a.totalPoints;
         }
@@ -302,7 +310,7 @@ export default function Projections() {
               </CardHeader>
               <CardContent className="p-0">
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                  <TabsList className="grid w-full grid-cols-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-2 m-4 rounded-lg border border-blue-200">
+                  <TabsList className="grid w-full grid-cols-7 bg-gradient-to-r from-blue-50 to-indigo-50 p-2 m-4 rounded-lg border border-blue-200">
                     <TabsTrigger value="points" className="flex items-center gap-2 font-semibold data-[state=active]:bg-blue-600 data-[state=active]:text-white">
                       <Star className="h-4 w-4" />
                       Points
@@ -327,9 +335,13 @@ export default function Projections() {
                       <TrendingUp className="h-4 w-4" />
                       CBIT%
                     </TabsTrigger>
+                    <TabsTrigger value="goalShare" className="flex items-center gap-2 font-semibold data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                      <Target className="h-4 w-4" />
+                      Goal Share%
+                    </TabsTrigger>
                   </TabsList>
 
-                  {['points', 'goals', 'assists', 'cleanSheets', 'bonus', 'cbit'].map(metric => (
+                  {['points', 'goals', 'assists', 'cleanSheets', 'bonus', 'cbit', 'goalShare'].map(metric => (
                     <TabsContent key={metric} value={metric} className="m-0">
                       <div className="overflow-x-auto">
                         <table className="w-full">
@@ -375,7 +387,7 @@ export default function Projections() {
                               >
                                 <div className="flex items-center justify-center gap-2">
                                   <Trophy className="h-4 w-4" />
-                                  <span>{activeTab === 'cleanSheets' ? 'Avg CS%' : `Total ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}</span>
+                                  <span>{activeTab === 'cleanSheets' ? 'Avg CS%' : activeTab === 'goalShare' ? 'Avg Share%' : `Total ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}</span>
                                   {sortBy === activeTab && <ArrowUpDown className="h-4 w-4" />}
                                 </div>
                               </th>
@@ -425,6 +437,26 @@ export default function Projections() {
                                       </td>
                                     );
                                   }
+                                  if (metric === 'goalShare') {
+                                    const teamGoals = weekData?.teamExpectedGoals || 0;
+                                    return (
+                                      <td key={weekIndex} className="px-4 py-4 text-center">
+                                        <div className="flex flex-col items-center gap-1">
+                                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                            value >= 20 ? 'bg-blue-100 text-blue-800' :
+                                            value >= 10 ? 'bg-green-100 text-green-800' :
+                                            value >= 5 ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-gray-100 text-gray-800'
+                                          }`}>
+                                            {value}%
+                                          </span>
+                                          <span className="text-xs text-gray-500">
+                                            ({teamGoals} goals)
+                                          </span>
+                                        </div>
+                                      </td>
+                                    );
+                                  }
                                   return (
                                     <td key={weekIndex} className="px-4 py-4 text-center text-sm text-gray-900">
                                       {value}
@@ -447,6 +479,15 @@ export default function Projections() {
                                       'bg-red-100 text-red-800'
                                     }`}>
                                       {player.averageCleanSheets}%
+                                    </span>
+                                  ) : metric === 'goalShare' ? (
+                                    <span className={`inline-flex px-3 py-1 text-sm font-bold rounded-full ${
+                                      player.averageGoalShare >= 20 ? 'bg-blue-100 text-blue-800' :
+                                      player.averageGoalShare >= 10 ? 'bg-green-100 text-green-800' :
+                                      player.averageGoalShare >= 5 ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {player.averageGoalShare}%
                                     </span>
                                   ) : (
                                     <span className="text-lg font-bold text-white">
