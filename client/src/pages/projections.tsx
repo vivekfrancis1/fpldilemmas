@@ -49,7 +49,6 @@ export default function Projections() {
     // Map tab names to sort keys
     const sortMapping: { [key: string]: string } = {
       'points': 'points',
-      'minutes': 'minutes',
       'goals': 'goals',
       'assists': 'assists',
       'cleanSheets': 'cleanSheets',
@@ -304,14 +303,10 @@ export default function Projections() {
               </CardHeader>
               <CardContent className="p-0">
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                  <TabsList className="grid w-full grid-cols-7 bg-gray-50 p-1 m-4 rounded-lg">
+                  <TabsList className="grid w-full grid-cols-6 bg-gray-50 p-1 m-4 rounded-lg">
                     <TabsTrigger value="points" className="flex items-center gap-1">
                       <Star className="h-4 w-4" />
                       Points
-                    </TabsTrigger>
-                    <TabsTrigger value="minutes" className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      Minutes
                     </TabsTrigger>
                     <TabsTrigger value="goals" className="flex items-center gap-1">
                       <Target className="h-4 w-4" />
@@ -335,7 +330,7 @@ export default function Projections() {
                     </TabsTrigger>
                   </TabsList>
 
-                  {['points', 'minutes', 'goals', 'assists', 'cleanSheets', 'bonus', 'cbit'].map(metric => (
+                  {['points', 'goals', 'assists', 'cleanSheets', 'bonus', 'cbit'].map(metric => (
                     <TabsContent key={metric} value={metric} className="m-0">
                       <div className="overflow-x-auto">
                         <table className="w-full">
@@ -348,6 +343,12 @@ export default function Projections() {
                                 <div className="flex items-center justify-center gap-1">
                                   <PoundSterling className="h-3 w-3" />
                                   Price
+                                </div>
+                              </th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-72 bg-gray-50">
+                                <div className="flex items-center justify-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Avg Min
                                 </div>
                               </th>
                               {Array.from({ length: weeks }, (_, i) => (
@@ -371,6 +372,9 @@ export default function Projections() {
                                 </td>
                                 <td className="px-4 py-4 text-center text-sm font-medium text-gray-900 sticky left-48 bg-white">
                                   £{player.price}m
+                                </td>
+                                <td className="px-4 py-4 text-center text-sm font-medium text-gray-900 sticky left-72 bg-white">
+                                  {Math.round(player.totalMinutes / weeks)}
                                 </td>
                                 {Array.from({ length: weeks }, (_, weekIndex) => {
                                   const weekData = player.weeklyProjections[weekIndex + 2];
