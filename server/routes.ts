@@ -709,7 +709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currentGameweek = nextEvent?.id || 2;
       }
       
-      // DEBUG: Use current gameweek instead of next gameweek for consistency testing
+      // Use current gameweek to match Goal Share tool
       const startGameweek = currentGameweek;
       console.log(`DEBUG: Player Projections using startGameweek=${startGameweek}, currentGameweek=${currentGameweek}`);
     
@@ -761,9 +761,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 console.log(`VALIDATION ERROR ${player.name} GW${gw}: projectedGoals=${playerGoalShare.projectedGoals} vs calculated=${calculatedGoals}`);
               }
               
-              // Debug logging for consistency checking
+              // Debug logging for consistency checking  
               if (player.name.includes('Bowen') || player.name.includes('Salah')) {
                 console.log(`DEBUG ${player.name} GW${gw}: goalShare=${playerGoalShare.goalShare}%, projectedGoals=${playerGoalShare.projectedGoals}, teamGoals=${goalShare.expectedGoals}, validation=${calculatedGoals}`);
+                console.log(`DIRECT OVERWRITE: Setting ${player.name} GW${gw} goals to ${playerGoalShare.projectedGoals} (was ${player.weeklyProjections[gw].goals})`);
               }
             }
           });
@@ -1180,6 +1181,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating goal share data:", error);
       res.status(500).json({ error: "Failed to generate goal share data" });
+    }
+  });
+
+  // Data Consistency Validation endpoint
+  app.get("/api/validate-consistency/:gameweek", async (req, res) => {
+    try {
+      const gameweek = parseInt(req.params.gameweek) || 2;
+      
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      
+      // Get Goal Share data for the specific gameweek
+      const goalShareData = generateGoalShareData(bootstrapData, fixturesData, 1, gameweek);
+      
+      // Find Jarrod Bowen in the data
+      const bowenData = [];
+      goalShareData.forEach(team => {
+        const bowen = team.players.find(p => p.name.includes('Jarrod Bowen'));
+        if (bowen) {
+          bowenData.push({
+            gameweek: team.gameweek,
+            teamName: team.teamName,
+            teamExpectedGoals: team.expectedGoals,
+            playerName: bowen.name,
+            goalShare: bowen.goalShare,
+            projectedGoals: bowen.projectedGoals
+          });
+        }
+      });
+      
+      res.json({
+        gameweek,
+        message: "Goal Share data for Jarrod Bowen",
+        data: bowenData
+      });
+    } catch (error) {
+      console.error("Error in validation:", error);
+      res.status(500).json({ error: "Failed to validate consistency" });
     }
   });
 
