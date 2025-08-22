@@ -369,9 +369,9 @@ export default function OpenFPLProjections() {
                     </div>
                   </div>
 
-                  {/* Responsive Sortable Table with Continuous Scroll */}
+                  {/* Enhanced Scrollable Table - Full Width */}
                   <div className="overflow-x-auto overflow-y-auto max-h-[600px] md:max-h-[800px] bg-white rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg">
-                    <table className="w-full text-xs md:text-sm min-w-[800px] md:min-w-0">
+                    <table className="w-full text-xs md:text-sm min-w-[1200px]">
                       <thead className="sticky top-0 z-10">
                         <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
                           <th className="px-2 md:px-3 py-2 text-left min-w-[140px]">
@@ -390,7 +390,7 @@ export default function OpenFPLProjections() {
                               Pts {getSortIcon("predicted_points")}
                             </button>
                           </th>
-                          <th className="px-1 md:px-2 py-2 text-center min-w-[50px] hidden md:table-cell">
+                          <th className="px-1 md:px-2 py-2 text-center min-w-[60px]">
                             <button 
                               onClick={() => handleSort("predicted_minutes")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
@@ -398,23 +398,23 @@ export default function OpenFPLProjections() {
                               <Clock className="h-3 w-3" /> Min {getSortIcon("predicted_minutes")}
                             </button>
                           </th>
-                          <th className="px-2 py-2 text-center">
+                          <th className="px-2 py-2 text-center min-w-[70px]">
                             <button 
                               onClick={() => handleSort("predicted_goals")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
                             >
-                              ⚽ G {getSortIcon("predicted_goals")}
+                              ⚽ Goals {getSortIcon("predicted_goals")}
                             </button>
                           </th>
-                          <th className="px-2 py-2 text-center">
+                          <th className="px-2 py-2 text-center min-w-[70px]">
                             <button 
                               onClick={() => handleSort("predicted_assists")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
                             >
-                              🎯 A {getSortIcon("predicted_assists")}
+                              🎯 Assists {getSortIcon("predicted_assists")}
                             </button>
                           </th>
-                          <th className="px-2 py-2 text-center">
+                          <th className="px-2 py-2 text-center min-w-[60px]">
                             <button 
                               onClick={() => handleSort("predicted_clean_sheets")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
@@ -422,31 +422,31 @@ export default function OpenFPLProjections() {
                               🛡️ CS {getSortIcon("predicted_clean_sheets")}
                             </button>
                           </th>
-                          <th className="px-2 py-2 text-center">
+                          <th className="px-2 py-2 text-center min-w-[60px]">
                             <button 
                               onClick={() => handleSort("predicted_bonus")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
                             >
-                              ⭐ B {getSortIcon("predicted_bonus")}
+                              ⭐ Bonus {getSortIcon("predicted_bonus")}
                             </button>
                           </th>
-                          <th className="px-2 py-2 text-center">
+                          <th className="px-2 py-2 text-center min-w-[60px]">
                             <button 
                               onClick={() => handleSort("cbit_percentage")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
                             >
-                              CBIT {getSortIcon("cbit_percentage")}
+                              CBIT% {getSortIcon("cbit_percentage")}
                             </button>
                           </th>
-                          <th className="px-2 py-2 text-center">
+                          <th className="px-2 py-2 text-center min-w-[80px]">
                             <button 
                               onClick={() => handleSort("ensemble_confidence")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
                             >
-                              Conf {getSortIcon("ensemble_confidence")}
+                              Confidence {getSortIcon("ensemble_confidence")}
                             </button>
                           </th>
-                          <th className="px-2 py-2 text-center">
+                          <th className="px-2 py-2 text-center min-w-[60px]">
                             <button 
                               onClick={() => handleSort("investment_risk")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
@@ -454,28 +454,28 @@ export default function OpenFPLProjections() {
                               Risk {getSortIcon("investment_risk")}
                             </button>
                           </th>
-                          <th className="px-2 py-2 text-center">
+                          <th className="px-2 py-2 text-center min-w-[80px]">
                             <button 
                               onClick={() => handleSort("ownership_percentage")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
                             >
-                              Own% {getSortIcon("ownership_percentage")}
+                              Ownership% {getSortIcon("ownership_percentage")}
                             </button>
                           </th>
-                          <th className="px-2 py-2 text-center">
+                          <th className="px-2 py-2 text-center min-w-[60px]">
                             <button 
                               onClick={() => handleSort("current_price")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
                             >
-                              <DollarSign className="h-3 w-3" /> £ {getSortIcon("current_price")}
+                              <DollarSign className="h-3 w-3" /> Price {getSortIcon("current_price")}
                             </button>
                           </th>
-                          <th className="px-2 py-2 text-center">
+                          <th className="px-2 py-2 text-center min-w-[70px]">
                             <button 
                               onClick={() => handleSort("availability_status")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
                             >
-                              Fit {getSortIcon("availability_status")}
+                              Fitness {getSortIcon("availability_status")}
                             </button>
                           </th>
                         </tr>
@@ -511,8 +511,8 @@ export default function OpenFPLProjections() {
                               </div>
                             </td>
 
-                            {/* Minutes - Hidden on mobile */}
-                            <td className="px-1 md:px-2 py-2 text-center hidden md:table-cell">
+                            {/* Minutes */}
+                            <td className="px-1 md:px-2 py-2 text-center">
                               <div className="text-xs md:text-sm font-semibold text-gray-700 bg-gray-50 rounded py-1 px-1 md:px-2 inline-block border border-gray-200">
                                 {projection.predicted_minutes || 0}
                               </div>
