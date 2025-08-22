@@ -193,7 +193,7 @@ export default function Fixtures() {
               </select>
             </div>
             
-            <div className="flex flex-wrap gap-2 text-xs justify-center">
+            <div className="flex flex-wrap gap-3 text-xs justify-center">
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-green-600 rounded"></div>
                 <span>1-2 Easy</span>
@@ -210,13 +210,8 @@ export default function Fixtures() {
                 <div className="w-3 h-3 bg-red-600 rounded"></div>
                 <span>5 Very Hard</span>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="font-medium">H</span>
-                <span>Home</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="font-medium">A</span>
-                <span>Away</span>
+              <div className="text-xs text-gray-600">
+                Format: TEAM (H/A)
               </div>
             </div>
           </div>
@@ -258,18 +253,15 @@ export default function Fixtures() {
                             }`}>
                               {fixture ? (
                                 <div 
-                                  className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
+                                  className={`px-1 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
                                     fixture.finished ? 'opacity-50' : ''
                                   }`}
                                   title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} (FDR: ${fixture.difficulty})`}
                                   data-testid={`fixture-${team.id}-${gw}`}
                                 >
-                                  <div className="flex items-center justify-center gap-1">
-                                    <span className="text-xs font-bold">
-                                      {fixture.isHome ? 'H' : 'A'}
-                                    </span>
-                                    <span className="truncate max-w-8">{fixture.opponent}</span>
-                                  </div>
+                                  <span className="truncate text-xs font-medium whitespace-nowrap">
+                                    {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})
+                                  </span>
                                 </div>
                               ) : (
                                 <div className="px-2 py-1 text-gray-300">-</div>
@@ -322,15 +314,16 @@ export default function Fixtures() {
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Venue Indicators</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">Format Guide</h4>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-lg">H</span>
-                      <span className="text-sm">Home fixture</span>
+                    <div className="text-sm">
+                      <span className="font-medium">TEAM (H)</span> - Home fixture vs TEAM
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-lg">A</span>
-                      <span className="text-sm">Away fixture</span>
+                    <div className="text-sm">
+                      <span className="font-medium">TEAM (A)</span> - Away fixture at TEAM
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Example: LIV (A) means Away at Liverpool
                     </div>
                   </div>
                   <p className="text-sm text-gray-600 mt-3">
