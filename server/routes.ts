@@ -764,6 +764,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team Goal Projections endpoint
+  app.get("/api/team-goal-projections", async (req, res) => {
+    try {
+      const weeks = parseInt(req.query.weeks as string) || 8;
+      
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      
+      const teams = bootstrapData.teams;
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      // Get upcoming fixtures for each team
+      const upcomingFixtures = fixturesData
+        .filter((fixture: any) => 
+          !fixture.finished && 
+          fixture.event >= currentGameweek && 
+          fixture.event <= currentGameweek + weeks - 1
+        );
+      
+      const teamProjections = teams.map((team: any, index: number) => {
+        const teamFixtures = upcomingFixtures.filter((fixture: any) => 
+          fixture.team_h === team.id || fixture.team_a === team.id
+        );
+        
+        // Base team attacking strength (simulating betting market data)
+        const baseAttackStrength = (team.strength_attack_home + team.strength_attack_away) / 2000;
+        const baseForm = 0.8 + Math.random() * 0.4; // 0.8 to 1.2 form multiplier
+        
+        // Historical scoring pattern (simulating market analysis)
+        const historicalGoalsPerGame = 1.2 + Math.random() * 1.0; // 1.2 to 2.2 goals per game
+        
+        const gameweekProjections: { [gameweek: number]: number } = {};
+        let totalGoals = 0;
+        
+        // Generate projections for each gameweek
+        for (let gw = currentGameweek; gw < currentGameweek + weeks; gw++) {
+          const gwFixtures = teamFixtures.filter((f: any) => f.event === gw);
+          
+          if (gwFixtures.length === 0) {
+            // No fixture this gameweek
+            gameweekProjections[gw] = 0;
+            continue;
+          }
+          
+          const fixture = gwFixtures[0];
+          const isHome = fixture.team_h === team.id;
+          const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
+          
+          if (!opponent) {
+            gameweekProjections[gw] = 0;
+            continue;
+          }
+          
+          // Calculate expected goals based on team strengths and betting market simulation
+          const homeAdvantage = isHome ? 1.15 : 0.95;
+          const opponentDefenseStrength = isHome ? 
+            (opponent.strength_defence_away || 1000) / 1000 : 
+            (opponent.strength_defence_home || 1000) / 1000;
+          
+          // Simulate betting market expected goals
+          const marketExpectedGoals = (baseAttackStrength * homeAdvantage * (2.2 - opponentDefenseStrength) * baseForm);
+          
+          // Add some realistic variance based on form and fixture difficulty
+          const fixtureVariance = 0.85 + Math.random() * 0.3; // 0.85 to 1.15
+          const weeklyGoals = Math.max(0.1, marketExpectedGoals * fixtureVariance);
+          
+          gameweekProjections[gw] = Math.round(weeklyGoals * 10) / 10;
+          totalGoals += weeklyGoals;
+        }
+        
+        // Calculate confidence based on team consistency and data reliability
+        const strengthConsistency = Math.abs(team.strength_attack_home - team.strength_attack_away) / 1000;
+        const fixtureCount = teamFixtures.length;
+        const confidence = strengthConsistency < 0.1 && fixtureCount >= weeks * 0.8 ? 'High' : 
+                          strengthConsistency < 0.2 && fixtureCount >= weeks * 0.6 ? 'Medium' : 'Low';
+        
+        return {
+          id: team.id,
+          team: team.name,
+          teamShort: team.short_name,
+          gameweekProjections,
+          totalGoals: Math.round(totalGoals * 10) / 10,
+          averageGoalsPerGame: fixtureCount > 0 ? Math.round((totalGoals / fixtureCount) * 10) / 10 : 0,
+          confidence,
+          position: index + 1 // Will be sorted by actual performance later
+        };
+      });
+      
+      // Sort by total goals descending for initial ranking
+      teamProjections.sort((a: any, b: any) => b.totalGoals - a.totalGoals);
+      
+      // Update positions after sorting
+      teamProjections.forEach((team: any, index: number) => {
+        team.position = index + 1;
+      });
+      
+      res.json(teamProjections);
+    } catch (error) {
+      console.error("Error fetching team goal projections:", error);
+      res.status(500).json({ error: "Failed to fetch team goal projections" });
+    }
+  });
+
   // Manager rank API routes
   
   // Get manager basic info and current rank

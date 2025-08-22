@@ -16,6 +16,7 @@ import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
 import Projections from "./pages/projections";
 import ResultsProjections from "./pages/results-projections";
+import TeamGoalProjections from "./pages/team-goal-projections";
 
 function Router() {
   return (
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/player-stats" component={PlayerStats} />
       <Route path="/projections" component={Projections} />
       <Route path="/results-projections" component={ResultsProjections} />
+      <Route path="/team-goal-projections" component={TeamGoalProjections} />
       <Route component={NotFound} />
     </Switch>
   );
