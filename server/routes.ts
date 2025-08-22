@@ -558,6 +558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      const bettingData = getSpreadBettingData();
       
       const teamProjections = teams.map((team: any) => {
         const upcomingFixtures = fixturesData
