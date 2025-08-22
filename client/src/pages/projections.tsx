@@ -226,7 +226,7 @@ export default function Projections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map(week => (
+                      {Array.from({ length: 8 }, (_, i) => i + 1).map(week => (
                         <SelectItem key={week} value={week.toString()}>{week}</SelectItem>
                       ))}
                     </SelectContent>
