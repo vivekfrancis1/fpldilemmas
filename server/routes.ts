@@ -991,10 +991,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Projected Goals & CS Odds endpoint
+  // Match Odds endpoint
   app.get("/api/projected-goals-cs", async (req, res) => {
     try {
-      const selectedGameweek = req.query.gameweek as string || "current";
+      const selectedGameweek = req.query.gameweek as string || "all";
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -1016,13 +1016,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const nextEvent = bootstrapData.events.find((event: any) => !event.finished);
         currentGameweek = nextEvent?.id || 2;
       }
-      const targetGameweek = selectedGameweek === "current" ? currentGameweek : parseInt(selectedGameweek);
       
-      // Get fixtures for the selected gameweek
-      const gameweekFixtures = fixturesData
-        .filter((fixture: any) => 
-          fixture.event === targetGameweek
-        );
+      let gameweekFixtures;
+      if (selectedGameweek === "all") {
+        // Get fixtures for next 8 gameweeks (excluding finished ones)
+        const maxGameweek = Math.min(currentGameweek + 7, 38);
+        gameweekFixtures = fixturesData
+          .filter((fixture: any) => 
+            !fixture.finished && 
+            fixture.event >= currentGameweek && 
+            fixture.event <= maxGameweek
+          );
+      } else {
+        const targetGameweek = selectedGameweek === "current" ? currentGameweek : parseInt(selectedGameweek);
+        // Get fixtures for the selected gameweek (excluding finished ones)
+        gameweekFixtures = fixturesData
+          .filter((fixture: any) => 
+            !fixture.finished && 
+            fixture.event === targetGameweek
+          );
+      }
       
       const matchProjections: any[] = [];
       
@@ -1057,7 +1070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Add match projection with both teams
         matchProjections.push({
           fixtureId: fixture.id,
-          gameweek: targetGameweek,
+          gameweek: fixture.event,
           kickoffTime: fixture.kickoff_time,
           dayOfWeek,
           date,

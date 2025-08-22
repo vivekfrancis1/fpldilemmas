@@ -31,7 +31,7 @@ interface MatchProjection {
 }
 
 export default function ProjectedGoalsCS() {
-  const [selectedGameweek, setSelectedGameweek] = useState<string>("current");
+  const [selectedGameweek, setSelectedGameweek] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
 
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
@@ -111,7 +111,9 @@ export default function ProjectedGoalsCS() {
               <Target className="h-8 w-8 text-blue-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              PL GW{selectedGameweek === "current" ? currentGameweek : selectedGameweek}: Match Odds
+              {selectedGameweek === "all" ? "PL Match Odds - Next 8 Gameweeks" : 
+               selectedGameweek === "current" ? `PL GW${currentGameweek}: Match Odds` : 
+               `PL GW${selectedGameweek}: Match Odds`}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
               Expected goals and clean sheet probabilities based on betting market analysis
@@ -130,8 +132,9 @@ export default function ProjectedGoalsCS() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all">All Available</SelectItem>
                       <SelectItem value="current">Current GW</SelectItem>
-                      {Array.from({ length: 5 }, (_, i) => currentGameweek + i).map(gw => (
+                      {Array.from({ length: 8 }, (_, i) => currentGameweek + i).map(gw => (
                         <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                       ))}
                     </SelectContent>
@@ -180,7 +183,9 @@ export default function ProjectedGoalsCS() {
                       {/* Day Header */}
                       <div className="bg-gradient-to-r from-gray-100 to-gray-50 px-6 py-3 border-b border-gray-200">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-base text-gray-800">{dayOfWeek}</span>
+                          <span className="font-bold text-base text-gray-800">
+                            {selectedGameweek === "all" ? `GW${projections[0]?.gameweek} - ${dayOfWeek}` : dayOfWeek}
+                          </span>
                           <span className="text-sm text-gray-600 font-medium">{date}</span>
                         </div>
                       </div>

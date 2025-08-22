@@ -12,7 +12,7 @@ Navigation priority: Player Statistics as default landing page, with side naviga
 Manager ID caching: My Live Rank now automatically saves and pre-loads the last searched Manager ID for convenience (implemented January 2025)
 My Team section: Added comprehensive team display under My FPL showing formation, squad value, transfers, and detailed player lineup with enhanced UI design (January 2025)
 Player Projections: Added AI-powered projection model using advanced statistical analysis to predict minutes, goals, assists, clean sheets, bonus points, and CBIT% for upcoming weeks (January 2025)
-Match Odds: Updated results projections to show projected goals and clean sheet odds for each team by gameweek in compact fixture format, based on Spreadex Sport market data (January 2025)
+Match Odds: Updated results projections to show projected goals and clean sheet odds for each team by gameweek in compact fixture format for next 8 gameweeks, based on Spreadex Sport market data (January 2025)
 Team Goal Projections: Added team-level goal forecasting tool for next 8 gameweeks using sports spread betting markets (Polymarket, Spreadex) with market-derived expected goals modeling (January 2025)
 Team CS Projections: Added clean sheet probability forecasting tool showing defensive prospects for each team over next 8 gameweeks with market-derived modeling (January 2025)
 Most popular tools: Player Statistics, My Live Rank, and Fixtures (updated January 2025)
