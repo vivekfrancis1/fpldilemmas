@@ -53,35 +53,78 @@ export default function PlayerMinutes() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Generate player minutes data using the same deterministic approach as other tools
-  const generatePlayerMinutesData = (gameweek: number, playerData: any) => {
-    const seed = playerData.id * gameweek * 847; // Different multiplier for minutes
-    const random = (seed * 9301 + 49297) % 233280 / 233280;
+  // Generate player minutes data ensuring team totals equal 990 minutes per gameweek
+  const generateTeamMinutesData = (gameweek: number, teamPlayers: any[]) => {
+    const teamData: PlayerMinutesData[] = [];
     
-    // Base minutes based on player position and recent form
-    let baseMinutes = 45;
-    if (playerData.element_type === 1) baseMinutes = 75; // Goalkeepers
-    else if (playerData.element_type === 2) baseMinutes = 70; // Defenders
-    else if (playerData.element_type === 3) baseMinutes = 65; // Midfielders
-    else if (playerData.element_type === 4) baseMinutes = 60; // Forwards
+    // Calculate base minutes for each player
+    const baseMinutesData = teamPlayers.map(player => {
+      const seed = player.id * gameweek * 847;
+      const random = (seed * 9301 + 49297) % 233280 / 233280;
+      
+      // Base minutes based on player position
+      let baseMinutes = 45;
+      if (player.element_type === 1) baseMinutes = 75; // Goalkeepers
+      else if (player.element_type === 2) baseMinutes = 70; // Defenders
+      else if (player.element_type === 3) baseMinutes = 65; // Midfielders
+      else if (player.element_type === 4) baseMinutes = 60; // Forwards
+      
+      const variance = random * 30 - 15;
+      const rawMinutes = Math.max(0, Math.min(90, baseMinutes + variance));
+      
+      return {
+        player,
+        rawMinutes,
+        random
+      };
+    });
     
-    // Add randomness and player-specific factors
-    const variance = random * 30 - 15;
-    const expectedMinutes = Math.max(0, Math.min(90, baseMinutes + variance));
+    // Calculate total raw minutes
+    const totalRawMinutes = baseMinutesData.reduce((sum, data) => sum + data.rawMinutes, 0);
     
-    const startProbability = expectedMinutes / 90 * 100;
-    const injuryRisk = random * 15; // 0-15% injury risk
+    // Normalize to ensure team total equals 990
+    baseMinutesData.forEach(data => {
+      const normalizedMinutes = (data.rawMinutes / totalRawMinutes) * 990;
+      const expectedMinutes = Math.max(0, Math.min(90, Math.round(normalizedMinutes)));
+      
+      const startProbability = expectedMinutes / 90 * 100;
+      const injuryRisk = data.random * 15; // 0-15% injury risk
+      
+      teamData.push({
+        player_id: data.player.id,
+        player_name: data.player.web_name,
+        team: getTeamShortName(data.player.team),
+        position: getPositionShortName(data.player.element_type),
+        gameweek,
+        expected_minutes: expectedMinutes,
+        start_probability: Math.round(startProbability),
+        injury_risk: Math.round(injuryRisk)
+      });
+    });
     
-    return {
-      player_id: playerData.id,
-      player_name: playerData.web_name,
-      team: getTeamShortName(playerData.team),
-      position: getPositionShortName(playerData.element_type),
-      gameweek,
-      expected_minutes: Math.round(expectedMinutes),
-      start_probability: Math.round(startProbability),
-      injury_risk: Math.round(injuryRisk)
-    };
+    // Final adjustment to ensure exact 990 total
+    const currentTotal = teamData.reduce((sum, data) => sum + data.expected_minutes, 0);
+    const adjustment = 990 - currentTotal;
+    
+    if (adjustment !== 0) {
+      // Distribute the adjustment among players with room to adjust
+      const adjustablePlayers = teamData.filter(data => 
+        adjustment > 0 ? data.expected_minutes < 90 : data.expected_minutes > 0
+      );
+      
+      if (adjustablePlayers.length > 0) {
+        const adjustmentPerPlayer = Math.floor(adjustment / adjustablePlayers.length);
+        const remainder = adjustment % adjustablePlayers.length;
+        
+        adjustablePlayers.forEach((data, index) => {
+          const playerAdjustment = adjustmentPerPlayer + (index < remainder ? 1 : 0);
+          data.expected_minutes = Math.max(0, Math.min(90, data.expected_minutes + playerAdjustment));
+          data.start_probability = Math.round((data.expected_minutes / 90) * 100);
+        });
+      }
+    }
+    
+    return teamData;
   };
 
   const getTeamShortName = (teamId: number): string => {
@@ -92,15 +135,18 @@ export default function PlayerMinutes() {
     return bootstrapData?.element_types.find(t => t.id === elementType)?.singular_name_short || '';
   };
 
-  // Generate data for next 6 gameweeks (2-7)
+  // Generate data for next 6 gameweeks (2-7) with team totals = 990
   const playerMinutesData = useMemo(() => {
-    if (!bootstrapData?.elements) return [];
+    if (!bootstrapData?.elements || !bootstrapData?.teams) return [];
     
     const allData: PlayerMinutesData[] = [];
     
     for (let gw = 2; gw <= 7; gw++) {
-      for (const player of bootstrapData.elements) {
-        allData.push(generatePlayerMinutesData(gw, player));
+      // Group players by team
+      for (const team of bootstrapData.teams) {
+        const teamPlayers = bootstrapData.elements.filter(player => player.team === team.id);
+        const teamGameweekData = generateTeamMinutesData(gw, teamPlayers);
+        allData.push(...teamGameweekData);
       }
     }
     
@@ -402,7 +448,7 @@ export default function PlayerMinutes() {
             <Users className="h-4 w-4" />
             <AlertDescription className="text-xs sm:text-sm">
               Expected minutes are calculated using advanced statistical modeling based on player position, recent form, and rotation patterns. 
-              Values are capped at 90 minutes (normal time only - no extra time). The percentage shows start probability for each gameweek.
+              Values are capped at 90 minutes (normal time only - no extra time). Each team's total minutes per gameweek equals exactly 990 (11 players × 90 minutes). The percentage shows start probability for each gameweek.
             </AlertDescription>
           </Alert>
         </div>
