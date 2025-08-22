@@ -750,6 +750,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (playerGoalShare && player.weeklyProjections[gw]) {
               // Use the projectedGoals field that was calculated in the Goal Share tool
               player.weeklyProjections[gw].goals = playerGoalShare.projectedGoals || 0;
+              
+              // Debug logging for consistency checking
+              if (player.name.includes('Bowen') || player.name.includes('Salah')) {
+                console.log(`DEBUG ${player.name} GW${gw}: goalShare=${playerGoalShare.goalShare}%, projectedGoals=${playerGoalShare.projectedGoals}, teamGoals=${goalShare.expectedGoals}`);
+              }
             }
           });
         }
