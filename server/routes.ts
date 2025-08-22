@@ -271,6 +271,45 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get manager's team for current gameweek (without gameweek param)
+  app.get("/api/manager/:managerId/team", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+      
+      // First get the current gameweek from bootstrap data
+      const bootstrapResponse = await fetch(`${FPL_BASE_URL}/bootstrap-static/`);
+      if (!bootstrapResponse.ok) {
+        throw new Error(`Failed to fetch bootstrap data: ${bootstrapResponse.status}`);
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      // Then get the team data for the current gameweek
+      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "Team data not found" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error(`Error fetching team data for manager ${req.params.managerId}:`, error);
+      res.status(500).json({
+        error: "Failed to fetch team data",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Get manager's team for specific gameweek
   app.get("/api/manager/:managerId/team/:gameweek", async (req, res) => {
     try {
