@@ -14,6 +14,7 @@ import LiveRank from "./pages/live-rank";
 import MyTeam from "./pages/my-team";
 import MyLeagues from "./pages/my-leagues";
 import PriceTracker from "./pages/price-tracker";
+import OpenFPLProjections from "./pages/openfpl-projections";
 import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
 
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/team-cs-projections" component={TeamCSProjections} />
       <Route path="/goal-share" component={GoalShare} />
       <Route path="/assist-share" component={AssistShare} />
+      <Route path="/openfpl-projections" component={OpenFPLProjections} />
       <Route component={NotFound} />
     </Switch>
   );
