@@ -515,21 +515,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Advanced price prediction algorithm based on authentic FPL mechanics and data
       const validPredictions = [];
       
-      for (const player of elements) {
+      // Pre-filter players to only process those with significant activity for faster response
+      const activeElements = elements.filter((player: any) => {
+        const transfersIn = player.transfers_in_event || 0;
+        const transfersOut = player.transfers_out_event || 0;
+        const netTransfers = transfersIn - transfersOut;
+        const ownership = parseFloat(player.selected_by_percent || "0");
+        
+        // Only process players with some transfer activity or decent ownership
+        return Math.abs(netTransfers) > 500 || ownership > 1.0 || 
+               transfersIn > 1000 || transfersOut > 1000;
+      });
+      
+      for (const player of activeElements) {
         try {
           // Get authentic transfer data from daily tracking
           let transfersIn = player.transfers_in_event || 0;
           let transfersOut = player.transfers_out_event || 0;
           
-          try {
-            const latestData = await storage.getLatestPriceData(player.id);
-            if (latestData) {
-              transfersIn = latestData.dailyTransfersIn || transfersIn;
-              transfersOut = latestData.dailyTransfersOut || transfersOut;
-            }
-          } catch (error) {
-            // Use FPL API data as fallback
-          }
+          // Skip database lookup for speed - use FPL API data directly
+          // This can be enhanced later with cached daily data
           
           const netTransfers = transfersIn - transfersOut;
           const ownership = parseFloat(player.selected_by_percent || "0");
@@ -672,18 +677,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const finalPredictions = validPredictions.filter((prediction: any) => {
           // Only show players with predicted changes or high transfer activity
-          const hasSignificantActivity = Math.abs(prediction.net_transfers) > 5000;
+          const hasSignificantActivity = Math.abs(prediction.net_transfers) > 3000;
           const hasPredictedChange = prediction.predicted_change !== 0;
-          const hasHighConfidence = prediction.confidence > 30;
+          const hasHighConfidence = prediction.confidence > 25;
           
           return hasPredictedChange || hasSignificantActivity || hasHighConfidence;
         })
         .sort((a: any, b: any) => {
-          // Sort by confidence descending, then by net transfers
+          // Sort by predicted change first (rises/falls), then confidence, then transfer volume
+          if (Math.abs(b.predicted_change) !== Math.abs(a.predicted_change)) {
+            return Math.abs(b.predicted_change) - Math.abs(a.predicted_change);
+          }
           if (b.confidence !== a.confidence) return b.confidence - a.confidence;
           return Math.abs(b.net_transfers) - Math.abs(a.net_transfers);
         })
-        .slice(0, 20); // Show top 20 predictions
+        .slice(0, 25); // Show top 25 predictions
       
       res.json(finalPredictions);
     } catch (error) {
