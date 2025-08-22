@@ -653,8 +653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             bonus: Math.round(weekBonus * 10) / 10,
             cbit: weekCbit,
             points: Math.round(weekPoints * 10) / 10,
-            goalShare: 0, // Will be calculated in normalization
-            teamExpectedGoals: 0 // Will be set in normalization
+
           };
           
           totalMinutes += weekMinutes;
@@ -677,7 +676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalGoals: Math.round(totalGoals * 10) / 10,
           totalAssists: Math.round(totalAssists * 10) / 10,
           averageCleanSheets: Math.round(totalCleanSheets / weeks * 100),
-          averageGoalShare: 0, // Will be calculated in normalization
+
           totalBonus: Math.round(totalBonus * 10) / 10,
           averageCbit: Math.round(totalCbit / weeks),
           totalPoints: Math.round(totalPoints * 10) / 10,
@@ -793,11 +792,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const playerShare = playerGoalShares.get(player.id) || 0;
               const normalizedGoals = (playerShare / totalPlayerGoalShare) * teamExpectedGoals;
               
-              // Update weekly projections with normalized goals and goal share
+              // Update weekly projections with normalized goals
               if (player.weeklyProjections[gw]) {
                 player.weeklyProjections[gw].goals = Math.round(normalizedGoals * 100) / 100;
-                player.weeklyProjections[gw].goalShare = Math.round((playerShare / totalPlayerGoalShare) * 100);
-                player.weeklyProjections[gw].teamExpectedGoals = teamExpectedGoals;
               }
             });
           }
@@ -812,8 +809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let totalBonus = 0;
         let totalCbit = 0;
         let totalPoints = 0;
-        let totalGoalShare = 0;
-        let fixtureCount = 0;
+
         
         for (let gw = startGameweek; gw < startGameweek + weeks; gw++) {
           const weekData = player.weeklyProjections[gw];
@@ -824,10 +820,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalBonus += weekData.bonus || 0;
             totalCbit += weekData.cbit || 0;
             totalPoints += weekData.points || 0;
-            if (weekData.teamExpectedGoals > 0) {
-              totalGoalShare += weekData.goalShare || 0;
-              fixtureCount++;
-            }
+
           }
         }
         
@@ -837,7 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         player.totalBonus = Math.round(totalBonus * 100) / 100;
         player.averageCbit = Math.round(totalCbit / weeks);
         player.totalPoints = Math.round(totalPoints * 100) / 100;
-        player.averageGoalShare = fixtureCount > 0 ? Math.round(totalGoalShare / fixtureCount) : 0;
+
         
         // Remove playerData from final output
         delete player.playerData;
