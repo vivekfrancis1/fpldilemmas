@@ -602,7 +602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const fixtureQuality = 0.7 + Math.random() * 0.6; // Easier/harder fixtures
           const weeklyMultiplier = weeklyForm * fixtureQuality;
           
-          const weekMinutes = Math.round((projectedMinutes / weeks) * weeklyMultiplier);
+          const weekMinutes = Math.min(90, Math.max(0, Math.round((projectedMinutes / weeks) * weeklyMultiplier)));
           const weekGoals = (projectedGoals / weeks) * weeklyMultiplier;
           const weekAssists = (projectedAssists / weeks) * weeklyMultiplier;
           const weekCleanSheets = (projectedCleanSheets / weeks) * weeklyMultiplier;
@@ -615,7 +615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const weekCbit = Math.min(95, Math.max(1, Math.round(weekCbitScore * 100)));
           
           weeklyProjections[week - 1] = {
-            minutes: Math.max(0, weekMinutes),
+            minutes: weekMinutes,
             goals: Math.round(weekGoals * 10) / 10,
             assists: Math.round(weekAssists * 10) / 10,
             cleanSheets: Math.round(weekCleanSheets * 10) / 10,

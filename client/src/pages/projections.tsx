@@ -83,7 +83,7 @@ export default function Projections() {
         // Generate projections for each week (starting from GW2 since GW1 is completed)
         for (let week = 2; week <= weeks + 1; week++) {
           const baseMinutes = Math.max(20, Math.min(90, player.minutes / Math.max(1, 1) || 45));
-          const weekMinutes = Math.round(baseMinutes * (0.85 + Math.random() * 0.3));
+          const weekMinutes = Math.min(90, Math.max(0, Math.round(baseMinutes * (0.85 + Math.random() * 0.3))));
           
           const goalsPerMinute = player.goals_scored / Math.max(player.minutes, 1);
           const assistsPerMinute = player.assists / Math.max(player.minutes, 1);
@@ -110,7 +110,7 @@ export default function Projections() {
           const weekCbit = Math.min(95, Math.max(1, Math.round(weekPoints * 3.5)));
           
           weeklyProjections[week - 1] = {
-            minutes: Math.max(0, weekMinutes),
+            minutes: weekMinutes,
             goals: Math.round(weekGoals * 10) / 10,
             assists: Math.round(weekAssists * 10) / 10,
             cleanSheets: Math.round(weekCleanSheets * 10) / 10,
