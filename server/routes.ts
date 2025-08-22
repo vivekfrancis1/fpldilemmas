@@ -761,10 +761,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 console.log(`VALIDATION ERROR ${player.name} GW${gw}: projectedGoals=${playerGoalShare.projectedGoals} vs calculated=${calculatedGoals}`);
               }
               
-              // Debug logging for consistency checking  
-              if (player.name.includes('Bowen') || player.name.includes('Salah')) {
-                console.log(`DEBUG ${player.name} GW${gw}: goalShare=${playerGoalShare.goalShare}%, projectedGoals=${playerGoalShare.projectedGoals}, teamGoals=${goalShare.expectedGoals}, validation=${calculatedGoals}`);
-                console.log(`DIRECT OVERWRITE: Setting ${player.name} GW${gw} goals to ${playerGoalShare.projectedGoals} (was ${player.weeklyProjections[gw].goals})`);
+              // Debug logging for validation with 10+ players
+              if (player.name.includes('Bowen') || player.name.includes('Salah') || player.name.includes('Haaland') || 
+                  player.name.includes('Kane') || player.name.includes('Son') || player.name.includes('Palmer') ||
+                  player.name.includes('Saka') || player.name.includes('Watkins') || player.name.includes('Isak') || 
+                  player.name.includes('Mbeumo') || player.name.includes('Wood') || player.name.includes('Solanke')) {
+                console.log(`VALIDATION ${player.name} GW${gw}: goalShare=${playerGoalShare.goalShare}%, projectedGoals=${playerGoalShare.projectedGoals}, teamGoals=${goalShare.expectedGoals}`);
               }
             }
           });
@@ -1176,6 +1178,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = await fixturesResponse.json();
       
       console.log(`DEBUG: Goal Share API called for gameweek=${gameweek}`);
+      
+      // Add comprehensive debug logging for Goal Share API
+      console.log(`DEBUG: About to generate goal share data for GW${gameweek}`);
+      const goalShareDataDebug = generateGoalShareData(bootstrapData, fixturesData, 1, gameweek);
+      console.log(`DEBUG: Generated ${goalShareDataDebug.length} team entries for GW${gameweek}`);
+      
+      goalShareDataDebug.forEach(team => {
+        if (team.players) {
+          team.players.forEach(player => {
+            if (player.name && (player.name.includes('Bowen') || player.name.includes('Salah') || player.name.includes('Haaland'))) {
+              console.log(`GOAL_SHARE_API ${player.name} GW${team.gameweek}: goalShare=${player.goalShare}%, projectedGoals=${player.projectedGoals}, teamGoals=${team.expectedGoals}`);
+            }
+          });
+        }
+      });
       const goalShareData = generateGoalShareData(bootstrapData, fixturesData, 1, gameweek);
       res.json(goalShareData);
     } catch (error) {
