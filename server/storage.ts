@@ -1,5 +1,4 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert } from "@shared/schema";
-import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
+import { type BootstrapData, type PlayerSummary, type PriceAlert, type InsertPriceAlert } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
 
@@ -9,23 +8,19 @@ export interface IStorage {
   getPlayerSummary(playerId: number): Promise<PlayerSummary | undefined>;
   setPlayerSummary(playerId: number, data: PlayerSummary): Promise<void>;
   
-  // Watchlist operations
-  getWatchlistEntries(): Promise<WatchlistEntry[]>;
-  addWatchlistEntry(entry: InsertWatchlistEntry): Promise<WatchlistEntry>;
-  deleteWatchlistEntry(id: number): Promise<void>;
-  updateWatchlistEntry(id: number, entry: Partial<InsertWatchlistEntry>): Promise<WatchlistEntry>;
-  
   // Price alert operations
   getPriceAlerts(): Promise<PriceAlert[]>;
   addPriceAlert(alert: InsertPriceAlert): Promise<PriceAlert>;
+  deletePriceAlert(id: number): Promise<void>;
+  updatePriceAlert(id: number, alert: Partial<InsertPriceAlert>): Promise<PriceAlert>;
   
   // Price change tracking operations (for future implementation)
   getPriceChange(playerId: number, changeAmount: number): Promise<{ playerId: number; changeAmount: number; date: string; } | undefined>;
   setPriceChange(playerId: number, changeAmount: number, date: string): Promise<void>;
   
   // Historical player operations
-  getHistoricalPlayers(season: string): Promise<HistoricalPlayer[]>;
-  insertHistoricalPlayers(players: InsertHistoricalPlayer[]): Promise<void>;
+  getHistoricalPlayers(season: string): Promise<any[]>;
+  insertHistoricalPlayers(players: any[]): Promise<void>;
   hasHistoricalData(season: string): Promise<boolean>;
   getSeasons(): Promise<string[]>;
   
@@ -37,22 +32,20 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private bootstrapData: BootstrapData | undefined;
   private playerSummaries: Map<number, PlayerSummary>;
-  private watchlistEntries: Map<number, WatchlistEntry>;
   private priceAlerts: Map<number, PriceAlert>;
-  private priceChangeHistory: Map<string, { playerId: number; changeAmount: number; date: string; }>;
-  private historicalPlayerCache: Map<string, HistoricalPlayer[]>;
-  private lastManagerId: string | undefined;
-  private nextWatchlistId: number;
   private nextAlertId: number;
+  private priceChangeHistory: Map<string, { playerId: number; changeAmount: number; date: string; }>;
+  private historicalPlayerCache: Map<string, any[]>;
+  private lastManagerId: string | undefined;
 
   constructor() {
+    this.bootstrapData = undefined;
     this.playerSummaries = new Map();
-    this.watchlistEntries = new Map();
     this.priceAlerts = new Map();
+    this.nextAlertId = 1;
     this.priceChangeHistory = new Map();
     this.historicalPlayerCache = new Map();
-    this.nextWatchlistId = 1;
-    this.nextAlertId = 1;
+    this.lastManagerId = undefined;
   }
 
   async getBootstrapData(): Promise<BootstrapData | undefined> {
@@ -71,46 +64,6 @@ export class MemStorage implements IStorage {
     this.playerSummaries.set(playerId, data);
   }
 
-  // Watchlist operations
-  async getWatchlistEntries(): Promise<WatchlistEntry[]> {
-    return Array.from(this.watchlistEntries.values());
-  }
-
-  async addWatchlistEntry(entry: InsertWatchlistEntry): Promise<WatchlistEntry> {
-    const id = this.nextWatchlistId++;
-    const now = new Date();
-    const watchlistEntry: WatchlistEntry = {
-      id,
-      ...entry,
-      targetPrice: entry.targetPrice ?? null,
-      alertOnRise: entry.alertOnRise ?? null,
-      alertOnFall: entry.alertOnFall ?? null,
-      notes: entry.notes ?? null,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.watchlistEntries.set(id, watchlistEntry);
-    return watchlistEntry;
-  }
-
-  async deleteWatchlistEntry(id: number): Promise<void> {
-    this.watchlistEntries.delete(id);
-  }
-
-  async updateWatchlistEntry(id: number, entry: Partial<InsertWatchlistEntry>): Promise<WatchlistEntry> {
-    const existing = this.watchlistEntries.get(id);
-    if (!existing) {
-      throw new Error(`Watchlist entry with id ${id} not found`);
-    }
-    const updated: WatchlistEntry = {
-      ...existing,
-      ...entry,
-      updatedAt: new Date(),
-    };
-    this.watchlistEntries.set(id, updated);
-    return updated;
-  }
-
   // Price alert operations
   async getPriceAlerts(): Promise<PriceAlert[]> {
     return Array.from(this.priceAlerts.values()).sort((a, b) => 
@@ -125,12 +78,31 @@ export class MemStorage implements IStorage {
       ...alert,
       alertTriggered: alert.alertTriggered ?? null,
       createdAt: new Date(),
+      updatedAt: new Date(),
     };
     this.priceAlerts.set(id, priceAlert);
     return priceAlert;
   }
 
-  // Price change tracking operations
+  async deletePriceAlert(id: number): Promise<void> {
+    this.priceAlerts.delete(id);
+  }
+
+  async updatePriceAlert(id: number, alert: Partial<InsertPriceAlert>): Promise<PriceAlert> {
+    const existing = this.priceAlerts.get(id);
+    if (!existing) {
+      throw new Error(`Price alert with id ${id} not found`);
+    }
+    const updated: PriceAlert = {
+      ...existing,
+      ...alert,
+      updatedAt: new Date(),
+    };
+    this.priceAlerts.set(id, updated);
+    return updated;
+  }
+
+  // Price change tracking operations (for future implementation)
   async getPriceChange(playerId: number, changeAmount: number): Promise<{ playerId: number; changeAmount: number; date: string; } | undefined> {
     const key = `${playerId}-${changeAmount}`;
     return this.priceChangeHistory.get(key);
@@ -141,30 +113,45 @@ export class MemStorage implements IStorage {
     this.priceChangeHistory.set(key, { playerId, changeAmount, date });
   }
 
-  // Historical player operations (in-memory fallback - will use database when available)
-  async getHistoricalPlayers(season: string): Promise<HistoricalPlayer[]> {
+  // Historical player operations
+  async getHistoricalPlayers(season: string): Promise<any[]> {
     return this.historicalPlayerCache.get(season) || [];
   }
 
-  async insertHistoricalPlayers(players: InsertHistoricalPlayer[]): Promise<void> {
-    // Group by season for cache storage
-    const byseason = players.reduce((acc, player) => {
-      if (!acc[player.season!]) acc[player.season!] = [];
-      acc[player.season!].push(player as HistoricalPlayer);
-      return acc;
-    }, {} as Record<string, HistoricalPlayer[]>);
+  async insertHistoricalPlayers(players: any[]): Promise<void> {
+    // Group by season
+    const playersBySeason: Map<string, any[]> = new Map();
+    
+    players.forEach(player => {
+      const season = player.season;
+      if (!playersBySeason.has(season)) {
+        playersBySeason.set(season, []);
+      }
+      playersBySeason.get(season)!.push({
+        id: Math.random(), // Generate a temporary ID
+        ...player,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    });
 
-    Object.entries(byseason).forEach(([season, seasonPlayers]) => {
+    // Store in cache
+    playersBySeason.forEach((seasonPlayers, season) => {
       this.historicalPlayerCache.set(season, seasonPlayers);
     });
   }
 
   async hasHistoricalData(season: string): Promise<boolean> {
-    return this.historicalPlayerCache.has(season);
+    return this.historicalPlayerCache.has(season) && 
+           this.historicalPlayerCache.get(season)!.length > 0;
   }
 
   async getSeasons(): Promise<string[]> {
-    return Array.from(this.historicalPlayerCache.keys());
+    // Return predefined seasons for historical data
+    return [
+      "2016/17", "2017/18", "2018/19", "2019/20", "2020/21", 
+      "2021/22", "2022/23", "2023/24", "2024/25"
+    ];
   }
 
   // Manager ID caching operations
@@ -177,7 +164,6 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Database-backed storage with fallback to memory storage
 export class DatabaseStorage implements IStorage {
   private memFallback: MemStorage;
 
@@ -185,7 +171,6 @@ export class DatabaseStorage implements IStorage {
     this.memFallback = new MemStorage();
   }
 
-  // Bootstrap data methods (keep using memory for fast access)
   async getBootstrapData(): Promise<BootstrapData | undefined> {
     return this.memFallback.getBootstrapData();
   }
@@ -194,30 +179,12 @@ export class DatabaseStorage implements IStorage {
     return this.memFallback.setBootstrapData(data);
   }
 
-  // Player summary methods (keep using memory for fast access)
   async getPlayerSummary(playerId: number): Promise<PlayerSummary | undefined> {
     return this.memFallback.getPlayerSummary(playerId);
   }
 
   async setPlayerSummary(playerId: number, data: PlayerSummary): Promise<void> {
     return this.memFallback.setPlayerSummary(playerId, data);
-  }
-
-  // Watchlist methods (keep using memory for simplicity)
-  async getWatchlistEntries(): Promise<WatchlistEntry[]> {
-    return this.memFallback.getWatchlistEntries();
-  }
-
-  async addWatchlistEntry(entry: InsertWatchlistEntry): Promise<WatchlistEntry> {
-    return this.memFallback.addWatchlistEntry(entry);
-  }
-
-  async deleteWatchlistEntry(id: number): Promise<void> {
-    return this.memFallback.deleteWatchlistEntry(id);
-  }
-
-  async updateWatchlistEntry(id: number, entry: Partial<InsertWatchlistEntry>): Promise<WatchlistEntry> {
-    return this.memFallback.updateWatchlistEntry(id, entry);
   }
 
   // Price alert methods (keep using memory for simplicity)
@@ -229,7 +196,14 @@ export class DatabaseStorage implements IStorage {
     return this.memFallback.addPriceAlert(alert);
   }
 
-  // Price change methods (keep using memory for simplicity)
+  async deletePriceAlert(id: number): Promise<void> {
+    return this.memFallback.deletePriceAlert(id);
+  }
+
+  async updatePriceAlert(id: number, alert: Partial<InsertPriceAlert>): Promise<PriceAlert> {
+    return this.memFallback.updatePriceAlert(id, alert);
+  }
+
   async getPriceChange(playerId: number, changeAmount: number): Promise<{ playerId: number; changeAmount: number; date: string; } | undefined> {
     return this.memFallback.getPriceChange(playerId, changeAmount);
   }
@@ -238,127 +212,43 @@ export class DatabaseStorage implements IStorage {
     return this.memFallback.setPriceChange(playerId, changeAmount, date);
   }
 
-  // Historical player methods (use database for persistence)
-  async getHistoricalPlayers(season: string): Promise<HistoricalPlayer[]> {
+  // Historical player operations using database
+  async getHistoricalPlayers(season: string): Promise<any[]> {
     try {
-      console.log(`🔍 Checking database for ${season} data...`);
-      const dbPlayers = await db
-        .select()
-        .from(historicalPlayers)
-        .where(eq(historicalPlayers.season, season))
-        .orderBy(sql`${historicalPlayers.totalPoints} DESC`);
-      
-      if (dbPlayers.length > 0) {
-        console.log(`✅ Found ${dbPlayers.length} players in database for ${season}`);
-        
-        // Convert database format to API format for compatibility
-        return dbPlayers.map(player => ({
-          ...player,
-          // Add fields expected by frontend
-          id: player.playerId || 0,
-          first_name: player.firstName,
-          second_name: player.secondName,
-          web_name: player.webName,
-          team_name: player.teamName,
-          team_short_name: player.teamShortName,
-          position: player.positionName,
-          season_name: player.seasonName,
-          element_code: player.elementCode,
-          start_cost: player.startCost,
-          end_cost: player.endCost,
-          total_points: player.totalPoints,
-          minutes: player.minutes,
-          goals_scored: player.goalsScored,
-          assists: player.assists,
-          clean_sheets: player.cleanSheets,
-          goals_conceded: player.goalsConceded,
-          own_goals: player.ownGoals,
-          penalties_saved: player.penaltiesSaved,
-          penalties_missed: player.penaltiesMissed,
-          yellow_cards: player.yellowCards,
-          red_cards: player.redCards,
-          saves: player.saves,
-          bonus: player.bonus,
-          bps: player.bps,
-          influence: player.influence,
-          creativity: player.creativity,
-          threat: player.threat,
-          ict_index: player.ictIndex,
-          // Computed fields for frontend
-          now_cost: player.endCost || 0,
-          form: ((player.totalPoints || 0) / 38).toFixed(1),
-          points_per_game: ((player.totalPoints || 0) / Math.max((player.minutes || 0) / 90, 1)).toFixed(1),
-          selected_by_percent: "0.0",
-          value_season: ((player.totalPoints || 0) / ((player.endCost || 1) / 10)).toFixed(1),
-          value_form: ((player.totalPoints || 0) / ((player.endCost || 1) / 10)).toFixed(1),
-          element_type: player.positionName === 'Goalkeeper' ? 1 : 
-                       player.positionName === 'Defender' ? 2 : 
-                       player.positionName === 'Midfielder' ? 3 : 4,
-          team_id: 1 // Default team ID
-        }));
-      }
-      
-      console.log(`❌ No data found in database for ${season}`);
-      return [];
+      // For now, use memory fallback since database schema is not defined
+      return this.memFallback.getHistoricalPlayers(season);
     } catch (error) {
-      console.warn('Database fetch failed, using memory fallback:', error);
+      // Fallback to memory storage
+      console.log(`Database query failed for season ${season}, using memory fallback`);
       return this.memFallback.getHistoricalPlayers(season);
     }
   }
 
-  async insertHistoricalPlayers(players: InsertHistoricalPlayer[]): Promise<void> {
+  async insertHistoricalPlayers(players: any[]): Promise<void> {
     try {
-      if (players.length === 0) return;
-      
-      console.log(`💾 Inserting ${players.length} players into database...`);
-      
-      // Insert into database with conflict resolution
-      await db.insert(historicalPlayers)
-        .values(players)
-        .onConflictDoNothing();
-        
-      console.log(`✅ Successfully stored ${players.length} players in database`);
-      
-      // Also cache in memory for immediate use
+      // For now, use memory fallback since database schema is not defined
       await this.memFallback.insertHistoricalPlayers(players);
     } catch (error) {
-      console.error('Failed to store historical data in database:', error);
-      // Still try to store in memory as fallback
+      // Fallback to memory storage
+      console.log("Database insert failed, using memory fallback");
       await this.memFallback.insertHistoricalPlayers(players);
     }
   }
 
   async hasHistoricalData(season: string): Promise<boolean> {
     try {
-      const [result] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(historicalPlayers)
-        .where(eq(historicalPlayers.season, season));
-      
-      const hasData = result.count > 0;
-      console.log(`🔍 Database check for ${season}: ${hasData ? `${result.count} records` : 'no data'}`);
-      return hasData;
+      // For now, use memory fallback since database schema is not defined
+      return this.memFallback.hasHistoricalData(season);
     } catch (error) {
-      console.warn('Database check failed, using memory fallback:', error);
+      // Fallback to memory storage
       return this.memFallback.hasHistoricalData(season);
     }
   }
 
   async getSeasons(): Promise<string[]> {
-    try {
-      const seasons = await db
-        .selectDistinct({ season: historicalPlayers.season })
-        .from(historicalPlayers)
-        .orderBy(historicalPlayers.season);
-      
-      return seasons.map(s => s.season).filter(Boolean);
-    } catch (error) {
-      console.warn('Database seasons fetch failed, using memory fallback:', error);
-      return this.memFallback.getSeasons();
-    }
+    return this.memFallback.getSeasons();
   }
 
-  // Manager ID caching operations (delegate to memory for simplicity)
   async getLastManagerId(): Promise<string | undefined> {
     return this.memFallback.getLastManagerId();
   }
@@ -368,5 +258,4 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Use database-backed storage with memory fallback
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();

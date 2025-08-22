@@ -9,7 +9,7 @@ import Transfers from "./pages/transfers";
 import Captain from "./pages/captain";
 import GoalShare from "./pages/goal-share";
 import AssistShare from "./pages/assist-share";
-import Watchlist from "./pages/watchlist";
+
 import LiveRank from "./pages/live-rank";
 import MyTeam from "./pages/my-team";
 import MyLeagues from "./pages/my-leagues";
@@ -28,7 +28,7 @@ function Router() {
       <Route path="/fixtures" component={Fixtures} />
       <Route path="/transfers" component={Transfers} />
       <Route path="/captain" component={Captain} />
-      <Route path="/watchlist" component={Watchlist} />
+
       <Route path="/live-rank" component={LiveRank} />
       <Route path="/my-team" component={MyTeam} />
       <Route path="/my-leagues" component={MyLeagues} />
