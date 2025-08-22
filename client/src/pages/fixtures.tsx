@@ -28,6 +28,7 @@ export default function Fixtures() {
     // Will be updated when we get current gameweek data
     return { start: 1, end: 10 };
   });
+  const [sortBy, setSortBy] = useState<'team' | 'fdr-asc' | 'fdr-desc'>('team');
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -79,11 +80,12 @@ export default function Fixtures() {
     }
   };
 
-  // Build fixture matrix
-  const fixtureMatrix = useMemo(() => {
-    if (!bootstrapData?.teams || !fixturesData || !bootstrapData?.events) return {};
+  // Build fixture matrix with average FDR calculation
+  const { fixtureMatrix, teamAverageFDR } = useMemo(() => {
+    if (!bootstrapData?.teams || !fixturesData || !bootstrapData?.events) return { fixtureMatrix: {}, teamAverageFDR: {} };
 
     const matrix: Record<number, Record<number, { opponent: string, difficulty: number, isHome: boolean, finished: boolean }>> = {};
+    const avgFDR: Record<number, number> = {};
     
     // Initialize matrix
     bootstrapData.teams.forEach(team => {
@@ -116,8 +118,19 @@ export default function Fixtures() {
       }
     });
 
-    return matrix;
-  }, [bootstrapData, fixturesData, gameweekRange]);
+    // Calculate average FDR for each team
+    bootstrapData.teams.forEach(team => {
+      const teamFixtures = Object.values(matrix[team.id] || {});
+      if (teamFixtures.length > 0) {
+        const totalDifficulty = teamFixtures.reduce((sum, fixture) => sum + fixture.difficulty, 0);
+        avgFDR[team.id] = parseFloat((totalDifficulty / teamFixtures.length).toFixed(2));
+      } else {
+        avgFDR[team.id] = 0;
+      }
+    });
+
+    return { fixtureMatrix: matrix, teamAverageFDR: avgFDR };
+  }, [bootstrapData, fixturesData, gameweekRange, currentGameweek]);
 
   const gameweeks = useMemo(() => {
     const gws = [];
@@ -126,6 +139,22 @@ export default function Fixtures() {
     }
     return gws;
   }, [gameweekRange]);
+
+  // Sort teams based on selected sort option
+  const sortedTeams = useMemo(() => {
+    if (!bootstrapData?.teams) return [];
+    
+    const teams = [...bootstrapData.teams];
+    
+    switch (sortBy) {
+      case 'fdr-asc':
+        return teams.sort((a, b) => (teamAverageFDR[a.id] || 0) - (teamAverageFDR[b.id] || 0));
+      case 'fdr-desc':
+        return teams.sort((a, b) => (teamAverageFDR[b.id] || 0) - (teamAverageFDR[a.id] || 0));
+      default:
+        return teams.sort((a, b) => a.short_name.localeCompare(b.short_name));
+    }
+  }, [bootstrapData?.teams, teamAverageFDR, sortBy]);
 
   if (error) {
     return (
@@ -192,6 +221,20 @@ export default function Fixtures() {
                 ))}
               </select>
             </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Sort by:</label>
+              <select 
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value as 'team' | 'fdr-asc' | 'fdr-desc')}
+                className="px-3 py-1 border border-gray-300 rounded text-sm"
+                data-testid="select-sort-by"
+              >
+                <option value="team">Team Name</option>
+                <option value="fdr-asc">FDR (Easiest First)</option>
+                <option value="fdr-desc">FDR (Hardest First)</option>
+              </select>
+            </div>
             
             <div className="flex flex-wrap gap-3 text-xs justify-center">
               <div className="flex items-center gap-1">
@@ -228,6 +271,7 @@ export default function Fixtures() {
                   <thead>
                     <tr className="border-b bg-gray-50">
                       <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
+                      <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Avg FDR</th>
                       {gameweeks.map(gw => (
                         <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                           gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
@@ -238,13 +282,25 @@ export default function Fixtures() {
                     </tr>
                   </thead>
                   <tbody>
-                    {bootstrapData?.teams?.map(team => (
-                      <tr key={team.id} className="border-b hover:bg-gray-50">
-                        <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">{team.short_name}</span>
-                          </div>
-                        </td>
+                    {sortedTeams.map(team => {
+                      const avgFDR = teamAverageFDR[team.id];
+                      return (
+                        <tr key={team.id} className="border-b hover:bg-gray-50">
+                          <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{team.short_name}</span>
+                            </div>
+                          </td>
+                          <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
+                            <div className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                              avgFDR <= 2 ? 'bg-green-100 text-green-800' :
+                              avgFDR <= 3 ? 'bg-yellow-100 text-yellow-800' :
+                              avgFDR <= 4 ? 'bg-orange-100 text-orange-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {avgFDR > 0 ? avgFDR : '-'}
+                            </div>
+                          </td>
                         {gameweeks.map(gw => {
                           const fixture = fixtureMatrix[team.id]?.[gw];
                           return (
@@ -269,8 +325,9 @@ export default function Fixtures() {
                             </td>
                           );
                         })}
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -321,6 +378,9 @@ export default function Fixtures() {
                     </div>
                     <div className="text-sm">
                       <span className="font-medium">TEAM (A)</span> - Away fixture at TEAM
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium">Avg FDR</span> - Average fixture difficulty rating across selected gameweeks
                     </div>
                     <div className="text-sm text-gray-600">
                       Example: LIV (A) means Away at Liverpool
