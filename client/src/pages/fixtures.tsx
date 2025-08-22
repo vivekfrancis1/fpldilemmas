@@ -25,8 +25,8 @@ interface Team {
 
 export default function Fixtures() {
   const [gameweekRange, setGameweekRange] = useState(() => {
-    // Will be updated when we get current gameweek data
-    return { start: 1, end: 10 };
+    // Show next 10 gameweeks: GW3 to GW12
+    return { start: 3, end: 12 };
   });
   const [sortBy, setSortBy] = useState<'team' | 'fdr-asc' | 'fdr-desc'>('fdr-asc');
 
@@ -48,22 +48,24 @@ export default function Fixtures() {
     const firstUnfinished = bootstrapData.events.find(event => !event.finished);
     const current = firstUnfinished ? firstUnfinished.id : 1;
     
-    // Only show upcoming gameweeks (unfinished gameweeks only)
+    // Show gameweeks 3-12 (next 10 gameweeks) regardless of finished status
     const available = bootstrapData.events
-      .filter(event => !event.finished)
+      .filter(event => event.id >= 3 && event.id <= 12)
       .map(event => event.id)
       .sort((a, b) => a - b);
     
     return { currentGameweek: current, availableGameweeks: available };
   }, [bootstrapData]);
 
-  // Update gameweek range when current gameweek changes
+  // Update gameweek range when current gameweek changes - show next 10 gameweeks (GW3-GW12)
   useEffect(() => {
-    if (availableGameweeks.length > 0 && gameweekRange.start === 1) {
-      const firstAvailable = availableGameweeks[0];
+    if (availableGameweeks.length > 0 && gameweekRange.start !== 3) {
+      // Start from GW3 and show next 10 gameweeks (GW3-GW12)
+      const startGW = 3;
+      const endGW = 12;
       setGameweekRange({
-        start: firstAvailable,
-        end: Math.min(firstAvailable + 9, Math.max(...availableGameweeks))
+        start: startGW,
+        end: endGW
       });
     }
   }, [availableGameweeks, gameweekRange.start]);
@@ -191,7 +193,7 @@ export default function Fixtures() {
               Fixture Difficulty Table
             </h1>
             <p className="text-sm sm:text-lg text-gray-600 max-w-2xl mx-auto px-2" data-testid="text-page-description">
-              Upcoming fixture matrix showing difficulty ratings for all teams across future gameweeks
+              Next 10 gameweeks (GW3-GW12) fixture difficulty ratings for all Premier League teams
             </p>
           </div>
 
