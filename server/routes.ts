@@ -512,8 +512,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const ownership = parseFloat(player.selected_by_percent || "0");
           const currentPrice = player.now_cost;
           
-          // Calculate price prediction using FPL's actual mechanics with ownership percentage
-          // Base thresholds: 5% of total FPL players (approximately 10 million players)
+          // Calculate price prediction using FPL's authentic mechanics
+          // Official FPL price change limits: 0.1m max per day, 0.3m max per gameweek
           const totalPlayers = 10000000; // Approximate total FPL players
           
           // Ownership-based thresholds (percentage of ownership with minimums)
@@ -530,6 +530,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             25000, // Minimum 25k transfers out regardless of ownership  
             ownedPlayers * ownershipThresholdMultiplier * 0.6 // Falls need 60% of rise threshold
           );
+          
+          // Apply FPL's official price change limits
+          // Price changes are capped at 0.1m (1 unit) per day, 0.3m (3 units) per gameweek
+          const maxDailyChange = 1; // 0.1m = 1 price unit
+          const maxGameweekChange = 3; // 0.3m = 3 price units
           
           // Adjust thresholds based on price tier (premium players harder to move)
           const priceMultiplier = currentPrice < 60 ? 0.8 : // Budget players easier
@@ -558,36 +563,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const adjustedFallThreshold = fallThreshold / velocityBonus;
           
           if (netTransfers > adjustedRiseThreshold) {
-            predictedChange = 1;
+            // Predict price rise (max 0.1m per day, 0.3m per gameweek)
+            predictedChange = Math.min(maxDailyChange, maxGameweekChange);
             const excess = netTransfers - adjustedRiseThreshold;
             const baseConfidence = 50 + (excess / adjustedRiseThreshold) * 30;
             confidence = Math.min(95, baseConfidence * velocityBonus);
             
             if (excess > adjustedRiseThreshold * 0.6) {
               probability = "Very High";
-              reason = `Massive inflow: ${(netTransfers/1000).toFixed(0)}k (${(transferVelocity/1000).toFixed(1)}k/hr) vs ${ownership}% owned`;
+              reason = `Massive inflow: ${(netTransfers/1000).toFixed(0)}k (${(transferVelocity/1000).toFixed(1)}k/hr) vs ${ownership}% owned (0.1m rise expected)`;
             } else if (excess > adjustedRiseThreshold * 0.3) {
               probability = "High";
-              reason = `Strong demand: ${(netTransfers/1000).toFixed(0)}k net exceeds ${(adjustedRiseThreshold/1000).toFixed(0)}k threshold`;
+              reason = `Strong demand: ${(netTransfers/1000).toFixed(0)}k net exceeds ${(adjustedRiseThreshold/1000).toFixed(0)}k threshold (0.1m rise likely)`;
             } else {
               probability = "Medium";
-              reason = `Rising: ${(netTransfers/1000).toFixed(0)}k crosses ${ownership}%-based threshold`;
+              reason = `Rising: ${(netTransfers/1000).toFixed(0)}k crosses ${ownership}%-based threshold (0.1m rise possible)`;
             }
           } else if (netTransfers < -adjustedFallThreshold) {
-            predictedChange = -1;
+            // Predict price fall (max 0.1m per day, 0.3m per gameweek)
+            predictedChange = -Math.min(maxDailyChange, maxGameweekChange);
             const excess = Math.abs(netTransfers) - adjustedFallThreshold;
             const baseConfidence = 50 + (excess / adjustedFallThreshold) * 30;
             confidence = Math.min(95, baseConfidence * velocityBonus);
             
             if (excess > adjustedFallThreshold * 0.6) {
               probability = "Very High";
-              reason = `Mass exodus: ${(netTransfers/1000).toFixed(0)}k (${(transferVelocity/1000).toFixed(1)}k/hr) from ${ownership}% owned`;
+              reason = `Mass exodus: ${(netTransfers/1000).toFixed(0)}k (${(transferVelocity/1000).toFixed(1)}k/hr) from ${ownership}% owned (0.1m fall expected)`;
             } else if (excess > adjustedFallThreshold * 0.3) {
               probability = "High";
-              reason = `Heavy selling: ${(netTransfers/1000).toFixed(0)}k exceeds ${(adjustedFallThreshold/1000).toFixed(0)}k threshold`;
+              reason = `Heavy selling: ${(netTransfers/1000).toFixed(0)}k exceeds ${(adjustedFallThreshold/1000).toFixed(0)}k threshold (0.1m fall likely)`;
             } else {
               probability = "Medium";
-              reason = `Falling: ${(netTransfers/1000).toFixed(0)}k crosses ownership threshold`;
+              reason = `Falling: ${(netTransfers/1000).toFixed(0)}k crosses ownership threshold (0.1m fall possible)`;
             }
           } else {
             // Calculate how close to adjusted thresholds
