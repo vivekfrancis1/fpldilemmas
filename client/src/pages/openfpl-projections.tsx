@@ -163,7 +163,7 @@ export default function OpenFPLProjections() {
           <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white rounded-xl md:rounded-2xl p-4 md:p-8 shadow-2xl">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:gap-3 mb-3 md:mb-4">
               <Brain className="h-6 w-6 md:h-10 md:w-10" />
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold">OpenFPL Projections</h1>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold">Player Projections</h1>
             </div>
             <p className="text-blue-100 text-sm sm:text-base md:text-lg lg:text-xl mb-2">
               🤖 Advanced ML ensemble predictions using XGBoost + Random Forest models
