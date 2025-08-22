@@ -1920,6 +1920,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // League Analysis endpoint
+  app.get("/api/leagues/:leagueId/analyze", async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      
+      if (!leagueId || isNaN(Number(leagueId))) {
+        return res.status(400).json({ message: "Invalid league ID" });
+      }
+      
+      const response = await fetch(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_new_entries=1&page_standings=1&phase=1`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "League not found" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Transform the data for the frontend
+      const transformedData = {
+        id: data.league.id,
+        name: data.league.name,
+        standings: data.standings.results || [],
+        league_type: data.league.league_type,
+        admin_entry: data.league.admin_entry,
+        started: data.league.started,
+        code_privacy: data.league.code_privacy,
+        has_cup: data.league.has_cup,
+        cup_league: data.league.cup_league,
+        rank: data.league.rank
+      };
+      
+      res.json(transformedData);
+    } catch (error) {
+      console.error(`Error analyzing league ${req.params.leagueId}:`, error);
+      res.status(500).json({
+        error: "Failed to load league data",
+        message: error instanceof Error ? error.message : "Please check the league ID and try again.",
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
