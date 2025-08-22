@@ -339,6 +339,39 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get manager's leagues
+  app.get("/api/manager/:managerId/leagues", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+      
+      // Get manager data first to access leagues information
+      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "Manager leagues not found" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Extract and return leagues information
+      const leagues = data.leagues || { classic: [], h2h: [], cup: null };
+      res.json(leagues);
+    } catch (error) {
+      console.error(`Error fetching manager leagues for ID ${req.params.managerId}:`, error);
+      res.status(500).json({
+        error: "Failed to fetch manager leagues",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Get manager's history
   app.get("/api/manager/:managerId/history", async (req, res) => {
     try {
