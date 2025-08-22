@@ -420,70 +420,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get price changes using historical daily tracking data when available
       const recentChanges = [];
       
-      // Try to get recent price changes from daily tracking data
-      for (const player of elements.slice(0, 50)) { // Limit to avoid overwhelming response
-        try {
-          const latestData = await storage.getLatestPriceData(player.id);
+      // Only show players with ACTUAL price changes using authentic FPL data
+      for (const player of elements) {
+        const priceChange = player.cost_change_event || 0;
+        
+        // Only include players who have actually changed price this gameweek
+        if (priceChange !== 0) {
           const team = teams.find((t: any) => t.id === player.team);
           const position = positions.find((p: any) => p.id === player.element_type);
           
-          // Use daily tracking data if available, otherwise use event data
-          let dailyTransfersIn = 0;
-          let dailyTransfersOut = 0;
-          let priceChange = player.cost_change_event || 0;
+          // Get transfer data from daily tracking if available
+          let dailyTransfersIn = player.transfers_in_event || 0;
+          let dailyTransfersOut = player.transfers_out_event || 0;
           
-          if (latestData) {
-            dailyTransfersIn = latestData.dailyTransfersIn || 0;
-            dailyTransfersOut = latestData.dailyTransfersOut || 0;
-          } else {
-            // Fallback to event data
-            dailyTransfersIn = player.transfers_in_event || 0;
-            dailyTransfersOut = player.transfers_out_event || 0;
+          try {
+            const latestData = await storage.getLatestPriceData(player.id);
+            if (latestData) {
+              dailyTransfersIn = latestData.dailyTransfersIn || dailyTransfersIn;
+              dailyTransfersOut = latestData.dailyTransfersOut || dailyTransfersOut;
+            }
+          } catch (error) {
+            // Use event data as fallback
           }
-          
-          // Only include if there's meaningful activity
-          if (priceChange !== 0 || Math.abs(dailyTransfersIn - dailyTransfersOut) > 1000) {
-            recentChanges.push({
-              player_id: player.id,
-              player_name: player.web_name,
-              team_name: team?.short_name || "Unknown",
-              position: position?.singular_name_short || "Unknown",
-              old_price: player.now_cost - priceChange,
-              new_price: player.now_cost,
-              current_price: player.now_cost,
-              change: priceChange,
-              ownership_change: ((dailyTransfersIn - dailyTransfersOut) / 10000000) * 100,
-              transfers_in: dailyTransfersIn,
-              transfers_out: dailyTransfersOut,
-              recency_score: Math.abs(dailyTransfersIn - dailyTransfersOut) + Math.abs(priceChange) * 50000
-            });
-          }
-        } catch (error) {
-          // Skip individual player errors
-          continue;
-        }
-      }
-      
-      // If no tracked data available, show some basic current data
-      if (recentChanges.length === 0) {
-        const popularPlayers = elements.filter((p: any) => parseFloat(p.selected_by_percent || "0") > 5);
-        for (const player of popularPlayers.slice(0, 10)) {
-          const team = teams.find((t: any) => t.id === player.team);
-          const position = positions.find((p: any) => p.id === player.element_type);
           
           recentChanges.push({
             player_id: player.id,
             player_name: player.web_name,
             team_name: team?.short_name || "Unknown",
             position: position?.singular_name_short || "Unknown",
-            old_price: player.now_cost,
+            old_price: player.now_cost - priceChange,
             new_price: player.now_cost,
             current_price: player.now_cost,
-            change: 0,
-            ownership_change: 0,
-            transfers_in: player.transfers_in_event || 0,
-            transfers_out: player.transfers_out_event || 0,
-            recency_score: parseFloat(player.selected_by_percent || "0") * 100
+            change: priceChange,
+            ownership_change: ((dailyTransfersIn - dailyTransfersOut) / 10000000) * 100,
+            transfers_in: dailyTransfersIn,
+            transfers_out: dailyTransfersOut,
+            // Price changes are most recent, so high recency score
+            recency_score: Math.abs(priceChange) * 100000 + Math.abs(dailyTransfersIn - dailyTransfersOut)
           });
         }
       }
@@ -520,21 +493,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
       
-      // Popular player IDs for demonstration when real transfer data is minimal
-      const playerKeys = [239, 426, 355, 284, 302, 344, 283, 291, 254, 321];
+      // Advanced price prediction algorithm based on authentic FPL mechanics and data
+      const predictions = [];
       
-      // Advanced price prediction algorithm based on FPL mechanics
-      const predictions = elements
-        .map((player: any) => {
+      for (const player of elements) {
+        try {
+          // Get authentic transfer data from daily tracking
           let transfersIn = player.transfers_in_event || 0;
           let transfersOut = player.transfers_out_event || 0;
           
-          // Generate realistic transfer activity for popular players when data is minimal
-          if (transfersIn === 0 && transfersOut === 0 && playerKeys.includes(player.id)) {
-            const playerIndex = playerKeys.indexOf(player.id);
-            const baseActivity = (player.now_cost > 100 ? 35000 : 20000) + (playerIndex * 5000);
-            transfersIn = baseActivity + (player.id * 13) % 15000;
-            transfersOut = Math.max(0, transfersIn - (8000 + (player.id * 17) % 12000));
+          const latestData = await storage.getLatestPriceData(player.id);
+          if (latestData) {
+            transfersIn = latestData.dailyTransfersIn || transfersIn;
+            transfersOut = latestData.dailyTransfersOut || transfersOut;
           }
           
           const netTransfers = transfersIn - transfersOut;
@@ -661,15 +632,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fall_threshold: Math.round(adjustedFallThreshold),
             transfer_velocity: Math.round(transferVelocity)
           };
-        })
-        .filter((prediction: any) => {
-          // Show all meaningful predictions and popular players
-          const hasActivity = Math.abs(prediction.net_transfers) > 100;
-          const hasProbability = prediction.probability !== "Low";
-          const hasRecentChanges = prediction.transfers_in > 50 || prediction.transfers_out > 50;
-          const isPopularPlayer = playerKeys.includes(prediction.player_id);
+        } catch (error) {
+          // Skip individual player errors
+          return null;
+        }
+      }
+      
+      const finalPredictions = validPredictions.filter((prediction: any) => {
+          // Only show players with predicted changes or high transfer activity
+          const hasSignificantActivity = Math.abs(prediction.net_transfers) > 5000;
+          const hasPredictedChange = prediction.predicted_change !== 0;
+          const hasHighConfidence = prediction.confidence > 30;
           
-          return hasProbability || hasActivity || hasRecentChanges || isPopularPlayer;
+          return hasPredictedChange || hasSignificantActivity || hasHighConfidence;
         })
         .sort((a: any, b: any) => {
           // Sort by confidence descending, then by net transfers
@@ -678,7 +653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .slice(0, 20); // Show top 20 predictions
       
-      res.json(predictions);
+      res.json(finalPredictions);
     } catch (error) {
       console.error("Error generating price predictions:", error);
       res.status(500).json({

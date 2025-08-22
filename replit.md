@@ -52,7 +52,7 @@ Historical data: Added year selection functionality for player statistics from 2
 - **Caching Layer**: Custom `IStorage` interface with `MemStorage` implementation for bootstrap data and player summaries
 - **Data Persistence**: Database storage for daily price tracking, transfer data, and historical records with scheduled data collection
 - **Data Consistency**: All projection tools use deterministic calculations based on team ID and gameweek seeds, ensuring identical values across multiple API calls (August 2025)
-- **Daily Price Tracking**: Automated system fetching player prices, ownership, and transfer data at 7:30 AM IST daily, calculating daily transfer differences and storing historical trends for comprehensive price analysis (August 2025)
+- **Daily Price Tracking**: Automated system fetching player prices, ownership, and transfer data at 7:30 AM IST daily, calculating daily transfer differences and storing historical trends for comprehensive price analysis. Recent Price Changes now only displays actual price changes, while Price Predictions shows players likely to rise/fall based on transfer activity and ownership thresholds (August 2025)
 
 ### API Integration
 - **External API**: Fantasy Premier League official API (`https://fantasy.premierleague.com/api`)
