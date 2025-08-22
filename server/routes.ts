@@ -416,24 +416,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
       
-      // Simulate recent price changes based on transfer activity
+      // Get actual price changes using cost_change_event field
       const recentChanges = elements
         .filter((player: any) => {
-          const transfersIn = player.transfers_in_event || 0;
-          const transfersOut = player.transfers_out_event || 0;
-          const netTransfers = transfersIn - transfersOut;
-          return Math.abs(netTransfers) > 50000; // Players with significant transfer activity
+          const priceChange = player.cost_change_event || 0;
+          return priceChange !== 0; // Only players with actual price changes
         })
-        .slice(0, 20) // Limit to 20 changes
         .map((player: any) => {
           const team = teams.find((t: any) => t.id === player.team);
           const position = positions.find((p: any) => p.id === player.element_type);
           const transfersIn = player.transfers_in_event || 0;
           const transfersOut = player.transfers_out_event || 0;
-          const netTransfers = transfersIn - transfersOut;
-          
-          // Simulate price change based on transfer momentum
-          const priceChange = netTransfers > 100000 ? 1 : netTransfers < -100000 ? -1 : 0;
+          const priceChange = player.cost_change_event || 0;
           
           return {
             player_id: player.id,
@@ -446,9 +440,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             change: priceChange,
             ownership_change: ((transfersIn - transfersOut) / 10000000) * 100,
             transfers_in: transfersIn,
-            transfers_out: transfersOut
+            transfers_out: transfersOut,
+            // Add recency score based on transfer activity (more recent = higher activity)
+            recency_score: Math.abs(transfersIn - transfersOut) + Math.abs(priceChange) * 50000
           };
-        });
+        })
+        .sort((a: any, b: any) => {
+          // Sort by recency score (descending) - most recent/active changes first
+          return b.recency_score - a.recency_score;
+        })
+        .slice(0, 20); // Limit to 20 most recent changes
       
       res.json(recentChanges);
     } catch (error) {
