@@ -509,20 +509,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }).filter(Boolean);
         
         const averageCleanSheetOdds = projections.length > 0 ? 
-          projections.reduce((sum, p) => sum + p.cleanSheetOdds, 0) / projections.length : 0;
+          projections.reduce((sum: number, p: any) => sum + p.cleanSheetOdds, 0) / projections.length : 0;
+        
+        // Convert projections array to gameweekProjections object
+        const gameweekProjections: { [gameweek: number]: number } = {};
+        projections.forEach((p: any) => {
+          gameweekProjections[p.gameweek] = p.cleanSheetOdds;
+        });
+        
+        // Calculate total CS probability and determine confidence
+        const totalCSProbability = Math.round(averageCleanSheetOdds * projections.length * 10) / 10;
+        let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
+        if (averageCleanSheetOdds >= 40) confidence = 'High';
+        else if (averageCleanSheetOdds < 25) confidence = 'Low';
         
         return {
           id: team.id,
           team: team.short_name,
+          teamShort: team.short_name,
           teamName: team.name,
-          projections,
-          averageCleanSheetOdds: Math.round(averageCleanSheetOdds * 10) / 10,
-          expectedCleanSheets: Math.round((averageCleanSheetOdds / 100) * projections.length * 10) / 10
+          gameweekProjections,
+          totalCSProbability: Math.round(totalCSProbability * 10) / 10,
+          averageCSProbability: Math.round(averageCleanSheetOdds * 10) / 10,
+          confidence,
+          position: 0 // Will be set after sorting
         };
       });
       
-      // Sort by average clean sheet odds descending
-      teamProjections.sort((a, b) => b.averageCleanSheetOdds - a.averageCleanSheetOdds);
+      // Sort by average clean sheet odds descending and set positions
+      teamProjections.sort((a: any, b: any) => b.averageCSProbability - a.averageCSProbability);
+      teamProjections.forEach((team: any, index: number) => {
+        team.position = index + 1;
+      });
       
       res.json(teamProjections);
     } catch (error) {
