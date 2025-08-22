@@ -76,17 +76,17 @@ export default function ProjectedGoalsCS() {
   }, [filteredProjections]);
 
   const getGoalsColor = (goals: number) => {
-    if (goals >= 2.0) return 'bg-blue-500 text-white font-semibold';
-    if (goals >= 1.5) return 'bg-blue-100 text-blue-800 font-medium';
-    if (goals >= 1.0) return 'bg-gray-100 text-gray-800';
-    return 'bg-gray-50 text-gray-600';
+    if (goals >= 2.0) return 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border border-blue-700';
+    if (goals >= 1.5) return 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-300';
+    if (goals >= 1.0) return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300';
+    return 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-600 border border-gray-200';
   };
 
   const getCSColor = (percentage: number) => {
-    if (percentage >= 40) return 'bg-orange-500 text-white font-semibold';
-    if (percentage >= 30) return 'bg-orange-100 text-orange-800 font-medium';
-    if (percentage >= 20) return 'bg-gray-100 text-gray-800';
-    return 'bg-gray-50 text-gray-600';
+    if (percentage >= 40) return 'bg-gradient-to-r from-orange-500 to-orange-600 text-white border border-orange-700';
+    if (percentage >= 30) return 'bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border border-orange-300';
+    if (percentage >= 20) return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300';
+    return 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-600 border border-gray-200';
   };
 
   if (isLoading || projectionsLoading) {
@@ -119,13 +119,14 @@ export default function ProjectedGoalsCS() {
           </div>
 
           {/* Controls */}
-          <Card className="mb-6">
+          <Card className="mb-6 shadow-md border-0">
             <CardContent className="p-6">
-              <div className="flex flex-wrap gap-4 items-end">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Gameweek:</label>
+              <div className="flex flex-wrap gap-6 items-center">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                  <label className="text-sm font-semibold text-gray-700">Gameweek:</label>
                   <Select value={selectedGameweek} onValueChange={setSelectedGameweek}>
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-36 border-2 border-gray-200 hover:border-blue-400 transition-colors">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -137,10 +138,11 @@ export default function ProjectedGoalsCS() {
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Team:</label>
+                <div className="flex items-center gap-3">
+                  <Filter className="h-5 w-5 text-blue-600" />
+                  <label className="text-sm font-semibold text-gray-700">Team:</label>
                   <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-36 border-2 border-gray-200 hover:border-blue-400 transition-colors">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -158,12 +160,12 @@ export default function ProjectedGoalsCS() {
           </Card>
 
           {/* Projections Table */}
-          <Card className="overflow-hidden">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
+          <Card className="overflow-hidden shadow-lg border-0">
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <Target className="h-6 w-6" />
                 Projected Goals & CS Odds
-                <Badge variant="outline" className="ml-2">
+                <Badge className="bg-white/20 text-white border-white/30 ml-auto">
                   {filteredProjections.length} matches
                 </Badge>
               </CardTitle>
@@ -176,10 +178,10 @@ export default function ProjectedGoalsCS() {
                   return (
                     <div key={groupKey}>
                       {/* Day Header */}
-                      <div className="bg-gray-100 px-4 py-2 border-b">
+                      <div className="bg-gradient-to-r from-gray-100 to-gray-50 px-6 py-3 border-b border-gray-200">
                         <div className="flex items-center justify-between">
-                          <span className="font-semibold text-sm text-gray-700">{dayOfWeek}</span>
-                          <span className="text-xs text-gray-500">{date}</span>
+                          <span className="font-bold text-base text-gray-800">{dayOfWeek}</span>
+                          <span className="text-sm text-gray-600 font-medium">{date}</span>
                         </div>
                       </div>
                       
@@ -187,25 +189,29 @@ export default function ProjectedGoalsCS() {
                       {projections.map((match, index) => (
                         <div 
                           key={`${match.fixtureId}-${index}`} 
-                          className="px-4 py-3 border-b last:border-b-0 hover:bg-gray-50"
+                          className="px-6 py-4 border-b border-gray-100 last:border-b-0 hover:bg-blue-50/50 transition-colors duration-200"
                           data-testid={`match-row-${match.homeTeam.teamShort}-${match.awayTeam.teamShort}`}
                         >
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Home Team */}
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-sm">
-                                {match.homeTeam.teamShort}
-                              </span>
-                              <div className="flex items-center space-x-3">
+                            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span className="font-bold text-base text-gray-800">
+                                  {match.homeTeam.teamShort}
+                                </span>
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">HOME</span>
+                              </div>
+                              <div className="flex items-center space-x-4">
                                 <div className="text-center">
-                                  <div className="text-xs text-gray-500 mb-1">GOALS</div>
-                                  <div className={`px-2 py-1 rounded text-sm ${getGoalsColor(match.homeTeam.projectedGoals)}`}>
+                                  <div className="text-xs font-semibold text-gray-600 mb-1">GOALS</div>
+                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.homeTeam.projectedGoals)}`}>
                                     {match.homeTeam.projectedGoals.toFixed(2)}
                                   </div>
                                 </div>
                                 <div className="text-center">
-                                  <div className="text-xs text-gray-500 mb-1">CS%</div>
-                                  <div className={`px-2 py-1 rounded text-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
+                                  <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
+                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
                                     {match.homeTeam.cleanSheetOdds}%
                                   </div>
                                 </div>
@@ -213,20 +219,24 @@ export default function ProjectedGoalsCS() {
                             </div>
 
                             {/* Away Team */}
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-sm">
-                                {match.awayTeam.teamShort}
-                              </span>
-                              <div className="flex items-center space-x-3">
+                            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="font-bold text-base text-gray-800">
+                                  {match.awayTeam.teamShort}
+                                </span>
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">AWAY</span>
+                              </div>
+                              <div className="flex items-center space-x-4">
                                 <div className="text-center">
-                                  <div className="text-xs text-gray-500 mb-1">GOALS</div>
-                                  <div className={`px-2 py-1 rounded text-sm ${getGoalsColor(match.awayTeam.projectedGoals)}`}>
+                                  <div className="text-xs font-semibold text-gray-600 mb-1">GOALS</div>
+                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.awayTeam.projectedGoals)}`}>
                                     {match.awayTeam.projectedGoals.toFixed(2)}
                                   </div>
                                 </div>
                                 <div className="text-center">
-                                  <div className="text-xs text-gray-500 mb-1">CS%</div>
-                                  <div className={`px-2 py-1 rounded text-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
+                                  <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
+                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
                                     {match.awayTeam.cleanSheetOdds}%
                                   </div>
                                 </div>
