@@ -1019,16 +1019,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let gameweekFixtures;
       if (selectedGameweek === "all") {
-        // Get fixtures for next 8 gameweeks (excluding finished ones)
-        const maxGameweek = Math.min(currentGameweek + 7, 38);
+        // Get fixtures for next 8 gameweeks starting from the gameweek after current
+        const startGameweek = currentGameweek + 1;
+        const maxGameweek = Math.min(startGameweek + 7, 38);
         gameweekFixtures = fixturesData
           .filter((fixture: any) => 
             !fixture.finished && 
-            fixture.event >= currentGameweek && 
+            fixture.event >= startGameweek && 
             fixture.event <= maxGameweek
           );
       } else {
-        const targetGameweek = selectedGameweek === "current" ? currentGameweek : parseInt(selectedGameweek);
+        const targetGameweek = parseInt(selectedGameweek);
         // Get fixtures for the selected gameweek (excluding finished ones)
         gameweekFixtures = fixturesData
           .filter((fixture: any) => 

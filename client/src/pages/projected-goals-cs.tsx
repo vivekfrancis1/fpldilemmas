@@ -112,7 +112,6 @@ export default function ProjectedGoalsCS() {
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
               {selectedGameweek === "all" ? "PL Match Odds - Next 8 Gameweeks" : 
-               selectedGameweek === "current" ? `PL GW${currentGameweek}: Match Odds` : 
                `PL GW${selectedGameweek}: Match Odds`}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
@@ -133,8 +132,7 @@ export default function ProjectedGoalsCS() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Available</SelectItem>
-                      <SelectItem value="current">Current GW</SelectItem>
-                      {Array.from({ length: 8 }, (_, i) => currentGameweek + i).map(gw => (
+                      {Array.from({ length: 8 }, (_, i) => currentGameweek + i + 1).map(gw => (
                         <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                       ))}
                     </SelectContent>
