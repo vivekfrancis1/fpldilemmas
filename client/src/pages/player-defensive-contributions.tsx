@@ -26,6 +26,16 @@ interface BootstrapData {
     second_name: string;
     team: number;
     element_type: number;
+    total_points: number;
+    form: number;
+    now_cost: number;
+    goals_scored: number;
+    assists: number;
+    clean_sheets: number;
+    goals_conceded: number;
+    yellow_cards: number;
+    red_cards: number;
+    minutes: number;
   }>;
   teams: Array<{
     id: number;
@@ -75,17 +85,14 @@ export default function PlayerDefensiveContributions() {
     }
   };
 
-  // Generate player CBIT/CBITR threshold data using historical performance
+  // Generate player CBIT/CBITR threshold data using real FPL performance metrics
   const generatePlayerDefensiveData = (gameweek: number, playerData: any) => {
     // Skip goalkeepers - they don't contribute to CBIT/CBITR thresholds
     if (playerData.element_type === 1) {
       return null; // Exclude goalkeepers
     }
     
-    const seed = playerData.id * gameweek * 1789;
-    const random1 = (seed * 9301 + 49297) % 233280 / 233280;
-    
-    // Check if player has historical defensive data
+    // Check if player has historical defensive data for enhanced accuracy
     const playerName = playerData.web_name;
     let historicalRate = null;
     
@@ -97,34 +104,56 @@ export default function PlayerDefensiveContributions() {
       historicalRate = historicalDefensivePerformers.forwards[playerName];
     }
     
-    // Position-based base probability of hitting thresholds
-    let baseThreshold = 0.2;
+    // Calculate base threshold using real FPL performance metrics
+    let calculatedThreshold = 0;
     
     if (playerData.element_type === 2) { // Defenders (10+ CBIT)
-      baseThreshold = 0.45; // Defenders most likely to hit 10+ CBIT
+      // Defensive performance indicators
+      const cleanSheetBonus = (playerData.clean_sheets || 0) * 3;
+      const goalsConceededPenalty = (playerData.goals_conceded || 0) * -1;
+      const cardBonus = ((playerData.yellow_cards || 0) * 1.5) + ((playerData.red_cards || 0) * 0.5);
+      const pointsPerformance = (playerData.total_points || 0) / 8;
+      const minutesPlayed = Math.min(20, (playerData.minutes || 0) / 90);
+      const priceIndicator = Math.max(0, (playerData.now_cost || 40) - 40) / 2;
+      
+      calculatedThreshold = 25 + cleanSheetBonus + goalsConceededPenalty + cardBonus + pointsPerformance + minutesPlayed + priceIndicator;
+      
     } else if (playerData.element_type === 3) { // Midfielders (12+ CBITR)
-      baseThreshold = 0.35; // Midfielders good chance for 12+ CBITR
+      // Midfield defensive contribution indicators
+      const attackingBonus = ((playerData.goals_scored || 0) * 2) + ((playerData.assists || 0) * 1.5);
+      const cleanSheetBonus = (playerData.clean_sheets || 0) * 2;
+      const pointsPerformance = (playerData.total_points || 0) / 10;
+      const minutesPlayed = Math.min(15, (playerData.minutes || 0) / 90);
+      const priceIndicator = Math.max(0, (playerData.now_cost || 45) - 45) / 3;
+      
+      calculatedThreshold = 20 + attackingBonus + cleanSheetBonus + pointsPerformance + minutesPlayed + priceIndicator;
+      
     } else if (playerData.element_type === 4) { // Forwards (12+ CBITR)
-      baseThreshold = 0.15; // Forwards least likely to hit 12+ CBITR
+      // Forward defensive contribution (rare)
+      const attackingBonus = ((playerData.goals_scored || 0) * 1.5) + ((playerData.assists || 0) * 1);
+      const pointsPerformance = (playerData.total_points || 0) / 15;
+      const minutesPlayed = Math.min(8, (playerData.minutes || 0) / 90);
+      
+      calculatedThreshold = 8 + attackingBonus + pointsPerformance + minutesPlayed;
     }
     
-    // Use historical data if available, otherwise use position-based estimate
-    let finalThreshold;
+    // Apply form factor
+    const formFactor = Math.max(-5, Math.min(10, ((playerData.form || 0) - 3) * 2));
+    calculatedThreshold += formFactor;
+    
+    // Blend with historical data if available
+    let finalThreshold = calculatedThreshold;
     if (historicalRate !== null) {
-      // Blend historical data (70%) with current form variance (30%)
-      const formVariance = (random1 * 0.3 - 0.15); // -0.15 to +0.15
-      finalThreshold = historicalRate * 0.7 + (baseThreshold + formVariance) * 0.3;
-    } else {
-      // Standard variance for players without historical data
-      const playerVariance = random1 * 0.4 - 0.2; // -0.2 to +0.2
-      finalThreshold = baseThreshold + playerVariance;
+      // Use 60% historical data, 40% calculated performance
+      finalThreshold = (historicalRate * 60) + (calculatedThreshold * 0.4);
     }
     
     // Ensure realistic bounds and handle NaN
     if (isNaN(finalThreshold)) {
-      finalThreshold = baseThreshold;
+      finalThreshold = playerData.element_type === 2 ? 25 : 
+                     playerData.element_type === 3 ? 18 : 8;
     }
-    finalThreshold = Math.max(0.05, Math.min(0.8, finalThreshold));
+    finalThreshold = Math.max(2, Math.min(80, finalThreshold));
     
     return {
       player_id: playerData.id,
@@ -132,7 +161,7 @@ export default function PlayerDefensiveContributions() {
       team: getTeamShortName(playerData.team),
       position: getPositionShortName(playerData.element_type),
       gameweek,
-      threshold_probability: Math.round(finalThreshold * 100)
+      threshold_probability: Math.round(finalThreshold)
     };
   };
 
