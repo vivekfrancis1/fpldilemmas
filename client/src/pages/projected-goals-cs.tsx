@@ -7,19 +7,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
-interface TeamProjection {
-  id: number;
-  team: string;
-  teamShort: string;
-  opponent: string;
-  opponentShort: string;
-  isHome: boolean;
+interface MatchProjection {
+  fixtureId: number;
   gameweek: number;
   kickoffTime: string;
-  projectedGoals: number;
-  cleanSheetOdds: number;
   dayOfWeek: string;
   date: string;
+  homeTeam: {
+    id: number;
+    team: string;
+    teamShort: string;
+    projectedGoals: number;
+    cleanSheetOdds: number;
+  };
+  awayTeam: {
+    id: number;
+    team: string;
+    teamShort: string;
+    projectedGoals: number;
+    cleanSheetOdds: number;
+  };
   confidence: 'High' | 'Medium' | 'Low';
 }
 
@@ -31,7 +38,7 @@ export default function ProjectedGoalsCS() {
     queryKey: ["/api/bootstrap-static"],
   });
 
-  const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamProjection[]>({
+  const { data: projectionsData, isLoading: projectionsLoading } = useQuery<MatchProjection[]>({
     queryKey: [`/api/projected-goals-cs?gameweek=${selectedGameweek}`],
   });
 
@@ -39,7 +46,11 @@ export default function ProjectedGoalsCS() {
     if (!projectionsData) return [];
     
     return projectionsData
-      .filter(team => selectedTeam === "all" || team.teamShort === selectedTeam)
+      .filter(match => 
+        selectedTeam === "all" || 
+        match.homeTeam.teamShort === selectedTeam || 
+        match.awayTeam.teamShort === selectedTeam
+      )
       .sort((a, b) => {
         // Sort by gameweek, then by kickoff time
         if (a.gameweek !== b.gameweek) {
@@ -51,14 +62,14 @@ export default function ProjectedGoalsCS() {
 
   // Group by gameweek and day
   const groupedProjections = useMemo(() => {
-    const groups: { [key: string]: TeamProjection[] } = {};
+    const groups: { [key: string]: MatchProjection[] } = {};
     
-    filteredProjections.forEach(projection => {
-      const key = `GW${projection.gameweek}-${projection.dayOfWeek}-${projection.date}`;
+    filteredProjections.forEach(match => {
+      const key = `GW${match.gameweek}-${match.dayOfWeek}-${match.date}`;
       if (!groups[key]) {
         groups[key] = [];
       }
-      groups[key].push(projection);
+      groups[key].push(match);
     });
     
     return groups;
@@ -161,35 +172,60 @@ export default function ProjectedGoalsCS() {
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="space-y-0">
-                      {projections.map((projection, index) => (
+                      {projections.map((match, index) => (
                         <div 
-                          key={`${projection.id}-${index}`} 
-                          className="flex items-center justify-between py-3 px-4 border-b last:border-b-0 hover:bg-gray-50"
-                          data-testid={`projection-row-${projection.teamShort}`}
+                          key={`${match.fixtureId}-${index}`} 
+                          className="py-3 px-4 border-b last:border-b-0 hover:bg-gray-50"
+                          data-testid={`match-row-${match.homeTeam.teamShort}-${match.awayTeam.teamShort}`}
                         >
-                          <div className="flex items-center space-x-3 flex-1">
-                            <div className="flex items-center space-x-2 min-w-0 flex-1">
-                              <span className="font-semibold text-sm truncate">
-                                {projection.teamShort}
+                          {/* Home Team */}
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-semibold text-sm">
+                                {match.homeTeam.teamShort}
                               </span>
-                              <span className="text-xs text-gray-500">
-                                {projection.isHome ? 'vs' : '@'} {projection.opponentShort}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-4">
-                            <div className="text-center">
-                              <div className="text-xs text-gray-500 mb-1">GOALS</div>
-                              <div className={`px-2 py-1 rounded text-sm ${getGoalsColor(projection.projectedGoals)}`}>
-                                {projection.projectedGoals.toFixed(2)}
-                              </div>
+                              <span className="text-xs text-gray-500">vs {match.awayTeam.teamShort}</span>
                             </div>
                             
-                            <div className="text-center">
-                              <div className="text-xs text-gray-500 mb-1">CS%</div>
-                              <div className={`px-2 py-1 rounded text-sm ${getCSColor(projection.cleanSheetOdds)}`}>
-                                {projection.cleanSheetOdds}%
+                            <div className="flex items-center space-x-4">
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500 mb-1">GOALS</div>
+                                <div className={`px-2 py-1 rounded text-sm ${getGoalsColor(match.homeTeam.projectedGoals)}`}>
+                                  {match.homeTeam.projectedGoals.toFixed(2)}
+                                </div>
+                              </div>
+                              
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500 mb-1">CS%</div>
+                                <div className={`px-2 py-1 rounded text-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
+                                  {match.homeTeam.cleanSheetOdds}%
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Away Team */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-semibold text-sm">
+                                {match.awayTeam.teamShort}
+                              </span>
+                              <span className="text-xs text-gray-500">@ {match.homeTeam.teamShort}</span>
+                            </div>
+                            
+                            <div className="flex items-center space-x-4">
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500 mb-1">GOALS</div>
+                                <div className={`px-2 py-1 rounded text-sm ${getGoalsColor(match.awayTeam.projectedGoals)}`}>
+                                  {match.awayTeam.projectedGoals.toFixed(2)}
+                                </div>
+                              </div>
+                              
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500 mb-1">CS%</div>
+                                <div className={`px-2 py-1 rounded text-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
+                                  {match.awayTeam.cleanSheetOdds}%
+                                </div>
                               </div>
                             </div>
                           </div>

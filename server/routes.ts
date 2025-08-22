@@ -1024,7 +1024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fixture.event === targetGameweek
         );
       
-      const teamProjections: any[] = [];
+      const matchProjections: any[] = [];
       
       gameweekFixtures.forEach((fixture: any) => {
         const homeTeam = teams.find((t: any) => t.id === fixture.team_h);
@@ -1054,42 +1054,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const homeAttackStrengthCalc = (homeTeam.strength_attack_home || 1000) / 1000;
         const awayCSProbability = Math.max(5, Math.min(65, awayDefenseStrengthCalc * (2.0 - homeAttackStrengthCalc) * 35));
         
-        // Add home team projection
-        teamProjections.push({
-          id: homeTeam.id,
-          team: homeTeam.name,
-          teamShort: homeTeam.short_name,
-          opponent: awayTeam.name,
-          opponentShort: awayTeam.short_name,
-          isHome: true,
+        // Add match projection with both teams
+        matchProjections.push({
+          fixtureId: fixture.id,
           gameweek: targetGameweek,
           kickoffTime: fixture.kickoff_time,
-          projectedGoals: Math.round(homeExpectedGoals * 100) / 100,
-          cleanSheetOdds: Math.round(homeCSProbability),
           dayOfWeek,
           date,
-          confidence: 'High'
-        });
-        
-        // Add away team projection
-        teamProjections.push({
-          id: awayTeam.id,
-          team: awayTeam.name,
-          teamShort: awayTeam.short_name,
-          opponent: homeTeam.name,
-          opponentShort: homeTeam.short_name,
-          isHome: false,
-          gameweek: targetGameweek,
-          kickoffTime: fixture.kickoff_time,
-          projectedGoals: Math.round(awayExpectedGoals * 100) / 100,
-          cleanSheetOdds: Math.round(awayCSProbability),
-          dayOfWeek,
-          date,
+          homeTeam: {
+            id: homeTeam.id,
+            team: homeTeam.name,
+            teamShort: homeTeam.short_name,
+            projectedGoals: Math.round(homeExpectedGoals * 100) / 100,
+            cleanSheetOdds: Math.round(homeCSProbability)
+          },
+          awayTeam: {
+            id: awayTeam.id,
+            team: awayTeam.name,
+            teamShort: awayTeam.short_name,
+            projectedGoals: Math.round(awayExpectedGoals * 100) / 100,
+            cleanSheetOdds: Math.round(awayCSProbability)
+          },
           confidence: 'High'
         });
       });
       
-      res.json(teamProjections);
+      res.json(matchProjections);
     } catch (error) {
       console.error("Error fetching projected goals & CS:", error);
       res.status(500).json({ error: "Failed to fetch projected goals & CS" });
