@@ -75,6 +75,12 @@ export default function OpenFPLProjections() {
 
   const { data: projections, isLoading: isLoadingProjections, error: projectionsError } = useQuery({
     queryKey: ["/api/openfpl-projections", horizonFilter, gameweekFilter],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.append('horizon', horizonFilter);
+      params.append('gameweek', gameweekFilter);
+      return fetch(`/api/openfpl-projections?${params.toString()}`).then(res => res.json());
+    },
     refetchInterval: 300000, // 5 minutes
   });
 

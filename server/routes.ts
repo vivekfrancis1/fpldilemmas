@@ -2090,6 +2090,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       
       console.log(`Loaded ${bootstrapData.elements?.length || 0} players from FPL API`);
+      
+      if (!bootstrapData.elements || bootstrapData.elements.length === 0) {
+        return res.status(500).json({ error: "No player data available from FPL API" });
+      }
 
       const elements = bootstrapData.elements;
       const teams = bootstrapData.teams;
@@ -2213,7 +2217,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .sort((a, b) => b.predicted_points - a.predicted_points)
         .slice(0, 50);
       
-      res.json(filteredProjections);
+      console.log(`Generated ${projections.length} total projections, filtered to ${filteredProjections.length}`);
+      
+      if (filteredProjections.length === 0) {
+        console.log("No projections passed filtering criteria");
+        // Return some basic projections to show data
+        const basicProjections = projections
+          .filter(p => p.predicted_points > 0)
+          .sort((a, b) => b.predicted_points - a.predicted_points)
+          .slice(0, 20);
+        res.json(basicProjections);
+      } else {
+        res.json(filteredProjections);
+      }
       
     } catch (error) {
       console.error("Error generating OpenFPL projections:", error);
