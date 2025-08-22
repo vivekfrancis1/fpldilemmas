@@ -45,6 +45,7 @@ export default function PlayerMinutes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"name" | "avg-desc" | "avg-asc" | "gw2" | "gw3" | "gw4" | "gw5" | "gw6" | "gw7">("avg-desc");
 
   // Get bootstrap data for player and team info
   const { data: bootstrapData, isLoading: isBootstrapLoading } = useQuery<BootstrapData>({
@@ -106,6 +107,14 @@ export default function PlayerMinutes() {
     return allData;
   }, [bootstrapData]);
 
+  // Calculate average minutes for each player
+  const getPlayerAverageMinutes = (playerId: number): number => {
+    const playerData = playerMinutesData.filter(data => data.player_id === playerId);
+    if (playerData.length === 0) return 0;
+    const total = playerData.reduce((sum, data) => sum + data.expected_minutes, 0);
+    return Math.round(total / playerData.length);
+  };
+
   // Filter and search players
   const filteredPlayers = useMemo(() => {
     if (!bootstrapData?.elements) return [];
@@ -132,8 +141,32 @@ export default function PlayerMinutes() {
       players = players.filter(player => player.team.toString() === teamFilter);
     }
     
+    // Apply sorting
+    players.sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return a.web_name.localeCompare(b.web_name);
+        case "avg-desc":
+          return getPlayerAverageMinutes(b.id) - getPlayerAverageMinutes(a.id);
+        case "avg-asc":
+          return getPlayerAverageMinutes(a.id) - getPlayerAverageMinutes(b.id);
+        case "gw2":
+        case "gw3":
+        case "gw4":
+        case "gw5":
+        case "gw6":
+        case "gw7":
+          const gameweek = parseInt(sortBy.replace("gw", ""));
+          const aData = getPlayerGameweekData(a.id, gameweek);
+          const bData = getPlayerGameweekData(b.id, gameweek);
+          return (bData?.expected_minutes || 0) - (aData?.expected_minutes || 0);
+        default:
+          return 0;
+      }
+    });
+    
     return players.slice(0, 50); // Limit to 50 players for performance
-  }, [bootstrapData, searchTerm, positionFilter, teamFilter]);
+  }, [bootstrapData, searchTerm, positionFilter, teamFilter, sortBy, playerMinutesData]);
 
   // Get minutes data for filtered players
   const getPlayerGameweekData = (playerId: number, gameweek: number) => {
@@ -191,7 +224,7 @@ export default function PlayerMinutes() {
           {/* Filters */}
           <Card className="mb-4 sm:mb-6">
             <CardContent className="p-3 sm:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -228,6 +261,23 @@ export default function PlayerMinutes() {
                         {team.name}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger data-testid="select-sort-by">
+                    <SelectValue placeholder="Sort by..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="avg-desc">Avg Minutes (High-Low)</SelectItem>
+                    <SelectItem value="avg-asc">Avg Minutes (Low-High)</SelectItem>
+                    <SelectItem value="name">Player Name</SelectItem>
+                    <SelectItem value="gw2">GW2 Minutes</SelectItem>
+                    <SelectItem value="gw3">GW3 Minutes</SelectItem>
+                    <SelectItem value="gw4">GW4 Minutes</SelectItem>
+                    <SelectItem value="gw5">GW5 Minutes</SelectItem>
+                    <SelectItem value="gw6">GW6 Minutes</SelectItem>
+                    <SelectItem value="gw7">GW7 Minutes</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -283,6 +333,7 @@ export default function PlayerMinutes() {
                       <th className="px-2 sm:px-4 py-2 sm:py-3 text-left min-w-[120px] sm:min-w-[200px] sticky left-0 bg-muted/50 z-10">
                         Player
                       </th>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">Avg</th>
                       <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">GW2</th>
                       <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">GW3</th>
                       <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">GW4</th>
@@ -305,6 +356,11 @@ export default function PlayerMinutes() {
                                 <span className="truncate">{getTeamShortName(player.team)}</span>
                               </div>
                             </div>
+                          </div>
+                        </td>
+                        <td className="px-2 sm:px-3 py-2 text-center">
+                          <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getMinutesColor(getPlayerAverageMinutes(player.id))}`}>
+                            {getPlayerAverageMinutes(player.id)}m
                           </div>
                         </td>
                         {[2, 3, 4, 5, 6, 7].map((gw) => {
