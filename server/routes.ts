@@ -416,11 +416,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
       
-      // Get actual price changes using cost_change_event field
+      // Get price changes - show both actual changes and high transfer activity
       const recentChanges = elements
         .filter((player: any) => {
           const priceChange = player.cost_change_event || 0;
-          return priceChange !== 0; // Only players with actual price changes
+          const transfersIn = player.transfers_in_event || 0;
+          const transfersOut = player.transfers_out_event || 0;
+          const netTransfers = Math.abs(transfersIn - transfersOut);
+          
+          // Include players with actual price changes OR significant transfer activity
+          return priceChange !== 0 || netTransfers > 10000;
         })
         .map((player: any) => {
           const team = teams.find((t: any) => t.id === player.team);
@@ -606,8 +611,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
         .filter((prediction: any) => {
-          // Only show players with significant activity or high probability
-          return prediction.probability !== "Low" || Math.abs(prediction.net_transfers) > 30000;
+          // Show predictions with any meaningful activity or higher probability
+          const hasActivity = Math.abs(prediction.net_transfers) > 5000;
+          const hasProbability = prediction.probability !== "Low";
+          const hasRecentChanges = prediction.transfers_in > 1000 || prediction.transfers_out > 1000;
+          
+          return hasProbability || hasActivity || hasRecentChanges;
         })
         .sort((a: any, b: any) => {
           // Sort by confidence descending, then by net transfers
