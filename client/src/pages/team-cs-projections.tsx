@@ -23,7 +23,7 @@ interface TeamCSProjection {
 export default function TeamCSProjections() {
   const [weeks, setWeeks] = useState<number>(6);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("total");
+  const [sortBy, setSortBy] = useState<string>("average");
 
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -47,10 +47,9 @@ export default function TeamCSProjections() {
         }
         
         switch (sortBy) {
-          case "total": return b.totalCSProbability - a.totalCSProbability;
           case "average": return b.averageCSProbability - a.averageCSProbability;
           case "position": return a.position - b.position;
-          default: return b.totalCSProbability - a.totalCSProbability;
+          default: return b.averageCSProbability - a.averageCSProbability;
         }
       });
   }, [projectionsData, selectedTeam, sortBy]);
@@ -72,6 +71,13 @@ export default function TeamCSProjections() {
     return 'bg-red-50 text-red-800';
   };
 
+  // Ensure we start from GW 7
+  const getGameweeks = () => {
+    if (!bootstrapData?.events) return [];
+    const currentGW = Math.max(bootstrapData.events.find((event: any) => event.is_current)?.id || 7, 7);
+    return Array.from({ length: weeks }, (_, i) => currentGW + i);
+  };
+
   if (isLoading || projectionsLoading) {
     return (
       <Layout>
@@ -81,6 +87,8 @@ export default function TeamCSProjections() {
       </Layout>
     );
   }
+
+  const gameweeks = getGameweeks();
 
   return (
     <Layout>
@@ -141,7 +149,6 @@ export default function TeamCSProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="total">Total CS</SelectItem>
                       <SelectItem value="average">CS/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
                       {bootstrapData?.events && Array.from({ length: weeks }, (_, i) => {
@@ -196,15 +203,7 @@ export default function TeamCSProjections() {
                           </th>
                         );
                       })}
-                      <th 
-                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors"
-                        onClick={() => setSortBy('total')}
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          Total
-                          {sortBy === 'total' && <TrendingUp className="h-3 w-3" />}
-                        </div>
-                      </th>
+
                       <th 
                         className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                         onClick={() => setSortBy('average')}
@@ -246,11 +245,7 @@ export default function TeamCSProjections() {
                           );
                         })}
                         
-                        <td className="px-4 py-4 text-center bg-blue-50">
-                          <span className="text-lg font-bold text-blue-900">
-                            {team.totalCSProbability}
-                          </span>
-                        </td>
+
                         
                         <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
                           {team.averageCSProbability}%
