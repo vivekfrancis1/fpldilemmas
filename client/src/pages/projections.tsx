@@ -40,7 +40,7 @@ export default function Projections() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("points");
-  const [weeks, setWeeks] = useState<number>(6);
+  const [weeks, setWeeks] = useState<number>(8);
   const [activeTab, setActiveTab] = useState<string>("points");
 
   // Auto-sort based on active tab
@@ -108,7 +108,7 @@ export default function Projections() {
           
           const weekCbit = Math.min(95, Math.max(1, Math.round(weekPoints * 3.5)));
           
-          weeklyProjections[week - 1] = {
+          weeklyProjections[week] = {
             minutes: weekMinutes,
             goals: Math.round(weekGoals * 10) / 10,
             assists: Math.round(weekAssists * 10) / 10,

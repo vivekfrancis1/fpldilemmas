@@ -614,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const weekCbitScore = Math.max(0, (weekPPG - threshold + 2) / 4);
           const weekCbit = Math.min(95, Math.max(1, Math.round(weekCbitScore * 100)));
           
-          weeklyProjections[week - 1] = {
+          weeklyProjections[week] = {
             minutes: weekMinutes,
             goals: Math.round(weekGoals * 10) / 10,
             assists: Math.round(weekAssists * 10) / 10,
