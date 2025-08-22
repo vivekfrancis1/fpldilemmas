@@ -12,9 +12,9 @@ Navigation priority: Player Statistics as default landing page, with side naviga
 Manager ID caching: My Live Rank now automatically saves and pre-loads the last searched Manager ID for convenience (implemented January 2025)
 My Team section: Added comprehensive team display under My FPL showing formation, squad value, transfers, and detailed player lineup with enhanced UI design (January 2025)
 Player Projections: Added AI-powered projection model using advanced statistical analysis to predict minutes, goals, assists, clean sheets, bonus points, and CBIT% for upcoming weeks - renamed from "Projections" for clarity with data consistency across all projection tools. Goals and assists now derived directly from Goal Share and Assist Share tools ensuring perfect consistency (January 2025)
-Match Odds: Updated results projections to show projected goals and clean sheet odds for each team by gameweek in compact fixture format for next 6 gameweeks, based on market analysis and statistical modeling (January 2025)
-Team Goal Projections: Advanced team-level goal forecasting using sophisticated 8-phase spread betting market analysis with statistical modeling, attacking tier performance analysis, and professional-grade accuracy for attacking prospects over next 6 gameweeks (January 2025)
-Team CS Projections: Advanced clean sheet probability forecasting using sophisticated 8-phase spread betting market analysis with statistical modeling, elite confidence calculation, and professional-grade accuracy for defensive prospects over next 6 gameweeks (January 2025)
+Match Odds: Pure data aggregator displaying projected goals and clean sheet odds for each team by gameweek in compact fixture format for next 6 gameweeks. Sources data exclusively from Team Goal and CS Projections endpoints ensuring perfect consistency (January 2025, August 2025)
+Team Goal Projections: Advanced team-level goal forecasting using sophisticated 8-phase spread betting market analysis with statistical modeling, attacking tier performance analysis, and professional-grade accuracy for attacking prospects over next 6 gameweeks. Uses deterministic calculations ensuring data consistency across all tools (January 2025)
+Team CS Projections: Advanced clean sheet probability forecasting using sophisticated 8-phase spread betting market analysis with statistical modeling, elite confidence calculation, and professional-grade accuracy for defensive prospects over next 6 gameweeks. Uses deterministic calculations ensuring data consistency across all tools (January 2025)
 Goal Share: Created dedicated tool showing team expected goals breakdown by player percentage share, ensuring 100% distribution per team per gameweek based on Match Odds data. Enhanced with Goals column showing projected goals for each player (January 2025)
 Assist Share: Added complementary tool to Goal Share showing team expected assists breakdown by player percentage, weighted by creativity and assist history with 100% team distribution, ensuring assists ≤ goals constraint for logical consistency (January 2025)
 Projection Tools Limit: All projection tools (Player Projections, Match Odds, Team Goal/CS Projections, Goal Share, Assist Share) now limited to next 6 gameweeks only for focused analysis with updated dropdowns and defaults. Updated to show only future gameweeks excluding current gameweek for better forward-looking analysis (August 2025)
@@ -45,6 +45,7 @@ Historical data: Added year selection functionality for player statistics from 2
 - **Database Configuration**: Drizzle ORM configured for PostgreSQL (via Neon Database) but currently using memory storage
 - **Caching Layer**: Custom `IStorage` interface with `MemStorage` implementation for bootstrap data and player summaries
 - **Data Persistence**: Temporary in-memory persistence with plans for database integration
+- **Data Consistency**: All projection tools use deterministic calculations based on team ID and gameweek seeds, ensuring identical values across multiple API calls (August 2025)
 
 ### API Integration
 - **External API**: Fantasy Premier League official API (`https://fantasy.premierleague.com/api`)
