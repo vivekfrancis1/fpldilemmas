@@ -8,25 +8,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 
 interface MatchProjection {
-  fixtureId: number;
+  id: number;
   gameweek: number;
   kickoffTime: string;
-  dayOfWeek: string;
-  date: string;
   homeTeam: {
     id: number;
-    team: string;
-    teamShort: string;
-    projectedGoals: number;
+    name: string;
+    shortName: string;
+    expectedGoals: number;
     cleanSheetOdds: number;
   };
   awayTeam: {
     id: number;
-    team: string;
-    teamShort: string;
-    projectedGoals: number;
+    name: string;
+    shortName: string;
+    expectedGoals: number;
     cleanSheetOdds: number;
   };
+  totalExpectedGoals: number;
   confidence: 'High' | 'Medium' | 'Low';
 }
 
@@ -39,7 +38,7 @@ export default function ProjectedGoalsCS() {
   });
 
   const { data: projectionsData, isLoading: projectionsLoading } = useQuery<MatchProjection[]>({
-    queryKey: [`/api/projected-goals-cs?gameweek=${selectedGameweek}`],
+    queryKey: ["/api/projected-goals-cs"],
   });
 
   const filteredProjections = useMemo(() => {
@@ -47,9 +46,10 @@ export default function ProjectedGoalsCS() {
     
     return projectionsData
       .filter(match => 
-        selectedTeam === "all" || 
-        match.homeTeam.teamShort === selectedTeam || 
-        match.awayTeam.teamShort === selectedTeam
+        (selectedGameweek === "all" || match.gameweek.toString() === selectedGameweek) &&
+        (selectedTeam === "all" || 
+        match.homeTeam.shortName === selectedTeam || 
+        match.awayTeam.shortName === selectedTeam)
       )
       .sort((a, b) => {
         // Sort by gameweek, then by kickoff time
@@ -60,12 +60,12 @@ export default function ProjectedGoalsCS() {
       });
   }, [projectionsData, selectedTeam]);
 
-  // Group by gameweek and day
+  // Group by gameweek for display
   const groupedProjections = useMemo(() => {
     const groups: { [key: string]: MatchProjection[] } = {};
     
     filteredProjections.forEach(match => {
-      const key = `GW${match.gameweek}-${match.dayOfWeek}-${match.date}`;
+      const key = `GW${match.gameweek}`;
       if (!groups[key]) {
         groups[key] = [];
       }
@@ -174,7 +174,7 @@ export default function ProjectedGoalsCS() {
             <CardContent className="p-0">
               <div className="space-y-0">
                 {Object.entries(groupedProjections).map(([groupKey, projections]) => {
-                  const [gwInfo, dayOfWeek, date] = groupKey.split('-');
+                  const gwInfo = groupKey; // Just the gameweek info like "GW2"
                   
                   return (
                     <div key={groupKey}>
@@ -182,18 +182,18 @@ export default function ProjectedGoalsCS() {
                       <div className="bg-gradient-to-r from-gray-100 to-gray-50 px-6 py-3 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-base text-gray-800">
-                            {selectedGameweek === "all" ? `GW${projections[0]?.gameweek} - ${dayOfWeek}` : dayOfWeek}
+                            {selectedGameweek === "all" ? `GW${projections[0]?.gameweek}` : `GW${selectedGameweek}`}
                           </span>
-                          <span className="text-sm text-gray-600 font-medium">{date}</span>
+                          <span className="text-sm text-gray-600 font-medium">{projections.length} matches</span>
                         </div>
                       </div>
                       
                       {/* Matches for this day */}
                       {projections.map((match, index) => (
                         <div 
-                          key={`${match.fixtureId}-${index}`} 
+                          key={`${match.id}-${index}`} 
                           className="px-6 py-4 border-b border-gray-100 last:border-b-0 hover:bg-blue-50/50 transition-colors duration-200"
-                          data-testid={`match-row-${match.homeTeam.teamShort}-${match.awayTeam.teamShort}`}
+                          data-testid={`match-row-${match.homeTeam.shortName}-${match.awayTeam.shortName}`}
                         >
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Home Team */}
@@ -201,15 +201,15 @@ export default function ProjectedGoalsCS() {
                               <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                                 <span className="font-bold text-base text-gray-800">
-                                  {match.homeTeam.teamShort}
+                                  {match.homeTeam.shortName}
                                 </span>
                                 <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">HOME</span>
                               </div>
                               <div className="flex items-center space-x-4">
                                 <div className="text-center">
                                   <div className="text-xs font-semibold text-gray-600 mb-1">GOALS</div>
-                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.homeTeam.projectedGoals)}`}>
-                                    {match.homeTeam.projectedGoals.toFixed(2)}
+                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.homeTeam.expectedGoals)}`}>
+                                    {match.homeTeam.expectedGoals.toFixed(2)}
                                   </div>
                                 </div>
                                 <div className="text-center">
@@ -226,15 +226,15 @@ export default function ProjectedGoalsCS() {
                               <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                                 <span className="font-bold text-base text-gray-800">
-                                  {match.awayTeam.teamShort}
+                                  {match.awayTeam.shortName}
                                 </span>
                                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">AWAY</span>
                               </div>
                               <div className="flex items-center space-x-4">
                                 <div className="text-center">
                                   <div className="text-xs font-semibold text-gray-600 mb-1">GOALS</div>
-                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.awayTeam.projectedGoals)}`}>
-                                    {match.awayTeam.projectedGoals.toFixed(2)}
+                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.awayTeam.expectedGoals)}`}>
+                                    {match.awayTeam.expectedGoals.toFixed(2)}
                                   </div>
                                 </div>
                                 <div className="text-center">
