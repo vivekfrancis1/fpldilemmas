@@ -709,7 +709,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currentGameweek = nextEvent?.id || 2;
       }
       
-      const startGameweek = currentGameweek + 1;
+      // DEBUG: Use current gameweek instead of next gameweek for consistency testing
+      const startGameweek = currentGameweek;
+      console.log(`DEBUG: Player Projections using startGameweek=${startGameweek}, currentGameweek=${currentGameweek}`);
     
     // Generate Goal Share and Assist Share data using same logic as dedicated tools
     const goalShareData = generateGoalShareData(bootstrapData, fixturesData, weeks, startGameweek);
@@ -751,9 +753,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Use the projectedGoals field that was calculated in the Goal Share tool
               player.weeklyProjections[gw].goals = playerGoalShare.projectedGoals || 0;
               
+              // Validation: Check if projectedGoals matches manual calculation
+              const manualCalculation = (goalShare.expectedGoals * playerGoalShare.goalShare) / 100;
+              const calculatedGoals = Math.round(manualCalculation * 100) / 100;
+              
+              if (Math.abs(playerGoalShare.projectedGoals - calculatedGoals) > 0.01) {
+                console.log(`VALIDATION ERROR ${player.name} GW${gw}: projectedGoals=${playerGoalShare.projectedGoals} vs calculated=${calculatedGoals}`);
+              }
+              
               // Debug logging for consistency checking
               if (player.name.includes('Bowen') || player.name.includes('Salah')) {
-                console.log(`DEBUG ${player.name} GW${gw}: goalShare=${playerGoalShare.goalShare}%, projectedGoals=${playerGoalShare.projectedGoals}, teamGoals=${goalShare.expectedGoals}`);
+                console.log(`DEBUG ${player.name} GW${gw}: goalShare=${playerGoalShare.goalShare}%, projectedGoals=${playerGoalShare.projectedGoals}, teamGoals=${goalShare.expectedGoals}, validation=${calculatedGoals}`);
               }
             }
           });
@@ -1164,6 +1174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const fixturesData = await fixturesResponse.json();
       
+      console.log(`DEBUG: Goal Share API called for gameweek=${gameweek}`);
       const goalShareData = generateGoalShareData(bootstrapData, fixturesData, 1, gameweek);
       res.json(goalShareData);
     } catch (error) {
