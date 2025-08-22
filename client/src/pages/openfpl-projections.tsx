@@ -74,8 +74,6 @@ export default function OpenFPLProjections() {
     metric: "predicted_points", 
     direction: "desc"
   });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [playersPerPage, setPlayersPerPage] = useState(50);
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
@@ -240,16 +238,12 @@ export default function OpenFPLProjections() {
   const tableData = getTableData();
   const gameweekLabels = ["current", "next", "upcoming", "gw+3", "gw+4", "gw+5"];
 
-  // Filter and paginate table data
+  // Filter table data for continuous scroll
   const filteredTableData = tableData.filter(player => {
     if (!searchQuery) return true;
     return player.player_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
            player.team_name.toLowerCase().includes(searchQuery.toLowerCase());
   });
-
-  const totalPages = playersPerPage === 699 ? 1 : Math.ceil(filteredTableData.length / playersPerPage);
-  const startIndex = (currentPage - 1) * playersPerPage;
-  const paginatedTableData = playersPerPage === 699 ? filteredTableData : filteredTableData.slice(startIndex, startIndex + playersPerPage);
 
   const formatPrice = (price: number) => `£${(price / 10).toFixed(1)}m`;
 
@@ -500,33 +494,13 @@ export default function OpenFPLProjections() {
                       <Input
                         placeholder="Search players or teams..."
                         value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          setCurrentPage(1);
-                        }}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-64"
                         data-testid="input-table-search"
                       />
-                      <Select value={playersPerPage.toString()} onValueChange={(value) => {
-                        setPlayersPerPage(parseInt(value));
-                        setCurrentPage(1);
-                      }}>
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="25">25 per page</SelectItem>
-                          <SelectItem value="50">50 per page</SelectItem>
-                          <SelectItem value="100">100 per page</SelectItem>
-                          <SelectItem value="699">All players</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {playersPerPage === 699 ? 
-                        `Showing all ${filteredTableData.length} players` :
-                        `Showing ${startIndex + 1}-${Math.min(startIndex + playersPerPage, filteredTableData.length)} of ${filteredTableData.length} players`
-                      }
+                      Showing all {filteredTableData.length} players
                     </div>
                   </div>
 
@@ -540,7 +514,7 @@ export default function OpenFPLProjections() {
                       <TabsTrigger value="predicted_bonus">Bonus</TabsTrigger>
                     </TabsList>
                     
-                    <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-[80vh]">
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30">
@@ -584,7 +558,7 @@ export default function OpenFPLProjections() {
                           </tr>
                         </thead>
                         <tbody>
-                          {paginatedTableData.map((player, index) => (
+                          {filteredTableData.map((player, index) => (
                             <tr key={player.player_id} className="hover:bg-muted/30">
                               <td className="border border-gray-200 dark:border-gray-700 p-3 sticky left-0 bg-background">
                                 <div className="space-y-1">
@@ -642,28 +616,7 @@ export default function OpenFPLProjections() {
                       <p><strong>Current sort:</strong> {getGameweekNumber(tableSortBy.gameweek)} - {activeTab} ({tableSortBy.direction === "desc" ? "Highest first" : "Lowest first"})</p>
                     </div>
 
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                      <div className="flex justify-center items-center gap-2 mt-4">
-                        <button
-                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                          disabled={currentPage === 1}
-                          className="px-3 py-1 rounded border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
-                        >
-                          Previous
-                        </button>
-                        <span className="text-sm text-muted-foreground">
-                          Page {currentPage} of {totalPages}
-                        </span>
-                        <button
-                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                          disabled={currentPage === totalPages}
-                          className="px-3 py-1 rounded border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
-                        >
-                          Next
-                        </button>
-                      </div>
-                    )}
+
                   </Tabs>
                   </div>
                 ) : (
