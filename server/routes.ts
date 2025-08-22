@@ -1114,26 +1114,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })).filter(p => p.assistShare > 0).sort((a, b) => b.assistShare - a.assistShare);
   }
 
-  // Match Odds (Projected Goals & CS) endpoint - combining Team Goal and CS projections
+  // Match Odds (Projected Goals & CS) endpoint - using data from Team Goal and CS projections only
   app.get("/api/projected-goals-cs", async (req, res) => {
     try {
       const weeks = parseInt(req.query.weeks as string) || 6;
       
-      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+      // Fetch data from Team Goal and CS projection endpoints
+      const [bootstrapResponse, fixturesResponse, goalProjectionsResponse, csProjectionsResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("https://fantasy.premierleague.com/api/fixtures/")
+        fetch("https://fantasy.premierleague.com/api/fixtures/"),
+        fetch(`http://localhost:5000/api/team-goal-projections?weeks=${weeks}`),
+        fetch(`http://localhost:5000/api/team-cs-projections?weeks=${weeks}`)
       ]);
       
-      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API");
+      if (!bootstrapResponse.ok || !fixturesResponse.ok || !goalProjectionsResponse.ok || !csProjectionsResponse.ok) {
+        throw new Error("Failed to fetch data from APIs");
       }
       
       const bootstrapData = await bootstrapResponse.json();
       const fixturesData = await fixturesResponse.json();
+      const goalProjections = await goalProjectionsResponse.json();
+      const csProjections = await csProjectionsResponse.json();
       
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
-      const bettingData = getSpreadBettingData();
+      
+      // Create lookup maps for projections by team and gameweek
+      const goalProjectionMap = new Map();
+      goalProjections.forEach((team: any) => {
+        goalProjectionMap.set(team.id, team.gameweekProjections);
+      });
+      
+      const csProjectionMap = new Map();
+      csProjections.forEach((team: any) => {
+        csProjectionMap.set(team.id, team.gameweekProjections);
+      });
       
       // Get upcoming fixtures for the next specified weeks (future gameweeks only)
       const upcomingFixtures = fixturesData
@@ -1150,50 +1165,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!homeTeam || !awayTeam) return null;
         
-        // Calculate home team expected goals using same logic as Team Goal projections
-        const homeTeamBettingData = bettingData.teamGoalRates[homeTeam.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
-        const awayDefenseData = bettingData.teamCleanSheetRates[awayTeam.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
+        const gameweek = fixture.event.toString();
         
-        let homeExpectedGoals = homeTeamBettingData.expectedGoalsPerGame;
-        homeExpectedGoals *= 1.15; // Home advantage
-        const awayDefenseStrength = awayDefenseData.baseCleanSheetRate;
-        const defensiveImpact = Math.pow(awayDefenseStrength * 2.5, 1.2);
-        const attackingPenetration = 1.25 - (defensiveImpact * 0.65);
-        homeExpectedGoals *= Math.max(0.55, Math.min(1.35, attackingPenetration));
+        // Get expected goals from Team Goal Projections
+        const homeGoalProjections = goalProjectionMap.get(homeTeam.id) || {};
+        const awayGoalProjections = goalProjectionMap.get(awayTeam.id) || {};
+        const homeExpectedGoals = homeGoalProjections[gameweek] || 0;
+        const awayExpectedGoals = awayGoalProjections[gameweek] || 0;
         
-        // Calculate away team expected goals
-        const awayTeamBettingData = bettingData.teamGoalRates[awayTeam.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
-        const homeDefenseData = bettingData.teamCleanSheetRates[homeTeam.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
+        // Get clean sheet odds from Team CS Projections
+        const homeCSProjections = csProjectionMap.get(homeTeam.id) || {};
+        const awayCSProjections = csProjectionMap.get(awayTeam.id) || {};
+        const homeCleanSheetOdds = homeCSProjections[gameweek] || 0;
+        const awayCleanSheetOdds = awayCSProjections[gameweek] || 0;
         
-        let awayExpectedGoals = awayTeamBettingData.expectedGoalsPerGame;
-        awayExpectedGoals *= 0.87; // Away disadvantage
-        const homeDefenseStrength = homeDefenseData.baseCleanSheetRate;
-        const homeDefensiveImpact = Math.pow(homeDefenseStrength * 2.5, 1.2);
-        const awayAttackingPenetration = 1.25 - (homeDefensiveImpact * 0.65);
-        awayExpectedGoals *= Math.max(0.55, Math.min(1.35, awayAttackingPenetration));
+        // Determine confidence based on the availability and quality of projection data
+        const hasHomeGoalData = homeExpectedGoals > 0;
+        const hasAwayGoalData = awayExpectedGoals > 0;
+        const hasHomeCSData = homeCleanSheetOdds > 0;
+        const hasAwayCSData = awayCleanSheetOdds > 0;
+        const dataCompleteness = [hasHomeGoalData, hasAwayGoalData, hasHomeCSData, hasAwayCSData].filter(Boolean).length;
         
-        // Calculate clean sheet odds using same logic as Team CS projections
-        const homeCSBettingData = bettingData.teamCleanSheetRates[homeTeam.id] || { baseCleanSheetRate: 0.25, homeBonus: 0.05, confidence: 0.70 };
-        let homeCSProbability = homeCSBettingData.baseCleanSheetRate * 100;
-        homeCSProbability *= (1 + homeCSBettingData.homeBonus + 0.10); // Home advantage
-        const awayGoalThreat = awayTeamBettingData.expectedGoalsPerGame;
-        const awayAttackingPressure = Math.pow(awayGoalThreat / 2.5, 1.3);
-        const homeDefensiveSusceptibility = 1.25 - (awayAttackingPressure * 0.55);
-        homeCSProbability *= Math.max(0.4, Math.min(1.4, homeDefensiveSusceptibility));
-        
-        const awayCSBettingData = bettingData.teamCleanSheetRates[awayTeam.id] || { baseCleanSheetRate: 0.25, homeBonus: 0.05, confidence: 0.70 };
-        let awayCSProbability = awayCSBettingData.baseCleanSheetRate * 100;
-        awayCSProbability *= 0.85; // Away disadvantage
-        const homeGoalThreat = homeTeamBettingData.expectedGoalsPerGame;
-        const homeAttackingPressure = Math.pow(homeGoalThreat / 2.5, 1.3);
-        const awayDefensiveSusceptibility = 1.25 - (homeAttackingPressure * 0.55);
-        awayCSProbability *= Math.max(0.4, Math.min(1.4, awayDefensiveSusceptibility));
-        
-        // Apply realistic bounds
-        homeExpectedGoals = Math.max(0.3, Math.min(4.0, homeExpectedGoals));
-        awayExpectedGoals = Math.max(0.2, Math.min(3.5, awayExpectedGoals));
-        homeCSProbability = Math.max(5, Math.min(75, homeCSProbability));
-        awayCSProbability = Math.max(3, Math.min(65, awayCSProbability));
+        let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
+        if (dataCompleteness === 4) confidence = 'High'; // All data available
+        else if (dataCompleteness <= 2) confidence = 'Low'; // Limited data
         
         return {
           id: fixture.id,
@@ -1204,18 +1199,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: homeTeam.name,
             shortName: homeTeam.short_name,
             expectedGoals: Math.round(homeExpectedGoals * 100) / 100,
-            cleanSheetOdds: Math.round(homeCSProbability * 10) / 10
+            cleanSheetOdds: Math.round(homeCleanSheetOdds * 10) / 10
           },
           awayTeam: {
             id: awayTeam.id,
             name: awayTeam.name,
             shortName: awayTeam.short_name,
             expectedGoals: Math.round(awayExpectedGoals * 100) / 100,
-            cleanSheetOdds: Math.round(awayCSProbability * 10) / 10
+            cleanSheetOdds: Math.round(awayCleanSheetOdds * 10) / 10
           },
           totalExpectedGoals: Math.round((homeExpectedGoals + awayExpectedGoals) * 100) / 100,
-          confidence: homeTeamBettingData.confidence >= 0.85 && awayTeamBettingData.confidence >= 0.85 ? 'High' : 
-                     homeTeamBettingData.confidence >= 0.65 && awayTeamBettingData.confidence >= 0.65 ? 'Medium' : 'Low'
+          confidence
         };
       }).filter(Boolean);
       
