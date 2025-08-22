@@ -9,7 +9,7 @@ FPL Dilemmas is a Fantasy Premier League (FPL) analytics application that provid
 Preferred communication style: Simple, everyday language.
 Site tagline: "Analytical tools to beat the deadline blues" (updated December 2024)
 Navigation priority: Player Statistics as default landing page, with side navigation for all tools (updated December 2024)
-Manager ID caching: My Live Rank now automatically saves and pre-loads the last searched Manager ID for convenience (implemented January 2025)
+Manager ID caching: All FPL manager tools (My Live Rank, My Team, My Leagues) now automatically save and pre-load the last searched Manager ID using localStorage for seamless cross-tool experience (implemented January 2025, enhanced August 2025)
 My Team section: Added comprehensive team display under My FPL showing formation, squad value, transfers, and detailed player lineup with enhanced UI design (January 2025)
 Player Projections: Added AI-powered projection model using advanced statistical analysis to predict minutes, goals, assists, clean sheets, bonus points, and CBIT% for upcoming weeks - renamed from "Projections" for clarity with data consistency across all projection tools. Goals and assists now derived directly from Goal Share and Assist Share tools ensuring perfect consistency (January 2025)
 Match Odds: Pure data aggregator displaying projected goals and clean sheet odds for each team by gameweek in compact fixture format for next 6 gameweeks. Sources data exclusively from Team Goal and CS Projections endpoints ensuring perfect consistency (January 2025, August 2025)

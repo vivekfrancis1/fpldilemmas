@@ -51,29 +51,40 @@ function MyLeagues() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
 
+  // Cache manager ID functionality
+  const saveManagerIdToCache = (id: string) => {
+    try {
+      localStorage.setItem('fpl-manager-id', id);
+    } catch (error) {
+      console.warn('Failed to save manager ID to localStorage:', error);
+    }
+  };
+
+  const getManagerIdFromCache = (): string | null => {
+    try {
+      return localStorage.getItem('fpl-manager-id');
+    } catch (error) {
+      console.warn('Failed to get manager ID from localStorage:', error);
+      return null;
+    }
+  };
+
   // Load cached manager ID on component mount
   useEffect(() => {
-    const loadCachedManagerId = async () => {
-      try {
-        const response = await fetch("/api/manager/cache/last");
-        if (response.ok) {
-          const data = await response.json();
-          if (data.managerId) {
-            setManagerId(data.managerId);
-            setSearchedId(data.managerId);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load cached manager ID:", error);
-      }
-    };
-
-    loadCachedManagerId();
+    const cachedId = getManagerIdFromCache();
+    if (cachedId) {
+      setManagerId(cachedId);
+      // Auto-load the data for cached manager
+      setSearchedId(cachedId);
+    }
   }, []);
 
   const handleSearch = () => {
     if (managerId.trim()) {
-      setSearchedId(managerId.trim());
+      const trimmedId = managerId.trim();
+      setSearchedId(trimmedId);
+      // Save to cache for future use
+      saveManagerIdToCache(trimmedId);
     }
   };
 
