@@ -40,7 +40,7 @@ export default function Projections() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("points");
-  const [weeks, setWeeks] = useState<number>(4);
+  const [weeks, setWeeks] = useState<number>(6);
   const [activeTab, setActiveTab] = useState<string>("points");
 
   // Auto-sort based on active tab
@@ -80,8 +80,8 @@ export default function Projections() {
         const weeklyProjections: { [gameweek: number]: any } = {};
         let totalMinutes = 0, totalGoals = 0, totalAssists = 0, totalCleanSheets = 0, totalBonus = 0, totalCbit = 0, totalPoints = 0;
         
-        // Generate projections for each week
-        for (let week = 1; week <= weeks; week++) {
+        // Generate projections for each week (starting from GW2 since GW1 is completed)
+        for (let week = 2; week <= weeks + 1; week++) {
           const baseMinutes = Math.max(20, Math.min(90, player.minutes / Math.max(1, 1) || 45));
           const weekMinutes = Math.round(baseMinutes * (0.85 + Math.random() * 0.3));
           
@@ -109,7 +109,7 @@ export default function Projections() {
           
           const weekCbit = Math.min(95, Math.max(1, Math.round(weekPoints * 3.5)));
           
-          weeklyProjections[week] = {
+          weeklyProjections[week - 1] = {
             minutes: Math.max(0, weekMinutes),
             goals: Math.round(weekGoals * 10) / 10,
             assists: Math.round(weekAssists * 10) / 10,
@@ -352,7 +352,7 @@ export default function Projections() {
                               </th>
                               {Array.from({ length: weeks }, (_, i) => (
                                 <th key={i} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  GW {i + 1}
+                                  GW {i + 2}
                                 </th>
                               ))}
                               <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold">
@@ -373,7 +373,7 @@ export default function Projections() {
                                   £{player.price}m
                                 </td>
                                 {Array.from({ length: weeks }, (_, weekIndex) => {
-                                  const weekData = player.weeklyProjections[weekIndex + 1];
+                                  const weekData = player.weeklyProjections[weekIndex + 2];
                                   let value = weekData?.[metric as keyof typeof weekData] || 0;
                                   if (metric === 'cbit') {
                                     return (

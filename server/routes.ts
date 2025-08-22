@@ -525,7 +525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const weeklyProjections: { [gameweek: number]: any } = {};
         let totalMinutes = 0, totalGoals = 0, totalAssists = 0, totalCleanSheets = 0, totalBonus = 0, totalCbit = 0, totalPoints = 0;
         
-        for (let week = 1; week <= weeks; week++) {
+        for (let week = 2; week <= weeks + 1; week++) {
           // More realistic weekly distribution with some games being better than others
           const weeklyForm = 0.6 + Math.random() * 0.8; // 0.6 to 1.4 multiplier
           const fixtureQuality = 0.7 + Math.random() * 0.6; // Easier/harder fixtures
@@ -543,7 +543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const weekCbitScore = Math.max(0, (weekPPG - threshold + 2) / 4);
           const weekCbit = Math.min(95, Math.max(1, Math.round(weekCbitScore * 100)));
           
-          weeklyProjections[week] = {
+          weeklyProjections[week - 1] = {
             minutes: Math.max(0, weekMinutes),
             goals: Math.round(weekGoals * 10) / 10,
             assists: Math.round(weekAssists * 10) / 10,
