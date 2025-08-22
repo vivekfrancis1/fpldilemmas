@@ -1114,81 +1114,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })).filter(p => p.assistShare > 0).sort((a, b) => b.assistShare - a.assistShare);
   }
 
-  // Match Odds (Projected Goals & CS) endpoint - using data from Team Goal and CS projections only
+  // Match Odds (Projected Goals & CS) endpoint - pure aggregator of Team Goal and CS projection data
   app.get("/api/projected-goals-cs", async (req, res) => {
     try {
       const weeks = parseInt(req.query.weeks as string) || 6;
       
-      // Fetch data from Team Goal and CS projection endpoints
-      const [bootstrapResponse, fixturesResponse, goalProjectionsResponse, csProjectionsResponse] = await Promise.all([
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("https://fantasy.premierleague.com/api/fixtures/"),
+      // Fetch data ONLY from Team Goal and CS projection endpoints
+      const [goalProjectionsResponse, csProjectionsResponse, fixturesResponse] = await Promise.all([
         fetch(`http://localhost:5000/api/team-goal-projections?weeks=${weeks}`),
-        fetch(`http://localhost:5000/api/team-cs-projections?weeks=${weeks}`)
+        fetch(`http://localhost:5000/api/team-cs-projections?weeks=${weeks}`),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
       ]);
       
-      if (!bootstrapResponse.ok || !fixturesResponse.ok || !goalProjectionsResponse.ok || !csProjectionsResponse.ok) {
-        throw new Error("Failed to fetch data from APIs");
+      if (!goalProjectionsResponse.ok || !csProjectionsResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch projection data");
       }
       
-      const bootstrapData = await bootstrapResponse.json();
-      const fixturesData = await fixturesResponse.json();
       const goalProjections = await goalProjectionsResponse.json();
       const csProjections = await csProjectionsResponse.json();
+      const fixturesData = await fixturesResponse.json();
       
-      const teams = bootstrapData.teams;
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
-      
-      // Create lookup maps for projections by team and gameweek
-      const goalProjectionMap = new Map();
+      // Create team lookup from projection data
+      const teamLookup = new Map();
       goalProjections.forEach((team: any) => {
-        goalProjectionMap.set(team.id, team.gameweekProjections);
+        teamLookup.set(team.id, {
+          id: team.id,
+          name: team.teamName,
+          shortName: team.team,
+          goalProjections: team.gameweekProjections
+        });
       });
       
-      const csProjectionMap = new Map();
+      // Add CS projections to team lookup
       csProjections.forEach((team: any) => {
-        csProjectionMap.set(team.id, team.gameweekProjections);
+        const existingTeam = teamLookup.get(team.id);
+        if (existingTeam) {
+          existingTeam.csProjections = team.gameweekProjections;
+        }
       });
       
-      // Get upcoming fixtures for the next specified weeks (future gameweeks only)
+      // Get current gameweek from fixtures
+      const currentGameweek = Math.min(...fixturesData.filter((f: any) => !f.finished).map((f: any) => f.event)) - 1;
+      
+      // Get upcoming fixtures and match with projection data
       const upcomingFixtures = fixturesData
         .filter((fixture: any) => 
           !fixture.finished && 
           fixture.event > currentGameweek && 
           fixture.event <= currentGameweek + weeks
         )
-        .slice(0, 50); // Limit for performance
+        .slice(0, 50);
       
       const matchOdds = upcomingFixtures.map((fixture: any) => {
-        const homeTeam = teams.find((t: any) => t.id === fixture.team_h);
-        const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
+        const homeTeam = teamLookup.get(fixture.team_h);
+        const awayTeam = teamLookup.get(fixture.team_a);
         
         if (!homeTeam || !awayTeam) return null;
         
-        const gameweek = fixture.event.toString();
+        const gameweek = fixture.event;
         
-        // Get expected goals from Team Goal Projections
-        const homeGoalProjections = goalProjectionMap.get(homeTeam.id) || {};
-        const awayGoalProjections = goalProjectionMap.get(awayTeam.id) || {};
-        const homeExpectedGoals = homeGoalProjections[gameweek] || 0;
-        const awayExpectedGoals = awayGoalProjections[gameweek] || 0;
+        // Get data directly from projection outputs
+        const homeExpectedGoals = homeTeam.goalProjections?.[gameweek] || 0;
+        const awayExpectedGoals = awayTeam.goalProjections?.[gameweek] || 0;
+        const homeCleanSheetOdds = homeTeam.csProjections?.[gameweek] || 0;
+        const awayCleanSheetOdds = awayTeam.csProjections?.[gameweek] || 0;
         
-        // Get clean sheet odds from Team CS Projections
-        const homeCSProjections = csProjectionMap.get(homeTeam.id) || {};
-        const awayCSProjections = csProjectionMap.get(awayTeam.id) || {};
-        const homeCleanSheetOdds = homeCSProjections[gameweek] || 0;
-        const awayCleanSheetOdds = awayCSProjections[gameweek] || 0;
-        
-        // Determine confidence based on the availability and quality of projection data
-        const hasHomeGoalData = homeExpectedGoals > 0;
-        const hasAwayGoalData = awayExpectedGoals > 0;
-        const hasHomeCSData = homeCleanSheetOdds > 0;
-        const hasAwayCSData = awayCleanSheetOdds > 0;
-        const dataCompleteness = [hasHomeGoalData, hasAwayGoalData, hasHomeCSData, hasAwayCSData].filter(Boolean).length;
-        
+        // Confidence based purely on data availability from projections
+        const dataPoints = [homeExpectedGoals, awayExpectedGoals, homeCleanSheetOdds, awayCleanSheetOdds].filter(val => val > 0).length;
         let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
-        if (dataCompleteness === 4) confidence = 'High'; // All data available
-        else if (dataCompleteness <= 2) confidence = 'Low'; // Limited data
+        if (dataPoints === 4) confidence = 'High';
+        else if (dataPoints <= 2) confidence = 'Low';
         
         return {
           id: fixture.id,
@@ -1197,16 +1192,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           homeTeam: {
             id: homeTeam.id,
             name: homeTeam.name,
-            shortName: homeTeam.short_name,
-            expectedGoals: Math.round(homeExpectedGoals * 100) / 100,
-            cleanSheetOdds: Math.round(homeCleanSheetOdds * 10) / 10
+            shortName: homeTeam.shortName,
+            expectedGoals: homeExpectedGoals,
+            cleanSheetOdds: homeCleanSheetOdds
           },
           awayTeam: {
             id: awayTeam.id,
             name: awayTeam.name,
-            shortName: awayTeam.short_name,
-            expectedGoals: Math.round(awayExpectedGoals * 100) / 100,
-            cleanSheetOdds: Math.round(awayCleanSheetOdds * 10) / 10
+            shortName: awayTeam.shortName,
+            expectedGoals: awayExpectedGoals,
+            cleanSheetOdds: awayCleanSheetOdds
           },
           totalExpectedGoals: Math.round((homeExpectedGoals + awayExpectedGoals) * 100) / 100,
           confidence
