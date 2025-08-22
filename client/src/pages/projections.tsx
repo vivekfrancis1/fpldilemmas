@@ -153,6 +153,15 @@ export default function Projections() {
       .filter(p => selectedPosition === "all" || p.position === selectedPosition)
       .filter(p => selectedTeam === "all" || p.team === selectedTeam)
       .sort((a, b) => {
+        // Handle gameweek-specific sorting
+        if (sortBy.startsWith('gw')) {
+          const gwNumber = parseInt(sortBy.replace('gw', ''));
+          const aValue = a.weeklyProjections[gwNumber]?.[activeTab as keyof typeof a.weeklyProjections[gwNumber]] || 0;
+          const bValue = b.weeklyProjections[gwNumber]?.[activeTab as keyof typeof b.weeklyProjections[gwNumber]] || 0;
+          return typeof aValue === 'number' && typeof bValue === 'number' ? bValue - aValue : 0;
+        }
+        
+        // Handle total column sorting
         switch (sortBy) {
           case "points": return b.totalPoints - a.totalPoints;
           case "goals": return b.totalGoals - a.totalGoals;
@@ -273,11 +282,17 @@ export default function Projections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="points">Points</SelectItem>
-                      <SelectItem value="goals">Goals</SelectItem>
-                      <SelectItem value="assists">Assists</SelectItem>
+                      <SelectItem value="points">Total Points</SelectItem>
+                      <SelectItem value="goals">Total Goals</SelectItem>
+                      <SelectItem value="assists">Total Assists</SelectItem>
+                      <SelectItem value="minutes">Total Minutes</SelectItem>
+                      <SelectItem value="cleanSheets">Total CS</SelectItem>
+                      <SelectItem value="bonus">Total Bonus</SelectItem>
                       <SelectItem value="cbit">CBIT %</SelectItem>
                       <SelectItem value="price">Price</SelectItem>
+                      {Array.from({ length: weeks }, (_, i) => (
+                        <SelectItem key={`gw${i + 2}`} value={`gw${i + 2}`}>GW{i + 2} {activeTab === 'points' ? 'Points' : activeTab === 'goals' ? 'Goals' : activeTab === 'assists' ? 'Assists' : activeTab === 'cleanSheets' ? 'CS' : activeTab === 'bonus' ? 'Bonus' : activeTab === 'cbit' ? 'CBIT%' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
