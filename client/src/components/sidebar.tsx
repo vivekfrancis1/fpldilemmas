@@ -59,7 +59,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/player-projected-goals", label: "Player Projected Goals", icon: Target, description: "Expected goals by player", popular: false },
         { path: "/player-expected-assists", label: "Player Expected Assists", icon: Zap, description: "Expected assists by player", popular: false },
         { path: "/player-expected-bonus", label: "Player Expected Bonus", icon: Award, description: "Expected bonus points by player", popular: false },
-        { path: "/player-expected-cleansheets", label: "Player Expected Clean Sheets", icon: Shield, description: "Expected clean sheets (GK/DEF/MID)", popular: false }
+        { path: "/player-expected-cleansheets", label: "Player Expected Clean Sheets", icon: Shield, description: "Expected clean sheets (GK/DEF/MID)", popular: false },
+        { path: "/player-defensive-contributions", label: "Player Defensive Contributions", icon: Shield, description: "Defensive threshold probabilities", popular: false }
       ]
     },
     {
