@@ -14,8 +14,8 @@ interface TeamCSProjection {
   gameweekProjections: {
     [gameweek: number]: number; // Clean sheet probability as percentage
   };
-  totalCS: number;
-  averageCSPerGame: number;
+  totalCSProbability: number;
+  averageCSProbability: number;
   confidence: 'High' | 'Medium' | 'Low';
   position: number;
 }
@@ -47,10 +47,10 @@ export default function TeamCSProjections() {
         }
         
         switch (sortBy) {
-          case "total": return b.totalCS - a.totalCS;
-          case "average": return b.averageCSPerGame - a.averageCSPerGame;
+          case "total": return b.totalCSProbability - a.totalCSProbability;
+          case "average": return b.averageCSProbability - a.averageCSProbability;
           case "position": return a.position - b.position;
-          default: return b.totalCS - a.totalCS;
+          default: return b.totalCSProbability - a.totalCSProbability;
         }
       });
   }, [projectionsData, selectedTeam, sortBy]);
@@ -144,8 +144,9 @@ export default function TeamCSProjections() {
                       <SelectItem value="total">Total CS</SelectItem>
                       <SelectItem value="average">CS/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
-                      {Array.from({ length: weeks }, (_, i) => {
-                        const gwNumber = i + 2;
+                      {bootstrapData?.events && Array.from({ length: weeks }, (_, i) => {
+                        const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+                        const gwNumber = currentGW + i + 1;
                         return (
                           <SelectItem key={`gw${gwNumber}`} value={`gw${gwNumber}`}>GW{gwNumber}</SelectItem>
                         );
@@ -179,8 +180,9 @@ export default function TeamCSProjections() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
                         Team
                       </th>
-                      {Array.from({ length: weeks }, (_, i) => {
-                        const gwNumber = i + 2;
+                      {bootstrapData?.events && Array.from({ length: weeks }, (_, i) => {
+                        const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+                        const gwNumber = currentGW + i + 1;
                         return (
                           <th 
                             key={gwNumber} 
@@ -233,24 +235,25 @@ export default function TeamCSProjections() {
                           </div>
                         </td>
                         
-                        {Array.from({ length: weeks }, (_, weekIndex) => {
-                          const gwNumber = weekIndex + 2;
+                        {bootstrapData?.events && Array.from({ length: weeks }, (_, weekIndex) => {
+                          const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+                          const gwNumber = currentGW + weekIndex + 1;
                           const csPercentage = team.gameweekProjections[gwNumber] || 0;
                           return (
                             <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getCSColor(csPercentage)}`}>
-                              {csPercentage.toFixed(0)}%
+                              {csPercentage}%
                             </td>
                           );
                         })}
                         
                         <td className="px-4 py-4 text-center bg-blue-50">
                           <span className="text-lg font-bold text-blue-900">
-                            {team.totalCS.toFixed(1)}
+                            {team.totalCSProbability}
                           </span>
                         </td>
                         
                         <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
-                          {team.averageCSPerGame.toFixed(1)}
+                          {team.averageCSProbability}%
                         </td>
                         
                         <td className="px-4 py-4 text-center">
