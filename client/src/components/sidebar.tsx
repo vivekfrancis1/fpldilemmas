@@ -53,7 +53,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/team-goal-projections", label: "Team Goal Projections", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-cs-projections", label: "Team CS Projections", icon: Shield, description: "Clean sheet probabilities", popular: false },
 
-        { path: "/openfpl-projections", label: "Player Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false }
+        { path: "/openfpl-projections", label: "Player Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false, isNew: true }
       ]
     },
     {
@@ -143,6 +143,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                         {item.popular && (
                           <Badge variant="secondary" className="bg-fpl-green/20 text-fpl-green text-xs hidden sm:inline-flex flex-shrink-0">
                             Popular
+                          </Badge>
+                        )}
+                        {(item as any).isNew && (
+                          <Badge variant="secondary" className="bg-yellow-500 text-black text-xs px-1.5 py-0.5 font-bold flex-shrink-0">
+                            New
                           </Badge>
                         )}
                       </div>
