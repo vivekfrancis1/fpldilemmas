@@ -109,6 +109,9 @@ export default function PlayerStatsTable({
           case "tackles": return player.tackles || 0;
           case "recoveries": return player.recoveries || 0;
           case "defensive_contributions": {
+            // Goalkeepers have 0 defensive contributions
+            if (player.element_type === 1) return 0;
+            
             const clearances = player.clearances || 0;
             const blocks = player.blocks || 0;
             const interceptions = player.interceptions || 0;
@@ -471,6 +474,9 @@ export default function PlayerStatsTable({
                   <td className="px-2 py-4 text-center text-sm text-blue-600 font-medium">{player.recoveries || 0}</td>
                   <td className="px-2 py-4 text-center text-sm text-purple-600 font-bold">
                     {(() => {
+                      // Goalkeepers have 0 defensive contributions
+                      if (player.element_type === 1) return 0;
+                      
                       const clearances = player.clearances || 0;
                       const blocks = player.blocks || 0;
                       const interceptions = player.interceptions || 0;
