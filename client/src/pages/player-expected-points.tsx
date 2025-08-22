@@ -85,6 +85,11 @@ export default function PlayerExpectedPoints() {
   const [sortBy, setSortBy] = useState("expected_points");
   const [viewMode, setViewMode] = useState<"list" | "table">("table");
   const [activeTab, setActiveTab] = useState("expected_points");
+  const [tableSortBy, setTableSortBy] = useState<{ gameweek: string; metric: string; direction: "asc" | "desc" }>({
+    gameweek: "next",
+    metric: "expected_points", 
+    direction: "desc"
+  });
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -218,6 +223,18 @@ export default function PlayerExpectedPoints() {
       
       return matchesSearch && matchesPosition && matchesPriceMin && matchesPriceMax && matchesOwnership;
     }).sort((a, b) => {
+      // Table view uses its own sorting
+      if (viewMode === "table") {
+        const aValue = a.gameweeks[tableSortBy.gameweek]?.[tableSortBy.metric as keyof PlayerExpectedPoints] || 0;
+        const bValue = b.gameweeks[tableSortBy.gameweek]?.[tableSortBy.metric as keyof PlayerExpectedPoints] || 0;
+        
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return tableSortBy.direction === "desc" ? bValue - aValue : aValue - bValue;
+        }
+        return 0;
+      }
+      
+      // List view uses filter-based sorting
       const aValue = a.gameweeks[gameweekFilter]?.[sortBy as keyof PlayerExpectedPoints] || 0;
       const bValue = b.gameweeks[gameweekFilter]?.[sortBy as keyof PlayerExpectedPoints] || 0;
       
@@ -268,6 +285,21 @@ export default function PlayerExpectedPoints() {
     if (risk === "Low") return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
     if (risk === "Medium") return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
     return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+  };
+
+  const handleTableSort = (gameweek: string, metric: string) => {
+    setTableSortBy(prev => ({
+      gameweek,
+      metric,
+      direction: prev.gameweek === gameweek && prev.metric === metric && prev.direction === "desc" ? "asc" : "desc"
+    }));
+  };
+
+  const getSortIcon = (gameweek: string, metric: string) => {
+    if (tableSortBy.gameweek === gameweek && tableSortBy.metric === metric) {
+      return tableSortBy.direction === "desc" ? "↓" : "↑";
+    }
+    return "⇅";
   };
 
   return (
@@ -471,7 +503,18 @@ export default function PlayerExpectedPoints() {
                             </th>
                             {gameweekLabels.map(gw => (
                               <th key={gw} className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[100px]">
-                                {getGameweekNumber(gw)}
+                                <button
+                                  onClick={() => handleTableSort(gw, activeTab)}
+                                  className="w-full text-center hover:bg-muted/50 rounded px-2 py-1 transition-colors"
+                                  title={`Sort by ${activeTab} for ${getGameweekNumber(gw)}`}
+                                >
+                                  <div className="flex items-center justify-center gap-1">
+                                    <span>{getGameweekNumber(gw)}</span>
+                                    <span className="text-xs opacity-60">
+                                      {getSortIcon(gw, activeTab)}
+                                    </span>
+                                  </div>
+                                </button>
                               </th>
                             ))}
                             <th className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[120px]">
@@ -530,7 +573,8 @@ export default function PlayerExpectedPoints() {
                     
                     <div className="text-sm text-muted-foreground mt-4">
                       <p><strong>Legend:</strong> I = Injury Risk, R = Rotation Risk, Conf = Confidence Score, Value = Price/Performance Ratio</p>
-                      <p>Table shows top 50 players. Switch tabs to view different scoring metrics across gameweeks.</p>
+                      <p>Table shows top 50 players. Click gameweek headers to sort by that metric. Switch tabs to view different scoring metrics across gameweeks.</p>
+                      <p><strong>Current sort:</strong> {getGameweekNumber(tableSortBy.gameweek)} - {activeTab} ({tableSortBy.direction === "desc" ? "Highest first" : "Lowest first"})</p>
                     </div>
                   </Tabs>
                 ) : (
