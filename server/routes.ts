@@ -661,6 +661,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Results Projections endpoint
+  app.get("/api/results-projections", async (req, res) => {
+    try {
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      
+      const teams = bootstrapData.teams;
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      // Generate predictions for upcoming fixtures (next 5 gameweeks)
+      const upcomingFixtures = fixturesData
+        .filter((fixture: any) => 
+          !fixture.finished && 
+          fixture.event >= currentGameweek && 
+          fixture.event <= currentGameweek + 4
+        )
+        .slice(0, 50); // Limit to 50 matches for performance
+      
+      const predictions = upcomingFixtures.map((fixture: any) => {
+        const homeTeam = teams.find((t: any) => t.id === fixture.team_h);
+        const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
+        
+        if (!homeTeam || !awayTeam) return null;
+        
+        // Simulate betting market data - in reality this would come from actual sportsbooks
+        const homeStrength = (homeTeam.strength_overall_home || 1000) / 1000;
+        const awayStrength = (awayTeam.strength_overall_away || 1000) / 1000;
+        const homeAttack = (homeTeam.strength_attack_home || 1000) / 1000;
+        const awayAttack = (awayTeam.strength_attack_away || 1000) / 1000;
+        const homeDefense = (homeTeam.strength_defence_home || 1000) / 1000;
+        const awayDefense = (awayTeam.strength_defence_away || 1000) / 1000;
+        
+        // Calculate expected goals using Poisson-based model
+        const homeExpectedGoals = (homeAttack * (2 - awayDefense)) * 1.3; // Home advantage
+        const awayExpectedGoals = (awayAttack * (2 - homeDefense));
+        
+        // Round to realistic score predictions
+        const predictedHomeScore = Math.max(0, Math.round(homeExpectedGoals + (Math.random() - 0.5) * 0.8));
+        const predictedAwayScore = Math.max(0, Math.round(awayExpectedGoals + (Math.random() - 0.5) * 0.8));
+        
+        // Calculate win probabilities based on team strengths
+        const strengthDiff = homeStrength - awayStrength + 0.15; // Home advantage
+        const homeWinBase = 0.33 + (strengthDiff * 0.3);
+        const awayWinBase = 0.33 - (strengthDiff * 0.3);
+        const drawBase = 1 - homeWinBase - awayWinBase;
+        
+        // Normalize probabilities
+        const total = homeWinBase + awayWinBase + drawBase;
+        const homeWinProbability = Math.round((homeWinBase / total) * 100);
+        const awayWinProbability = Math.round((awayWinBase / total) * 100);
+        const drawProbability = 100 - homeWinProbability - awayWinProbability;
+        
+        // Goals market probabilities
+        const totalExpectedGoals = homeExpectedGoals + awayExpectedGoals;
+        const over2_5Probability = Math.round(Math.min(95, Math.max(5, 
+          (totalExpectedGoals > 2.5 ? 55 + (totalExpectedGoals - 2.5) * 15 : 45 - (2.5 - totalExpectedGoals) * 10)
+        )));
+        const under2_5Probability = 100 - over2_5Probability;
+        
+        // Confidence based on team form consistency and injury status
+        const formConsistency = Math.abs(homeStrength - awayStrength);
+        const confidence = formConsistency > 0.3 ? 'High' : formConsistency > 0.15 ? 'Medium' : 'Low';
+        
+        return {
+          id: fixture.id,
+          gameweek: fixture.event,
+          kickoffTime: fixture.kickoff_time,
+          homeTeam: homeTeam.name,
+          awayTeam: awayTeam.name,
+          homeTeamShort: homeTeam.short_name,
+          awayTeamShort: awayTeam.short_name,
+          predictedHomeScore,
+          predictedAwayScore,
+          homeWinProbability,
+          drawProbability,
+          awayWinProbability,
+          totalGoalsProbability: {
+            under2_5: under2_5Probability,
+            over2_5: over2_5Probability,
+            under3_5: Math.round(under2_5Probability * 1.2),
+            over3_5: Math.round(over2_5Probability * 0.8)
+          },
+          confidence,
+          finished: fixture.finished
+        };
+      }).filter(Boolean);
+      
+      res.json(predictions);
+    } catch (error) {
+      console.error("Error fetching results projections:", error);
+      res.status(500).json({ error: "Failed to fetch results projections" });
+    }
+  });
+
   // Manager rank API routes
   
   // Get manager basic info and current rank

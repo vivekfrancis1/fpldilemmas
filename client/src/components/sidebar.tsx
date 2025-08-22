@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   Star,
-  Trophy
+  Trophy,
+  Target
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Analysis Tools", 
       items: [
         { path: "/projections", label: "Projections", icon: TrendingUp, description: "AI-powered player projections", popular: false },
+        { path: "/results-projections", label: "Results Projections", icon: Target, description: "Predicted match outcomes", popular: false },
         { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
         { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: false },
         { path: "/watchlist", label: "Watchlist", icon: Heart, description: "Track favorite players", popular: false },
