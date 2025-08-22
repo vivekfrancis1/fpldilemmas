@@ -15,6 +15,8 @@ Player Projections: Added AI-powered projection model using advanced statistical
 Match Odds: Updated results projections to show projected goals and clean sheet odds for each team by gameweek in compact fixture format for next 8 gameweeks, based on Spreadex Sport market data (January 2025)
 Team Goal Projections: Added team-level goal forecasting tool for next 8 gameweeks using sports spread betting markets (Polymarket, Spreadex) with market-derived expected goals modeling (January 2025)
 Team CS Projections: Added clean sheet probability forecasting tool showing defensive prospects for each team over next 8 gameweeks with market-derived modeling (January 2025)
+Goal Share: Created dedicated tool showing team expected goals breakdown by player percentage share, ensuring 100% distribution per team per gameweek based on Match Odds data (January 2025)
+Assist Share: Added complementary tool to Goal Share showing team expected assists breakdown by player percentage, weighted by creativity and assist history with 100% team distribution (January 2025)
 Most popular tools: Player Statistics, My Live Rank, and Fixtures (updated January 2025)
 Historical data: Added year selection functionality for player statistics from 2016/17 season onwards with full data coverage of 300-400+ players per season (fully functional August 2025)
 
