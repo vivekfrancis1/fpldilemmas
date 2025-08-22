@@ -13,7 +13,8 @@ import {
   X,
   Star,
   Trophy,
-  Target
+  Target,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/projections", label: "Projections", icon: TrendingUp, description: "AI-powered player projections", popular: false },
         { path: "/results-projections", label: "Results Projections", icon: Target, description: "Predicted match outcomes", popular: false },
         { path: "/team-goal-projections", label: "Team Goal Projections", icon: BarChart3, description: "Expected team goals", popular: false },
+        { path: "/team-cs-projections", label: "Team CS Projections", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
         { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: false },
         { path: "/watchlist", label: "Watchlist", icon: Heart, description: "Track favorite players", popular: false },
