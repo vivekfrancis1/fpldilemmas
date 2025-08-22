@@ -265,7 +265,7 @@ export default function ProjectedGoalsCS() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Spreadex Sport market data</li>
+                    <li>• Sports market analysis</li>
                     <li>• Team attacking and defensive strength</li>
                     <li>• Historical performance patterns</li>
                     <li>• Home/away venue adjustments</li>

@@ -488,7 +488,7 @@ export default function Projections() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Spread betting market odds</li>
+                    <li>• Market analysis and statistical modeling</li>
                     <li>• Historical player performance</li>
                     <li>• Team form and fixture analysis</li>
                     <li>• Injury and availability reports</li>

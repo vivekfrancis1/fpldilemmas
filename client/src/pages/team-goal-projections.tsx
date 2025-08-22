@@ -280,7 +280,7 @@ export default function TeamGoalProjections() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Sports spread betting markets (Polymarket, Spreadex)</li>
+                    <li>• Sports market analysis and statistical modeling</li>
                     <li>• Team attacking statistics and form</li>
                     <li>• Historical goal-scoring patterns</li>
                     <li>• Fixture difficulty and home/away factors</li>

@@ -289,7 +289,7 @@ export default function TeamCSProjections() {
                   <h4 className="font-semibold text-gray-900 mb-2">Methodology</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
                     <li>• Poisson distribution for goal probability</li>
-                    <li>• Market-derived clean sheet modeling</li>
+                    <li>• Advanced statistical clean sheet modeling</li>
                     <li>• Home/away defensive adjustments</li>
                     <li>• Form and injury impact analysis</li>
                   </ul>
