@@ -21,9 +21,10 @@ Projection Tools Limit: All projection tools (Player Projections, Match Odds, Te
 Most popular tools: Player Statistics, My Live Rank, and Fixtures (updated January 2025)
 Captain Selector: Enhanced with comprehensive historical captaincy performance data from 2016-2024 seasons, featuring 30+ elite captain performers with historical multipliers, advanced 6-factor scoring algorithm (form 30%, fixtures 25%, ICT 20%, consistency 10%, momentum 10%, ownership 5%), home/away advantage calculations, position-specific adjustments, and sophisticated ownership analysis for both template and differential strategies (August 2025)
 Transfer Planner: Enhanced with comprehensive historical transfer performance data from 2016-2024 seasons, featuring 30+ reliable transfer targets with historical multipliers, advanced 8-factor scoring algorithm (form 25%, value 20%, fixtures 20%, ICT 15%, consistency 10%, momentum 5%, price change 3%, reliability 2%), position-specific value adjustments, weighted fixture analysis with home advantage, injury risk assessment, and sophisticated transfer momentum analysis (August 2025)
-Live Rank functionality: Fixed missing manager API endpoints, now fully functional with cached manager ID support, real-time rank tracking, and historical performance analysis (August 2025)
+Live Rank functionality: Fixed missing manager API endpoints, now fully functional with cached manager ID support, real-time rank tracking, and historical performance analysis with private league filtering (August 2025)
 My Team section: Fixed API endpoints, now displays current team formation, squad value, transfers, and detailed player lineup with enhanced UI design (August 2025)
 My Leagues functionality: Fixed data structure issues and API endpoints, now properly displays private leagues with league standings, performance metrics, and rank tracking (August 2025)
+Price Tracker: Enhanced with sophisticated ownership percentage-based price prediction algorithm using transfer velocity, dynamic thresholds (5% of owned players with minimums), price tier multipliers, and authentic FPL price change data from cost_change_event field sorted by recency (August 2025)
 Historical data: Added year selection functionality for player statistics from 2016/17 season onwards with full data coverage of 300-400+ players per season (fully functional August 2025)
 
 
