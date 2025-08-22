@@ -1174,10 +1174,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const gameweek = fixture.event;
         
         // Get data directly from projection outputs
-        const homeExpectedGoals = homeTeam.goalProjections?.[gameweek] || 0;
-        const awayExpectedGoals = awayTeam.goalProjections?.[gameweek] || 0;
-        const homeCleanSheetOdds = homeTeam.csProjections?.[gameweek] || 0;
-        const awayCleanSheetOdds = awayTeam.csProjections?.[gameweek] || 0;
+        const homeExpectedGoals = homeTeam.goalProjections?.[gameweek.toString()] || 0;
+        const awayExpectedGoals = awayTeam.goalProjections?.[gameweek.toString()] || 0;
+        const homeCleanSheetOdds = homeTeam.csProjections?.[gameweek.toString()] || 0;
+        const awayCleanSheetOdds = awayTeam.csProjections?.[gameweek.toString()] || 0;
         
         // Confidence based purely on data availability from projections
         const dataPoints = [homeExpectedGoals, awayExpectedGoals, homeCleanSheetOdds, awayCleanSheetOdds].filter(val => val > 0).length;
