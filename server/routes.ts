@@ -744,12 +744,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         
         if (goalShare) {
-          // Apply goal projections from Goal Share tool
+          // Apply goal projections from Goal Share tool - use the projectedGoals directly
           players.forEach((player: any) => {
             const playerGoalShare = goalShare.players.find((p: any) => p.id === player.id);
             if (playerGoalShare && player.weeklyProjections[gw]) {
-              const playerExpectedGoals = (goalShare.expectedGoals * playerGoalShare.goalShare) / 100;
-              player.weeklyProjections[gw].goals = Math.round(playerExpectedGoals * 100) / 100;
+              // Use the projectedGoals field that was calculated in the Goal Share tool
+              player.weeklyProjections[gw].goals = playerGoalShare.projectedGoals || 0;
             }
           });
         }
