@@ -81,33 +81,33 @@ export default function PlayerStats() {
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 overflow-x-hidden">
-        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <div className="w-full max-w-7xl mx-auto px-1 sm:px-3 lg:px-4 py-2 sm:py-4 lg:py-8">
           {/* Header Section */}
-          <div className="text-center mb-6 sm:mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-              <BarChart3 className="h-8 w-8 text-blue-600" />
+          <div className="text-center mb-4 sm:mb-6 lg:mb-8">
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full mb-3 sm:mb-4">
+              <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4" data-testid="text-page-title">
+            <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-4 px-2" data-testid="text-page-title">
               Player Statistics
             </h1>
-            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed" data-testid="text-page-description">
+            <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed px-2" data-testid="text-page-description">
               Comprehensive player performance data and analytics for informed FPL decisions. 
               Filter, sort, and analyze every player in the Premier League.
             </p>
             
             {/* Season Selector */}
-            <div className="flex justify-center mt-6">
-              <div className="flex items-center space-x-3">
-                <Calendar className="h-5 w-5 text-gray-500" />
+            <div className="flex justify-center mt-4 sm:mt-6 px-2">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
                 <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-                  <SelectTrigger className="w-48" data-testid="select-season">
+                  <SelectTrigger className="w-40 sm:w-48" data-testid="select-season">
                     <SelectValue placeholder="Select season" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="current">
                       <div className="flex items-center space-x-2">
                         <span>Current Season</span>
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
                           Live
                         </Badge>
                       </div>

@@ -120,22 +120,22 @@ export default function PriceTracker() {
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50/30 overflow-x-hidden">
-        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <div className="w-full max-w-7xl mx-auto px-1 sm:px-3 lg:px-4 py-2 sm:py-4 lg:py-8">
           {/* Header Section */}
-          <div className="text-center mb-6 sm:mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4">
-              <RefreshCw className="h-8 w-8 text-orange-600" />
+          <div className="text-center mb-4 sm:mb-6 lg:mb-8">
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-orange-100 rounded-full mb-3 sm:mb-4">
+              <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4" data-testid="text-page-title">
+            <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-4 px-2" data-testid="text-page-title">
               Price Tracker
             </h1>
-            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed" data-testid="text-page-description">
+            <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed px-2" data-testid="text-page-description">
               Real-time price analysis and data-driven predictions based on FPL transfer patterns
             </p>
           </div>
 
           {/* Info Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8 px-1">
             <Card className="bg-white shadow-sm border border-gray-100">
               <CardContent className="pt-6">
                 <div className="flex items-center">

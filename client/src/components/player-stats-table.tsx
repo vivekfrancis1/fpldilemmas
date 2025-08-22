@@ -245,13 +245,13 @@ export default function PlayerStatsTable({
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       {/* Table Header */}
-      <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900" data-testid="text-table-title">
-            Complete Player Statistics - All Data Points
+      <div className="px-3 sm:px-6 py-3 sm:py-4 bg-gray-50 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900" data-testid="text-table-title">
+            Player Statistics
           </h3>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600" data-testid="text-results-count">
+            <span className="text-xs sm:text-sm text-gray-600" data-testid="text-results-count">
               Showing {filteredAndSortedPlayers.length} players
             </span>
           </div>
@@ -260,14 +260,14 @@ export default function PlayerStatsTable({
 
       {/* Comprehensive Player Statistics Table */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[2400px]">
+        <table className="w-full min-w-[1200px] sm:min-w-[2400px]">
           <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
             <tr>
-              <th className="px-4 py-3 text-left min-w-[200px]">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left min-w-[150px] sm:min-w-[200px]">
                 <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Player</div>
               </th>
               {/* Priority columns first */}
-              <th className="px-2 py-3 text-center min-w-[80px]">
+              <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[60px] sm:min-w-[80px]">
                 <SortableHeader field="now_cost" label="Price" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
@@ -387,20 +387,20 @@ export default function PlayerStatsTable({
               
               return (
                 <tr key={player.id} className="hover:bg-gray-50 transition-colors" data-testid={`row-player-${player.id}`}>
-                  <td className="px-4 py-4 whitespace-nowrap min-w-[200px]">
+                  <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap min-w-[150px] sm:min-w-[200px]">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-8 w-8">
-                        <div className="h-8 w-8 rounded-full bg-fpl-purple flex items-center justify-center text-white font-semibold text-xs">
+                      <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8">
+                        <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-fpl-purple flex items-center justify-center text-white font-semibold text-xs">
                           {player.first_name[0]}{player.second_name[0]}
                         </div>
                       </div>
-                      <div className="ml-3">
-                        <div className="text-sm font-medium text-gray-900">{player.web_name}</div>
+                      <div className="ml-2 sm:ml-3 min-w-0">
+                        <div className="text-xs sm:text-sm font-medium text-gray-900 truncate">{player.web_name}</div>
                         <div className="text-xs text-gray-500">
-                          <Badge variant="outline" className={`mr-1 ${getPositionColor(position)}`}>
+                          <Badge variant="outline" className={`mr-1 text-xs ${getPositionColor(position)}`}>
                             {position}
                           </Badge>
-                          {teamName}
+                          <span className="hidden sm:inline">{teamName}</span>
                         </div>
                       </div>
                     </div>

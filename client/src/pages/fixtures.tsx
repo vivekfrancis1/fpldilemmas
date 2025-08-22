@@ -160,7 +160,7 @@ export default function Fixtures() {
     return (
       <Layout>
         <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30">
-          <div className="w-full max-w-7xl mx-auto px-4 py-8">
+          <div className="w-full max-w-7xl mx-auto px-1 sm:px-3 lg:px-4 py-2 sm:py-4 lg:py-8">
             <Card className="border-red-200 bg-red-50">
               <CardContent className="p-6">
                 <div className="flex items-center">
@@ -181,24 +181,24 @@ export default function Fixtures() {
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50/30">
-        <div className="w-full max-w-full mx-auto px-3 py-4">
+        <div className="w-full max-w-full mx-auto px-1 sm:px-3 py-2 sm:py-4">
           {/* Header */}
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-              <Calendar className="h-8 w-8 text-green-600" />
+          <div className="text-center mb-4 sm:mb-6">
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full mb-3 sm:mb-4">
+              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2" data-testid="text-page-title">
+            <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2 px-2" data-testid="text-page-title">
               Fixture Difficulty Table
             </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
+            <p className="text-sm sm:text-lg text-gray-600 max-w-2xl mx-auto px-2" data-testid="text-page-description">
               Upcoming fixture matrix showing difficulty ratings for all teams across future gameweeks
             </p>
           </div>
 
           {/* Controls */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6 items-center justify-center px-2">
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Gameweeks:</label>
+              <label className="text-xs sm:text-sm font-medium text-gray-700">Gameweeks:</label>
               <select 
                 value={gameweekRange.start} 
                 onChange={(e) => setGameweekRange(prev => ({ ...prev, start: parseInt(e.target.value) }))}

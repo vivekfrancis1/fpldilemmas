@@ -82,77 +82,75 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       <aside 
         className={`fixed left-0 top-0 h-full bg-fpl-purple text-white z-50 transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 lg:static lg:z-auto w-80 max-w-[80vw] sm:max-w-80`}
+        } lg:translate-x-0 lg:static lg:z-auto w-72 sm:w-80 max-w-[85vw] sm:max-w-80 overflow-y-auto`}
       >
         {/* Header */}
-        <div className="p-6 border-b border-purple-400/20">
+        <div className="p-4 sm:p-6 border-b border-purple-400/20">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-fpl-green rounded-full flex items-center justify-center">
-                <i className="fas fa-futbol text-fpl-purple text-sm"></i>
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-fpl-green rounded-full flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-futbol text-fpl-purple text-xs sm:text-sm"></i>
               </div>
-              <div>
-                <h1 className="text-lg font-bold">FPL Dilemmas</h1>
-                <p className="text-purple-200 text-xs">Analytical tools to beat the deadline blues</p>
+              <div className="min-w-0">
+                <h1 className="text-sm sm:text-lg font-bold truncate">FPL Dilemmas</h1>
+                <p className="text-purple-200 text-xs hidden sm:block">Analytical tools to beat the deadline blues</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggle}
-              className="lg:hidden text-white hover:bg-white/10 p-1"
+              className="lg:hidden text-white hover:bg-white/10 p-1 flex-shrink-0"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-6">
+        <nav className="p-3 sm:p-6 space-y-4 sm:space-y-6 pb-20">
           {navItems.map((section) => (
-            <div key={section.section}>
-              <h3 className="text-xs font-semibold text-purple-300 uppercase tracking-wider mb-3 px-3">
-                {section.section === "Most Popular" && (
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    {section.section}
-                  </div>
-                )}
-                {section.section !== "Most Popular" && section.section}
-              </h3>
-              <ul className="space-y-1">
-                {section.items.map((item) => (
-                  <li key={item.path}>
-                    <Link href={item.path} onClick={() => window.innerWidth < 1024 && onToggle()}>
-                      <div
-                        className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors group cursor-pointer ${
-                          isActive(item.path)
-                            ? 'bg-fpl-green text-fpl-purple font-medium'
-                            : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                        }`}
-                        data-testid={`sidebar-link-${item.path.slice(1) || 'player-stats'}`}
-                      >
-                        <item.icon className={`h-5 w-5 ${isActive(item.path) ? 'text-fpl-purple' : ''}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{item.label}</span>
-                            {item.popular && (
-                              <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 h-auto">
-                                HOT
-                              </Badge>
-                            )}
+            <div key={section.section} className="space-y-2 sm:space-y-3">
+              <h2 className="text-purple-200 text-xs font-semibold uppercase tracking-wider px-1">
+                {section.section}
+              </h2>
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const isCurrentPage = isActive(item.path);
+                  const Icon = item.icon;
+                  
+                  return (
+                    <Link 
+                      key={item.path} 
+                      href={item.path}
+                      onClick={() => onToggle()}
+                    >
+                      <div className={`group flex items-center justify-between px-2 sm:px-3 py-2 sm:py-3 rounded-lg transition-all duration-200 cursor-pointer ${
+                        isCurrentPage 
+                          ? 'bg-white/10 text-white shadow-sm' 
+                          : 'text-purple-100 hover:bg-white/5 hover:text-white'
+                      }`}>
+                        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+                          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 ${isCurrentPage ? 'text-fpl-green' : 'text-purple-300 group-hover:text-purple-200'}`} />
+                          <div className="min-w-0">
+                            <p className={`text-xs sm:text-sm font-medium truncate ${isCurrentPage ? 'text-white' : 'group-hover:text-white'}`}>
+                              {item.label}
+                            </p>
+                            <p className={`text-xs hidden sm:block ${isCurrentPage ? 'text-purple-200' : 'text-purple-400 group-hover:text-purple-300'}`}>
+                              {item.description}
+                            </p>
                           </div>
-                          <p className={`text-xs ${
-                            isActive(item.path) ? 'text-fpl-purple/70' : 'text-purple-300'
-                          }`}>
-                            {item.description}
-                          </p>
                         </div>
+                        {item.popular && (
+                          <Badge variant="secondary" className="bg-fpl-green/20 text-fpl-green text-xs hidden sm:inline-flex flex-shrink-0">
+                            Popular
+                          </Badge>
+                        )}
                       </div>
                     </Link>
-                  </li>
-                ))}
-              </ul>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </nav>

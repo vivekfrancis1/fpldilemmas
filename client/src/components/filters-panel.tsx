@@ -85,22 +85,22 @@ export default function FiltersPanel({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-      <div className="flex flex-wrap items-center gap-4 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900" data-testid="text-filters-title">Filters & Search</h3>
+    <div className="bg-white rounded-lg shadow-md p-3 sm:p-6 mb-4 sm:mb-8">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900" data-testid="text-filters-title">Filters & Search</h3>
         <Button
           variant="ghost"
           size="sm"
           onClick={clearFilters}
-          className="text-fpl-purple hover:text-fpl-pink transition-colors"
+          className="text-fpl-purple hover:text-fpl-pink transition-colors text-xs sm:text-sm"
           data-testid="button-clear-filters"
         >
-          <RotateCcw className="h-4 w-4 mr-1" />
+          <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
           Clear All
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         {/* Search Input */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2" data-testid="label-search">Search Player</label>
