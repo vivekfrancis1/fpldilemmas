@@ -1846,10 +1846,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Get current gameweek from fixtures
-      const currentGameweek = Math.min(...fixturesData.filter((f: any) => !f.finished).map((f: any) => f.event)) - 1;
+      // Get bootstrap data to find current gameweek
+      const [bootstrapResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
+      ]);
+      const bootstrapData = await bootstrapResponse.json();
       
-      // Get upcoming fixtures and match with projection data
+      // Use current gameweek from bootstrap data (GW2 is current, so we want GW3+)
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      
+      // Get upcoming fixtures and match with projection data - exclude current gameweek (GW2)
       const upcomingFixtures = fixturesData
         .filter((fixture: any) => 
           !fixture.finished && 
