@@ -295,7 +295,7 @@ export default function PlayerMinutes() {
               <div className="flex flex-wrap gap-2 sm:gap-4 text-xs">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-green-600 rounded"></div>
-                  <span>75+ mins</span>
+                  <span>75-90 mins</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-green-400 rounded"></div>
@@ -312,6 +312,9 @@ export default function PlayerMinutes() {
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-red-500 rounded"></div>
                   <span>&lt;30 mins</span>
+                </div>
+                <div className="text-xs text-muted-foreground ml-4">
+                  * Maximum 90 minutes (normal time only)
                 </div>
               </div>
             </CardContent>
@@ -399,7 +402,7 @@ export default function PlayerMinutes() {
             <Users className="h-4 w-4" />
             <AlertDescription className="text-xs sm:text-sm">
               Expected minutes are calculated using advanced statistical modeling based on player position, recent form, and rotation patterns. 
-              The percentage shows start probability for each gameweek.
+              Values are capped at 90 minutes (normal time only - no extra time). The percentage shows start probability for each gameweek.
             </AlertDescription>
           </Alert>
         </div>
