@@ -561,9 +561,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const averageGoals = totalGoals / Math.max(1, projections.length);
         let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
         
-        // Enhanced confidence calculation using market data
-        if (teamBettingData.confidence >= 0.85 && averageGoals >= 1.8) confidence = 'High';
-        else if (teamBettingData.confidence <= 0.65 || averageGoals < 1.0) confidence = 'Low';
+        // Enhanced confidence calculation using market data only
+        if (teamBettingData.confidence >= 0.85) confidence = 'High';
+        else if (teamBettingData.confidence <= 0.65) confidence = 'Low';
         
         return {
           id: team.id,
@@ -1216,7 +1216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cleanSheetOdds: Math.round(awayCSProbability * 10) / 10
           },
           totalExpectedGoals: Math.round((homeExpectedGoals + awayExpectedGoals) * 100) / 100,
-          confidence: homeTeamBettingData.confidence >= 0.8 && awayTeamBettingData.confidence >= 0.8 ? 'High' : 
+          confidence: homeTeamBettingData.confidence >= 0.85 && awayTeamBettingData.confidence >= 0.85 ? 'High' : 
                      homeTeamBettingData.confidence >= 0.65 && awayTeamBettingData.confidence >= 0.65 ? 'Medium' : 'Low'
         };
       }).filter(Boolean);
