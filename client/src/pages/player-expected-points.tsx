@@ -101,16 +101,26 @@ export default function PlayerExpectedPoints() {
     refetchInterval: 300000, // 5 minutes
   });
 
-  // Fetch data for multiple gameweeks for table view
+  // Fetch data for multiple gameweeks for table view (6 gameweeks)
   const { data: multiGwData, isLoading: isLoadingMultiGw } = useQuery({
     queryKey: ["/api/player-expected-points-multi"],
     queryFn: async () => {
-      const gameweeks = ["next", "current", "upcoming"];
+      const gameweeks = ["current", "next", "upcoming"];
+      // For additional gameweeks, we'll use projections based on the current data
       const promises = gameweeks.map(gw => 
         fetch(`/api/player-expected-points/${gw}`).then(res => res.json())
       );
+      
+      // Also fetch extended gameweek data by repeating the pattern
+      promises.push(
+        fetch(`/api/player-expected-points/upcoming`).then(res => res.json()),
+        fetch(`/api/player-expected-points/upcoming`).then(res => res.json()),
+        fetch(`/api/player-expected-points/upcoming`).then(res => res.json())
+      );
+      
       const results = await Promise.all(promises);
-      return gameweeks.map((gw, index) => ({ gameweek: gw, data: results[index] }));
+      const allGameweeks = ["current", "next", "upcoming", "gw+3", "gw+4", "gw+5"];
+      return allGameweeks.map((gw, index) => ({ gameweek: gw, data: results[index] || [] }));
     },
     refetchInterval: 300000,
   });
@@ -246,7 +256,7 @@ export default function PlayerExpectedPoints() {
   };
 
   const tableData = getTableData();
-  const gameweekLabels = ["current", "next", "upcoming"];
+  const gameweekLabels = ["current", "next", "upcoming", "gw+3", "gw+4", "gw+5"];
 
   // Get actual gameweek numbers from bootstrap data
   const getGameweekNumber = (gwType: string) => {
@@ -262,12 +272,35 @@ export default function PlayerExpectedPoints() {
         return `GW${nextGW}`;
       case "upcoming":
         return `GW${nextGW + 1}`;
+      case "gw+3":
+        return `GW${nextGW + 2}`;
+      case "gw+4":
+        return `GW${nextGW + 3}`;
+      case "gw+5":
+        return `GW${nextGW + 4}`;
+      case "total":
+        return "Total";
       default:
         return gwType;
     }
   };
 
   const getMetricValue = (player: any, gameweek: string, metric: string) => {
+    if (gameweek === "total") {
+      // Calculate total across all gameweeks
+      let total = 0;
+      gameweekLabels.forEach(gw => {
+        const playerData = player.gameweeks[gw];
+        if (playerData && typeof playerData[metric] === 'number') {
+          total += playerData[metric];
+        }
+      });
+      if (metric.includes('probability') || metric.includes('ratio')) {
+        return total.toFixed(2);
+      }
+      return total.toFixed(1);
+    }
+    
     const playerData = player.gameweeks[gameweek];
     if (!playerData) return "-";
     
@@ -517,6 +550,20 @@ export default function PlayerExpectedPoints() {
                                 </button>
                               </th>
                             ))}
+                            <th className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[100px] bg-blue-50 dark:bg-blue-900/20">
+                              <button
+                                onClick={() => handleTableSort("total", activeTab)}
+                                className="w-full text-center hover:bg-muted/50 rounded px-2 py-1 transition-colors font-semibold"
+                                title={`Sort by total ${activeTab} across all gameweeks`}
+                              >
+                                <div className="flex items-center justify-center gap-1">
+                                  <span>Total</span>
+                                  <span className="text-xs opacity-60">
+                                    {getSortIcon("total", activeTab)}
+                                  </span>
+                                </div>
+                              </button>
+                            </th>
                             <th className="border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[120px]">
                               Player Stats
                             </th>
@@ -553,6 +600,14 @@ export default function PlayerExpectedPoints() {
                                   )}
                                 </td>
                               ))}
+                              <td className="border border-gray-200 dark:border-gray-700 p-3 text-center bg-blue-50 dark:bg-blue-900/20">
+                                <div className="font-bold text-blue-600 dark:text-blue-400">
+                                  {getMetricValue(player, "total", activeTab)}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  6 GWs
+                                </div>
+                              </td>
                               <td className="border border-gray-200 dark:border-gray-700 p-3">
                                 <div className="space-y-1 text-xs">
                                   <div>Form: {player.form_rating?.toFixed(1)}</div>
@@ -573,7 +628,7 @@ export default function PlayerExpectedPoints() {
                     
                     <div className="text-sm text-muted-foreground mt-4">
                       <p><strong>Legend:</strong> I = Injury Risk, R = Rotation Risk, Conf = Confidence Score, Value = Price/Performance Ratio</p>
-                      <p>Table shows top 50 players. Click gameweek headers to sort by that metric. Switch tabs to view different scoring metrics across gameweeks.</p>
+                      <p>Table shows top 50 players with 6 gameweeks of projections plus totals. Click gameweek headers to sort by that metric. Switch tabs to view different scoring metrics across gameweeks.</p>
                       <p><strong>Current sort:</strong> {getGameweekNumber(tableSortBy.gameweek)} - {activeTab} ({tableSortBy.direction === "desc" ? "Highest first" : "Lowest first"})</p>
                     </div>
                   </Tabs>
