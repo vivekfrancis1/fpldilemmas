@@ -31,128 +31,32 @@ export default function GoalShare() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: matchOddsData, isLoading: matchOddsLoading } = useQuery({
-    queryKey: ["/api/results-projections"],
+  const { data: goalShareData, isLoading: goalShareLoading } = useQuery({
+    queryKey: ["/api/goal-share", selectedGameweek === "all" ? "2" : selectedGameweek],
     staleTime: 10 * 60 * 1000,
   });
 
-  // Generate goal share data based on match odds
-  const goalShareData = useMemo(() => {
-    if (!bootstrapData?.elements || !matchOddsData) return [];
-
-    const data: GoalShareData[] = [];
-    const teams = bootstrapData.teams;
-    
-    // Get current gameweek for filtering
-    let currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id;
-    if (!currentGameweek) {
-      const nextEvent = bootstrapData.events.find((event: any) => !event.finished);
-      currentGameweek = nextEvent?.id || 2;
-    }
-
-    // Process match odds data to create goal share breakdowns
-    if (Array.isArray(matchOddsData)) {
-      matchOddsData.forEach((match: any) => {
-      const homeTeam = teams.find((t: any) => t.name === match.homeTeam);
-      const awayTeam = teams.find((t: any) => t.name === match.awayTeam);
-
-      if (homeTeam && awayTeam && match.homeExpectedGoals && match.awayExpectedGoals) {
-        // Home team goal share
-        const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
-        const homePlayerShares = distributeGoalShares(homePlayersInSquad, bootstrapData.element_types, match.homeExpectedGoals);
-        
-        data.push({
-          gameweek: match.gameweek,
-          teamId: homeTeam.id,
-          teamName: match.homeTeam,
-          teamShort: match.homeTeamShort,
-          expectedGoals: match.homeExpectedGoals,
-          players: homePlayerShares
-        });
-
-        // Away team goal share
-        const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
-        const awayPlayerShares = distributeGoalShares(awayPlayersInSquad, bootstrapData.element_types, match.awayExpectedGoals);
-        
-        data.push({
-          gameweek: match.gameweek,
-          teamId: awayTeam.id,
-          teamName: match.awayTeam,
-          teamShort: match.awayTeamShort,
-          expectedGoals: match.awayExpectedGoals,
-          players: awayPlayerShares
-        });
-      }
-      });
-    }
-
-    return data;
-  }, [bootstrapData, matchOddsData]);
-
-  // Function to distribute goal shares among players
-  function distributeGoalShares(players: any[], positions: any[], teamExpectedGoals: number) {
-    const playerShares: any[] = [];
-    let totalShare = 0;
-
-    // Calculate base shares based on position and performance
-    players.forEach((player: any) => {
-      const position = positions.find((p: any) => p.id === player.element_type);
-      const positionName = position?.singular_name;
-
-      // Position-specific base shares
-      const positionShares = {
-        'Goalkeeper': 1,
-        'Defender': 6,
-        'Midfielder': 15,
-        'Forward': 35
-      };
-
-      const baseShare = positionShares[positionName as keyof typeof positionShares] || 10;
-      
-      // Adjust based on current performance
-      const formAdjustment = parseFloat(player.form) || 0;
-      const pointsAdjustment = parseFloat(player.points_per_game) || 0;
-      const performanceMultiplier = Math.max(0.3, Math.min(2.0, (formAdjustment + pointsAdjustment) / 10 + 0.5));
-      
-      const adjustedShare = baseShare * performanceMultiplier;
-      
-      playerShares.push({
-        id: player.id,
-        name: `${player.first_name} ${player.second_name}`,
-        position: position?.singular_name_short || '',
-        rawShare: adjustedShare
-      });
-      
-      totalShare += adjustedShare;
-    });
-
-    // Normalize to 100% and calculate projected goals
-    return playerShares.map(player => {
-      const goalShare = Math.round((player.rawShare / totalShare) * 100);
-      const projectedGoals = Math.round((goalShare / 100) * teamExpectedGoals * 100) / 100; // Round to 2 decimal places
-      return {
-        ...player,
-        goalShare,
-        projectedGoals
-      };
-    }).filter(p => p.goalShare > 0).sort((a, b) => b.goalShare - a.goalShare);
-  }
+  // Use goal share data directly from API
+  const processedGoalShareData = useMemo(() => {
+    if (!goalShareData || !Array.isArray(goalShareData)) return [];
+    return goalShareData;
+  }, [goalShareData]);
 
   // Filter data
   const filteredData = useMemo(() => {
-    return goalShareData.filter(item => {
+    return processedGoalShareData.filter(item => {
       if (selectedGameweek !== "all" && item.gameweek !== parseInt(selectedGameweek)) return false;
       if (selectedTeam !== "all" && item.teamId !== parseInt(selectedTeam)) return false;
       return true;
     });
-  }, [goalShareData, selectedGameweek, selectedTeam]);
+  }, [processedGoalShareData, selectedGameweek, selectedTeam]);
 
   // Get available gameweeks
   const availableGameweeks = useMemo(() => {
-    const gameweekSet = new Set(goalShareData.map(item => item.gameweek));
+    const gameweekSet = new Set(processedGoalShareData.map(item => item.gameweek));
     const gameweeks = Array.from(gameweekSet).sort((a, b) => a - b);
     return gameweeks;
-  }, [goalShareData]);
+  }, [processedGoalShareData]);
 
   if (error) {
     return (
@@ -233,14 +137,14 @@ export default function GoalShare() {
           </Card>
 
           {/* Loading State */}
-          {(isLoading || matchOddsLoading) && (
+          {(isLoading || goalShareLoading) && (
             <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           )}
 
           {/* Goal Share Cards */}
-          {!isLoading && !matchOddsLoading && (
+          {!isLoading && !goalShareLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredData.map((teamData, index) => (
                 <Card key={`${teamData.teamId}_${teamData.gameweek}`} className="overflow-hidden">
@@ -312,7 +216,7 @@ export default function GoalShare() {
             </div>
           )}
 
-          {!isLoading && !matchOddsLoading && filteredData.length === 0 && (
+          {!isLoading && !goalShareLoading && filteredData.length === 0 && (
             <Card>
               <CardContent className="p-12 text-center">
                 <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
