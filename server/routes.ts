@@ -643,7 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalMinutes: Math.round(totalMinutes),
           totalGoals: Math.round(totalGoals * 10) / 10,
           totalAssists: Math.round(totalAssists * 10) / 10,
-          totalCleanSheets: Math.round(totalCleanSheets * 100),
+          averageCleanSheets: Math.round(totalCleanSheets / weeks * 100),
           totalBonus: Math.round(totalBonus * 10) / 10,
           averageCbit: Math.round(totalCbit / weeks),
           totalPoints: Math.round(totalPoints * 10) / 10,

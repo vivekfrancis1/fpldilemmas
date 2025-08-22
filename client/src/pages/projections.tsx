@@ -29,7 +29,7 @@ interface PlayerProjection {
   totalMinutes: number;
   totalGoals: number;
   totalAssists: number;
-  totalCleanSheets: number;
+  averageCleanSheets: number;
   totalBonus: number;
   averageCbit: number;
   totalPoints: number;
@@ -137,7 +137,7 @@ export default function Projections() {
           totalMinutes: Math.round(totalMinutes),
           totalGoals: Math.round(totalGoals * 10) / 10,
           totalAssists: Math.round(totalAssists * 10) / 10,
-          totalCleanSheets: Math.round(totalCleanSheets),
+          averageCleanSheets: Math.round(totalCleanSheets / weeks),
           totalBonus: Math.round(totalBonus * 10) / 10,
           averageCbit: Math.round(totalCbit / weeks),
           totalPoints: Math.round(totalPoints * 10) / 10,
@@ -171,7 +171,7 @@ export default function Projections() {
           case "goals": return b.totalGoals - a.totalGoals;
           case "assists": return b.totalAssists - a.totalAssists;
           case "minutes": return b.totalMinutes - a.totalMinutes;
-          case "cleanSheets": return b.totalCleanSheets - a.totalCleanSheets;
+          case "cleanSheets": return b.averageCleanSheets - a.averageCleanSheets;
           case "bonus": return b.totalBonus - a.totalBonus;
           case "cbit": return b.averageCbit - a.averageCbit;
           case "price": return a.price - b.price;
@@ -375,7 +375,7 @@ export default function Projections() {
                               >
                                 <div className="flex items-center justify-center gap-2">
                                   <Trophy className="h-4 w-4" />
-                                  <span>Total {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</span>
+                                  <span>{activeTab === 'cleanSheets' ? 'Avg CS%' : `Total ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}</span>
                                   {sortBy === activeTab && <ArrowUpDown className="h-4 w-4" />}
                                 </div>
                               </th>
@@ -442,11 +442,11 @@ export default function Projections() {
                                     </span>
                                   ) : metric === 'cleanSheets' ? (
                                     <span className={`inline-flex px-3 py-1 text-sm font-bold rounded-full ${
-                                      player.totalCleanSheets >= 50 ? 'bg-green-100 text-green-800' :
-                                      player.totalCleanSheets >= 25 ? 'bg-yellow-100 text-yellow-800' :
+                                      player.averageCleanSheets >= 50 ? 'bg-green-100 text-green-800' :
+                                      player.averageCleanSheets >= 25 ? 'bg-yellow-100 text-yellow-800' :
                                       'bg-red-100 text-red-800'
                                     }`}>
-                                      {player.totalCleanSheets}%
+                                      {player.averageCleanSheets}%
                                     </span>
                                   ) : (
                                     <span className="text-lg font-bold text-white">
