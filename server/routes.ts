@@ -253,6 +253,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manager API routes for Live Rank, My Team, and My Leagues
+  
+  // Get manager data
+  app.get("/api/manager/:managerId", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+      
+      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "Manager not found" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error(`Error fetching manager data for ID ${req.params.managerId}:`, error);
+      res.status(500).json({
+        error: "Failed to fetch manager data",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Get manager history
+  app.get("/api/manager/:managerId/history", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+      
+      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "Manager history not found" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error(`Error fetching manager history for ID ${req.params.managerId}:`, error);
+      res.status(500).json({
+        error: "Failed to fetch manager history",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Get manager team picks for current gameweek
+  app.get("/api/manager/:managerId/team", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      const gameweek = req.query.gameweek;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+
+      // Get current gameweek if not specified
+      let currentGameweek = gameweek;
+      if (!currentGameweek) {
+        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        if (bootstrapResponse.ok) {
+          const bootstrapData = await bootstrapResponse.json();
+          currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+        } else {
+          currentGameweek = 1; // fallback
+        }
+      }
+      
+      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "Manager team not found for this gameweek" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error(`Error fetching manager team for ID ${req.params.managerId}:`, error);
+      res.status(500).json({
+        error: "Failed to fetch manager team",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Get manager leagues
+  app.get("/api/manager/:managerId/leagues", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+      
+      // Get manager data which includes leagues
+      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "Manager not found" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Extract leagues from manager data
+      const leagues = {
+        classic: data.leagues?.classic || [],
+        h2h: data.leagues?.h2h || [],
+        cup: data.leagues?.cup || []
+      };
+      
+      res.json(leagues);
+    } catch (error) {
+      console.error(`Error fetching manager leagues for ID ${req.params.managerId}:`, error);
+      res.status(500).json({
+        error: "Failed to fetch manager leagues",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Price alerts API routes
   
   // Get all price alerts
