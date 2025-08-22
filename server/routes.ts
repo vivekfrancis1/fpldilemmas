@@ -6,10 +6,6 @@ import { storage } from "./storage";
 const FPL_BASE_URL = "https://fantasy.premierleague.com/api";
 
 export function registerRoutes(app: Express): Server {
-  // Root route
-  app.get("/", (req, res) => {
-    res.send("FPL Dilemmas API is running!");
-  });
 
   // Bootstrap data endpoint
   app.get("/api/bootstrap", async (req, res) => {
