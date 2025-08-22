@@ -163,11 +163,6 @@ export default function CaptainSelector({ data, isLoading }: CaptainSelectorProp
         // Apply position and historical multipliers
         const captainScore = Math.min(rawCaptainScore * positionMultiplier * historicalMultiplier, 10);
         
-        // Debug logging for development
-        if (player.total_points > 50) {
-          console.log(`Captain Debug: ${playerName} - Score: ${captainScore.toFixed(2)}, Form: ${formScore.toFixed(2)}, Fixture: ${fixtureScore.toFixed(2)}, ICT: ${ictScore.toFixed(2)}, Hist: ${historicalMultiplier}`);
-        }
-        
         // Classification
         const isPopularPick = ownershipPercent > 15;
         const isDifferentialPick = ownershipPercent < 5 && captainScore > 6;
