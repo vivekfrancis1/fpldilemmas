@@ -487,18 +487,25 @@ export default function PlayerDefensiveContributions() {
                           </div>
                         </td>
                         <td className="px-2 sm:px-3 py-2 text-center">
-                          <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(getPlayerAverageThreshold(player.id))}`}>
-                            {getPlayerAverageThreshold(player.id)}%
-                          </div>
+                          {(() => {
+                            const avgThreshold = getPlayerAverageThreshold(player.id);
+                            return (
+                              <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(avgThreshold)}`}>
+                                {avgThreshold}%
+                              </div>
+                            );
+                          })()}
                         </td>
                         {[2, 3, 4, 5, 6, 7].map((gw) => {
                           const data = getPlayerGameweekData(player.id, gw);
                           return (
                             <td key={gw} className="px-2 sm:px-3 py-2 text-center">
-                              {data && (
+                              {data ? (
                                 <div className={`inline-flex items-center justify-center min-w-[30px] sm:min-w-[40px] h-6 sm:h-7 px-1 sm:px-2 rounded text-xs font-medium ${getDefensiveColor(data.threshold_probability)}`}>
                                   {data.threshold_probability}%
                                 </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">-</span>
                               )}
                             </td>
                           );
