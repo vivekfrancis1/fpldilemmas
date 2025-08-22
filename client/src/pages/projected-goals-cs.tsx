@@ -157,74 +157,78 @@ export default function ProjectedGoalsCS() {
             </CardContent>
           </Card>
 
-          {/* Projections Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {Object.entries(groupedProjections).map(([groupKey, projections]) => {
-              const [gwInfo, dayOfWeek, date] = groupKey.split('-');
-              
-              return (
-                <Card key={groupKey} className="overflow-hidden">
-                  <CardHeader className="bg-gray-50 py-3">
-                    <CardTitle className="text-lg flex items-center justify-between">
-                      <span>{dayOfWeek}</span>
-                      <span className="text-sm font-normal text-gray-600">{date}</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="space-y-0">
+          {/* Projections Table */}
+          <Card className="overflow-hidden">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Projected Goals & CS Odds
+                <Badge variant="outline" className="ml-2">
+                  {filteredProjections.length} matches
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="space-y-0">
+                {Object.entries(groupedProjections).map(([groupKey, projections]) => {
+                  const [gwInfo, dayOfWeek, date] = groupKey.split('-');
+                  
+                  return (
+                    <div key={groupKey}>
+                      {/* Day Header */}
+                      <div className="bg-gray-100 px-4 py-2 border-b">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-sm text-gray-700">{dayOfWeek}</span>
+                          <span className="text-xs text-gray-500">{date}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Matches for this day */}
                       {projections.map((match, index) => (
                         <div 
                           key={`${match.fixtureId}-${index}`} 
-                          className="py-3 px-4 border-b last:border-b-0 hover:bg-gray-50"
+                          className="px-4 py-3 border-b last:border-b-0 hover:bg-gray-50"
                           data-testid={`match-row-${match.homeTeam.teamShort}-${match.awayTeam.teamShort}`}
                         >
-                          {/* Home Team */}
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center space-x-2">
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Home Team */}
+                            <div className="flex items-center justify-between">
                               <span className="font-semibold text-sm">
                                 {match.homeTeam.teamShort}
                               </span>
-                              <span className="text-xs text-gray-500">vs {match.awayTeam.teamShort}</span>
-                            </div>
-                            
-                            <div className="flex items-center space-x-4">
-                              <div className="text-center">
-                                <div className="text-xs text-gray-500 mb-1">GOALS</div>
-                                <div className={`px-2 py-1 rounded text-sm ${getGoalsColor(match.homeTeam.projectedGoals)}`}>
-                                  {match.homeTeam.projectedGoals.toFixed(2)}
+                              <div className="flex items-center space-x-3">
+                                <div className="text-center">
+                                  <div className="text-xs text-gray-500 mb-1">GOALS</div>
+                                  <div className={`px-2 py-1 rounded text-sm ${getGoalsColor(match.homeTeam.projectedGoals)}`}>
+                                    {match.homeTeam.projectedGoals.toFixed(2)}
+                                  </div>
                                 </div>
-                              </div>
-                              
-                              <div className="text-center">
-                                <div className="text-xs text-gray-500 mb-1">CS%</div>
-                                <div className={`px-2 py-1 rounded text-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
-                                  {match.homeTeam.cleanSheetOdds}%
+                                <div className="text-center">
+                                  <div className="text-xs text-gray-500 mb-1">CS%</div>
+                                  <div className={`px-2 py-1 rounded text-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
+                                    {match.homeTeam.cleanSheetOdds}%
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Away Team */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
+                            {/* Away Team */}
+                            <div className="flex items-center justify-between">
                               <span className="font-semibold text-sm">
                                 {match.awayTeam.teamShort}
                               </span>
-                              <span className="text-xs text-gray-500">@ {match.homeTeam.teamShort}</span>
-                            </div>
-                            
-                            <div className="flex items-center space-x-4">
-                              <div className="text-center">
-                                <div className="text-xs text-gray-500 mb-1">GOALS</div>
-                                <div className={`px-2 py-1 rounded text-sm ${getGoalsColor(match.awayTeam.projectedGoals)}`}>
-                                  {match.awayTeam.projectedGoals.toFixed(2)}
+                              <div className="flex items-center space-x-3">
+                                <div className="text-center">
+                                  <div className="text-xs text-gray-500 mb-1">GOALS</div>
+                                  <div className={`px-2 py-1 rounded text-sm ${getGoalsColor(match.awayTeam.projectedGoals)}`}>
+                                    {match.awayTeam.projectedGoals.toFixed(2)}
+                                  </div>
                                 </div>
-                              </div>
-                              
-                              <div className="text-center">
-                                <div className="text-xs text-gray-500 mb-1">CS%</div>
-                                <div className={`px-2 py-1 rounded text-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
-                                  {match.awayTeam.cleanSheetOdds}%
+                                <div className="text-center">
+                                  <div className="text-xs text-gray-500 mb-1">CS%</div>
+                                  <div className={`px-2 py-1 rounded text-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
+                                    {match.awayTeam.cleanSheetOdds}%
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -232,11 +236,11 @@ export default function ProjectedGoalsCS() {
                         </div>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Info Panel */}
           <Card className="mt-6">
