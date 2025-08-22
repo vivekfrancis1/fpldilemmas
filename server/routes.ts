@@ -382,69 +382,167 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // - Team strength and fixtures
         // - Position-specific scoring patterns
         // - Historical performance trends
+        // - Points per game consistency
+        // - Season trajectory analysis
         
-        const formMultiplier = Math.max(0.5, Math.min(2.0, (player.form || 0) / 5 + 0.8));
-        const fixtureStrength = Math.random() * 0.4 + 0.8; // Placeholder for fixture analysis
+        const currentForm = parseFloat(player.form) || 0;
+        const pointsPerGame = parseFloat(player.points_per_game) || 0;
+        const selectedByPercent = player.selected_by_percent || 0;
         
-        // Base minutes projection  
-        const avgMinutes = player.minutes > 0 ? Math.min(90, player.minutes / Math.max(1, 1)) : 45;
-        const playTimeProb = Math.min(0.95, Math.max(0.1, player.minutes / (90 * Math.max(1, 1)) || 0.5));
-        const projectedMinutes = Math.round(avgMinutes * weeks * playTimeProb * formMultiplier);
+        // Enhanced form analysis with recency bias
+        const formConsistency = Math.max(0.3, Math.min(1.5, 
+          (currentForm * 0.6 + pointsPerGame * 0.4) / 6 + 0.7
+        ));
         
-        // Goals projection based on position and current rate
-        const goalsPerMinute = player.goals_scored / Math.max(player.minutes, 1);
-        const positionGoalMultiplier = position?.singular_name === 'Goalkeeper' ? 0.05 : 
-          position?.singular_name === 'Defender' ? 0.8 : 
-          position?.singular_name === 'Midfielder' ? 1.2 : 1.8;
-        const projectedGoals = goalsPerMinute * projectedMinutes * positionGoalMultiplier * formMultiplier * fixtureStrength;
+        // Team strength based on average points and clean sheet potential
+        const teamStrength = Math.max(0.7, Math.min(1.3, 
+          (team?.strength_overall_home + team?.strength_overall_away) / 200 + 0.8
+        ));
         
-        // Assists projection
-        const assistsPerMinute = player.assists / Math.max(player.minutes, 1);
-        const positionAssistMultiplier = position?.singular_name === 'Goalkeeper' ? 0.1 :
-          position?.singular_name === 'Defender' ? 0.9 :
-          position?.singular_name === 'Midfielder' ? 1.5 : 1.1;
-        const projectedAssists = assistsPerMinute * projectedMinutes * positionAssistMultiplier * formMultiplier;
+        // Fixture analysis based on team strengths (simplified but more realistic)
+        const fixtureStrength = Math.max(0.6, Math.min(1.4, teamStrength * (0.85 + Math.random() * 0.3)));
         
-        // Clean sheets for defensive players
+        // Enhanced minutes projection based on recent playing time and status
+        const recentMinutesPerGame = player.minutes > 0 ? player.minutes / Math.max(1, 10) : 20; // Assume 10 games played
+        const statusMultiplier = player.status === 'a' ? 1.0 : player.status === 'd' ? 0.3 : 0.8; // Available, Doubtful, Injured
+        
+        // Playing time probability based on recent performance and selection
+        const basePlayingTime = Math.min(90, Math.max(15, recentMinutesPerGame));
+        const consistencyBonus = Math.min(0.2, selectedByPercent / 50); // Popular players get slight bonus
+        const projectedMinutes = Math.round(basePlayingTime * weeks * statusMultiplier * formConsistency * (1 + consistencyBonus));
+        
+        // Enhanced goals projection with position-specific analysis
+        const currentGoalRate = player.goals_scored / Math.max(player.minutes, 90); // Goals per 90 minutes
+        const expectedGoalsData = player.expected_goals || player.goals_scored * 1.1; // Use xG if available
+        
+        // Position-specific multipliers based on real FPL patterns
+        const positionGoalData = {
+          'Goalkeeper': { base: 0.02, variance: 0.01 },
+          'Defender': { base: 0.12, variance: 0.08 },
+          'Midfielder': { base: 0.25, variance: 0.15 },
+          'Forward': { base: 0.45, variance: 0.20 }
+        };
+        
+        const posData = positionGoalData[position?.singular_name as keyof typeof positionGoalData] || positionGoalData['Midfielder'];
+        const enhancedGoalRate = Math.max(posData.base - posData.variance, 
+          Math.min(posData.base + posData.variance, currentGoalRate * 1.2 + posData.base * 0.3));
+        
+        const projectedGoals = enhancedGoalRate * (projectedMinutes / 90) * formConsistency * fixtureStrength;
+        
+        // Enhanced assists projection with creativity metrics
+        const currentAssistRate = player.assists / Math.max(player.minutes, 90);
+        const creativityScore = (player.creativity || 0) / 100; // FPL creativity stat
+        
+        // Position-specific assist expectations
+        const positionAssistData = {
+          'Goalkeeper': { base: 0.01, creativity: 0.0 },
+          'Defender': { base: 0.08, creativity: 0.3 },
+          'Midfielder': { base: 0.22, creativity: 0.7 },
+          'Forward': { base: 0.15, creativity: 0.4 }
+        };
+        
+        const assistData = positionAssistData[position?.singular_name as keyof typeof positionAssistData] || positionAssistData['Midfielder'];
+        const enhancedAssistRate = Math.max(0.01, 
+          Math.min(assistData.base * 2, currentAssistRate * 1.1 + (creativityScore * assistData.creativity * 0.1)));
+        
+        const projectedAssists = enhancedAssistRate * (projectedMinutes / 90) * formConsistency * teamStrength;
+        
+        // Enhanced clean sheet projection based on team defensive strength
         const isDefensive = position?.singular_name === 'Goalkeeper' || position?.singular_name === 'Defender';
-        const teamCleanSheetRate = 0.25; // Placeholder for team defensive strength
-        const projectedCleanSheets = isDefensive ? teamCleanSheetRate * weeks * fixtureStrength : 0;
         
-        // Bonus points estimation
-        const projectedBonus = (projectedGoals * 2 + projectedAssists * 1.5 + projectedCleanSheets * 0.8) * 0.25;
+        if (isDefensive) {
+          // Team defensive strength based on FPL strength ratings
+          const defensiveStrength = (team?.strength_defence_home + team?.strength_defence_away) / 2 || 1000;
+          const teamCleanSheetRate = Math.max(0.15, Math.min(0.45, (1200 - defensiveStrength) / 1000 * 0.4));
+          
+          // Goalkeeper gets slight bonus over defenders
+          const positionMultiplier = position?.singular_name === 'Goalkeeper' ? 1.05 : 1.0;
+          const projectedCleanSheets = teamCleanSheetRate * weeks * fixtureStrength * positionMultiplier;
+        } else {
+          const projectedCleanSheets = 0;
+        }
         
-        // FPL points calculation
+        // Enhanced bonus points based on historical BPS patterns
+        const bpsPerformance = (player.bonus || 0) / Math.max(1, 10); // Bonus points per game
+        const threatScore = (player.threat || 0) / 100; // FPL threat metric
+        const influenceScore = (player.influence || 0) / 100; // FPL influence metric
+        
+        // More sophisticated bonus calculation
+        const expectedBps = (projectedGoals * 24 + projectedAssists * 18 + 
+          projectedCleanSheets * (isDefensive ? 12 : 0) + 
+          (projectedMinutes / 90) * 2) * (1 + threatScore * 0.1 + influenceScore * 0.1);
+        
+        // Convert BPS to actual bonus points (rough approximation)
+        const projectedBonus = Math.max(0, (expectedBps - 15) / 10) * 0.4;
+        
+        // Accurate FPL points calculation
         const minutesPoints = Math.floor(projectedMinutes / 60) * 2; // 2 points per 60+ minutes
         const goalPoints = projectedGoals * (isDefensive ? 6 : position?.singular_name === 'Midfielder' ? 5 : 4);
         const assistPoints = projectedAssists * 3;
-        const cleanSheetPoints = projectedCleanSheets * (isDefensive ? 4 : 1);
-        const projectedPoints = minutesPoints + goalPoints + assistPoints + cleanSheetPoints + projectedBonus;
+        const cleanSheetPoints = (projectedCleanSheets || 0) * (isDefensive ? 4 : 1);
         
-        // CBIT calculation (Chance of being in top 15)
-        const playerValue = projectedPoints / weeks;
-        const cbitPercentage = Math.min(95, Math.max(1, Math.round(playerValue * 3.5)));
+        // Add yellow cards penalty (small negative impact)
+        const yellowCardPenalty = (player.yellow_cards || 0) / 10 * weeks * 0.1;
         
-        // Confidence based on consistency and sample size
-        const consistency = 1 - (Math.abs(parseFloat(player.form) - (player.total_points / Math.max(1, 1))) / 10);
-        const sampleSize = Math.min(1, player.minutes / 500);
-        const confidenceScore = consistency * sampleSize;
+        const projectedPoints = Math.max(0, minutesPoints + goalPoints + assistPoints + cleanSheetPoints + projectedBonus - yellowCardPenalty);
         
-        const confidence = confidenceScore > 0.6 ? 'High' : confidenceScore > 0.3 ? 'Medium' : 'Low';
+        // Enhanced CBIT calculation based on points per game and position competition
+        const projectedPPG = projectedPoints / weeks;
+        const positionThresholds = {
+          'Goalkeeper': 4.0,    // Lower threshold for GKs
+          'Defender': 4.5,      // Defenders need decent points
+          'Midfielder': 5.5,    // Midfielders compete heavily
+          'Forward': 6.0        // Forwards need high scores
+        };
+        
+        const threshold = positionThresholds[position?.singular_name as keyof typeof positionThresholds] || 5.5;
+        const cbitScore = Math.max(0, (projectedPPG - threshold + 2) / 4);
+        const cbitPercentage = Math.min(95, Math.max(1, Math.round(cbitScore * 100)));
+        
+        // Advanced confidence scoring based on multiple reliability factors
+        const gamesSample = Math.min(1, player.minutes / 450); // At least 5 full games for good sample
+        const formConsistencyScore = 1 - Math.abs(currentForm - pointsPerGame) / Math.max(pointsPerGame, 2);
+        const selectionStability = Math.min(1, selectedByPercent / 20); // Popular = more reliable data
+        const positionReliability = position?.singular_name === 'Goalkeeper' ? 0.9 : 
+          position?.singular_name === 'Defender' ? 0.8 :
+          position?.singular_name === 'Midfielder' ? 0.7 : 0.6; // Forwards more volatile
+        
+        // Injury and availability factor
+        const availabilityScore = player.status === 'a' ? 1.0 : 
+          player.status === 'd' ? 0.6 : 0.2;
+        
+        // Combined confidence score (0-1 scale)
+        const confidenceScore = (
+          gamesSample * 0.25 +
+          formConsistencyScore * 0.25 +
+          selectionStability * 0.15 +
+          positionReliability * 0.20 +
+          availabilityScore * 0.15
+        );
+        
+        const confidence = confidenceScore > 0.75 ? 'High' : confidenceScore > 0.5 ? 'Medium' : 'Low';
         
         // Generate weekly breakdown
         const weeklyProjections: { [gameweek: number]: any } = {};
         let totalMinutes = 0, totalGoals = 0, totalAssists = 0, totalCleanSheets = 0, totalBonus = 0, totalCbit = 0, totalPoints = 0;
         
         for (let week = 1; week <= weeks; week++) {
-          // Distribute totals across weeks with some variation
-          const weeklyVariation = 0.7 + Math.random() * 0.6;
-          const weekMinutes = Math.round((projectedMinutes / weeks) * weeklyVariation);
-          const weekGoals = (projectedGoals / weeks) * weeklyVariation;
-          const weekAssists = (projectedAssists / weeks) * weeklyVariation;
-          const weekCleanSheets = (projectedCleanSheets / weeks) * weeklyVariation;
-          const weekBonus = (projectedBonus / weeks) * weeklyVariation;
-          const weekPoints = (projectedPoints / weeks) * weeklyVariation;
-          const weekCbit = Math.min(95, Math.max(1, Math.round(weekPoints * 3.5)));
+          // More realistic weekly distribution with some games being better than others
+          const weeklyForm = 0.6 + Math.random() * 0.8; // 0.6 to 1.4 multiplier
+          const fixtureQuality = 0.7 + Math.random() * 0.6; // Easier/harder fixtures
+          const weeklyMultiplier = weeklyForm * fixtureQuality;
+          
+          const weekMinutes = Math.round((projectedMinutes / weeks) * weeklyMultiplier);
+          const weekGoals = (projectedGoals / weeks) * weeklyMultiplier;
+          const weekAssists = (projectedAssists / weeks) * weeklyMultiplier;
+          const weekCleanSheets = (projectedCleanSheets || 0 / weeks) * weeklyMultiplier;
+          const weekBonus = (projectedBonus / weeks) * weeklyMultiplier;
+          const weekPoints = (projectedPoints / weeks) * weeklyMultiplier;
+          
+          // Week-specific CBIT based on that week's projected performance
+          const weekPPG = weekPoints;
+          const weekCbitScore = Math.max(0, (weekPPG - threshold + 2) / 4);
+          const weekCbit = Math.min(95, Math.max(1, Math.round(weekCbitScore * 100)));
           
           weeklyProjections[week] = {
             minutes: Math.max(0, weekMinutes),
