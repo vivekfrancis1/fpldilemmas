@@ -25,8 +25,8 @@ interface Team {
 
 export default function Fixtures() {
   const [gameweekRange, setGameweekRange] = useState(() => {
-    // Show next 10 gameweeks: GW3 to GW12
-    return { start: 3, end: 12 };
+    // Show next 6 gameweeks: GW3 to GW8
+    return { start: 3, end: 8 };
   });
   const [sortBy, setSortBy] = useState<'team' | 'fdr-asc' | 'fdr-desc'>('fdr-asc');
 
@@ -60,9 +60,9 @@ export default function Fixtures() {
   // Update gameweek range when current gameweek changes - show next 10 gameweeks (GW3-GW12)
   useEffect(() => {
     if (availableGameweeks.length > 0 && gameweekRange.start !== 3) {
-      // Start from GW3 and show next 10 gameweeks (GW3-GW12)
+      // Start from GW3 and show next 6 gameweeks (GW3-GW8)
       const startGW = 3;
-      const endGW = 12;
+      const endGW = 8;
       setGameweekRange({
         start: startGW,
         end: endGW
@@ -193,7 +193,7 @@ export default function Fixtures() {
               Fixture Difficulty Table
             </h1>
             <p className="text-sm sm:text-lg text-gray-600 max-w-2xl mx-auto px-2" data-testid="text-page-description">
-              Fixture difficulty ratings showing 10 gameweeks by default (customizable up to GW38)
+              Fixture difficulty ratings showing 6 gameweeks by default (customizable up to GW38)
             </p>
           </div>
 
