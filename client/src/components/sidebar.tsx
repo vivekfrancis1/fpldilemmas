@@ -58,7 +58,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/player-minutes", label: "Player Minutes", icon: Users, description: "Expected playing time", popular: false },
         { path: "/player-projected-goals", label: "Player Projected Goals", icon: Target, description: "Expected goals by player", popular: false },
         { path: "/player-expected-assists", label: "Player Expected Assists", icon: Zap, description: "Expected assists by player", popular: false },
-        { path: "/player-expected-bonus", label: "Player Expected Bonus", icon: Award, description: "Expected bonus points by player", popular: false }
       ]
     },
     {
