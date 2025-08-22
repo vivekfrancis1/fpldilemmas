@@ -160,4 +160,5 @@ export type Fixture = z.infer<typeof fixtureSchema>;
 export type BootstrapData = z.infer<typeof bootstrapDataSchema>;
 export type PlayerSummary = z.infer<typeof playerSummarySchema>;
 
-
+// Re-export watchlist types
+export * from "./watchlist-schema";
