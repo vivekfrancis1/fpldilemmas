@@ -162,3 +162,64 @@ export type PlayerSummary = z.infer<typeof playerSummarySchema>;
 
 // Re-export watchlist types
 export * from "./watchlist-schema";
+
+// Import pgTable for database schema definitions
+import { sql } from 'drizzle-orm';
+import {
+  index,
+  integer,
+  pgTable,
+  timestamp,
+  varchar,
+  decimal,
+  date,
+} from "drizzle-orm/pg-core";
+
+// Session storage table
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: varchar("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User storage table
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Daily price tracking table for historical price and transfer data
+export const dailyPlayerPrices = pgTable("daily_player_prices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name").notNull(),
+  recordDate: date("record_date").notNull(),
+  originalPrice: integer("original_price").notNull(), // Start of season price
+  currentPrice: integer("current_price").notNull(), // Price on this date
+  ownership: decimal("ownership", { precision: 5, scale: 2 }).notNull(), // Ownership percentage
+  totalTransfersIn: integer("total_transfers_in").notNull(),
+  totalTransfersOut: integer("total_transfers_out").notNull(),
+  dailyTransfersIn: integer("daily_transfers_in").default(0), // Calculated from previous day
+  dailyTransfersOut: integer("daily_transfers_out").default(0), // Calculated from previous day
+  priceChangeEvent: integer("price_change_event").default(0), // Price change in this gameweek
+  teamId: integer("team_id"),
+  position: varchar("position"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_daily_prices_player_date").on(table.playerId, table.recordDate),
+  index("idx_daily_prices_date").on(table.recordDate),
+]);
+
+export type UpsertUser = typeof users.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type DailyPlayerPrice = typeof dailyPlayerPrices.$inferSelect;
+export type InsertDailyPlayerPrice = typeof dailyPlayerPrices.$inferInsert;

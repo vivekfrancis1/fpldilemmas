@@ -24,7 +24,7 @@ Transfer Planner: Enhanced with comprehensive historical transfer performance da
 Live Rank functionality: Fixed missing manager API endpoints, now fully functional with cached manager ID support, real-time rank tracking, and historical performance analysis with private league filtering (August 2025)
 My Team section: Fixed API endpoints, now displays current team formation, squad value, transfers, and detailed player lineup with enhanced UI design (August 2025)
 My Leagues functionality: Fixed data structure issues and API endpoints, now properly displays private leagues with league standings, performance metrics, and rank tracking (August 2025)
-Price Tracker: Enhanced with sophisticated ownership percentage-based price prediction algorithm using transfer velocity, dynamic thresholds (5% of owned players with minimums), price tier multipliers, and authentic FPL price change data from cost_change_event field sorted by recency (August 2025)
+Price Tracker: Enhanced with sophisticated ownership percentage-based price prediction algorithm using transfer velocity, dynamic thresholds (5% of owned players with minimums), price tier multipliers, and authentic FPL price change data from cost_change_event field sorted by recency. Now includes daily price tracking system that fetches data at 7:30 AM IST, storing historical prices, ownership, transfers, and calculating daily transfer differences for comprehensive price analysis (August 2025)
 Historical data: Added year selection functionality for player statistics from 2016/17 season onwards with full data coverage of 300-400+ players per season (fully functional August 2025)
 
 
@@ -48,10 +48,11 @@ Historical data: Added year selection functionality for player statistics from 2
 
 ### Data Storage Solutions
 - **Primary Storage**: In-memory storage using Map and object caching
-- **Database Configuration**: Drizzle ORM configured for PostgreSQL (via Neon Database) but currently using memory storage
+- **Database Configuration**: Drizzle ORM configured for PostgreSQL (via Neon Database) with active database storage for historical data
 - **Caching Layer**: Custom `IStorage` interface with `MemStorage` implementation for bootstrap data and player summaries
-- **Data Persistence**: Temporary in-memory persistence with plans for database integration
+- **Data Persistence**: Database storage for daily price tracking, transfer data, and historical records with scheduled data collection
 - **Data Consistency**: All projection tools use deterministic calculations based on team ID and gameweek seeds, ensuring identical values across multiple API calls (August 2025)
+- **Daily Price Tracking**: Automated system fetching player prices, ownership, and transfer data at 7:30 AM IST daily, calculating daily transfer differences and storing historical trends for comprehensive price analysis (August 2025)
 
 ### API Integration
 - **External API**: Fantasy Premier League official API (`https://fantasy.premierleague.com/api`)

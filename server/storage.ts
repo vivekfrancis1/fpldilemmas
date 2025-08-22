@@ -23,6 +23,11 @@ export interface IStorage {
   getPriceChange(playerId: number, changeAmount: number): Promise<{ playerId: number; changeAmount: number; date: string; } | undefined>;
   setPriceChange(playerId: number, changeAmount: number, date: string): Promise<void>;
   
+  // Daily price tracking methods
+  saveDailyPriceData(data: any[]): Promise<void>;
+  getLatestPriceData(playerId: number): Promise<any | null>;
+  getDailyPriceHistory(playerId: number, days?: number): Promise<any[]>;
+  
   // Historical player operations
   getHistoricalPlayers(season: string): Promise<HistoricalPlayer[]>;
   insertHistoricalPlayers(players: InsertHistoricalPlayer[]): Promise<void>;
@@ -174,6 +179,22 @@ export class MemStorage implements IStorage {
 
   async setLastManagerId(managerId: string): Promise<void> {
     this.lastManagerId = managerId;
+  }
+
+  // Daily price tracking methods
+  async saveDailyPriceData(data: any[]): Promise<void> {
+    // Memory implementation - not persistent
+    console.log(`Saved ${data.length} daily price records`);
+  }
+
+  async getLatestPriceData(playerId: number): Promise<any | null> {
+    // Memory implementation - return null
+    return null;
+  }
+
+  async getDailyPriceHistory(playerId: number, days: number = 30): Promise<any[]> {
+    // Memory implementation - return empty array
+    return [];
   }
 }
 
@@ -365,6 +386,55 @@ export class DatabaseStorage implements IStorage {
 
   async setLastManagerId(managerId: string): Promise<void> {
     return this.memFallback.setLastManagerId(managerId);
+  }
+
+  // Daily price tracking methods (use database for persistence)
+  async saveDailyPriceData(data: any[]): Promise<void> {
+    try {
+      const { dailyPlayerPrices } = await import("@shared/schema");
+      await db.insert(dailyPlayerPrices).values(data).onConflictDoNothing();
+      console.log(`Saved ${data.length} daily price records to database`);
+    } catch (error) {
+      console.error("Error saving daily price data:", error);
+      // Fallback to memory storage
+      return this.memFallback.saveDailyPriceData(data);
+    }
+  }
+
+  async getLatestPriceData(playerId: number): Promise<any | null> {
+    try {
+      const { dailyPlayerPrices } = await import("@shared/schema");
+      const [latest] = await db
+        .select()
+        .from(dailyPlayerPrices)
+        .where(eq(dailyPlayerPrices.playerId, playerId))
+        .orderBy(sql`${dailyPlayerPrices.recordDate} DESC`)
+        .limit(1);
+      return latest || null;
+    } catch (error) {
+      console.error("Error getting latest price data:", error);
+      return this.memFallback.getLatestPriceData(playerId);
+    }
+  }
+
+  async getDailyPriceHistory(playerId: number, days: number = 30): Promise<any[]> {
+    try {
+      const { dailyPlayerPrices } = await import("@shared/schema");
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      
+      const history = await db
+        .select()
+        .from(dailyPlayerPrices)
+        .where(eq(dailyPlayerPrices.playerId, playerId))
+        .orderBy(sql`${dailyPlayerPrices.recordDate} DESC`)
+        .limit(days);
+      
+      return history;
+    } catch (error) {
+      console.error("Error getting daily price history:", error);
+      return this.memFallback.getDailyPriceHistory(playerId, days);
+    }
   }
 }
 

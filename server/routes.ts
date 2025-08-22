@@ -416,66 +416,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
       
-      // Get price changes - show both actual changes and simulated recent activity
-      // Since we may be between gameweeks, generate realistic transfer activity data
-      const playerKeys = [239, 426, 355, 284, 302, 344, 283, 291, 254, 321]; // Popular player IDs
+      // Get price changes using historical daily tracking data when available
+      const recentChanges = [];
       
-      const recentChanges = elements
-        .filter((player: any) => {
-          const priceChange = player.cost_change_event || 0;
-          const transfersIn = player.transfers_in_event || 0;
-          const transfersOut = player.transfers_out_event || 0;
-          const netTransfers = Math.abs(transfersIn - transfersOut);
-          
-          // Include players with actual changes or show popular players with simulated activity
-          return priceChange !== 0 || netTransfers > 1000 || playerKeys.includes(player.id);
-        })
-        .map((player: any) => {
+      // Try to get recent price changes from daily tracking data
+      for (const player of elements.slice(0, 50)) { // Limit to avoid overwhelming response
+        try {
+          const latestData = await storage.getLatestPriceData(player.id);
           const team = teams.find((t: any) => t.id === player.team);
           const position = positions.find((p: any) => p.id === player.element_type);
           
-          // Use actual data or simulate realistic activity for demonstration
-          let transfersIn = player.transfers_in_event || 0;
-          let transfersOut = player.transfers_out_event || 0;
+          // Use daily tracking data if available, otherwise use event data
+          let dailyTransfersIn = 0;
+          let dailyTransfersOut = 0;
           let priceChange = player.cost_change_event || 0;
           
-          // If no real activity, generate realistic patterns for popular players
-          if (transfersIn === 0 && transfersOut === 0 && playerKeys.includes(player.id)) {
-            const playerIndex = playerKeys.indexOf(player.id);
-            const baseActivity = (player.now_cost > 100 ? 25000 : 15000) + (playerIndex * 3000);
-            transfersIn = baseActivity + (player.id * 7) % 8000;
-            transfersOut = Math.max(0, transfersIn - (5000 + (player.id * 11) % 10000));
-            
-            // Simulate price changes for highly active players
-            const netTransfers = transfersIn - transfersOut;
-            if (Math.abs(netTransfers) > 20000) {
-              priceChange = netTransfers > 0 ? 1 : -1;
-            }
+          if (latestData) {
+            dailyTransfersIn = latestData.dailyTransfersIn || 0;
+            dailyTransfersOut = latestData.dailyTransfersOut || 0;
+          } else {
+            // Fallback to event data
+            dailyTransfersIn = player.transfers_in_event || 0;
+            dailyTransfersOut = player.transfers_out_event || 0;
           }
           
-          return {
+          // Only include if there's meaningful activity
+          if (priceChange !== 0 || Math.abs(dailyTransfersIn - dailyTransfersOut) > 1000) {
+            recentChanges.push({
+              player_id: player.id,
+              player_name: player.web_name,
+              team_name: team?.short_name || "Unknown",
+              position: position?.singular_name_short || "Unknown",
+              old_price: player.now_cost - priceChange,
+              new_price: player.now_cost,
+              current_price: player.now_cost,
+              change: priceChange,
+              ownership_change: ((dailyTransfersIn - dailyTransfersOut) / 10000000) * 100,
+              transfers_in: dailyTransfersIn,
+              transfers_out: dailyTransfersOut,
+              recency_score: Math.abs(dailyTransfersIn - dailyTransfersOut) + Math.abs(priceChange) * 50000
+            });
+          }
+        } catch (error) {
+          // Skip individual player errors
+          continue;
+        }
+      }
+      
+      // If no tracked data available, show some basic current data
+      if (recentChanges.length === 0) {
+        const popularPlayers = elements.filter((p: any) => parseFloat(p.selected_by_percent || "0") > 5);
+        for (const player of popularPlayers.slice(0, 10)) {
+          const team = teams.find((t: any) => t.id === player.team);
+          const position = positions.find((p: any) => p.id === player.element_type);
+          
+          recentChanges.push({
             player_id: player.id,
             player_name: player.web_name,
             team_name: team?.short_name || "Unknown",
             position: position?.singular_name_short || "Unknown",
-            old_price: player.now_cost - priceChange,
+            old_price: player.now_cost,
             new_price: player.now_cost,
             current_price: player.now_cost,
-            change: priceChange,
-            ownership_change: ((transfersIn - transfersOut) / 10000000) * 100,
-            transfers_in: transfersIn,
-            transfers_out: transfersOut,
-            // Add recency score based on transfer activity (more recent = higher activity)
-            recency_score: Math.abs(transfersIn - transfersOut) + Math.abs(priceChange) * 50000
-          };
-        })
-        .sort((a: any, b: any) => {
-          // Sort by recency score (descending) - most recent/active changes first
-          return b.recency_score - a.recency_score;
-        })
-        .slice(0, 20); // Limit to 20 most recent changes
+            change: 0,
+            ownership_change: 0,
+            transfers_in: player.transfers_in_event || 0,
+            transfers_out: player.transfers_out_event || 0,
+            recency_score: parseFloat(player.selected_by_percent || "0") * 100
+          });
+        }
+      }
       
-      res.json(recentChanges);
+      // Sort and limit the results
+      recentChanges.sort((a: any, b: any) => {
+        // Sort by recency score (descending) - most recent/active changes first
+        return b.recency_score - a.recency_score;
+      });
+      
+      const limitedChanges = recentChanges.slice(0, 20); // Limit to 20 most recent changes
+      
+      res.json(limitedChanges);
     } catch (error) {
       console.error("Error generating price changes:", error);
       res.status(500).json({
@@ -1958,6 +1978,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating match odds:", error);
       res.status(500).json({ error: "Failed to generate match odds" });
+    }
+  });
+
+  // Price scheduler status and manual trigger endpoints
+  app.get("/api/price-scheduler/status", (req, res) => {
+    const { priceScheduler } = require("./price-scheduler");
+    res.json(priceScheduler.getStatus());
+  });
+
+  app.post("/api/price-scheduler/trigger", async (req, res) => {
+    try {
+      const { priceScheduler } = require("./price-scheduler");
+      await priceScheduler.triggerManualFetch();
+      res.json({ success: true, message: "Price data fetch triggered successfully" });
+    } catch (error) {
+      console.error("Error triggering price fetch:", error);
+      res.status(500).json({ error: "Failed to trigger price fetch" });
+    }
+  });
+
+  app.get("/api/daily-prices/:playerId", async (req, res) => {
+    try {
+      const { playerId } = req.params;
+      const days = parseInt(req.query.days as string) || 30;
+      
+      const history = await storage.getDailyPriceHistory(parseInt(playerId), days);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching daily price history:", error);
+      res.status(500).json({ error: "Failed to fetch price history" });
     }
   });
 
