@@ -262,8 +262,8 @@ export default function OpenFPLProjections() {
               <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-lg md:text-xl lg:text-2xl">
                 <div className="flex items-center gap-2">
                   <Target className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
-                  <span className="hidden sm:inline">OpenFPL Ensemble Predictions</span>
-                  <span className="sm:hidden">OpenFPL Predictions</span>
+                  <span className="hidden sm:inline">Player Projections</span>
+                  <span className="sm:hidden">Player Projections</span>
                 </div>
                 {horizonFilter && (
                   <Badge variant="outline" className="text-xs md:text-sm px-2 md:px-3 py-1">
@@ -271,9 +271,6 @@ export default function OpenFPLProjections() {
                   </Badge>
                 )}
               </CardTitle>
-              <CardDescription className="text-sm md:text-base lg:text-lg">
-                Position-specific ensemble models trained on 4 seasons of FPL + Understat data
-              </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               {isLoadingProjections ? (
