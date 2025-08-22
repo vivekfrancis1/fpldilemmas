@@ -483,35 +483,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const ownership = parseFloat(player.selected_by_percent || "0");
           const currentPrice = player.now_cost;
           
-          // Calculate price prediction using FPL's actual mechanics
-          // Price rises: Need net transfers > ownership threshold
-          // Price falls: Need net transfers < -ownership threshold
+          // Calculate price prediction using FPL's actual mechanics with ownership percentage
+          // Base thresholds: 5% of total FPL players (approximately 10 million players)
+          const totalPlayers = 10000000; // Approximate total FPL players
           
-          // Dynamic thresholds based on ownership (FPL uses tiered system)
-          let riseThreshold, fallThreshold;
+          // Ownership-based thresholds (percentage of ownership with minimums)
+          const ownershipThresholdMultiplier = 0.05; // 5% of owned players need to transfer
+          const ownedPlayers = (ownership / 100) * totalPlayers;
           
-          if (ownership < 5) {
-            // Low ownership players need fewer transfers
-            riseThreshold = 50000;
-            fallThreshold = -30000;
-          } else if (ownership < 15) {
-            // Medium ownership players
-            riseThreshold = 100000;
-            fallThreshold = -60000;
-          } else if (ownership < 30) {
-            // High ownership players
-            riseThreshold = 200000;
-            fallThreshold = -120000;
-          } else {
-            // Very high ownership players need massive transfers
-            riseThreshold = 400000;
-            fallThreshold = -250000;
-          }
+          // Calculate percentage-based thresholds with minimums
+          let riseThreshold = Math.max(
+            40000, // Minimum 40k transfers regardless of ownership
+            ownedPlayers * ownershipThresholdMultiplier
+          );
           
-          // Adjust thresholds based on price (higher priced players harder to move)
-          const priceMultiplier = Math.max(0.7, Math.min(1.5, currentPrice / 80));
+          let fallThreshold = Math.max(
+            25000, // Minimum 25k transfers out regardless of ownership  
+            ownedPlayers * ownershipThresholdMultiplier * 0.6 // Falls need 60% of rise threshold
+          );
+          
+          // Adjust thresholds based on price tier (premium players harder to move)
+          const priceMultiplier = currentPrice < 60 ? 0.8 : // Budget players easier
+                                 currentPrice < 100 ? 1.0 : // Mid-price normal
+                                 currentPrice < 130 ? 1.3 : // Premium harder
+                                 1.6; // Super premium much harder
+          
           riseThreshold *= priceMultiplier;
           fallThreshold *= priceMultiplier;
+          
+          // Consider transfer rate (assume 24-hour window for gameweek transfers)
+          // Higher velocity increases probability
+          const transferVelocity = Math.abs(netTransfers) / 24; // Transfers per hour estimate
+          const velocityBonus = transferVelocity > 5000 ? 1.2 : // High velocity
+                               transferVelocity > 2000 ? 1.1 : // Medium velocity  
+                               1.0; // Normal velocity
           
           // Predict price change
           let predictedChange = 0;
@@ -519,55 +524,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let confidence = 0;
           let reason = "Stable transfer activity";
           
-          if (netTransfers > riseThreshold) {
+          // Apply velocity bonus to thresholds (higher velocity = easier to trigger)
+          const adjustedRiseThreshold = riseThreshold / velocityBonus;
+          const adjustedFallThreshold = fallThreshold / velocityBonus;
+          
+          if (netTransfers > adjustedRiseThreshold) {
             predictedChange = 1;
-            const excess = netTransfers - riseThreshold;
-            confidence = Math.min(95, 60 + (excess / riseThreshold) * 35);
+            const excess = netTransfers - adjustedRiseThreshold;
+            const baseConfidence = 50 + (excess / adjustedRiseThreshold) * 30;
+            confidence = Math.min(95, baseConfidence * velocityBonus);
             
-            if (excess > riseThreshold * 0.5) {
+            if (excess > adjustedRiseThreshold * 0.6) {
               probability = "Very High";
-              reason = `Massive transfer inflow (${(netTransfers/1000).toFixed(0)}k net) vs ${ownership}% ownership`;
-            } else if (excess > riseThreshold * 0.2) {
+              reason = `Massive inflow: ${(netTransfers/1000).toFixed(0)}k (${(transferVelocity/1000).toFixed(1)}k/hr) vs ${ownership}% owned`;
+            } else if (excess > adjustedRiseThreshold * 0.3) {
               probability = "High";
-              reason = `Strong transfer demand (${(netTransfers/1000).toFixed(0)}k net) for ${ownership}% owned player`;
+              reason = `Strong demand: ${(netTransfers/1000).toFixed(0)}k net exceeds ${(adjustedRiseThreshold/1000).toFixed(0)}k threshold`;
             } else {
               probability = "Medium";
-              reason = `Moderate transfer inflow crossing ownership threshold`;
+              reason = `Rising: ${(netTransfers/1000).toFixed(0)}k crosses ${ownership}%-based threshold`;
             }
-          } else if (netTransfers < fallThreshold) {
+          } else if (netTransfers < -adjustedFallThreshold) {
             predictedChange = -1;
-            const excess = Math.abs(netTransfers) - Math.abs(fallThreshold);
-            confidence = Math.min(95, 60 + (excess / Math.abs(fallThreshold)) * 35);
+            const excess = Math.abs(netTransfers) - adjustedFallThreshold;
+            const baseConfidence = 50 + (excess / adjustedFallThreshold) * 30;
+            confidence = Math.min(95, baseConfidence * velocityBonus);
             
-            if (excess > Math.abs(fallThreshold) * 0.5) {
+            if (excess > adjustedFallThreshold * 0.6) {
               probability = "Very High";
-              reason = `Mass exodus (${(netTransfers/1000).toFixed(0)}k net) from ${ownership}% owned player`;
-            } else if (excess > Math.abs(fallThreshold) * 0.2) {
+              reason = `Mass exodus: ${(netTransfers/1000).toFixed(0)}k (${(transferVelocity/1000).toFixed(1)}k/hr) from ${ownership}% owned`;
+            } else if (excess > adjustedFallThreshold * 0.3) {
               probability = "High";
-              reason = `Heavy selling pressure (${(netTransfers/1000).toFixed(0)}k net) vs ownership`;
+              reason = `Heavy selling: ${(netTransfers/1000).toFixed(0)}k exceeds ${(adjustedFallThreshold/1000).toFixed(0)}k threshold`;
             } else {
               probability = "Medium";
-              reason = `Significant transfer outflow approaching threshold`;
+              reason = `Falling: ${(netTransfers/1000).toFixed(0)}k crosses ownership threshold`;
             }
           } else {
-            // Calculate how close to threshold
-            const riseProgress = Math.max(0, netTransfers / riseThreshold);
-            const fallProgress = Math.max(0, Math.abs(netTransfers) / Math.abs(fallThreshold));
+            // Calculate how close to adjusted thresholds
+            const riseProgress = Math.max(0, netTransfers / adjustedRiseThreshold);
+            const fallProgress = Math.max(0, Math.abs(netTransfers) / adjustedFallThreshold);
             const maxProgress = Math.max(riseProgress, fallProgress);
             
-            if (maxProgress > 0.7) {
+            // Apply velocity bonus to confidence
+            const velocityAdjustedProgress = maxProgress * velocityBonus;
+            
+            if (velocityAdjustedProgress > 0.8) {
               probability = "Medium";
-              confidence = Math.round(maxProgress * 50);
+              confidence = Math.round(Math.min(95, velocityAdjustedProgress * 45));
               reason = netTransfers > 0 ? 
-                `Approaching rise threshold (${(netTransfers/1000).toFixed(0)}k of ${(riseThreshold/1000).toFixed(0)}k needed)` :
-                `Approaching fall threshold (${(netTransfers/1000).toFixed(0)}k of ${(fallThreshold/1000).toFixed(0)}k needed)`;
-            } else if (maxProgress > 0.4) {
+                `Near rise: ${(netTransfers/1000).toFixed(0)}k of ${(adjustedRiseThreshold/1000).toFixed(0)}k (${((riseProgress*100)).toFixed(0)}% + velocity bonus)` :
+                `Near fall: ${(netTransfers/1000).toFixed(0)}k of ${(adjustedFallThreshold/1000).toFixed(0)}k (${((fallProgress*100)).toFixed(0)}% + velocity bonus)`;
+            } else if (velocityAdjustedProgress > 0.5) {
               probability = "Low";
-              confidence = Math.round(maxProgress * 40);
-              reason = `Moderate activity but below threshold for ${ownership}% owned player`;
+              confidence = Math.round(velocityAdjustedProgress * 35);
+              reason = `Moderate activity: ${(netTransfers/1000).toFixed(0)}k (${(transferVelocity/1000).toFixed(1)}k/hr) for ${ownership}% owned`;
             } else {
-              confidence = Math.round(maxProgress * 20);
-              reason = `Stable - insufficient transfers relative to ${ownership}% ownership`;
+              confidence = Math.round(velocityAdjustedProgress * 25);
+              reason = `Stable: ${(netTransfers/1000).toFixed(0)}k insufficient vs ${ownership}% ownership (${(adjustedRiseThreshold/1000).toFixed(0)}k rise / ${(adjustedFallThreshold/1000).toFixed(0)}k fall needed)`;
             }
           }
           
@@ -585,8 +599,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             transfers_out: transfersOut,
             reason: reason,
             probability: probability,
-            rise_threshold: riseThreshold,
-            fall_threshold: fallThreshold
+            rise_threshold: Math.round(adjustedRiseThreshold),
+            fall_threshold: Math.round(adjustedFallThreshold),
+            transfer_velocity: Math.round(transferVelocity)
           };
         })
         .filter((prediction: any) => {
