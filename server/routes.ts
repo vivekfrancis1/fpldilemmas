@@ -364,9 +364,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Projections endpoint
-  app.get("/api/projections", async (req, res) => {
+  app.get("/api/projections/:weeks", async (req, res) => {
     try {
-      const weeks = parseInt(req.query.weeks as string) || 4;
+      const weeks = parseInt(req.params.weeks) || 4;
       
       // Get bootstrap data and fixtures for consistency with other tools
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
@@ -397,8 +397,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await Promise.all(playerSummaryPromises);
       
       // Generate projections based on current player data, form, and historical performance
+      const teams = bootstrapData.teams;
       const projections = bootstrapData.elements.map((player: any) => {
-        const team = bootstrapData.teams.find((t: any) => t.id === player.team);
+        const team = teams.find((t: any) => t.id === player.team);
         const position = bootstrapData.element_types.find((p: any) => p.id === player.element_type);
         
         // Advanced projection model based on:
@@ -627,7 +628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const weeklyProjections: { [gameweek: number]: any } = {};
         let totalMinutes = 0, totalGoals = 0, totalAssists = 0, totalCleanSheets = 0, totalBonus = 0, totalCbit = 0, totalPoints = 0;
         
-        for (let week = 2; week <= weeks + 1; week++) {
+        for (let week = startGameweek; week < startGameweek + weeks; week++) {
           // More realistic weekly distribution with some games being better than others
           const weeklyForm = 0.6 + Math.random() * 0.8; // 0.6 to 1.4 multiplier
           const fixtureQuality = 0.7 + Math.random() * 0.6; // Easier/harder fixtures
@@ -694,24 +695,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(finalProjections);
     } catch (error) {
       console.error("Error generating projections:", error);
-      res.status(500).json({ error: "Failed to generate projections" });
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ error: "Failed to generate projections", message: error.message });
     }
   });
 
   // Function to derive goals and assists from Goal Share and Assist Share tools
   async function deriveProjectionsFromShareTools(projections: any[], bootstrapData: any, fixturesData: any, weeks: number) {
-    const teams = bootstrapData.teams;
-    let currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id;
-    if (!currentGameweek) {
-      const nextEvent = bootstrapData.events.find((event: any) => !event.finished);
-      currentGameweek = nextEvent?.id || 2;
-    }
-    
-    const startGameweek = currentGameweek + 1;
+    try {
+      const teams = bootstrapData.teams;
+      let currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id;
+      if (!currentGameweek) {
+        const nextEvent = bootstrapData.events.find((event: any) => !event.finished);
+        currentGameweek = nextEvent?.id || 2;
+      }
+      
+      const startGameweek = currentGameweek + 1;
     
     // Generate Goal Share and Assist Share data using same logic as dedicated tools
-    const goalShareData = await generateGoalShareData(bootstrapData, fixturesData, weeks, startGameweek);
-    const assistShareData = await generateAssistShareData(bootstrapData, fixturesData, weeks, startGameweek);
+    const goalShareData = generateGoalShareData(bootstrapData, fixturesData, weeks, startGameweek);
+    const assistShareData = generateAssistShareData(bootstrapData, fixturesData, weeks, startGameweek);
     
     // Group players by team and normalize their projections
     const teamPlayers = new Map();
@@ -738,6 +741,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const assistShare = assistShareData.find((item: any) => 
           item.teamId === teamId && item.gameweek === gw
         );
+        
+
         
         if (goalShare) {
           // Apply goal projections from Goal Share tool
@@ -781,7 +786,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalBonus += weekData.bonus || 0;
             totalCbit += weekData.cbit || 0;
             totalPoints += weekData.points || 0;
-
           }
         }
         
@@ -798,7 +802,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     });
     
-    return projections;
+      return projections;
+    } catch (error) {
+      console.error("Error in deriveProjectionsFromShareTools:", error);
+      throw error;
+    }
   }
 
   // Helper function to generate Goal Share data (same logic as goal-share page)
@@ -1116,6 +1124,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching results projections:", error);
       res.status(500).json({ error: "Failed to fetch results projections" });
+    }
+  });
+
+  // Goal Share endpoint
+  app.get("/api/goal-share/:gameweek", async (req, res) => {
+    try {
+      const gameweek = parseInt(req.params.gameweek) || 2;
+      
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      
+      const goalShareData = generateGoalShareData(bootstrapData, fixturesData, 1, gameweek);
+      res.json(goalShareData);
+    } catch (error) {
+      console.error("Error generating goal share data:", error);
+      res.status(500).json({ error: "Failed to generate goal share data" });
+    }
+  });
+
+  // Assist Share endpoint
+  app.get("/api/assist-share/:gameweek", async (req, res) => {
+    try {
+      const gameweek = parseInt(req.params.gameweek) || 2;
+      
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      
+      const assistShareData = generateAssistShareData(bootstrapData, fixturesData, 1, gameweek);
+      res.json(assistShareData);
+    } catch (error) {
+      console.error("Error generating assist share data:", error);
+      res.status(500).json({ error: "Failed to generate assist share data" });
     }
   });
 
