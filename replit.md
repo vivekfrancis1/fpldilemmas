@@ -30,6 +30,7 @@ Player Expected Minutes: New projection tool showing expected playing time for p
 Player Projected Goals: New projection tool displaying expected goals for players across next 6 gameweeks with scoring probability percentages, using position-specific algorithms and deterministic calculations (August 2025)
 Player Expected Assists: New projection tool showing expected assists for players across next 6 gameweeks with assist probability percentages, featuring position-specific creativity modeling and clickable column sorting (August 2025)
 Player Expected Bonus: New projection tool displaying expected bonus points for players across next 6 gameweeks with bonus probability percentages, using performance-based algorithms and deterministic calculations with purple gradient theme (August 2025)
+Player Expected Clean Sheets: New projection tool showing clean sheet probabilities for goalkeepers, defenders and midfielders across next 6 gameweeks, excluding forwards who don't earn clean sheet points, with team defensive strength modeling and green gradient theme (August 2025)
 
 
 ## System Architecture
