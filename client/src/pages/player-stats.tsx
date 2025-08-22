@@ -31,9 +31,9 @@ export default function PlayerStats() {
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
-  // Get current season data
+  // Get current season data with enhanced defensive statistics
   const { data: bootstrapData, isLoading: currentLoading, error: currentError } = useQuery<BootstrapData>({
-    queryKey: ["/api/bootstrap-static"],
+    queryKey: ["/api/bootstrap-enhanced"],
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: selectedSeason === "current",
   });

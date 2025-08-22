@@ -103,6 +103,11 @@ export default function PlayerStatsTable({
           case "influence": return parseFloat(player.influence) || 0;
           case "creativity": return parseFloat(player.creativity) || 0;
           case "threat": return parseFloat(player.threat) || 0;
+          case "clearances": return player.clearances || 0;
+          case "blocks": return player.blocks || 0;
+          case "interceptions": return player.interceptions || 0;
+          case "tackles": return player.tackles || 0;
+          case "recoveries": return player.recoveries || 0;
           case "ict_index": return parseFloat(player.ict_index) || 0;
           case "cost_change_event": return player.cost_change_event;
           case "cost_change_event_fall": return player.cost_change_event_fall;
@@ -304,6 +309,22 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="saves" label="Saves" />
               </th>
+              {/* Defensive Statistics */}
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="clearances" label="Clear" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="blocks" label="Blocks" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="interceptions" label="Inter" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="tackles" label="Tackles" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="recoveries" label="Recov" />
+              </th>
               {/* All other data points */}
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="bonus" label="Bonus" />
@@ -424,6 +445,12 @@ export default function PlayerStatsTable({
                   {/* Defensive contributions */}
                   <td className="px-2 py-4 text-center text-sm text-red-600">{player.goals_conceded || 0}</td>
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{player.saves || 0}</td>
+                  {/* Defensive Statistics */}
+                  <td className="px-2 py-4 text-center text-sm text-blue-600 font-medium">{player.clearances || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-blue-600 font-medium">{player.blocks || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-blue-600 font-medium">{player.interceptions || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-blue-600 font-medium">{player.tackles || 0}</td>
+                  <td className="px-2 py-4 text-center text-sm text-blue-600 font-medium">{player.recoveries || 0}</td>
                   {/* All other data points */}
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bonus || 0}</td>
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{player.bps || 0}</td>

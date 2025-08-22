@@ -31,6 +31,12 @@ export const playerSchema = z.object({
   creativity: z.string(),
   threat: z.string(),
   ict_index: z.string(),
+  // Defensive statistics
+  clearances: z.number().optional(),
+  blocks: z.number().optional(),
+  interceptions: z.number().optional(),
+  tackles: z.number().optional(),
+  recoveries: z.number().optional(),
   news: z.string(),
   news_added: z.string().nullable(),
   chance_of_playing_this_round: z.number().nullable(),
@@ -78,6 +84,12 @@ export const historicalPlayerDataSchema = z.object({
   creativity: z.string(),
   threat: z.string(),
   ict_index: z.string(),
+  // Defensive statistics for historical data
+  clearances: z.number().optional(),
+  blocks: z.number().optional(),
+  interceptions: z.number().optional(),
+  tackles: z.number().optional(),
+  recoveries: z.number().optional(),
 });
 
 // Extended player schema with historical data

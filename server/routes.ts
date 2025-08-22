@@ -127,6 +127,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced bootstrap data with defensive statistics
+  app.get("/api/bootstrap-enhanced", async (req, res) => {
+    try {
+      // Fetch main bootstrap data
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error(`FPL API responded with status: ${bootstrapResponse.status}`);
+      }
+      const bootstrapData = await bootstrapResponse.json();
+      
+      // Enhance player data with defensive statistics from individual summaries
+      const enhancedElements = [];
+      const sampleSize = Math.min(20, bootstrapData.elements.length); // Sample 20 players for defensive stats
+      
+      for (let i = 0; i < sampleSize; i++) {
+        const player = bootstrapData.elements[i];
+        try {
+          const summaryResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+          if (summaryResponse.ok) {
+            const summaryData = await summaryResponse.json();
+            
+            // Calculate defensive totals from history
+            let totals = { clearances: 0, blocks: 0, interceptions: 0, tackles: 0, recoveries: 0 };
+            
+            if (summaryData.history && Array.isArray(summaryData.history)) {
+              for (const gameweek of summaryData.history) {
+                totals.clearances += gameweek.clearances || 0;
+                totals.blocks += gameweek.blocks || 0;
+                totals.interceptions += gameweek.interceptions || 0;
+                totals.tackles += gameweek.tackles || 0;
+                totals.recoveries += gameweek.recoveries || 0;
+              }
+            }
+            
+            enhancedElements.push({
+              ...player,
+              ...totals
+            });
+          } else {
+            enhancedElements.push(player);
+          }
+        } catch (error) {
+          console.error(`Error fetching defensive stats for player ${player.id}:`, error);
+          enhancedElements.push(player);
+        }
+      }
+      
+      // Add remaining players without defensive stats
+      for (let i = sampleSize; i < bootstrapData.elements.length; i++) {
+        enhancedElements.push(bootstrapData.elements[i]);
+      }
+      
+      res.json({
+        ...bootstrapData,
+        elements: enhancedElements
+      });
+    } catch (error) {
+      console.error("Error fetching enhanced bootstrap data:", error);
+      res.status(500).json({
+        error: "Failed to fetch enhanced player data",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Individual player detailed data
   app.get("/api/element-summary/:playerId", async (req, res) => {
     try {
