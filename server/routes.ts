@@ -980,7 +980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Normalize to 100% and add projected goals calculation
     return playerShares.map(player => {
-      const goalShare = Math.round((player.rawShare / totalShare) * 100);
+      const goalShare = Math.round((player.rawShare / totalShare) * 1000) / 10; // One decimal place
       return {
         ...player,
         goalShare,
@@ -1033,7 +1033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Normalize to 100%
     return playerShares.map(player => ({
       ...player,
-      assistShare: Math.round((player.rawShare / totalShare) * 100)
+      assistShare: Math.round((player.rawShare / totalShare) * 1000) / 10 // One decimal place
     })).filter(p => p.assistShare > 0).sort((a, b) => b.assistShare - a.assistShare);
   }
 
