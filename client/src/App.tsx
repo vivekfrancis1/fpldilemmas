@@ -21,8 +21,6 @@ import ProjectedGoalsCS from "./pages/projected-goals-cs";
 import TeamGoalProjections from "./pages/team-goal-projections";
 import TeamCSProjections from "./pages/team-cs-projections";
 import PlayerMinutes from "./pages/player-minutes";
-import PlayerProjectedGoals from "./pages/player-projected-goals";
-import PlayerExpectedAssists from "./pages/player-expected-assists";
 
 function Router() {
   return (
@@ -45,8 +43,6 @@ function Router() {
       <Route path="/goal-share" component={GoalShare} />
       <Route path="/assist-share" component={AssistShare} />
       <Route path="/player-minutes" component={PlayerMinutes} />
-      <Route path="/player-projected-goals" component={PlayerProjectedGoals} />
-      <Route path="/player-expected-assists" component={PlayerExpectedAssists} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -54,9 +54,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/team-cs-projections", label: "Team CS Projections", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/goal-share", label: "Goal Share", icon: Target, description: "Player goal involvement %", popular: false },
         { path: "/assist-share", label: "Assist Share", icon: Zap, description: "Player assist involvement %", popular: false },
-        { path: "/player-minutes", label: "Player Minutes", icon: Users, description: "Expected playing time", popular: false },
-        { path: "/player-projected-goals", label: "Player Projected Goals", icon: Target, description: "Expected goals by player", popular: false },
-        { path: "/player-expected-assists", label: "Player Expected Assists", icon: Zap, description: "Expected assists by player", popular: false }
+        { path: "/player-minutes", label: "Player Minutes", icon: Users, description: "Expected playing time", popular: false }
       ]
     },
     {
