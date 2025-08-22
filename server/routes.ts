@@ -765,7 +765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Goal Share endpoint
+  // Goal Share endpoint - uses Team Goal Projections for consistency
   app.get("/api/goal-share/:gameweek", async (req, res) => {
     try {
       const gameweek = parseInt(req.params.gameweek) || 2;
@@ -784,12 +784,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Goal Share API called for gameweek=${gameweek}`);
       
-      // Add comprehensive debug logging for Goal Share API
-      console.log(`DEBUG: About to generate goal share data for GW${gameweek}`);
-      const goalShareDataDebug = generateGoalShareData(bootstrapData, fixturesData, 1, gameweek);
-      console.log(`DEBUG: Generated ${goalShareDataDebug.length} team entries for GW${gameweek}`);
+      // Generate team goal projections data to get exact expected goals
+      const teamGoalProjections = generateTeamGoalProjections(bootstrapData, fixturesData, 6, gameweek);
       
-      goalShareDataDebug.forEach(team => {
+      // Generate goal share data using Team Goal Projections expected goals
+      const goalShareData = generateGoalShareFromTeamProjections(bootstrapData, fixturesData, teamGoalProjections, gameweek);
+      
+      console.log(`DEBUG: Generated ${goalShareData.length} team entries for GW${gameweek} using Team Goal Projections`);
+      
+      goalShareData.forEach(team => {
         if (team.players) {
           team.players.forEach(player => {
             if (player.name && (player.name.includes('Bowen') || player.name.includes('Salah') || player.name.includes('Haaland'))) {
@@ -798,7 +801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       });
-      const goalShareData = generateGoalShareData(bootstrapData, fixturesData, 1, gameweek);
+      
       res.json(goalShareData);
     } catch (error) {
       console.error("Error generating goal share data:", error);
@@ -878,71 +881,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper function to generate Goal Share data (same logic as goal-share page)
-  function generateGoalShareData(bootstrapData: any, fixturesData: any, weeks: number, startGameweek: number) {
+  // Helper function to generate Goal Share data using Team Goal Projections for consistency
+  function generateGoalShareFromTeamProjections(bootstrapData: any, fixturesData: any, teamGoalProjections: any[], targetGameweek: number) {
     const data: any[] = [];
     const teams = bootstrapData.teams;
     
-    // Process upcoming fixtures to create goal share breakdowns
-    for (let gw = startGameweek; gw < startGameweek + weeks; gw++) {
-      const gwFixtures = fixturesData.filter((fixture: any) => 
-        !fixture.finished && fixture.event === gw
-      );
+    // Get fixtures for the target gameweek
+    const gwFixtures = fixturesData.filter((fixture: any) => 
+      !fixture.finished && fixture.event === targetGameweek
+    );
+    
+    gwFixtures.forEach((fixture: any) => {
+      const homeTeam = teams.find((t: any) => t.id === fixture.team_h);
+      const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
       
-      gwFixtures.forEach((fixture: any) => {
-        const homeTeam = teams.find((t: any) => t.id === fixture.team_h);
-        const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
+      if (homeTeam && awayTeam) {
+        // Find expected goals from Team Goal Projections for this gameweek
+        const homeTeamProjection = teamGoalProjections.find(proj => 
+          proj.id === homeTeam.id
+        );
+        const awayTeamProjection = teamGoalProjections.find(proj => 
+          proj.id === awayTeam.id
+        );
         
-        if (homeTeam && awayTeam) {
-          // Calculate expected goals using same logic as team projections
-          const homeAttackStrength = (homeTeam.strength_attack_home || 1000) / 1000;
-          const awayDefenseStrength = (awayTeam.strength_defence_away || 1000) / 1000;
-          const homeExpectedGoals = (homeAttackStrength * (2.2 - awayDefenseStrength)) * 1.15;
+        if (homeTeamProjection && awayTeamProjection) {
+          // Team Goal Projections returns gameweekProjections as an object with gameweek keys
+          const homeExpectedGoals = homeTeamProjection.gameweekProjections[targetGameweek.toString()];
+          const awayExpectedGoals = awayTeamProjection.gameweekProjections[targetGameweek.toString()];
           
-          const awayAttackStrength = (awayTeam.strength_attack_away || 1000) / 1000;
-          const homeDefenseStrength = (homeTeam.strength_defence_home || 1000) / 1000;
-          const awayExpectedGoals = awayAttackStrength * (2.2 - homeDefenseStrength);
-          
-          // Home team goal share
-          const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
-          const homePlayerShares = distributeGoalShares(homePlayersInSquad, bootstrapData.element_types);
-          const homeExpectedGoalsRounded = Math.round(homeExpectedGoals * 100) / 100;
-          
-          // Calculate projected goals for each player
-          homePlayerShares.forEach(player => {
-            player.projectedGoals = Math.round((homeExpectedGoalsRounded * player.goalShare / 100) * 100) / 100;
-          });
-          
-          data.push({
-            gameweek: gw,
-            teamId: homeTeam.id,
-            teamName: homeTeam.name,
-            teamShort: homeTeam.short_name,
-            expectedGoals: homeExpectedGoalsRounded,
-            players: homePlayerShares
-          });
-          
-          // Away team goal share
-          const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
-          const awayPlayerShares = distributeGoalShares(awayPlayersInSquad, bootstrapData.element_types);
-          const awayExpectedGoalsRounded = Math.round(awayExpectedGoals * 100) / 100;
-          
-          // Calculate projected goals for each player
-          awayPlayerShares.forEach(player => {
-            player.projectedGoals = Math.round((awayExpectedGoalsRounded * player.goalShare / 100) * 100) / 100;
-          });
-          
-          data.push({
-            gameweek: gw,
-            teamId: awayTeam.id,
-            teamName: awayTeam.name,
-            teamShort: awayTeam.short_name,
-            expectedGoals: awayExpectedGoalsRounded,
-            players: awayPlayerShares
-          });
+          if (homeExpectedGoals !== undefined && awayExpectedGoals !== undefined) {
+            
+            // Home team goal share
+            const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
+            const homePlayerShares = distributeGoalShares(homePlayersInSquad, bootstrapData.element_types);
+            
+            // Calculate projected goals for each player
+            homePlayerShares.forEach(player => {
+              player.projectedGoals = Math.round((homeExpectedGoals * player.goalShare / 100) * 100) / 100;
+            });
+            
+            data.push({
+              gameweek: targetGameweek,
+              teamId: homeTeam.id,
+              teamName: homeTeam.name,
+              teamShort: homeTeam.short_name,
+              expectedGoals: homeExpectedGoals,
+              players: homePlayerShares
+            });
+            
+            // Away team goal share
+            const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
+            const awayPlayerShares = distributeGoalShares(awayPlayersInSquad, bootstrapData.element_types);
+            
+            // Calculate projected goals for each player
+            awayPlayerShares.forEach(player => {
+              player.projectedGoals = Math.round((awayExpectedGoals * player.goalShare / 100) * 100) / 100;
+            });
+            
+            data.push({
+              gameweek: targetGameweek,
+              teamId: awayTeam.id,
+              teamName: awayTeam.name,
+              teamShort: awayTeam.short_name,
+              expectedGoals: awayExpectedGoals,
+              players: awayPlayerShares
+            });
+          }
         }
-      });
-    }
+      }
+    });
     
     return data;
   }
