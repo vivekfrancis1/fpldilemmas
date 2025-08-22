@@ -1,12 +1,13 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "../components/layout";
-import { TrendingUp, Filter, Users, Clock, Target, Trophy, Zap, Star } from "lucide-react";
+import { TrendingUp, Filter, Users, Clock, Target, Trophy, Zap, Star, PoundSterling } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface PlayerProjection {
   id: number;
@@ -14,13 +15,24 @@ interface PlayerProjection {
   team: string;
   position: string;
   price: number;
-  minutes: number;
-  goals: number;
-  assists: number;
-  cleanSheets: number;
-  bonus: number;
-  cbit: number; // Chance of being in top 15
-  points: number;
+  weeklyProjections: {
+    [gameweek: number]: {
+      minutes: number;
+      goals: number;
+      assists: number;
+      cleanSheets: number;
+      bonus: number;
+      cbit: number;
+      points: number;
+    };
+  };
+  totalMinutes: number;
+  totalGoals: number;
+  totalAssists: number;
+  totalCleanSheets: number;
+  totalBonus: number;
+  averageCbit: number;
+  totalPoints: number;
   confidence: 'High' | 'Medium' | 'Low';
 }
 
@@ -29,6 +41,7 @@ export default function Projections() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("points");
   const [weeks, setWeeks] = useState<number>(4);
+  const [activeTab, setActiveTab] = useState<string>("points");
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -40,40 +53,64 @@ export default function Projections() {
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  // Generate projections based on current data and betting markets
+  // Generate weekly projections based on current data
   const projections = useMemo(() => {
     if (!bootstrapData?.elements || !projectionsData) {
-      // Generate mock projections for demonstration
+      // Generate weekly projections for demonstration
       return bootstrapData?.elements?.slice(0, 50).map(player => {
         const team = bootstrapData.teams.find(t => t.id === player.team);
         const position = bootstrapData.element_types.find(p => p.id === player.element_type);
         
-        // Simple projection model based on current stats and form
-        const baseMinutes = Math.max(20, Math.min(90, player.minutes / player.starts_per_90 || 45));
-        const projectedMinutes = baseMinutes * weeks * (0.8 + Math.random() * 0.4);
+        const weeklyProjections: { [gameweek: number]: any } = {};
+        let totalMinutes = 0, totalGoals = 0, totalAssists = 0, totalCleanSheets = 0, totalBonus = 0, totalCbit = 0, totalPoints = 0;
         
-        const goalsPerMinute = player.goals_scored / Math.max(player.minutes, 1);
-        const assistsPerMinute = player.assists / Math.max(player.minutes, 1);
-        
-        const projectedGoals = goalsPerMinute * projectedMinutes * (position?.singular_name === 'Goalkeeper' ? 0.1 : 
-          position?.singular_name === 'Defender' ? 0.8 : 
-          position?.singular_name === 'Midfielder' ? 1.2 : 1.5);
-        
-        const projectedAssists = assistsPerMinute * projectedMinutes * (position?.singular_name === 'Goalkeeper' ? 0.1 :
-          position?.singular_name === 'Defender' ? 0.8 :
-          position?.singular_name === 'Midfielder' ? 1.3 : 1.0);
-        
-        const cleanSheetChance = position?.singular_name === 'Goalkeeper' || position?.singular_name === 'Defender' ? 0.3 : 0;
-        const projectedCleanSheets = cleanSheetChance * weeks;
-        
-        const projectedBonus = (projectedGoals * 2 + projectedAssists * 1.5 + projectedCleanSheets * 1) * 0.3;
-        
-        const projectedPoints = (projectedMinutes / 90) * 2 + 
-          projectedGoals * (position?.singular_name === 'Goalkeeper' || position?.singular_name === 'Defender' ? 6 : 
-            position?.singular_name === 'Midfielder' ? 5 : 4) +
-          projectedAssists * 3 +
-          projectedCleanSheets * (position?.singular_name === 'Goalkeeper' || position?.singular_name === 'Defender' ? 4 : 1) +
-          projectedBonus;
+        // Generate projections for each week
+        for (let week = 1; week <= weeks; week++) {
+          const baseMinutes = Math.max(20, Math.min(90, player.minutes / Math.max(player.starts, 1) || 45));
+          const weekMinutes = Math.round(baseMinutes * (0.85 + Math.random() * 0.3));
+          
+          const goalsPerMinute = player.goals_scored / Math.max(player.minutes, 1);
+          const assistsPerMinute = player.assists / Math.max(player.minutes, 1);
+          
+          const weekGoals = goalsPerMinute * weekMinutes * (position?.singular_name === 'Goalkeeper' ? 0.05 : 
+            position?.singular_name === 'Defender' ? 0.8 : 
+            position?.singular_name === 'Midfielder' ? 1.2 : 1.8) * (0.7 + Math.random() * 0.6);
+          
+          const weekAssists = assistsPerMinute * weekMinutes * (position?.singular_name === 'Goalkeeper' ? 0.1 :
+            position?.singular_name === 'Defender' ? 0.9 :
+            position?.singular_name === 'Midfielder' ? 1.5 : 1.1) * (0.7 + Math.random() * 0.6);
+          
+          const isDefensive = position?.singular_name === 'Goalkeeper' || position?.singular_name === 'Defender';
+          const weekCleanSheets = isDefensive ? (0.2 + Math.random() * 0.3) : 0;
+          
+          const weekBonus = (weekGoals * 2 + weekAssists * 1.5 + weekCleanSheets * 0.8) * 0.25;
+          
+          const weekPoints = Math.floor(weekMinutes / 60) * 2 + 
+            weekGoals * (isDefensive ? 6 : position?.singular_name === 'Midfielder' ? 5 : 4) +
+            weekAssists * 3 +
+            weekCleanSheets * (isDefensive ? 4 : 1) +
+            weekBonus;
+          
+          const weekCbit = Math.min(95, Math.max(1, Math.round(weekPoints * 3.5)));
+          
+          weeklyProjections[week] = {
+            minutes: Math.max(0, weekMinutes),
+            goals: Math.round(weekGoals * 10) / 10,
+            assists: Math.round(weekAssists * 10) / 10,
+            cleanSheets: Math.round(weekCleanSheets * 10) / 10,
+            bonus: Math.round(weekBonus * 10) / 10,
+            cbit: weekCbit,
+            points: Math.round(weekPoints * 10) / 10
+          };
+          
+          totalMinutes += weekMinutes;
+          totalGoals += weekGoals;
+          totalAssists += weekAssists;
+          totalCleanSheets += weekCleanSheets;
+          totalBonus += weekBonus;
+          totalCbit += weekCbit;
+          totalPoints += weekPoints;
+        }
 
         return {
           id: player.id,
@@ -81,14 +118,15 @@ export default function Projections() {
           team: team?.short_name || '',
           position: position?.singular_name_short || '',
           price: player.now_cost / 10,
-          minutes: Math.round(projectedMinutes),
-          goals: Math.round(projectedGoals * 10) / 10,
-          assists: Math.round(projectedAssists * 10) / 10,
-          cleanSheets: Math.round(projectedCleanSheets * 10) / 10,
-          bonus: Math.round(projectedBonus * 10) / 10,
-          cbit: Math.min(95, Math.max(5, Math.round((projectedPoints / weeks) * 2))),
-          points: Math.round(projectedPoints * 10) / 10,
-          confidence: projectedPoints > 30 ? 'High' : projectedPoints > 20 ? 'Medium' : 'Low'
+          weeklyProjections,
+          totalMinutes: Math.round(totalMinutes),
+          totalGoals: Math.round(totalGoals * 10) / 10,
+          totalAssists: Math.round(totalAssists * 10) / 10,
+          totalCleanSheets: Math.round(totalCleanSheets * 10) / 10,
+          totalBonus: Math.round(totalBonus * 10) / 10,
+          averageCbit: Math.round(totalCbit / weeks),
+          totalPoints: Math.round(totalPoints * 10) / 10,
+          confidence: totalPoints > 30 ? 'High' : totalPoints > 20 ? 'Medium' : 'Low'
         } as PlayerProjection;
       }) || [];
     }
@@ -101,12 +139,12 @@ export default function Projections() {
       .filter(p => selectedTeam === "all" || p.team === selectedTeam)
       .sort((a, b) => {
         switch (sortBy) {
-          case "points": return b.points - a.points;
-          case "goals": return b.goals - a.goals;
-          case "assists": return b.assists - a.assists;
-          case "cbit": return b.cbit - a.cbit;
+          case "points": return b.totalPoints - a.totalPoints;
+          case "goals": return b.totalGoals - a.totalGoals;
+          case "assists": return b.totalAssists - a.totalAssists;
+          case "cbit": return b.averageCbit - a.averageCbit;
           case "price": return a.price - b.price;
-          default: return b.points - a.points;
+          default: return b.totalPoints - a.totalPoints;
         }
       });
   }, [projections, selectedPosition, selectedTeam, sortBy]);
@@ -247,84 +285,129 @@ export default function Projections() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          <div className="flex items-center justify-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            Min
-                          </div>
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          <div className="flex items-center justify-center gap-1">
-                            <Target className="h-3 w-3" />
-                            Goals
-                          </div>
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          <div className="flex items-center justify-center gap-1">
-                            <Users className="h-3 w-3" />
-                            Assists
-                          </div>
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          <div className="flex items-center justify-center gap-1">
-                            <Trophy className="h-3 w-3" />
-                            CS
-                          </div>
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          <div className="flex items-center justify-center gap-1">
-                            <Zap className="h-3 w-3" />
-                            Bonus
-                          </div>
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">CBIT %</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredProjections.map((player, index) => (
-                        <tr key={player.id} className="hover:bg-gray-50" data-testid={`projection-row-${player.id}`}>
-                          <td className="px-4 py-4">
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{player.name}</div>
-                              <div className="text-sm text-gray-500">{player.team} • {player.position}</div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 text-center text-sm text-gray-900">£{player.price}m</td>
-                          <td className="px-4 py-4 text-center text-sm text-gray-900">{player.minutes}</td>
-                          <td className="px-4 py-4 text-center text-sm text-gray-900">{player.goals}</td>
-                          <td className="px-4 py-4 text-center text-sm text-gray-900">{player.assists}</td>
-                          <td className="px-4 py-4 text-center text-sm text-gray-900">{player.cleanSheets}</td>
-                          <td className="px-4 py-4 text-center text-sm text-gray-900">{player.bonus}</td>
-                          <td className="px-4 py-4 text-center">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              player.cbit >= 70 ? 'bg-green-100 text-green-800' :
-                              player.cbit >= 40 ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {player.cbit}%
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-center">
-                            <span className="text-sm font-semibold text-gray-900">{player.points}</span>
-                          </td>
-                          <td className="px-4 py-4 text-center">
-                            <Badge className={getConfidenceColor(player.confidence)}>
-                              {player.confidence}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-8 bg-gray-50 p-1 m-4 rounded-lg">
+                    <TabsTrigger value="points" className="flex items-center gap-1">
+                      <Star className="h-4 w-4" />
+                      Points
+                    </TabsTrigger>
+                    <TabsTrigger value="price" className="flex items-center gap-1">
+                      <PoundSterling className="h-4 w-4" />
+                      Price
+                    </TabsTrigger>
+                    <TabsTrigger value="minutes" className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      Minutes
+                    </TabsTrigger>
+                    <TabsTrigger value="goals" className="flex items-center gap-1">
+                      <Target className="h-4 w-4" />
+                      Goals
+                    </TabsTrigger>
+                    <TabsTrigger value="assists" className="flex items-center gap-1">
+                      <Users className="h-4 w-4" />
+                      Assists
+                    </TabsTrigger>
+                    <TabsTrigger value="cleanSheets" className="flex items-center gap-1">
+                      <Trophy className="h-4 w-4" />
+                      CS
+                    </TabsTrigger>
+                    <TabsTrigger value="bonus" className="flex items-center gap-1">
+                      <Zap className="h-4 w-4" />
+                      Bonus
+                    </TabsTrigger>
+                    <TabsTrigger value="cbit" className="flex items-center gap-1">
+                      <TrendingUp className="h-4 w-4" />
+                      CBIT%
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {['points', 'price', 'minutes', 'goals', 'assists', 'cleanSheets', 'bonus', 'cbit'].map(metric => (
+                    <TabsContent key={metric} value={metric} className="m-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-50 border-b">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
+                                Player
+                              </th>
+                              {metric === 'price' ? (
+                                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Current Price
+                                </th>
+                              ) : (
+                                Array.from({ length: weeks }, (_, i) => (
+                                  <th key={i} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    GW {i + 1}
+                                  </th>
+                                ))
+                              )}
+                              {metric !== 'price' && (
+                                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold">
+                                  Total
+                                </th>
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {filteredProjections.map((player) => (
+                              <tr key={player.id} className="hover:bg-gray-50" data-testid={`projection-row-${player.id}`}>
+                                <td className="px-4 py-4 sticky left-0 bg-white">
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-900">{player.name}</div>
+                                    <div className="text-sm text-gray-500">{player.team} • {player.position}</div>
+                                  </div>
+                                </td>
+                                {metric === 'price' ? (
+                                  <td className="px-4 py-4 text-center text-sm text-gray-900">£{player.price}m</td>
+                                ) : (
+                                  Array.from({ length: weeks }, (_, weekIndex) => {
+                                    const weekData = player.weeklyProjections[weekIndex + 1];
+                                    let value = weekData?.[metric as keyof typeof weekData] || 0;
+                                    if (metric === 'cbit') {
+                                      return (
+                                        <td key={weekIndex} className="px-4 py-4 text-center">
+                                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                            value >= 70 ? 'bg-green-100 text-green-800' :
+                                            value >= 40 ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-red-100 text-red-800'
+                                          }`}>
+                                            {value}%
+                                          </span>
+                                        </td>
+                                      );
+                                    }
+                                    return (
+                                      <td key={weekIndex} className="px-4 py-4 text-center text-sm text-gray-900">
+                                        {value}
+                                      </td>
+                                    );
+                                  })
+                                )}
+                                {metric !== 'price' && (
+                                  <td className="px-4 py-4 text-center bg-blue-50">
+                                    {metric === 'cbit' ? (
+                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                        player.averageCbit >= 70 ? 'bg-green-100 text-green-800' :
+                                        player.averageCbit >= 40 ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-red-100 text-red-800'
+                                      }`}>
+                                        {player.averageCbit}%
+                                      </span>
+                                    ) : (
+                                      <span className="text-sm font-semibold text-gray-900">
+                                        {player[`total${metric.charAt(0).toUpperCase() + metric.slice(1)}` as keyof PlayerProjection]}
+                                      </span>
+                                    )}
+                                  </td>
+                                )}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </TabsContent>
+                  ))}
+                </Tabs>
               </CardContent>
             </Card>
           )}

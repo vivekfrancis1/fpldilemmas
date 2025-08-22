@@ -431,19 +431,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const confidence = confidenceScore > 0.6 ? 'High' : confidenceScore > 0.3 ? 'Medium' : 'Low';
         
+        // Generate weekly breakdown
+        const weeklyProjections: { [gameweek: number]: any } = {};
+        let totalMinutes = 0, totalGoals = 0, totalAssists = 0, totalCleanSheets = 0, totalBonus = 0, totalCbit = 0, totalPoints = 0;
+        
+        for (let week = 1; week <= weeks; week++) {
+          // Distribute totals across weeks with some variation
+          const weeklyVariation = 0.7 + Math.random() * 0.6;
+          const weekMinutes = Math.round((projectedMinutes / weeks) * weeklyVariation);
+          const weekGoals = (projectedGoals / weeks) * weeklyVariation;
+          const weekAssists = (projectedAssists / weeks) * weeklyVariation;
+          const weekCleanSheets = (projectedCleanSheets / weeks) * weeklyVariation;
+          const weekBonus = (projectedBonus / weeks) * weeklyVariation;
+          const weekPoints = (projectedPoints / weeks) * weeklyVariation;
+          const weekCbit = Math.min(95, Math.max(1, Math.round(weekPoints * 3.5)));
+          
+          weeklyProjections[week] = {
+            minutes: Math.max(0, weekMinutes),
+            goals: Math.round(weekGoals * 10) / 10,
+            assists: Math.round(weekAssists * 10) / 10,
+            cleanSheets: Math.round(weekCleanSheets * 10) / 10,
+            bonus: Math.round(weekBonus * 10) / 10,
+            cbit: weekCbit,
+            points: Math.round(weekPoints * 10) / 10
+          };
+          
+          totalMinutes += weekMinutes;
+          totalGoals += weekGoals;
+          totalAssists += weekAssists;
+          totalCleanSheets += weekCleanSheets;
+          totalBonus += weekBonus;
+          totalCbit += weekCbit;
+          totalPoints += weekPoints;
+        }
+
         return {
           id: player.id,
           name: `${player.first_name} ${player.second_name}`,
           team: team?.short_name || '',
           position: position?.singular_name_short || '',
           price: player.now_cost / 10,
-          minutes: Math.max(0, projectedMinutes),
-          goals: Math.round(projectedGoals * 10) / 10,
-          assists: Math.round(projectedAssists * 10) / 10,
-          cleanSheets: Math.round(projectedCleanSheets * 10) / 10,
-          bonus: Math.round(projectedBonus * 10) / 10,
-          cbit: cbitPercentage,
-          points: Math.round(projectedPoints * 10) / 10,
+          weeklyProjections,
+          totalMinutes: Math.round(totalMinutes),
+          totalGoals: Math.round(totalGoals * 10) / 10,
+          totalAssists: Math.round(totalAssists * 10) / 10,
+          totalCleanSheets: Math.round(totalCleanSheets * 10) / 10,
+          totalBonus: Math.round(totalBonus * 10) / 10,
+          averageCbit: Math.round(totalCbit / weeks),
+          totalPoints: Math.round(totalPoints * 10) / 10,
           confidence
         };
       });
