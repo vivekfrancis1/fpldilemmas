@@ -17,7 +17,7 @@ Team Goal Projections: Advanced team-level goal forecasting using sophisticated 
 Team CS Projections: Advanced clean sheet probability forecasting using sophisticated 8-phase spread betting market analysis with statistical modeling, elite confidence calculation, and professional-grade accuracy for defensive prospects over next 6 gameweeks (January 2025)
 Goal Share: Created dedicated tool showing team expected goals breakdown by player percentage share, ensuring 100% distribution per team per gameweek based on Match Odds data. Enhanced with Goals column showing projected goals for each player (January 2025)
 Assist Share: Added complementary tool to Goal Share showing team expected assists breakdown by player percentage, weighted by creativity and assist history with 100% team distribution, ensuring assists ≤ goals constraint for logical consistency (January 2025)
-Projection Tools Limit: All projection tools (Player Projections, Match Odds, Team Goal/CS Projections, Goal Share, Assist Share) now limited to next 6 gameweeks only for focused analysis with updated dropdowns and defaults (January 2025)
+Projection Tools Limit: All projection tools (Player Projections, Match Odds, Team Goal/CS Projections, Goal Share, Assist Share) now limited to next 6 gameweeks only for focused analysis with updated dropdowns and defaults. Updated to show only future gameweeks excluding current gameweek for better forward-looking analysis (August 2025)
 Most popular tools: Player Statistics, My Live Rank, and Fixtures (updated January 2025)
 Historical data: Added year selection functionality for player statistics from 2016/17 season onwards with full data coverage of 300-400+ players per season (fully functional August 2025)
 
