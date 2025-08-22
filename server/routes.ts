@@ -1329,7 +1329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = await fixturesResponse.json();
       
       // Get Goal Share data for the specific gameweek
-      const goalShareData = generateGoalShareData(bootstrapData, fixturesData, 1, gameweek);
+      const goalShareData = generateGoalShareProjections(bootstrapData, fixturesData, 1, gameweek);
       
       // Find Jarrod Bowen in the data
       const bowenData = [];
