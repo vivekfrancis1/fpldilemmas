@@ -15,8 +15,7 @@ import {
   Trophy,
   Target,
   Shield,
-  Zap,
-  Award
+  Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +56,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/assist-share", label: "Assist Share", icon: Zap, description: "Player assist involvement %", popular: false },
         { path: "/player-minutes", label: "Player Minutes", icon: Users, description: "Expected playing time", popular: false },
         { path: "/player-projected-goals", label: "Player Projected Goals", icon: Target, description: "Expected goals by player", popular: false },
-        { path: "/player-expected-assists", label: "Player Expected Assists", icon: Zap, description: "Expected assists by player", popular: false },
+        { path: "/player-expected-assists", label: "Player Expected Assists", icon: Zap, description: "Expected assists by player", popular: false }
       ]
     },
     {
