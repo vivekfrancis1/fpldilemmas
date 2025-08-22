@@ -52,8 +52,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/projected-goals-cs", label: "Match Odds", icon: Target, description: "Projected goals & clean sheets", popular: false },
         { path: "/team-goal-projections", label: "Team Goal Projections", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-cs-projections", label: "Team CS Projections", icon: Shield, description: "Clean sheet probabilities", popular: false },
-        { path: "/goal-share", label: "Goal Share", icon: Target, description: "Player goal involvement %", popular: false },
-        { path: "/assist-share", label: "Assist Share", icon: Zap, description: "Player assist involvement %", popular: false },
+
         { path: "/openfpl-projections", label: "OpenFPL Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false }
       ]
     },
@@ -62,8 +61,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
         { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: false },
-        { path: "/watchlist", label: "Watchlist", icon: Heart, description: "Track favorite players", popular: false },
-        { path: "/transfers", label: "Transfers", icon: ArrowRightLeft, description: "Transfer planning", popular: false },
+
         { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
       ]
     }
