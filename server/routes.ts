@@ -414,25 +414,52 @@ export function registerRoutes(app: Express): Server {
       const currentGameweek = bootstrapData.events?.find((event: any) => event.is_current)?.id || 1;
       const projectionGameweeks = Array.from({length: 6}, (_, i) => currentGameweek + i + 1);
       
+      // Generate fixture-like data for match odds display
       const projections = projectionGameweeks.map(gw => {
-        return bootstrapData.teams.map((team: any) => {
-          // Deterministic calculation based on team ID and gameweek
-          const seed = team.id * 1000 + gw;
-          const teamStrength = (team.id % 7) / 7;
-          const gwModifier = 1 + (gw % 3) * 0.1;
-          
-          const goalOdds = Math.round((0.3 + teamStrength * 0.6 + gwModifier * 0.1) * 100) / 100;
-          const csOdds = Math.round((0.15 + (1 - teamStrength) * 0.4 + gwModifier * 0.05) * 100) / 100;
-          
-          return {
-            team_id: team.id,
-            team_name: team.name,
-            team_short: team.short_name,
-            gameweek: gw,
-            projected_goals: goalOdds,
-            clean_sheet_odds: csOdds
-          };
-        });
+        const matches: any[] = [];
+        const teams = bootstrapData.teams;
+        
+        // Create fixture pairs for each gameweek
+        for (let i = 0; i < teams.length; i += 2) {
+          if (i + 1 < teams.length) {
+            const homeTeam = teams[i];
+            const awayTeam = teams[i + 1];
+            
+            // Deterministic calculations for each team
+            const homeStrength = (homeTeam.id % 7) / 7;
+            const awayStrength = (awayTeam.id % 7) / 7;
+            const gwModifier = 1 + (gw % 3) * 0.1;
+            
+            const homeGoals = Math.round((0.3 + homeStrength * 0.6 + gwModifier * 0.1) * 100) / 100;
+            const awayGoals = Math.round((0.3 + awayStrength * 0.6 + gwModifier * 0.1) * 100) / 100;
+            const homeCS = Math.round((0.15 + (1 - awayStrength) * 0.4 + gwModifier * 0.05) * 100) / 100;
+            const awayCS = Math.round((0.15 + (1 - homeStrength) * 0.4 + gwModifier * 0.05) * 100) / 100;
+            
+            matches.push({
+              id: i * 1000 + gw,
+              gameweek: gw,
+              kickoffTime: `2025-08-${(gw % 30) + 1}T15:00:00Z`,
+              homeTeam: {
+                id: homeTeam.id,
+                name: homeTeam.name,
+                shortName: homeTeam.short_name,
+                expectedGoals: homeGoals,
+                cleanSheetOdds: homeCS
+              },
+              awayTeam: {
+                id: awayTeam.id,
+                name: awayTeam.name,
+                shortName: awayTeam.short_name,
+                expectedGoals: awayGoals,
+                cleanSheetOdds: awayCS
+              },
+              totalExpectedGoals: Math.round((homeGoals + awayGoals) * 100) / 100,
+              confidence: (homeGoals + awayGoals) > 2.5 ? 'High' : (homeGoals + awayGoals) > 1.5 ? 'Medium' : 'Low'
+            });
+          }
+        }
+        
+        return matches;
       }).flat();
 
       res.json(projections);
