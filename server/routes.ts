@@ -400,6 +400,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Price tracking endpoints
+  
+  // Get recent price changes (simulated data for demo)
+  app.get("/api/price-changes/recent", async (req, res) => {
+    try {
+      // Generate simulated price changes based on real player data
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const elements = bootstrapData.elements;
+      const teams = bootstrapData.teams;
+      const positions = bootstrapData.element_types;
+      
+      // Simulate recent price changes based on transfer activity
+      const recentChanges = elements
+        .filter((player: any) => {
+          const transfersIn = player.transfers_in_event || 0;
+          const transfersOut = player.transfers_out_event || 0;
+          const netTransfers = transfersIn - transfersOut;
+          return Math.abs(netTransfers) > 50000; // Players with significant transfer activity
+        })
+        .slice(0, 20) // Limit to 20 changes
+        .map((player: any) => {
+          const team = teams.find((t: any) => t.id === player.team);
+          const position = positions.find((p: any) => p.id === player.element_type);
+          const transfersIn = player.transfers_in_event || 0;
+          const transfersOut = player.transfers_out_event || 0;
+          const netTransfers = transfersIn - transfersOut;
+          
+          // Simulate price change based on transfer momentum
+          const priceChange = netTransfers > 100000 ? 1 : netTransfers < -100000 ? -1 : 0;
+          
+          return {
+            player_id: player.id,
+            player_name: player.web_name,
+            team_name: team?.short_name || "Unknown",
+            position: position?.singular_name_short || "Unknown",
+            old_price: player.now_cost - priceChange,
+            new_price: player.now_cost,
+            current_price: player.now_cost,
+            change: priceChange,
+            date: new Date().toISOString(),
+            ownership_change: ((transfersIn - transfersOut) / 10000000) * 100,
+            transfers_in: transfersIn,
+            transfers_out: transfersOut
+          };
+        });
+      
+      res.json(recentChanges);
+    } catch (error) {
+      console.error("Error generating price changes:", error);
+      res.status(500).json({
+        error: "Failed to fetch price changes",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Get price predictions (simulated data for demo)
+  app.get("/api/price-predictions", async (req, res) => {
+    try {
+      // Generate predictions based on real player data
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const elements = bootstrapData.elements;
+      const teams = bootstrapData.teams;
+      const positions = bootstrapData.element_types;
+      
+      // Generate predictions for players with high transfer activity
+      const predictions = elements
+        .filter((player: any) => {
+          const transfersIn = player.transfers_in_event || 0;
+          const transfersOut = player.transfers_out_event || 0;
+          const netTransfers = Math.abs(transfersIn - transfersOut);
+          return netTransfers > 30000; // Players likely to change price
+        })
+        .slice(0, 15) // Limit to 15 predictions
+        .map((player: any) => {
+          const team = teams.find((t: any) => t.id === player.team);
+          const position = positions.find((p: any) => p.id === player.element_type);
+          const transfersIn = player.transfers_in_event || 0;
+          const transfersOut = player.transfers_out_event || 0;
+          const netTransfers = transfersIn - transfersOut;
+          
+          // Predict price change based on transfer momentum and ownership
+          const predictedChange = netTransfers > 150000 ? 1 : netTransfers < -150000 ? -1 : 0;
+          const confidence = Math.min(Math.abs(netTransfers) / 2000000 * 100, 95);
+          
+          let probability = "Low";
+          let reason = "Stable transfer activity";
+          
+          if (Math.abs(netTransfers) > 200000) {
+            probability = "Very High";
+            reason = netTransfers > 0 ? "Massive transfer inflow" : "Massive transfer outflow";
+          } else if (Math.abs(netTransfers) > 100000) {
+            probability = "High";
+            reason = netTransfers > 0 ? "High transfer demand" : "High transfer exodus";
+          } else if (Math.abs(netTransfers) > 50000) {
+            probability = "Medium";
+            reason = "Moderate transfer activity";
+          }
+          
+          return {
+            player_id: player.id,
+            player_name: player.web_name,
+            team_name: team?.short_name || "Unknown",
+            position: position?.singular_name_short || "Unknown",
+            current_price: player.now_cost,
+            predicted_change: predictedChange,
+            confidence: Math.round(confidence),
+            ownership_percentage: parseFloat(player.selected_by_percent || "0"),
+            net_transfers: netTransfers,
+            transfers_in: transfersIn,
+            transfers_out: transfersOut,
+            reason: reason,
+            probability: probability,
+            expected_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // Tomorrow
+          };
+        });
+      
+      res.json(predictions);
+    } catch (error) {
+      console.error("Error generating price predictions:", error);
+      res.status(500).json({
+        error: "Failed to fetch price predictions",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Price alerts API routes
   
   // Get all price alerts
