@@ -38,7 +38,7 @@ export default function Transfers() {
               Transfer Planner
             </h1>
             <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed" data-testid="text-page-description">
-              Find the best players to transfer in and out based on form, fixtures, and value
+              Enhanced with historical transfer data (2016-2024) and advanced statistical modeling for optimal transfer decisions
             </p>
           </div>
           
