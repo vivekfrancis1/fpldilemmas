@@ -567,12 +567,12 @@ export default function PlayerExpectedPoints() {
 
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <TabsList className="grid w-full grid-cols-6">
-                      <TabsTrigger value="expected_points">Expected Points</TabsTrigger>
-                      <TabsTrigger value="appearance_points">Appearance</TabsTrigger>
-                      <TabsTrigger value="goal_points">Goals</TabsTrigger>
-                      <TabsTrigger value="assist_points">Assists</TabsTrigger>
-                      <TabsTrigger value="clean_sheet_points">Clean Sheets</TabsTrigger>
-                      <TabsTrigger value="bonus_points">Bonus</TabsTrigger>
+                      <TabsTrigger value="expected_points">Total Points</TabsTrigger>
+                      <TabsTrigger value="appearance_points">Appearance Points</TabsTrigger>
+                      <TabsTrigger value="goal_points">Goal Points</TabsTrigger>
+                      <TabsTrigger value="assist_points">Assist Points</TabsTrigger>
+                      <TabsTrigger value="clean_sheet_points">Clean Sheet Points</TabsTrigger>
+                      <TabsTrigger value="bonus_points">Bonus Points</TabsTrigger>
                     </TabsList>
                     
                     <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
