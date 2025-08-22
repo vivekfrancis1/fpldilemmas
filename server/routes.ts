@@ -368,9 +368,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const weeks = parseInt(req.query.weeks as string) || 4;
       
-      // Get bootstrap data for player information
-      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      // Get bootstrap data and fixtures for consistency with other tools
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
       const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
       
       // Fetch historical data for enhanced projections (sample of players for performance)
       const historicalData = new Map();
@@ -445,13 +454,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (currentForm * 0.6 + pointsPerGame * 0.4) / 6 + 0.7 + historicalFormAdjustment
         ));
         
-        // Team strength based on average points and clean sheet potential
+        // Use consistent gameweek logic as other tools
+        let currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id;
+        if (!currentGameweek) {
+          const nextEvent = bootstrapData.events.find((event: any) => !event.finished);
+          currentGameweek = nextEvent?.id || 2;
+        }
+        
+        const startGameweek = currentGameweek + 1;
+        
+        // Get player's team fixtures for consistent goal/assist calculations
+        const playerTeamFixtures = fixturesData.filter((fixture: any) => 
+          !fixture.finished && 
+          fixture.event >= startGameweek && 
+          fixture.event <= startGameweek + weeks - 1 &&
+          (fixture.team_h === player.team || fixture.team_a === player.team)
+        );
+        
+        // Team strength based on FPL strength ratings (consistent with other tools)
         const teamStrength = Math.max(0.7, Math.min(1.3, 
           (team?.strength_overall_home + team?.strength_overall_away) / 200 + 0.8
         ));
         
-        // Fixture analysis based on team strengths (simplified but more realistic)
-        const fixtureStrength = Math.max(0.6, Math.min(1.4, teamStrength * (0.85 + Math.random() * 0.3)));
+        // Calculate fixture-based strength using same logic as team projections
+        let fixtureStrength = 0;
+        let totalFixtures = 0;
+        
+        playerTeamFixtures.forEach((fixture: any) => {
+          const isHome = fixture.team_h === player.team;
+          const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
+          
+          if (opponent) {
+            const opponentStrength = (opponent.strength_overall_home + opponent.strength_overall_away) / 2000;
+            const matchDifficulty = isHome ? (2.2 - opponentStrength) * 1.15 : (2.2 - opponentStrength);
+            fixtureStrength += Math.max(0.6, Math.min(1.4, matchDifficulty));
+            totalFixtures++;
+          }
+        });
+        
+        fixtureStrength = totalFixtures > 0 ? fixtureStrength / totalFixtures : 1.0;
         
         // Enhanced minutes projection combining current and historical playing time
         const recentMinutesPerGame = player.minutes > 0 ? player.minutes / Math.max(1, 10) : 20; // Assume 10 games played
@@ -466,49 +507,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const consistencyBonus = Math.min(0.2, selectedByPercent / 50); // Popular players get slight bonus
         const projectedMinutes = Math.round(basePlayingTime * weeks * statusMultiplier * formConsistency * (1 + consistencyBonus));
         
-        // Enhanced goals projection combining current and historical data
-        const currentGoalRate = player.goals_scored / Math.max(player.minutes, 90); // Goals per 90 minutes
-        const expectedGoalsData = player.expected_goals || player.goals_scored * 1.1; // Use xG if available
+        // Enhanced goals projection using fixture-based calculations for consistency
+        let projectedGoals = 0;
         
-        // Blend current season performance with historical trends (70% current, 30% historical)
-        const blendedGoalRate = historicalGoalRate > 0 ? 
-          (currentGoalRate * 0.7 + historicalGoalRate * 0.3) : currentGoalRate;
+        // Calculate goals based on team's expected goals in each fixture (consistent with team projections)
+        playerTeamFixtures.forEach((fixture: any) => {
+          const isHome = fixture.team_h === player.team;
+          const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
+          
+          if (opponent) {
+            // Use same expected goals calculation as team projections
+            let teamExpectedGoals;
+            if (isHome) {
+              const homeAttackStrength = (team?.strength_attack_home || 1000) / 1000;
+              const awayDefenseStrength = (opponent.strength_defence_away || 1000) / 1000;
+              teamExpectedGoals = (homeAttackStrength * (2.2 - awayDefenseStrength)) * 1.15;
+            } else {
+              const awayAttackStrength = (team?.strength_attack_away || 1000) / 1000;
+              const homeDefenseStrength = (opponent.strength_defence_home || 1000) / 1000;
+              teamExpectedGoals = awayAttackStrength * (2.2 - homeDefenseStrength);
+            }
+            
+            // Player's share of team goals based on position and current performance
+            const currentGoalRate = player.goals_scored / Math.max(player.minutes, 90);
+            const expectedGoalsData = player.expected_goals || player.goals_scored * 1.1;
+            
+            // Position-specific goal distribution within team
+            const positionGoalShare = {
+              'Goalkeeper': 0.01,
+              'Defender': 0.06,
+              'Midfielder': 0.15,
+              'Forward': 0.35
+            };
+            
+            const baseShare = positionGoalShare[position?.singular_name as keyof typeof positionGoalShare] || 0.15;
+            const performanceAdjustment = Math.max(0.3, Math.min(2.0, (currentGoalRate + expectedGoalsData/90) * 5));
+            const playerGoalShare = baseShare * performanceAdjustment * formConsistency;
+            
+            projectedGoals += teamExpectedGoals * playerGoalShare;
+          }
+        });
         
-        // Position-specific multipliers based on real FPL patterns
-        const positionGoalData = {
-          'Goalkeeper': { base: 0.02, variance: 0.01 },
-          'Defender': { base: 0.12, variance: 0.08 },
-          'Midfielder': { base: 0.25, variance: 0.15 },
-          'Forward': { base: 0.45, variance: 0.20 }
-        };
+        // Fallback if no fixtures available
+        if (totalFixtures === 0) {
+          const currentGoalRate = player.goals_scored / Math.max(player.minutes, 90);
+          const blendedGoalRate = historicalGoalRate > 0 ? 
+            (currentGoalRate * 0.7 + historicalGoalRate * 0.3) : currentGoalRate;
+          projectedGoals = blendedGoalRate * (projectedMinutes / 90) * formConsistency;
+        }
         
-        const posData = positionGoalData[position?.singular_name as keyof typeof positionGoalData] || positionGoalData['Midfielder'];
-        const enhancedGoalRate = Math.max(posData.base - posData.variance, 
-          Math.min(posData.base + posData.variance, blendedGoalRate * 1.2 + posData.base * 0.2));
+        // Enhanced assists projection based on team attacking output (consistent with goals)
+        let projectedAssists = 0;
         
-        const projectedGoals = enhancedGoalRate * (projectedMinutes / 90) * formConsistency * fixtureStrength;
+        // Calculate assists based on team's attacking output in each fixture
+        playerTeamFixtures.forEach((fixture: any) => {
+          const isHome = fixture.team_h === player.team;
+          const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
+          
+          if (opponent) {
+            // Use same expected goals calculation as team projections for consistency
+            let teamExpectedGoals;
+            if (isHome) {
+              const homeAttackStrength = (team?.strength_attack_home || 1000) / 1000;
+              const awayDefenseStrength = (opponent.strength_defence_away || 1000) / 1000;
+              teamExpectedGoals = (homeAttackStrength * (2.2 - awayDefenseStrength)) * 1.15;
+            } else {
+              const awayAttackStrength = (team?.strength_attack_away || 1000) / 1000;
+              const homeDefenseStrength = (opponent.strength_defence_home || 1000) / 1000;
+              teamExpectedGoals = awayAttackStrength * (2.2 - homeDefenseStrength);
+            }
+            
+            // Player's share of team assists based on position and creativity
+            const currentAssistRate = player.assists / Math.max(player.minutes, 90);
+            const creativityScore = (player.creativity || 0) / 100;
+            
+            // Position-specific assist distribution within team
+            const positionAssistShare = {
+              'Goalkeeper': 0.005,
+              'Defender': 0.04,
+              'Midfielder': 0.12,
+              'Forward': 0.08
+            };
+            
+            const baseShare = positionAssistShare[position?.singular_name as keyof typeof positionAssistShare] || 0.08;
+            const creativityAdjustment = Math.max(0.5, Math.min(2.0, 1 + creativityScore * 2));
+            const performanceAdjustment = Math.max(0.3, Math.min(2.0, currentAssistRate * 10 + 0.5));
+            const playerAssistShare = baseShare * creativityAdjustment * performanceAdjustment * formConsistency;
+            
+            // Assists typically 60% of goals for team attacking output
+            projectedAssists += teamExpectedGoals * 0.6 * playerAssistShare;
+          }
+        });
         
-        // Enhanced assists projection with creativity metrics and historical data
-        const currentAssistRate = player.assists / Math.max(player.minutes, 90);
-        const creativityScore = (player.creativity || 0) / 100; // FPL creativity stat
-        
-        // Blend current and historical assist rates (70% current, 30% historical)
-        const blendedAssistRate = historicalAssistRate > 0 ? 
-          (currentAssistRate * 0.7 + historicalAssistRate * 0.3) : currentAssistRate;
-        
-        // Position-specific assist expectations
-        const positionAssistData = {
-          'Goalkeeper': { base: 0.01, creativity: 0.0 },
-          'Defender': { base: 0.08, creativity: 0.3 },
-          'Midfielder': { base: 0.22, creativity: 0.7 },
-          'Forward': { base: 0.15, creativity: 0.4 }
-        };
-        
-        const assistData = positionAssistData[position?.singular_name as keyof typeof positionAssistData] || positionAssistData['Midfielder'];
-        const enhancedAssistRate = Math.max(0.01, 
-          Math.min(assistData.base * 2, blendedAssistRate * 1.1 + (creativityScore * assistData.creativity * 0.1)));
-        
-        const projectedAssists = enhancedAssistRate * (projectedMinutes / 90) * formConsistency * teamStrength;
+        // Fallback if no fixtures available
+        if (totalFixtures === 0) {
+          const currentAssistRate = player.assists / Math.max(player.minutes, 90);
+          const blendedAssistRate = historicalAssistRate > 0 ? 
+            (currentAssistRate * 0.7 + historicalAssistRate * 0.3) : currentAssistRate;
+          projectedAssists = blendedAssistRate * (projectedMinutes / 90) * formConsistency * teamStrength;
+        }
         
         // Enhanced clean sheet projection based on team defensive strength
         const isDefensive = position?.singular_name === 'Goalkeeper' || position?.singular_name === 'Defender';
@@ -702,9 +799,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const homeDefense = (homeTeam.strength_defence_home || 1000) / 1000;
         const awayDefense = (awayTeam.strength_defence_away || 1000) / 1000;
         
-        // Calculate expected goals using Poisson-based model
-        const homeExpectedGoals = (homeAttack * (2 - awayDefense)) * 1.3; // Home advantage
-        const awayExpectedGoals = (awayAttack * (2 - homeDefense));
+        // Calculate expected goals using consistent model across all tools
+        const homeExpectedGoals = (homeAttack * (2.2 - awayDefense)) * 1.15; // Home advantage
+        const awayExpectedGoals = (awayAttack * (2.2 - homeDefense));
         
         // Round to realistic score predictions
         const predictedHomeScore = Math.max(0, Math.round(homeExpectedGoals + (Math.random() - 0.5) * 0.8));
@@ -741,6 +838,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           awayTeam: awayTeam.name,
           homeTeamShort: homeTeam.short_name,
           awayTeamShort: awayTeam.short_name,
+          homeExpectedGoals: Math.round(homeExpectedGoals * 100) / 100,
+          awayExpectedGoals: Math.round(awayExpectedGoals * 100) / 100,
           predictedHomeScore,
           predictedAwayScore,
           homeWinProbability,
