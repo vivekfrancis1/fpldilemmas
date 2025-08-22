@@ -132,7 +132,7 @@ export default function ProjectedGoalsCS() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Available</SelectItem>
-                      {Array.from({ length: 8 }, (_, i) => currentGameweek + i + 1).map(gw => (
+                      {Array.from({ length: 6 }, (_, i) => currentGameweek + i + 1).map(gw => (
                         <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                       ))}
                     </SelectContent>
