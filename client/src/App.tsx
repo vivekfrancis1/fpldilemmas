@@ -23,6 +23,7 @@ import TeamCSProjections from "./pages/team-cs-projections";
 import PlayerMinutes from "./pages/player-minutes";
 import PlayerProjectedGoals from "./pages/player-projected-goals";
 import PlayerExpectedAssists from "./pages/player-expected-assists";
+import PlayerExpectedBonus from "./pages/player-expected-bonus";
 
 function Router() {
   return (
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/player-minutes" component={PlayerMinutes} />
       <Route path="/player-projected-goals" component={PlayerProjectedGoals} />
       <Route path="/player-expected-assists" component={PlayerExpectedAssists} />
+      <Route path="/player-expected-bonus" component={PlayerExpectedBonus} />
       <Route component={NotFound} />
     </Switch>
   );
