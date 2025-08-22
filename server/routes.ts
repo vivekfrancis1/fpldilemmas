@@ -467,7 +467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get current gameweek if not specified
-      let currentGameweek = gameweek;
+      let currentGameweek: string | number = gameweek ? String(gameweek) : '1';
       if (!currentGameweek) {
         const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
         if (bootstrapResponse.ok) {
@@ -983,8 +983,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!opponent) return null;
           
           // Advanced spread betting market-based goal calculation with 8-phase statistical modeling
-          const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
-          const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
+          const teamBettingData = (bettingData.teamGoalRates as any)[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
+          const opponentDefenseData = (bettingData.teamCleanSheetRates as any)[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
           
           // Phase 1: Core market probability foundation
           let baseExpectedGoals = teamBettingData.expectedGoalsPerGame;
@@ -1067,7 +1067,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Determine confidence based on betting market confidence and fixture difficulty  
-        const teamBettingData = bettingData.teamGoalRates[team.id] || { confidence: 0.70 };
+        const teamBettingData = (bettingData.teamGoalRates as any)[team.id] || { confidence: 0.70 };
         const averageGoals = totalGoals / Math.max(1, projections.length);
         let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
         
@@ -1139,8 +1139,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!opponent) return null;
           
           // Advanced spread betting market-based clean sheet calculation with statistical modeling
-          const teamBettingData = bettingData.teamCleanSheetRates[team.id] || { baseCleanSheetRate: 0.25, homeBonus: 0.05, confidence: 0.70 };
-          const opponentBettingData = bettingData.teamGoalRates[opponent.id] || { expectedGoalsPerGame: 1.5, confidence: 0.70 };
+          const teamBettingData = (bettingData.teamCleanSheetRates as any)[team.id] || { baseCleanSheetRate: 0.25, homeBonus: 0.05, confidence: 0.70 };
+          const opponentBettingData = (bettingData.teamGoalRates as any)[opponent.id] || { expectedGoalsPerGame: 1.5, confidence: 0.70 };
           
           // Phase 1: Core market probability foundation
           let baseCSProbability = teamBettingData.baseCleanSheetRate * 100;
@@ -1224,14 +1224,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Elite-level confidence calculation using advanced statistical market analysis
-        const teamBettingData = bettingData.teamCleanSheetRates[team.id] || { confidence: 0.70 };
+        const teamBettingData = (bettingData.teamCleanSheetRates as any)[team.id] || { confidence: 0.70 };
         const totalCSProbability = Math.round(averageCleanSheetOdds * projections.length * 10) / 10;
         let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
         
         // Advanced multi-dimensional confidence assessment
         const marketConfidence = teamBettingData.confidence; // Base market reliability
         const performanceConsistency = projections.length > 0 ? 
-          Math.max(0, 1 - (Math.max(...projections.map(p => p.cleanSheetOdds)) - Math.min(...projections.map(p => p.cleanSheetOdds))) / 80) : 0;
+          Math.max(0, 1 - (Math.max(...projections.map((p: any) => p.cleanSheetOdds)) - Math.min(...projections.map((p: any) => p.cleanSheetOdds))) / 80) : 0;
         const volumeConfidence = Math.min(1.0, projections.length / 5); // 5+ fixtures for full confidence
         const qualityBonus = averageCleanSheetOdds >= 35 ? 0.15 : averageCleanSheetOdds >= 25 ? 0.10 : 0;
         
@@ -1324,8 +1324,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // EXACT same 8-phase calculation as team-goal-projections endpoint
             const bettingData = getSpreadBettingData();
-            const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
-            const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
+            const teamBettingData = (bettingData.teamGoalRates as any)[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
+            const opponentDefenseData = (bettingData.teamCleanSheetRates as any)[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
             
             // Phase 1: Core market probability foundation
             let baseExpectedGoals = teamBettingData.expectedGoalsPerGame;
@@ -1412,7 +1412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Generated ${allGoalShareData.length} total team entries for GW2-GW7 using Team Goal Projections`);
       
       // Debug: Check gameweeks in data
-      const uniqueGameweeks = [...new Set(allGoalShareData.map(item => item.gameweek))];
+      const uniqueGameweeks = Array.from(new Set(allGoalShareData.map((item: any) => item.gameweek)));
       console.log(`DEBUG: Unique gameweeks in data: ${uniqueGameweeks.join(', ')}`);
       
       // Filter to requested gameweek if specific, otherwise return all
@@ -1432,7 +1432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Debug logging for key players
       filteredData.forEach(team => {
         if (team.players && (targetGameweek === 0 || team.gameweek === targetGameweek)) {
-          team.players.forEach(player => {
+          team.players.forEach((player: any) => {
             if (player.name && (player.name.includes('Bowen') || player.name.includes('Salah') || player.name.includes('Haaland'))) {
               console.log(`GOAL_SHARE_API ${player.name} GW${team.gameweek}: goalShare=${player.goalShare}%, projectedGoals=${player.projectedGoals}, teamGoals=${team.expectedGoals}`);
             }
@@ -1465,12 +1465,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = await fixturesResponse.json();
       
       // Get Goal Share data for the specific gameweek
-      const goalShareData = generateGoalShareData(bootstrapData, fixturesData, 1, gameweek);
+      const goalShareData = generateAssistShareData(bootstrapData, fixturesData, 1, gameweek);
       
       // Find Jarrod Bowen in the data
-      const bowenData = [];
-      goalShareData.forEach(team => {
-        const bowen = team.players.find(p => p.name.includes('Jarrod Bowen'));
+      const bowenData: any[] = [];
+      goalShareData.forEach((team: any) => {
+        const bowen = team.players.find((p: any) => p.name.includes('Jarrod Bowen'));
         if (bowen) {
           bowenData.push({
             gameweek: team.gameweek,
@@ -1611,7 +1611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Enhanced goal share distribution based on Premier League historical data
   function distributeGoalShares(players: any[], positions: any[]) {
-    const playerShares = [];
+    const playerShares: any[] = [];
     let totalShare = 0;
 
     // Enhanced position-based goal involvement rates based on Premier League historical data
@@ -1702,10 +1702,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     // Normalize to 100% with one decimal place
-    return playerShares.map(player => ({
+    return playerShares.map((player: any) => ({
       ...player,
       goalShare: Math.round((player.rawShare / totalShare) * 1000) / 10 // One decimal place
-    })).filter(p => p.goalShare > 0).sort((a, b) => b.goalShare - a.goalShare);
+    })).filter((p: any) => p.goalShare > 0).sort((a: any, b: any) => b.goalShare - a.goalShare);
   }
 
   // Helper function to generate Assist Share data (same logic as assist-share page)
@@ -1785,7 +1785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Helper function to distribute assist shares among players using historical data analysis
   function distributeAssistShares(players: any[], positions: any[]) {
-    const playerShares = [];
+    const playerShares: any[] = [];
     let totalShare = 0;
 
     // Enhanced position-based assist involvement rates from Premier League historical data (2016-2024)
@@ -1933,10 +1933,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     // Normalize to 100% with one decimal place
-    return playerShares.map(player => ({
+    return playerShares.map((player: any) => ({
       ...player,
       assistShare: Math.round((player.rawShare / totalShare) * 1000) / 10 // One decimal place
-    })).filter(p => p.assistShare > 0).sort((a, b) => b.assistShare - a.assistShare);
+    })).filter((p: any) => p.assistShare > 0).sort((a: any, b: any) => b.assistShare - a.assistShare);
   }
 
   // Match Odds (Projected Goals & CS) endpoint - pure aggregator of Team Goal and CS projection data
