@@ -14,6 +14,7 @@ import MyLeagues from "./pages/my-leagues";
 import PriceTracker from "./pages/price-tracker";
 import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
+import Projections from "./pages/projections";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/price-tracker" component={PriceTracker} />
       <Route path="/league-comparison" component={LeagueComparison} />
       <Route path="/player-stats" component={PlayerStats} />
+      <Route path="/projections" component={Projections} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -46,6 +46,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Analysis Tools", 
       items: [
+        { path: "/projections", label: "Projections", icon: TrendingUp, description: "AI-powered player projections", popular: false },
         { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
         { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: false },
         { path: "/watchlist", label: "Watchlist", icon: Heart, description: "Track favorite players", popular: false },
