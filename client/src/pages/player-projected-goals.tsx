@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Target, Search, Filter } from "lucide-react";
+import { Target, Search, Filter, ChevronUp, ChevronDown } from "lucide-react";
 import Layout from "../components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -221,7 +221,7 @@ export default function PlayerProjectedGoals() {
           {/* Filters */}
           <Card className="mb-4 sm:mb-6">
             <CardContent className="p-3 sm:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -258,23 +258,6 @@ export default function PlayerProjectedGoals() {
                         {team.name}
                       </SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-                  <SelectTrigger data-testid="select-sort-by">
-                    <SelectValue placeholder="Sort by..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="avg-desc">Avg Goals (High-Low)</SelectItem>
-                    <SelectItem value="avg-asc">Avg Goals (Low-High)</SelectItem>
-                    <SelectItem value="name">Player Name</SelectItem>
-                    <SelectItem value="gw2">GW2 Goals</SelectItem>
-                    <SelectItem value="gw3">GW3 Goals</SelectItem>
-                    <SelectItem value="gw4">GW4 Goals</SelectItem>
-                    <SelectItem value="gw5">GW5 Goals</SelectItem>
-                    <SelectItem value="gw6">GW6 Goals</SelectItem>
-                    <SelectItem value="gw7">GW7 Goals</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -328,15 +311,86 @@ export default function PlayerProjectedGoals() {
                   <thead>
                     <tr className="border-b bg-muted/50">
                       <th className="px-2 sm:px-4 py-2 sm:py-3 text-left min-w-[120px] sm:min-w-[200px] sticky left-0 bg-muted/50 z-10">
-                        Player
+                        <button 
+                          onClick={() => setSortBy(sortBy === "name" ? "name" : "name")}
+                          className="flex items-center gap-1 hover:text-primary transition-colors"
+                          data-testid="sort-player-name"
+                        >
+                          Player
+                          {sortBy === "name" && <ChevronUp className="h-3 w-3" />}
+                        </button>
                       </th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">Avg</th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">GW2</th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">GW3</th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">GW4</th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">GW5</th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">GW6</th>
-                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">GW7</th>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy(sortBy === "avg-desc" ? "avg-asc" : "avg-desc")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-avg-goals"
+                        >
+                          Avg
+                          {sortBy === "avg-desc" && <ChevronDown className="h-3 w-3" />}
+                          {sortBy === "avg-asc" && <ChevronUp className="h-3 w-3" />}
+                        </button>
+                      </th>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy("gw2")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-gw2"
+                        >
+                          GW2
+                          {sortBy === "gw2" && <ChevronDown className="h-3 w-3" />}
+                        </button>
+                      </th>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy("gw3")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-gw3"
+                        >
+                          GW3
+                          {sortBy === "gw3" && <ChevronDown className="h-3 w-3" />}
+                        </button>
+                      </th>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy("gw4")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-gw4"
+                        >
+                          GW4
+                          {sortBy === "gw4" && <ChevronDown className="h-3 w-3" />}
+                        </button>
+                      </th>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy("gw5")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-gw5"
+                        >
+                          GW5
+                          {sortBy === "gw5" && <ChevronDown className="h-3 w-3" />}
+                        </button>
+                      </th>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy("gw6")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-gw6"
+                        >
+                          GW6
+                          {sortBy === "gw6" && <ChevronDown className="h-3 w-3" />}
+                        </button>
+                      </th>
+                      <th className="px-2 sm:px-3 py-2 text-center min-w-[60px] sm:min-w-[80px]">
+                        <button 
+                          onClick={() => setSortBy("gw7")}
+                          className="flex items-center gap-1 mx-auto hover:text-primary transition-colors"
+                          data-testid="sort-gw7"
+                        >
+                          GW7
+                          {sortBy === "gw7" && <ChevronDown className="h-3 w-3" />}
+                        </button>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
