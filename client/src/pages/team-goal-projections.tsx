@@ -31,7 +31,7 @@ export default function TeamGoalProjections() {
   });
 
   const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamGoalProjection[]>({
-    queryKey: ["/api/team-goal-projections", weeks],
+    queryKey: [`/api/team-goal-projections?weeks=${weeks}`],
   });
 
   const filteredProjections = useMemo(() => {
@@ -145,9 +145,12 @@ export default function TeamGoalProjections() {
                       <SelectItem value="total">Total Goals</SelectItem>
                       <SelectItem value="average">Goals/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
-                      {Array.from({ length: weeks }, (_, i) => (
-                        <SelectItem key={`gw${i + 2}`} value={`gw${i + 2}`}>GW{i + 2}</SelectItem>
-                      ))}
+                      {Array.from({ length: weeks }, (_, i) => {
+                        const gwNumber = i + 2;
+                        return (
+                          <SelectItem key={`gw${gwNumber}`} value={`gw${gwNumber}`}>GW{gwNumber}</SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -177,18 +180,21 @@ export default function TeamGoalProjections() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
                         Team
                       </th>
-                      {Array.from({ length: weeks }, (_, i) => (
-                        <th 
-                          key={i + 2} 
-                          className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                          onClick={() => setSortBy(`gw${i + 2}`)}
-                        >
-                          <div className="flex items-center justify-center gap-1">
-                            GW{i + 2}
-                            {sortBy === `gw${i + 2}` && <TrendingUp className="h-3 w-3" />}
-                          </div>
-                        </th>
-                      ))}
+                      {Array.from({ length: weeks }, (_, i) => {
+                        const gwNumber = i + 2;
+                        return (
+                          <th 
+                            key={gwNumber} 
+                            className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                            onClick={() => setSortBy(`gw${gwNumber}`)}
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              GW{gwNumber}
+                              {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
+                            </div>
+                          </th>
+                        );
+                      })}
                       <th 
                         className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors"
                         onClick={() => setSortBy('total')}
@@ -229,7 +235,8 @@ export default function TeamGoalProjections() {
                         </td>
                         
                         {Array.from({ length: weeks }, (_, weekIndex) => {
-                          const goals = team.gameweekProjections[weekIndex + 2] || 0;
+                          const gwNumber = weekIndex + 2; // Start from GW2
+                          const goals = team.gameweekProjections[gwNumber] || 0;
                           return (
                             <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsColor(goals)}`}>
                               {goals.toFixed(1)}
