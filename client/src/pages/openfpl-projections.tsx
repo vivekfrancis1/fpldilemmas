@@ -158,85 +158,86 @@ export default function OpenFPLProjections() {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-6">
-        {/* Enhanced Header with gradient */}
-        <div className="text-center mb-8">
-          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white rounded-2xl p-8 shadow-2xl">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Brain className="h-10 w-10" />
-              <h1 className="text-5xl font-bold">OpenFPL Projections</h1>
+        {/* Responsive Header with gradient */}
+        <div className="text-center mb-6 md:mb-8">
+          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white rounded-xl md:rounded-2xl p-4 md:p-8 shadow-2xl">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:gap-3 mb-3 md:mb-4">
+              <Brain className="h-6 w-6 md:h-10 md:w-10" />
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold">OpenFPL Projections</h1>
             </div>
-            <p className="text-blue-100 text-xl mb-2">
+            <p className="text-blue-100 text-sm sm:text-base md:text-lg lg:text-xl mb-2">
               🤖 Advanced ML ensemble predictions using XGBoost + Random Forest models
             </p>
-            <p className="text-blue-200 text-sm">
+            <p className="text-blue-200 text-xs sm:text-sm">
               Based on peer-reviewed OpenFPL research • Rivaling commercial FPL services • Processing all 699 players
             </p>
           </div>
         </div>
 
         <div className="grid gap-6">
-          {/* Model Performance Metrics */}
+          {/* Responsive Model Performance Metrics */}
           {modelMetrics && (
             <Card className="border-2 border-gradient shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50">
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <BarChart3 className="h-6 w-6 text-blue-600" />
-                  Model Performance vs Commercial Benchmarks
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 p-4 md:p-6">
+                <CardTitle className="flex items-center gap-2 text-lg md:text-xl lg:text-2xl">
+                  <BarChart3 className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
+                  <span className="hidden sm:inline">Model Performance vs Commercial Benchmarks</span>
+                  <span className="sm:hidden">Model Performance</span>
                 </CardTitle>
-                <CardDescription className="text-lg">
+                <CardDescription className="text-sm md:text-base lg:text-lg">
                   Real-time accuracy metrics compared to leading FPL services
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                  <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div className="text-3xl font-bold text-green-600">{(modelMetrics as any).rmse_overall?.toFixed(3)}</div>
-                    <div className="text-sm text-green-700 font-medium">Overall RMSE</div>
+              <CardContent className="p-4 md:p-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-6">
+                  <div className="text-center p-3 md:p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div className="text-xl md:text-2xl lg:text-3xl font-bold text-green-600">{(modelMetrics as any).rmse_overall?.toFixed(3)}</div>
+                    <div className="text-xs md:text-sm text-green-700 font-medium">Overall RMSE</div>
                   </div>
-                  <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="text-3xl font-bold text-blue-600">{(modelMetrics as any).rmse_haulers?.toFixed(3)}</div>
-                    <div className="text-sm text-blue-700 font-medium">Haulers (5+ pts)</div>
+                  <div className="text-center p-3 md:p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">{(modelMetrics as any).rmse_haulers?.toFixed(3)}</div>
+                    <div className="text-xs md:text-sm text-blue-700 font-medium">Haulers (5+ pts)</div>
                   </div>
-                  <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
-                    <div className="text-3xl font-bold text-purple-600">{(modelMetrics as any).rmse_tickers?.toFixed(3)}</div>
-                    <div className="text-sm text-purple-700 font-medium">Tickers (3-4 pts)</div>
+                  <div className="text-center p-3 md:p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="text-xl md:text-2xl lg:text-3xl font-bold text-purple-600">{(modelMetrics as any).rmse_tickers?.toFixed(3)}</div>
+                    <div className="text-xs md:text-sm text-purple-700 font-medium">Tickers (3-4 pts)</div>
                   </div>
-                  <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-                    <div className="text-3xl font-bold text-orange-600">{(modelMetrics as any).rmse_blanks?.toFixed(3)}</div>
-                    <div className="text-sm text-orange-700 font-medium">Blanks (≤2 pts)</div>
+                  <div className="text-center p-3 md:p-4 bg-orange-50 rounded-lg border border-orange-200">
+                    <div className="text-xl md:text-2xl lg:text-3xl font-bold text-orange-600">{(modelMetrics as any).rmse_blanks?.toFixed(3)}</div>
+                    <div className="text-xs md:text-sm text-orange-700 font-medium">Blanks (≤2 pts)</div>
                   </div>
-                  <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                    <div className="text-3xl font-bold text-indigo-600">{((modelMetrics as any).accuracy_rate * 100)?.toFixed(1)}%</div>
-                    <div className="text-sm text-indigo-700 font-medium">Accuracy Rate</div>
+                  <div className="col-span-2 sm:col-span-3 lg:col-span-1 text-center p-3 md:p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                    <div className="text-xl md:text-2xl lg:text-3xl font-bold text-indigo-600">{((modelMetrics as any).accuracy_rate * 100)?.toFixed(1)}%</div>
+                    <div className="text-xs md:text-sm text-indigo-700 font-medium">Accuracy Rate</div>
                   </div>
                 </div>
-                <div className="mt-6 text-center text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                <div className="mt-4 md:mt-6 text-center text-xs md:text-sm text-gray-600 bg-gray-50 p-2 md:p-3 rounded-lg">
                   Last updated: {(modelMetrics as any).last_updated} • Models retrained weekly with latest data • Lower RMSE = Better accuracy
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Enhanced Filters */}
+          {/* Responsive Filters */}
           <Card className="shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-gray-50 to-green-50">
-              <CardTitle className="text-xl">🔍 Smart Filters & Search</CardTitle>
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-green-50 p-4 md:p-6">
+              <CardTitle className="text-lg md:text-xl">🔍 Smart Filters & Search</CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div className="relative">
+            <CardContent className="p-4 md:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+                <div className="relative sm:col-span-2 md:col-span-1">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Search players..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-12 border-2"
+                    className="pl-10 h-10 md:h-12 border-2"
                     data-testid="input-search"
                   />
                 </div>
                 
                 <Select value={positionFilter} onValueChange={setPositionFilter}>
-                  <SelectTrigger className="h-12 border-2" data-testid="select-position">
+                  <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-position">
                     <SelectValue placeholder="Position" />
                   </SelectTrigger>
                   <SelectContent>
@@ -250,18 +251,18 @@ export default function OpenFPLProjections() {
                 </Select>
 
                 <Select value={horizonFilter} onValueChange={setHorizonFilter}>
-                  <SelectTrigger className="h-12 border-2" data-testid="select-horizon">
-                    <SelectValue placeholder="Forecast Horizon" />
+                  <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-horizon">
+                    <SelectValue placeholder="Horizon" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">1 Gameweek</SelectItem>
-                    <SelectItem value="2">2 Gameweeks</SelectItem>
-                    <SelectItem value="3">3 Gameweeks</SelectItem>
+                    <SelectItem value="1">1 GW</SelectItem>
+                    <SelectItem value="2">2 GW</SelectItem>
+                    <SelectItem value="3">3 GW</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={gameweekFilter} onValueChange={setGameweekFilter}>
-                  <SelectTrigger className="h-12 border-2" data-testid="select-gameweek">
+                  <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-gameweek">
                     <SelectValue placeholder="Target GW" />
                   </SelectTrigger>
                   <SelectContent>
@@ -272,44 +273,47 @@ export default function OpenFPLProjections() {
                 </Select>
 
                 <Input
-                  placeholder="Min ownership %"
+                  placeholder="Min own %"
                   value={minOwnership}
                   onChange={(e) => setMinOwnership(e.target.value)}
                   type="number"
                   min="0"
                   max="100"
-                  className="h-12 border-2"
+                  className="h-10 md:h-12 border-2"
                   data-testid="input-ownership"
                 />
 
                 <Input
-                  placeholder="Max price £X.Xm"
+                  placeholder="Max £X.Xm"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
                   type="number"
                   step="0.1"
                   min="3.9"
                   max="15.0"
-                  className="h-12 border-2"
+                  className="h-10 md:h-12 border-2"
                   data-testid="input-price"
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* Projections Results */}
+          {/* Responsive Projections Results */}
           <Card className="shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50">
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <Target className="h-6 w-6 text-blue-600" />
-                OpenFPL Ensemble Predictions
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 p-4 md:p-6">
+              <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-lg md:text-xl lg:text-2xl">
+                <div className="flex items-center gap-2">
+                  <Target className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
+                  <span className="hidden sm:inline">OpenFPL Ensemble Predictions</span>
+                  <span className="sm:hidden">OpenFPL Predictions</span>
+                </div>
                 {horizonFilter && (
-                  <Badge variant="outline" className="text-sm px-3 py-1">
+                  <Badge variant="outline" className="text-xs md:text-sm px-2 md:px-3 py-1">
                     {horizonFilter} GW{horizonFilter !== "1" ? "s" : ""} Ahead
                   </Badge>
                 )}
               </CardTitle>
-              <CardDescription className="text-lg">
+              <CardDescription className="text-sm md:text-base lg:text-lg">
                 Position-specific ensemble models trained on 4 seasons of FPL + Understat data
               </CardDescription>
             </CardHeader>
@@ -339,38 +343,38 @@ export default function OpenFPLProjections() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Summary Stats */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                    <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-xl border-2 border-blue-200 shadow-md">
-                      <div className="text-3xl font-bold text-blue-700">{filteredProjections.length}</div>
-                      <div className="text-sm text-blue-600 font-medium">Players Available</div>
+                  {/* Responsive Summary Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+                    <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 md:p-6 rounded-lg md:rounded-xl border-2 border-blue-200 shadow-md">
+                      <div className="text-2xl md:text-3xl font-bold text-blue-700">{filteredProjections.length}</div>
+                      <div className="text-xs md:text-sm text-blue-600 font-medium">Players Available</div>
                     </div>
-                    <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 rounded-xl border-2 border-green-200 shadow-md">
-                      <div className="text-3xl font-bold text-green-700">
+                    <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 md:p-6 rounded-lg md:rounded-xl border-2 border-green-200 shadow-md">
+                      <div className="text-2xl md:text-3xl font-bold text-green-700">
                         {filteredProjections[0]?.predicted_points?.toFixed(1) || "0.0"}
                       </div>
-                      <div className="text-sm text-green-600 font-medium">Top Prediction</div>
+                      <div className="text-xs md:text-sm text-green-600 font-medium">Top Prediction</div>
                     </div>
-                    <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-6 rounded-xl border-2 border-purple-200 shadow-md">
-                      <div className="text-3xl font-bold text-purple-700">
+                    <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 md:p-6 rounded-lg md:rounded-xl border-2 border-purple-200 shadow-md">
+                      <div className="text-2xl md:text-3xl font-bold text-purple-700">
                         {(filteredProjections.reduce((sum, p) => sum + (p.ensemble_confidence || 0), 0) / filteredProjections.length)?.toFixed(1) || "0.0"}%
                       </div>
-                      <div className="text-sm text-purple-600 font-medium">Avg Confidence</div>
+                      <div className="text-xs md:text-sm text-purple-600 font-medium">Avg Confidence</div>
                     </div>
-                    <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-6 rounded-xl border-2 border-orange-200 shadow-md">
-                      <div className="text-3xl font-bold text-orange-700">
+                    <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 md:p-6 rounded-lg md:rounded-xl border-2 border-orange-200 shadow-md">
+                      <div className="text-2xl md:text-3xl font-bold text-orange-700">
                         {(filteredProjections.reduce((sum, p) => sum + p.current_price, 0) / filteredProjections.length / 10)?.toFixed(1) || "0.0"}m
                       </div>
-                      <div className="text-sm text-orange-600 font-medium">Avg Price</div>
+                      <div className="text-xs md:text-sm text-orange-600 font-medium">Avg Price</div>
                     </div>
                   </div>
 
-                  {/* Compact Sortable Table with Continuous Scroll */}
-                  <div className="overflow-auto max-h-[800px] bg-white rounded-2xl border-2 border-gray-200 shadow-lg">
-                    <table className="w-full text-sm">
+                  {/* Responsive Sortable Table with Continuous Scroll */}
+                  <div className="overflow-x-auto overflow-y-auto max-h-[600px] md:max-h-[800px] bg-white rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg">
+                    <table className="w-full text-xs md:text-sm min-w-[800px] md:min-w-0">
                       <thead className="sticky top-0 z-10">
                         <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
-                          <th className="px-3 py-2 text-left">
+                          <th className="px-2 md:px-3 py-2 text-left min-w-[140px]">
                             <button 
                               onClick={() => handleSort("player_name")}
                               className="flex items-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
@@ -378,7 +382,7 @@ export default function OpenFPLProjections() {
                               Player {getSortIcon("player_name")}
                             </button>
                           </th>
-                          <th className="px-2 py-2 text-center">
+                          <th className="px-1 md:px-2 py-2 text-center min-w-[50px]">
                             <button 
                               onClick={() => handleSort("predicted_points")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
@@ -386,7 +390,7 @@ export default function OpenFPLProjections() {
                               Pts {getSortIcon("predicted_points")}
                             </button>
                           </th>
-                          <th className="px-2 py-2 text-center">
+                          <th className="px-1 md:px-2 py-2 text-center min-w-[50px] hidden md:table-cell">
                             <button 
                               onClick={() => handleSort("predicted_minutes")}
                               className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
@@ -483,16 +487,16 @@ export default function OpenFPLProjections() {
                             className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-150 group text-xs"
                           >
                             {/* Player Info */}
-                            <td className="px-3 py-2">
+                            <td className="px-2 md:px-3 py-2">
                               <div className="flex items-center gap-2">
                                 <div className="text-sm">{getPositionIcon(projection.position)}</div>
                                 <div className="min-w-0">
-                                  <div className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors truncate">
+                                  <div className="font-semibold text-gray-900 text-xs md:text-sm group-hover:text-blue-600 transition-colors truncate">
                                     {projection.player_name}
                                   </div>
                                   <div className="flex items-center gap-1 text-xs text-gray-500">
-                                    <span className="font-medium">{projection.team_name}</span>
-                                    <Badge variant="outline" className="text-xs px-1 py-0">
+                                    <span className="font-medium truncate">{projection.team_name}</span>
+                                    <Badge variant="outline" className="text-xs px-1 py-0 hidden sm:inline-block">
                                       {projection.position}
                                     </Badge>
                                   </div>
@@ -501,15 +505,15 @@ export default function OpenFPLProjections() {
                             </td>
 
                             {/* Predicted Points */}
-                            <td className="px-2 py-2 text-center">
-                              <div className="text-sm font-bold text-blue-600 bg-blue-50 rounded py-1 px-2 inline-block border border-blue-200">
+                            <td className="px-1 md:px-2 py-2 text-center">
+                              <div className="text-xs md:text-sm font-bold text-blue-600 bg-blue-50 rounded py-1 px-1 md:px-2 inline-block border border-blue-200">
                                 {projection.predicted_points?.toFixed(1) || "0.0"}
                               </div>
                             </td>
 
-                            {/* Minutes */}
-                            <td className="px-2 py-2 text-center">
-                              <div className="text-sm font-semibold text-gray-700 bg-gray-50 rounded py-1 px-2 inline-block border border-gray-200">
+                            {/* Minutes - Hidden on mobile */}
+                            <td className="px-1 md:px-2 py-2 text-center hidden md:table-cell">
+                              <div className="text-xs md:text-sm font-semibold text-gray-700 bg-gray-50 rounded py-1 px-1 md:px-2 inline-block border border-gray-200">
                                 {projection.predicted_minutes || 0}
                               </div>
                             </td>
