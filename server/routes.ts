@@ -529,15 +529,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (currentGoalRate * 0.7 + historicalGoalRate * 0.3) : currentGoalRate;
         projectedGoals = blendedGoalRate * (projectedMinutes / 90) * formConsistency;
         
-        // Store assist data for normalization
-        playerData.currentAssistRate = player.assists / Math.max(player.minutes, 90);
-        playerData.creativityScore = (player.creativity || 0) / 100;
+        // Store assist data for normalization (these are added after playerData creation)
+        const currentAssistRate = player.assists / Math.max(player.minutes, 90);
+        const creativityScore = (player.creativity || 0) / 100;
         
         // Initial projection will be normalized later
         let projectedAssists = 0;
         
         // Fallback calculation for now
-        const currentAssistRate = player.assists / Math.max(player.minutes, 90);
         const blendedAssistRate = historicalAssistRate > 0 ? 
           (currentAssistRate * 0.7 + historicalAssistRate * 0.3) : currentAssistRate;
         projectedAssists = blendedAssistRate * (projectedMinutes / 90) * formConsistency * teamStrength;
@@ -695,8 +694,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(finalProjections);
     } catch (error) {
       console.error("Error generating projections:", error);
-      console.error("Error stack:", error.stack);
-      res.status(500).json({ error: "Failed to generate projections", message: error.message });
+      console.error("Error stack:", (error as Error).stack);
+      res.status(500).json({ error: "Failed to generate projections", message: (error as Error).message });
     }
   });
 
@@ -1180,7 +1179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Goal Projections endpoint
   app.get("/api/team-goal-projections", async (req, res) => {
     try {
-      const weeks = parseInt(req.query.weeks as string) || 8;
+      const weeks = parseInt(req.query.weeks as string) || 6;
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -1287,7 +1286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Clean Sheet Projections endpoint
   app.get("/api/team-cs-projections", async (req, res) => {
     try {
-      const weeks = parseInt(req.query.weeks as string) || 8;
+      const weeks = parseInt(req.query.weeks as string) || 6;
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -1420,9 +1419,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let gameweekFixtures;
       if (selectedGameweek === "all") {
-        // Get fixtures for next 8 gameweeks starting from the gameweek after current
+        // Get fixtures for next 6 gameweeks starting from the gameweek after current
         const startGameweek = currentGameweek + 1;
-        const maxGameweek = Math.min(startGameweek + 7, 38);
+        const maxGameweek = Math.min(startGameweek + 5, 38);
         gameweekFixtures = fixturesData
           .filter((fixture: any) => 
             !fixture.finished && 
