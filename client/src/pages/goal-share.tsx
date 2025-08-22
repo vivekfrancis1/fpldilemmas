@@ -295,7 +295,7 @@ export default function GoalShare() {
                               player.goalShare >= 5 ? 'bg-yellow-100 text-yellow-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {player.goalShare}%
+                              {player.goalShare.toFixed(1)}%
                             </span>
                           </div>
                         </div>

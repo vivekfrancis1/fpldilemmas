@@ -282,7 +282,7 @@ export default function AssistShare() {
                               player.assistShare >= 10 ? 'bg-yellow-100 text-yellow-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {player.assistShare}%
+                              {player.assistShare.toFixed(1)}%
                             </span>
                           </div>
                         </div>
