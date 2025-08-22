@@ -554,7 +554,7 @@ export default function OpenFPLProjections() {
                       Showing <span className="font-bold text-blue-600">{filteredProjections.length}</span> of <span className="font-bold">{Array.isArray(projections) ? projections.length : 0}</span> total predictions
                     </div>
                     <div className="text-sm text-gray-500 mt-2">
-                      Updated every 5 minutes • Processing all 693 active FPL players
+                      Updated every hour • Processing all 693 active FPL players
                     </div>
                   </div>
                 </div>
