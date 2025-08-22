@@ -12,7 +12,7 @@ export interface IStorage {
   // Watchlist operations
   getWatchlistEntries(): Promise<WatchlistEntry[]>;
   addWatchlistEntry(entry: InsertWatchlistEntry): Promise<WatchlistEntry>;
-  removeWatchlistEntry(id: number): Promise<void>;
+  deleteWatchlistEntry(id: number): Promise<void>;
   updateWatchlistEntry(id: number, entry: Partial<InsertWatchlistEntry>): Promise<WatchlistEntry>;
   
   // Price alert operations
@@ -27,6 +27,7 @@ export interface IStorage {
   getHistoricalPlayers(season: string): Promise<HistoricalPlayer[]>;
   insertHistoricalPlayers(players: InsertHistoricalPlayer[]): Promise<void>;
   hasHistoricalData(season: string): Promise<boolean>;
+  getSeasons(): Promise<string[]>;
   
   // Manager ID caching operations
   getLastManagerId(): Promise<string | undefined>;
@@ -92,7 +93,7 @@ export class MemStorage implements IStorage {
     return watchlistEntry;
   }
 
-  async removeWatchlistEntry(id: number): Promise<void> {
+  async deleteWatchlistEntry(id: number): Promise<void> {
     this.watchlistEntries.delete(id);
   }
 
@@ -162,6 +163,10 @@ export class MemStorage implements IStorage {
     return this.historicalPlayerCache.has(season);
   }
 
+  async getSeasons(): Promise<string[]> {
+    return Array.from(this.historicalPlayerCache.keys());
+  }
+
   // Manager ID caching operations
   async getLastManagerId(): Promise<string | undefined> {
     return this.lastManagerId;
@@ -207,8 +212,8 @@ export class DatabaseStorage implements IStorage {
     return this.memFallback.addWatchlistEntry(entry);
   }
 
-  async removeWatchlistEntry(id: number): Promise<void> {
-    return this.memFallback.removeWatchlistEntry(id);
+  async deleteWatchlistEntry(id: number): Promise<void> {
+    return this.memFallback.deleteWatchlistEntry(id);
   }
 
   async updateWatchlistEntry(id: number, entry: Partial<InsertWatchlistEntry>): Promise<WatchlistEntry> {
@@ -336,6 +341,20 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.warn('Database check failed, using memory fallback:', error);
       return this.memFallback.hasHistoricalData(season);
+    }
+  }
+
+  async getSeasons(): Promise<string[]> {
+    try {
+      const seasons = await db
+        .selectDistinct({ season: historicalPlayers.season })
+        .from(historicalPlayers)
+        .orderBy(historicalPlayers.season);
+      
+      return seasons.map(s => s.season).filter(Boolean);
+    } catch (error) {
+      console.warn('Database seasons fetch failed, using memory fallback:', error);
+      return this.memFallback.getSeasons();
     }
   }
 

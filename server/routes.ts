@@ -31,7 +31,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const historicalData = await storage.getHistoricalPlayersData(season);
+      const historicalData = await storage.getHistoricalPlayers(season);
       res.json(historicalData);
     } catch (error) {
       console.error(`Error fetching historical data for season ${season}:`, error);
@@ -45,7 +45,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Available seasons endpoint
   app.get("/api/seasons", async (req, res) => {
     try {
-      const seasons = await storage.getAvailableSeasons();
+      const seasons = await storage.getSeasons();
       res.json(seasons);
     } catch (error) {
       console.error("Error fetching seasons:", error);
@@ -191,7 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Watchlist routes
   app.get("/api/watchlist", async (req, res) => {
     try {
-      const watchlist = await storage.getWatchlist();
+      const watchlist = await storage.getWatchlistEntries();
       res.json(watchlist);
     } catch (error) {
       console.error("Error fetching watchlist:", error);
@@ -204,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/watchlist", async (req, res) => {
     try {
-      const watchlistItem = await storage.addToWatchlist(req.body);
+      const watchlistItem = await storage.addWatchlistEntry(req.body);
       res.status(201).json(watchlistItem);
     } catch (error) {
       console.error("Error adding to watchlist:", error);
@@ -223,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid watchlist entry ID" });
       }
       
-      await storage.removeFromWatchlist(id);
+      await storage.deleteWatchlistEntry(id);
       res.status(204).send();
     } catch (error) {
       console.error("Error removing from watchlist:", error);
@@ -242,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid watchlist entry ID" });
       }
       
-      const updatedItem = await storage.updateWatchlistItem(id, req.body);
+      const updatedItem = await storage.updateWatchlistEntry(id, req.body);
       res.json(updatedItem);
     } catch (error) {
       console.error("Error updating watchlist item:", error);
@@ -413,20 +413,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }).filter(Boolean);
         
-        const totalGoals = projections.reduce((sum, p) => sum + p.expectedGoals, 0);
+        const totalGoals = projections.reduce((sum: number, p: any) => sum + p.expectedGoals, 0);
+        
+        // Convert projections array to gameweekProjections object
+        const gameweekProjections: { [gameweek: number]: number } = {};
+        projections.forEach((p: any) => {
+          gameweekProjections[p.gameweek] = p.expectedGoals;
+        });
+        
+        // Determine confidence based on fixture difficulty and total goals
+        const averageGoals = totalGoals / Math.max(1, projections.length);
+        let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
+        if (averageGoals >= 2.0) confidence = 'High';
+        else if (averageGoals < 1.2) confidence = 'Low';
         
         return {
           id: team.id,
           team: team.short_name,
+          teamShort: team.short_name,
           teamName: team.name,
-          projections,
-          totalExpectedGoals: Math.round(totalGoals * 100) / 100,
-          averagePerGame: Math.round((totalGoals / Math.max(1, projections.length)) * 100) / 100
+          gameweekProjections,
+          totalGoals: Math.round(totalGoals * 100) / 100,
+          averageGoalsPerGame: Math.round(averageGoals * 100) / 100,
+          confidence,
+          position: 0 // Will be set after sorting
         };
       });
       
-      // Sort by total expected goals descending
-      teamProjections.sort((a, b) => b.totalExpectedGoals - a.totalExpectedGoals);
+      // Sort by total expected goals descending and set positions
+      teamProjections.sort((a: any, b: any) => b.totalGoals - a.totalGoals);
+      teamProjections.forEach((team: any, index: number) => {
+        team.position = index + 1;
+      });
       
       res.json(teamProjections);
     } catch (error) {
