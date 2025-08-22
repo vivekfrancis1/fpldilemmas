@@ -2074,15 +2074,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // OpenFPL Projection routes
-  app.get('/api/openfpl-projections', async (req, res) => {
+  // OpenFPL Projection routes (supporting both query params and path params)
+  app.get('/api/openfpl-projections/:horizon?/:gameweek?', async (req, res) => {
     try {
-      const horizon = parseInt(req.query.horizon as string) || 1;
-      const gameweekParam = req.query.gameweek as string || "next";
+      const horizon = parseInt(req.params.horizon || req.query.horizon as string) || 1;
+      const gameweekParam = req.params.gameweek || req.query.gameweek as string || "next";
       
-      const bootstrapData = await storage.getBootstrapData();
+      // Fetch bootstrap data directly from FPL API if not in storage
+      let bootstrapData = await storage.getBootstrapData();
       if (!bootstrapData) {
-        return res.status(500).json({ error: "Bootstrap data not available" });
+        try {
+          const response = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+          if (!response.ok) {
+            throw new Error('Failed to fetch FPL data');
+          }
+          bootstrapData = await response.json();
+          await storage.setBootstrapData(bootstrapData as BootstrapData);
+        } catch (error) {
+          console.error('Error fetching bootstrap data:', error);
+          return res.status(500).json({ error: "Failed to fetch FPL data" });
+        }
       }
 
       const elements = bootstrapData.elements;
@@ -2243,10 +2254,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ OpenFPL Projection routes registered successfully");
 
-  // Player Expected Points routes
-  app.get('/api/player-expected-points', async (req, res) => {
+  // Player Expected Points routes (supporting both query params and path params)
+  app.get('/api/player-expected-points/:gameweek?', async (req, res) => {
     try {
-      const gameweekParam = req.query.gameweek as string || "next";
+      const gameweekParam = req.params.gameweek || req.query.gameweek as string || "next";
       
       // Fetch bootstrap data directly from FPL API if not in storage
       let bootstrapData = await storage.getBootstrapData();
