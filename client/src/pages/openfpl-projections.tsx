@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Brain, BarChart3, Target, AlertTriangle, TrendingUp, Star, Clock, DollarSign } from "lucide-react";
+import { Search, Brain, BarChart3, Target, AlertTriangle, TrendingUp, Star, Clock, DollarSign, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import Layout from "@/components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,8 @@ export default function OpenFPLProjections() {
   const [gameweekFilter, setGameweekFilter] = useState("next");
   const [minOwnership, setMinOwnership] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [sortBy, setSortBy] = useState<keyof OpenFPLProjection>("predicted_points");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -77,6 +79,20 @@ export default function OpenFPLProjections() {
     }));
   };
 
+  const handleSort = (column: keyof OpenFPLProjection) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortDirection("desc");
+    }
+  };
+
+  const getSortIcon = (column: keyof OpenFPLProjection) => {
+    if (sortBy !== column) return <ArrowUpDown className="h-4 w-4" />;
+    return sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const filteredProjections = Array.isArray(projections) ? projections.filter((projection: OpenFPLProjection) => {
     const matchesSearch = !searchTerm || 
       projection.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -90,11 +106,21 @@ export default function OpenFPLProjections() {
     
     return matchesSearch && matchesPosition && matchesOwnership && matchesPrice;
   }).sort((a: OpenFPLProjection, b: OpenFPLProjection) => {
-    // Sort by predicted points descending, then by ensemble confidence
-    if (b.predicted_points !== a.predicted_points) {
-      return b.predicted_points - a.predicted_points;
+    const aValue = a[sortBy];
+    const bValue = b[sortBy];
+    
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
     }
-    return b.ensemble_confidence - a.ensemble_confidence;
+    
+    const aStr = String(aValue || '');
+    const bStr = String(bValue || '');
+    
+    if (sortDirection === "asc") {
+      return aStr.localeCompare(bStr);
+    } else {
+      return bStr.localeCompare(aStr);
+    }
   }) : [];
 
   const formatPrice = (price: number) => `£${(price / 10).toFixed(1)}m`;
@@ -339,113 +365,231 @@ export default function OpenFPLProjections() {
                     </div>
                   </div>
 
-                  {/* Enhanced Cards Layout */}
-                  <div className="grid gap-6">
-                    {filteredProjections.map((projection: OpenFPLProjection, index: number) => (
-                      <div key={`${projection.player_id}-${index}`} 
-                           className="bg-white border-2 border-gray-200 rounded-2xl p-6 hover:shadow-2xl transition-all duration-300 hover:border-blue-300 hover:scale-[1.02]">
-                        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
-                          {/* Player Info */}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-4 mb-3">
-                              <div className="text-4xl">{getPositionIcon(projection.position)}</div>
-                              <div className="flex flex-col">
-                                <h3 className="text-2xl font-bold text-gray-900">{projection.player_name}</h3>
-                                <div className="flex items-center gap-3 text-lg text-gray-600">
-                                  <span className="font-semibold">{projection.team_name}</span>
-                                  <Badge variant="outline" className="text-sm px-2 py-1">
-                                    {projection.position}
-                                  </Badge>
-                                  <Badge className={`text-sm px-3 py-1 ${getAvailabilityColor(projection.availability_status || 100)}`}>
-                                    {projection.availability_status === 100 ? "✅ Available" : 
-                                     projection.availability_status >= 75 ? "⚠️ Likely" :
-                                     projection.availability_status >= 50 ? "❓ 50/50" :
-                                     projection.availability_status >= 25 ? "⚠️ Doubt" : "❌ Out"}
-                                  </Badge>
+                  {/* Enhanced Sortable Table */}
+                  <div className="overflow-x-auto bg-white rounded-2xl border-2 border-gray-200 shadow-lg">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
+                          <th className="px-6 py-4 text-left">
+                            <button 
+                              onClick={() => handleSort("player_name")}
+                              className="flex items-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              Player {getSortIcon("player_name")}
+                            </button>
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => handleSort("predicted_points")}
+                              className="flex items-center justify-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              Points {getSortIcon("predicted_points")}
+                            </button>
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => handleSort("predicted_minutes")}
+                              className="flex items-center justify-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              <Clock className="h-4 w-4" /> Mins {getSortIcon("predicted_minutes")}
+                            </button>
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => handleSort("predicted_goals")}
+                              className="flex items-center justify-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              ⚽ Goals {getSortIcon("predicted_goals")}
+                            </button>
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => handleSort("predicted_assists")}
+                              className="flex items-center justify-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              🎯 Assists {getSortIcon("predicted_assists")}
+                            </button>
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => handleSort("predicted_clean_sheets")}
+                              className="flex items-center justify-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              🛡️ CS {getSortIcon("predicted_clean_sheets")}
+                            </button>
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => handleSort("predicted_bonus")}
+                              className="flex items-center justify-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              ⭐ Bonus {getSortIcon("predicted_bonus")}
+                            </button>
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => handleSort("cbit_percentage")}
+                              className="flex items-center justify-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              CBIT% {getSortIcon("cbit_percentage")}
+                            </button>
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => handleSort("ensemble_confidence")}
+                              className="flex items-center justify-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              Confidence {getSortIcon("ensemble_confidence")}
+                            </button>
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => handleSort("investment_risk")}
+                              className="flex items-center justify-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              Risk {getSortIcon("investment_risk")}
+                            </button>
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => handleSort("ownership_percentage")}
+                              className="flex items-center justify-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              Ownership {getSortIcon("ownership_percentage")}
+                            </button>
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => handleSort("current_price")}
+                              className="flex items-center justify-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              <DollarSign className="h-4 w-4" /> Price {getSortIcon("current_price")}
+                            </button>
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            <button 
+                              onClick={() => handleSort("availability_status")}
+                              className="flex items-center justify-center gap-2 font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                            >
+                              Status {getSortIcon("availability_status")}
+                            </button>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredProjections.map((projection: OpenFPLProjection, index: number) => (
+                          <tr 
+                            key={`${projection.player_id}-${index}`}
+                            className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 group"
+                          >
+                            {/* Player Info */}
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="text-2xl">{getPositionIcon(projection.position)}</div>
+                                <div>
+                                  <div className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors">
+                                    {projection.player_name}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <span className="font-medium">{projection.team_name}</span>
+                                    <Badge variant="outline" className="text-xs px-2 py-1">
+                                      {projection.position}
+                                    </Badge>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </div>
+                            </td>
 
-                          {/* Key Metrics */}
-                          <div className="grid grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-6">
-                            <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
-                              <div className="text-3xl font-bold text-blue-600">
+                            {/* Predicted Points */}
+                            <td className="px-6 py-4 text-center">
+                              <div className="text-2xl font-bold text-blue-600 bg-blue-50 rounded-lg py-2 px-3 inline-block border border-blue-200">
                                 {projection.predicted_points?.toFixed(1) || "0.0"}
                               </div>
-                              <div className="text-xs text-blue-700 font-medium">Pred Pts</div>
-                            </div>
-                            
-                            <div className="text-center p-4 bg-gray-50 rounded-xl border border-gray-200">
-                              <div className="text-xl font-semibold text-gray-700 flex items-center justify-center gap-1">
-                                <Clock className="h-4 w-4" />
+                            </td>
+
+                            {/* Minutes */}
+                            <td className="px-6 py-4 text-center">
+                              <div className="text-lg font-semibold text-gray-700 bg-gray-50 rounded-lg py-2 px-3 inline-block border border-gray-200">
                                 {projection.predicted_minutes || 0}'
                               </div>
-                              <div className="text-xs text-gray-600 font-medium">Minutes</div>
-                            </div>
+                            </td>
 
-                            <div className="text-center p-4 bg-green-50 rounded-xl border border-green-200">
-                              <div className="text-xl font-semibold text-green-600">
-                                ⚽ {projection.predicted_goals?.toFixed(2) || "0.00"}
+                            {/* Goals */}
+                            <td className="px-6 py-4 text-center">
+                              <div className="text-lg font-semibold text-green-600 bg-green-50 rounded-lg py-2 px-3 inline-block border border-green-200">
+                                {projection.predicted_goals?.toFixed(2) || "0.00"}
                               </div>
-                              <div className="text-xs text-green-700 font-medium">Goals</div>
-                            </div>
+                            </td>
 
-                            <div className="text-center p-4 bg-purple-50 rounded-xl border border-purple-200">
-                              <div className="text-xl font-semibold text-purple-600">
-                                🎯 {projection.predicted_assists?.toFixed(2) || "0.00"}
+                            {/* Assists */}
+                            <td className="px-6 py-4 text-center">
+                              <div className="text-lg font-semibold text-purple-600 bg-purple-50 rounded-lg py-2 px-3 inline-block border border-purple-200">
+                                {projection.predicted_assists?.toFixed(2) || "0.00"}
                               </div>
-                              <div className="text-xs text-purple-700 font-medium">Assists</div>
-                            </div>
+                            </td>
 
-                            <div className="text-center p-4 bg-indigo-50 rounded-xl border border-indigo-200">
-                              <div className="text-xl font-semibold text-indigo-600">
-                                🛡️ {projection.predicted_clean_sheets?.toFixed(2) || "0.00"}
+                            {/* Clean Sheets */}
+                            <td className="px-6 py-4 text-center">
+                              <div className="text-lg font-semibold text-indigo-600 bg-indigo-50 rounded-lg py-2 px-3 inline-block border border-indigo-200">
+                                {projection.predicted_clean_sheets?.toFixed(2) || "0.00"}
                               </div>
-                              <div className="text-xs text-indigo-700 font-medium">CS</div>
-                            </div>
+                            </td>
 
-                            <div className="text-center p-4 bg-orange-50 rounded-xl border border-orange-200">
-                              <div className="text-xl font-semibold text-orange-600">
-                                ⭐ {projection.predicted_bonus?.toFixed(2) || "0.00"}
+                            {/* Bonus */}
+                            <td className="px-6 py-4 text-center">
+                              <div className="text-lg font-semibold text-orange-600 bg-orange-50 rounded-lg py-2 px-3 inline-block border border-orange-200">
+                                {projection.predicted_bonus?.toFixed(2) || "0.00"}
                               </div>
-                              <div className="text-xs text-orange-700 font-medium">Bonus</div>
-                            </div>
-                          </div>
+                            </td>
 
-                          {/* Advanced Stats */}
-                          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-center">
-                            <div className="text-center p-4 bg-yellow-50 rounded-xl border border-yellow-200">
-                              <div className="text-xl font-bold text-yellow-600">
+                            {/* CBIT% */}
+                            <td className="px-6 py-4 text-center">
+                              <div className="text-lg font-bold text-yellow-600 bg-yellow-50 rounded-lg py-2 px-3 inline-block border border-yellow-200">
                                 {projection.cbit_percentage?.toFixed(1) || "0.0"}%
                               </div>
-                              <div className="text-xs text-yellow-700 font-medium">CBIT%</div>
-                            </div>
-                            
-                            <div className="text-center p-4 rounded-xl border">
-                              <div className={`text-xl font-bold px-3 py-1 rounded-lg ${getConfidenceColor(projection.ensemble_confidence || 0)}`}>
+                            </td>
+
+                            {/* Confidence */}
+                            <td className="px-6 py-4 text-center">
+                              <Badge className={`text-sm px-3 py-2 font-medium ${getConfidenceColor(projection.ensemble_confidence || 0)}`}>
                                 {projection.ensemble_confidence?.toFixed(1) || "0.0"}%
-                              </div>
-                              <div className="text-xs text-gray-600 font-medium mt-1">Confidence</div>
-                            </div>
-
-                            <div className="text-center">
-                              <Badge className={`text-lg px-4 py-2 ${getRiskColor(projection.investment_risk || "High")}`}>
-                                {projection.investment_risk || "High"} Risk
                               </Badge>
-                            </div>
+                            </td>
 
-                            <div className="text-center p-4 bg-gray-50 rounded-xl border border-gray-200">
-                              <div className="text-xl font-bold text-gray-700 flex items-center justify-center gap-1">
-                                <DollarSign className="h-4 w-4" />
+                            {/* Risk */}
+                            <td className="px-6 py-4 text-center">
+                              <Badge className={`text-sm px-3 py-2 font-medium ${getRiskColor(projection.investment_risk || "High")}`}>
+                                {projection.investment_risk || "High"}
+                              </Badge>
+                            </td>
+
+                            {/* Ownership */}
+                            <td className="px-6 py-4 text-center">
+                              <div className="text-lg font-semibold text-gray-700 bg-gray-50 rounded-lg py-2 px-3 inline-block border border-gray-200">
+                                {projection.ownership_percentage?.toFixed(1) || "0.0"}%
+                              </div>
+                            </td>
+
+                            {/* Price */}
+                            <td className="px-6 py-4 text-center">
+                              <div className="text-lg font-bold text-gray-900 bg-gray-50 rounded-lg py-2 px-3 inline-block border border-gray-200">
                                 {formatPrice(projection.current_price)}
                               </div>
-                              <div className="text-xs text-gray-600 font-medium">{projection.ownership_percentage?.toFixed(1) || "0.0"}% owned</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                            </td>
+
+                            {/* Availability Status */}
+                            <td className="px-6 py-4 text-center">
+                              <Badge className={`text-sm px-3 py-2 font-medium ${getAvailabilityColor(projection.availability_status || 100)}`}>
+                                {projection.availability_status === 100 ? "✅ Available" : 
+                                 projection.availability_status >= 75 ? "⚠️ Likely" :
+                                 projection.availability_status >= 50 ? "❓ 50/50" :
+                                 projection.availability_status >= 25 ? "⚠️ Doubt" : "❌ Out"}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
 
                   {/* Results Summary */}
