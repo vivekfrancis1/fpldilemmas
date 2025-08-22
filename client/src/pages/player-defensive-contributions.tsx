@@ -92,12 +92,15 @@ export default function PlayerDefensiveContributions() {
       historicalRate = historicalDefensivePerformers.forwards[playerName];
     }
     
+    // Skip goalkeepers - they don't contribute to CBIT/CBITR thresholds
+    if (playerData.element_type === 1) {
+      return null; // Exclude goalkeepers
+    }
+    
     // Position-based base probability of hitting thresholds
     let baseThreshold = 0.2;
     
-    if (playerData.element_type === 1) { // Goalkeepers
-      baseThreshold = 0.15; // GKs less likely to hit defensive thresholds
-    } else if (playerData.element_type === 2) { // Defenders (10+ CBIT)
+    if (playerData.element_type === 2) { // Defenders (10+ CBIT)
       baseThreshold = 0.45; // Defenders most likely to hit 10+ CBIT
     } else if (playerData.element_type === 3) { // Midfielders (12+ CBITR)
       baseThreshold = 0.35; // Midfielders good chance for 12+ CBITR
@@ -138,7 +141,7 @@ export default function PlayerDefensiveContributions() {
     return bootstrapData?.element_types.find(t => t.id === elementType)?.singular_name_short || '';
   };
 
-  // Generate data for next 6 gameweeks (2-7)
+  // Generate data for next 6 gameweeks (2-7) excluding goalkeepers
   const playerDefensiveData = useMemo(() => {
     if (!bootstrapData?.elements) return [];
     
@@ -146,7 +149,13 @@ export default function PlayerDefensiveContributions() {
     
     for (let gw = 2; gw <= 7; gw++) {
       for (const player of bootstrapData.elements) {
-        allData.push(generatePlayerDefensiveData(gw, player));
+        // Skip goalkeepers completely
+        if (player.element_type === 1) continue;
+        
+        const data = generatePlayerDefensiveData(gw, player);
+        if (data) { // Only add if data is not null
+          allData.push(data);
+        }
       }
     }
     
@@ -184,10 +193,13 @@ export default function PlayerDefensiveContributions() {
       );
     }
     
-    // Apply position filter
+    // Apply position filter (exclude goalkeepers)
     if (positionFilter !== "all") {
       players = players.filter(player => player.element_type.toString() === positionFilter);
     }
+    
+    // Always exclude goalkeepers
+    players = players.filter(player => player.element_type !== 1);
     
     // Apply team filter
     if (teamFilter !== "all") {
@@ -300,11 +312,13 @@ export default function PlayerDefensiveContributions() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Positions</SelectItem>
-                    {bootstrapData?.element_types.map(type => (
-                      <SelectItem key={type.id} value={type.id.toString()}>
-                        {type.singular_name}
-                      </SelectItem>
-                    ))}
+                    {bootstrapData?.element_types
+                      .filter(type => type.id !== 1) // Exclude goalkeepers
+                      .map(type => (
+                        <SelectItem key={type.id} value={type.id.toString()}>
+                          {type.singular_name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
 
