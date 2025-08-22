@@ -765,10 +765,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Goal Share endpoint - uses Team Goal Projections for consistency
+  // Goal Share endpoint - uses Team Goal Projections for consistency, supports multiple gameweeks
   app.get("/api/goal-share/:gameweek", async (req, res) => {
     try {
-      const gameweek = parseInt(req.params.gameweek) || 2;
+      const targetGameweek = parseInt(req.params.gameweek) || 2;
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -782,17 +782,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const fixturesData = await fixturesResponse.json();
       
-      console.log(`DEBUG: Goal Share API called for gameweek=${gameweek}`);
+      console.log(`DEBUG: Goal Share API called for gameweek=${targetGameweek}`);
       
-      // Generate team goal projections data using the same logic as the endpoint
-      const teams = bootstrapData.teams;
-      const teamProjections: any[] = [];
+      // Generate goal share data for all upcoming 6 gameweeks (GW2-GW7)
+      const allGoalShareData: any[] = [];
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
       
-      teams.forEach((team: any) => {
-        const gameweekProjections: any = {};
+      for (let gameweek = Math.max(2, currentGameweek + 1); gameweek <= Math.max(2, currentGameweek + 1) + 5; gameweek++) {
+        // Generate team goal projections data using the same logic as the endpoint
+        const teams = bootstrapData.teams;
+        const teamProjections: any[] = [];
         
-        // Generate projections for next 6 gameweeks (same as team-goal-projections endpoint)
-        for (let gw = gameweek; gw < gameweek + 6; gw++) {
+        teams.forEach((team: any) => {
+          const gameweekProjections: any = {};
+          
+          // Generate projections for this specific gameweek
+          for (let gw = gameweek; gw <= gameweek; gw++) {
           const gwFixtures = fixturesData.filter((fixture: any) => 
             !fixture.finished && 
             fixture.event === gw &&
@@ -885,16 +890,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections
+          });
         });
-      });
+        
+        // Generate goal share data using Team Goal Projections expected goals for this gameweek
+        const weekGoalShareData = generateGoalShareFromTeamProjections(bootstrapData, fixturesData, teamProjections, gameweek);
+        allGoalShareData.push(...weekGoalShareData);
+      }
       
-      // Generate goal share data using Team Goal Projections expected goals
-      const goalShareData = generateGoalShareFromTeamProjections(bootstrapData, fixturesData, teamProjections, gameweek);
+      console.log(`DEBUG: Generated ${allGoalShareData.length} total team entries for GW2-GW7 using Team Goal Projections`);
       
-      console.log(`DEBUG: Generated ${goalShareData.length} team entries for GW${gameweek} using Team Goal Projections`);
+      // Filter to requested gameweek if specific, otherwise return all
+      const filteredData = targetGameweek === 0 ? allGoalShareData : 
+        allGoalShareData.filter(item => item.gameweek === targetGameweek);
       
-      goalShareData.forEach(team => {
-        if (team.players) {
+      // Debug logging for key players
+      filteredData.forEach(team => {
+        if (team.players && team.gameweek === targetGameweek) {
           team.players.forEach(player => {
             if (player.name && (player.name.includes('Bowen') || player.name.includes('Salah') || player.name.includes('Haaland'))) {
               console.log(`GOAL_SHARE_API ${player.name} GW${team.gameweek}: goalShare=${player.goalShare}%, projectedGoals=${player.projectedGoals}, teamGoals=${team.expectedGoals}`);
@@ -903,7 +915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      res.json(goalShareData);
+      res.json(filteredData);
     } catch (error) {
       console.error("Error generating goal share data:", error);
       res.status(500).json({ error: "Failed to generate goal share data" });
@@ -957,10 +969,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Assist Share endpoint
+  // Assist Share endpoint - supports multiple gameweeks
   app.get("/api/assist-share/:gameweek", async (req, res) => {
     try {
-      const gameweek = parseInt(req.params.gameweek) || 2;
+      const targetGameweek = parseInt(req.params.gameweek) || 2;
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -974,8 +986,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const fixturesData = await fixturesResponse.json();
       
-      const assistShareData = generateAssistShareData(bootstrapData, fixturesData, 1, gameweek);
-      res.json(assistShareData);
+      // Generate assist share data for all upcoming 6 gameweeks (GW2-GW7)
+      const allAssistShareData: any[] = [];
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      for (let gw = Math.max(2, currentGameweek + 1); gw <= Math.max(2, currentGameweek + 1) + 5; gw++) {
+        const weekData = generateAssistShareData(bootstrapData, fixturesData, 1, gw);
+        allAssistShareData.push(...weekData);
+      }
+      
+      // Filter to requested gameweek if specific, otherwise return all
+      const filteredData = targetGameweek === 0 ? allAssistShareData : 
+        allAssistShareData.filter(item => item.gameweek === targetGameweek);
+      
+      res.json(filteredData);
     } catch (error) {
       console.error("Error generating assist share data:", error);
       res.status(500).json({ error: "Failed to generate assist share data" });

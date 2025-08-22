@@ -41,11 +41,11 @@ export default function AssistShare() {
     return nextEvent?.id || 2;
   }, [bootstrapData]);
 
-  // Use the dedicated assist-share API endpoint
+  // Use the dedicated assist-share API endpoint - fetch all gameweeks (GW2-GW7)
   const { data: assistShareData = [], isLoading: assistShareLoading } = useQuery<AssistShareData[]>({
-    queryKey: ["/api/assist-share", currentGameweek],
+    queryKey: ["/api/assist-share", 0], // 0 = fetch all gameweeks
     staleTime: 10 * 60 * 1000,
-    enabled: !!currentGameweek
+    enabled: true
   });
 
   // Filter data
@@ -98,7 +98,7 @@ export default function AssistShare() {
               Assist Involvement Share
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Team expected assists breakdown by player percentage share with data consistency
+              Team expected assists breakdown by player percentage share for next 6 gameweeks (GW2-GW7)
             </p>
           </div>
 

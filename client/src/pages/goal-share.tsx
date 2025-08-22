@@ -32,7 +32,7 @@ export default function GoalShare() {
   });
 
   const { data: goalShareData, isLoading: goalShareLoading } = useQuery({
-    queryKey: ["/api/goal-share", selectedGameweek === "all" ? "2" : selectedGameweek],
+    queryKey: ["/api/goal-share", 0], // 0 = fetch all gameweeks (GW2-GW7)
     staleTime: 10 * 60 * 1000,
   });
 
@@ -93,7 +93,7 @@ export default function GoalShare() {
               Goal Involvement Share
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Team expected goals breakdown by player percentage share based on Match Odds data
+              Team expected goals breakdown by player percentage share for next 6 gameweeks (GW2-GW7)
             </p>
           </div>
 
