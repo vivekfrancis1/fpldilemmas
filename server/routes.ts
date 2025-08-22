@@ -474,56 +474,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
       
-      // Generate predictions for players with high transfer activity
+      // Advanced price prediction algorithm based on FPL mechanics
       const predictions = elements
-        .filter((player: any) => {
-          const transfersIn = player.transfers_in_event || 0;
-          const transfersOut = player.transfers_out_event || 0;
-          const netTransfers = Math.abs(transfersIn - transfersOut);
-          return netTransfers > 30000; // Players likely to change price
-        })
-        .slice(0, 15) // Limit to 15 predictions
         .map((player: any) => {
-          const team = teams.find((t: any) => t.id === player.team);
-          const position = positions.find((p: any) => p.id === player.element_type);
           const transfersIn = player.transfers_in_event || 0;
           const transfersOut = player.transfers_out_event || 0;
           const netTransfers = transfersIn - transfersOut;
+          const ownership = parseFloat(player.selected_by_percent || "0");
+          const currentPrice = player.now_cost;
           
-          // Predict price change based on transfer momentum and ownership
-          const predictedChange = netTransfers > 150000 ? 1 : netTransfers < -150000 ? -1 : 0;
-          const confidence = Math.min(Math.abs(netTransfers) / 2000000 * 100, 95);
+          // Calculate price prediction using FPL's actual mechanics
+          // Price rises: Need net transfers > ownership threshold
+          // Price falls: Need net transfers < -ownership threshold
           
+          // Dynamic thresholds based on ownership (FPL uses tiered system)
+          let riseThreshold, fallThreshold;
+          
+          if (ownership < 5) {
+            // Low ownership players need fewer transfers
+            riseThreshold = 50000;
+            fallThreshold = -30000;
+          } else if (ownership < 15) {
+            // Medium ownership players
+            riseThreshold = 100000;
+            fallThreshold = -60000;
+          } else if (ownership < 30) {
+            // High ownership players
+            riseThreshold = 200000;
+            fallThreshold = -120000;
+          } else {
+            // Very high ownership players need massive transfers
+            riseThreshold = 400000;
+            fallThreshold = -250000;
+          }
+          
+          // Adjust thresholds based on price (higher priced players harder to move)
+          const priceMultiplier = Math.max(0.7, Math.min(1.5, currentPrice / 80));
+          riseThreshold *= priceMultiplier;
+          fallThreshold *= priceMultiplier;
+          
+          // Predict price change
+          let predictedChange = 0;
           let probability = "Low";
+          let confidence = 0;
           let reason = "Stable transfer activity";
           
-          if (Math.abs(netTransfers) > 200000) {
-            probability = "Very High";
-            reason = netTransfers > 0 ? "Massive transfer inflow" : "Massive transfer outflow";
-          } else if (Math.abs(netTransfers) > 100000) {
-            probability = "High";
-            reason = netTransfers > 0 ? "High transfer demand" : "High transfer exodus";
-          } else if (Math.abs(netTransfers) > 50000) {
-            probability = "Medium";
-            reason = "Moderate transfer activity";
+          if (netTransfers > riseThreshold) {
+            predictedChange = 1;
+            const excess = netTransfers - riseThreshold;
+            confidence = Math.min(95, 60 + (excess / riseThreshold) * 35);
+            
+            if (excess > riseThreshold * 0.5) {
+              probability = "Very High";
+              reason = `Massive transfer inflow (${(netTransfers/1000).toFixed(0)}k net) vs ${ownership}% ownership`;
+            } else if (excess > riseThreshold * 0.2) {
+              probability = "High";
+              reason = `Strong transfer demand (${(netTransfers/1000).toFixed(0)}k net) for ${ownership}% owned player`;
+            } else {
+              probability = "Medium";
+              reason = `Moderate transfer inflow crossing ownership threshold`;
+            }
+          } else if (netTransfers < fallThreshold) {
+            predictedChange = -1;
+            const excess = Math.abs(netTransfers) - Math.abs(fallThreshold);
+            confidence = Math.min(95, 60 + (excess / Math.abs(fallThreshold)) * 35);
+            
+            if (excess > Math.abs(fallThreshold) * 0.5) {
+              probability = "Very High";
+              reason = `Mass exodus (${(netTransfers/1000).toFixed(0)}k net) from ${ownership}% owned player`;
+            } else if (excess > Math.abs(fallThreshold) * 0.2) {
+              probability = "High";
+              reason = `Heavy selling pressure (${(netTransfers/1000).toFixed(0)}k net) vs ownership`;
+            } else {
+              probability = "Medium";
+              reason = `Significant transfer outflow approaching threshold`;
+            }
+          } else {
+            // Calculate how close to threshold
+            const riseProgress = Math.max(0, netTransfers / riseThreshold);
+            const fallProgress = Math.max(0, Math.abs(netTransfers) / Math.abs(fallThreshold));
+            const maxProgress = Math.max(riseProgress, fallProgress);
+            
+            if (maxProgress > 0.7) {
+              probability = "Medium";
+              confidence = Math.round(maxProgress * 50);
+              reason = netTransfers > 0 ? 
+                `Approaching rise threshold (${(netTransfers/1000).toFixed(0)}k of ${(riseThreshold/1000).toFixed(0)}k needed)` :
+                `Approaching fall threshold (${(netTransfers/1000).toFixed(0)}k of ${(fallThreshold/1000).toFixed(0)}k needed)`;
+            } else if (maxProgress > 0.4) {
+              probability = "Low";
+              confidence = Math.round(maxProgress * 40);
+              reason = `Moderate activity but below threshold for ${ownership}% owned player`;
+            } else {
+              confidence = Math.round(maxProgress * 20);
+              reason = `Stable - insufficient transfers relative to ${ownership}% ownership`;
+            }
           }
           
           return {
             player_id: player.id,
             player_name: player.web_name,
-            team_name: team?.short_name || "Unknown",
-            position: position?.singular_name_short || "Unknown",
-            current_price: player.now_cost,
+            team_name: teams.find((t: any) => t.id === player.team)?.short_name || "Unknown",
+            position: positions.find((p: any) => p.id === player.element_type)?.singular_name_short || "Unknown",
+            current_price: currentPrice,
             predicted_change: predictedChange,
             confidence: Math.round(confidence),
-            ownership_percentage: parseFloat(player.selected_by_percent || "0"),
+            ownership_percentage: ownership,
             net_transfers: netTransfers,
             transfers_in: transfersIn,
             transfers_out: transfersOut,
             reason: reason,
-            probability: probability
+            probability: probability,
+            rise_threshold: riseThreshold,
+            fall_threshold: fallThreshold
           };
-        });
+        })
+        .filter((prediction: any) => {
+          // Only show players with significant activity or high probability
+          return prediction.probability !== "Low" || Math.abs(prediction.net_transfers) > 30000;
+        })
+        .sort((a: any, b: any) => {
+          // Sort by confidence descending, then by net transfers
+          if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+          return Math.abs(b.net_transfers) - Math.abs(a.net_transfers);
+        })
+        .slice(0, 20); // Show top 20 predictions
       
       res.json(predictions);
     } catch (error) {
