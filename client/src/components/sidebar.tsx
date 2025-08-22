@@ -49,7 +49,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Analysis Tools", 
       items: [
         { path: "/projections", label: "Projections", icon: TrendingUp, description: "AI-powered player projections", popular: false },
-        { path: "/results-projections", label: "Goals & CS Odds", icon: Target, description: "Projected goals & clean sheets", popular: false },
+        { path: "/results-projections", label: "Match Odds", icon: Target, description: "Projected goals & clean sheets", popular: false },
         { path: "/team-goal-projections", label: "Team Goal Projections", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-cs-projections", label: "Team CS Projections", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },

@@ -111,7 +111,7 @@ export default function ProjectedGoalsCS() {
               <Target className="h-8 w-8 text-blue-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              PL GW{selectedGameweek === "current" ? currentGameweek : selectedGameweek}: Projected Goals & CS Odds
+              PL GW{selectedGameweek === "current" ? currentGameweek : selectedGameweek}: Match Odds
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
               Expected goals and clean sheet probabilities based on betting market analysis
@@ -164,7 +164,7 @@ export default function ProjectedGoalsCS() {
             <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
               <CardTitle className="flex items-center gap-3 text-xl">
                 <Target className="h-6 w-6" />
-                Projected Goals & CS Odds
+                Match Odds
                 <Badge className="bg-white/20 text-white border-white/30 ml-auto">
                   {filteredProjections.length} matches
                 </Badge>
@@ -255,7 +255,7 @@ export default function ProjectedGoalsCS() {
           {/* Info Panel */}
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle className="text-lg">About Projected Goals & CS Odds</CardTitle>
+              <CardTitle className="text-lg">About Match Odds</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
