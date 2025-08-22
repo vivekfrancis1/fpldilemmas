@@ -111,7 +111,7 @@ export default function ProjectedGoalsCS() {
               <Target className="h-8 w-8 text-blue-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              {selectedGameweek === "all" ? "PL Match Odds - Next 8 Gameweeks" : 
+              {selectedGameweek === "all" ? "PL Match Odds - Next 6 Gameweeks" : 
                `PL GW${selectedGameweek}: Match Odds`}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">

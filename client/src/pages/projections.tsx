@@ -42,7 +42,7 @@ export default function Projections() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("points");
-  const [weeks, setWeeks] = useState<number>(8);
+  const [weeks, setWeeks] = useState<number>(6);
   const [activeTab, setActiveTab] = useState<string>("points");
 
   // Auto-sort based on active tab
@@ -244,7 +244,7 @@ export default function Projections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 8 }, (_, i) => i + 1).map(week => (
+                      {Array.from({ length: 6 }, (_, i) => i + 1).map(week => (
                         <SelectItem key={week} value={week.toString()}>{week}</SelectItem>
                       ))}
                     </SelectContent>

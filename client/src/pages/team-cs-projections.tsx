@@ -21,7 +21,7 @@ interface TeamCSProjection {
 }
 
 export default function TeamCSProjections() {
-  const [weeks, setWeeks] = useState<number>(8);
+  const [weeks, setWeeks] = useState<number>(6);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
 
@@ -110,7 +110,7 @@ export default function TeamCSProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 8 }, (_, i) => i + 1).map(week => (
+                      {Array.from({ length: 6 }, (_, i) => i + 1).map(week => (
                         <SelectItem key={week} value={week.toString()}>{week}</SelectItem>
                       ))}
                     </SelectContent>
