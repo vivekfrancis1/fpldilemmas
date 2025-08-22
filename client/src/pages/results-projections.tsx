@@ -238,13 +238,13 @@ export default function ResultsProjections() {
                           <td className="px-4 py-4 text-center">
                             <div className="space-y-1">
                               <div className="flex justify-between text-xs">
-                                <span className="text-blue-600">Home: {match.homeWinProbability}%</span>
+                                <span className="text-blue-600">{match.homeTeamShort}: {match.homeWinProbability}%</span>
                               </div>
                               <div className="flex justify-between text-xs">
                                 <span className="text-gray-600">Draw: {match.drawProbability}%</span>
                               </div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-red-600">Away: {match.awayWinProbability}%</span>
+                                <span className="text-red-600">{match.awayTeamShort}: {match.awayWinProbability}%</span>
                               </div>
                             </div>
                           </td>
