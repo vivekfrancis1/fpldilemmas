@@ -51,7 +51,7 @@ export default function CaptainSelector({ data, isLoading }: CaptainSelectorProp
     const nextFixtures = fixtures.filter(f => f.event === nextGameweek);
 
     const candidates: CaptainCandidate[] = data.elements
-      .filter(player => player.total_points > 20) // Only players with some points
+      .filter(player => player.total_points > 5) // Only players with some points
       .map(player => {
         const team = data.teams.find(t => t.id === player.team)!;
         const position = data.element_types.find(et => et.id === player.element_type)!;
@@ -162,6 +162,11 @@ export default function CaptainSelector({ data, isLoading }: CaptainSelectorProp
         
         // Apply position and historical multipliers
         const captainScore = Math.min(rawCaptainScore * positionMultiplier * historicalMultiplier, 10);
+        
+        // Debug logging for development
+        if (player.total_points > 50) {
+          console.log(`Captain Debug: ${playerName} - Score: ${captainScore.toFixed(2)}, Form: ${formScore.toFixed(2)}, Fixture: ${fixtureScore.toFixed(2)}, ICT: ${ictScore.toFixed(2)}, Hist: ${historicalMultiplier}`);
+        }
         
         // Classification
         const isPopularPick = ownershipPercent > 15;
