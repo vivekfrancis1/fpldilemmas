@@ -56,6 +56,26 @@ export default function TeamGoalProjections() {
       });
   }, [projectionsData, selectedTeam, sortBy]);
 
+  const totalGoals = useMemo(() => {
+    if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, averagePerGame: 0 };
+    
+    const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+    const gameweekTotals: { [gameweek: number]: number } = {};
+    let overallTotal = 0;
+    
+    // Calculate totals for each gameweek
+    for (let i = 0; i < weeks; i++) {
+      const gwNumber = currentGW + i + 1;
+      const gwTotal = filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
+      gameweekTotals[gwNumber] = gwTotal;
+      overallTotal += gwTotal;
+    }
+    
+    const averagePerGame = weeks > 0 ? overallTotal / weeks : 0;
+    
+    return { gameweekTotals, overallTotal, averagePerGame };
+  }, [filteredProjections, weeks, bootstrapData]);
+
   const getConfidenceColor = (confidence: string) => {
     switch (confidence) {
       case 'High': return 'bg-green-100 text-green-800';
@@ -268,6 +288,49 @@ export default function TeamGoalProjections() {
                         </td>
                       </tr>
                     ))}
+                    
+                    {/* Total Row */}
+                    <tr className="bg-gray-100 border-t-2 border-gray-300 font-semibold">
+                      <td className="px-4 py-4 text-center text-sm font-bold text-gray-700 sticky left-0 bg-gray-100">
+                        -
+                      </td>
+                      
+                      <td className="px-4 py-4 sticky left-12 bg-gray-100">
+                        <div className="flex items-center">
+                          <div>
+                            <div className="text-sm font-bold text-gray-900">TOTAL</div>
+                            <div className="text-xs text-gray-600">All Teams</div>
+                          </div>
+                        </div>
+                      </td>
+                      
+                      {bootstrapData?.events && Array.from({ length: weeks }, (_, weekIndex) => {
+                        const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+                        const gwNumber = currentGW + weekIndex + 1;
+                        const gwTotal = totalGoals.gameweekTotals[gwNumber] || 0;
+                        return (
+                          <td key={weekIndex} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
+                            {gwTotal.toFixed(2)}
+                          </td>
+                        );
+                      })}
+                      
+                      <td className="px-4 py-4 text-center bg-orange-100">
+                        <span className="text-lg font-bold text-orange-900">
+                          {totalGoals.overallTotal.toFixed(2)}
+                        </span>
+                      </td>
+                      
+                      <td className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
+                        {totalGoals.averagePerGame.toFixed(2)}
+                      </td>
+                      
+                      <td className="px-4 py-4 text-center bg-gray-100">
+                        <Badge className="bg-blue-100 text-blue-800">
+                          Summary
+                        </Badge>
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
