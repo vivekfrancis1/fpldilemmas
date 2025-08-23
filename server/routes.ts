@@ -1069,7 +1069,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       },
       
       getConfidenceMultiplier: (teamId: number) => {
-        // Confidence multiplier removed - all teams use base multiplier of 1.0
+        const team = teamProjectionData[teamId];
+        if (!team) return 1.0;
+        
+        // 1.2x confidence multiplier for teams with low confidence (below 65%)
+        if (team.confidence < 0.65) return 1.2;
         return 1.0;
       }
     };
