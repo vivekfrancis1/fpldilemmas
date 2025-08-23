@@ -944,12 +944,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         19: { expectedGoalsPerGame: 1.27, variance: 0.50, confidence: 0.58 }, // West Ham - Limited creativity (48.1 goals)
         
         // Struggling attacking units - replacing relegated teams with promoted ones
-        8: { expectedGoalsPerGame: 1.06, variance: 0.48, confidence: 0.55 }, // Everton - Goal-shy team (40.2 goals)
-        7: { expectedGoalsPerGame: 1.45, variance: 0.45, confidence: 0.62 }, // Crystal Palace - Improved attack (55.1 goals)
+        8: { expectedGoalsPerGame: 1.06, variance: 0.48, confidence: 0.55 }, // Crystal Palace - Goal-shy team (40.2 goals)
+        7: { expectedGoalsPerGame: 1.45, variance: 0.45, confidence: 0.62 }, // Chelsea - Improved attack (55.1 goals)
         20: { expectedGoalsPerGame: 1.12, variance: 0.52, confidence: 0.50 }, // Wolves - Defensive setup (42.7 goals)
-        11: { expectedGoalsPerGame: 1.10, variance: 0.54, confidence: 0.48 }, // Leicester - Struggle to adapt
-        9: { expectedGoalsPerGame: 0.88, variance: 0.58, confidence: 0.38 }, // Burnley (2025/26 promoted) - Weakest attack
-        16: { expectedGoalsPerGame: 0.95, variance: 0.55, confidence: 0.40 }, // Leeds United (2025/26 promoted)
+        9: { expectedGoalsPerGame: 1.10, variance: 0.54, confidence: 0.48 }, // Everton - Struggle to adapt
+        6: { expectedGoalsPerGame: 0.88, variance: 0.58, confidence: 0.38 }, // Burnley (2025/26 promoted) - Weakest attack
+        11: { expectedGoalsPerGame: 0.95, variance: 0.55, confidence: 0.40 }, // Leeds United (2025/26 promoted)
         17: { expectedGoalsPerGame: 0.85, variance: 0.60, confidence: 0.36 }  // Sunderland (2025/26 promoted) - Championship level
       },
       
@@ -964,16 +964,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         2: { baseCleanSheetRate: 0.25, homeBonus: 0.06, confidence: 0.79 }, // Aston Villa - Martinez factor
         4: { baseCleanSheetRate: 0.23, homeBonus: 0.06, confidence: 0.77 }, // Brentford - Organized low block
         3: { baseCleanSheetRate: 0.21, homeBonus: 0.05, confidence: 0.74 }, // Bournemouth - Senesi improvement
-        8: { baseCleanSheetRate: 0.20, homeBonus: 0.05, confidence: 0.71 }, // Everton - Tarkowski-Branthwaite
-        11: { baseCleanSheetRate: 0.18, homeBonus: 0.04, confidence: 0.68 }, // Leicester - Experience
+        9: { baseCleanSheetRate: 0.20, homeBonus: 0.05, confidence: 0.71 }, // Everton - Tarkowski-Branthwaite
         14: { baseCleanSheetRate: 0.17, homeBonus: 0.04, confidence: 0.66 }, // Man United - Individual errors
         10: { baseCleanSheetRate: 0.16, homeBonus: 0.04, confidence: 0.63 }, // Fulham - Attacking focus
-        6: { baseCleanSheetRate: 0.14, homeBonus: 0.03, confidence: 0.60 }, // Chelsea - Transition period
-        7: { baseCleanSheetRate: 0.12, homeBonus: 0.03, confidence: 0.57 }, // Crystal Palace - Age concerns
+        7: { baseCleanSheetRate: 0.14, homeBonus: 0.03, confidence: 0.60 }, // Chelsea - Transition period
+        8: { baseCleanSheetRate: 0.12, homeBonus: 0.03, confidence: 0.57 }, // Crystal Palace - Age concerns
         18: { baseCleanSheetRate: 0.11, homeBonus: 0.03, confidence: 0.54 }, // Tottenham - High-line risks
         20: { baseCleanSheetRate: 0.09, homeBonus: 0.02, confidence: 0.48 }, // Wolves - Lack of pace
-        9: { baseCleanSheetRate: 0.08, homeBonus: 0.02, confidence: 0.42 }, // Burnley (2025/26 promoted) - Weak defense
-        16: { baseCleanSheetRate: 0.09, homeBonus: 0.02, confidence: 0.44 }, // Leeds United (2025/26 promoted) - Weak defense
+        6: { baseCleanSheetRate: 0.08, homeBonus: 0.02, confidence: 0.42 }, // Burnley (2025/26 promoted) - Weak defense
+        11: { baseCleanSheetRate: 0.09, homeBonus: 0.02, confidence: 0.44 }, // Leeds United (2025/26 promoted) - Weak defense
         17: { baseCleanSheetRate: 0.06, homeBonus: 0.02, confidence: 0.40 }  // Sunderland (2025/26 promoted) - Weakest defense
       },
       
@@ -1092,7 +1091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tierMultiplier = 1.01 + (tierSeed / 3333); // 101-104%
           } else if ([3, 10, 16, 19].includes(team.id)) { // Average attacking output
             tierMultiplier = 0.98 + (tierSeed / 2500); // 98-102%
-          } else if ([9, 16, 17].includes(team.id)) { // Newly promoted teams (2025/26) - no calibration boost
+          } else if ([6, 11, 17].includes(team.id)) { // Newly promoted teams (2025/26) - no calibration boost
             tierMultiplier = 0.90 + (tierSeed / 2000); // 90-95% (reduced for promoted teams)
           } else { // Other weaker attacking units
             tierMultiplier = 0.94 + (tierSeed / 1667); // 94-100%
@@ -1117,7 +1116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Confidence-based goal adjustment - higher confidence = higher output (fixed logic)
           let confidenceMultiplier = 1.0;
-          if ([9, 16, 17].includes(team.id)) {
+          if ([6, 11, 17].includes(team.id)) {
             // Newly promoted teams: no confidence boost
             confidenceMultiplier = 1.0; // No artificial boost for promoted teams
           } else if (teamBettingData.confidence >= 0.85) {
@@ -1334,7 +1333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tierMultiplier = 1.01 + (tierSeed / 3333); // 101-104%
           } else if ([3, 10, 16, 19].includes(team.id)) { // Average attacking output
             tierMultiplier = 0.98 + (tierSeed / 2500); // 98-102%
-          } else if ([9, 16, 17].includes(team.id)) { // Newly promoted teams (2025/26) - no calibration boost
+          } else if ([6, 11, 17].includes(team.id)) { // Newly promoted teams (2025/26) - no calibration boost
             tierMultiplier = 0.90 + (tierSeed / 2000); // 90-95% (reduced for promoted teams)
           } else { // Other weaker attacking units
             tierMultiplier = 0.94 + (tierSeed / 1667); // 94-100%
@@ -1357,7 +1356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
           let confidenceMultiplier = 1.0;
-          if ([9, 16, 17].includes(team.id)) {
+          if ([6, 11, 17].includes(team.id)) {
             // Newly promoted teams: no confidence boost  
             confidenceMultiplier = 1.0; // No artificial boost for promoted teams
           } else if (teamBettingData.confidence >= 0.85) {
