@@ -3003,6 +3003,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const historicalData: { [season: string]: any[] } = {};
       historicalData["current"] = currentYearActualData;
       
+      // Fetch historical data from past two years PLUS current year actual data for assist share weighting
+      const historicalSeasons = ["2024/25", "2023/24"];
+      
       await Promise.all(historicalSeasons.map(async (season) => {
         try {
           const historicalPlayers = await storage.getHistoricalPlayers(season);
