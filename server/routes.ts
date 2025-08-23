@@ -1413,7 +1413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Clean Sheet Projections endpoint
   app.get("/api/team-cs-projections", async (req, res) => {
     try {
-      const weeks = parseInt(req.query.weeks as string) || 35;
+      console.log(`DEBUG: Team CS Projections API called - generating all 38 gameweeks`);
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -1429,24 +1429,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      
+      console.log(`DEBUG: Processing all 38 gameweeks for clean sheets, current GW: ${currentGameweek}`);
       const bettingData = getSpreadBettingData();
       
       const teamProjections = teams.map((team: any) => {
-        // Limit fixtures to only the specified number of weeks
-        const maxGameweek = weeks === 35 ? 38 : currentGameweek + weeks;
-        const upcomingFixtures = fixturesData
+        // Get all fixtures for this team across all 38 gameweeks
+        const allFixtures = fixturesData
           .filter((f: any) => 
             (f.team_h === team.id || f.team_a === team.id) && 
-            !f.finished && 
-            f.event > currentGameweek && 
-            f.event <= maxGameweek
+            f.event >= 1 && f.event <= 38
           );
         
-        const projections = upcomingFixtures.map((fixture: any) => {
+        const projections = allFixtures.map((fixture: any) => {
           const isHome = fixture.team_h === team.id;
           const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
           
           if (!opponent) return null;
+          
+          // Check if fixture is finished - use actual clean sheet data, otherwise use projections
+          if (fixture.finished) {
+            // For finished fixtures, determine clean sheet: 0% if conceded, 100% if didn't concede
+            const goalsConceded = isHome ? (fixture.team_a_score || 0) : (fixture.team_h_score || 0);
+            const cleanSheetPercentage = goalsConceded === 0 ? 100 : 0;
+            return {
+              gameweek: fixture.event,
+              opponent: opponent.short_name,
+              isHome,
+              cleanSheetOdds: cleanSheetPercentage, // Actual clean sheet result (0 or 100)
+              expectedGoalsAgainst: goalsConceded, // Actual goals conceded
+              isActual: true // Flag to indicate this is actual data
+            };
+          }
           
           // Advanced spread betting market-based clean sheet calculation with statistical modeling
           const teamBettingData = bettingData.teamCleanSheetRates[team.id] || { baseCleanSheetRate: 0.25, homeBonus: 0.05, confidence: 0.70 };
@@ -1539,8 +1553,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }).filter(Boolean);
         
-        const averageCleanSheetOdds = projections.length > 0 ? 
-          projections.reduce((sum: number, p: any) => sum + p.cleanSheetOdds, 0) / projections.length : 0;
+        // Calculate totals and averages across all 38 gameweeks
+        const allGameweeks = Array.from({ length: 38 }, (_, i) => i + 1);
+        const totalCSProbability = allGameweeks.reduce((sum, gw) => {
+          const projection = projections.find(p => p && p.gameweek === gw);
+          return sum + (projection ? projection.cleanSheetOdds : 0);
+        }, 0);
+        const averageCleanSheetOdds = totalCSProbability / 38;
         
         // Convert projections array to gameweekProjections object
         const gameweekProjections: { [gameweek: number]: number } = {};
@@ -1550,7 +1569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Elite-level confidence calculation using advanced statistical market analysis
         const teamBettingData = bettingData.teamCleanSheetRates[team.id] || { confidence: 0.70 };
-        const totalCSProbability = Math.round(averageCleanSheetOdds * projections.length * 10) / 10;
+        const roundedTotalCSProbability = Math.round(totalCSProbability * 10) / 10;
         let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
         
         // Advanced multi-dimensional confidence assessment
@@ -1579,7 +1598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections,
-          totalCSProbability: Math.round(totalCSProbability * 10) / 10,
+          totalCSProbability: roundedTotalCSProbability,
           averageCSProbability: Math.round(averageCleanSheetOdds * 10) / 10,
           confidence,
           position: 0 // Will be set after sorting

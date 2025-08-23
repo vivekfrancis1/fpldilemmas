@@ -21,7 +21,6 @@ interface TeamCSProjection {
 }
 
 export default function TeamCSProjections() {
-  const [weeks, setWeeks] = useState<number>(6);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("average");
 
@@ -30,7 +29,7 @@ export default function TeamCSProjections() {
   });
 
   const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamCSProjection[]>({
-    queryKey: [`/api/team-cs-projections?weeks=${weeks}`],
+    queryKey: ["/api/team-cs-projections"],
   });
 
   const filteredProjections = useMemo(() => {
@@ -71,9 +70,9 @@ export default function TeamCSProjections() {
     return 'bg-red-50 text-red-800';
   };
 
-  // Show gameweeks 2-7 for 6 weeks
+  // Show all 38 gameweeks
   const getGameweeks = () => {
-    return Array.from({ length: weeks }, (_, i) => 2 + i);
+    return Array.from({ length: 38 }, (_, i) => i + 1);
   };
 
   if (isLoading || projectionsLoading) {
@@ -101,7 +100,7 @@ export default function TeamCSProjections() {
               Team CS Projections
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Clean sheet probabilities for each team over the next {weeks === 35 ? 'remaining' : weeks} gameweeks
+              Clean sheet probabilities for each team across all 38 gameweeks - actual results for completed games, projections for upcoming games
             </p>
           </div>
 
@@ -109,23 +108,6 @@ export default function TeamCSProjections() {
           <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex flex-wrap gap-4 items-end">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Weeks:</label>
-                  <Select value={weeks.toString()} onValueChange={(v) => setWeeks(parseInt(v))}>
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="6">6 weeks</SelectItem>
-                      <SelectItem value="10">10 weeks</SelectItem>
-                      <SelectItem value="15">15 weeks</SelectItem>
-                      <SelectItem value="20">20 weeks</SelectItem>
-                      <SelectItem value="25">25 weeks</SelectItem>
-                      <SelectItem value="30">30 weeks</SelectItem>
-                      <SelectItem value="35">Rest of Season</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-gray-700">Team:</label>
@@ -153,13 +135,9 @@ export default function TeamCSProjections() {
                     <SelectContent>
                       <SelectItem value="average">CS/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
-                      {bootstrapData?.events && Array.from({ length: weeks }, (_, i) => {
-                        const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-                        const gwNumber = currentGW + i + 1;
-                        return (
-                          <SelectItem key={`gw${gwNumber}`} value={`gw${gwNumber}`}>GW{gwNumber}</SelectItem>
-                        );
-                      })}
+                      {Array.from({ length: 38 }, (_, i) => (
+                        <SelectItem key={`gw${i + 1}`} value={`gw${i + 1}`}>GW{i + 1}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -172,7 +150,7 @@ export default function TeamCSProjections() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Team CS Projections: Next {weeks === 35 ? 'Remaining' : weeks}GW
+                Team CS Projections: All 38 Gameweeks
                 <Badge variant="outline" className="ml-2">
                   {filteredProjections.length} teams
                 </Badge>
@@ -189,9 +167,8 @@ export default function TeamCSProjections() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
                         Team
                       </th>
-                      {bootstrapData?.events && Array.from({ length: weeks }, (_, i) => {
-                        const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-                        const gwNumber = currentGW + i + 1;
+                      {Array.from({ length: 38 }, (_, i) => {
+                        const gwNumber = i + 1;
                         return (
                           <th 
                             key={gwNumber} 
@@ -236,13 +213,12 @@ export default function TeamCSProjections() {
                           </div>
                         </td>
                         
-                        {bootstrapData?.events && Array.from({ length: weeks }, (_, weekIndex) => {
-                          const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-                          const gwNumber = currentGW + weekIndex + 1;
+                        {Array.from({ length: 38 }, (_, weekIndex) => {
+                          const gwNumber = weekIndex + 1;
                           const csPercentage = team.gameweekProjections[gwNumber] || 0;
                           return (
                             <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getCSColor(csPercentage)}`}>
-                              {csPercentage}%
+                              {csPercentage > 0 ? `${csPercentage}%` : "-"}
                             </td>
                           );
                         })}
