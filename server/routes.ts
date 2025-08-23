@@ -1985,6 +1985,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Processing all 38 gameweeks, current GW: ${currentGameweek}`);
       
+      // Check which gameweeks are COMPLETELY finished (all 10 fixtures done) - SAME LOGIC AS GOALS AGAINST
+      const completeGameweeks = new Set();
+      for (let gw = 1; gw <= 38; gw++) {
+        const gameweekFixtures = fixturesData.filter((f: any) => f.event === gw);
+        const finishedFixtures = gameweekFixtures.filter((f: any) => f.finished);
+        
+        if (gameweekFixtures.length > 0 && finishedFixtures.length === gameweekFixtures.length) {
+          completeGameweeks.add(gw);
+          console.log(`DEBUG: Goals Scored - GW${gw} COMPLETE - All ${gameweekFixtures.length} fixtures finished, using ACTUAL data`);
+        } else if (gameweekFixtures.length > 0) {
+          console.log(`DEBUG: Goals Scored - GW${gw} INCOMPLETE - ${finishedFixtures.length}/${gameweekFixtures.length} fixtures finished, using PROJECTIONS`);
+        }
+      }
+      
       const teamProjections = teams.map((team: any) => {
         // Get ALL fixtures for this team across all 38 gameweeks
         const allFixtures = fixturesData
@@ -1999,14 +2013,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (!opponent) return null;
           
-          // Check if fixture is finished - use actual goals, otherwise use projections
-          if (fixture.finished) {
-            // For finished fixtures, use actual goals scored
+          // Use actual data only if the ENTIRE gameweek is complete - PERFECT CONSISTENCY WITH GOALS AGAINST
+          if (completeGameweeks.has(fixture.event)) {
+            // For complete gameweeks, use actual goals scored
             const actualGoals = isHome ? (fixture.team_h_score || 0) : (fixture.team_a_score || 0);
+            console.log(`DEBUG: Goals Scored - GW${fixture.event} ACTUAL - ${team.short_name} scored: ${actualGoals} goals`);
             return {
               gameweek: fixture.event,
               opponent: opponent.short_name,
-              expectedGoals: actualGoals, // Actual goals for finished games
+              expectedGoals: actualGoals, // Actual goals for complete gameweeks
               isHome: isHome,
               isActual: true // Flag to indicate this is actual data
             };
@@ -4031,6 +4046,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
+      // Check which gameweeks are COMPLETELY finished (all 10 fixtures done)
+      const completeGameweeks = new Set();
+      for (let gw = 1; gw <= 38; gw++) {
+        const gameweekFixtures = fixturesData.filter((f: any) => f.event === gw);
+        const finishedFixtures = gameweekFixtures.filter((f: any) => f.finished);
+        
+        if (gameweekFixtures.length > 0 && finishedFixtures.length === gameweekFixtures.length) {
+          completeGameweeks.add(gw);
+          console.log(`DEBUG: GW${gw} COMPLETE - All ${gameweekFixtures.length} fixtures finished, using ACTUAL data`);
+        } else if (gameweekFixtures.length > 0) {
+          console.log(`DEBUG: GW${gw} INCOMPLETE - ${finishedFixtures.length}/${gameweekFixtures.length} fixtures finished, using PROJECTIONS`);
+        }
+      }
+
       // Create realistic defensive variance while maintaining mathematical consistency
       fixturesData.forEach((fixture: any) => {
         if (fixture.event >= 1 && fixture.event <= 38) {
@@ -4038,9 +4067,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const awayTeamAgainst = teamsGoalsAgainst.get(fixture.team_a);
           
           if (homeTeamAgainst && awayTeamAgainst) {
-            // Check if fixture is finished - use actual goals conceded, otherwise apply defensive variance
-            if (fixture.finished) {
-              // For finished fixtures, use actual goals conceded (no scaling)
+            // Use actual data only if the ENTIRE gameweek is complete
+            if (completeGameweeks.has(fixture.event)) {
+              // For complete gameweeks, use actual goals conceded
               homeTeamAgainst.gameweekProjections[fixture.event] = fixture.team_a_score || 0;
               awayTeamAgainst.gameweekProjections[fixture.event] = fixture.team_h_score || 0;
               console.log(`DEBUG: GW${fixture.event} ACTUAL - Home conceded: ${fixture.team_a_score || 0}, Away conceded: ${fixture.team_h_score || 0}`);
@@ -4110,22 +4139,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Apply normalization while preserving actual data for finished fixtures
       let totalGoalsAgainst = 0;
       Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
-        // Apply normalization ONLY to projected gameweeks, preserve actual data for finished fixtures
+        // Apply normalization ONLY to projected gameweeks, preserve actual data for complete gameweeks
         Object.keys(team.gameweekProjections).forEach((gw: any) => {
           if (typeof team.gameweekProjections[gw] === 'number') {
-            // Check if this gameweek has finished fixtures - if so, preserve actual data
             const gameweekNumber = parseInt(gw);
-            const hasFinishedFixture = fixturesData.some((fixture: any) => 
-              fixture.event === gameweekNumber && 
-              fixture.finished && 
-              (fixture.team_h === team.id || fixture.team_a === team.id)
-            );
             
-            if (hasFinishedFixture) {
-              // Keep actual data unchanged for finished fixtures
+            if (completeGameweeks.has(gameweekNumber)) {
+              // Keep actual data unchanged for complete gameweeks
               console.log(`DEBUG: GW${gw} Team ${team.teamShort} - PRESERVING ACTUAL: ${team.gameweekProjections[gw]} goals conceded`);
             } else {
-              // Apply normalization only to projected data
+              // Apply normalization only to projected gameweeks
               team.gameweekProjections[gw] = Math.round(team.gameweekProjections[gw] * normalizationFactor * 100) / 100;
             }
           }
