@@ -361,14 +361,7 @@ export default function OpenFPLProjections() {
                                 <th className="px-2 py-3 text-center min-w-[50px] font-semibold text-gray-900">Team</th>
                                 <th className="px-2 py-3 text-center min-w-[50px] font-semibold text-gray-900">Pos</th>
                                 <th className="px-2 py-3 text-center min-w-[60px] font-semibold text-gray-900">Price</th>
-                                <th className="px-2 py-3 text-center min-w-[60px] font-semibold text-gray-900">
-                                  <button 
-                                    onClick={() => handleTableSort("minutes_total")}
-                                    className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors"
-                                  >
-                                    Mins {getTableSortIcon("minutes_total")}
-                                  </button>
-                                </th>
+
                                 <th className="px-2 py-3 text-center min-w-[60px] font-semibold text-gray-900">
                                   <button 
                                     onClick={() => handleTableSort("ownership_total")}
@@ -510,11 +503,6 @@ export default function OpenFPLProjections() {
                                       </td>
                                       <td className="px-2 py-3 text-center">
                                         <span className="text-sm font-medium">£{(player.current_price / 10).toFixed(1)}m</span>
-                                      </td>
-                                      <td className="px-2 py-3 text-center">
-                                        <span className="text-sm font-medium text-blue-700">
-                                          {Math.round(group.minutesTotal)}'
-                                        </span>
                                       </td>
                                       <td className="px-2 py-3 text-center">
                                         <span className="text-sm font-medium text-purple-700">
