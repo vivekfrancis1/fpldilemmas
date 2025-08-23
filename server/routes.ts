@@ -4043,10 +4043,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Team Goals Against Projections endpoint - PERFECT MATHEMATICAL MIRROR of Team Goal Projections
+  // Team Goals Against Projections endpoint - PERFECT 1:1 MATHEMATICAL MIRROR
   app.get("/api/team-goals-against-projections", async (req, res) => {
     try {
-      console.log(`DEBUG: Team Goals Against API - fetching Team Goal projections for perfect mirror`);
+      console.log(`DEBUG: Creating PERFECT 1:1 mirror - Goals Against = Goals Scored exactly`);
       
       // Fetch Team Goal projections to create perfect mirror
       const teamGoalResponse = await fetch(`http://localhost:5000/api/team-goal-projections`);
@@ -4055,6 +4055,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const teamGoalProjections = await teamGoalResponse.json();
+      
+      // Calculate exact total from goals scored for verification
+      const exactGoalsScoredTotal = teamGoalProjections.reduce((sum: number, team: any) => sum + team.totalGoals, 0);
+      console.log(`DEBUG: Goals Scored Total: ${exactGoalsScoredTotal.toFixed(2)} - Goals Against will match EXACTLY`);
+      
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
         fetch("https://fantasy.premierleague.com/api/fixtures/")
@@ -4064,17 +4069,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = await fixturesResponse.json();
       const teams = bootstrapData.teams;
       
-      console.log(`DEBUG: Creating perfect mirror - Team A goals vs Team B = Team B goals against from Team A`);
-      
-      // Create goals against projections by flipping Team Goal projections  
+      // Initialize goals against with zeros for all teams
       const teamsGoalsAgainst = new Map();
       teams.forEach((team: any) => {
+        const gameweekProjections: any = {};
+        for (let gw = 1; gw <= 38; gw++) {
+          gameweekProjections[gw] = 0;
+        }
+        
         teamsGoalsAgainst.set(team.id, {
           id: team.id,
           team: team.short_name,
           teamShort: team.short_name,
           teamName: team.name,
-          gameweekProjections: {},
+          gameweekProjections: gameweekProjections,
           totalGoalsAgainst: 0,
           averageGoalsAgainstPerGame: 0,
           confidence: 'Medium',
@@ -4082,47 +4090,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
-      // Define defensive tier multipliers for realistic variance while maintaining mathematical consistency
-      const getDefensiveTier = (teamId: number): string => {
-        const tierMapping: { [key: number]: string } = {
-          1: 'elite',   // Arsenal - elite defense
-          13: 'elite',  // Man City - elite defense  
-          12: 'elite',  // Liverpool - elite defense
-          6: 'strong',  // Brighton - strong defense
-          15: 'strong', // Newcastle - strong defense
-          2: 'strong',  // Aston Villa - strong defense
-          16: 'strong', // Nottingham Forest - strong defense
-          5: 'strong',  // Brentford - strong defense
-          7: 'average', // Chelsea - average defense
-          11: 'average',// Everton - average defense
-          18: 'average',// Tottenham - average defense
-          14: 'average',// Man United - average defense
-          4: 'average', // Bournemouth - average defense
-          10: 'average',// Fulham - average defense
-          20: 'average',// West Ham - average defense
-          3: 'weak',    // Brentford - weak defense
-          8: 'weak',    // Crystal Palace - weak defense
-          9: 'weak',    // Leicester - weak defense
-          17: 'promoted', // Sheffield United - promoted defense
-          19: 'promoted'  // Luton Town - promoted defense
-        };
-        return tierMapping[teamId] || 'average';
-      };
-
-      // Get defensive multipliers from unified admin settings (consistent with admin portal)
-      const getDefensiveMultiplier = (tier: string): number => {
-        switch (tier) {
-          case 'elite': return unifiedProjectionSettings.eliteDefenseMultiplier;
-          case 'strong': return unifiedProjectionSettings.strongDefenseMultiplier;
-          case 'average': return unifiedProjectionSettings.averageDefenseMultiplier;
-          case 'weak': return unifiedProjectionSettings.weakDefenseMultiplier;
-          case 'promoted': return unifiedProjectionSettings.promotedDefenseMultiplier;
-          default: return unifiedProjectionSettings.averageDefenseMultiplier;
+      // Create PERFECT 1:1 mirror by processing fixtures
+      fixturesData.forEach((fixture: any) => {
+        if (fixture.event >= 1 && fixture.event <= 38) {
+          const homeTeamGoals = teamGoalProjections.find((t: any) => t.id === fixture.team_h);
+          const awayTeamGoals = teamGoalProjections.find((t: any) => t.id === fixture.team_a);
+          
+          if (homeTeamGoals && awayTeamGoals) {
+            const homeTeamScoredThisGW = homeTeamGoals.gameweekProjections[fixture.event] || 0;
+            const awayTeamScoredThisGW = awayTeamGoals.gameweekProjections[fixture.event] || 0;
+            
+            // PERFECT MIRROR: Home goals scored = Away goals conceded (and vice versa)
+            const homeTeamAgainst = teamsGoalsAgainst.get(fixture.team_h);
+            const awayTeamAgainst = teamsGoalsAgainst.get(fixture.team_a);
+            
+            if (homeTeamAgainst && awayTeamAgainst) {
+              homeTeamAgainst.gameweekProjections[fixture.event] = awayTeamScoredThisGW;
+              awayTeamAgainst.gameweekProjections[fixture.event] = homeTeamScoredThisGW;
+            }
+          }
         }
-      };
+      });
+      
+      // Calculate totals from perfect mirror data (no complex normalization)
+      let totalGoalsAgainst = 0;
+      Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
+        let teamTotal = 0;
+        Object.values(team.gameweekProjections).forEach((goals: any) => {
+          if (typeof goals === 'number') {
+            teamTotal += goals;
+          }
+        });
+        
+        team.totalGoalsAgainst = Math.round(teamTotal * 100) / 100;
+        team.averageGoalsAgainstPerGame = Math.round((teamTotal / 38) * 100) / 100;
+        totalGoalsAgainst += team.totalGoalsAgainst;
+        
+        // Set confidence based on defensive quality
+        team.confidence = team.averageGoalsAgainstPerGame <= 1.0 ? 'High' : 
+                         team.averageGoalsAgainstPerGame <= 1.5 ? 'Medium' : 'Low';
+      });
+      
+      console.log(`DEBUG: PERFECT MIRROR SUCCESS - Goals Scored: ${exactGoalsScoredTotal.toFixed(2)}, Goals Against: ${totalGoalsAgainst.toFixed(2)}`);
+      
+      // Convert to array and sort by goals against (best defense first)
+      const finalProjections = Array.from(teamsGoalsAgainst.values())
+        .sort((a, b) => a.totalGoalsAgainst - b.totalGoalsAgainst)
+        .map((team, index) => ({
+          ...team,
+          position: index + 1
+        }));
 
-      // First pass: Calculate base goals against from mirror logic
-      const baseGoalsAgainst = new Map();
+      res.json(finalProjections);
+    } catch (error) {
+      console.error("Error generating team goals against projections:", error);
+      res.status(500).json({ error: "Failed to generate goals against projections" });
+    }
+  });
+
+  // Match Odds (Projected Goals & CS) endpoint - pure aggregator of Team Goal and CS projection data
+  app.get("/api/projected-goals-cs", async (req, res) => {
+    try {
+      console.log(`DEBUG: Match Projections API called - generating all 38 gameweeks`);
+      
+      // Fetch data ONLY from Team Goal and CS projection endpoints
+      const [goalProjectionsResponse, csProjectionsResponse, fixturesResponse] = await Promise.all([
+        fetch(`http://localhost:5000/api/team-goal-projections`),
+        fetch(`http://localhost:5000/api/team-cs-projections`),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!goalProjectionsResponse.ok || !csProjectionsResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch projection data");
+      }
+      
+      const goalProjections = await goalProjectionsResponse.json();
+      const csProjections = await csProjectionsResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      
+      // Create team lookup from projection data
+      const teamLookup = new Map();
       fixturesData.forEach((fixture: any) => {
         if (fixture.event >= 1 && fixture.event <= 38) {
           const homeTeam = teamsGoalsAgainst.get(fixture.team_h);
