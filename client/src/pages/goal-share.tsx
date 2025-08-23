@@ -179,7 +179,7 @@ export default function GoalShare() {
                           <CardTitle className="text-xl font-bold text-gray-900">{team.teamName}</CardTitle>
                           <p className="text-sm text-gray-500">
                             {selectedSeason === "current" ? "Expected Goals:" : "Actual Goals:"} 
-                            <span className="font-semibold text-gray-700">{team.expectedGoals.toFixed(0)}</span>
+                            <span className="font-semibold text-gray-700">{selectedSeason === "current" ? team.expectedGoals.toFixed(2) : team.expectedGoals.toFixed(0)}</span>
                           </p>
                         </div>
                       </div>
