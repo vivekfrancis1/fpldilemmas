@@ -35,7 +35,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Most Popular",
       items: [
         { path: "/", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: true },
-        { path: "/fixtures", label: "Fixtures", icon: Calendar, description: "Fixture difficulty analysis", popular: true }
+        { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar, description: "Fixture difficulty analysis", popular: true }
       ]
     },
     {
