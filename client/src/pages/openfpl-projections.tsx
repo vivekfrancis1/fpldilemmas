@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface BootstrapData {
   elements: any[];
@@ -43,10 +44,11 @@ interface OpenFPLProjection {
 export default function OpenFPLProjections() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
-  const [horizonFilter, setHorizonFilter] = useState("1");
-  const [gameweekFilter, setGameweekFilter] = useState("next");
+  const [horizonFilter, setHorizonFilter] = useState("6");
+  const [gameweekFilter, setGameweekFilter] = useState("all");
   const [minOwnership, setMinOwnership] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [activeMetric, setActiveMetric] = useState("predicted_points");
   const [sortBy, setSortBy] = useState<keyof OpenFPLProjection>("predicted_points");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
@@ -339,232 +341,136 @@ export default function OpenFPLProjections() {
                     </div>
                   </div>
 
-                  {/* Enhanced Scrollable Table - Full Width */}
-                  <div className="w-full overflow-x-auto overflow-y-auto max-h-[70vh] bg-white rounded-xl md:rounded-2xl border-2 border-gray-200 shadow-lg">
-                    <table className="text-xs md:text-sm min-w-[1000px] w-max">
-                      <thead className="sticky top-0 z-10">
-                        <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
-                          <th className="px-2 md:px-3 py-2 text-left min-w-[140px]">
-                            <button 
-                              onClick={() => handleSort("player_name")}
-                              className="flex items-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              Player {getSortIcon("player_name")}
-                            </button>
-                          </th>
-                          <th className="px-1 md:px-2 py-2 text-center min-w-[50px]">
-                            <button 
-                              onClick={() => handleSort("predicted_points")}
-                              className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              Pts {getSortIcon("predicted_points")}
-                            </button>
-                          </th>
-                          <th className="px-1 md:px-2 py-2 text-center min-w-[60px]">
-                            <button 
-                              onClick={() => handleSort("predicted_minutes")}
-                              className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              <Clock className="h-3 w-3" /> Min {getSortIcon("predicted_minutes")}
-                            </button>
-                          </th>
-                          <th className="px-2 py-2 text-center min-w-[70px]">
-                            <button 
-                              onClick={() => handleSort("predicted_goals")}
-                              className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              ⚽ Goals {getSortIcon("predicted_goals")}
-                            </button>
-                          </th>
-                          <th className="px-2 py-2 text-center min-w-[70px]">
-                            <button 
-                              onClick={() => handleSort("predicted_assists")}
-                              className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              🎯 Assists {getSortIcon("predicted_assists")}
-                            </button>
-                          </th>
-                          <th className="px-2 py-2 text-center min-w-[60px]">
-                            <button 
-                              onClick={() => handleSort("predicted_clean_sheets")}
-                              className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              🛡️ CS {getSortIcon("predicted_clean_sheets")}
-                            </button>
-                          </th>
-                          <th className="px-2 py-2 text-center min-w-[60px]">
-                            <button 
-                              onClick={() => handleSort("predicted_bonus")}
-                              className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              ⭐ Bonus {getSortIcon("predicted_bonus")}
-                            </button>
-                          </th>
-                          <th className="px-2 py-2 text-center min-w-[60px]">
-                            <button 
-                              onClick={() => handleSort("cbit_percentage")}
-                              className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              CBIT% {getSortIcon("cbit_percentage")}
-                            </button>
-                          </th>
-                          <th className="px-2 py-2 text-center min-w-[80px]">
-                            <button 
-                              onClick={() => handleSort("ensemble_confidence")}
-                              className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              Confidence {getSortIcon("ensemble_confidence")}
-                            </button>
-                          </th>
-                          <th className="px-2 py-2 text-center min-w-[60px]">
-                            <button 
-                              onClick={() => handleSort("investment_risk")}
-                              className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              Risk {getSortIcon("investment_risk")}
-                            </button>
-                          </th>
-                          <th className="px-2 py-2 text-center min-w-[80px]">
-                            <button 
-                              onClick={() => handleSort("ownership_percentage")}
-                              className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              Ownership% {getSortIcon("ownership_percentage")}
-                            </button>
-                          </th>
-                          <th className="px-2 py-2 text-center min-w-[60px]">
-                            <button 
-                              onClick={() => handleSort("current_price")}
-                              className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              <DollarSign className="h-3 w-3" /> Price {getSortIcon("current_price")}
-                            </button>
-                          </th>
-                          <th className="px-2 py-2 text-center min-w-[70px]">
-                            <button 
-                              onClick={() => handleSort("availability_status")}
-                              className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                            >
-                              Fitness {getSortIcon("availability_status")}
-                            </button>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {filteredProjections.map((projection: OpenFPLProjection, index: number) => (
-                          <tr 
-                            key={`${projection.player_id}-${index}`}
-                            className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-150 group text-xs"
-                          >
-                            {/* Player Info */}
-                            <td className="px-2 md:px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <div className="text-sm">{getPositionIcon(projection.position)}</div>
-                                <div className="min-w-0">
-                                  <div className="font-semibold text-gray-900 text-xs md:text-sm group-hover:text-blue-600 transition-colors truncate">
-                                    {projection.player_name}
-                                  </div>
-                                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                                    <span className="font-medium truncate">{projection.team_name}</span>
-                                    <Badge variant="outline" className="text-xs px-1 py-0 hidden sm:inline-block">
-                                      {projection.position}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
+                  {/* Metric Tabs with Gameweek Columns */}
+                  <Tabs value={activeMetric} onValueChange={setActiveMetric} className="w-full">
+                    <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 mb-6">
+                      <TabsTrigger value="predicted_points" className="text-xs">Pts</TabsTrigger>
+                      <TabsTrigger value="predicted_minutes" className="text-xs">Mins</TabsTrigger>
+                      <TabsTrigger value="predicted_goals" className="text-xs">Goals</TabsTrigger>
+                      <TabsTrigger value="predicted_assists" className="text-xs">Assists</TabsTrigger>
+                      <TabsTrigger value="predicted_clean_sheets" className="text-xs">CS</TabsTrigger>
+                      <TabsTrigger value="predicted_bonus" className="text-xs">Bonus</TabsTrigger>
+                      <TabsTrigger value="cbit_percentage" className="text-xs">CBIT%</TabsTrigger>
+                      <TabsTrigger value="ownership_percentage" className="text-xs">Own%</TabsTrigger>
+                    </TabsList>
 
-                            {/* Predicted Points */}
-                            <td className="px-1 md:px-2 py-2 text-center">
-                              <div className="text-xs md:text-sm font-bold text-blue-600 bg-blue-50 rounded py-1 px-1 md:px-2 inline-block border border-blue-200">
-                                {projection.predicted_points?.toFixed(1) || "0.0"}
-                              </div>
-                            </td>
+                    {['predicted_points', 'predicted_minutes', 'predicted_goals', 'predicted_assists', 'predicted_clean_sheets', 'predicted_bonus', 'cbit_percentage', 'ownership_percentage'].map((metric) => (
+                      <TabsContent key={metric} value={metric} className="mt-0">
+                        <div className="w-full overflow-x-auto overflow-y-auto max-h-[70vh] bg-white rounded-xl border-2 border-gray-200 shadow-lg">
+                          <table className="text-xs min-w-[800px] w-full">
+                            <thead className="sticky top-0 z-10">
+                              <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
+                                <th className="px-3 py-3 text-left min-w-[160px] font-semibold text-gray-900">
+                                  Player
+                                </th>
+                                <th className="px-2 py-3 text-center min-w-[50px] font-semibold text-gray-900">Team</th>
+                                <th className="px-2 py-3 text-center min-w-[50px] font-semibold text-gray-900">Pos</th>
+                                <th className="px-2 py-3 text-center min-w-[60px] font-semibold text-gray-900">Price</th>
+                                {Array.from({length: parseInt(horizonFilter)}, (_, i) => (
+                                  <th key={i} className="px-2 py-3 text-center min-w-[70px] font-semibold text-gray-900">
+                                    GW{i + 1}
+                                  </th>
+                                ))}
+                                <th className="px-2 py-3 text-center min-w-[70px] font-semibold text-blue-900 bg-blue-50">
+                                  Total
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(() => {
+                                // Group projections by player
+                                const playerGroups = filteredProjections.reduce((acc, proj) => {
+                                  if (!acc[proj.player_id]) {
+                                    acc[proj.player_id] = {
+                                      player: proj,
+                                      gameweeks: {}
+                                    };
+                                  }
+                                  acc[proj.player_id].gameweeks[proj.gameweek] = proj;
+                                  return acc;
+                                }, {} as Record<number, any>);
 
-                            {/* Minutes */}
-                            <td className="px-1 md:px-2 py-2 text-center">
-                              <div className="text-xs md:text-sm font-semibold text-gray-700 bg-gray-50 rounded py-1 px-1 md:px-2 inline-block border border-gray-200">
-                                {projection.predicted_minutes || 0}
-                              </div>
-                            </td>
+                                return Object.values(playerGroups).map((group: any, index) => {
+                                  const player = group.player;
+                                  const gwData = group.gameweeks;
+                                  
+                                  // Calculate total for the metric
+                                  const total = Object.values(gwData).reduce((sum: number, proj: any) => {
+                                    const value = proj[metric] || 0;
+                                    return sum + value;
+                                  }, 0);
 
-                            {/* Goals */}
-                            <td className="px-2 py-2 text-center">
-                              <div className="text-sm font-semibold text-green-600 bg-green-50 rounded py-1 px-2 inline-block border border-green-200">
-                                {projection.predicted_goals?.toFixed(2) || "0.00"}
-                              </div>
-                            </td>
-
-                            {/* Assists */}
-                            <td className="px-2 py-2 text-center">
-                              <div className="text-sm font-semibold text-purple-600 bg-purple-50 rounded py-1 px-2 inline-block border border-purple-200">
-                                {projection.predicted_assists?.toFixed(2) || "0.00"}
-                              </div>
-                            </td>
-
-                            {/* Clean Sheets */}
-                            <td className="px-2 py-2 text-center">
-                              <div className="text-sm font-semibold text-indigo-600 bg-indigo-50 rounded py-1 px-2 inline-block border border-indigo-200">
-                                {projection.predicted_clean_sheets?.toFixed(2) || "0.00"}
-                              </div>
-                            </td>
-
-                            {/* Bonus */}
-                            <td className="px-2 py-2 text-center">
-                              <div className="text-sm font-semibold text-orange-600 bg-orange-50 rounded py-1 px-2 inline-block border border-orange-200">
-                                {projection.predicted_bonus?.toFixed(2) || "0.00"}
-                              </div>
-                            </td>
-
-                            {/* CBIT% */}
-                            <td className="px-2 py-2 text-center">
-                              <div className="text-sm font-bold text-yellow-600 bg-yellow-50 rounded py-1 px-2 inline-block border border-yellow-200">
-                                {projection.cbit_percentage?.toFixed(1) || "0.0"}
-                              </div>
-                            </td>
-
-                            {/* Confidence */}
-                            <td className="px-2 py-2 text-center">
-                              <Badge className={`text-xs px-2 py-1 font-medium ${getConfidenceColor(projection.ensemble_confidence || 0)}`}>
-                                {projection.ensemble_confidence?.toFixed(1) || "0.0"}
-                              </Badge>
-                            </td>
-
-                            {/* Risk */}
-                            <td className="px-2 py-2 text-center">
-                              <Badge className={`text-xs px-2 py-1 font-medium ${getRiskColor(projection.investment_risk || "High")}`}>
-                                {(projection.investment_risk || "High").charAt(0)}
-                              </Badge>
-                            </td>
-
-                            {/* Ownership */}
-                            <td className="px-2 py-2 text-center">
-                              <div className="text-sm font-semibold text-gray-700 bg-gray-50 rounded py-1 px-2 inline-block border border-gray-200">
-                                {projection.ownership_percentage?.toFixed(1) || "0.0"}
-                              </div>
-                            </td>
-
-                            {/* Price */}
-                            <td className="px-2 py-2 text-center">
-                              <div className="text-sm font-bold text-gray-900 bg-gray-50 rounded py-1 px-2 inline-block border border-gray-200">
-                                {formatPrice(projection.current_price)}
-                              </div>
-                            </td>
-
-                            {/* Availability Status */}
-                            <td className="px-2 py-2 text-center">
-                              <Badge className={`text-xs px-2 py-1 font-medium ${getAvailabilityColor(projection.availability_status || 100)}`}>
-                                {projection.availability_status === 100 ? "✓" : 
-                                 projection.availability_status >= 75 ? "⚠" :
-                                 projection.availability_status >= 50 ? "?" :
-                                 projection.availability_status >= 25 ? "⚠" : "✗"}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                                  return (
+                                    <tr 
+                                      key={player.player_id}
+                                      className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${
+                                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
+                                      }`}
+                                    >
+                                      <td className="px-3 py-3 text-left">
+                                        <div className="flex flex-col">
+                                          <span className="font-medium text-gray-900 text-sm">
+                                            {player.player_name}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td className="px-2 py-3 text-center">
+                                        <span className="text-xs text-gray-600">{player.team_name}</span>
+                                      </td>
+                                      <td className="px-2 py-3 text-center">
+                                        <span className={`inline-block w-6 h-6 rounded-full text-xs font-bold text-white flex items-center justify-center ${
+                                          player.position === 'GKP' ? 'bg-yellow-500' :
+                                          player.position === 'DEF' ? 'bg-green-500' :
+                                          player.position === 'MID' ? 'bg-blue-500' :
+                                          'bg-red-500'
+                                        }`}>
+                                          {player.position.charAt(0)}
+                                        </span>
+                                      </td>
+                                      <td className="px-2 py-3 text-center">
+                                        <span className="text-sm font-medium">£{(player.current_price / 10).toFixed(1)}m</span>
+                                      </td>
+                                      {Array.from({length: parseInt(horizonFilter)}, (_, i) => {
+                                        const gwProj = Object.values(gwData).find((proj: any) => proj.gameweek === (player.gameweek + i));
+                                        const value = gwProj?.[metric] || 0;
+                                        
+                                        return (
+                                          <td key={i} className="px-2 py-3 text-center">
+                                            <span className={`text-sm font-medium ${
+                                              metric === 'predicted_points' && value >= 6 ? 'text-green-700' :
+                                              metric === 'predicted_points' && value >= 4 ? 'text-blue-700' :
+                                              metric === 'predicted_minutes' && value >= 75 ? 'text-green-700' :
+                                              metric === 'predicted_minutes' && value >= 60 ? 'text-blue-700' :
+                                              metric.includes('predicted_goals') && value >= 0.5 ? 'text-green-700' :
+                                              metric.includes('predicted_assists') && value >= 0.3 ? 'text-green-700' :
+                                              metric === 'cbit_percentage' && value >= 10 ? 'text-green-700' :
+                                              metric === 'ownership_percentage' && value >= 15 ? 'text-red-700' :
+                                              'text-gray-700'
+                                            }`}>
+                                              {metric === 'predicted_minutes' ? `${Math.round(value)}'` :
+                                               metric === 'ownership_percentage' || metric === 'cbit_percentage' ? `${value.toFixed(1)}%` :
+                                               value.toFixed(metric.includes('predicted_') && !metric.includes('minutes') ? 2 : 1)}
+                                            </span>
+                                          </td>
+                                        );
+                                      })}
+                                      <td className="px-2 py-3 text-center bg-blue-50">
+                                        <span className="text-sm font-bold text-blue-900">
+                                          {metric === 'predicted_minutes' ? `${Math.round(total)}'` :
+                                           metric === 'ownership_percentage' || metric === 'cbit_percentage' ? `${(total / parseInt(horizonFilter)).toFixed(1)}%` :
+                                           total.toFixed(metric.includes('predicted_') && !metric.includes('minutes') ? 2 : 1)}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                });
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
+                      </TabsContent>
+                    ))}
+                  </Tabs>
 
                   {/* Results Summary */}
                   <div className="mt-12 text-center bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-xl border border-gray-200">
