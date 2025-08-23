@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Layout from "../components/layout";
 import { Users, TrendingUp, Filter, Search, Zap, ChevronUp, ChevronDown } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,38 +95,34 @@ export default function PlayerAssistProjections() {
 
   if (error) {
     return (
-      <Layout>
-        <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30">
-          <div className="w-full max-w-7xl mx-auto px-4 py-8">
-            <Card className="border-red-200 bg-red-50">
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <Zap className="h-6 w-6 text-red-600 mr-3" />
-                  <div>
-                    <h3 className="font-semibold text-red-800">Error Loading Data</h3>
-                    <p className="text-red-600">Unable to load player assist projections. Please try again later.</p>
-                  </div>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30">
+        <div className="w-full max-w-7xl mx-auto px-4 py-8">
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <Zap className="h-6 w-6 text-red-600 mr-3" />
+                <div>
+                  <h3 className="font-semibold text-red-800">Error Loading Data</h3>
+                  <p className="text-red-600">Unable to load player assist projections. Please try again later.</p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </Layout>
+      </div>
     );
   }
 
   if (isLoading) {
     return (
-      <Layout>
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50/30">
-          <div className="w-full max-w-7xl mx-auto px-4 py-8">
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading player assist projections...</p>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50/30">
+        <div className="w-full max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading player assist projections...</p>
           </div>
         </div>
-      </Layout>
+      </div>
     );
   }
 
@@ -135,8 +130,7 @@ export default function PlayerAssistProjections() {
   const teams = Array.from(new Set(playerProjections?.map(p => p.teamShort) || [])).sort();
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30">
         <div className="w-full max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
           <div className="text-center mb-8">
@@ -367,6 +361,5 @@ export default function PlayerAssistProjections() {
           </div>
         </div>
       </div>
-    </Layout>
   );
 }
