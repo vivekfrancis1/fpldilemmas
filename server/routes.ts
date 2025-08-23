@@ -918,78 +918,192 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Spread betting market data for enhanced projections
-  const getSpreadBettingData = () => {
-    return {
-      // Premium 2024/25 spread betting market data - Enhanced for high confidence modeling
-      teamGoalRates: {
-        // Realistic attacking output based on Premier League market analysis 2024/25 - Calibrated to ~1.64 goals/game average
-        13: { expectedGoalsPerGame: 1.97, variance: 0.35, confidence: 0.88 }, // Man City - Quality but aging (75.0 goals)
-        1: { expectedGoalsPerGame: 1.67, variance: 0.32, confidence: 0.86 }, // Arsenal - Consistent attack (63.5 goals)
-        12: { expectedGoalsPerGame: 2.14, variance: 0.30, confidence: 0.85 }, // Liverpool - Top attacking prediction (81.2 goals)
-        18: { expectedGoalsPerGame: 1.67, variance: 0.44, confidence: 0.76 }, // Tottenham - Quality attack (63.5 goals)
-        6: { expectedGoalsPerGame: 1.95, variance: 0.36, confidence: 0.86 }, // Chelsea - Elite attacking rebuild (68.1 goals)
+  // Initialize team database with official FPL data and projection metadata
+  const initializeTeamData = async () => {
+    try {
+      const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!response.ok) throw new Error("Failed to fetch FPL team data");
+      
+      const data = await response.json();
+      const teams = data.teams;
+      
+      // Define projection metadata for 2025/26 season with promoted teams
+      const projectionMetadata: Record<number, {
+        expectedGoalsPerGame: number;
+        goalVariance: number;
+        goalConfidence: number;
+        baseCleanSheetRate: number;
+        homeBonus: number;
+        cleanSheetConfidence: number;
+        attackingTier: string;
+        defensiveTier: string;
+      }> = {
+        // Elite attacking units
+        13: { expectedGoalsPerGame: 1.97, goalVariance: 0.35, goalConfidence: 0.88, baseCleanSheetRate: 0.33, homeBonus: 0.07, cleanSheetConfidence: 0.89, attackingTier: 'elite', defensiveTier: 'elite' }, // Man City
+        1: { expectedGoalsPerGame: 1.67, goalVariance: 0.32, goalConfidence: 0.86, baseCleanSheetRate: 0.39, homeBonus: 0.08, cleanSheetConfidence: 0.93, attackingTier: 'elite', defensiveTier: 'elite' }, // Arsenal
+        12: { expectedGoalsPerGame: 2.14, goalVariance: 0.30, goalConfidence: 0.85, baseCleanSheetRate: 0.36, homeBonus: 0.09, cleanSheetConfidence: 0.91, attackingTier: 'elite', defensiveTier: 'elite' }, // Liverpool
+        7: { expectedGoalsPerGame: 1.95, goalVariance: 0.36, goalConfidence: 0.86, baseCleanSheetRate: 0.14, homeBonus: 0.03, cleanSheetConfidence: 0.60, attackingTier: 'elite', defensiveTier: 'average' }, // Chelsea
         
-        // Strong attacking mid-table teams
-        5: { expectedGoalsPerGame: 1.49, variance: 0.40, confidence: 0.74 }, // Brighton - Tactical system (56.7 goals)
-        15: { expectedGoalsPerGame: 1.60, variance: 0.40, confidence: 0.76 }, // Newcastle - Strong unit (60.9 goals)
-        2: { expectedGoalsPerGame: 1.47, variance: 0.42, confidence: 0.74 }, // Aston Villa - Solid attack (55.9 goals)
-        14: { expectedGoalsPerGame: 1.45, variance: 0.46, confidence: 0.68 }, // Man United - Inconsistent (54.9 goals)
-        4: { expectedGoalsPerGame: 1.53, variance: 0.44, confidence: 0.70 }, // Bournemouth - Attacking style (58.1 goals)
+        // Strong attacking teams
+        18: { expectedGoalsPerGame: 1.67, goalVariance: 0.44, goalConfidence: 0.76, baseCleanSheetRate: 0.11, homeBonus: 0.03, cleanSheetConfidence: 0.54, attackingTier: 'strong', defensiveTier: 'average' }, // Tottenham
+        6: { expectedGoalsPerGame: 1.85, goalVariance: 0.43, goalConfidence: 0.78, baseCleanSheetRate: 0.30, homeBonus: 0.07, cleanSheetConfidence: 0.86, attackingTier: 'strong', defensiveTier: 'strong' }, // Brighton
+        15: { expectedGoalsPerGame: 1.60, goalVariance: 0.40, goalConfidence: 0.76, baseCleanSheetRate: 0.27, homeBonus: 0.07, cleanSheetConfidence: 0.82, attackingTier: 'strong', defensiveTier: 'strong' }, // Newcastle
+        2: { expectedGoalsPerGame: 1.47, goalVariance: 0.42, goalConfidence: 0.74, baseCleanSheetRate: 0.25, homeBonus: 0.06, cleanSheetConfidence: 0.79, attackingTier: 'strong', defensiveTier: 'strong' }, // Aston Villa
+        14: { expectedGoalsPerGame: 1.45, goalVariance: 0.46, goalConfidence: 0.68, baseCleanSheetRate: 0.17, homeBonus: 0.04, cleanSheetConfidence: 0.66, attackingTier: 'strong', defensiveTier: 'average' }, // Man United
         
         // Average attacking output
-        10: { expectedGoalsPerGame: 1.20, variance: 0.46, confidence: 0.64 }, // Fulham - Defensive focus (45.5 goals)
-        5: { expectedGoalsPerGame: 1.42, variance: 0.44, confidence: 0.61 }, // Brentford - Post-Toney transition
-        16: { expectedGoalsPerGame: 1.18, variance: 0.48, confidence: 0.60 }, // Nottingham Forest - Survival mode (45.0 goals)
-        19: { expectedGoalsPerGame: 1.27, variance: 0.50, confidence: 0.58 }, // West Ham - Limited creativity (48.1 goals)
+        4: { expectedGoalsPerGame: 1.53, goalVariance: 0.44, goalConfidence: 0.70, baseCleanSheetRate: 0.21, homeBonus: 0.05, cleanSheetConfidence: 0.74, attackingTier: 'average', defensiveTier: 'average' }, // Bournemouth
+        10: { expectedGoalsPerGame: 1.20, goalVariance: 0.46, goalConfidence: 0.64, baseCleanSheetRate: 0.16, homeBonus: 0.04, cleanSheetConfidence: 0.63, attackingTier: 'average', defensiveTier: 'average' }, // Fulham
+        5: { expectedGoalsPerGame: 1.42, goalVariance: 0.44, goalConfidence: 0.61, baseCleanSheetRate: 0.23, homeBonus: 0.06, cleanSheetConfidence: 0.77, attackingTier: 'average', defensiveTier: 'strong' }, // Brentford
+        16: { expectedGoalsPerGame: 1.18, goalVariance: 0.48, goalConfidence: 0.60, baseCleanSheetRate: 0.29, homeBonus: 0.07, cleanSheetConfidence: 0.84, attackingTier: 'average', defensiveTier: 'strong' }, // Nottingham Forest
+        19: { expectedGoalsPerGame: 1.27, goalVariance: 0.50, goalConfidence: 0.58, baseCleanSheetRate: 0.16, homeBonus: 0.04, cleanSheetConfidence: 0.63, attackingTier: 'average', defensiveTier: 'average' }, // West Ham
         
-        // Struggling attacking units - replacing relegated teams with promoted ones
-        8: { expectedGoalsPerGame: 1.06, variance: 0.48, confidence: 0.55 }, // Crystal Palace - Goal-shy team (40.2 goals)
-        7: { expectedGoalsPerGame: 1.45, variance: 0.45, confidence: 0.62 }, // Chelsea - Improved attack (55.1 goals)
-        20: { expectedGoalsPerGame: 1.12, variance: 0.52, confidence: 0.50 }, // Wolves - Defensive setup (42.7 goals)
-        9: { expectedGoalsPerGame: 1.10, variance: 0.54, confidence: 0.48 }, // Everton - Struggle to adapt
-        3: { expectedGoalsPerGame: 0.88, variance: 0.58, confidence: 0.38 }, // Burnley (2025/26 promoted) - Weakest attack
-        11: { expectedGoalsPerGame: 0.95, variance: 0.55, confidence: 0.40 }, // Leeds United (2025/26 promoted)
-        17: { expectedGoalsPerGame: 0.85, variance: 0.60, confidence: 0.36 }  // Sunderland (2025/26 promoted) - Championship level
+        // Weaker attacking units
+        8: { expectedGoalsPerGame: 1.06, goalVariance: 0.48, goalConfidence: 0.55, baseCleanSheetRate: 0.12, homeBonus: 0.03, cleanSheetConfidence: 0.57, attackingTier: 'weak', defensiveTier: 'average' }, // Crystal Palace
+        20: { expectedGoalsPerGame: 1.12, goalVariance: 0.52, goalConfidence: 0.50, baseCleanSheetRate: 0.09, homeBonus: 0.02, cleanSheetConfidence: 0.48, attackingTier: 'weak', defensiveTier: 'weak' }, // Wolves
+        9: { expectedGoalsPerGame: 1.10, goalVariance: 0.54, goalConfidence: 0.48, baseCleanSheetRate: 0.20, homeBonus: 0.05, cleanSheetConfidence: 0.71, attackingTier: 'weak', defensiveTier: 'strong' }, // Everton
+        
+        // Promoted teams (2025/26) - Championship level with no boosts
+        3: { expectedGoalsPerGame: 0.88, goalVariance: 0.58, goalConfidence: 0.38, baseCleanSheetRate: 0.08, homeBonus: 0.02, cleanSheetConfidence: 0.42, attackingTier: 'promoted', defensiveTier: 'promoted' }, // Burnley
+        11: { expectedGoalsPerGame: 0.95, goalVariance: 0.55, goalConfidence: 0.40, baseCleanSheetRate: 0.09, homeBonus: 0.02, cleanSheetConfidence: 0.44, attackingTier: 'promoted', defensiveTier: 'promoted' }, // Leeds
+        17: { expectedGoalsPerGame: 0.85, goalVariance: 0.60, goalConfidence: 0.36, baseCleanSheetRate: 0.06, homeBonus: 0.02, cleanSheetConfidence: 0.40, attackingTier: 'promoted', defensiveTier: 'promoted' }, // Sunderland
+      };
+      
+      // Upsert team data with projection metadata
+      const teamInserts = teams.map((team: any) => {
+        const metadata = projectionMetadata[team.id] || {
+          expectedGoalsPerGame: 1.3, goalVariance: 0.45, goalConfidence: 0.60,
+          baseCleanSheetRate: 0.15, homeBonus: 0.04, cleanSheetConfidence: 0.60,
+          attackingTier: 'average', defensiveTier: 'average'
+        };
+        
+        return {
+          id: team.id,
+          name: team.name,
+          shortName: team.short_name,
+          code: team.code,
+          ...metadata,
+          lastUpdated: new Date(),
+        };
+      });
+      
+      // Note: This would normally use database upsert, but since we don't have the database client here,
+      // we'll return the data for other functions to use
+      console.log(`Initialized projection data for ${teamInserts.length} teams`);
+      return teamInserts;
+    } catch (error) {
+      console.error("Failed to initialize team data:", error);
+      return [];
+    }
+  };
+
+  // Get team projection data (fallback to hardcoded data if DB not available)
+  const getTeamProjectionData = async () => {
+    // For now, return the hardcoded data. In production, this would query the database
+    const teams = await initializeTeamData();
+    const teamMap: Record<number, any> = {};
+    teams.forEach(team => {
+      teamMap[team.id] = {
+        expectedGoalsPerGame: team.expectedGoalsPerGame,
+        variance: team.goalVariance,
+        confidence: team.goalConfidence,
+        baseCleanSheetRate: team.baseCleanSheetRate,
+        homeBonus: team.homeBonus,
+        cleanSheetConfidence: team.cleanSheetConfidence,
+        attackingTier: team.attackingTier,
+        defensiveTier: team.defensiveTier
+      };
+    });
+    return teamMap;
+  };
+
+  // Create centralized team service with consistent data
+  const createTeamService = async () => {
+    const teamProjectionData = await getTeamProjectionData();
+    
+    return {
+      getTeamData: (teamId: number) => teamProjectionData[teamId],
+      
+      getBettingData: () => {
+        const teamGoalRates: Record<number, any> = {};
+        const teamCleanSheetRates: Record<number, any> = {};
+        
+        Object.keys(teamProjectionData).forEach(teamIdStr => {
+          const teamId = parseInt(teamIdStr);
+          const team = teamProjectionData[teamId];
+          
+          teamGoalRates[teamId] = {
+            expectedGoalsPerGame: team.expectedGoalsPerGame,
+            variance: team.variance,
+            confidence: team.confidence
+          };
+          
+          teamCleanSheetRates[teamId] = {
+            baseCleanSheetRate: team.baseCleanSheetRate,
+            homeBonus: team.homeBonus,
+            confidence: team.cleanSheetConfidence
+          };
+        });
+        
+        return {
+          teamGoalRates,
+          teamCleanSheetRates,
+          contextMultipliers: {
+            derby: { goals: 0.87, cleanSheets: 0.82 },
+            topSix: { goals: 1.12, cleanSheets: 0.88 },
+            relegationBattle: { goals: 0.83, cleanSheets: 0.78 },
+            earlyKickoff: { goals: 0.94, cleanSheets: 1.06 },
+            lateKickoff: { goals: 1.07, cleanSheets: 0.93 },
+            postEuropean: { goals: 0.88, cleanSheets: 0.87 },
+            midweekFixture: { goals: 0.91, cleanSheets: 0.95 },
+            seasonFinale: { goals: 1.05, cleanSheets: 0.90 },
+            newManagerBounce: { goals: 1.08, cleanSheets: 1.03 },
+            weatherConditions: { goals: 0.96, cleanSheets: 1.02 }
+          }
+        };
       },
       
-      // Elite defensive market data - Adjusted for higher scoring environment (reduced ~18% to match goal increase)
-      teamCleanSheetRates: {
-        1: { baseCleanSheetRate: 0.39, homeBonus: 0.08, confidence: 0.93 }, // Arsenal - Saliba-Gabriel wall
-        12: { baseCleanSheetRate: 0.36, homeBonus: 0.09, confidence: 0.91 }, // Liverpool - Van Dijk leadership  
-        13: { baseCleanSheetRate: 0.33, homeBonus: 0.07, confidence: 0.89 }, // Man City - Dias-Stones
-        6: { baseCleanSheetRate: 0.30, homeBonus: 0.07, confidence: 0.86 }, // Brighton - Dunk system
-        16: { baseCleanSheetRate: 0.29, homeBonus: 0.07, confidence: 0.84 }, // Nottingham Forest - Resilient
-        15: { baseCleanSheetRate: 0.27, homeBonus: 0.07, confidence: 0.82 }, // Newcastle - Trippier quality
-        2: { baseCleanSheetRate: 0.25, homeBonus: 0.06, confidence: 0.79 }, // Aston Villa - Martinez factor
-        5: { baseCleanSheetRate: 0.23, homeBonus: 0.06, confidence: 0.77 }, // Brentford - Organized low block
-        9: { baseCleanSheetRate: 0.20, homeBonus: 0.05, confidence: 0.71 }, // Everton - Tarkowski-Branthwaite
-        14: { baseCleanSheetRate: 0.17, homeBonus: 0.04, confidence: 0.66 }, // Man United - Individual errors
-        10: { baseCleanSheetRate: 0.16, homeBonus: 0.04, confidence: 0.63 }, // Fulham - Attacking focus
-        7: { baseCleanSheetRate: 0.14, homeBonus: 0.03, confidence: 0.60 }, // Chelsea - Transition period
-        8: { baseCleanSheetRate: 0.12, homeBonus: 0.03, confidence: 0.57 }, // Crystal Palace - Age concerns
-        18: { baseCleanSheetRate: 0.11, homeBonus: 0.03, confidence: 0.54 }, // Tottenham - High-line risks
-        20: { baseCleanSheetRate: 0.09, homeBonus: 0.02, confidence: 0.48 }, // Wolves - Lack of pace
-        3: { baseCleanSheetRate: 0.08, homeBonus: 0.02, confidence: 0.42 }, // Burnley (2025/26 promoted) - Weak defense
-        11: { baseCleanSheetRate: 0.09, homeBonus: 0.02, confidence: 0.44 }, // Leeds United (2025/26 promoted) - Weak defense
-        17: { baseCleanSheetRate: 0.06, homeBonus: 0.02, confidence: 0.40 }  // Sunderland (2025/26 promoted) - Weakest defense
+      getTierMultiplier: (teamId: number, tierSeed: number) => {
+        const team = teamProjectionData[teamId];
+        if (!team) return 0.94 + (tierSeed / 1667); // Default for unknown teams
+        
+        switch (team.attackingTier) {
+          case 'elite': return 1.06 + (tierSeed / 2500);
+          case 'strong': return 1.01 + (tierSeed / 3333);
+          case 'average': return 0.98 + (tierSeed / 2500);
+          case 'promoted': return 0.90 + (tierSeed / 2000);
+          case 'weak': 
+          default: return 0.94 + (tierSeed / 1667);
+        }
       },
       
-      // Advanced market-based contextual adjustments with statistical backing
-      contextMultipliers: {
-        derby: { goals: 0.87, cleanSheets: 0.82 }, // Rivalry matches historically more open
-        topSix: { goals: 1.12, cleanSheets: 0.88 }, // Elite clashes - high quality but competitive
-        relegationBattle: { goals: 0.83, cleanSheets: 0.78 }, // Desperate defending, limited attacking
-        earlyKickoff: { goals: 0.94, cleanSheets: 1.06 }, // Teams more cautious in early slots
-        lateKickoff: { goals: 1.07, cleanSheets: 0.93 }, // Evening games more attacking
-        postEuropean: { goals: 0.88, cleanSheets: 0.87 }, // Fatigue impacts both ends
-        midweekFixture: { goals: 0.91, cleanSheets: 0.95 }, // Rotation and tiredness
-        seasonFinale: { goals: 1.05, cleanSheets: 0.90 }, // Nothing to play for = open games
-        newManagerBounce: { goals: 1.08, cleanSheets: 1.03 }, // Temporary improvement
-        weatherConditions: { goals: 0.96, cleanSheets: 1.02 } // Bad weather favors defense
+      getConfidenceMultiplier: (teamId: number) => {
+        const team = teamProjectionData[teamId];
+        if (!team || team.attackingTier === 'promoted') return 1.0;
+        
+        if (team.confidence >= 0.85) return 1.35 + ((teamId * 19) % 100) / 1000;
+        if (team.confidence >= 0.75) return 1.25 + ((teamId * 23) % 100) / 1250;
+        if (team.confidence >= 0.65) return 1.15 + ((teamId * 31) % 100) / 1667;
+        return 1.0;
       }
     };
   };
+
+  // API endpoint to initialize team database with FPL data and projections
+  app.post("/api/admin/initialize-teams", async (req, res) => {
+    try {
+      const teamData = await initializeTeamData();
+      // TODO: In production, would insert/update database here
+      res.json({ 
+        success: true, 
+        message: `Initialized ${teamData.length} teams with projection data`,
+        teams: teamData.length
+      });
+    } catch (error) {
+      console.error("Failed to initialize teams:", error);
+      res.status(500).json({ error: "Failed to initialize team data" });
+    }
+  });
 
   // Team Goal Projections endpoint  
   app.get("/api/team-goal-projections", async (req, res) => {
@@ -1010,7 +1124,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-      const bettingData = getSpreadBettingData();
+      
+      // Use centralized team service
+      const teamService = await createTeamService();
+      const bettingData = teamService.getBettingData();
       
       console.log(`DEBUG: Processing all 38 gameweeks, current GW: ${currentGameweek}`);
       
@@ -1077,22 +1194,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             baseExpectedGoals *= 1.14; // Rivalry games typically more open and emotional
           }
           
-          // Phase 5: Advanced attacking tier performance modeling
-          let tierMultiplier = 1.0;
+          // Phase 5: Advanced attacking tier performance modeling using centralized data
           const tierSeed = (team.id * fixture.event * 13) % 100;
-          if ([13, 1, 12, 6].includes(team.id)) { // Elite attacking units
-            tierMultiplier = 1.06 + (tierSeed / 2500); // 106-110%
-          } else if ([18].includes(team.id)) { // Premium big-6 teams
-            tierMultiplier = 1.04 + (tierSeed / 2857); // 104-107.5%
-          } else if ([5, 15, 2, 14].includes(team.id)) { // Strong attacking teams
-            tierMultiplier = 1.01 + (tierSeed / 3333); // 101-104%
-          } else if ([4, 10, 16, 19].includes(team.id)) { // Average attacking output
-            tierMultiplier = 0.98 + (tierSeed / 2500); // 98-102%
-          } else if ([3, 11, 17].includes(team.id)) { // Newly promoted teams (2025/26) - no calibration boost
-            tierMultiplier = 0.90 + (tierSeed / 2000); // 90-95% (reduced for promoted teams)
-          } else { // Other weaker attacking units
-            tierMultiplier = 0.94 + (tierSeed / 1667); // 94-100%
-          }
+          const tierMultiplier = teamService.getTierMultiplier(team.id, tierSeed);
           baseExpectedGoals *= tierMultiplier;
           
           // Phase 6: Market momentum and fixture complexity factors
@@ -1203,49 +1307,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
       console.log(`DEBUG: Processing all 38 gameweeks for assists, current GW: ${currentGameweek}`);
-      const bettingData = getSpreadBettingData();
       
-      // Assist-specific betting data (assists typically 60-80% of goals with creative team adjustments)
-      const getAssistBettingData = () => {
-        return {
-          // Team assist rates based on creativity, attacking style, and historical performance
-          teamAssistRates: {
-            // Elite creative teams with high possession and through-ball frequency
-            13: { expectedAssistsPerGame: 1.85, variance: 0.35, confidence: 0.85 }, // Man City - Possession masters
-            1: { expectedAssistsPerGame: 1.78, variance: 0.40, confidence: 0.82 }, // Arsenal - Creative midfield
-            12: { expectedAssistsPerGame: 1.72, variance: 0.38, confidence: 0.80 }, // Liverpool - Attacking fullbacks
-            
-            // Strong creative teams with quality playmakers
-            6: { expectedAssistsPerGame: 1.65, variance: 0.40, confidence: 0.82 }, // Chelsea - Elite creative rebuild
-            14: { expectedAssistsPerGame: 1.25, variance: 0.44, confidence: 0.70 }, // Man United - Individual brilliance
-            18: { expectedAssistsPerGame: 1.45, variance: 0.42, confidence: 0.78 }, // Tottenham - Creative attackers
-            
-            // Moderate creative teams with structured play
-            5: { expectedAssistsPerGame: 1.25, variance: 0.40, confidence: 0.72 }, // Brighton - Possession-based
-            2: { expectedAssistsPerGame: 1.30, variance: 0.38, confidence: 0.74 }, // Aston Villa - Strong creative unit
-            15: { expectedAssistsPerGame: 1.15, variance: 0.45, confidence: 0.68 }, // Newcastle - Wing play
-            16: { expectedAssistsPerGame: 1.12, variance: 0.42, confidence: 0.69 }, // Nottingham Forest - Counter-attacks
-            
-            // Average creative teams with limited playmaking
-            4: { expectedAssistsPerGame: 1.05, variance: 0.40, confidence: 0.67 }, // Brentford - Direct style
-            19: { expectedAssistsPerGame: 1.02, variance: 0.43, confidence: 0.65 }, // West Ham - Physical approach  
-            9: { expectedAssistsPerGame: 0.98, variance: 0.38, confidence: 0.68 }, // Fulham - Balanced play
-            3: { expectedAssistsPerGame: 0.95, variance: 0.42, confidence: 0.66 }, // Bournemouth - Pace-based
-            
-            // Lower creative teams with defensive focus
-            8: { expectedAssistsPerGame: 0.88, variance: 0.35, confidence: 0.64 }, // Everton - Defensive stability
-            7: { expectedAssistsPerGame: 0.85, variance: 0.40, confidence: 0.63 }, // Crystal Palace - Limited creativity
-            11: { expectedAssistsPerGame: 0.82, variance: 0.43, confidence: 0.62 }, // Leicester - Rebuilding phase
-            20: { expectedAssistsPerGame: 0.78, variance: 0.38, confidence: 0.61 }, // Wolves - Defensive structure
-            
-            // Struggling creative teams
-            10: { expectedAssistsPerGame: 0.68, variance: 0.45, confidence: 0.58 }, // Ipswich - Championship level
-            17: { expectedAssistsPerGame: 0.62, variance: 0.48, confidence: 0.55 }  // Southampton - Limited quality
-          }
-        };
-      };
+      // Use centralized team service for consistent data
+      const teamService = await createTeamService();
+      const bettingData = teamService.getBettingData();
       
-      const assistBettingData = getAssistBettingData();
+      // Note: Using centralized team data for consistency across all projection tools
       
       const teamProjections = teams.map((team: any) => {
         // Get ALL fixtures for this team across all 38 gameweeks
@@ -1319,22 +1386,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             baseExpectedGoals *= 1.14; // Rivalry games typically more open and emotional
           }
           
-          // Apply the same tier multiplier as goals
-          let tierMultiplier = 1.0;
+          // Apply centralized tier multiplier
           const tierSeed = (team.id * fixture.event * 13) % 100;
-          if ([13, 1, 12, 6].includes(team.id)) { // Elite attacking units
-            tierMultiplier = 1.06 + (tierSeed / 2500); // 106-110%
-          } else if ([18].includes(team.id)) { // Premium big-6 teams
-            tierMultiplier = 1.04 + (tierSeed / 2857); // 104-107.5%
-          } else if ([5, 15, 2, 14].includes(team.id)) { // Strong attacking teams
-            tierMultiplier = 1.01 + (tierSeed / 3333); // 101-104%
-          } else if ([4, 10, 16, 19].includes(team.id)) { // Average attacking output
-            tierMultiplier = 0.98 + (tierSeed / 2500); // 98-102%
-          } else if ([3, 11, 17].includes(team.id)) { // Newly promoted teams (2025/26) - no calibration boost
-            tierMultiplier = 0.90 + (tierSeed / 2000); // 90-95% (reduced for promoted teams)
-          } else { // Other weaker attacking units
-            tierMultiplier = 0.94 + (tierSeed / 1667); // 94-100%
-          }
+          const tierMultiplier = teamService.getTierMultiplier(team.id, tierSeed);
           baseExpectedGoals *= tierMultiplier;
           
           // Apply the same market momentum and variance as goals
@@ -1389,14 +1443,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameweekProjections[p.gameweek] = p.expectedAssists;
         });
         
-        // Determine confidence based on assist data
-        const teamAssistData = assistBettingData.teamAssistRates[team.id] || { confidence: 0.65 };
+        // Determine confidence based on centralized team data
+        const teamData = teamService.getTeamData(team.id);
         const averageAssists = totalAssists / Math.max(1, projections.length);
         let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
         
-        // Enhanced confidence calculation using assist market data
-        if (teamAssistData.confidence >= 0.80) confidence = 'High';
-        else if (teamAssistData.confidence <= 0.60) confidence = 'Low';
+        // Enhanced confidence calculation using centralized team data
+        if (teamData && teamData.confidence >= 0.80) confidence = 'High';
+        else if (teamData && teamData.confidence <= 0.60) confidence = 'Low';
         
         return {
           id: team.id,
@@ -1445,7 +1499,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
       console.log(`DEBUG: Processing all 38 gameweeks for clean sheets, current GW: ${currentGameweek}`);
-      const bettingData = getSpreadBettingData();
+      
+      // Use centralized team service for consistent data
+      const teamService = await createTeamService();
+      const bettingData = teamService.getBettingData();
       
       const teamProjections = teams.map((team: any) => {
         // Get all fixtures for this team across all 38 gameweeks
@@ -1512,17 +1569,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             baseCSProbability *= 0.86; // Rivalry games typically more open and emotional
           }
           
-          // Phase 5: Realistic performance tier adjustments
-          let tierMultiplier = 1.0;
+          // Phase 5: Centralized defensive tier adjustments
           const tierSeed = (team.id * fixture.event * 13) % 100;
-          if ([1, 12, 13].includes(team.id)) { // Top 3 defensive teams
-            tierMultiplier = 1.05 + (tierSeed / 2500); // 105-109%
-          } else if ([2, 15, 16, 5].includes(team.id)) { // Strong defensive units
-            tierMultiplier = 1.02 + (tierSeed / 3333); // 102-105%
-          } else if ([4, 3, 8, 14].includes(team.id)) { // Average defenses
-            tierMultiplier = 0.98 + (tierSeed / 2500); // 98-102%
-          } else { // Weaker defensive units
-            tierMultiplier = 0.94 + (tierSeed / 1667); // 94-100%
+          const teamData = teamService.getTeamData(team.id);
+          let tierMultiplier = 1.0;
+          
+          if (teamData) {
+            switch (teamData.defensiveTier) {
+              case 'elite': tierMultiplier = 1.05 + (tierSeed / 2500); break;
+              case 'strong': tierMultiplier = 1.02 + (tierSeed / 3333); break;
+              case 'average': tierMultiplier = 0.98 + (tierSeed / 2500); break;
+              case 'promoted': tierMultiplier = 0.88 + (tierSeed / 2000); break; // Even lower for promoted defenses
+              case 'weak': 
+              default: tierMultiplier = 0.94 + (tierSeed / 1667); break;
+            }
           }
           baseCSProbability *= tierMultiplier;
           
@@ -1720,18 +1780,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               baseExpectedGoals *= 1.14; // Rivalry games typically more open and emotional
             }
             
-            // Phase 5: Advanced attacking tier performance modeling
-            let tierMultiplier = 1.0;
+            // Phase 5: Centralized attacking tier performance modeling
             const tierSeed = (team.id * fixture.event * 13) % 100;
-            if ([13, 1, 12].includes(team.id)) { // Elite attacking units
-              tierMultiplier = 1.06 + (tierSeed / 2500); // 106-110%
-            } else if ([18, 6, 5, 15].includes(team.id)) { // Strong attacking teams
-              tierMultiplier = 1.03 + (tierSeed / 3333); // 103-106%
-            } else if ([2, 14, 3, 9].includes(team.id)) { // Average attacking output
-              tierMultiplier = 0.99 + (tierSeed / 2500); // 99-103%
-            } else { // Weaker attacking units
-              tierMultiplier = 0.95 + (tierSeed / 1667); // 95-101%
-            }
+            const tierMultiplier = teamService.getTierMultiplier(team.id, tierSeed);
             baseExpectedGoals *= tierMultiplier;
             
             // Phase 6: Market momentum and fixture complexity factors
@@ -2126,6 +2177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teamPlayers = players.filter((p: any) => p.team === team.id);
         
         // Get team assist projection data using same logic as team assist projections
+        // Using centralized team data for assists - keeping function structure for compatibility
         const getAssistBettingData = () => {
           return {
             teamAssistRates: {
@@ -2162,8 +2214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         };
         
-        const assistBettingData = getAssistBettingData();
-        const teamAssistData = assistBettingData.teamAssistRates[team.id] || { expectedAssistsPerGame: 1.15, variance: 0.45, confidence: 0.60 };
+        const teamAssistData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.15, variance: 0.45, confidence: 0.60 };
         
         // Apply confidence-based boosting (same logic as other projections)
         let confidenceBoost = 1.0;

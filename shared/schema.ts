@@ -223,3 +223,33 @@ export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type DailyPlayerPrice = typeof dailyPlayerPrices.$inferSelect;
 export type InsertDailyPlayerPrice = typeof dailyPlayerPrices.$inferInsert;
+
+// FPL Teams table with projection metadata
+export const fplTeams = pgTable("fpl_teams", {
+  id: integer("id").primaryKey(), // Official FPL team ID
+  name: varchar("name").notNull(),
+  shortName: varchar("short_name").notNull(),
+  code: integer("code").notNull(),
+  
+  // Projection metadata for 2025/26 season
+  expectedGoalsPerGame: decimal("expected_goals_per_game", { precision: 4, scale: 2 }),
+  goalVariance: decimal("goal_variance", { precision: 4, scale: 2 }),
+  goalConfidence: decimal("goal_confidence", { precision: 4, scale: 2 }),
+  
+  baseCleanSheetRate: decimal("base_clean_sheet_rate", { precision: 4, scale: 2 }),
+  homeBonus: decimal("home_bonus", { precision: 4, scale: 2 }),
+  cleanSheetConfidence: decimal("clean_sheet_confidence", { precision: 4, scale: 2 }),
+  
+  // Team classification for tiered projections
+  attackingTier: varchar("attacking_tier"), // 'elite', 'strong', 'average', 'weak', 'promoted'
+  defensiveTier: varchar("defensive_tier"), // 'elite', 'strong', 'average', 'weak', 'promoted'
+  
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_fpl_teams_name").on(table.name),
+  index("idx_fpl_teams_tier").on(table.attackingTier),
+]);
+
+export type FplTeam = typeof fplTeams.$inferSelect;
+export type InsertFplTeam = typeof fplTeams.$inferInsert;
