@@ -1078,12 +1078,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       },
       
       getConfidenceMultiplier: (teamId: number) => {
-        const team = teamProjectionData[teamId];
-        if (!team || team.attackingTier === 'promoted') return 1.0;
-        
-        if (team.confidence >= 0.85) return 1.35 + ((teamId * 19) % 100) / 1000;
-        if (team.confidence >= 0.75) return 1.25 + ((teamId * 23) % 100) / 1250;
-        if (team.confidence >= 0.65) return 1.15 + ((teamId * 31) % 100) / 1667;
+        // Confidence multiplier removed - all teams use base multiplier of 1.0
         return 1.0;
       }
     };
@@ -1270,21 +1265,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const marketCeiling = Math.min(4.2, teamBettingData.expectedGoalsPerGame * 2.0); // Dynamic maximum
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
-          // Confidence-based goal adjustment - higher confidence = higher output (fixed logic)
-          let confidenceMultiplier = 1.0;
-          if ([3, 11, 17].includes(team.id)) {
-            // Newly promoted teams: no confidence boost
-            confidenceMultiplier = 1.0; // No artificial boost for promoted teams
-          } else if (teamBettingData.confidence >= 0.85) {
-            // High confidence teams: strong increase (35-45%)
-            confidenceMultiplier = 1.35 + (teamBettingData.confidence - 0.85) * 0.67; // 1.35 to 1.45
-          } else if (teamBettingData.confidence >= 0.65) {
-            // Medium confidence teams: moderate increase (15-35%)
-            confidenceMultiplier = 1.15 + (teamBettingData.confidence - 0.65) * 1.0; // 1.15 to 1.35
-          } else {
-            // Low confidence teams: minimal increase (5-15%)
-            confidenceMultiplier = 1.05 + (teamBettingData.confidence - 0.40) * 0.4; // 1.05 to 1.15
-          }
+          // Confidence multiplier removed - using base projections without confidence boost
+          const confidenceMultiplier = 1.0;
           
           // Final expected goals with confidence adjustment
           const expectedGoals = baseExpectedGoals * confidenceMultiplier;
@@ -1461,20 +1443,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const marketCeiling = Math.min(4.2, teamBettingData.expectedGoalsPerGame * 2.0); // Dynamic maximum
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
-          let confidenceMultiplier = 1.0;
-          if ([3, 11, 17].includes(team.id)) {
-            // Newly promoted teams: no confidence boost  
-            confidenceMultiplier = 1.0; // No artificial boost for promoted teams
-          } else if (teamBettingData.confidence >= 0.85) {
-            // High confidence teams: strong increase (35-45%)
-            confidenceMultiplier = 1.35 + (teamBettingData.confidence - 0.85) * 0.67; // 1.35 to 1.45
-          } else if (teamBettingData.confidence >= 0.65) {
-            // Medium confidence teams: moderate increase (15-35%)
-            confidenceMultiplier = 1.15 + (teamBettingData.confidence - 0.65) * 1.0; // 1.15 to 1.35
-          } else {
-            // Low confidence teams: minimal increase (5-15%)
-            confidenceMultiplier = 1.05 + (teamBettingData.confidence - 0.40) * 0.4; // 1.05 to 1.15
-          }
+          // Confidence multiplier removed - using base projections without confidence boost
+          const confidenceMultiplier = 1.0;
           
           const projectedGoals = baseExpectedGoals * confidenceMultiplier;
           
