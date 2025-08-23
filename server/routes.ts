@@ -3312,11 +3312,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
             awayResult = 'draw';
           }
         } else {
-          // For unfinished fixtures, use projection data
-          homeExpectedGoals = homeTeam.goalProjections?.[gameweek.toString()] || 0;
-          awayExpectedGoals = awayTeam.goalProjections?.[gameweek.toString()] || 0;
-          homeCleanSheetOdds = homeTeam.csProjections?.[gameweek.toString()] || 0;
-          awayCleanSheetOdds = awayTeam.csProjections?.[gameweek.toString()] || 0;
+          // For unfinished fixtures, use projection data with higher weightage
+          const rawHomeGoals = homeTeam.goalProjections?.[gameweek.toString()] || 0;
+          const rawAwayGoals = awayTeam.goalProjections?.[gameweek.toString()] || 0;
+          const rawHomeCS = homeTeam.csProjections?.[gameweek.toString()] || 0;
+          const rawAwayCS = awayTeam.csProjections?.[gameweek.toString()] || 0;
+          
+          // Apply higher weightage to Team Goal Projections (20% boost)
+          const goalProjectionWeightage = 1.20;
+          homeExpectedGoals = rawHomeGoals * goalProjectionWeightage;
+          awayExpectedGoals = rawAwayGoals * goalProjectionWeightage;
+          
+          // Apply higher weightage to Team Clean Sheet Projections (15% boost)
+          const csProjectionWeightage = 1.15;
+          homeCleanSheetOdds = Math.min(100, rawHomeCS * csProjectionWeightage);
+          awayCleanSheetOdds = Math.min(100, rawAwayCS * csProjectionWeightage);
+          
+          // Add confidence-based adjustment for high-quality projections
+          const isHighConfidenceMatch = rawHomeGoals > 0.8 && rawAwayGoals > 0.8 && rawHomeCS > 10 && rawAwayCS > 10;
+          if (isHighConfidenceMatch) {
+            // Extra 5% boost for matches with complete high-quality projection data
+            homeExpectedGoals *= 1.05;
+            awayExpectedGoals *= 1.05;
+            homeCleanSheetOdds = Math.min(100, homeCleanSheetOdds * 1.05);
+            awayCleanSheetOdds = Math.min(100, awayCleanSheetOdds * 1.05);
+          }
           
           // Determine projected match result based on expected goals
           if (homeExpectedGoals > awayExpectedGoals) {
@@ -3334,11 +3354,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Confidence based purely on data availability from projections
-        const dataPoints = [homeExpectedGoals, awayExpectedGoals, homeCleanSheetOdds, awayCleanSheetOdds].filter(val => val > 0).length;
+        // Enhanced confidence calculation based on projection quality and completeness
+        const hasCompleteGoalData = homeExpectedGoals > 0 && awayExpectedGoals > 0;
+        const hasCompleteCSData = homeCleanSheetOdds > 0 && awayCleanSheetOdds > 0;
+        const highQualityGoals = homeExpectedGoals > 0.8 && awayExpectedGoals > 0.8;
+        const reasonableCSData = homeCleanSheetOdds > 10 && awayCleanSheetOdds > 10;
+        
         let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
-        if (dataPoints === 4) confidence = 'High';
-        else if (dataPoints <= 2) confidence = 'Low';
+        
+        if (hasCompleteGoalData && hasCompleteCSData && highQualityGoals && reasonableCSData) {
+          confidence = 'High'; // Complete high-quality projections from both specialized endpoints
+        } else if (hasCompleteGoalData && hasCompleteCSData) {
+          confidence = 'Medium'; // Complete projections but lower quality
+        } else {
+          confidence = 'Low'; // Incomplete projection data
+        }
         
         return {
           id: fixture.id,
