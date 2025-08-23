@@ -7,10 +7,14 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { Settings, RotateCcw, Save, AlertTriangle, Target, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface UnifiedProjectionSettings {
+  // Auto balance setting
+  autoBalance: boolean;
+  
   // Global multipliers (affect both scoring and conceding)
   globalTierMultiplier: number;
   lowConfidenceBoost: number;
@@ -135,6 +139,11 @@ export default function AdminUnifiedProjections() {
     }
   };
 
+  const handleSwitchChange = (field: keyof UnifiedProjectionSettings, value: boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
+
   const handleSubmit = () => {
     updateSettingsMutation.mutate(formData);
   };
@@ -189,41 +198,65 @@ export default function AdminUnifiedProjections() {
                 These settings affect both goals scored and goals conceded calculations
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="globalTierMultiplier">Global Tier Multiplier</Label>
-                <Input
-                  id="globalTierMultiplier"
-                  type="number"
-                  step="0.01"
-                  value={formData.globalTierMultiplier || ''}
-                  onChange={(e) => handleInputChange('globalTierMultiplier', e.target.value)}
-                  data-testid="input-globalTierMultiplier"
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-blue-50 dark:bg-blue-950">
+                <div className="space-y-1">
+                  <Label htmlFor="autoBalance" className="text-base font-semibold text-blue-900 dark:text-blue-100">
+                    Auto Balance Goals
+                  </Label>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Automatically ensures Goals Scored = Goals Against across all teams
+                  </p>
+                </div>
+                <Switch
+                  id="autoBalance"
+                  checked={formData.autoBalance || false}
+                  onCheckedChange={(checked) => handleSwitchChange('autoBalance', checked)}
+                  data-testid="switch-autoBalance"
                 />
               </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="globalTierMultiplier">Global Tier Multiplier</Label>
+                  <Input
+                    id="globalTierMultiplier"
+                    type="number"
+                    step="0.01"
+                    value={formData.globalTierMultiplier || ''}
+                    onChange={(e) => handleInputChange('globalTierMultiplier', e.target.value)}
+                    disabled={formData.autoBalance}
+                    data-testid="input-globalTierMultiplier"
+                    className={formData.autoBalance ? "opacity-50" : ""}
+                  />
+                  {formData.autoBalance && (
+                    <p className="text-xs text-gray-500">Auto-calculated when Auto Balance is enabled</p>
+                  )}
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="lowConfidenceBoost">Low Confidence Boost</Label>
-                <Input
-                  id="lowConfidenceBoost"
-                  type="number"
-                  step="0.01"
-                  value={formData.lowConfidenceBoost || ''}
-                  onChange={(e) => handleInputChange('lowConfidenceBoost', e.target.value)}
-                  data-testid="input-lowConfidenceBoost"
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lowConfidenceBoost">Low Confidence Boost</Label>
+                  <Input
+                    id="lowConfidenceBoost"
+                    type="number"
+                    step="0.01"
+                    value={formData.lowConfidenceBoost || ''}
+                    onChange={(e) => handleInputChange('lowConfidenceBoost', e.target.value)}
+                    data-testid="input-lowConfidenceBoost"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="lowConfidenceThreshold">Low Confidence Threshold</Label>
-                <Input
-                  id="lowConfidenceThreshold"
-                  type="number"
-                  step="0.01"
-                  value={formData.lowConfidenceThreshold || ''}
-                  onChange={(e) => handleInputChange('lowConfidenceThreshold', e.target.value)}
-                  data-testid="input-lowConfidenceThreshold"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="lowConfidenceThreshold">Low Confidence Threshold</Label>
+                  <Input
+                    id="lowConfidenceThreshold"
+                    type="number"
+                    step="0.01"
+                    value={formData.lowConfidenceThreshold || ''}
+                    onChange={(e) => handleInputChange('lowConfidenceThreshold', e.target.value)}
+                    data-testid="input-lowConfidenceThreshold"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

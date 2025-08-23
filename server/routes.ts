@@ -1099,6 +1099,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // UNIFIED admin settings for both Goals Scored AND Goals Against (ensures perfect data consistency)
   let unifiedProjectionSettings = {
+    // Auto balance setting
+    autoBalance: true,
+    
     // Global multipliers (affect both scoring and conceding)
     globalTierMultiplier: 1.25,
     lowConfidenceBoost: 1.25,
@@ -1317,6 +1320,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/unified-projection-settings/reset", async (req, res) => {
     try {
       unifiedProjectionSettings = {
+        // Auto balance setting
+        autoBalance: true,
+        
         // Global multipliers (affect both scoring and conceding)
         globalTierMultiplier: 1.25,
         lowConfidenceBoost: 1.25,
@@ -3925,10 +3931,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalAdjustedGoals += match.homeAdjusted + match.awayAdjusted;
       });
       
-      const rawNormalizationFactor = totalAdjustedGoals > 0 ? totalOriginalGoals / totalAdjustedGoals : 1;
-      
-      console.log(`DEBUG: Raw normalization factor: ${rawNormalizationFactor.toFixed(4)}`);
-      console.log(`DEBUG: Original total: ${totalOriginalGoals.toFixed(2)}, Adjusted total: ${totalAdjustedGoals.toFixed(2)}`);
+      // Check if auto-balance is enabled for perfect mathematical consistency
+      let rawNormalizationFactor;
+      if (unifiedProjectionSettings.autoBalance) {
+        // Auto-balance: Calculate perfect ratio to match goals scored exactly
+        rawNormalizationFactor = totalAdjustedGoals > 0 ? totalOriginalGoals / totalAdjustedGoals : 1;
+        console.log(`DEBUG: Auto Balance ENABLED - Perfect normalization factor: ${rawNormalizationFactor.toFixed(4)}`);
+        console.log(`DEBUG: Goals Scored will equal Goals Against after adjustment`);
+        console.log(`DEBUG: Original total: ${totalOriginalGoals.toFixed(2)}, Adjusted total: ${totalAdjustedGoals.toFixed(2)}`);
+      } else {
+        // Manual mode: Use bounded ratio for stability
+        rawNormalizationFactor = totalAdjustedGoals > 0 ? Math.max(0.1, Math.min(3.0, totalOriginalGoals / totalAdjustedGoals)) : 1;
+        console.log(`DEBUG: Manual mode - Bounded normalization factor: ${rawNormalizationFactor.toFixed(4)}`);
+        console.log(`DEBUG: Original total: ${totalOriginalGoals.toFixed(2)}, Adjusted total: ${totalAdjustedGoals.toFixed(2)}`);
+      }
       
       // Apply selective normalization that preserves more defensive variance
       // Instead of uniform normalization, apply team-specific adjustments
