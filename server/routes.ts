@@ -3825,7 +3825,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
-      // Process each fixture to create perfect mirror logic
+      // Define defensive tier multipliers for realistic variance while maintaining mathematical consistency
+      const getDefensiveTier = (teamId: number): string => {
+        const tierMapping: { [key: number]: string } = {
+          1: 'elite',   // Arsenal - elite defense
+          13: 'elite',  // Man City - elite defense  
+          12: 'elite',  // Liverpool - elite defense
+          6: 'strong',  // Brighton - strong defense
+          15: 'strong', // Newcastle - strong defense
+          2: 'strong',  // Aston Villa - strong defense
+          16: 'strong', // Nottingham Forest - strong defense
+          5: 'strong',  // Brentford - strong defense
+          7: 'average', // Chelsea - average defense
+          11: 'average',// Everton - average defense
+          18: 'average',// Tottenham - average defense
+          14: 'average',// Man United - average defense
+          4: 'average', // Bournemouth - average defense
+          10: 'average',// Fulham - average defense
+          20: 'average',// West Ham - average defense
+          3: 'weak',    // Brentford - weak defense
+          8: 'weak',    // Crystal Palace - weak defense
+          9: 'weak',    // Leicester - weak defense
+          17: 'promoted', // Sheffield United - promoted defense
+          19: 'promoted'  // Luton Town - promoted defense
+        };
+        return tierMapping[teamId] || 'average';
+      };
+
+      // Get defensive multipliers from unified settings
+      const getDefensiveMultiplier = (tier: string): number => {
+        switch (tier) {
+          case 'elite': return unifiedProjectionSettings.eliteDefenseMultiplier;
+          case 'strong': return unifiedProjectionSettings.strongDefenseMultiplier;
+          case 'average': return unifiedProjectionSettings.averageDefenseMultiplier;
+          case 'weak': return unifiedProjectionSettings.weakDefenseMultiplier;
+          case 'promoted': return unifiedProjectionSettings.promotedDefenseMultiplier;
+          default: return unifiedProjectionSettings.averageDefenseMultiplier;
+        }
+      };
+
+      // First pass: Calculate base goals against from mirror logic
+      const baseGoalsAgainst = new Map();
       fixturesData.forEach((fixture: any) => {
         if (fixture.event >= 1 && fixture.event <= 38) {
           const homeTeam = teamsGoalsAgainst.get(fixture.team_h);
@@ -3837,24 +3877,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const awayTeamGoals = teamGoalProjections.find((t: any) => t.id === fixture.team_a);
             
             if (homeTeamGoals && awayTeamGoals) {
-              // PERFECT MIRROR: Home team goals vs away team = Away team goals against from home team
               const homeGoalsScored = homeTeamGoals.gameweekProjections[fixture.event] || 0;
               const awayGoalsScored = awayTeamGoals.gameweekProjections[fixture.event] || 0;
               
-              // Check if fixture is finished - use actual goals, otherwise use projections
+              // Check if fixture is finished - use actual goals, otherwise use projections with defensive adjustments
               if (fixture.finished) {
                 // For finished fixtures, use actual goals conceded
-                homeTeam.gameweekProjections[fixture.event] = fixture.team_a_score || 0; // Home team concedes away team's actual score
-                awayTeam.gameweekProjections[fixture.event] = fixture.team_h_score || 0; // Away team concedes home team's actual score
+                homeTeam.gameweekProjections[fixture.event] = fixture.team_a_score || 0;
+                awayTeam.gameweekProjections[fixture.event] = fixture.team_h_score || 0;
               } else {
-                // PERFECT MIRROR: Home team's goals scored vs away = Away team's goals conceded
-                homeTeam.gameweekProjections[fixture.event] = awayGoalsScored; // Home team concedes what away team scores
-                awayTeam.gameweekProjections[fixture.event] = homeGoalsScored; // Away team concedes what home team scores
+                // Apply defensive tier multipliers for realistic variance
+                const homeDefensiveTier = getDefensiveTier(fixture.team_h);
+                const awayDefensiveTier = getDefensiveTier(fixture.team_a);
+                
+                const homeDefensiveMultiplier = getDefensiveMultiplier(homeDefensiveTier);
+                const awayDefensiveMultiplier = getDefensiveMultiplier(awayDefensiveTier);
+                
+                // Home team concedes adjusted goals from away team attack
+                let homeGoalsConceded = awayGoalsScored * homeDefensiveMultiplier;
+                // Away team concedes adjusted goals from home team attack  
+                let awayGoalsConceded = homeGoalsScored * awayDefensiveMultiplier;
+                
+                homeTeam.gameweekProjections[fixture.event] = homeGoalsConceded;
+                awayTeam.gameweekProjections[fixture.event] = awayGoalsConceded;
+                
+                // Store base values for normalization
+                if (!baseGoalsAgainst.has(fixture.id)) {
+                  baseGoalsAgainst.set(fixture.id, {
+                    homeOriginal: awayGoalsScored,
+                    awayOriginal: homeGoalsScored,
+                    homeAdjusted: homeGoalsConceded,
+                    awayAdjusted: awayGoalsConceded
+                  });
+                }
               }
             }
           }
         }
       });
+      
+      // Advanced normalization: Preserve defensive variance while maintaining mathematical consistency
+      let totalOriginalGoals = 0;
+      let totalAdjustedGoals = 0;
+      
+      baseGoalsAgainst.forEach((match: any) => {
+        totalOriginalGoals += match.homeOriginal + match.awayOriginal;
+        totalAdjustedGoals += match.homeAdjusted + match.awayAdjusted;
+      });
+      
+      const rawNormalizationFactor = totalAdjustedGoals > 0 ? totalOriginalGoals / totalAdjustedGoals : 1;
+      
+      console.log(`DEBUG: Raw normalization factor: ${rawNormalizationFactor.toFixed(4)}`);
+      console.log(`DEBUG: Original total: ${totalOriginalGoals.toFixed(2)}, Adjusted total: ${totalAdjustedGoals.toFixed(2)}`);
+      
+      // Apply selective normalization that preserves more defensive variance
+      // Instead of uniform normalization, apply team-specific adjustments
+      const teamTotals = new Map();
+      
+      // Calculate current totals for each team
+      Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
+        let teamTotal = 0;
+        Object.values(team.gameweekProjections).forEach((goals: any) => {
+          if (typeof goals === 'number') teamTotal += goals;
+        });
+        teamTotals.set(team.id, teamTotal);
+      });
+      
+      // Calculate average goals against and apply selective adjustment
+      const avgGoalsAgainst = Array.from(teamTotals.values()).reduce((sum: any, total: any) => sum + total, 0) / teamTotals.size;
+      
+      // Apply graduated normalization that preserves tier differences
+      Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
+        const currentTotal = teamTotals.get(team.id);
+        const defensiveTier = getDefensiveTier(team.id);
+        
+        // Apply tier-specific target adjustments for realistic variance
+        let targetMultiplier = 1.0;
+        switch (defensiveTier) {
+          case 'elite': targetMultiplier = 0.82; break;     // Elite defenses: ~18% fewer goals
+          case 'strong': targetMultiplier = 0.92; break;    // Strong defenses: ~8% fewer goals  
+          case 'average': targetMultiplier = 1.0; break;    // Average defenses: baseline
+          case 'weak': targetMultiplier = 1.12; break;      // Weak defenses: ~12% more goals
+          case 'promoted': targetMultiplier = 1.22; break;  // Promoted defenses: ~22% more goals
+        }
+        
+        const targetTotal = avgGoalsAgainst * targetMultiplier;
+        const teamAdjustmentFactor = currentTotal > 0 ? targetTotal / currentTotal : 1;
+        
+        // Apply team-specific adjustment with global balance factor
+        const finalAdjustment = teamAdjustmentFactor * rawNormalizationFactor;
+        
+        // Apply the adjustment to all gameweeks for this team
+        Object.keys(team.gameweekProjections).forEach((gw: any) => {
+          if (typeof team.gameweekProjections[gw] === 'number') {
+            team.gameweekProjections[gw] *= finalAdjustment;
+          }
+        });
+      });
+      
+      console.log(`DEBUG: Applied graduated normalization with defensive tier preservation`);
       
       // Calculate totals and averages with perfect mathematical consistency
       const finalProjections = Array.from(teamsGoalsAgainst.values()).map((team: any) => {
