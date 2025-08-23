@@ -935,11 +935,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             (0.85 + ((team.id * fixture.event * 11) % 100) / 1667); // Away factor 85-91%
           baseExpectedGoals *= venueMultiplier;
           
-          // Phase 3: Sophisticated opponent defensive resistance matrix
+          // Phase 3: Balanced opponent defensive resistance matrix
           const opponentDefenseStrength = opponentDefenseData.baseCleanSheetRate;
-          const defensiveImpact = Math.pow(opponentDefenseStrength * 2.5, 1.2); // Non-linear scaling
-          const attackingPenetration = 1.25 - (defensiveImpact * 0.65);
-          baseExpectedGoals *= Math.max(0.55, Math.min(1.35, attackingPenetration));
+          // More realistic defensive impact - good defenses reduce goals by 10-25%, not 50%+
+          const defensiveReduction = opponentDefenseStrength * 0.4; // Max 20% reduction for best defenses
+          const attackingPenetration = 1.0 - defensiveReduction;
+          baseExpectedGoals *= Math.max(0.75, Math.min(1.15, attackingPenetration));
           
           // Phase 4: Market-informed tactical context analysis
           const isEliteClash = [1, 12, 13].includes(team.id) && [1, 12, 13].includes(opponent.id); // Big 3 clash
@@ -1090,11 +1091,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             (0.78 + ((team.id * fixture.event * 11) % 100) / 1250); // Away factor 78-86%
           baseCSProbability *= venueMultiplier;
           
-          // Phase 3: Sophisticated opponent attacking threat matrix
+          // Phase 3: Balanced opponent attacking threat matrix  
           const opponentGoalThreat = opponentBettingData.expectedGoalsPerGame;
-          const attackingPressure = Math.pow(opponentGoalThreat / 2.5, 1.3); // Non-linear scaling
-          const defensiveSusceptibility = 1.25 - (attackingPressure * 0.55);
-          baseCSProbability *= Math.max(0.4, Math.min(1.4, defensiveSusceptibility));
+          // More realistic attacking impact - strong attacks reduce CS by 15-30%, not 60%+
+          const attackingReduction = (opponentGoalThreat - 1.0) * 0.15; // Scale from average (1.5 goals)
+          const defensiveSusceptibility = 1.0 - Math.max(0, attackingReduction);
+          baseCSProbability *= Math.max(0.7, Math.min(1.2, defensiveSusceptibility));
           
           // Phase 4: Market-informed tactical context analysis
           const isEliteClash = [1, 12, 13].includes(team.id) && [1, 12, 13].includes(opponent.id); // Big 3 clash
