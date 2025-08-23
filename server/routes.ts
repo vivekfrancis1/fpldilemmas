@@ -3044,6 +3044,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Debug all team totals to find Brighton
+      teams.forEach((team: any) => {
+        if (team.name.includes("Brighton") || team.short_name === "BHA") {
+          console.log(`DEBUG: Brighton total goals calculated: ${teamSeasonTotals[team.id].expectedGoals.toFixed(2)} (team ID: ${team.id}, name: ${team.name})`);
+        }
+      });
+      
+      // Find Simon Adingra and check his team assignment
+      const adingra = players.find((p: any) => `${p.first_name} ${p.second_name}`.includes("Adingra"));
+      if (adingra) {
+        const adingraTeam = teams.find((t: any) => t.id === adingra.team);
+        console.log(`DEBUG: Found Simon Adingra - ID: ${adingra.id}, name: '${adingra.first_name} ${adingra.second_name}', team ID: ${adingra.team}, team name: '${adingraTeam?.name}', goals: ${adingra.goals_scored}`);
+      } else {
+        console.log(`DEBUG: Simon Adingra not found in any current squad`);
+      }
+      
       console.log("DEBUG: Calculated season totals from Team Goal Projections for Player projections");
       
       // Get historical data (same as Goal Share)
@@ -3086,6 +3102,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teamData = teamSeasonTotals[teamId];
         
         if (team && teamData.expectedGoals > 0) {
+          // Debug all teams to see Brighton data
+          if (team.name.includes("Brighton") || team.short_name === "BHA") {
+            console.log(`DEBUG: Processing Brighton team - name: ${team.name}, short: ${team.short_name}, id: ${teamId}, expectedGoals: ${teamData.expectedGoals.toFixed(2)}`);
+            const brightonPlayers = players.filter((p: any) => p.team === teamId);
+            const adingra = brightonPlayers.find(p => `${p.first_name} ${p.second_name}`.includes("Adingra"));
+            if (adingra) {
+              console.log(`DEBUG: Found Simon Adingra in current squad: ID=${adingra.id}, name='${adingra.first_name} ${adingra.second_name}', goals=${adingra.goals_scored}`);
+            } else {
+              console.log(`DEBUG: Simon Adingra NOT found in current Brighton squad`);
+              console.log(`DEBUG: Brighton current players:`, brightonPlayers.map(p => `${p.first_name} ${p.second_name}`));
+            }
+          }
+          
           const teamPlayers = players.filter((p: any) => p.team === teamId);
           
           const weightedPlayerShares: { [playerId: number]: { name: string, position: string, totalWeightedShare: number, totalWeight: number } } = {};
@@ -3098,6 +3127,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               totalWeightedShare: 0,
               totalWeight: 0
             };
+            
+            // Debug Simon Adingra specifically
+            if (`${player.first_name} ${player.second_name}`.includes("Adingra")) {
+              console.log(`DEBUG: Initializing Simon Adingra for team ${team.name} (${teamId}) - goals this season: ${player.goals_scored}`);
+            }
           });
           
           // Process all three data sources with equal weighting
@@ -3144,6 +3178,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     if (matchedPlayerId && weightedPlayerShares[matchedPlayerId]) {
                       weightedPlayerShares[matchedPlayerId].totalWeightedShare += seasonGoalShare * 0.3333;
                       weightedPlayerShares[matchedPlayerId].totalWeight += 0.3333;
+                      
+                      // Debug Simon Adingra specifically
+                      if (weightedPlayerShares[matchedPlayerId].name.includes("Adingra")) {
+                        console.log(`DEBUG Adingra: Added ${season} data - goals: ${goals}, teamGoals: ${teamTotalGoals}, share: ${seasonGoalShare.toFixed(1)}%, weight: 0.3333`);
+                      }
+                    } else if (`${player.first_name || player.firstName} ${player.second_name || player.secondName}`.includes("Adingra")) {
+                      console.log(`DEBUG Adingra: Failed to match historical player from ${season} - player name: '${player.first_name || player.firstName} ${player.second_name || player.secondName}', goals: ${goals}`);
                     }
                   }
                 });
@@ -3177,6 +3218,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             finalPlayerShares.forEach(player => {
               player.goalShare = (player.goalShare / totalShare) * 100;
               const projectedGoals = (teamData.expectedGoals * player.goalShare / 100);
+              
+              // Debug Brighton specifically
+              if (team.name.includes("Brighton") || team.short_name === "BHA") {
+                console.log(`DEBUG Brighton - ${player.name}: teamGoals=${teamData.expectedGoals.toFixed(2)}, goalShare=${player.goalShare.toFixed(1)}%, projectedGoals=${projectedGoals.toFixed(2)}`);
+              }
               
               const currentPlayer = players.find((p: any) => p.id === player.id);
               
