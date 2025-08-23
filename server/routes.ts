@@ -816,33 +816,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return {
       // Premium 2024/25 spread betting market data - Enhanced for high confidence modeling
       teamGoalRates: {
-        // Realistic attacking output based on Premier League market analysis 2024/25
-        13: { expectedGoalsPerGame: 2.15, variance: 0.35, confidence: 0.87 }, // Man City - Haaland factor but aging
-        1: { expectedGoalsPerGame: 2.05, variance: 0.32, confidence: 0.85 }, // Arsenal - Creative midfield depth
-        12: { expectedGoalsPerGame: 1.95, variance: 0.30, confidence: 0.83 }, // Liverpool - Salah-Nunez combination
-        18: { expectedGoalsPerGame: 1.72, variance: 0.48, confidence: 0.74 }, // Tottenham - Son-Richarlison inconsistent
-        6: { expectedGoalsPerGame: 1.68, variance: 0.45, confidence: 0.72 }, // Chelsea - Transition period
+        // Realistic attacking output based on Premier League market analysis 2024/25 - Calibrated to ~1.64 goals/game average
+        13: { expectedGoalsPerGame: 2.45, variance: 0.35, confidence: 0.87 }, // Man City - Haaland factor but aging
+        1: { expectedGoalsPerGame: 2.35, variance: 0.32, confidence: 0.85 }, // Arsenal - Creative midfield depth
+        12: { expectedGoalsPerGame: 2.25, variance: 0.30, confidence: 0.83 }, // Liverpool - Salah-Nunez combination
+        18: { expectedGoalsPerGame: 1.92, variance: 0.48, confidence: 0.74 }, // Tottenham - Son-Richarlison inconsistent
+        6: { expectedGoalsPerGame: 1.88, variance: 0.45, confidence: 0.72 }, // Chelsea - Transition period
         
         // Strong attacking mid-table teams
-        5: { expectedGoalsPerGame: 1.58, variance: 0.38, confidence: 0.76 }, // Brighton - System-based attack
-        15: { expectedGoalsPerGame: 1.55, variance: 0.40, confidence: 0.74 }, // Newcastle - Isak quality
-        2: { expectedGoalsPerGame: 1.52, variance: 0.42, confidence: 0.72 }, // Aston Villa - Watkins impact
-        14: { expectedGoalsPerGame: 1.48, variance: 0.44, confidence: 0.70 }, // Man United - Bruno dependency
-        3: { expectedGoalsPerGame: 1.42, variance: 0.46, confidence: 0.68 }, // Bournemouth - Solanke burden
+        5: { expectedGoalsPerGame: 1.78, variance: 0.38, confidence: 0.76 }, // Brighton - System-based attack
+        15: { expectedGoalsPerGame: 1.75, variance: 0.40, confidence: 0.74 }, // Newcastle - Isak quality
+        2: { expectedGoalsPerGame: 1.72, variance: 0.42, confidence: 0.72 }, // Aston Villa - Watkins impact
+        14: { expectedGoalsPerGame: 1.68, variance: 0.44, confidence: 0.70 }, // Man United - Bruno dependency
+        3: { expectedGoalsPerGame: 1.62, variance: 0.46, confidence: 0.68 }, // Bournemouth - Solanke burden
         
         // Average attacking output
-        9: { expectedGoalsPerGame: 1.38, variance: 0.41, confidence: 0.66 }, // Fulham - Well-organized
-        4: { expectedGoalsPerGame: 1.35, variance: 0.40, confidence: 0.64 }, // Brentford - Post-Toney era
-        16: { expectedGoalsPerGame: 1.28, variance: 0.44, confidence: 0.62 }, // Nottingham Forest - Limited creativity
-        19: { expectedGoalsPerGame: 1.25, variance: 0.48, confidence: 0.60 }, // West Ham - Bowen reliance
+        9: { expectedGoalsPerGame: 1.58, variance: 0.41, confidence: 0.66 }, // Fulham - Well-organized
+        4: { expectedGoalsPerGame: 1.55, variance: 0.40, confidence: 0.64 }, // Brentford - Post-Toney era
+        16: { expectedGoalsPerGame: 1.48, variance: 0.44, confidence: 0.62 }, // Nottingham Forest - Limited creativity
+        19: { expectedGoalsPerGame: 1.45, variance: 0.48, confidence: 0.60 }, // West Ham - Bowen reliance
         
         // Struggling attacking units
-        8: { expectedGoalsPerGame: 1.18, variance: 0.45, confidence: 0.57 }, // Everton - DCL fitness issues
-        7: { expectedGoalsPerGame: 1.15, variance: 0.47, confidence: 0.55 }, // Crystal Palace - Lack of quality
-        20: { expectedGoalsPerGame: 1.08, variance: 0.49, confidence: 0.52 }, // Wolves - Cunha burden
-        11: { expectedGoalsPerGame: 1.05, variance: 0.51, confidence: 0.50 }, // Leicester - Championship hangover
-        10: { expectedGoalsPerGame: 0.95, variance: 0.55, confidence: 0.47 }, // Ipswich - Championship level
-        17: { expectedGoalsPerGame: 0.92, variance: 0.52, confidence: 0.48 }  // Southampton - Attacking struggles
+        8: { expectedGoalsPerGame: 1.38, variance: 0.45, confidence: 0.57 }, // Everton - DCL fitness issues
+        7: { expectedGoalsPerGame: 1.35, variance: 0.47, confidence: 0.55 }, // Crystal Palace - Lack of quality
+        20: { expectedGoalsPerGame: 1.28, variance: 0.49, confidence: 0.52 }, // Wolves - Cunha burden
+        11: { expectedGoalsPerGame: 1.25, variance: 0.51, confidence: 0.50 }, // Leicester - Championship hangover
+        10: { expectedGoalsPerGame: 1.15, variance: 0.55, confidence: 0.47 }, // Ipswich - Championship level
+        17: { expectedGoalsPerGame: 1.12, variance: 0.52, confidence: 0.48 }  // Southampton - Attacking struggles
       },
       
       // Elite defensive market data - Premium accuracy for high confidence
