@@ -2038,8 +2038,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Process each player and group by team
       historicalPlayers.forEach(player => {
-        const teamName = player.team_name || player.teamName || 'Unknown Team';
-        const teamShort = player.team_short_name || player.teamShortName || 'UNK';
+        const teamName = player.teamName || 'Unknown Team';
+        const teamShort = player.teamShortName || 'UNK';
         const assists = player.assists || 0;
         
         if (!teamAssistShares[teamName]) {
@@ -2054,11 +2054,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamAssistShares[teamName].totalAssists += assists;
         teamAssistShares[teamName].players.push({
           id: player.id || player.playerId,
-          name: `${player.first_name || player.firstName} ${player.second_name || player.secondName}`,
-          position: player.position || player.positionName,
+          name: `${player.firstName} ${player.secondName}`,
+          position: player.positionName,
           assists: assists,
           minutes: player.minutes || 0,
-          totalPoints: player.total_points || player.totalPoints || 0
+          totalPoints: player.totalPoints || 0
         });
       });
       
@@ -2406,104 +2406,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return playerShares;
   }
 
-  // Enhanced goal share distribution based on Premier League historical data
-  function distributeGoalShares(players: any[], positions: any[]) {
-    const playerShares = [];
-    let totalShare = 0;
-
-    // Enhanced position-based goal involvement rates based on Premier League historical data
-    const positionGoalRates = {
-      'Goalkeeper': { base: 0.8, variance: 0.4 },     // 0.8% base, penalty takers get boost
-      'Defender': { base: 6.5, variance: 2.5 },       // 6.5% base, attacking fullbacks/CBs get boost  
-      'Midfielder': { base: 22.0, variance: 8.0 },    // 22% base, attacking mids get major boost
-      'Forward': { base: 38.0, variance: 10.0 }       // 38% base, star forwards get major boost
-    };
-
-    // Elite player boost based on historical goal scoring (deterministic)
-    const elitePlayerBoosts: { [key: string]: number } = {
-      // Top goalscorers historically
-      'Erling Haaland': 1.9, 'Harry Kane': 1.7, 'Mohamed Salah': 1.6,
-      'Son Heung-min': 1.5, 'Ivan Toney': 1.4, 'Alexander Isak': 1.3,
-      'Darwin Núñez': 1.25, 'Ollie Watkins': 1.25, 'Nicolas Jackson': 1.2,
-      'Dominic Solanke': 1.2, 'Chris Wood': 1.15, 'Jamie Vardy': 1.15,
-      'Callum Wilson': 1.15, 'Beto': 1.1, 'Jean-Philippe Mateta': 1.1,
-      // Key midfielders with goal threat
-      'Bruno Fernandes': 1.35, 'Kevin De Bruyne': 1.3, 'Cole Palmer': 1.3,
-      'Phil Foden': 1.2, 'Bukayo Saka': 1.2, 'Martin Ødegaard': 1.15,
-      'Mason Mount': 1.1, 'James Maddison': 1.1, 'Eberechi Eze': 1.1,
-      // Attacking defenders with goal threat
-      'Trent Alexander-Arnold': 1.25, 'Andrew Robertson': 1.15, 'Reece James': 1.15,
-      'João Cancelo': 1.1, 'Kyle Walker': 1.05, 'Ben Chilwell': 1.1
-    };
-
-    players.forEach(player => {
-      const position = positions.find(p => p.id === player.element_type);
-      const positionName = position?.singular_name;
-      const playerName = `${player.first_name} ${player.second_name}`;
-      
-      // Get position rates
-      const positionRate = positionGoalRates[positionName as keyof typeof positionGoalRates] || { base: 12.0, variance: 4.0 };
-      
-      // Deterministic variance based on player ID (ensures consistency)
-      const seed = (player.id * 17) % 100;
-      const varianceMultiplier = 1 + ((seed - 50) / 100) * (positionRate.variance / positionRate.base);
-      
-      // Base share from position with deterministic variance
-      let baseShare = positionRate.base * Math.max(0.4, Math.min(1.6, varianceMultiplier));
-      
-      // Elite player boost
-      const eliteBoost = elitePlayerBoosts[playerName] || 1.0;
-      baseShare *= eliteBoost;
-      
-      // Enhanced performance adjustments based on current FPL stats
-      const form = Math.max(0.5, Math.min(10, parseFloat(player.form) || 3.0));
-      const pointsPerGame = Math.max(1.0, Math.min(15, parseFloat(player.points_per_game) || 3.0));
-      const totalPoints = Math.max(5, Math.min(300, parseFloat(player.total_points) || 20));
-      const goalsScored = Math.max(0, Math.min(30, parseFloat(player.goals_scored) || 0));
-      const assists = Math.max(0, Math.min(20, parseFloat(player.assists) || 0));
-      const minutesPlayed = Math.max(50, Math.min(3000, parseFloat(player.minutes) || 500));
-      
-      // Advanced performance scoring with goal involvement weighting
-      const goalInvolvement = (goalsScored * 1.0 + assists * 0.5) / Math.max(1, minutesPlayed / 90);
-      const formWeight = 0.2;
-      const ppgWeight = 0.25;
-      const totalPointsWeight = 0.2;
-      const minutesWeight = 0.15;
-      const goalInvolvementWeight = 0.2;
-      
-      const performanceScore = (
-        (form / 5) * formWeight +
-        (pointsPerGame / 6) * ppgWeight +
-        (totalPoints / 100) * totalPointsWeight +
-        (minutesPlayed / 1500) * minutesWeight +
-        Math.min(2, goalInvolvement * 10) * goalInvolvementWeight
-      );
-      
-      const performanceMultiplier = Math.max(0.4, Math.min(2.2, performanceScore));
-      
-      // Apply injury/availability factor (based on chance of playing)
-      const availabilityFactor = (player.chance_of_playing_next_round || 100) / 100;
-      const availabilityMultiplier = Math.max(0.3, availabilityFactor);
-      
-      // Calculate final raw share
-      const rawShare = baseShare * performanceMultiplier * availabilityMultiplier;
-      
-      playerShares.push({
-        id: player.id,
-        name: playerName,
-        position: position?.singular_name_short || 'UNK',
-        rawShare: rawShare
-      });
-      
-      totalShare += rawShare;
-    });
-
-    // Normalize to 100% with one decimal place
-    return playerShares.map(player => ({
-      ...player,
-      goalShare: Math.round((player.rawShare / totalShare) * 1000) / 10 // One decimal place
-    })).filter(p => p.goalShare > 0).sort((a, b) => b.goalShare - a.goalShare);
-  }
 
   // Helper function to generate Assist Share data (same logic as assist-share page)
   function generateAssistShareData(bootstrapData: any, fixturesData: any, weeks: number, startGameweek: number) {
