@@ -15,7 +15,8 @@ import {
   Trophy,
   Target,
   Shield,
-  Zap
+  Zap,
+  Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +70,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: false },
 
         { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
+      ]
+    },
+    {
+      section: "Admin Tools",
+      items: [
+        { path: "/admin/goal-projections", label: "Goal Projection Settings", icon: Settings, description: "Configure projection model", popular: false, isNew: true }
       ]
     }
   ];

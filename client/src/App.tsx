@@ -26,6 +26,7 @@ import TeamGoalsAgainstProjections from "./pages/team-goals-against-projections"
 import TeamAssistProjections from "./pages/team-assist-projections";
 import TeamCSProjections from "./pages/team-cs-projections";
 import SeasonProjections from "./pages/season-projections";
+import AdminGoalProjections from "./pages/admin-goal-projections";
 
 function Router() {
   return (
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/assist-share" component={AssistShare} />
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
       <Route path="/season-projections" component={SeasonProjections} />
+      <Route path="/admin/goal-projections" component={AdminGoalProjections} />
       <Route component={NotFound} />
     </Switch>
   );

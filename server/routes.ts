@@ -1049,31 +1049,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamGoalRates,
           teamCleanSheetRates,
           contextMultipliers: {
-            derby: { goals: 0.87, cleanSheets: 0.82 },
-            topSix: { goals: 1.12, cleanSheets: 0.88 },
-            relegationBattle: { goals: 0.83, cleanSheets: 0.78 },
-            earlyKickoff: { goals: 0.94, cleanSheets: 1.06 },
-            lateKickoff: { goals: 1.07, cleanSheets: 0.93 },
-            postEuropean: { goals: 0.88, cleanSheets: 0.87 },
-            midweekFixture: { goals: 0.91, cleanSheets: 0.95 },
-            seasonFinale: { goals: 1.05, cleanSheets: 0.90 },
-            newManagerBounce: { goals: 1.08, cleanSheets: 1.03 },
-            weatherConditions: { goals: 0.96, cleanSheets: 1.02 }
+            derby: { goals: adminSettings.derbyGoalsMultiplier, cleanSheets: 0.82 },
+            topSix: { goals: adminSettings.topSixGoalsMultiplier, cleanSheets: 0.88 },
+            relegationBattle: { goals: adminSettings.relegationBattleGoalsMultiplier, cleanSheets: 0.78 },
+            earlyKickoff: { goals: adminSettings.earlyKickoffGoalsMultiplier, cleanSheets: 1.06 },
+            lateKickoff: { goals: adminSettings.lateKickoffGoalsMultiplier, cleanSheets: 0.93 },
+            postEuropean: { goals: adminSettings.postEuropeanGoalsMultiplier, cleanSheets: 0.87 },
+            midweekFixture: { goals: adminSettings.midweekFixtureGoalsMultiplier, cleanSheets: 0.95 },
+            seasonFinale: { goals: adminSettings.seasonFinaleGoalsMultiplier, cleanSheets: 0.90 },
+            newManagerBounce: { goals: adminSettings.newManagerBounceGoalsMultiplier, cleanSheets: 1.03 },
+            weatherConditions: { goals: adminSettings.weatherConditionsGoalsMultiplier, cleanSheets: 1.02 }
           }
         };
       },
       
       getTierMultiplier: (teamId: number, tierSeed: number) => {
-        // Generic 25% multiplier applied to all teams for projected goals
-        return 1.25;
+        // Use configurable tier multiplier from admin settings
+        return adminSettings.globalTierMultiplier;
       },
       
       getConfidenceMultiplier: (teamId: number) => {
         const team = teamProjectionData[teamId];
         if (!team) return 1.0;
         
-        // 1.25x confidence multiplier for teams with low confidence (below 65%)
-        if (team.confidence < 0.65) return 1.25;
+        // Use configurable confidence multiplier and threshold from admin settings
+        if (team.confidence < adminSettings.lowConfidenceThreshold) return adminSettings.lowConfidenceBoost;
         return 1.0;
       }
     };
@@ -1092,6 +1092,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to initialize teams:", error);
       res.status(500).json({ error: "Failed to initialize team data" });
+    }
+  });
+
+  // ==================== ADMIN ENDPOINTS FOR TEAM GOAL PROJECTIONS ====================
+  
+  // In-memory admin settings (would be database in production)
+  let adminSettings = {
+    globalTierMultiplier: 1.25,
+    lowConfidenceBoost: 1.25,
+    lowConfidenceThreshold: 0.65,
+    derbyGoalsMultiplier: 0.87,
+    topSixGoalsMultiplier: 1.12,
+    relegationBattleGoalsMultiplier: 0.83,
+    earlyKickoffGoalsMultiplier: 0.94,
+    lateKickoffGoalsMultiplier: 1.07,
+    postEuropeanGoalsMultiplier: 0.88,
+    midweekFixtureGoalsMultiplier: 0.91,
+    seasonFinaleGoalsMultiplier: 1.05,
+    newManagerBounceGoalsMultiplier: 1.08,
+    weatherConditionsGoalsMultiplier: 0.96,
+    marketFloorMultiplier: 0.4,
+    marketCeilingMultiplier: 2.0,
+    absoluteMinGoals: 0.3,
+    absoluteMaxGoals: 4.2,
+    lastUpdated: new Date().toISOString(),
+    updatedBy: "admin"
+  };
+
+  // Get admin settings
+  app.get("/api/admin/goal-projection-settings", async (req, res) => {
+    try {
+      res.json(adminSettings);
+    } catch (error) {
+      console.error("Error fetching admin settings:", error);
+      res.status(500).json({ error: "Failed to fetch admin settings" });
+    }
+  });
+
+  // Update admin settings
+  app.put("/api/admin/goal-projection-settings", async (req, res) => {
+    try {
+      const updatedSettings = {
+        ...adminSettings,
+        ...req.body,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      adminSettings = updatedSettings;
+      
+      // Clear cached data to force recalculation with new settings
+      // Note: In production this would clear database cache
+      console.log("Admin settings updated, projection model will use new parameters");
+      
+      res.json({ 
+        success: true, 
+        message: "Admin settings updated successfully",
+        settings: adminSettings 
+      });
+    } catch (error) {
+      console.error("Error updating admin settings:", error);
+      res.status(500).json({ error: "Failed to update admin settings" });
+    }
+  });
+
+  // Reset admin settings to defaults
+  app.post("/api/admin/goal-projection-settings/reset", async (req, res) => {
+    try {
+      adminSettings = {
+        globalTierMultiplier: 1.25,
+        lowConfidenceBoost: 1.25,
+        lowConfidenceThreshold: 0.65,
+        derbyGoalsMultiplier: 0.87,
+        topSixGoalsMultiplier: 1.12,
+        relegationBattleGoalsMultiplier: 0.83,
+        earlyKickoffGoalsMultiplier: 0.94,
+        lateKickoffGoalsMultiplier: 1.07,
+        postEuropeanGoalsMultiplier: 0.88,
+        midweekFixtureGoalsMultiplier: 0.91,
+        seasonFinaleGoalsMultiplier: 1.05,
+        newManagerBounceGoalsMultiplier: 1.08,
+        weatherConditionsGoalsMultiplier: 0.96,
+        marketFloorMultiplier: 0.4,
+        marketCeilingMultiplier: 2.0,
+        absoluteMinGoals: 0.3,
+        absoluteMaxGoals: 4.2,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      res.json({ 
+        success: true, 
+        message: "Admin settings reset to defaults",
+        settings: adminSettings 
+      });
+    } catch (error) {
+      console.error("Error resetting admin settings:", error);
+      res.status(500).json({ error: "Failed to reset admin settings" });
     }
   });
 
@@ -1256,8 +1354,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
           
           // Phase 8: Realistic Premier League goal bounds with market precision
-          const marketFloor = Math.max(0.3, teamBettingData.expectedGoalsPerGame * 0.4); // Dynamic minimum
-          const marketCeiling = Math.min(4.2, teamBettingData.expectedGoalsPerGame * 2.0); // Dynamic maximum
+          const marketFloor = Math.max(adminSettings.absoluteMinGoals, teamBettingData.expectedGoalsPerGame * adminSettings.marketFloorMultiplier); // Dynamic minimum
+          const marketCeiling = Math.min(adminSettings.absoluteMaxGoals, teamBettingData.expectedGoalsPerGame * adminSettings.marketCeilingMultiplier); // Dynamic maximum
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
           // Apply confidence multiplier from centralized team service
@@ -1434,8 +1532,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
           
           // Apply the same goal bounds and confidence multiplier as goals
-          const marketFloor = Math.max(0.3, teamBettingData.expectedGoalsPerGame * 0.4); // Dynamic minimum
-          const marketCeiling = Math.min(4.2, teamBettingData.expectedGoalsPerGame * 2.0); // Dynamic maximum
+          const marketFloor = Math.max(adminSettings.absoluteMinGoals, teamBettingData.expectedGoalsPerGame * adminSettings.marketFloorMultiplier); // Dynamic minimum
+          const marketCeiling = Math.min(adminSettings.absoluteMaxGoals, teamBettingData.expectedGoalsPerGame * adminSettings.marketCeilingMultiplier); // Dynamic maximum
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
           // Apply confidence multiplier from centralized team service

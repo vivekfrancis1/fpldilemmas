@@ -253,3 +253,38 @@ export const fplTeams = pgTable("fpl_teams", {
 
 export type FplTeam = typeof fplTeams.$inferSelect;
 export type InsertFplTeam = typeof fplTeams.$inferInsert;
+
+// Admin settings for Team Goal Projections model
+export const adminGoalProjectionSettings = pgTable("admin_goal_projection_settings", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  
+  // Global multipliers
+  globalTierMultiplier: decimal("global_tier_multiplier", { precision: 4, scale: 2 }).default("1.25"),
+  lowConfidenceBoost: decimal("low_confidence_boost", { precision: 4, scale: 2 }).default("1.25"),
+  lowConfidenceThreshold: decimal("low_confidence_threshold", { precision: 4, scale: 2 }).default("0.65"),
+  
+  // Context multipliers
+  derbyGoalsMultiplier: decimal("derby_goals_multiplier", { precision: 4, scale: 2 }).default("0.87"),
+  topSixGoalsMultiplier: decimal("top_six_goals_multiplier", { precision: 4, scale: 2 }).default("1.12"),
+  relegationBattleGoalsMultiplier: decimal("relegation_battle_goals_multiplier", { precision: 4, scale: 2 }).default("0.83"),
+  earlyKickoffGoalsMultiplier: decimal("early_kickoff_goals_multiplier", { precision: 4, scale: 2 }).default("0.94"),
+  lateKickoffGoalsMultiplier: decimal("late_kickoff_goals_multiplier", { precision: 4, scale: 2 }).default("1.07"),
+  postEuropeanGoalsMultiplier: decimal("post_european_goals_multiplier", { precision: 4, scale: 2 }).default("0.88"),
+  midweekFixtureGoalsMultiplier: decimal("midweek_fixture_goals_multiplier", { precision: 4, scale: 2 }).default("0.91"),
+  seasonFinaleGoalsMultiplier: decimal("season_finale_goals_multiplier", { precision: 4, scale: 2 }).default("1.05"),
+  newManagerBounceGoalsMultiplier: decimal("new_manager_bounce_goals_multiplier", { precision: 4, scale: 2 }).default("1.08"),
+  weatherConditionsGoalsMultiplier: decimal("weather_conditions_goals_multiplier", { precision: 4, scale: 2 }).default("0.96"),
+  
+  // Market bounds
+  marketFloorMultiplier: decimal("market_floor_multiplier", { precision: 4, scale: 2 }).default("0.4"),
+  marketCeilingMultiplier: decimal("market_ceiling_multiplier", { precision: 4, scale: 2 }).default("2.0"),
+  absoluteMinGoals: decimal("absolute_min_goals", { precision: 4, scale: 2 }).default("0.3"),
+  absoluteMaxGoals: decimal("absolute_max_goals", { precision: 4, scale: 2 }).default("4.2"),
+  
+  // Metadata
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  updatedBy: varchar("updated_by").default("admin"),
+});
+
+export type AdminGoalProjectionSettings = typeof adminGoalProjectionSettings.$inferSelect;
+export type InsertAdminGoalProjectionSettings = typeof adminGoalProjectionSettings.$inferInsert;
