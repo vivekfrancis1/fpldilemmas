@@ -2282,6 +2282,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return data;
   }
 
+  // Enhanced assist share distribution based on Premier League historical data  
+  function distributeAssistShares(players: any[], positions: any[], historicalData: any = {}) {
+    const playerShares = [];
+    let totalShare = 0;
+
+    // Enhanced position-based assist involvement rates based on Premier League historical data
+    const positionAssistRates = {
+      'Goalkeeper': { base: 0.2, variance: 0.1 },     // 0.2% base, rare but possible
+      'Defender': { base: 8.5, variance: 3.0 },       // 8.5% base, attacking fullbacks get major boost  
+      'Midfielder': { base: 35.0, variance: 12.0 },   // 35% base, creative mids get major boost
+      'Forward': { base: 18.0, variance: 6.0 }        // 18% base, playmaking forwards get boost
+    };
+
+    // Elite assist provider boost based on historical creativity (deterministic)
+    const eliteAssistBoosts: { [key: string]: number } = {
+      // Elite creative midfielders and playmakers
+      'Kevin De Bruyne': 2.1, 'Bruno Fernandes': 1.9, 'Martin Ødegaard': 1.7,
+      'Cole Palmer': 1.8, 'James Maddison': 1.6, 'Phil Foden': 1.5,
+      'Bukayo Saka': 1.6, 'Mason Mount': 1.4, 'Eberechi Eze': 1.4,
+      'Pascal Groß': 1.5, 'Emile Smith Rowe': 1.3, 'Jack Grealish': 1.3,
+      // Creative fullbacks and wing-backs
+      'Trent Alexander-Arnold': 2.0, 'Andrew Robertson': 1.6, 'Reece James': 1.5,
+      'Ben Chilwell': 1.4, 'Kieran Trippier': 1.5, 'Luke Shaw': 1.3,
+      'João Cancelo': 1.4, 'Kyle Walker': 1.2, 'Pervis Estupiñán': 1.2,
+      // Playmaking forwards and wide players
+      'Mohamed Salah': 1.5, 'Son Heung-min': 1.4, 'Diogo Jota': 1.2,
+      'Gabriel Jesus': 1.3, 'Ivan Toney': 1.2, 'Harry Kane': 1.4,
+      'Ollie Watkins': 1.3, 'Alexander Isak': 1.2, 'Darwin Núñez': 1.1,
+      // Key creative defenders
+      'Virgil van Dijk': 1.1, 'William Saliba': 1.05, 'Gabriel Magalhães': 1.05,
+      'Thiago Silva': 1.1, 'John Stones': 1.05, 'Rúben Dias': 1.05
+    };
+
+    players.forEach(player => {
+      const position = positions.find(p => p.id === player.element_type);
+      const positionName = position?.singular_name;
+      const playerName = `${player.first_name} ${player.second_name}`;
+      
+      // Get position rates
+      const positionRate = positionAssistRates[positionName as keyof typeof positionAssistRates] || { base: 15.0, variance: 5.0 };
+      
+      // Deterministic variance based on player ID (ensures consistency)
+      const seed = (player.id * 23) % 100; // Different seed from goals for variety
+      const varianceMultiplier = 1 + ((seed - 50) / 100) * (positionRate.variance / positionRate.base);
+      
+      // Base share from position with deterministic variance
+      let baseShare = positionRate.base * Math.max(0.3, Math.min(1.8, varianceMultiplier));
+      
+      // Elite assist provider boost
+      const assistBoost = eliteAssistBoosts[playerName] || 1.0;
+      baseShare *= assistBoost;
+      
+      // Historical optimization using multiple seasons
+      let historicalMultiplier = 1.0;
+      let totalHistoricalAssists = 0;
+      let seasonsFound = 0;
+      
+      // Check multiple seasons for comprehensive historical data
+      Object.values(historicalData).forEach((seasonPlayers: any) => {
+        if (Array.isArray(seasonPlayers)) {
+          const historicalPlayer = seasonPlayers.find((hp: any) => 
+            hp && (
+              (`${hp.first_name || hp.firstName} ${hp.second_name || hp.secondName}` === playerName) ||
+              (hp.web_name === player.web_name && Math.abs((hp.now_cost || hp.nowCost || 0) - player.now_cost) <= 20)
+            )
+          );
+          
+          if (historicalPlayer) {
+            const assists = historicalPlayer.assists || 0;
+            const minutes = historicalPlayer.minutes || 0;
+            if (minutes > 500) { // Only count seasons with meaningful playing time
+              totalHistoricalAssists += assists;
+              seasonsFound++;
+            }
+          }
+        }
+      });
+      
+      // Apply historical boost for proven assist providers
+      if (seasonsFound >= 2 && totalHistoricalAssists >= 8) {
+        const avgAssistsPerSeason = totalHistoricalAssists / seasonsFound;
+        // Boost based on historical assist average (elite assisters get major boost)
+        if (avgAssistsPerSeason >= 6) {
+          historicalMultiplier = 1.4; // Elite historical assist providers
+        } else if (avgAssistsPerSeason >= 4) {
+          historicalMultiplier = 1.25; // Very good historical assist providers
+        } else if (avgAssistsPerSeason >= 2.5) {
+          historicalMultiplier = 1.15; // Good historical assist providers
+        }
+      }
+      
+      baseShare *= historicalMultiplier;
+      
+      // ICT creativity boost (assists heavily correlate with creativity)
+      const creativityBoost = player.creativity_rank <= 50 ? 1.3 : 
+                             player.creativity_rank <= 100 ? 1.15 : 
+                             player.creativity_rank <= 200 ? 1.05 : 1.0;
+      baseShare *= creativityBoost;
+      
+      // Form and injury considerations
+      const formBoost = (player.form || 0) > 6 ? 1.1 : (player.form || 0) < 3 ? 0.9 : 1.0;
+      const availabilityPenalty = (player.chance_of_playing_next_round || 100) < 75 ? 0.8 : 1.0;
+      baseShare *= formBoost * availabilityPenalty;
+      
+      // Price tier boost (expensive players often more creative)
+      const priceBoost = player.now_cost >= 90 ? 1.2 : player.now_cost >= 70 ? 1.1 : player.now_cost >= 50 ? 1.05 : 1.0;
+      baseShare *= priceBoost;
+      
+      // Final calculation with realistic bounds
+      const finalShare = Math.max(0.1, Math.min(45.0, baseShare)); // Realistic assist share range
+      
+      playerShares.push({
+        id: player.id,
+        name: playerName,
+        position: positionName,
+        rawShare: finalShare
+      });
+      
+      totalShare += finalShare;
+    });
+
+    return playerShares;
+  }
+
   // Enhanced goal share distribution based on Premier League historical data
   function distributeGoalShares(players: any[], positions: any[]) {
     const playerShares = [];
