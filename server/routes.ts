@@ -1110,17 +1110,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const marketCeiling = Math.min(4.2, teamBettingData.expectedGoalsPerGame * 2.0); // Dynamic maximum
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
-          // Confidence-based goal adjustment to match realistic Premier League totals
+          // Confidence-based goal adjustment - higher confidence = higher output (fixed logic)
           let confidenceMultiplier = 1.0;
           if (teamBettingData.confidence >= 0.85) {
-            // High confidence teams: moderate increase (10-15%)
-            confidenceMultiplier = 1.10 + (teamBettingData.confidence - 0.85) * 0.5; // 1.10 to 1.15
+            // High confidence teams: strong increase (35-45%)
+            confidenceMultiplier = 1.35 + (teamBettingData.confidence - 0.85) * 0.67; // 1.35 to 1.45
           } else if (teamBettingData.confidence >= 0.65) {
-            // Medium confidence teams: significant increase (25-35%)
-            confidenceMultiplier = 1.25 + (0.85 - teamBettingData.confidence) * 0.5; // 1.25 to 1.35
+            // Medium confidence teams: moderate increase (15-35%)
+            confidenceMultiplier = 1.15 + (teamBettingData.confidence - 0.65) * 1.0; // 1.15 to 1.35
           } else {
-            // Low confidence teams: major increase (50-70%)
-            confidenceMultiplier = 1.50 + (0.65 - teamBettingData.confidence) * 1.0; // 1.50 to 1.70
+            // Low confidence teams: minimal increase (5-15%)
+            confidenceMultiplier = 1.05 + (teamBettingData.confidence - 0.40) * 0.4; // 1.05 to 1.15
           }
           
           // Final expected goals with confidence adjustment
