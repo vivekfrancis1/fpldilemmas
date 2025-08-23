@@ -11,12 +11,15 @@ interface MatchProjection {
   id: number;
   gameweek: number;
   kickoffTime: string;
+  finished: boolean;
+  matchResult: string;
   homeTeam: {
     id: number;
     name: string;
     shortName: string;
     expectedGoals: number;
     cleanSheetOdds: number;
+    result: string;
   };
   awayTeam: {
     id: number;
@@ -24,6 +27,7 @@ interface MatchProjection {
     shortName: string;
     expectedGoals: number;
     cleanSheetOdds: number;
+    result: string;
   };
   totalExpectedGoals: number;
   confidence: 'High' | 'Medium' | 'Low';
@@ -87,6 +91,26 @@ export default function ProjectedGoalsCS() {
     if (percentage >= 30) return 'bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border border-orange-300';
     if (percentage >= 20) return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300';
     return 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-600 border border-gray-200';
+  };
+
+  const getResultColor = (result: string) => {
+    if (result === 'win') return 'bg-green-500 text-white';
+    if (result === 'loss') return 'bg-red-500 text-white';
+    if (result === 'draw') return 'bg-gray-500 text-white';
+    if (result === 'projected_win') return 'bg-green-100 text-green-800 border border-green-300';
+    if (result === 'projected_loss') return 'bg-red-100 text-red-800 border border-red-300';
+    if (result === 'projected_draw') return 'bg-gray-100 text-gray-800 border border-gray-300';
+    return 'bg-gray-50 text-gray-600';
+  };
+
+  const getResultText = (result: string) => {
+    if (result === 'win') return 'W';
+    if (result === 'loss') return 'L';
+    if (result === 'draw') return 'D';
+    if (result === 'projected_win') return 'PW';
+    if (result === 'projected_loss') return 'PL';
+    if (result === 'projected_draw') return 'PD';
+    return '-';
   };
 
   if (isLoading || projectionsLoading) {
@@ -220,6 +244,12 @@ export default function ProjectedGoalsCS() {
                                     {match.homeTeam.cleanSheetOdds}%
                                   </div>
                                 </div>
+                                <div className="text-center">
+                                  <div className="text-xs font-semibold text-gray-600 mb-1">RESULT</div>
+                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getResultColor(match.homeTeam.result)}`}>
+                                    {getResultText(match.homeTeam.result)}
+                                  </div>
+                                </div>
                               </div>
                             </div>
 
@@ -243,6 +273,12 @@ export default function ProjectedGoalsCS() {
                                   <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
                                   <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
                                     {match.awayTeam.cleanSheetOdds}%
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-xs font-semibold text-gray-600 mb-1">RESULT</div>
+                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getResultColor(match.awayTeam.result)}`}>
+                                    {getResultText(match.awayTeam.result)}
                                   </div>
                                 </div>
                               </div>
@@ -276,8 +312,9 @@ export default function ProjectedGoalsCS() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Key Metrics</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Goals: Expected goals for the team</li>
-                    <li>• CS%: Clean sheet probability percentage</li>
+                    <li>• Goals: Expected goals (actual for completed games)</li>
+                    <li>• CS%: Clean sheet probability (0%/100% for completed games)</li>
+                    <li>• Result: W/L/D for completed games, PW/PL/PD for projected results</li>
                     <li>• Color coding: Blue for high goals, Orange for high CS%</li>
                     <li>• Updated regularly based on market movements</li>
                   </ul>

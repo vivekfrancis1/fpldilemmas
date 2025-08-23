@@ -2893,6 +2893,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Check if fixture is finished - use actual data, otherwise use projections
         let homeExpectedGoals, awayExpectedGoals, homeCleanSheetOdds, awayCleanSheetOdds;
+        let matchResult, homeResult, awayResult;
         
         if (fixture.finished) {
           // For finished fixtures, use actual goals and clean sheet results
@@ -2900,12 +2901,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           awayExpectedGoals = fixture.team_a_score || 0;
           homeCleanSheetOdds = (fixture.team_a_score === 0) ? 100 : 0;
           awayCleanSheetOdds = (fixture.team_h_score === 0) ? 100 : 0;
+          
+          // Determine actual match result
+          if (homeExpectedGoals > awayExpectedGoals) {
+            matchResult = 'home_win';
+            homeResult = 'win';
+            awayResult = 'loss';
+          } else if (awayExpectedGoals > homeExpectedGoals) {
+            matchResult = 'away_win';
+            homeResult = 'loss';
+            awayResult = 'win';
+          } else {
+            matchResult = 'draw';
+            homeResult = 'draw';
+            awayResult = 'draw';
+          }
         } else {
           // For unfinished fixtures, use projection data
           homeExpectedGoals = homeTeam.goalProjections?.[gameweek.toString()] || 0;
           awayExpectedGoals = awayTeam.goalProjections?.[gameweek.toString()] || 0;
           homeCleanSheetOdds = homeTeam.csProjections?.[gameweek.toString()] || 0;
           awayCleanSheetOdds = awayTeam.csProjections?.[gameweek.toString()] || 0;
+          
+          // Determine projected match result based on expected goals
+          if (homeExpectedGoals > awayExpectedGoals) {
+            matchResult = 'projected_home_win';
+            homeResult = 'projected_win';
+            awayResult = 'projected_loss';
+          } else if (awayExpectedGoals > homeExpectedGoals) {
+            matchResult = 'projected_away_win';
+            homeResult = 'projected_loss';
+            awayResult = 'projected_win';
+          } else {
+            matchResult = 'projected_draw';
+            homeResult = 'projected_draw';
+            awayResult = 'projected_draw';
+          }
         }
         
         // Confidence based purely on data availability from projections
@@ -2918,19 +2949,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: fixture.id,
           gameweek: fixture.event,
           kickoffTime: fixture.kickoff_time,
+          finished: fixture.finished,
+          matchResult: matchResult,
           homeTeam: {
             id: homeTeam.id,
             name: homeTeam.name,
             shortName: homeTeam.shortName,
             expectedGoals: homeExpectedGoals,
-            cleanSheetOdds: homeCleanSheetOdds
+            cleanSheetOdds: homeCleanSheetOdds,
+            result: homeResult
           },
           awayTeam: {
             id: awayTeam.id,
             name: awayTeam.name,
             shortName: awayTeam.shortName,
             expectedGoals: awayExpectedGoals,
-            cleanSheetOdds: awayCleanSheetOdds
+            cleanSheetOdds: awayCleanSheetOdds,
+            result: awayResult
           },
           totalExpectedGoals: Math.round((homeExpectedGoals + awayExpectedGoals) * 100) / 100,
           confidence
