@@ -202,7 +202,7 @@ export default function OpenFPLProjections() {
         <div className="fpl-page-header">
           <div className="fpl-page-title">
             <Brain className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
-            Open FPL Player Projections
+            Open FPL Projections
           </div>
           <p className="fpl-page-subtitle">
             🤖 Advanced ML ensemble predictions using XGBoost + Random Forest models
