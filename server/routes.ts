@@ -2450,10 +2450,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Processing all 38 gameweeks for clean sheets, current GW: ${currentGameweek}`);
       
-      // Create lookup map for team Goals Against totals for new formula
+      // Create lookup map for team Goals Against by gameweek for new formula
       const teamGoalsAgainstMap = new Map();
       goalsAgainstData.forEach((team: any) => {
-        teamGoalsAgainstMap.set(team.id, team.totalGoalsAgainst);
+        teamGoalsAgainstMap.set(team.id, team.gameweekProjections);
       });
       
       // Use centralized team service for consistent data
@@ -2489,11 +2489,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           }
           
-          // Get team's total Goals Against for the season
-          const teamGoalsAgainst = teamGoalsAgainstMap.get(team.id) || 55; // Default to 55 if not found
+          // Get team's Goals Against for this specific gameweek
+          const teamGoalsAgainstProjections = teamGoalsAgainstMap.get(team.id) || {};
+          const gameweekGoalsAgainst = teamGoalsAgainstProjections[fixture.event.toString()] || 1.5; // Default if not found
           
-          // NEW FORMULA: Clean sheet = (55 - Goals Against) / 55 * 100 (expressed as percentage)
-          let cleanSheetProbability = ((55 - teamGoalsAgainst) / 55) * 100;
+          // NEW FORMULA: Clean sheet = (55 - Goals Against for this gameweek) expressed as percentage
+          let cleanSheetProbability = 55 - gameweekGoalsAgainst;
           
           // Ensure realistic bounds (0-100%)
           cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
@@ -2503,7 +2504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             opponent: opponent.short_name,
             isHome,
             cleanSheetOdds: Math.round(cleanSheetProbability * 10) / 10,
-            expectedGoalsAgainst: teamGoalsAgainst, // Team's total Goals Against for season
+            expectedGoalsAgainst: gameweekGoalsAgainst, // Team's Goals Against for this gameweek
             isActual: false // Flag to indicate this is projected data
           };
         }).filter(Boolean);
