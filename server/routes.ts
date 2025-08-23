@@ -1479,8 +1479,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const marketCeiling = Math.min(55, teamBettingData.baseCleanSheetRate * 150); // Maximum realistic CS%
           baseCSProbability = Math.max(marketFloor, Math.min(marketCeiling, baseCSProbability));
           
-          // Final probability with market precision
-          const cleanSheetProbability = baseCSProbability;
+          // Confidence-based clean sheet adjustment to match increased goal environment
+          // Since goals increased by 10-70%, clean sheets should decrease proportionately
+          let confidenceReduction = 1.0;
+          if (teamBettingData.confidence >= 0.85) {
+            // High confidence teams: small reduction (5-10%) to match goal increase
+            confidenceReduction = 0.92 - (teamBettingData.confidence - 0.85) * 0.5; // 0.90 to 0.92
+          } else if (teamBettingData.confidence >= 0.65) {
+            // Medium confidence teams: moderate reduction (15-25%) to match goal increase
+            confidenceReduction = 0.80 - (0.85 - teamBettingData.confidence) * 0.5; // 0.75 to 0.80
+          } else {
+            // Low confidence teams: significant reduction (30-45%) to match goal increase
+            confidenceReduction = 0.60 - (0.65 - teamBettingData.confidence) * 0.5; // 0.55 to 0.60
+          }
+          
+          // Final probability with market precision and goal environment adjustment
+          const cleanSheetProbability = baseCSProbability * confidenceReduction;
           
           return {
             gameweek: fixture.event,
