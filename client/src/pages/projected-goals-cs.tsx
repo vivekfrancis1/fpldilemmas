@@ -111,8 +111,8 @@ export default function ProjectedGoalsCS() {
               <Target className="h-8 w-8 text-blue-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              {selectedGameweek === "all" ? "PL Match Odds - Next 6 Gameweeks" : 
-               `PL GW${selectedGameweek}: Match Odds`}
+              {selectedGameweek === "all" ? "PL Match Projections - Next 6 Gameweeks" : 
+               `PL GW${selectedGameweek}: Match Projections`}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
               Expected goals and clean sheet probabilities based on betting market analysis
@@ -165,7 +165,7 @@ export default function ProjectedGoalsCS() {
             <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
               <CardTitle className="flex items-center gap-3 text-xl">
                 <Target className="h-6 w-6" />
-                Match Odds
+                Match Projections
                 <Badge className="bg-white/20 text-white border-white/30 ml-auto">
                   {filteredProjections.length} matches
                 </Badge>
