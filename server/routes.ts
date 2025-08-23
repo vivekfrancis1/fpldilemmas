@@ -1947,14 +1947,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (teamBettingData.confidence >= 0.85) confidence = 'High';
         else if (teamBettingData.confidence <= 0.65) confidence = 'Low';
         
+        // Apply league goals per season scaling if specified in auto balance mode
+        let scaledTotalGoals = totalGoals;
+        let scaledAverageGoals = averageGoals;
+        if (unifiedProjectionSettings.autoBalance && unifiedProjectionSettings.leagueGoalsPerSeason > 0) {
+          // Calculate current league total for scaling reference
+          const leagueScaling = unifiedProjectionSettings.leagueGoalsPerSeason / 895.17; // Base league total
+          scaledTotalGoals = totalGoals * leagueScaling;
+          scaledAverageGoals = averageGoals * leagueScaling;
+        }
+        
         return {
           id: team.id,
           team: team.short_name,
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections,
-          totalGoals: Math.round(totalGoals * 100) / 100,
-          averageGoalsPerGame: Math.round(averageGoals * 100) / 100,
+          totalGoals: Math.round(scaledTotalGoals * 100) / 100,
+          averageGoalsPerGame: Math.round(scaledAverageGoals * 100) / 100,
           confidence,
           position: 0 // Will be set after sorting
         };
@@ -3937,18 +3947,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalAdjustedGoals += match.homeAdjusted + match.awayAdjusted;
       });
       
+      // Apply league goals per season scaling to base totals first if specified
+      let leagueScaling = 1;
+      if (unifiedProjectionSettings.autoBalance && unifiedProjectionSettings.leagueGoalsPerSeason > 0) {
+        leagueScaling = unifiedProjectionSettings.leagueGoalsPerSeason / totalOriginalGoals;
+        console.log(`DEBUG: League Goals Per Season scaling: ${leagueScaling.toFixed(4)} (target: ${unifiedProjectionSettings.leagueGoalsPerSeason})`);
+        
+        // Apply league scaling to both totals so balance calculations remain correct
+        totalOriginalGoals *= leagueScaling;
+        totalAdjustedGoals *= leagueScaling;
+      }
+
       // Check if auto-balance is enabled for perfect mathematical consistency
       let rawNormalizationFactor;
       if (unifiedProjectionSettings.autoBalance) {
-        // Auto-balance: Calculate perfect ratio to match goals scored exactly
+        // Auto-balance: Calculate perfect ratio to match goals scored exactly (after league scaling)
         rawNormalizationFactor = totalAdjustedGoals > 0 ? totalOriginalGoals / totalAdjustedGoals : 1;
-        
-        // Apply league goals per season scaling if specified
-        if (unifiedProjectionSettings.leagueGoalsPerSeason > 0) {
-          const leagueScaling = unifiedProjectionSettings.leagueGoalsPerSeason / totalOriginalGoals;
-          rawNormalizationFactor *= leagueScaling;
-          console.log(`DEBUG: League Goals Per Season scaling: ${leagueScaling.toFixed(4)} (target: ${unifiedProjectionSettings.leagueGoalsPerSeason})`);
-        }
         
         console.log(`DEBUG: Auto Balance ENABLED - Perfect normalization factor: ${rawNormalizationFactor.toFixed(4)}`);
         console.log(`DEBUG: Goals Scored will equal Goals Against after adjustment`);
