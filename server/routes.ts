@@ -3609,6 +3609,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const teams = bootstrapData.teams;
 
+      // Define team metadata for defensive tiers
+      const projectionMetadata: Record<number, {
+        expectedGoalsPerGame: number;
+        goalVariance: number;
+        goalConfidence: number;
+        baseCleanSheetRate: number;
+        homeBonus: number;
+        cleanSheetConfidence: number;
+        attackingTier: string;
+        defensiveTier: string;
+      }> = {
+        13: { expectedGoalsPerGame: 1.97, goalVariance: 0.35, goalConfidence: 0.88, baseCleanSheetRate: 0.33, homeBonus: 0.07, cleanSheetConfidence: 0.89, attackingTier: 'elite', defensiveTier: 'elite' }, // Man City
+        1: { expectedGoalsPerGame: 1.67, goalVariance: 0.32, goalConfidence: 0.86, baseCleanSheetRate: 0.39, homeBonus: 0.08, cleanSheetConfidence: 0.93, attackingTier: 'elite', defensiveTier: 'elite' }, // Arsenal
+        12: { expectedGoalsPerGame: 2.14, goalVariance: 0.30, goalConfidence: 0.85, baseCleanSheetRate: 0.36, homeBonus: 0.09, cleanSheetConfidence: 0.91, attackingTier: 'elite', defensiveTier: 'elite' }, // Liverpool
+        7: { expectedGoalsPerGame: 1.95, goalVariance: 0.36, goalConfidence: 0.86, baseCleanSheetRate: 0.14, homeBonus: 0.03, cleanSheetConfidence: 0.60, attackingTier: 'elite', defensiveTier: 'average' }, // Chelsea
+        11: { expectedGoalsPerGame: 1.72, goalVariance: 0.38, goalConfidence: 0.82, baseCleanSheetRate: 0.22, homeBonus: 0.05, cleanSheetConfidence: 0.76, attackingTier: 'strong', defensiveTier: 'average' }, // Everton
+        18: { expectedGoalsPerGame: 1.67, goalVariance: 0.44, goalConfidence: 0.76, baseCleanSheetRate: 0.11, homeBonus: 0.03, cleanSheetConfidence: 0.54, attackingTier: 'strong', defensiveTier: 'average' }, // Tottenham
+        6: { expectedGoalsPerGame: 1.85, goalVariance: 0.43, goalConfidence: 0.78, baseCleanSheetRate: 0.30, homeBonus: 0.07, cleanSheetConfidence: 0.86, attackingTier: 'strong', defensiveTier: 'strong' }, // Brighton
+        15: { expectedGoalsPerGame: 1.60, goalVariance: 0.40, goalConfidence: 0.76, baseCleanSheetRate: 0.27, homeBonus: 0.07, cleanSheetConfidence: 0.82, attackingTier: 'strong', defensiveTier: 'strong' }, // Newcastle
+        2: { expectedGoalsPerGame: 1.47, goalVariance: 0.42, goalConfidence: 0.74, baseCleanSheetRate: 0.25, homeBonus: 0.06, cleanSheetConfidence: 0.79, attackingTier: 'strong', defensiveTier: 'strong' }, // Aston Villa
+        14: { expectedGoalsPerGame: 1.45, goalVariance: 0.46, goalConfidence: 0.68, baseCleanSheetRate: 0.17, homeBonus: 0.04, cleanSheetConfidence: 0.66, attackingTier: 'strong', defensiveTier: 'average' }, // Man United
+        16: { expectedGoalsPerGame: 1.18, goalVariance: 0.48, goalConfidence: 0.60, baseCleanSheetRate: 0.29, homeBonus: 0.07, cleanSheetConfidence: 0.84, attackingTier: 'average', defensiveTier: 'strong' }, // Nottingham Forest
+        5: { expectedGoalsPerGame: 1.42, goalVariance: 0.44, goalConfidence: 0.61, baseCleanSheetRate: 0.23, homeBonus: 0.06, cleanSheetConfidence: 0.77, attackingTier: 'average', defensiveTier: 'strong' }, // Brentford
+        4: { expectedGoalsPerGame: 1.53, goalVariance: 0.44, goalConfidence: 0.70, baseCleanSheetRate: 0.21, homeBonus: 0.05, cleanSheetConfidence: 0.74, attackingTier: 'average', defensiveTier: 'average' }, // Bournemouth
+        10: { expectedGoalsPerGame: 1.20, goalVariance: 0.46, goalConfidence: 0.64, baseCleanSheetRate: 0.16, homeBonus: 0.04, cleanSheetConfidence: 0.63, attackingTier: 'average', defensiveTier: 'average' }, // Fulham
+        20: { expectedGoalsPerGame: 1.38, goalVariance: 0.42, goalConfidence: 0.63, baseCleanSheetRate: 0.19, homeBonus: 0.05, cleanSheetConfidence: 0.71, attackingTier: 'average', defensiveTier: 'average' }, // West Ham
+        3: { expectedGoalsPerGame: 0.96, goalVariance: 0.52, goalConfidence: 0.58, baseCleanSheetRate: 0.13, homeBonus: 0.03, cleanSheetConfidence: 0.57, attackingTier: 'weak', defensiveTier: 'weak' }, // Brentford
+        8: { expectedGoalsPerGame: 1.08, goalVariance: 0.50, goalConfidence: 0.56, baseCleanSheetRate: 0.15, homeBonus: 0.04, cleanSheetConfidence: 0.61, attackingTier: 'weak', defensiveTier: 'weak' }, // Crystal Palace
+        9: { expectedGoalsPerGame: 0.89, goalVariance: 0.54, goalConfidence: 0.52, baseCleanSheetRate: 0.11, homeBonus: 0.03, cleanSheetConfidence: 0.53, attackingTier: 'weak', defensiveTier: 'promoted' }, // Leicester
+        17: { expectedGoalsPerGame: 0.67, goalVariance: 0.58, goalConfidence: 0.48, baseCleanSheetRate: 0.08, homeBonus: 0.02, cleanSheetConfidence: 0.45, attackingTier: 'promoted', defensiveTier: 'promoted' }, // Sheffield United
+        19: { expectedGoalsPerGame: 0.84, goalVariance: 0.56, goalConfidence: 0.50, baseCleanSheetRate: 0.09, homeBonus: 0.02, cleanSheetConfidence: 0.48, attackingTier: 'promoted', defensiveTier: 'promoted' } // Luton Town
+      };
+
       // Initialize goals against data for each team
       const teamsGoalsAgainst = new Map();
       teams.forEach((team: any) => {
@@ -3631,34 +3664,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const awayTeam = teamsGoalsAgainst.get(match.awayTeam.id);
 
         if (homeTeam && awayTeam) {
-          // Get team defensive data to apply multipliers
-          const homeTeamData = teamService.getTeamData(match.homeTeam.id);
-          const awayTeamData = teamService.getTeamData(match.awayTeam.id);
-
           // Calculate goals against with defensive multipliers
           let homeGoalsAgainst = match.awayTeam.expectedGoals * adminGoalsAgainstSettings.globalDefensiveMultiplier;
           let awayGoalsAgainst = match.homeTeam.expectedGoals * adminGoalsAgainstSettings.globalDefensiveMultiplier;
 
+          // Get defensive tier based on team ID (using the same mapping as projectionMetadata)
+          const getDefensiveTier = (teamId: number) => {
+            const teamMetadata = projectionMetadata[teamId];
+            return teamMetadata ? teamMetadata.defensiveTier : 'average';
+          };
+
+          const homeDefensiveTier = getDefensiveTier(match.homeTeam.id);
+          const awayDefensiveTier = getDefensiveTier(match.awayTeam.id);
+
           // Apply defensive tier multipliers for home team
-          if (homeTeamData) {
-            switch (homeTeamData.defensiveTier) {
-              case 'elite': homeGoalsAgainst *= adminGoalsAgainstSettings.eliteDefenseMultiplier; break;
-              case 'strong': homeGoalsAgainst *= adminGoalsAgainstSettings.strongDefenseMultiplier; break;
-              case 'average': homeGoalsAgainst *= adminGoalsAgainstSettings.averageDefenseMultiplier; break;
-              case 'weak': homeGoalsAgainst *= adminGoalsAgainstSettings.weakDefenseMultiplier; break;
-              case 'promoted': homeGoalsAgainst *= adminGoalsAgainstSettings.promotedDefenseMultiplier; break;
-            }
+          switch (homeDefensiveTier) {
+            case 'elite': homeGoalsAgainst *= adminGoalsAgainstSettings.eliteDefenseMultiplier; break;
+            case 'strong': homeGoalsAgainst *= adminGoalsAgainstSettings.strongDefenseMultiplier; break;
+            case 'average': homeGoalsAgainst *= adminGoalsAgainstSettings.averageDefenseMultiplier; break;
+            case 'weak': homeGoalsAgainst *= adminGoalsAgainstSettings.weakDefenseMultiplier; break;
+            case 'promoted': homeGoalsAgainst *= adminGoalsAgainstSettings.promotedDefenseMultiplier; break;
           }
 
           // Apply defensive tier multipliers for away team
-          if (awayTeamData) {
-            switch (awayTeamData.defensiveTier) {
-              case 'elite': awayGoalsAgainst *= adminGoalsAgainstSettings.eliteDefenseMultiplier; break;
-              case 'strong': awayGoalsAgainst *= adminGoalsAgainstSettings.strongDefenseMultiplier; break;
-              case 'average': awayGoalsAgainst *= adminGoalsAgainstSettings.averageDefenseMultiplier; break;
-              case 'weak': awayGoalsAgainst *= adminGoalsAgainstSettings.weakDefenseMultiplier; break;
-              case 'promoted': awayGoalsAgainst *= adminGoalsAgainstSettings.promotedDefenseMultiplier; break;
-            }
+          switch (awayDefensiveTier) {
+            case 'elite': awayGoalsAgainst *= adminGoalsAgainstSettings.eliteDefenseMultiplier; break;
+            case 'strong': awayGoalsAgainst *= adminGoalsAgainstSettings.strongDefenseMultiplier; break;
+            case 'average': awayGoalsAgainst *= adminGoalsAgainstSettings.averageDefenseMultiplier; break;
+            case 'weak': awayGoalsAgainst *= adminGoalsAgainstSettings.weakDefenseMultiplier; break;
+            case 'promoted': awayGoalsAgainst *= adminGoalsAgainstSettings.promotedDefenseMultiplier; break;
           }
 
           // Apply bounds
