@@ -1574,24 +1574,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const decayFactor = 0.02; // Extremely gradual decay for realistic Premier League ranges
           let adjustedBaseRate = teamBettingData.baseCleanSheetRate;
           
-          // Boost base rates for more realistic Premier League clean sheet %
-          if (adjustedBaseRate < 0.20) adjustedBaseRate *= 1.8; // Weak defenses get 80% boost
-          else if (adjustedBaseRate < 0.30) adjustedBaseRate *= 1.5; // Average defenses get 50% boost
-          else adjustedBaseRate *= 1.3; // Strong defenses get 30% boost
+          // Boost base rates more aggressively for lower-tier teams
+          if (adjustedBaseRate < 0.20) adjustedBaseRate *= 2.5; // Weak defenses get 150% boost
+          else if (adjustedBaseRate < 0.30) adjustedBaseRate *= 2.0; // Average defenses get 100% boost
+          else adjustedBaseRate *= 1.5; // Strong defenses get 50% boost
           
           const baseCSPercentage = adjustedBaseRate * 100;
           let baseCSProbability = baseCSPercentage * Math.exp(-decayFactor * opponentExpectedGoals);
           
-          // Add defensive floor based on team tier to prevent unrealistically low values
+          // Add higher defensive floors for more realistic Premier League clean sheet %
           const teamData = teamService.getTeamData(team.id);
-          let defensiveFloor = 12; // Default minimum
+          let defensiveFloor = 18; // Higher default minimum
           if (teamData) {
             switch (teamData.defensiveTier) {
-              case 'elite': defensiveFloor = 18; break;
-              case 'strong': defensiveFloor = 15; break;
-              case 'average': defensiveFloor = 12; break;
-              case 'promoted': defensiveFloor = 8; break;
-              case 'weak': defensiveFloor = 10; break;
+              case 'elite': defensiveFloor = 25; break;
+              case 'strong': defensiveFloor = 22; break;
+              case 'average': defensiveFloor = 18; break;
+              case 'promoted': defensiveFloor = 15; break; // Even promoted teams get better floor
+              case 'weak': defensiveFloor = 16; break;
             }
           }
           
