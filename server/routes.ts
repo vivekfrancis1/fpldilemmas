@@ -948,9 +948,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         7: { expectedGoalsPerGame: 1.45, variance: 0.45, confidence: 0.62 }, // Crystal Palace - Improved attack (55.1 goals)
         20: { expectedGoalsPerGame: 1.12, variance: 0.52, confidence: 0.50 }, // Wolves - Defensive setup (42.7 goals)
         11: { expectedGoalsPerGame: 1.10, variance: 0.54, confidence: 0.48 }, // Leicester - Struggle to adapt
-        10: { expectedGoalsPerGame: 1.05, variance: 0.55, confidence: 0.40 }, // Burnley - Newly promoted
-        17: { expectedGoalsPerGame: 1.10, variance: 0.52, confidence: 0.42 }, // Leeds United - Newly promoted  
-        21: { expectedGoalsPerGame: 0.98, variance: 0.58, confidence: 0.38 }  // Sunderland - Newly promoted
+        10: { expectedGoalsPerGame: 0.88, variance: 0.58, confidence: 0.38 }, // Burnley - Newly promoted, weakest attack
+        17: { expectedGoalsPerGame: 0.95, variance: 0.55, confidence: 0.40 }, // Leeds United - Newly promoted  
+        21: { expectedGoalsPerGame: 0.85, variance: 0.60, confidence: 0.36 }  // Sunderland - Newly promoted, Championship level
       },
       
       // Elite defensive market data - Adjusted for higher scoring environment (reduced ~18% to match goal increase)
