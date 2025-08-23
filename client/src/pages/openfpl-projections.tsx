@@ -447,30 +447,11 @@ export default function OpenFPLProjections() {
                                         value = Math.abs(difference);
                                       }
                                       
-                                      // If this gameweek has 0 minutes, set all other stats to 0
-                                      if (metric !== 'predicted_minutes') {
-                                        const minutesValue = gwIndex === 1 ? 
-                                          Math.abs(horizonData[1]?.predicted_minutes || 0) :
-                                          Math.abs((horizonData[gwIndex]?.predicted_minutes || 0) - (horizonData[gwIndex - 1]?.predicted_minutes || 0));
-                                        
-                                        if (minutesValue === 0) {
-                                          return 0;
-                                        }
-                                      }
-                                      
                                       return value;
                                     });
 
                                     // Total is the highest horizon value (cumulative)
-                                    let total = getHorizonValue(parseInt(horizonFilter));
-                                    
-                                    // If total minutes are 0, set all other stats to 0
-                                    if (metric !== 'predicted_minutes') {
-                                      const totalMinutes = horizonData[parseInt(horizonFilter)]?.predicted_minutes || 0;
-                                      if (totalMinutes === 0) {
-                                        total = 0;
-                                      }
-                                    }
+                                    const total = getHorizonValue(parseInt(horizonFilter));
 
                                     // Calculate minutes and ownership totals for additional columns
                                     const minutesTotal = horizonData[parseInt(horizonFilter)]?.predicted_minutes || 0;
