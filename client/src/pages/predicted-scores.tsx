@@ -79,12 +79,21 @@ export default function PredictedScores() {
     }
   };
 
-  const getResultText = (result: string) => {
-    switch (result) {
-      case 'home_win': return 'H';
-      case 'away_win': return 'A';
-      case 'draw': return 'D';
-      default: return '?';
+  const getResultText = (result: string, isFinished: boolean) => {
+    if (isFinished) {
+      switch (result) {
+        case 'home_win': return 'Win';
+        case 'away_win': return 'Win';
+        case 'draw': return 'Draw';
+        default: return '?';
+      }
+    } else {
+      switch (result) {
+        case 'home_win': return 'Projected Win';
+        case 'away_win': return 'Projected Win';
+        case 'draw': return 'Projected Draw';
+        default: return '?';
+      }
     }
   };
 
@@ -269,14 +278,14 @@ export default function PredictedScores() {
                         <td className="px-4 py-4 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <Badge className={`${getResultColor(match.predictedResult)} text-white`}>
-                              {getResultText(match.predictedResult)}
+                              {getResultText(match.predictedResult, match.finished)}
                             </Badge>
                             {match.finished && match.actualResult && (
                               <Badge 
                                 variant="outline" 
                                 className={`${getResultColor(match.actualResult, true)} border-2`}
                               >
-                                {getResultText(match.actualResult)}
+                                Actual: {getResultText(match.actualResult, true)}
                               </Badge>
                             )}
                           </div>
