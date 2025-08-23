@@ -249,35 +249,35 @@ export default function OpenFPLProjections() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">
-                    Gameweeks
-                    <span className="block text-xs text-gray-400 font-normal">Columns to show</span>
-                  </label>
+                  <label className="text-xs font-medium text-gray-600">Horizon</label>
                   <Select value={horizonFilter} onValueChange={setHorizonFilter}>
                     <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-horizon">
                       <SelectValue placeholder="6 GWs" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">1 Column</SelectItem>
-                      <SelectItem value="2">2 Columns</SelectItem>
-                      <SelectItem value="3">3 Columns</SelectItem>
-                      <SelectItem value="4">4 Columns</SelectItem>
-                      <SelectItem value="5">5 Columns</SelectItem>
-                      <SelectItem value="6">6 Columns</SelectItem>
+                      <SelectItem value="1">1 GW</SelectItem>
+                      <SelectItem value="2">2 GWs</SelectItem>
+                      <SelectItem value="3">3 GWs</SelectItem>
+                      <SelectItem value="4">4 GWs</SelectItem>
+                      <SelectItem value="5">5 GWs</SelectItem>
+                      <SelectItem value="6">6 GWs</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Target</label>
+                  <label className="text-xs font-medium text-gray-600">
+                    Data Source
+                    <span className="block text-xs text-gray-400 font-normal">Which gameweeks to include</span>
+                  </label>
                   <Select value={gameweekFilter} onValueChange={setGameweekFilter}>
                     <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-gameweek">
-                      <SelectValue placeholder="Next GW" />
+                      <SelectValue placeholder="All Available" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="next">Next GW</SelectItem>
-                      <SelectItem value="current">Current GW</SelectItem>
-                      <SelectItem value="all">All Available</SelectItem>
+                      <SelectItem value="all">All Available Data</SelectItem>
+                      <SelectItem value="next">Next GW Only</SelectItem>
+                      <SelectItem value="current">Current GW Only</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
