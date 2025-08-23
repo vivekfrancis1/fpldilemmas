@@ -454,20 +454,15 @@ export default function OpenFPLProjections() {
                                       const gwIndex = i + 1;
                                       if (gwIndex === 1) {
                                         // GW1 = 1 horizon value
-                                        return Math.max(0, getHorizonValue(1));
+                                        return getHorizonValue(1);
                                       } else {
                                         // GWn = n horizon - (n-1) horizon
-                                        const diff = getHorizonValue(gwIndex) - getHorizonValue(gwIndex - 1);
-                                        // If we get negative value, use the longer horizon value instead
-                                        if (diff < 0) {
-                                          return getHorizonValue(gwIndex);
-                                        }
-                                        return diff;
+                                        return getHorizonValue(gwIndex) - getHorizonValue(gwIndex - 1);
                                       }
                                     });
 
-                                    // Total is the sum of all individual gameweek values
-                                    const total = gwValues.reduce((sum, value) => sum + value, 0);
+                                    // Total is the highest horizon value (cumulative)
+                                    const total = getHorizonValue(parseInt(horizonFilter));
 
                                     // Calculate minutes and ownership totals for additional columns
                                     const minutesTotal = horizonData[parseInt(horizonFilter)]?.predicted_minutes || 0;
@@ -549,7 +544,6 @@ export default function OpenFPLProjections() {
                                         return (
                                           <td key={i} className="px-2 py-3 text-center">
                                             <span className={`text-sm font-medium ${
-                                              value < 0 ? 'text-red-600' :
                                               metric === 'predicted_points' && value >= 6 ? 'text-green-700' :
                                               metric === 'predicted_points' && value >= 4 ? 'text-blue-700' :
                                               metric === 'predicted_minutes' && value >= 75 ? 'text-green-700' :
