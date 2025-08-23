@@ -938,18 +938,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         3: { expectedGoalsPerGame: 1.53, variance: 0.44, confidence: 0.70 }, // Bournemouth - Attacking style (58.1 goals)
         
         // Average attacking output
-        9: { expectedGoalsPerGame: 1.58, variance: 0.41, confidence: 0.66 }, // Fulham - Well-organized
+        9: { expectedGoalsPerGame: 1.20, variance: 0.46, confidence: 0.64 }, // Fulham - Defensive focus (45.5 goals)
         4: { expectedGoalsPerGame: 1.42, variance: 0.44, confidence: 0.61 }, // Brentford - Post-Toney transition
-        16: { expectedGoalsPerGame: 1.48, variance: 0.44, confidence: 0.62 }, // Nottingham Forest - Limited creativity
-        19: { expectedGoalsPerGame: 1.45, variance: 0.48, confidence: 0.60 }, // West Ham - Bowen reliance
+        16: { expectedGoalsPerGame: 1.18, variance: 0.48, confidence: 0.60 }, // Nottingham Forest - Survival mode (45.0 goals)
+        19: { expectedGoalsPerGame: 1.27, variance: 0.50, confidence: 0.58 }, // West Ham - Limited creativity (48.1 goals)
         
         // Struggling attacking units
-        8: { expectedGoalsPerGame: 1.38, variance: 0.45, confidence: 0.57 }, // Everton - DCL fitness issues
-        7: { expectedGoalsPerGame: 1.35, variance: 0.47, confidence: 0.55 }, // Crystal Palace - Lack of quality
-        20: { expectedGoalsPerGame: 1.28, variance: 0.49, confidence: 0.52 }, // Wolves - Cunha burden
-        11: { expectedGoalsPerGame: 1.25, variance: 0.51, confidence: 0.50 }, // Leicester - Championship hangover
-        10: { expectedGoalsPerGame: 1.15, variance: 0.55, confidence: 0.47 }, // Ipswich - Championship level
-        17: { expectedGoalsPerGame: 1.12, variance: 0.52, confidence: 0.48 }  // Southampton - Attacking struggles
+        8: { expectedGoalsPerGame: 1.06, variance: 0.48, confidence: 0.55 }, // Everton - Goal-shy team (40.2 goals)
+        7: { expectedGoalsPerGame: 1.45, variance: 0.45, confidence: 0.62 }, // Crystal Palace - Improved attack (55.1 goals)
+        20: { expectedGoalsPerGame: 1.12, variance: 0.52, confidence: 0.50 }, // Wolves - Defensive setup (42.7 goals)
+        11: { expectedGoalsPerGame: 1.10, variance: 0.54, confidence: 0.48 }, // Leicester - Struggle to adapt
+        10: { expectedGoalsPerGame: 1.00, variance: 0.58, confidence: 0.45 }, // Ipswich - Promoted team
+        17: { expectedGoalsPerGame: 0.95, variance: 0.55, confidence: 0.43 }  // Southampton - Relegation battle
       },
       
       // Elite defensive market data - Adjusted for higher scoring environment (reduced ~18% to match goal increase)
