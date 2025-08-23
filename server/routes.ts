@@ -1260,8 +1260,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const marketCeiling = Math.min(4.2, teamBettingData.expectedGoalsPerGame * 2.0); // Dynamic maximum
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
-          // Confidence multiplier removed - using base projections without confidence boost
-          const confidenceMultiplier = 1.0;
+          // Apply confidence multiplier from centralized team service
+          const confidenceMultiplier = teamService.getConfidenceMultiplier(team.id);
           
           // Final expected goals with confidence adjustment
           const expectedGoals = baseExpectedGoals * confidenceMultiplier;
@@ -1438,8 +1438,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const marketCeiling = Math.min(4.2, teamBettingData.expectedGoalsPerGame * 2.0); // Dynamic maximum
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
-          // Confidence multiplier removed - using base projections without confidence boost
-          const confidenceMultiplier = 1.0;
+          // Apply confidence multiplier from centralized team service
+          const confidenceMultiplier = teamService.getConfidenceMultiplier(team.id);
           
           const projectedGoals = baseExpectedGoals * confidenceMultiplier;
           
