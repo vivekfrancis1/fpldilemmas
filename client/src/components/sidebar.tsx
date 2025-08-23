@@ -73,15 +73,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
         { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
       ]
-    },
-    {
-      section: "Admin Tools",
-      items: [
-        { path: "/admin/unified-projections", label: "Unified Projection Settings", icon: Settings, description: "Configure goals scored & conceded (synchronized)", popular: false, isNew: true },
-        { path: "/admin/cs-projections", label: "Clean Sheet Settings", icon: Shield, description: "Configure clean sheet model", popular: false, isNew: true },
-        { path: "/admin/assist-projections", label: "Assist Projection Settings", icon: Zap, description: "Configure assist projection model", popular: false, isNew: true },
-        { path: "/admin/match-projections", label: "Match Projection Settings", icon: Calendar, description: "Configure match projection model", popular: false, isNew: true }
-      ]
     }
   ];
 
