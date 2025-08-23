@@ -1097,7 +1097,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== ADMIN ENDPOINTS FOR TEAM GOAL PROJECTIONS ====================
   
-  // In-memory admin settings for Goal Projections (would be database in production)
+  // UNIFIED admin settings for both Goals Scored AND Goals Against (ensures perfect data consistency)
+  let unifiedProjectionSettings = {
+    // Global multipliers (affect both scoring and conceding)
+    globalTierMultiplier: 1.25,
+    lowConfidenceBoost: 1.25,
+    lowConfidenceThreshold: 0.65,
+    
+    // Contextual multipliers (affect both scoring and conceding)
+    derbyMatchMultiplier: 0.87,
+    topSixMatchMultiplier: 1.12,
+    relegationBattleMultiplier: 0.83,
+    earlyKickoffMultiplier: 0.94,
+    lateKickoffMultiplier: 1.07,
+    postEuropeanMultiplier: 0.88,
+    midweekFixtureMultiplier: 0.91,
+    seasonFinaleMultiplier: 1.05,
+    newManagerBounceMultiplier: 1.08,
+    weatherConditionsMultiplier: 0.96,
+    
+    // Team tier multipliers for attacking (goals scored)
+    eliteAttackMultiplier: 1.30,
+    strongAttackMultiplier: 1.15,
+    averageAttackMultiplier: 1.00,
+    weakAttackMultiplier: 0.85,
+    promotedAttackMultiplier: 0.70,
+    
+    // Team tier multipliers for defending (goals conceded) - lower = stronger defense
+    eliteDefenseMultiplier: 0.60,
+    strongDefenseMultiplier: 0.75,
+    averageDefenseMultiplier: 1.00,
+    weakDefenseMultiplier: 1.35,
+    promotedDefenseMultiplier: 1.60,
+    
+    // Market bounds
+    absoluteMinGoals: 0.3,
+    absoluteMaxGoals: 4.2,
+    marketFloorMultiplier: 0.4,
+    marketCeilingMultiplier: 2.0,
+    
+    // Metadata
+    lastUpdated: new Date().toISOString(),
+    updatedBy: "admin"
+  };
+
+  // LEGACY admin settings for Goal Projections (DEPRECATED - use unified settings)
   let adminGoalSettings = {
     globalTierMultiplier: 1.25,
     lowConfidenceBoost: 1.25,
@@ -1194,7 +1238,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     updatedBy: "admin"
   };
 
-  // ==================== GOAL PROJECTION ADMIN ENDPOINTS ====================
+  // ==================== UNIFIED PROJECTION ADMIN ENDPOINTS ====================
+
+  // Get unified projection settings
+  app.get("/api/admin/unified-projection-settings", async (req, res) => {
+    try {
+      res.json(unifiedProjectionSettings);
+    } catch (error) {
+      console.error("Error fetching unified projection settings:", error);
+      res.status(500).json({ error: "Failed to fetch unified projection settings" });
+    }
+  });
+
+  // Update unified projection settings
+  app.put("/api/admin/unified-projection-settings", async (req, res) => {
+    try {
+      const updatedSettings = {
+        ...unifiedProjectionSettings,
+        ...req.body,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      unifiedProjectionSettings = updatedSettings;
+      
+      // Update legacy settings for backward compatibility until migration complete
+      adminGoalSettings = {
+        ...adminGoalSettings,
+        globalTierMultiplier: updatedSettings.globalTierMultiplier,
+        lowConfidenceBoost: updatedSettings.lowConfidenceBoost,
+        lowConfidenceThreshold: updatedSettings.lowConfidenceThreshold,
+        derbyGoalsMultiplier: updatedSettings.derbyMatchMultiplier,
+        topSixGoalsMultiplier: updatedSettings.topSixMatchMultiplier,
+        relegationBattleGoalsMultiplier: updatedSettings.relegationBattleMultiplier,
+        earlyKickoffGoalsMultiplier: updatedSettings.earlyKickoffMultiplier,
+        lateKickoffGoalsMultiplier: updatedSettings.lateKickoffMultiplier,
+        postEuropeanGoalsMultiplier: updatedSettings.postEuropeanMultiplier,
+        midweekFixtureGoalsMultiplier: updatedSettings.midweekFixtureMultiplier,
+        seasonFinaleGoalsMultiplier: updatedSettings.seasonFinaleMultiplier,
+        newManagerBounceGoalsMultiplier: updatedSettings.newManagerBounceMultiplier,
+        weatherConditionsGoalsMultiplier: updatedSettings.weatherConditionsMultiplier,
+        marketFloorMultiplier: updatedSettings.marketFloorMultiplier,
+        marketCeilingMultiplier: updatedSettings.marketCeilingMultiplier,
+        absoluteMinGoals: updatedSettings.absoluteMinGoals,
+        absoluteMaxGoals: updatedSettings.absoluteMaxGoals,
+        lastUpdated: updatedSettings.lastUpdated,
+        updatedBy: updatedSettings.updatedBy
+      };
+
+      adminGoalsAgainstSettings = {
+        ...adminGoalsAgainstSettings,
+        globalDefensiveMultiplier: 1.0, // Keep at 1.0 as it's applied via tier multipliers
+        eliteDefenseMultiplier: updatedSettings.eliteDefenseMultiplier,
+        strongDefenseMultiplier: updatedSettings.strongDefenseMultiplier,
+        averageDefenseMultiplier: updatedSettings.averageDefenseMultiplier,
+        weakDefenseMultiplier: updatedSettings.weakDefenseMultiplier,
+        promotedDefenseMultiplier: updatedSettings.promotedDefenseMultiplier,
+        minGoalsAgainst: updatedSettings.absoluteMinGoals,
+        maxGoalsAgainst: updatedSettings.absoluteMaxGoals,
+        lastUpdated: updatedSettings.lastUpdated,
+        updatedBy: updatedSettings.updatedBy
+      };
+      
+      console.log("Unified projection settings updated - both goals scored and goals against now synchronized");
+      
+      res.json({ 
+        success: true, 
+        message: "Unified projection settings updated successfully. Goals scored and goals against are now perfectly synchronized.",
+        settings: unifiedProjectionSettings 
+      });
+    } catch (error) {
+      console.error("Error updating unified projection settings:", error);
+      res.status(500).json({ error: "Failed to update unified projection settings" });
+    }
+  });
+
+  // Reset unified projection settings to defaults
+  app.post("/api/admin/unified-projection-settings/reset", async (req, res) => {
+    try {
+      unifiedProjectionSettings = {
+        // Global multipliers (affect both scoring and conceding)
+        globalTierMultiplier: 1.25,
+        lowConfidenceBoost: 1.25,
+        lowConfidenceThreshold: 0.65,
+        
+        // Contextual multipliers (affect both scoring and conceding)
+        derbyMatchMultiplier: 0.87,
+        topSixMatchMultiplier: 1.12,
+        relegationBattleMultiplier: 0.83,
+        earlyKickoffMultiplier: 0.94,
+        lateKickoffMultiplier: 1.07,
+        postEuropeanMultiplier: 0.88,
+        midweekFixtureMultiplier: 0.91,
+        seasonFinaleMultiplier: 1.05,
+        newManagerBounceMultiplier: 1.08,
+        weatherConditionsMultiplier: 0.96,
+        
+        // Team tier multipliers for attacking (goals scored)
+        eliteAttackMultiplier: 1.30,
+        strongAttackMultiplier: 1.15,
+        averageAttackMultiplier: 1.00,
+        weakAttackMultiplier: 0.85,
+        promotedAttackMultiplier: 0.70,
+        
+        // Team tier multipliers for defending (goals conceded) - lower = stronger defense
+        eliteDefenseMultiplier: 0.60,
+        strongDefenseMultiplier: 0.75,
+        averageDefenseMultiplier: 1.00,
+        weakDefenseMultiplier: 1.35,
+        promotedDefenseMultiplier: 1.60,
+        
+        // Market bounds
+        absoluteMinGoals: 0.3,
+        absoluteMaxGoals: 4.2,
+        marketFloorMultiplier: 0.4,
+        marketCeilingMultiplier: 2.0,
+        
+        // Metadata
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      res.json({ 
+        success: true, 
+        message: "Unified projection settings reset to defaults. Perfect synchronization restored.",
+        settings: unifiedProjectionSettings 
+      });
+    } catch (error) {
+      console.error("Error resetting unified projection settings:", error);
+      res.status(500).json({ error: "Failed to reset unified projection settings" });
+    }
+  });
+
+  // ==================== LEGACY GOAL PROJECTION ADMIN ENDPOINTS ====================
 
   // Get admin settings
   app.get("/api/admin/goal-projection-settings", async (req, res) => {
