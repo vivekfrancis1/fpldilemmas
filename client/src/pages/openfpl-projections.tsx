@@ -51,6 +51,8 @@ export default function OpenFPLProjections() {
   const [activeMetric, setActiveMetric] = useState("predicted_points");
   const [sortBy, setSortBy] = useState<keyof OpenFPLProjection>("predicted_points");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [sortColumn, setSortColumn] = useState<string>("total");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -93,6 +95,20 @@ export default function OpenFPLProjections() {
   const getSortIcon = (column: keyof OpenFPLProjection) => {
     if (sortBy !== column) return <ArrowUpDown className="h-4 w-4" />;
     return sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
+  const getTableSortIcon = (column: string) => {
+    if (sortColumn !== column) return <ArrowUpDown className="h-3 w-3" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+  };
+
+  const handleTableSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDir("desc");
+    }
   };
 
   const filteredProjections = Array.isArray(projections) ? projections.filter((projection: OpenFPLProjection) => {
@@ -368,11 +384,21 @@ export default function OpenFPLProjections() {
                                 <th className="px-2 py-3 text-center min-w-[60px] font-semibold text-gray-900">Price</th>
                                 {Array.from({length: parseInt(horizonFilter)}, (_, i) => (
                                   <th key={i} className="px-2 py-3 text-center min-w-[70px] font-semibold text-gray-900">
-                                    GW{i + 1}
+                                    <button 
+                                      onClick={() => handleTableSort(`gw${i}`)}
+                                      className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors"
+                                    >
+                                      GW{i + 1} {getTableSortIcon(`gw${i}`)}
+                                    </button>
                                   </th>
                                 ))}
                                 <th className="px-2 py-3 text-center min-w-[70px] font-semibold text-blue-900 bg-blue-50">
-                                  Total
+                                  <button 
+                                    onClick={() => handleTableSort("total")}
+                                    className="flex items-center justify-center gap-1 hover:text-blue-800 transition-colors"
+                                  >
+                                    Total {getTableSortIcon("total")}
+                                  </button>
                                 </th>
                               </tr>
                             </thead>
@@ -390,15 +416,46 @@ export default function OpenFPLProjections() {
                                   return acc;
                                 }, {} as Record<number, any>);
 
-                                return Object.values(playerGroups).map((group: any, index) => {
-                                  const player = group.player;
-                                  const gwData = group.gameweeks;
-                                  
-                                  // Calculate total for the metric
-                                  const total = Object.values(gwData).reduce((sum: number, proj: any) => {
-                                    const value = proj[metric] || 0;
-                                    return sum + value;
-                                  }, 0);
+                                return Object.values(playerGroups)
+                                  .map((group: any) => {
+                                    const player = group.player;
+                                    const gwData = group.gameweeks;
+                                    
+                                    // Calculate total for the metric
+                                    const total = Object.values(gwData).reduce((sum: number, proj: any) => {
+                                      const value = proj[metric] || 0;
+                                      return sum + value;
+                                    }, 0);
+
+                                    // Create array of gameweek values for sorting
+                                    const gwValues = Array.from({length: parseInt(horizonFilter)}, (_, i) => {
+                                      const gwProj = Object.values(gwData).find((proj: any) => proj.gameweek === (player.gameweek + i));
+                                      return gwProj?.[metric] || 0;
+                                    });
+
+                                    return { ...group, total, gwValues };
+                                  })
+                                  .sort((a: any, b: any) => {
+                                    let aValue: number, bValue: number;
+                                    
+                                    if (sortColumn === "total") {
+                                      aValue = a.total;
+                                      bValue = b.total;
+                                    } else if (sortColumn.startsWith("gw")) {
+                                      const gwIndex = parseInt(sortColumn.replace("gw", ""));
+                                      aValue = a.gwValues[gwIndex] || 0;
+                                      bValue = b.gwValues[gwIndex] || 0;
+                                    } else {
+                                      aValue = a.total;
+                                      bValue = b.total;
+                                    }
+                                    
+                                    return sortDir === "asc" ? aValue - bValue : bValue - aValue;
+                                  })
+                                  .map((group: any, index) => {
+                                    const player = group.player;
+                                    const gwData = group.gameweeks;
+                                    const total = group.total;
 
                                   return (
                                     <tr 
