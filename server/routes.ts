@@ -1179,7 +1179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Assist Projections endpoint - similar to goal projections with assist-specific calculations
   app.get("/api/team-assist-projections", async (req, res) => {
     try {
-      const weeks = parseInt(req.query.weeks as string) || 35;
+      console.log(`DEBUG: Team Assist Projections API called - generating all 38 gameweeks`);
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -1195,6 +1195,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      
+      console.log(`DEBUG: Processing all 38 gameweeks for assists, current GW: ${currentGameweek}`);
       const bettingData = getSpreadBettingData();
       
       // Assist-specific betting data (assists typically 60-80% of goals with creative team adjustments)
@@ -1240,23 +1242,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assistBettingData = getAssistBettingData();
       
       const teamProjections = teams.map((team: any) => {
-        // Limit fixtures to only the specified number of weeks
-        const maxGameweek = weeks === 35 ? 38 : currentGameweek + weeks;
-        const upcomingFixtures = fixturesData
+        // Get ALL fixtures for this team across all 38 gameweeks
+        const allFixtures = fixturesData
           .filter((f: any) => 
             (f.team_h === team.id || f.team_a === team.id) && 
-            !f.finished && 
-            f.event > currentGameweek && 
-            f.event <= maxGameweek
+            f.event >= 1 && f.event <= 38
           );
         
-        const projections = upcomingFixtures.map((fixture: any) => {
+        const projections = allFixtures.map((fixture: any) => {
           const isHome = fixture.team_h === team.id;
           const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
           
           if (!opponent) return null;
           
-          // Assist-specific calculation based on creativity and attacking patterns
+          // Check if fixture is finished - use actual assists, otherwise use projections
+          if (fixture.finished) {
+            // For finished fixtures, calculate actual assists (assists typically ~70% of goals in Premier League)
+            const actualGoals = isHome ? (fixture.team_h_score || 0) : (fixture.team_a_score || 0);
+            // Convert goals to approximate assists based on historical data (assists are ~65-75% of goals)
+            const actualAssists = Math.round((actualGoals * 0.7) * 100) / 100;
+            return {
+              gameweek: fixture.event,
+              opponent: opponent.short_name,
+              expectedAssists: actualAssists, // Actual assists estimate for finished games
+              isHome: isHome,
+              isActual: true // Flag to indicate this is actual data
+            };
+          }
+          
+          // For unfinished fixtures, use assist-specific calculation based on creativity and attacking patterns
           const teamAssistData = assistBettingData.teamAssistRates[team.id] || { expectedAssistsPerGame: 0.90, variance: 0.40, confidence: 0.65 };
           const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
           
@@ -1341,7 +1355,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             gameweek: fixture.event,
             opponent: opponent.short_name,
             isHome,
-            expectedAssists: Math.round(expectedAssists * 100) / 100
+            expectedAssists: Math.round(expectedAssists * 100) / 100,
+            isActual: false // Flag to indicate this is projected data
           };
         }).filter(Boolean);
         

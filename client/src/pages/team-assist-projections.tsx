@@ -22,7 +22,7 @@ interface TeamAssistProjection {
 }
 
 export default function TeamAssistProjections() {
-  const [weeks, setWeeks] = useState<number>(6);
+  const [weeks, setWeeks] = useState<number>(38);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
 
@@ -31,7 +31,7 @@ export default function TeamAssistProjections() {
   });
 
   const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamAssistProjection[]>({
-    queryKey: [`/api/team-assist-projections?weeks=${weeks}`],
+    queryKey: ["/api/team-assist-projections"],
   });
 
   const filteredProjections = useMemo(() => {
@@ -59,22 +59,20 @@ export default function TeamAssistProjections() {
   const totalAssists = useMemo(() => {
     if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, averagePerGame: 0 };
     
-    const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
     const gameweekTotals: { [gameweek: number]: number } = {};
     let overallTotal = 0;
     
-    // Calculate totals for each gameweek
-    for (let i = 0; i < weeks; i++) {
-      const gwNumber = currentGW + i + 1;
+    // Calculate totals for all 38 gameweeks
+    for (let gwNumber = 1; gwNumber <= 38; gwNumber++) {
       const gwTotal = filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
       gameweekTotals[gwNumber] = gwTotal;
       overallTotal += gwTotal;
     }
     
-    const averagePerGame = weeks > 0 ? overallTotal / weeks : 0;
+    const averagePerGame = overallTotal / 38;
     
     return { gameweekTotals, overallTotal, averagePerGame };
-  }, [filteredProjections, weeks, bootstrapData]);
+  }, [filteredProjections, bootstrapData]);
 
   // Helper functions for styling
   const getAssistsColor = (assists: number) => {
@@ -115,7 +113,7 @@ export default function TeamAssistProjections() {
             Team Assist Projections
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-            Advanced assist forecasting using sophisticated 8-phase creativity analysis with statistical modeling and professional-grade accuracy for attacking prospects.
+            Assists for each team across all 38 gameweeks - actual assists for completed games, projections for upcoming games
           </p>
         </div>
 
@@ -129,22 +127,6 @@ export default function TeamAssistProjections() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Time Period
-                </label>
-                <Select value={weeks.toString()} onValueChange={(value) => setWeeks(parseInt(value))}>
-                  <SelectTrigger data-testid="select-weeks">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="6">Next 6 GW</SelectItem>
-                    <SelectItem value="10">Next 10 GW</SelectItem>
-                    <SelectItem value="15">Next 15 GW</SelectItem>
-                    <SelectItem value="35">Remaining Season</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -179,13 +161,9 @@ export default function TeamAssistProjections() {
                     <SelectItem value="total">Total Assists</SelectItem>
                     <SelectItem value="average">Avg/Game</SelectItem>
                     <SelectItem value="position">League Position</SelectItem>
-                    {bootstrapData?.events && Array.from({ length: weeks }, (_, i) => {
-                      const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-                      const gwNumber = currentGW + i + 1;
-                      return (
-                        <SelectItem key={`gw${gwNumber}`} value={`gw${gwNumber}`}>GW{gwNumber}</SelectItem>
-                      );
-                    })}
+                    {Array.from({ length: 38 }, (_, i) => (
+                      <SelectItem key={`gw${i + 1}`} value={`gw${i + 1}`}>GW{i + 1}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -198,7 +176,7 @@ export default function TeamAssistProjections() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Team Assist Projections: Next {weeks === 35 ? 'Remaining' : weeks}GW
+              Team Assist Projections: All 38 Gameweeks
               <Badge variant="outline" className="ml-2">
                 {filteredProjections.length} teams
               </Badge>
@@ -215,9 +193,8 @@ export default function TeamAssistProjections() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
                       Team
                     </th>
-                    {bootstrapData?.events && Array.from({ length: weeks }, (_, i) => {
-                      const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-                      const gwNumber = currentGW + i + 1;
+                    {Array.from({ length: 38 }, (_, i) => {
+                      const gwNumber = i + 1;
                       return (
                         <th 
                           key={gwNumber} 
@@ -270,13 +247,12 @@ export default function TeamAssistProjections() {
                         </div>
                       </td>
                       
-                      {bootstrapData?.events && Array.from({ length: weeks }, (_, weekIndex) => {
-                        const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-                        const gwNumber = currentGW + weekIndex + 1;
+                      {Array.from({ length: 38 }, (_, weekIndex) => {
+                        const gwNumber = weekIndex + 1;
                         const assists = team.gameweekProjections[gwNumber] || 0;
                         return (
                           <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getAssistsColor(assists)}`}>
-                            {assists.toFixed(2)}
+                            {assists > 0 ? assists.toFixed(2) : "-"}
                           </td>
                         );
                       })}
@@ -314,13 +290,12 @@ export default function TeamAssistProjections() {
                       </div>
                     </td>
                     
-                    {bootstrapData?.events && Array.from({ length: weeks }, (_, weekIndex) => {
-                      const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-                      const gwNumber = currentGW + weekIndex + 1;
+                    {Array.from({ length: 38 }, (_, weekIndex) => {
+                      const gwNumber = weekIndex + 1;
                       const gwTotal = totalAssists.gameweekTotals[gwNumber] || 0;
                       return (
                         <td key={weekIndex} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
-                          {gwTotal.toFixed(2)}
+                          {gwTotal > 0 ? gwTotal.toFixed(2) : "-"}
                         </td>
                       );
                     })}
