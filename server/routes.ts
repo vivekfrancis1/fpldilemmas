@@ -1100,14 +1100,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Confidence-based goal adjustment to match realistic Premier League totals
           let confidenceMultiplier = 1.0;
           if (teamBettingData.confidence >= 0.85) {
-            // High confidence teams: small increase (5-10%)
-            confidenceMultiplier = 1.05 + (teamBettingData.confidence - 0.85) * 0.5; // 1.05 to 1.10
+            // High confidence teams: moderate increase (10-15%)
+            confidenceMultiplier = 1.10 + (teamBettingData.confidence - 0.85) * 0.5; // 1.10 to 1.15
           } else if (teamBettingData.confidence >= 0.65) {
-            // Medium confidence teams: moderate increase (15-25%)
-            confidenceMultiplier = 1.15 + (0.85 - teamBettingData.confidence) * 0.5; // 1.15 to 1.25
+            // Medium confidence teams: significant increase (25-35%)
+            confidenceMultiplier = 1.25 + (0.85 - teamBettingData.confidence) * 0.5; // 1.25 to 1.35
           } else {
-            // Low confidence teams: significant increase (35-55%)
-            confidenceMultiplier = 1.35 + (0.65 - teamBettingData.confidence) * 1.0; // 1.35 to 1.55
+            // Low confidence teams: major increase (50-70%)
+            confidenceMultiplier = 1.50 + (0.65 - teamBettingData.confidence) * 1.0; // 1.50 to 1.70
           }
           
           // Final expected goals with confidence adjustment
