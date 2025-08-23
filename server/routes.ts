@@ -1310,7 +1310,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const assistCeiling = Math.min(3.5, teamAssistData.expectedAssistsPerGame * 1.8); // Dynamic maximum
           baseExpectedAssists = Math.max(assistFloor, Math.min(assistCeiling, baseExpectedAssists));
           
-          const expectedAssists = baseExpectedAssists;
+          // Confidence-based assist adjustment to match realistic Premier League totals
+          let confidenceMultiplier = 1.0;
+          if (teamAssistData.confidence >= 0.80) {
+            // High confidence teams: moderate increase (10-15%)
+            confidenceMultiplier = 1.10 + (teamAssistData.confidence - 0.80) * 0.5; // 1.10 to 1.15
+          } else if (teamAssistData.confidence >= 0.60) {
+            // Medium confidence teams: significant increase (25-35%)
+            confidenceMultiplier = 1.25 + (0.80 - teamAssistData.confidence) * 0.5; // 1.25 to 1.35
+          } else {
+            // Low confidence teams: major increase (50-70%)
+            confidenceMultiplier = 1.50 + (0.60 - teamAssistData.confidence) * 1.0; // 1.50 to 1.70
+          }
+          
+          const expectedAssists = baseExpectedAssists * confidenceMultiplier;
           
           return {
             gameweek: fixture.event,
