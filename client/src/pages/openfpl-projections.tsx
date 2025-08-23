@@ -59,13 +59,24 @@ export default function OpenFPLProjections() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch data for all horizons up to the selected one
   const { data: projections, isLoading: isLoadingProjections, error: projectionsError } = useQuery({
-    queryKey: ["/api/openfpl-projections", horizonFilter, gameweekFilter],
-    queryFn: () => {
-      const params = new URLSearchParams();
-      params.append('horizon', horizonFilter);
-      params.append('gameweek', gameweekFilter);
-      return fetch(`/api/openfpl-projections?${params.toString()}`).then(res => res.json());
+    queryKey: ["/api/openfpl-projections-all-horizons", horizonFilter, gameweekFilter],
+    queryFn: async () => {
+      const maxHorizon = parseInt(horizonFilter);
+      const allProjections = [];
+      
+      // Fetch data for each horizon from 1 to maxHorizon
+      for (let horizon = 1; horizon <= maxHorizon; horizon++) {
+        const params = new URLSearchParams();
+        params.append('horizon', horizon.toString());
+        params.append('gameweek', gameweekFilter);
+        const response = await fetch(`/api/openfpl-projections?${params.toString()}`);
+        const data = await response.json();
+        allProjections.push(...data);
+      }
+      
+      return allProjections;
     },
     refetchInterval: 300000, // 5 minutes
   });
@@ -404,27 +415,26 @@ export default function OpenFPLProjections() {
                             </thead>
                             <tbody>
                               {(() => {
-                                // Group projections by player
+                                // Group projections by player and horizon
                                 const playerGroups = filteredProjections.reduce((acc, proj) => {
                                   if (!acc[proj.player_id]) {
                                     acc[proj.player_id] = {
                                       player: proj,
-                                      gameweeks: {}
+                                      horizons: {}
                                     };
                                   }
-                                  acc[proj.player_id].gameweeks[proj.gameweek] = proj;
+                                  acc[proj.player_id].horizons[proj.horizon] = proj;
                                   return acc;
                                 }, {} as Record<number, any>);
 
                                 return Object.values(playerGroups)
                                   .map((group: any) => {
                                     const player = group.player;
-                                    const gwData = group.gameweeks;
+                                    const horizonData = group.horizons;
                                     
                                     // Get horizon projections for calculating individual gameweek values
                                     const getHorizonValue = (horizon: number) => {
-                                      const horizonProj = Object.values(gwData).find((proj: any) => proj.horizon === horizon);
-                                      return horizonProj?.[metric] || 0;
+                                      return horizonData[horizon]?.[metric] || 0;
                                     };
 
                                     // Calculate individual gameweek values using horizon differences
