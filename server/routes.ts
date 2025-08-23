@@ -1582,16 +1582,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const baseCSPercentage = adjustedBaseRate * 100;
           let baseCSProbability = baseCSPercentage * Math.exp(-decayFactor * opponentExpectedGoals);
           
-          // Add defensive floor based on team tier to prevent unrealistically low values
+          // Add defensive floor based on team tier to prevent unrealistically low values (increased by ~50%)
           const teamData = teamService.getTeamData(team.id);
-          let defensiveFloor = 12; // Default minimum
+          let defensiveFloor = 18; // Default minimum (increased from 12)
           if (teamData) {
             switch (teamData.defensiveTier) {
-              case 'elite': defensiveFloor = 18; break;
-              case 'strong': defensiveFloor = 15; break;
-              case 'average': defensiveFloor = 12; break;
-              case 'promoted': defensiveFloor = 8; break;
-              case 'weak': defensiveFloor = 10; break;
+              case 'elite': defensiveFloor = 27; break; // Increased from 18
+              case 'strong': defensiveFloor = 23; break; // Increased from 15
+              case 'average': defensiveFloor = 18; break; // Increased from 12
+              case 'promoted': defensiveFloor = 12; break; // Increased from 8
+              case 'weak': defensiveFloor = 15; break; // Increased from 10
             }
           }
           
