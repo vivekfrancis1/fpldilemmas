@@ -1105,6 +1105,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team Confidence Analysis endpoint - shows confidence levels and multipliers
+  app.get("/api/team-confidence-analysis", async (req, res) => {
+    try {
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) throw new Error("Failed to fetch FPL API data");
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const teams = bootstrapData.teams;
+      
+      // Use centralized team service
+      const teamService = await createTeamService();
+      
+      const confidenceAnalysis = teams.map((team: any) => {
+        const teamData = teamService.getTeamData(team.id);
+        
+        // Calculate sample tier multiplier (using gameweek 5 as example)
+        const sampleTierSeed = (team.id * 5 * 13) % 100;
+        const tierMultiplier = teamService.getTierMultiplier(team.id, sampleTierSeed);
+        
+        // Calculate confidence multiplier (same logic as in projections)
+        const confidenceMultiplier = teamService.getConfidenceMultiplier(team.id);
+        
+        // Determine confidence level
+        let confidenceLevel: 'High' | 'Medium' | 'Low' = 'Medium';
+        if (teamData && teamData.confidence >= 0.85) confidenceLevel = 'High';
+        else if (teamData && teamData.confidence <= 0.65) confidenceLevel = 'Low';
+        
+        return {
+          id: team.id,
+          team: team.short_name,
+          teamName: team.name,
+          confidenceScore: teamData ? Math.round(teamData.confidence * 1000) / 10 : 0, // Convert to percentage
+          confidenceLevel,
+          attackingTier: teamData ? teamData.attackingTier : 'unknown',
+          defensiveTier: teamData ? teamData.defensiveTier : 'unknown',
+          expectedGoalsPerGame: teamData ? teamData.expectedGoalsPerGame : 0,
+          baseCleanSheetRate: teamData ? Math.round(teamData.baseCleanSheetRate * 1000) / 10 : 0, // Convert to percentage
+          
+          // Multipliers applied in projections
+          tierMultiplier: Math.round(tierMultiplier * 1000) / 1000, // Sample tier multiplier
+          confidenceMultiplier: Math.round(confidenceMultiplier * 1000) / 1000,
+          combinedMultiplier: Math.round(tierMultiplier * confidenceMultiplier * 1000) / 1000,
+          
+          // Final adjusted expected goals
+          adjustedExpectedGoals: teamData ? Math.round(teamData.expectedGoalsPerGame * tierMultiplier * confidenceMultiplier * 100) / 100 : 0
+        };
+      }).sort((a, b) => b.confidenceScore - a.confidenceScore); // Sort by confidence score descending
+      
+      res.json(confidenceAnalysis);
+    } catch (error) {
+      console.error("Error generating confidence analysis:", error);
+      res.status(500).json({ error: "Failed to generate team confidence analysis" });
+    }
+  });
+
   // Team Goal Projections endpoint  
   app.get("/api/team-goal-projections", async (req, res) => {
     try {
