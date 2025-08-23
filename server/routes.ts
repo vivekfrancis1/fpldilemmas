@@ -1571,13 +1571,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Phase 1: Inverse relationship to opponent's projected goals - more gradual and realistic
           // Higher opponent goals = lower clean sheet %, lower opponent goals = higher clean sheet %
           // Using gentler exponential decay and adjusted base rates
-          const decayFactor = 0.1; // Very gradual decay for realistic Premier League ranges
+          const decayFactor = 0.2; // More noticeable decay to show opponent threat impact
           let adjustedBaseRate = teamBettingData.baseCleanSheetRate;
           
-          // Boost base rates for more realistic Premier League clean sheet %
-          if (adjustedBaseRate < 0.20) adjustedBaseRate *= 1.8; // Weak defenses get 80% boost
-          else if (adjustedBaseRate < 0.30) adjustedBaseRate *= 1.5; // Average defenses get 50% boost
-          else adjustedBaseRate *= 1.3; // Strong defenses get 30% boost
+          // Boost base rates for more realistic Premier League clean sheet % (increased to compensate for lower floors)
+          if (adjustedBaseRate < 0.20) adjustedBaseRate *= 2.2; // Weak defenses get 120% boost
+          else if (adjustedBaseRate < 0.30) adjustedBaseRate *= 1.8; // Average defenses get 80% boost
+          else adjustedBaseRate *= 1.5; // Strong defenses get 50% boost
           
           const baseCSPercentage = adjustedBaseRate * 100;
           let baseCSProbability = baseCSPercentage * Math.exp(-decayFactor * opponentExpectedGoals);
@@ -1627,15 +1627,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.8);
           baseCSProbability *= confidenceAdjustment;
           
-          // Apply defensive floor protection based on team tier (applied AFTER all other adjustments)
-          let defensiveFloor = 15; // Default minimum
+          // Apply much lower defensive floor protection to allow more variation based on opposition
+          let defensiveFloor = 8; // Default minimum
           if (teamData) {
             switch (teamData.defensiveTier) {
-              case 'elite': defensiveFloor = 20; break;
-              case 'strong': defensiveFloor = 18; break;
-              case 'average': defensiveFloor = 15; break;
-              case 'weak': defensiveFloor = 12; break;
-              case 'promoted': defensiveFloor = 10; break;
+              case 'elite': defensiveFloor = 12; break;
+              case 'strong': defensiveFloor = 10; break;
+              case 'average': defensiveFloor = 8; break;
+              case 'weak': defensiveFloor = 6; break;
+              case 'promoted': defensiveFloor = 5; break;
             }
           }
           
