@@ -924,18 +924,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Premium 2024/25 spread betting market data - Enhanced for high confidence modeling
       teamGoalRates: {
         // Realistic attacking output based on Premier League market analysis 2024/25 - Calibrated to ~1.64 goals/game average
-        13: { expectedGoalsPerGame: 2.45, variance: 0.35, confidence: 0.87 }, // Man City - Haaland factor but aging
-        1: { expectedGoalsPerGame: 2.35, variance: 0.32, confidence: 0.85 }, // Arsenal - Creative midfield depth
-        12: { expectedGoalsPerGame: 2.25, variance: 0.30, confidence: 0.83 }, // Liverpool - Salah-Nunez combination
-        18: { expectedGoalsPerGame: 1.92, variance: 0.48, confidence: 0.74 }, // Tottenham - Son-Richarlison inconsistent
-        6: { expectedGoalsPerGame: 2.05, variance: 0.42, confidence: 0.78 }, // Chelsea - High-value squad rebuilding
+        13: { expectedGoalsPerGame: 1.97, variance: 0.35, confidence: 0.88 }, // Man City - Quality but aging (75.0 goals)
+        1: { expectedGoalsPerGame: 1.67, variance: 0.32, confidence: 0.86 }, // Arsenal - Consistent attack (63.5 goals)
+        12: { expectedGoalsPerGame: 2.14, variance: 0.30, confidence: 0.85 }, // Liverpool - Top attacking prediction (81.2 goals)
+        18: { expectedGoalsPerGame: 1.67, variance: 0.44, confidence: 0.76 }, // Tottenham - Quality attack (63.5 goals)
+        6: { expectedGoalsPerGame: 1.79, variance: 0.38, confidence: 0.80 }, // Chelsea - Strong attacking unit (68.1 goals)
         
         // Strong attacking mid-table teams
-        5: { expectedGoalsPerGame: 1.78, variance: 0.38, confidence: 0.76 }, // Brighton - System-based attack
-        15: { expectedGoalsPerGame: 1.75, variance: 0.40, confidence: 0.74 }, // Newcastle - Isak quality
-        2: { expectedGoalsPerGame: 1.72, variance: 0.42, confidence: 0.72 }, // Aston Villa - Watkins impact
-        14: { expectedGoalsPerGame: 1.68, variance: 0.44, confidence: 0.70 }, // Man United - Bruno dependency
-        3: { expectedGoalsPerGame: 1.62, variance: 0.46, confidence: 0.68 }, // Bournemouth - Solanke burden
+        5: { expectedGoalsPerGame: 1.49, variance: 0.40, confidence: 0.74 }, // Brighton - Tactical system (56.7 goals)
+        15: { expectedGoalsPerGame: 1.60, variance: 0.40, confidence: 0.76 }, // Newcastle - Strong unit (60.9 goals)
+        2: { expectedGoalsPerGame: 1.47, variance: 0.42, confidence: 0.74 }, // Aston Villa - Solid attack (55.9 goals)
+        14: { expectedGoalsPerGame: 1.45, variance: 0.46, confidence: 0.68 }, // Man United - Inconsistent (54.9 goals)
+        3: { expectedGoalsPerGame: 1.53, variance: 0.44, confidence: 0.70 }, // Bournemouth - Attacking style (58.1 goals)
         
         // Average attacking output
         9: { expectedGoalsPerGame: 1.58, variance: 0.41, confidence: 0.66 }, // Fulham - Well-organized
