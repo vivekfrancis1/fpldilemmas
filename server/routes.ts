@@ -1016,6 +1016,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bettingData = getSpreadBettingData();
       
       console.log(`DEBUG: Processing all 38 gameweeks, current GW: ${currentGameweek}`);
+      // Debug: Log teams to see actual IDs from API
+      console.log('DEBUG: Current teams from FPL API:', teams.map((t: any) => ({id: t.id, name: t.name, short: t.short_name})));
       
       const teamProjections = teams.map((team: any) => {
         // Get ALL fixtures for this team across all 38 gameweeks
