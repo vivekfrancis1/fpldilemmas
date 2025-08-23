@@ -2364,7 +2364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           predicted_minutes: Math.round(predictedMinutes),
           ownership_percentage: parseFloat(player.selected_by_percent),
           form_score: formFactor * 100,
-          fixture_difficulty: fixtureDifficulty,
+          fixture_difficulty: 3, // Neutral difficulty
           confidence_score: Math.round(confidenceScore)
         });
       }
