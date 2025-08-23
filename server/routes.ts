@@ -2,7 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { priceScheduler } from "./price-scheduler";
-import { insertPriceAlertSchema } from "@shared/schema";
+import { insertPriceAlertSchema, unifiedProjectionSettings as unifiedProjectionSettingsTable } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Player data routes
@@ -1097,60 +1099,225 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== ADMIN ENDPOINTS FOR TEAM GOAL PROJECTIONS ====================
   
-  // UNIFIED admin settings for both Goals Scored AND Goals Against (ensures perfect data consistency)
-  let unifiedProjectionSettings = {
-    // Auto balance setting
-    autoBalance: true,
-    
-    // League-wide controls
-    leagueGoalsPerSeason: 950, // Target total goals across all teams
-    
-    // Global multipliers (affect both scoring and conceding)
-    globalTierMultiplier: 1.25,
-    lowConfidenceBoost: 1.25,
-    lowConfidenceThreshold: 0.65,
-    
-    // Contextual multipliers (affect both scoring and conceding)
-    derbyMatchMultiplier: 0.87,
-    topSixMatchMultiplier: 1.12,
-    relegationBattleMultiplier: 0.83,
-    earlyKickoffMultiplier: 0.94,
-    lateKickoffMultiplier: 1.07,
-    postEuropeanMultiplier: 0.88,
-    midweekFixtureMultiplier: 0.91,
-    seasonFinaleMultiplier: 1.05,
-    newManagerBounceMultiplier: 1.08,
-    weatherConditionsMultiplier: 0.96,
-    
-    // Team tier multipliers for attacking (goals scored)
-    eliteAttackMultiplier: 1.30,
-    strongAttackMultiplier: 1.15,
-    averageAttackMultiplier: 1.00,
-    weakAttackMultiplier: 0.85,
-    promotedAttackMultiplier: 0.70,
-    
-    // Offensive variance controls (when enabled, overrides tier multipliers)
-    offensiveVarianceEnabled: false,
-    eliteAttackingGoals: 80,
-    weakAttackingGoals: 35,
-    
-    // Team tier multipliers for defending (goals conceded) - lower = stronger defense
-    eliteDefenseMultiplier: 0.60,
-    strongDefenseMultiplier: 0.75,
-    averageDefenseMultiplier: 1.00,
-    weakDefenseMultiplier: 1.35,
-    promotedDefenseMultiplier: 1.60,
-    
-    // Market bounds
-    absoluteMinGoals: 0.3,
-    absoluteMaxGoals: 4.2,
-    marketFloorMultiplier: 0.4,
-    marketCeilingMultiplier: 2.0,
-    
-    // Metadata
-    lastUpdated: new Date().toISOString(),
-    updatedBy: "admin"
-  };
+  // PERSISTENT unified settings - load from database, save to database
+  let unifiedProjectionSettings: any = null;
+
+  // Load unified projection settings from database
+  async function loadUnifiedProjectionSettings() {
+    try {
+      const settings = await db.select().from(unifiedProjectionSettingsTable).limit(1);
+      
+      if (settings.length > 0) {
+        // Convert database result to match expected format
+        const dbSettings = settings[0];
+        unifiedProjectionSettings = {
+          autoBalance: dbSettings.autoBalance,
+          leagueGoalsPerSeason: dbSettings.leagueGoalsPerSeason,
+          globalTierMultiplier: parseFloat(dbSettings.globalTierMultiplier || "1.25"),
+          lowConfidenceBoost: parseFloat(dbSettings.lowConfidenceBoost || "1.25"),
+          lowConfidenceThreshold: parseFloat(dbSettings.lowConfidenceThreshold || "0.65"),
+          derbyMatchMultiplier: parseFloat(dbSettings.derbyMatchMultiplier || "0.87"),
+          topSixMatchMultiplier: parseFloat(dbSettings.topSixMatchMultiplier || "1.12"),
+          relegationBattleMultiplier: parseFloat(dbSettings.relegationBattleMultiplier || "0.83"),
+          earlyKickoffMultiplier: parseFloat(dbSettings.earlyKickoffMultiplier || "0.94"),
+          lateKickoffMultiplier: parseFloat(dbSettings.lateKickoffMultiplier || "1.07"),
+          postEuropeanMultiplier: parseFloat(dbSettings.postEuropeanMultiplier || "0.88"),
+          midweekFixtureMultiplier: parseFloat(dbSettings.midweekFixtureMultiplier || "0.91"),
+          seasonFinaleMultiplier: parseFloat(dbSettings.seasonFinaleMultiplier || "1.05"),
+          newManagerBounceMultiplier: parseFloat(dbSettings.newManagerBounceMultiplier || "1.08"),
+          weatherConditionsMultiplier: parseFloat(dbSettings.weatherConditionsMultiplier || "0.96"),
+          eliteAttackMultiplier: parseFloat(dbSettings.eliteAttackMultiplier || "1.30"),
+          strongAttackMultiplier: parseFloat(dbSettings.strongAttackMultiplier || "1.15"),
+          averageAttackMultiplier: parseFloat(dbSettings.averageAttackMultiplier || "1.00"),
+          weakAttackMultiplier: parseFloat(dbSettings.weakAttackMultiplier || "0.85"),
+          promotedAttackMultiplier: parseFloat(dbSettings.promotedAttackMultiplier || "0.70"),
+          offensiveVarianceEnabled: dbSettings.offensiveVarianceEnabled,
+          eliteAttackingGoals: dbSettings.eliteAttackingGoals,
+          weakAttackingGoals: dbSettings.weakAttackingGoals,
+          eliteDefenseMultiplier: parseFloat(dbSettings.eliteDefenseMultiplier || "0.60"),
+          strongDefenseMultiplier: parseFloat(dbSettings.strongDefenseMultiplier || "0.75"),
+          averageDefenseMultiplier: parseFloat(dbSettings.averageDefenseMultiplier || "1.00"),
+          weakDefenseMultiplier: parseFloat(dbSettings.weakDefenseMultiplier || "1.35"),
+          promotedDefenseMultiplier: parseFloat(dbSettings.promotedDefenseMultiplier || "1.60"),
+          absoluteMinGoals: parseFloat(dbSettings.absoluteMinGoals || "0.3"),
+          absoluteMaxGoals: parseFloat(dbSettings.absoluteMaxGoals || "4.2"),
+          marketFloorMultiplier: parseFloat(dbSettings.marketFloorMultiplier || "0.4"),
+          marketCeilingMultiplier: parseFloat(dbSettings.marketCeilingMultiplier || "2.0"),
+          lastUpdated: dbSettings.lastUpdated?.toISOString() || new Date().toISOString(),
+          updatedBy: dbSettings.updatedBy || "admin"
+        };
+        console.log("✓ Unified projection settings loaded from database");
+        return unifiedProjectionSettings;
+      } else {
+        // Create default settings in database if none exist
+        console.log("No settings found in database, creating defaults...");
+        return await createDefaultUnifiedProjectionSettings();
+      }
+    } catch (error) {
+      console.error("Failed to load unified projection settings from database:", error);
+      // Fall back to default settings
+      return createInMemoryDefaultSettings();
+    }
+  }
+
+  // Create default settings in database
+  async function createDefaultUnifiedProjectionSettings() {
+    try {
+      const defaultSettings = {
+        autoBalance: true,
+        leagueGoalsPerSeason: 1050,
+        globalTierMultiplier: "1.25",
+        lowConfidenceBoost: "1.25",
+        lowConfidenceThreshold: "0.65",
+        derbyMatchMultiplier: "0.87",
+        topSixMatchMultiplier: "1.12",
+        relegationBattleMultiplier: "0.83",
+        earlyKickoffMultiplier: "0.94",
+        lateKickoffMultiplier: "1.07",
+        postEuropeanMultiplier: "0.88",
+        midweekFixtureMultiplier: "0.91",
+        seasonFinaleMultiplier: "1.05",
+        newManagerBounceMultiplier: "1.08",
+        weatherConditionsMultiplier: "0.96",
+        eliteAttackMultiplier: "1.30",
+        strongAttackMultiplier: "1.15",
+        averageAttackMultiplier: "1.00",
+        weakAttackMultiplier: "0.85",
+        promotedAttackMultiplier: "0.70",
+        offensiveVarianceEnabled: false,
+        eliteAttackingGoals: 80,
+        weakAttackingGoals: 35,
+        eliteDefenseMultiplier: "0.60",
+        strongDefenseMultiplier: "0.75",
+        averageDefenseMultiplier: "1.00",
+        weakDefenseMultiplier: "1.35",
+        promotedDefenseMultiplier: "1.60",
+        absoluteMinGoals: "0.30",
+        absoluteMaxGoals: "4.20",
+        marketFloorMultiplier: "0.40",
+        marketCeilingMultiplier: "2.00",
+        lastUpdated: new Date(),
+        updatedBy: "admin"
+      };
+      
+      const result = await db.insert(unifiedProjectionSettingsTable).values(defaultSettings).returning();
+      console.log("✓ Created default unified projection settings in database");
+      return await loadUnifiedProjectionSettings(); // Reload from DB
+    } catch (error) {
+      console.error("Failed to create default settings in database:", error);
+      return createInMemoryDefaultSettings();
+    }
+  }
+
+  // Fallback in-memory settings if database fails
+  function createInMemoryDefaultSettings() {
+    unifiedProjectionSettings = {
+      autoBalance: true,
+      leagueGoalsPerSeason: 1050,
+      globalTierMultiplier: 1.25,
+      lowConfidenceBoost: 1.25,
+      lowConfidenceThreshold: 0.65,
+      derbyMatchMultiplier: 0.87,
+      topSixMatchMultiplier: 1.12,
+      relegationBattleMultiplier: 0.83,
+      earlyKickoffMultiplier: 0.94,
+      lateKickoffMultiplier: 1.07,
+      postEuropeanMultiplier: 0.88,
+      midweekFixtureMultiplier: 0.91,
+      seasonFinaleMultiplier: 1.05,
+      newManagerBounceMultiplier: 1.08,
+      weatherConditionsMultiplier: 0.96,
+      eliteAttackMultiplier: 1.30,
+      strongAttackMultiplier: 1.15,
+      averageAttackMultiplier: 1.00,
+      weakAttackMultiplier: 0.85,
+      promotedAttackMultiplier: 0.70,
+      offensiveVarianceEnabled: false,
+      eliteAttackingGoals: 80,
+      weakAttackingGoals: 35,
+      eliteDefenseMultiplier: 0.60,
+      strongDefenseMultiplier: 0.75,
+      averageDefenseMultiplier: 1.00,
+      weakDefenseMultiplier: 1.35,
+      promotedDefenseMultiplier: 1.60,
+      absoluteMinGoals: 0.3,
+      absoluteMaxGoals: 4.2,
+      marketFloorMultiplier: 0.4,
+      marketCeilingMultiplier: 2.0,
+      lastUpdated: new Date().toISOString(),
+      updatedBy: "admin"
+    };
+    console.log("⚠ Using in-memory default settings (database unavailable)");
+    return unifiedProjectionSettings;
+  }
+
+  // Save settings to database
+  async function saveUnifiedProjectionSettings(newSettings: any) {
+    try {
+      // Update database
+      const updateData = {
+        autoBalance: newSettings.autoBalance,
+        leagueGoalsPerSeason: newSettings.leagueGoalsPerSeason,
+        globalTierMultiplier: newSettings.globalTierMultiplier?.toString(),
+        lowConfidenceBoost: newSettings.lowConfidenceBoost?.toString(),
+        lowConfidenceThreshold: newSettings.lowConfidenceThreshold?.toString(),
+        derbyMatchMultiplier: newSettings.derbyMatchMultiplier?.toString(),
+        topSixMatchMultiplier: newSettings.topSixMatchMultiplier?.toString(),
+        relegationBattleMultiplier: newSettings.relegationBattleMultiplier?.toString(),
+        earlyKickoffMultiplier: newSettings.earlyKickoffMultiplier?.toString(),
+        lateKickoffMultiplier: newSettings.lateKickoffMultiplier?.toString(),
+        postEuropeanMultiplier: newSettings.postEuropeanMultiplier?.toString(),
+        midweekFixtureMultiplier: newSettings.midweekFixtureMultiplier?.toString(),
+        seasonFinaleMultiplier: newSettings.seasonFinaleMultiplier?.toString(),
+        newManagerBounceMultiplier: newSettings.newManagerBounceMultiplier?.toString(),
+        weatherConditionsMultiplier: newSettings.weatherConditionsMultiplier?.toString(),
+        eliteAttackMultiplier: newSettings.eliteAttackMultiplier?.toString(),
+        strongAttackMultiplier: newSettings.strongAttackMultiplier?.toString(),
+        averageAttackMultiplier: newSettings.averageAttackMultiplier?.toString(),
+        weakAttackMultiplier: newSettings.weakAttackMultiplier?.toString(),
+        promotedAttackMultiplier: newSettings.promotedAttackMultiplier?.toString(),
+        offensiveVarianceEnabled: newSettings.offensiveVarianceEnabled,
+        eliteAttackingGoals: newSettings.eliteAttackingGoals,
+        weakAttackingGoals: newSettings.weakAttackingGoals,
+        eliteDefenseMultiplier: newSettings.eliteDefenseMultiplier?.toString(),
+        strongDefenseMultiplier: newSettings.strongDefenseMultiplier?.toString(),
+        averageDefenseMultiplier: newSettings.averageDefenseMultiplier?.toString(),
+        weakDefenseMultiplier: newSettings.weakDefenseMultiplier?.toString(),
+        promotedDefenseMultiplier: newSettings.promotedDefenseMultiplier?.toString(),
+        absoluteMinGoals: newSettings.absoluteMinGoals?.toString(),
+        absoluteMaxGoals: newSettings.absoluteMaxGoals?.toString(),
+        marketFloorMultiplier: newSettings.marketFloorMultiplier?.toString(),
+        marketCeilingMultiplier: newSettings.marketCeilingMultiplier?.toString(),
+        lastUpdated: new Date(),
+        updatedBy: newSettings.updatedBy || "admin"
+      };
+      
+      // Check if settings exist
+      const existing = await db.select().from(unifiedProjectionSettingsTable).limit(1);
+      
+      if (existing.length > 0) {
+        // Update existing
+        await db.update(unifiedProjectionSettingsTable)
+          .set(updateData)
+          .where(eq(unifiedProjectionSettingsTable.id, existing[0].id));
+      } else {
+        // Insert new
+        await db.insert(unifiedProjectionSettingsTable).values(updateData);
+      }
+      
+      // Update in-memory copy
+      unifiedProjectionSettings = { ...newSettings, ...updateData };
+      console.log("✓ Unified projection settings saved to database");
+      
+    } catch (error) {
+      console.error("Failed to save unified projection settings to database:", error);
+      // Update in-memory copy even if database save fails
+      unifiedProjectionSettings = { ...newSettings };
+    }
+  }
+
+  // Initialize settings on startup
+  await loadUnifiedProjectionSettings();
 
   // LEGACY admin settings for Goal Projections (DEPRECATED - use unified settings)
   let adminGoalSettings = {
@@ -1271,7 +1438,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedBy: "admin"
       };
       
-      unifiedProjectionSettings = updatedSettings;
+      // Save to database (this also updates in-memory copy)
+      await saveUnifiedProjectionSettings(updatedSettings);
       
       // Update legacy settings for backward compatibility until migration complete
       adminGoalSettings = {

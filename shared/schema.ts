@@ -173,6 +173,7 @@ import {
   varchar,
   decimal,
   date,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 // Session storage table
@@ -414,3 +415,61 @@ export const adminMatchProjectionSettings = pgTable("admin_match_projection_sett
 
 export type AdminMatchProjectionSettings = typeof adminMatchProjectionSettings.$inferSelect;
 export type InsertAdminMatchProjectionSettings = typeof adminMatchProjectionSettings.$inferInsert;
+
+// Unified Projection Settings - persistent storage for all projection controls
+export const unifiedProjectionSettings = pgTable("unified_projection_settings", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  
+  // Core balance controls
+  autoBalance: boolean("auto_balance").default(true),
+  leagueGoalsPerSeason: integer("league_goals_per_season").default(1050),
+  
+  // Global multipliers
+  globalTierMultiplier: decimal("global_tier_multiplier", { precision: 4, scale: 2 }).default("1.25"),
+  lowConfidenceBoost: decimal("low_confidence_boost", { precision: 4, scale: 2 }).default("1.25"),
+  lowConfidenceThreshold: decimal("low_confidence_threshold", { precision: 4, scale: 2 }).default("0.65"),
+  
+  // Match context multipliers
+  derbyMatchMultiplier: decimal("derby_match_multiplier", { precision: 4, scale: 2 }).default("0.87"),
+  topSixMatchMultiplier: decimal("top_six_match_multiplier", { precision: 4, scale: 2 }).default("1.12"),
+  relegationBattleMultiplier: decimal("relegation_battle_multiplier", { precision: 4, scale: 2 }).default("0.83"),
+  earlyKickoffMultiplier: decimal("early_kickoff_multiplier", { precision: 4, scale: 2 }).default("0.94"),
+  lateKickoffMultiplier: decimal("late_kickoff_multiplier", { precision: 4, scale: 2 }).default("1.07"),
+  postEuropeanMultiplier: decimal("post_european_multiplier", { precision: 4, scale: 2 }).default("0.88"),
+  midweekFixtureMultiplier: decimal("midweek_fixture_multiplier", { precision: 4, scale: 2 }).default("0.91"),
+  seasonFinaleMultiplier: decimal("season_finale_multiplier", { precision: 4, scale: 2 }).default("1.05"),
+  newManagerBounceMultiplier: decimal("new_manager_bounce_multiplier", { precision: 4, scale: 2 }).default("1.08"),
+  weatherConditionsMultiplier: decimal("weather_conditions_multiplier", { precision: 4, scale: 2 }).default("0.96"),
+  
+  // Offensive tier multipliers
+  eliteAttackMultiplier: decimal("elite_attack_multiplier", { precision: 4, scale: 2 }).default("1.30"),
+  strongAttackMultiplier: decimal("strong_attack_multiplier", { precision: 4, scale: 2 }).default("1.15"),
+  averageAttackMultiplier: decimal("average_attack_multiplier", { precision: 4, scale: 2 }).default("1.00"),
+  weakAttackMultiplier: decimal("weak_attack_multiplier", { precision: 4, scale: 2 }).default("0.85"),
+  promotedAttackMultiplier: decimal("promoted_attack_multiplier", { precision: 4, scale: 2 }).default("0.70"),
+  
+  // Offensive variance controls
+  offensiveVarianceEnabled: boolean("offensive_variance_enabled").default(false),
+  eliteAttackingGoals: integer("elite_attacking_goals").default(80),
+  weakAttackingGoals: integer("weak_attacking_goals").default(35),
+  
+  // Defensive tier multipliers
+  eliteDefenseMultiplier: decimal("elite_defense_multiplier", { precision: 4, scale: 2 }).default("0.60"),
+  strongDefenseMultiplier: decimal("strong_defense_multiplier", { precision: 4, scale: 2 }).default("0.75"),
+  averageDefenseMultiplier: decimal("average_defense_multiplier", { precision: 4, scale: 2 }).default("1.00"),
+  weakDefenseMultiplier: decimal("weak_defense_multiplier", { precision: 4, scale: 2 }).default("1.35"),
+  promotedDefenseMultiplier: decimal("promoted_defense_multiplier", { precision: 4, scale: 2 }).default("1.60"),
+  
+  // Bounds and limits
+  absoluteMinGoals: decimal("absolute_min_goals", { precision: 4, scale: 2 }).default("0.30"),
+  absoluteMaxGoals: decimal("absolute_max_goals", { precision: 4, scale: 2 }).default("4.20"),
+  marketFloorMultiplier: decimal("market_floor_multiplier", { precision: 4, scale: 2 }).default("0.40"),
+  marketCeilingMultiplier: decimal("market_ceiling_multiplier", { precision: 4, scale: 2 }).default("2.00"),
+  
+  // Metadata
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  updatedBy: varchar("updated_by").default("admin"),
+});
+
+export type UnifiedProjectionSettings = typeof unifiedProjectionSettings.$inferSelect;
+export type InsertUnifiedProjectionSettings = typeof unifiedProjectionSettings.$inferInsert;
