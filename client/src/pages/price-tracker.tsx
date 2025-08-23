@@ -255,7 +255,7 @@ export default function PriceTracker() {
         {/* Main Content Tabs */}
         <Tabs defaultValue="recent" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="recent" data-testid="tab-recent-changes">Recent Changes</TabsTrigger>
+            <TabsTrigger value="recent" data-testid="tab-recent-changes">Recent Price Changes</TabsTrigger>
             <TabsTrigger value="predictions" data-testid="tab-predictions">Price Predictions</TabsTrigger>
           </TabsList>
 
