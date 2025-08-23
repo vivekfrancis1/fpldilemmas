@@ -421,17 +421,26 @@ export default function OpenFPLProjections() {
                                     const player = group.player;
                                     const gwData = group.gameweeks;
                                     
-                                    // Calculate total for the metric
-                                    const total = Object.values(gwData).reduce((sum: number, proj: any) => {
-                                      const value = proj[metric] || 0;
-                                      return sum + value;
-                                    }, 0);
+                                    // Get horizon projections for calculating individual gameweek values
+                                    const getHorizonValue = (horizon: number) => {
+                                      const horizonProj = Object.values(gwData).find((proj: any) => proj.horizon === horizon);
+                                      return horizonProj?.[metric] || 0;
+                                    };
 
-                                    // Create array of gameweek values for sorting
+                                    // Calculate individual gameweek values using horizon differences
                                     const gwValues = Array.from({length: parseInt(horizonFilter)}, (_, i) => {
-                                      const gwProj = Object.values(gwData).find((proj: any) => proj.gameweek === (player.gameweek + i));
-                                      return gwProj?.[metric] || 0;
+                                      const gwIndex = i + 1;
+                                      if (gwIndex === 1) {
+                                        // GW1 = 1 horizon value
+                                        return getHorizonValue(1);
+                                      } else {
+                                        // GWn = n horizon - (n-1) horizon
+                                        return getHorizonValue(gwIndex) - getHorizonValue(gwIndex - 1);
+                                      }
                                     });
+
+                                    // Total is the highest horizon value (cumulative)
+                                    const total = getHorizonValue(parseInt(horizonFilter));
 
                                     return { ...group, total, gwValues };
                                   })
@@ -488,8 +497,7 @@ export default function OpenFPLProjections() {
                                         <span className="text-sm font-medium">£{(player.current_price / 10).toFixed(1)}m</span>
                                       </td>
                                       {Array.from({length: parseInt(horizonFilter)}, (_, i) => {
-                                        const gwProj = Object.values(gwData).find((proj: any) => proj.gameweek === (player.gameweek + i));
-                                        const value = gwProj?.[metric] || 0;
+                                        const value = group.gwValues[i] || 0;
                                         
                                         return (
                                           <td key={i} className="px-2 py-3 text-center">
