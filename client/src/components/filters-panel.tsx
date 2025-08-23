@@ -36,208 +36,121 @@ export default function FiltersPanel({
     });
   };
 
-  const applyQuickFilter = (filterType: string) => {
-    // Quick filter implementations
-    switch (filterType) {
-      case "topScorers":
-        setFilters({ ...filters, search: "" }); // Will be handled by sorting in table
-        break;
-      case "inForm":
-        setFilters({ ...filters, search: "" }); // Filter by high form
-        break;
-      case "budgetPlayers":
-        setFilters({ ...filters, maxPrice: "70" }); // Under £7.0m
-        break;
-      case "differentials":
-        setFilters({ ...filters, search: "" }); // Low ownership
-        break;
-      case "risingPrices":
-        setFilters({ ...filters, search: "" }); // Positive price change
-        break;
-    }
-  };
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <div className="flex flex-wrap items-center gap-4 mb-6">
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-16" />
+      <div className="fpl-filters">
+        <div className="fpl-card-header">
+          <Skeleton className="h-6 w-48" />
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i}>
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ))}
-        </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-4 w-20" />
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-8 w-24 rounded-full" />
-          ))}
+        <div className="fpl-card-content">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i}>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-3 sm:p-6 mb-4 sm:mb-8">
-      <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-900" data-testid="text-filters-title">Filters & Search</h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={clearFilters}
-          className="text-fpl-purple hover:text-fpl-pink transition-colors text-xs sm:text-sm"
-          data-testid="button-clear-filters"
-        >
-          <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-          Clear All
-        </Button>
+    <div className="fpl-filters">
+      <div className="fpl-card-header">
+        <div className="fpl-card-title">
+          <Search className="h-5 w-5 text-blue-600" />
+          Smart Filters & Search
+        </div>
       </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        {/* Search Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2" data-testid="label-search">Search Player</label>
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="Search by name..."
-              value={filters.search}
-              onChange={(e) => handleFilterChange("search", e.target.value)}
-              className="pl-10"
-              data-testid="input-search"
-            />
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+      <div className="fpl-card-content">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="relative sm:col-span-2 lg:col-span-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search players..."
+            value={filters.search}
+            onChange={(e) => handleFilterChange("search", e.target.value)}
+            className="pl-10 h-10 md:h-12 border-2"
+            data-testid="input-search"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-1">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">Position</label>
+            <Select value={filters.position} onValueChange={(value) => handleFilterChange("position", value)}>
+              <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-position">
+                <SelectValue placeholder="All Positions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Positions</SelectItem>
+                {elementTypes?.map((type) => (
+                  <SelectItem key={type.id} value={type.id.toString()}>
+                    {type.singular_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">Team</label>
+            <Select value={filters.team} onValueChange={(value) => handleFilterChange("team", value)}>
+              <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-team">
+                <SelectValue placeholder="All Teams" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Teams</SelectItem>
+                {teams?.map((team) => (
+                  <SelectItem key={team.id} value={team.id.toString()}>
+                    {team.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
-        
-        {/* Position Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2" data-testid="label-position">Position</label>
-          <Select value={filters.position} onValueChange={(value) => handleFilterChange("position", value)}>
-            <SelectTrigger data-testid="select-position">
-              <SelectValue placeholder="All Positions" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Positions</SelectItem>
-              {elementTypes?.map((type) => (
-                <SelectItem key={type.id} value={type.id.toString()}>
-                  {type.singular_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:col-span-1">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">Max Price</label>
+            <Select value={filters.maxPrice} onValueChange={(value) => handleFilterChange("maxPrice", value)}>
+              <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-max-price">
+                <SelectValue placeholder="Any Price" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any Price</SelectItem>
+                <SelectItem value="40">Under £4.0m</SelectItem>
+                <SelectItem value="45">Under £4.5m</SelectItem>
+                <SelectItem value="50">Under £5.0m</SelectItem>
+                <SelectItem value="55">Under £5.5m</SelectItem>
+                <SelectItem value="60">Under £6.0m</SelectItem>
+                <SelectItem value="65">Under £6.5m</SelectItem>
+                <SelectItem value="70">Under £7.0m</SelectItem>
+                <SelectItem value="75">Under £7.5m</SelectItem>
+                <SelectItem value="80">Under £8.0m</SelectItem>
+                <SelectItem value="85">Under £8.5m</SelectItem>
+                <SelectItem value="90">Under £9.0m</SelectItem>
+                <SelectItem value="95">Under £9.5m</SelectItem>
+                <SelectItem value="100">Under £10.0m</SelectItem>
+                <SelectItem value="105">Under £10.5m</SelectItem>
+                <SelectItem value="110">Under £11.0m</SelectItem>
+                <SelectItem value="115">Under £11.5m</SelectItem>
+                <SelectItem value="120">Under £12.0m</SelectItem>
+                <SelectItem value="125">Under £12.5m</SelectItem>
+                <SelectItem value="130">Under £13.0m</SelectItem>
+                <SelectItem value="135">Under £13.5m</SelectItem>
+                <SelectItem value="140">Under £14.0m</SelectItem>
+                <SelectItem value="145">Under £14.5m</SelectItem>
+                <SelectItem value="150">Under £15.0m</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        
-        {/* Team Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2" data-testid="label-team">Team</label>
-          <Select value={filters.team} onValueChange={(value) => handleFilterChange("team", value)}>
-            <SelectTrigger data-testid="select-team">
-              <SelectValue placeholder="All Teams" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Teams</SelectItem>
-              {teams?.map((team) => (
-                <SelectItem key={team.id} value={team.id.toString()}>
-                  {team.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
-        
-        {/* Price Range */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2" data-testid="label-max-price">Max Price</label>
-          <Select value={filters.maxPrice} onValueChange={(value) => handleFilterChange("maxPrice", value)}>
-            <SelectTrigger data-testid="select-max-price">
-              <SelectValue placeholder="Any Price" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any Price</SelectItem>
-              <SelectItem value="40">Under £4.0m</SelectItem>
-              <SelectItem value="45">Under £4.5m</SelectItem>
-              <SelectItem value="50">Under £5.0m</SelectItem>
-              <SelectItem value="55">Under £5.5m</SelectItem>
-              <SelectItem value="60">Under £6.0m</SelectItem>
-              <SelectItem value="65">Under £6.5m</SelectItem>
-              <SelectItem value="70">Under £7.0m</SelectItem>
-              <SelectItem value="75">Under £7.5m</SelectItem>
-              <SelectItem value="80">Under £8.0m</SelectItem>
-              <SelectItem value="85">Under £8.5m</SelectItem>
-              <SelectItem value="90">Under £9.0m</SelectItem>
-              <SelectItem value="95">Under £9.5m</SelectItem>
-              <SelectItem value="100">Under £10.0m</SelectItem>
-              <SelectItem value="105">Under £10.5m</SelectItem>
-              <SelectItem value="110">Under £11.0m</SelectItem>
-              <SelectItem value="115">Under £11.5m</SelectItem>
-              <SelectItem value="120">Under £12.0m</SelectItem>
-              <SelectItem value="125">Under £12.5m</SelectItem>
-              <SelectItem value="130">Under £13.0m</SelectItem>
-              <SelectItem value="135">Under £13.5m</SelectItem>
-              <SelectItem value="140">Under £14.0m</SelectItem>
-              <SelectItem value="145">Under £14.5m</SelectItem>
-              <SelectItem value="150">Under £15.0m</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      
-      {/* Quick Filters */}
-      <div className="flex flex-wrap gap-2">
-        <span className="text-sm font-medium text-gray-700 mr-2" data-testid="text-quick-filters">Quick Filters:</span>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => applyQuickFilter("topScorers")}
-          className="px-3 py-1 bg-gray-100 hover:bg-fpl-purple hover:text-white text-gray-700 text-sm rounded-full transition-colors"
-          data-testid="button-top-scorers"
-        >
-          Top Scorers
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => applyQuickFilter("inForm")}
-          className="px-3 py-1 bg-gray-100 hover:bg-fpl-purple hover:text-white text-gray-700 text-sm rounded-full transition-colors"
-          data-testid="button-in-form"
-        >
-          In Form
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => applyQuickFilter("budgetPlayers")}
-          className="px-3 py-1 bg-gray-100 hover:bg-fpl-purple hover:text-white text-gray-700 text-sm rounded-full transition-colors"
-          data-testid="button-budget-players"
-        >
-          Budget Players
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => applyQuickFilter("differentials")}
-          className="px-3 py-1 bg-gray-100 hover:bg-fpl-purple hover:text-white text-gray-700 text-sm rounded-full transition-colors"
-          data-testid="button-differentials"
-        >
-          Differentials
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => applyQuickFilter("risingPrices")}
-          className="px-3 py-1 bg-gray-100 hover:bg-fpl-purple hover:text-white text-gray-700 text-sm rounded-full transition-colors"
-          data-testid="button-rising-prices"
-        >
-          Rising Prices
-        </Button>
       </div>
     </div>
   );
