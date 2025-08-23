@@ -377,16 +377,22 @@ export default function OpenFPLProjections() {
                                     Own% {getTableSortIcon("ownership_total")}
                                   </button>
                                 </th>
-                                {Array.from({length: parseInt(horizonFilter)}, (_, i) => (
-                                  <th key={i} className="px-2 py-3 text-center min-w-[70px] font-semibold text-gray-900">
-                                    <button 
-                                      onClick={() => handleTableSort(`gw${i}`)}
-                                      className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors"
-                                    >
-                                      GW{i + 1} {getTableSortIcon(`gw${i}`)}
-                                    </button>
-                                  </th>
-                                ))}
+                                {Array.from({length: parseInt(horizonFilter)}, (_, i) => {
+                                  // Get current gameweek from bootstrap data, default to 2 if not available
+                                  const currentGW = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
+                                  const actualGW = currentGW + i + 1; // Next gameweek starts from current + 1
+                                  
+                                  return (
+                                    <th key={i} className="px-2 py-3 text-center min-w-[70px] font-semibold text-gray-900">
+                                      <button 
+                                        onClick={() => handleTableSort(`gw${i}`)}
+                                        className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors"
+                                      >
+                                        GW{actualGW} {getTableSortIcon(`gw${i}`)}
+                                      </button>
+                                    </th>
+                                  );
+                                })}
                                 <th className="px-2 py-3 text-center min-w-[70px] font-semibold text-blue-900 bg-blue-50">
                                   <button 
                                     onClick={() => handleTableSort("total")}
