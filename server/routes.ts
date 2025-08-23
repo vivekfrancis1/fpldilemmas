@@ -948,8 +948,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         7: { expectedGoalsPerGame: 1.45, variance: 0.45, confidence: 0.62 }, // Crystal Palace - Improved attack (55.1 goals)
         20: { expectedGoalsPerGame: 1.12, variance: 0.52, confidence: 0.50 }, // Wolves - Defensive setup (42.7 goals)
         11: { expectedGoalsPerGame: 1.10, variance: 0.54, confidence: 0.48 }, // Leicester - Struggle to adapt
-        10: { expectedGoalsPerGame: 1.00, variance: 0.58, confidence: 0.45 }, // Ipswich - Promoted team
-        17: { expectedGoalsPerGame: 0.95, variance: 0.55, confidence: 0.43 }  // Southampton - Relegation battle
+        10: { expectedGoalsPerGame: 1.05, variance: 0.55, confidence: 0.40 }, // Burnley - Newly promoted
+        17: { expectedGoalsPerGame: 1.10, variance: 0.52, confidence: 0.42 }, // Leeds United - Newly promoted  
+        21: { expectedGoalsPerGame: 0.98, variance: 0.58, confidence: 0.38 }  // Sunderland - Newly promoted
       },
       
       // Elite defensive market data - Adjusted for higher scoring environment (reduced ~18% to match goal increase)
@@ -972,8 +973,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         18: { baseCleanSheetRate: 0.11, homeBonus: 0.03, confidence: 0.54 }, // Tottenham - High-line risks
         19: { baseCleanSheetRate: 0.11, homeBonus: 0.03, confidence: 0.51 }, // West Ham - Defensive frailty
         20: { baseCleanSheetRate: 0.09, homeBonus: 0.02, confidence: 0.48 }, // Wolves - Lack of pace
-        10: { baseCleanSheetRate: 0.07, homeBonus: 0.02, confidence: 0.45 }, // Ipswich - Championship level
-        17: { baseCleanSheetRate: 0.06, homeBonus: 0.02, confidence: 0.42 }  // Southampton - Leaky defense
+        10: { baseCleanSheetRate: 0.08, homeBonus: 0.02, confidence: 0.42 }, // Burnley - Newly promoted defense
+        17: { baseCleanSheetRate: 0.09, homeBonus: 0.02, confidence: 0.44 }, // Leeds United - Newly promoted defense
+        21: { baseCleanSheetRate: 0.06, homeBonus: 0.02, confidence: 0.40 }  // Sunderland - Newly promoted defense
       },
       
       // Advanced market-based contextual adjustments with statistical backing
@@ -1089,7 +1091,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tierMultiplier = 1.01 + (tierSeed / 3333); // 101-104%
           } else if ([3, 9, 16, 19].includes(team.id)) { // Average attacking output
             tierMultiplier = 0.98 + (tierSeed / 2500); // 98-102%
-          } else { // Weaker attacking units
+          } else if ([10, 17, 21].includes(team.id)) { // Newly promoted teams - no calibration boost
+            tierMultiplier = 0.90 + (tierSeed / 2000); // 90-95% (reduced for promoted teams)
+          } else { // Other weaker attacking units
             tierMultiplier = 0.94 + (tierSeed / 1667); // 94-100%
           }
           baseExpectedGoals *= tierMultiplier;
@@ -1112,7 +1116,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Confidence-based goal adjustment - higher confidence = higher output (fixed logic)
           let confidenceMultiplier = 1.0;
-          if (teamBettingData.confidence >= 0.85) {
+          if ([10, 17, 21].includes(team.id)) {
+            // Newly promoted teams: no confidence boost
+            confidenceMultiplier = 1.0; // No artificial boost for promoted teams
+          } else if (teamBettingData.confidence >= 0.85) {
             // High confidence teams: strong increase (35-45%)
             confidenceMultiplier = 1.35 + (teamBettingData.confidence - 0.85) * 0.67; // 1.35 to 1.45
           } else if (teamBettingData.confidence >= 0.65) {
@@ -1326,7 +1333,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tierMultiplier = 1.01 + (tierSeed / 3333); // 101-104%
           } else if ([3, 9, 16, 19].includes(team.id)) { // Average attacking output
             tierMultiplier = 0.98 + (tierSeed / 2500); // 98-102%
-          } else { // Weaker attacking units
+          } else if ([10, 17, 21].includes(team.id)) { // Newly promoted teams - no calibration boost
+            tierMultiplier = 0.90 + (tierSeed / 2000); // 90-95% (reduced for promoted teams)
+          } else { // Other weaker attacking units
             tierMultiplier = 0.94 + (tierSeed / 1667); // 94-100%
           }
           baseExpectedGoals *= tierMultiplier;
@@ -1347,7 +1356,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
           let confidenceMultiplier = 1.0;
-          if (teamBettingData.confidence >= 0.85) {
+          if ([10, 17, 21].includes(team.id)) {
+            // Newly promoted teams: no confidence boost  
+            confidenceMultiplier = 1.0; // No artificial boost for promoted teams
+          } else if (teamBettingData.confidence >= 0.85) {
             // High confidence teams: strong increase (35-45%)
             confidenceMultiplier = 1.35 + (teamBettingData.confidence - 0.85) * 0.67; // 1.35 to 1.45
           } else if (teamBettingData.confidence >= 0.65) {
