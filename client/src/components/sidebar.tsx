@@ -49,7 +49,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Projection Tools", 
       items: [
-        { path: "/projected-goals-cs", label: "Match Odds", icon: Target, description: "Projected goals & clean sheets", popular: false },
+        { path: "/projected-goals-cs", label: "Match Projections", icon: Target, description: "Projected goals & clean sheets", popular: false },
         { path: "/team-goal-projections", label: "Team Goal Projections", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-cs-projections", label: "Team CS Projections", icon: Shield, description: "Clean sheet probabilities", popular: false },
 
