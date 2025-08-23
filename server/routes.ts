@@ -3348,6 +3348,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to distribute goal shares among players (same logic as goal-share page)
+  function distributeGoalShares(players: any[], positions: any[]) {
+    const playerShares: any[] = [];
+    let totalShare = 0;
+
+    // Calculate base shares based on position and performance
+    players.forEach((player: any) => {
+      const position = positions.find((p: any) => p.id === player.element_type);
+      const positionName = position?.singular_name;
+
+      // Position-specific base goal shares
+      const positionShares = {
+        'Goalkeeper': 0.5,
+        'Defender': 5,
+        'Midfielder': 15,
+        'Forward': 30
+      };
+
+      const baseShare = positionShares[positionName as keyof typeof positionShares] || 15;
+      
+      // Adjust based on form and current performance
+      const formAdjustment = parseFloat(player.form) || 0;
+      const goalsAdjustment = Math.max(0.5, Math.min(2.0, (player.goals_scored || 0) * 3 + 0.5));
+      
+      const performanceMultiplier = Math.max(0.3, Math.min(2.5, 
+        (formAdjustment / 10 + goalsAdjustment) / 2
+      ));
+      
+      const adjustedShare = baseShare * performanceMultiplier;
+      
+      playerShares.push({
+        id: player.id,
+        name: `${player.first_name} ${player.second_name}`,
+        position: position?.singular_name_short || '',
+        rawShare: adjustedShare
+      });
+      
+      totalShare += adjustedShare;
+    });
+
+    // Normalize to 100% and add projected goals calculation
+    return playerShares.map(player => {
+      const goalShare = Math.round((player.rawShare / totalShare) * 1000) / 10; // One decimal place
+      return {
+        ...player,
+        goalShare,
+        projectedGoals: 0 // Will be calculated when team expected goals are known
+      };
+    }).filter(p => p.goalShare > 0).sort((a, b) => b.goalShare - a.goalShare);
+  }
+
   // Helper function to generate Goal Share data using Team Goal Projections for consistency
   function generateGoalShareFromTeamProjections(bootstrapData: any, fixturesData: any, teamGoalProjections: any[], targetGameweek: number) {
     const data: any[] = [];
