@@ -924,18 +924,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Premium 2024/25 spread betting market data - Enhanced for high confidence modeling
       teamGoalRates: {
         // Realistic attacking output based on Premier League market analysis 2024/25 - Calibrated to ~1.64 goals/game average
-        13: { expectedGoalsPerGame: 1.97, variance: 0.35, confidence: 0.88 }, // Man City - Quality but aging (75.0 goals)
-        1: { expectedGoalsPerGame: 1.67, variance: 0.32, confidence: 0.86 }, // Arsenal - Consistent attack (63.5 goals)
-        12: { expectedGoalsPerGame: 2.14, variance: 0.30, confidence: 0.85 }, // Liverpool - Top attacking prediction (81.2 goals)
+        13: { expectedGoalsPerGame: 1.97, variance: 0.35, confidence: 0.75 }, // Man City - Quality but aging (75.0 goals)
+        1: { expectedGoalsPerGame: 1.67, variance: 0.32, confidence: 0.70 }, // Arsenal - Consistent attack (63.5 goals)
+        12: { expectedGoalsPerGame: 2.14, variance: 0.30, confidence: 0.72 }, // Liverpool - Top attacking prediction (81.2 goals)
         18: { expectedGoalsPerGame: 1.67, variance: 0.44, confidence: 0.76 }, // Tottenham - Quality attack (63.5 goals)
-        6: { expectedGoalsPerGame: 1.95, variance: 0.36, confidence: 0.86 }, // Chelsea - Elite attacking rebuild (68.1 goals)
+        6: { expectedGoalsPerGame: 1.79, variance: 0.36, confidence: 0.88 }, // Chelsea - Elite attacking rebuild (68.1 goals)
         
         // Strong attacking mid-table teams
-        5: { expectedGoalsPerGame: 1.49, variance: 0.40, confidence: 0.74 }, // Brighton - Tactical system (56.7 goals)
+        5: { expectedGoalsPerGame: 1.49, variance: 0.40, confidence: 0.65 }, // Brighton - Tactical system (56.7 goals)
         15: { expectedGoalsPerGame: 1.60, variance: 0.40, confidence: 0.76 }, // Newcastle - Strong unit (60.9 goals)
         2: { expectedGoalsPerGame: 1.47, variance: 0.42, confidence: 0.74 }, // Aston Villa - Solid attack (55.9 goals)
         14: { expectedGoalsPerGame: 1.45, variance: 0.46, confidence: 0.68 }, // Man United - Inconsistent (54.9 goals)
-        3: { expectedGoalsPerGame: 1.53, variance: 0.44, confidence: 0.70 }, // Bournemouth - Attacking style (58.1 goals)
+        3: { expectedGoalsPerGame: 1.53, variance: 0.44, confidence: 0.88 }, // Bournemouth - Attacking style (58.1 goals)
         
         // Average attacking output
         9: { expectedGoalsPerGame: 1.20, variance: 0.46, confidence: 0.64 }, // Fulham - Defensive focus (45.5 goals)
@@ -945,7 +945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Struggling attacking units
         8: { expectedGoalsPerGame: 1.06, variance: 0.48, confidence: 0.55 }, // Everton - Goal-shy team (40.2 goals)
-        7: { expectedGoalsPerGame: 1.45, variance: 0.45, confidence: 0.62 }, // Crystal Palace - Improved attack (55.1 goals)
+        7: { expectedGoalsPerGame: 1.45, variance: 0.45, confidence: 0.88 }, // Crystal Palace - Improved attack (55.1 goals)
         20: { expectedGoalsPerGame: 1.12, variance: 0.52, confidence: 0.50 }, // Wolves - Defensive setup (42.7 goals)
         11: { expectedGoalsPerGame: 1.10, variance: 0.54, confidence: 0.48 }, // Leicester - Struggle to adapt
         10: { expectedGoalsPerGame: 1.00, variance: 0.58, confidence: 0.45 }, // Ipswich - Promoted team
@@ -1110,17 +1110,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const marketCeiling = Math.min(4.2, teamBettingData.expectedGoalsPerGame * 2.0); // Dynamic maximum
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
-          // Confidence-based goal adjustment - higher confidence = higher output (fixed logic)
+          // Confidence-based goal adjustment - calibrated to match external predictions
           let confidenceMultiplier = 1.0;
           if (teamBettingData.confidence >= 0.85) {
-            // High confidence teams: strong increase (35-45%)
-            confidenceMultiplier = 1.35 + (teamBettingData.confidence - 0.85) * 0.67; // 1.35 to 1.45
+            // High confidence teams: strong increase (15-25%)
+            confidenceMultiplier = 1.15 + (teamBettingData.confidence - 0.85) * 0.67; // 1.15 to 1.25
           } else if (teamBettingData.confidence >= 0.65) {
-            // Medium confidence teams: moderate increase (15-35%)
-            confidenceMultiplier = 1.15 + (teamBettingData.confidence - 0.65) * 1.0; // 1.15 to 1.35
+            // Medium confidence teams: moderate increase (5-15%)
+            confidenceMultiplier = 1.05 + (teamBettingData.confidence - 0.65) * 0.5; // 1.05 to 1.15
           } else {
-            // Low confidence teams: minimal increase (5-15%)
-            confidenceMultiplier = 1.05 + (teamBettingData.confidence - 0.40) * 0.4; // 1.05 to 1.15
+            // Low confidence teams: minimal increase (0-5%)
+            confidenceMultiplier = 1.00 + (teamBettingData.confidence - 0.40) * 0.2; // 1.00 to 1.05
           }
           
           // Final expected goals with confidence adjustment
