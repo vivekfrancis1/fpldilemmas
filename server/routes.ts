@@ -2009,6 +2009,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Assist Share Season endpoint - season-long assist projections for current season
+  app.get("/api/assist-share-season", async (req, res) => {
+    try {
+      console.log(`DEBUG: Season Assist Share API called`);
+      
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      
+      const teams = bootstrapData.teams;
+      const players = bootstrapData.elements;
+      const positions = bootstrapData.element_types;
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      
+      // Calculate remaining gameweeks in season
+      const remainingGameweeks = Math.max(1, 38 - currentGameweek + 1);
+      console.log(`DEBUG: Calculating season assists for ${remainingGameweeks} remaining gameweeks`);
+      
+      const seasonAssistShareData: any[] = [];
+      
+      // Fetch historical data for optimization
+      console.log(`DEBUG: Fetching historical data for assist optimization...`);
+      const historicalSeasons = ['2024/25', '2023/24', '2022/23', '2021/22', '2020/21'];
+      const historicalData: { [season: string]: any[] } = {};
+      
+      for (const season of historicalSeasons) {
+        try {
+          const seasonData = await storage.getHistoricalPlayers(season);
+          if (seasonData && seasonData.length > 0) {
+            historicalData[season] = seasonData;
+            console.log(`DEBUG: Found ${seasonData.length} historical players for ${season}`);
+          }
+        } catch (error) {
+          console.log(`No data found for ${season}`);
+        }
+      }
+      
+      // Process each team's assist distribution
+      teams.forEach((team: any) => {
+        const teamPlayers = players.filter((p: any) => p.team === team.id);
+        
+        // Get team assist projection data using same logic as team assist projections
+        const getAssistBettingData = () => {
+          return {
+            teamAssistRates: {
+              // Elite creative teams
+              13: { expectedAssistsPerGame: 1.85, variance: 0.35, confidence: 0.85 }, // Man City
+              1: { expectedAssistsPerGame: 1.78, variance: 0.40, confidence: 0.82 }, // Arsenal
+              12: { expectedAssistsPerGame: 1.72, variance: 0.38, confidence: 0.80 }, // Liverpool
+              
+              // Strong creative teams
+              6: { expectedAssistsPerGame: 1.45, variance: 0.45, confidence: 0.75 }, // Chelsea
+              14: { expectedAssistsPerGame: 1.35, variance: 0.42, confidence: 0.73 }, // Man United
+              18: { expectedAssistsPerGame: 1.32, variance: 0.48, confidence: 0.70 }, // Tottenham
+              
+              // Moderate creative teams
+              5: { expectedAssistsPerGame: 1.28, variance: 0.40, confidence: 0.68 }, // Brighton
+              15: { expectedAssistsPerGame: 1.25, variance: 0.42, confidence: 0.65 }, // Newcastle
+              16: { expectedAssistsPerGame: 1.22, variance: 0.38, confidence: 0.67 }, // Fulham
+              2: { expectedAssistsPerGame: 1.20, variance: 0.44, confidence: 0.63 }, // Aston Villa
+              
+              // Average creative teams
+              17: { expectedAssistsPerGame: 1.15, variance: 0.45, confidence: 0.60 }, // Nottingham Forest
+              8: { expectedAssistsPerGame: 1.12, variance: 0.48, confidence: 0.58 }, // Everton
+              4: { expectedAssistsPerGame: 1.10, variance: 0.47, confidence: 0.62 }, // Brentford
+              20: { expectedAssistsPerGame: 1.08, variance: 0.50, confidence: 0.55 }, // West Ham
+              
+              // Lower creative output teams
+              11: { expectedAssistsPerGame: 1.05, variance: 0.48, confidence: 0.57 }, // Leicester
+              3: { expectedAssistsPerGame: 1.02, variance: 0.52, confidence: 0.53 }, // Bournemouth
+              9: { expectedAssistsPerGame: 0.98, variance: 0.55, confidence: 0.50 }, // Ipswich Town
+              7: { expectedAssistsPerGame: 0.95, variance: 0.50, confidence: 0.52 }, // Crystal Palace
+              10: { expectedAssistsPerGame: 0.92, variance: 0.48, confidence: 0.54 }, // Wolves
+              19: { expectedAssistsPerGame: 0.88, variance: 0.52, confidence: 0.48 } // Southampton
+            }
+          };
+        };
+        
+        const assistBettingData = getAssistBettingData();
+        const teamAssistData = assistBettingData.teamAssistRates[team.id] || { expectedAssistsPerGame: 1.15, variance: 0.45, confidence: 0.60 };
+        
+        // Apply confidence-based boosting (same logic as other projections)
+        let confidenceBoost = 1.0;
+        if (teamAssistData.confidence >= 0.85) {
+          confidenceBoost = 1.12 + (teamAssistData.confidence - 0.85) * 0.5;
+        } else if (teamAssistData.confidence >= 0.65) {
+          confidenceBoost = 1.30 + (0.85 - teamAssistData.confidence) * 0.5;
+        } else {
+          confidenceBoost = 1.60 + (0.65 - teamAssistData.confidence) * 0.5;
+        }
+        
+        const teamExpectedAssists = teamAssistData.expectedAssistsPerGame * remainingGameweeks * confidenceBoost;
+        
+        // Distribute assists among players using the existing function
+        const playersWithShares = distributeAssistShares(teamPlayers, positions, historicalData);
+        
+        // Normalize to ensure 100% distribution and apply team total
+        const totalShare = playersWithShares.reduce((sum: number, p: any) => sum + p.rawShare, 0);
+        const normalizedPlayers = playersWithShares.map((player: any) => ({
+          id: player.id,
+          name: player.name,
+          position: player.position,
+          assistShare: totalShare > 0 ? Math.round((player.rawShare / totalShare) * 1000) / 10 : 0,
+          projectedAssists: totalShare > 0 ? Math.round((player.rawShare / totalShare) * teamExpectedAssists * 10) / 10 : 0
+        })).filter(p => p.assistShare > 0).sort((a, b) => b.assistShare - a.assistShare);
+        
+        if (normalizedPlayers.length > 0) {
+          seasonAssistShareData.push({
+            gameweek: 0, // Season-long data
+            teamId: team.id,
+            teamName: team.name,
+            teamShort: team.short_name,
+            expectedAssists: Math.round(teamExpectedAssists * 100) / 100,
+            players: normalizedPlayers
+          });
+        }
+      });
+      
+      console.log(`DEBUG: Generated season-long assist share data for ${seasonAssistShareData.length} teams`);
+      
+      res.json(seasonAssistShareData);
+    } catch (error) {
+      console.error("Error generating season assist share data:", error);
+      res.status(500).json({ error: "Failed to generate season assist share data" });
+    }
+  });
+
   // Assist Share Historical endpoint - historical season assist data
   app.get("/api/assist-share-historical/:season", async (req, res) => {
     try {
