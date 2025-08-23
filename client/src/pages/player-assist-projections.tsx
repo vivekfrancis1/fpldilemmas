@@ -286,21 +286,12 @@ export default function PlayerAssistProjections() {
                     {filteredAndSortedData.map((player, index) => (
                       <tr 
                         key={player.id} 
-                        className={`hover:bg-gray-50 transition-colors ${
-                          index < 10 ? 'bg-gradient-to-r from-purple-50 to-blue-50' : ''
-                        }`}
+                        className="hover:bg-gray-50 transition-colors"
                         data-testid={`row-player-${player.id}`}
                       >
                         <td className="py-4 px-6">
-                          <div className="flex items-center space-x-3">
-                            {index < 10 && (
-                              <Badge className="bg-purple-100 text-purple-800 border-purple-200">
-                                #{index + 1}
-                              </Badge>
-                            )}
-                            <div>
-                              <div className="font-semibold text-gray-900">{player.name}</div>
-                            </div>
+                          <div className="flex items-center">
+                            <div className="font-semibold text-gray-900">{player.name}</div>
                           </div>
                         </td>
                         <td className="py-4 px-4">
