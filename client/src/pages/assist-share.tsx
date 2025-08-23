@@ -117,7 +117,7 @@ export default function AssistShare() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="current">Current Projections</SelectItem>
+                      <SelectItem value="current">2025-26 Projections</SelectItem>
                       {seasonsData?.map(season => (
                         <SelectItem key={season} value={season}>{season}</SelectItem>
                       ))}

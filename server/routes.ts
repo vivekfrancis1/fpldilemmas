@@ -3000,6 +3000,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       console.log(`DEBUG: Found ${currentYearActualData.length} players with assists in current season actual data`);
+      const historicalData: { [season: string]: any[] } = {};
       historicalData["current"] = currentYearActualData;
       
       await Promise.all(historicalSeasons.map(async (season) => {
