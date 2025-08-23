@@ -96,7 +96,7 @@ export default function TeamGoalProjections() {
               Team Goal Projections
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Expected goals for each team over the next {weeks} gameweeks based on betting market analysis
+              Expected goals for each team over the next {weeks === 35 ? 'remaining' : weeks} gameweeks based on betting market analysis
             </p>
           </div>
 
@@ -111,9 +111,13 @@ export default function TeamGoalProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 6 }, (_, i) => i + 1).map(week => (
-                        <SelectItem key={week} value={week.toString()}>{week}</SelectItem>
-                      ))}
+                      <SelectItem value="6">6 weeks</SelectItem>
+                      <SelectItem value="10">10 weeks</SelectItem>
+                      <SelectItem value="15">15 weeks</SelectItem>
+                      <SelectItem value="20">20 weeks</SelectItem>
+                      <SelectItem value="25">25 weeks</SelectItem>
+                      <SelectItem value="30">30 weeks</SelectItem>
+                      <SelectItem value="35">Rest of Season</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -164,7 +168,7 @@ export default function TeamGoalProjections() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Team Goal Projections: Next {weeks}GW
+                Team Goal Projections: Next {weeks === 35 ? 'Remaining' : weeks}GW
                 <Badge variant="outline" className="ml-2">
                   {filteredProjections.length} teams
                 </Badge>
