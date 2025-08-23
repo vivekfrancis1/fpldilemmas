@@ -2826,6 +2826,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })).filter(p => p.assistShare > 0).sort((a, b) => b.assistShare - a.assistShare);
   }
 
+  // Projected Standings endpoint - calculates final table based on all match results
+  app.get("/api/projected-standings", async (req, res) => {
+    try {
+      console.log(`DEBUG: Projected Standings API called - calculating final table`);
+      
+      // Fetch fixtures and bootstrap data
+      const [fixturesResponse, bootstrapResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/fixtures/"),
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
+      ]);
+      
+      if (!fixturesResponse.ok || !bootstrapResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
+      const fixturesData = await fixturesResponse.json();
+      const bootstrapData = await bootstrapResponse.json();
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      
+      console.log(`DEBUG: Processing standings for all 38 gameweeks, current GW: ${currentGameweek}`);
+      
+      // Get all fixtures for the season
+      const allFixtures = fixturesData.filter((fixture: any) => 
+        fixture.event >= 1 && fixture.event <= 38
+      );
+      
+      // Initialize team standings
+      const teamStandings = new Map();
+      bootstrapData.teams.forEach((team: any) => {
+        teamStandings.set(team.id, {
+          id: team.id,
+          name: team.name,
+          shortName: team.short_name,
+          played: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          goalsFor: 0,
+          goalsAgainst: 0,
+          goalDifference: 0,
+          points: 0,
+          actualGames: 0,
+          projectedGames: 0
+        });
+      });
+      
+      // Fetch goal and CS projections for unfinished games
+      const [goalProjectionsResponse, csProjectionsResponse] = await Promise.all([
+        fetch(`http://localhost:5000/api/team-goal-projections`),
+        fetch(`http://localhost:5000/api/team-cs-projections`)
+      ]);
+      
+      const goalProjections = await goalProjectionsResponse.json();
+      const csProjections = await csProjectionsResponse.json();
+      
+      // Create team lookup from projection data
+      const teamProjections = new Map();
+      goalProjections.forEach((team: any) => {
+        teamProjections.set(team.id, {
+          goalProjections: team.gameweekProjections
+        });
+      });
+      
+      csProjections.forEach((team: any) => {
+        const existingTeam = teamProjections.get(team.id);
+        if (existingTeam) {
+          existingTeam.csProjections = team.gameweekProjections;
+        }
+      });
+      
+      // Process all fixtures
+      allFixtures.forEach((fixture: any) => {
+        const homeTeam = teamStandings.get(fixture.team_h);
+        const awayTeam = teamStandings.get(fixture.team_a);
+        
+        if (!homeTeam || !awayTeam) return;
+        
+        let homeGoals, awayGoals;
+        let isActual = false;
+        
+        if (fixture.finished) {
+          // Use actual results for finished games
+          homeGoals = fixture.team_h_score || 0;
+          awayGoals = fixture.team_a_score || 0;
+          isActual = true;
+          homeTeam.actualGames++;
+          awayTeam.actualGames++;
+        } else {
+          // Use projected results for unfinished games
+          const homeProjection = teamProjections.get(fixture.team_h);
+          const awayProjection = teamProjections.get(fixture.team_a);
+          
+          homeGoals = homeProjection?.goalProjections?.[fixture.event.toString()] || 0;
+          awayGoals = awayProjection?.goalProjections?.[fixture.event.toString()] || 0;
+          homeTeam.projectedGames++;
+          awayTeam.projectedGames++;
+        }
+        
+        // Update games played
+        homeTeam.played++;
+        awayTeam.played++;
+        
+        // Update goals
+        homeTeam.goalsFor += homeGoals;
+        homeTeam.goalsAgainst += awayGoals;
+        awayTeam.goalsFor += awayGoals;
+        awayTeam.goalsAgainst += homeGoals;
+        
+        // Determine match result and update points
+        if (homeGoals > awayGoals) {
+          // Home win
+          homeTeam.wins++;
+          homeTeam.points += 3;
+          awayTeam.losses++;
+        } else if (awayGoals > homeGoals) {
+          // Away win
+          awayTeam.wins++;
+          awayTeam.points += 3;
+          homeTeam.losses++;
+        } else {
+          // Draw
+          homeTeam.draws++;
+          awayTeam.draws++;
+          homeTeam.points += 1;
+          awayTeam.points += 1;
+        }
+      });
+      
+      // Calculate goal difference and create final standings
+      const standings = Array.from(teamStandings.values()).map((team: any) => ({
+        ...team,
+        goalDifference: team.goalsFor - team.goalsAgainst
+      }));
+      
+      // Sort by points (desc), then goal difference (desc), then goals for (desc)
+      standings.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+        return b.goalsFor - a.goalsFor;
+      });
+      
+      // Add position
+      const finalStandings = standings.map((team, index) => ({
+        ...team,
+        position: index + 1
+      }));
+      
+      res.json(finalStandings);
+    } catch (error) {
+      console.error('Error generating projected standings:', error);
+      res.status(500).json({ error: 'Failed to generate projected standings' });
+    }
+  });
+
   // Match Odds (Projected Goals & CS) endpoint - pure aggregator of Team Goal and CS projection data
   app.get("/api/projected-goals-cs", async (req, res) => {
     try {

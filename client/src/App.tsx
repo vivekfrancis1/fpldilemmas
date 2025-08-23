@@ -19,6 +19,7 @@ import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
 
 import ProjectedGoalsCS from "./pages/projected-goals-cs";
+import ProjectedStandings from "./pages/projected-standings";
 import TeamGoalProjections from "./pages/team-goal-projections";
 import TeamAssistProjections from "./pages/team-assist-projections";
 import TeamCSProjections from "./pages/team-cs-projections";
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/player-stats" component={PlayerStats} />
 
       <Route path="/projected-goals-cs" component={ProjectedGoalsCS} />
+      <Route path="/projected-standings" component={ProjectedStandings} />
       <Route path="/results-projections" component={ProjectedGoalsCS} />
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
       <Route path="/team-assist-projections" component={TeamAssistProjections} />
