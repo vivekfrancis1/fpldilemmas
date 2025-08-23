@@ -1102,6 +1102,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Auto balance setting
     autoBalance: true,
     
+    // League-wide controls
+    leagueGoalsPerSeason: 950, // Target total goals across all teams
+    
     // Global multipliers (affect both scoring and conceding)
     globalTierMultiplier: 1.25,
     lowConfidenceBoost: 1.25,
@@ -1322,6 +1325,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       unifiedProjectionSettings = {
         // Auto balance setting
         autoBalance: true,
+        
+        // League-wide controls
+        leagueGoalsPerSeason: 950, // Target total goals across all teams
         
         // Global multipliers (affect both scoring and conceding)
         globalTierMultiplier: 1.25,
@@ -3936,6 +3942,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (unifiedProjectionSettings.autoBalance) {
         // Auto-balance: Calculate perfect ratio to match goals scored exactly
         rawNormalizationFactor = totalAdjustedGoals > 0 ? totalOriginalGoals / totalAdjustedGoals : 1;
+        
+        // Apply league goals per season scaling if specified
+        if (unifiedProjectionSettings.leagueGoalsPerSeason > 0) {
+          const leagueScaling = unifiedProjectionSettings.leagueGoalsPerSeason / totalOriginalGoals;
+          rawNormalizationFactor *= leagueScaling;
+          console.log(`DEBUG: League Goals Per Season scaling: ${leagueScaling.toFixed(4)} (target: ${unifiedProjectionSettings.leagueGoalsPerSeason})`);
+        }
+        
         console.log(`DEBUG: Auto Balance ENABLED - Perfect normalization factor: ${rawNormalizationFactor.toFixed(4)}`);
         console.log(`DEBUG: Goals Scored will equal Goals Against after adjustment`);
         console.log(`DEBUG: Original total: ${totalOriginalGoals.toFixed(2)}, Adjusted total: ${totalAdjustedGoals.toFixed(2)}`);

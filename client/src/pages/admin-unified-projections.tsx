@@ -15,6 +15,9 @@ interface UnifiedProjectionSettings {
   // Auto balance setting
   autoBalance: boolean;
   
+  // League-wide controls (visible in auto balance mode)
+  leagueGoalsPerSeason: number;
+  
   // Global multipliers (affect both scoring and conceding)
   globalTierMultiplier: number;
   lowConfidenceBoost: number;
@@ -205,12 +208,7 @@ export default function AdminUnifiedProjections() {
                     Auto Balance Goals
                   </Label>
                   <p className="text-base text-blue-700 dark:text-blue-300 max-w-md">
-                    <strong>Single Setting Control:</strong> Automatically ensures Goals Scored = Goals Against across all teams with perfect mathematical consistency.
-                  </p>
-                  <p className="text-sm text-green-700 dark:text-green-300">
-                    ✓ Maintains your defensive variance (Arsenal ~30 goals, West Ham ~85 goals)<br/>
-                    ✓ Handles all balancing automatically<br/>
-                    ✓ No manual adjustments needed
+                    Automatically ensures Goals Scored = Goals Against with perfect mathematical consistency while preserving your variance controls.
                   </p>
                 </div>
                 <Switch
@@ -221,6 +219,36 @@ export default function AdminUnifiedProjections() {
                   className="scale-150"
                 />
               </div>
+              
+              {formData.autoBalance && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-green-50 dark:bg-green-950">
+                  <div className="space-y-2">
+                    <Label htmlFor="leagueGoalsPerSeason" className="text-base font-semibold text-green-800 dark:text-green-200">
+                      League Goals Per Season
+                    </Label>
+                    <Input
+                      id="leagueGoalsPerSeason"
+                      type="number"
+                      step="10"
+                      value={formData.leagueGoalsPerSeason || ''}
+                      onChange={(e) => handleInputChange('leagueGoalsPerSeason', e.target.value)}
+                      data-testid="input-leagueGoalsPerSeason"
+                      className="font-medium"
+                    />
+                    <p className="text-xs text-green-600 dark:text-green-400">
+                      Controls average goals across all teams (typical: 800-1200 goals per season)
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+                      ✓ Auto Balance: ON<br/>
+                      ✓ Variance: Controlled via Defending Tiers<br/>
+                      ✓ Average: Controlled via League Goals
+                    </p>
+                  </div>
+                </div>
+              )}
               
               {!formData.autoBalance && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border rounded-lg bg-orange-50 dark:bg-orange-950">
@@ -360,7 +388,7 @@ export default function AdminUnifiedProjections() {
                 🤖 Auto Balance Mode Active
               </p>
               <p className="text-sm text-green-600 dark:text-green-400 mt-2">
-                Attacking multipliers are automatically managed for perfect balance. Turn off Auto Balance to see manual controls.
+                Attacking multipliers are automatically calculated for perfect balance. Use "League Goals Per Season" and "Defending Tiers" to control output.
               </p>
             </div>
           )}
@@ -370,9 +398,11 @@ export default function AdminUnifiedProjections() {
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-green-600" />
                 Attacking Tier Multipliers
+                {formData.autoBalance && <span className="text-sm text-orange-600">(Auto-managed)</span>}
               </CardTitle>
               <CardDescription>
                 Controls how many goals teams score based on their attacking strength
+                {formData.autoBalance && " - automatically calculated to maintain perfect balance"}
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
