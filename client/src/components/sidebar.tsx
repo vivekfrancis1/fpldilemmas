@@ -52,7 +52,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/projected-goals-cs", label: "Match Projections", icon: Target, description: "Projected goals & clean sheets", popular: false },
         { path: "/team-goal-projections", label: "Team Goal Projections", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-cs-projections", label: "Team CS Projections", icon: Shield, description: "Clean sheet probabilities", popular: false },
-
+        { path: "/season-projections", label: "Season Projections", icon: TrendingUp, description: "Season-long goal involvements", popular: false, isNew: true },
         { path: "/openfpl-projections", label: "Open FPL Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false, isNew: true }
       ]
     },
