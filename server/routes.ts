@@ -1582,21 +1582,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const baseCSPercentage = adjustedBaseRate * 100;
           let baseCSProbability = baseCSPercentage * Math.exp(-decayFactor * opponentExpectedGoals);
           
-          // Add defensive floor based on team tier to prevent unrealistically low values
+          // Store team data for later floor application
           const teamData = teamService.getTeamData(team.id);
-          let defensiveFloor = 15; // Default minimum
-          if (teamData) {
-            switch (teamData.defensiveTier) {
-              case 'elite': defensiveFloor = 20; break;
-              case 'strong': defensiveFloor = 18; break;
-              case 'average': defensiveFloor = 15; break;
-              case 'weak': defensiveFloor = 12; break;
-              case 'promoted': defensiveFloor = 10; break;
-            }
-          }
-          
-          // Ensure clean sheet percentage never goes below the defensive floor
-          baseCSProbability = Math.max(defensiveFloor, baseCSProbability);
           
           // Phase 2: Venue-specific adjustments
           const venueMultiplier = isHome ? 
@@ -1640,8 +1627,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.8);
           baseCSProbability *= confidenceAdjustment;
           
-          // Ensure realistic Premier League clean sheet bounds (8-45%)
-          const cleanSheetProbability = Math.max(8, Math.min(45, baseCSProbability));
+          // Apply defensive floor protection based on team tier (applied AFTER all other adjustments)
+          let defensiveFloor = 15; // Default minimum
+          if (teamData) {
+            switch (teamData.defensiveTier) {
+              case 'elite': defensiveFloor = 20; break;
+              case 'strong': defensiveFloor = 18; break;
+              case 'average': defensiveFloor = 15; break;
+              case 'weak': defensiveFloor = 12; break;
+              case 'promoted': defensiveFloor = 10; break;
+            }
+          }
+          
+          // Ensure realistic Premier League clean sheet bounds with defensive floor protection
+          const cleanSheetProbability = Math.max(defensiveFloor, Math.min(45, baseCSProbability));
           
           return {
             gameweek: fixture.event,
