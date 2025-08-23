@@ -1571,13 +1571,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Phase 1: Inverse relationship to opponent's projected goals - more gradual and realistic
           // Higher opponent goals = lower clean sheet %, lower opponent goals = higher clean sheet %
           // Using gentler exponential decay and adjusted base rates
-          const decayFactor = 0.15; // Balanced decay to show opponent threat impact
+          const decayFactor = 0.2; // More noticeable decay to show opponent threat impact
           let adjustedBaseRate = teamBettingData.baseCleanSheetRate;
           
           // Boost base rates for more realistic Premier League clean sheet % (increased to compensate for lower floors)
-          if (adjustedBaseRate < 0.20) adjustedBaseRate *= 3.0; // Weak defenses get 200% boost
-          else if (adjustedBaseRate < 0.30) adjustedBaseRate *= 2.5; // Average defenses get 150% boost
-          else adjustedBaseRate *= 2.0; // Strong defenses get 100% boost
+          if (adjustedBaseRate < 0.20) adjustedBaseRate *= 2.2; // Weak defenses get 120% boost
+          else if (adjustedBaseRate < 0.30) adjustedBaseRate *= 1.8; // Average defenses get 80% boost
+          else adjustedBaseRate *= 1.5; // Strong defenses get 50% boost
           
           const baseCSPercentage = adjustedBaseRate * 100;
           let baseCSProbability = baseCSPercentage * Math.exp(-decayFactor * opponentExpectedGoals);
