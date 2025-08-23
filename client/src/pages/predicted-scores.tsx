@@ -216,9 +216,6 @@ export default function PredictedScores() {
                         Away Team
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Outcome
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Expected Goals
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -245,10 +242,15 @@ export default function PredictedScores() {
                         </td>
                         
                         <td className="px-4 py-4 text-center">
-                          <div className="flex items-center justify-center">
+                          <div className="flex items-center justify-center gap-2">
                             <span className="text-sm font-medium text-gray-900">
                               {match.homeTeam.shortName}
                             </span>
+                            <Badge className={`${getResultColor(match.predictedResult)} text-white text-xs`}>
+                              {match.homeTeam.result === 'win' ? (match.finished ? 'Win' : 'Projected Win') :
+                               match.homeTeam.result === 'loss' ? (match.finished ? 'Loss' : 'Projected Loss') :
+                               (match.finished ? 'Draw' : 'Projected Draw')}
+                            </Badge>
                           </div>
                         </td>
                         
@@ -268,28 +270,18 @@ export default function PredictedScores() {
                         </td>
                         
                         <td className="px-4 py-4 text-center">
-                          <div className="flex items-center justify-center">
+                          <div className="flex items-center justify-center gap-2">
                             <span className="text-sm font-medium text-gray-900">
                               {match.awayTeam.shortName}
                             </span>
+                            <Badge className={`${getResultColor(match.predictedResult)} text-white text-xs`}>
+                              {match.awayTeam.result === 'win' ? (match.finished ? 'Win' : 'Projected Win') :
+                               match.awayTeam.result === 'loss' ? (match.finished ? 'Loss' : 'Projected Loss') :
+                               (match.finished ? 'Draw' : 'Projected Draw')}
+                            </Badge>
                           </div>
                         </td>
                         
-                        <td className="px-4 py-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <Badge className={`${getResultColor(match.predictedResult)} text-white`}>
-                              {getResultText(match.predictedResult, match.finished)}
-                            </Badge>
-                            {match.finished && match.actualResult && (
-                              <Badge 
-                                variant="outline" 
-                                className={`${getResultColor(match.actualResult, true)} border-2`}
-                              >
-                                Actual: {getResultText(match.actualResult, true)}
-                              </Badge>
-                            )}
-                          </div>
-                        </td>
                         
                         <td className="px-4 py-4 text-center text-sm text-gray-600">
                           {match.totalExpectedGoals.toFixed(2)}
