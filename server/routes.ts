@@ -1279,86 +1279,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           }
           
-          // For unfinished fixtures, use assist-specific calculation based on creativity and attacking patterns
-          const teamAssistData = assistBettingData.teamAssistRates[team.id] || { expectedAssistsPerGame: 0.90, variance: 0.40, confidence: 0.65 };
+          // For unfinished fixtures, calculate assists as 0.72 * projected goals for perfect consistency
+          // First, get the projected goals for this specific fixture from team goal projections
+          const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
           const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
           
-          // Phase 1: Core assist probability foundation
-          let baseExpectedAssists = teamAssistData.expectedAssistsPerGame;
+          // Use the same goal projection logic to get the expected goals for this fixture
+          let baseExpectedGoals = teamBettingData.expectedGoalsPerGame;
           
-          // Phase 2: Venue adjustments (assists less venue-dependent than goals)
+          // Apply the same venue multiplier as goals
           const venueMultiplier = isHome ? 
-            (1.08 + ((team.id * fixture.event * 7) % 100) / 2000) : // Home advantage 108-113%
-            (0.90 + ((team.id * fixture.event * 11) % 100) / 2000); // Away factor 90-95%
-          baseExpectedAssists *= venueMultiplier;
+            (1.12 + ((team.id * fixture.event * 7) % 100) / 1667) : // Home advantage 112-118%
+            (0.85 + ((team.id * fixture.event * 11) % 100) / 1667); // Away factor 85-91%
+          baseExpectedGoals *= venueMultiplier;
           
-          // Phase 3: Opponent defensive impact on creativity
+          // Apply the same opponent defense impact as goals
           const opponentDefenseStrength = opponentDefenseData.baseCleanSheetRate;
-          // Good defenses limit space and passing lanes, reducing assists
-          const creativityReduction = opponentDefenseStrength * 0.35; // Max 17.5% reduction
-          const creativePenetration = 1.0 - creativityReduction;
-          baseExpectedAssists *= Math.max(0.80, Math.min(1.12, creativePenetration));
+          const defensiveReduction = opponentDefenseStrength * 0.4; // Max 20% reduction for best defenses
+          const attackingPenetration = 1.0 - defensiveReduction;
+          baseExpectedGoals *= Math.max(0.75, Math.min(1.15, attackingPenetration));
           
-          // Phase 4: Tactical context for creativity
-          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id);
+          // Apply the same tactical context as goals
+          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
           const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
-          const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) ||
-                               (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) ||
-                               (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13);
+          const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
+                               (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
+                               (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13); // Manchester
           
           if (isEliteClash) {
-            baseExpectedAssists *= 1.12; // Elite clashes feature more intricate passing
+            baseExpectedGoals *= 1.12; // Elite clashes feature exceptional attacking quality
           } else if (isTopSixBattle) {
-            baseExpectedAssists *= 1.06; // Quality teams create more chances
+            baseExpectedGoals *= bettingData.contextMultipliers.topSix.goals * 1.02;
           }
           if (isRivalryMatch) {
-            baseExpectedAssists *= 1.08; // Open games with more attacking intent
+            baseExpectedGoals *= 1.14; // Rivalry games typically more open and emotional
           }
           
-          // Phase 5: Creative tier performance modeling
-          let creativeTierMultiplier = 1.0;
+          // Apply the same tier multiplier as goals
+          let tierMultiplier = 1.0;
           const tierSeed = (team.id * fixture.event * 13) % 100;
-          if ([13, 1, 12, 6].includes(team.id)) { // Elite creative units
-            creativeTierMultiplier = 1.08 + (tierSeed / 2500); // 108-112%
-          } else if ([18, 5, 2].includes(team.id)) { // Strong creative teams
-            creativeTierMultiplier = 1.04 + (tierSeed / 3333); // 104-107%
-          } else if ([15, 14, 16, 9].includes(team.id)) { // Average creativity
-            creativeTierMultiplier = 1.00 + (tierSeed / 2500); // 100-104%
-          } else { // Limited creativity
-            creativeTierMultiplier = 0.96 + (tierSeed / 1667); // 96-102%
+          if ([13, 1, 12, 6].includes(team.id)) { // Elite attacking units
+            tierMultiplier = 1.06 + (tierSeed / 2500); // 106-110%
+          } else if ([18].includes(team.id)) { // Premium big-6 teams
+            tierMultiplier = 1.04 + (tierSeed / 2857); // 104-107.5%
+          } else if ([5, 15, 2, 14].includes(team.id)) { // Strong attacking teams
+            tierMultiplier = 1.01 + (tierSeed / 3333); // 101-104%
+          } else if ([3, 9, 16, 19].includes(team.id)) { // Average attacking output
+            tierMultiplier = 0.98 + (tierSeed / 2500); // 98-102%
+          } else { // Weaker attacking units
+            tierMultiplier = 0.94 + (tierSeed / 1667); // 94-100%
           }
-          baseExpectedAssists *= creativeTierMultiplier;
+          baseExpectedGoals *= tierMultiplier;
           
-          // Phase 6: Market momentum for creative play
-          const creativeMomentum = 0.98 + ((team.id * fixture.event * 17) % 100) / 1667; // 98-104%
-          const seasonPhase = fixture.event <= 10 ? 1.02 : fixture.event <= 20 ? 1.0 : 0.98; // Early season creativity
-          baseExpectedAssists *= creativeMomentum * seasonPhase;
+          // Apply the same market momentum and variance as goals
+          const marketMomentum = 0.97 + ((team.id * fixture.event * 17) % 100) / 1667; // 97-103% market sentiment
+          const fixtureComplexity = fixture.event <= 10 ? 1.01 : fixture.event <= 20 ? 1.0 : 0.99; // Season stage
+          baseExpectedGoals *= marketMomentum * fixtureComplexity;
           
-          // Phase 7: Variance modeling for assist output
-          const creativeVolatility = 0.97 + ((team.id * fixture.event * 19) % 100) / 1250; // 97-105%
-          const confidenceAdjustment = Math.pow(teamAssistData.confidence, 0.75);
-          const assistVarianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamAssistData.variance * 0.7;
-          baseExpectedAssists *= creativeVolatility * confidenceAdjustment * assistVarianceImpact;
+          const marketVolatility = 0.96 + ((team.id * fixture.event * 19) % 100) / 1250; // 96-104% natural variation
+          const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.75); // Higher confidence = less variance
+          const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamBettingData.variance * 0.8;
+          baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
           
-          // Phase 8: Realistic assist bounds
-          const assistFloor = Math.max(0.2, teamAssistData.expectedAssistsPerGame * 0.35); // Dynamic minimum
-          const assistCeiling = Math.min(3.5, teamAssistData.expectedAssistsPerGame * 1.8); // Dynamic maximum
-          baseExpectedAssists = Math.max(assistFloor, Math.min(assistCeiling, baseExpectedAssists));
+          // Apply the same goal bounds and confidence multiplier as goals
+          const marketFloor = Math.max(0.3, teamBettingData.expectedGoalsPerGame * 0.4); // Dynamic minimum
+          const marketCeiling = Math.min(4.2, teamBettingData.expectedGoalsPerGame * 2.0); // Dynamic maximum
+          baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
-          // Confidence-based assist adjustment - higher confidence = higher output (fixed logic)
           let confidenceMultiplier = 1.0;
-          if (teamAssistData.confidence >= 0.80) {
-            // High confidence teams: strong increase (30-40%)
-            confidenceMultiplier = 1.30 + (teamAssistData.confidence - 0.80) * 0.67; // 1.30 to 1.40
-          } else if (teamAssistData.confidence >= 0.60) {
-            // Medium confidence teams: moderate increase (15-30%)
-            confidenceMultiplier = 1.15 + (teamAssistData.confidence - 0.60) * 0.75; // 1.15 to 1.30
+          if (teamBettingData.confidence >= 0.85) {
+            // High confidence teams: strong increase (35-45%)
+            confidenceMultiplier = 1.35 + (teamBettingData.confidence - 0.85) * 0.67; // 1.35 to 1.45
+          } else if (teamBettingData.confidence >= 0.65) {
+            // Medium confidence teams: moderate increase (15-35%)
+            confidenceMultiplier = 1.15 + (teamBettingData.confidence - 0.65) * 1.0; // 1.15 to 1.35
           } else {
             // Low confidence teams: minimal increase (5-15%)
-            confidenceMultiplier = 1.05 + (teamAssistData.confidence - 0.40) * 0.5; // 1.05 to 1.15
+            confidenceMultiplier = 1.05 + (teamBettingData.confidence - 0.40) * 0.4; // 1.05 to 1.15
           }
           
-          const expectedAssists = baseExpectedAssists * confidenceMultiplier;
+          const projectedGoals = baseExpectedGoals * confidenceMultiplier;
+          
+          // Calculate assists as exactly 0.72 * projected goals for perfect consistency
+          const expectedAssists = projectedGoals * 0.72;
           
           return {
             gameweek: fixture.event,
