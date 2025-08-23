@@ -1064,8 +1064,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       },
       
       getTierMultiplier: (teamId: number, tierSeed: number) => {
-        // Generic 25% multiplier applied to all teams for projected goals
-        return 1.25;
+        const team = teamProjectionData[teamId];
+        if (!team) return 1.25;
+        
+        // Apply tier-based multipliers with 200% boost for weak teams
+        switch (team.attackingTier) {
+          case 'weak':
+            return 2.0; // 200% boost for weak teams
+          case 'promoted':
+            return 1.1; // 10% boost for promoted teams
+          case 'average':
+            return 1.25; // 25% boost for average teams
+          case 'strong':
+            return 1.35; // 35% boost for strong teams
+          case 'elite':
+            return 1.5; // 50% boost for elite teams
+          default:
+            return 1.25; // Default 25% boost
+        }
       },
       
       getConfidenceMultiplier: (teamId: number) => {
