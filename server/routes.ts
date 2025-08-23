@@ -1574,10 +1574,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const decayFactor = 0.02; // Extremely gradual decay for realistic Premier League ranges
           let adjustedBaseRate = teamBettingData.baseCleanSheetRate;
           
-          // Boost base rates more aggressively for lower-tier teams
-          if (adjustedBaseRate < 0.20) adjustedBaseRate *= 2.5; // Weak defenses get 150% boost
-          else if (adjustedBaseRate < 0.30) adjustedBaseRate *= 2.0; // Average defenses get 100% boost
-          else adjustedBaseRate *= 1.5; // Strong defenses get 50% boost
+          // Boost base rates with specified percentages
+          if (adjustedBaseRate < 0.20) adjustedBaseRate *= 3.0; // Weak defenses get 200% boost
+          else if (adjustedBaseRate < 0.30) adjustedBaseRate *= 1.75; // Average defenses get 75% boost
+          else adjustedBaseRate *= 1.3; // Strong defenses get 30% boost
           
           const baseCSPercentage = adjustedBaseRate * 100;
           let baseCSProbability = baseCSPercentage * Math.exp(-decayFactor * opponentExpectedGoals);
