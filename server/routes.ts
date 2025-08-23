@@ -1503,22 +1503,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log(`DEBUG: Team CS Projections API called - generating all 38 gameweeks`);
       
-      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+      const [bootstrapResponse, fixturesResponse, goalProjectionsResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("https://fantasy.premierleague.com/api/fixtures/")
+        fetch("https://fantasy.premierleague.com/api/fixtures/"),
+        fetch(`http://localhost:5000/api/team-goal-projections`)
       ]);
       
-      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+      if (!bootstrapResponse.ok || !fixturesResponse.ok || !goalProjectionsResponse.ok) {
         throw new Error("Failed to fetch data from FPL API");
       }
       
       const bootstrapData = await bootstrapResponse.json();
       const fixturesData = await fixturesResponse.json();
+      const goalProjections = await goalProjectionsResponse.json();
       
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
       console.log(`DEBUG: Processing all 38 gameweeks for clean sheets, current GW: ${currentGameweek}`);
+      
+      // Create lookup map for opponent goal projections by team and gameweek
+      const opponentGoalProjections = new Map();
+      goalProjections.forEach((team: any) => {
+        opponentGoalProjections.set(team.id, team.gameweekProjections);
+      });
       
       // Use centralized team service for consistent data
       const teamService = await createTeamService();
@@ -1553,97 +1561,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           }
           
-          // Advanced spread betting market-based clean sheet calculation with statistical modeling
+          // Get opponent's specific goal projection for this gameweek
+          const opponentProjections = opponentGoalProjections.get(opponent.id);
+          const opponentExpectedGoals = opponentProjections?.[fixture.event.toString()] || 1.5; // Default to average
+          
+          // Base clean sheet calculation inversely proportional to opponent's projected goals
           const teamBettingData = bettingData.teamCleanSheetRates[team.id] || { baseCleanSheetRate: 0.25, homeBonus: 0.05, confidence: 0.70 };
-          const opponentBettingData = bettingData.teamGoalRates[opponent.id] || { expectedGoalsPerGame: 1.5, confidence: 0.70 };
           
-          // Phase 1: Core market probability foundation
-          let baseCSProbability = teamBettingData.baseCleanSheetRate * 100;
+          // Phase 1: Inverse relationship to opponent's projected goals
+          // Higher opponent goals = lower clean sheet %, lower opponent goals = higher clean sheet %
+          // Using exponential decay: CS% = base * e^(-k * opponent_goals)
+          const decayFactor = 0.4; // Controls how sharply CS% decreases with opponent goals
+          const baseCSPercentage = teamBettingData.baseCleanSheetRate * 100;
+          let baseCSProbability = baseCSPercentage * Math.exp(-decayFactor * opponentExpectedGoals);
           
-          // Phase 2: Advanced venue-specific market adjustments
+          // Phase 2: Venue-specific adjustments
           const venueMultiplier = isHome ? 
             (1 + teamBettingData.homeBonus + (0.08 + ((team.id * fixture.event * 7) % 100) / 1667)) : // Dynamic home advantage 8-14%
             (0.78 + ((team.id * fixture.event * 11) % 100) / 1250); // Away factor 78-86%
           baseCSProbability *= venueMultiplier;
           
-          // Phase 3: Balanced opponent attacking threat matrix  
-          const opponentGoalThreat = opponentBettingData.expectedGoalsPerGame;
-          // More realistic attacking impact - strong attacks reduce CS by 15-30%, not 60%+
-          const attackingReduction = (opponentGoalThreat - 1.0) * 0.15; // Scale from average (1.5 goals)
-          const defensiveSusceptibility = 1.0 - Math.max(0, attackingReduction);
-          baseCSProbability *= Math.max(0.7, Math.min(1.2, defensiveSusceptibility));
-          
-          // Phase 4: Market-informed tactical context analysis
-          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
-          const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
-          const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
-                               (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
-                               (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13); // Manchester
-          
-          if (isEliteClash) {
-            baseCSProbability *= 0.92; // Elite clashes more cautious but still competitive
-          } else if (isTopSixBattle) {
-            baseCSProbability *= bettingData.contextMultipliers.topSix.cleanSheets * 1.03;
-          }
-          if (isRivalryMatch) {
-            baseCSProbability *= 0.86; // Rivalry games typically more open and emotional
-          }
-          
-          // Phase 5: Centralized defensive tier adjustments
+          // Phase 3: Defensive tier adjustments  
           const tierSeed = (team.id * fixture.event * 13) % 100;
           const teamData = teamService.getTeamData(team.id);
           let tierMultiplier = 1.0;
           
           if (teamData) {
             switch (teamData.defensiveTier) {
-              case 'elite': tierMultiplier = 1.05 + (tierSeed / 2500); break;
-              case 'strong': tierMultiplier = 1.02 + (tierSeed / 3333); break;
-              case 'average': tierMultiplier = 0.98 + (tierSeed / 2500); break;
-              case 'promoted': tierMultiplier = 0.88 + (tierSeed / 2000); break; // Even lower for promoted defenses
+              case 'elite': tierMultiplier = 1.08 + (tierSeed / 2500); break;
+              case 'strong': tierMultiplier = 1.04 + (tierSeed / 3333); break;
+              case 'average': tierMultiplier = 1.0 + (tierSeed / 2500); break;
+              case 'promoted': tierMultiplier = 0.92 + (tierSeed / 2000); break; 
               case 'weak': 
-              default: tierMultiplier = 0.94 + (tierSeed / 1667); break;
+              default: tierMultiplier = 0.96 + (tierSeed / 1667); break;
             }
           }
           baseCSProbability *= tierMultiplier;
           
-          // Phase 6: Market momentum and sentiment factors
-          const marketMomentum = 0.96 + ((team.id * fixture.event * 17) % 100) / 1250; // 96-104% market sentiment
-          const fixtureComplexity = fixture.event <= 10 ? 1.02 : fixture.event <= 20 ? 1.0 : 0.98; // Season stage
-          baseCSProbability *= marketMomentum * fixtureComplexity;
+          // Phase 4: Tactical context adjustments
+          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id);
+          const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
+          const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) ||
+                               (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) ||
+                               (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13);
           
-          // Phase 7: Statistical variance modeling for realism
-          const marketVolatility = 0.94 + ((team.id * fixture.event * 19) % 100) / 833; // 94-106% natural variation
-          const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.8); // Higher confidence = less variance
-          baseCSProbability *= marketVolatility * confidenceAdjustment;
-          
-          // Phase 8: Realistic Premier League clean sheet bounds
-          const marketFloor = Math.max(5, teamBettingData.baseCleanSheetRate * 60); // Minimum realistic CS%
-          const marketCeiling = Math.min(55, teamBettingData.baseCleanSheetRate * 150); // Maximum realistic CS%
-          baseCSProbability = Math.max(marketFloor, Math.min(marketCeiling, baseCSProbability));
-          
-          // Confidence-based clean sheet adjustment to match increased goal environment
-          // Since goals increased by 10-70%, clean sheets should decrease proportionately
-          let confidenceReduction = 1.0;
-          if (teamBettingData.confidence >= 0.85) {
-            // High confidence teams: small reduction (5-10%) to match goal increase
-            confidenceReduction = 0.92 - (teamBettingData.confidence - 0.85) * 0.5; // 0.90 to 0.92
-          } else if (teamBettingData.confidence >= 0.65) {
-            // Medium confidence teams: moderate reduction (15-25%) to match goal increase
-            confidenceReduction = 0.80 - (0.85 - teamBettingData.confidence) * 0.5; // 0.75 to 0.80
-          } else {
-            // Low confidence teams: significant reduction (30-45%) to match goal increase
-            confidenceReduction = 0.60 - (0.65 - teamBettingData.confidence) * 0.5; // 0.55 to 0.60
+          if (isEliteClash) {
+            baseCSProbability *= 0.90; // Elite clashes tend to be more cagey but quality attacks break through
+          } else if (isTopSixBattle) {
+            baseCSProbability *= 0.95;
+          }
+          if (isRivalryMatch) {
+            baseCSProbability *= 0.88; // Rivalry games more open and emotional
           }
           
-          // Final probability with market precision and goal environment adjustment
-          const cleanSheetProbability = baseCSProbability * confidenceReduction;
+          // Phase 5: Final bounds and confidence adjustment
+          const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.8);
+          baseCSProbability *= confidenceAdjustment;
+          
+          // Ensure realistic clean sheet bounds (5-60%)
+          const cleanSheetProbability = Math.max(5, Math.min(60, baseCSProbability));
           
           return {
             gameweek: fixture.event,
             opponent: opponent.short_name,
             isHome,
             cleanSheetOdds: Math.round(cleanSheetProbability * 10) / 10,
-            expectedGoalsAgainst: Math.round((100 - cleanSheetProbability) / 40) / 100 // Derive from CS probability
+            expectedGoalsAgainst: opponentExpectedGoals, // Use opponent's actual projected goals
+            isActual: false // Flag to indicate this is projected data
           };
         }).filter(Boolean);
         
