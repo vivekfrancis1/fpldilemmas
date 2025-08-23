@@ -381,14 +381,13 @@ export default function OpenFPLProjections() {
 
                   {/* Metric Tabs with Gameweek Columns */}
                   <Tabs value={activeMetric} onValueChange={setActiveMetric} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-6">
+                    <TabsList className="grid w-full grid-cols-3 mb-6">
                       <TabsTrigger value="predicted_points" className="text-xs">Pts</TabsTrigger>
                       <TabsTrigger value="predicted_goals" className="text-xs">Goals</TabsTrigger>
                       <TabsTrigger value="predicted_assists" className="text-xs">Assists</TabsTrigger>
-                      <TabsTrigger value="predicted_bonus" className="text-xs">Bonus</TabsTrigger>
                     </TabsList>
 
-                    {['predicted_points', 'predicted_goals', 'predicted_assists', 'predicted_bonus'].map((metric) => (
+                    {['predicted_points', 'predicted_goals', 'predicted_assists'].map((metric) => (
                       <TabsContent key={metric} value={metric} className="mt-0">
                         <div className="w-full overflow-x-auto overflow-y-auto max-h-[70vh] bg-white rounded-xl border-2 border-gray-200 shadow-lg">
                           <table className="text-xs min-w-[800px] w-full">
@@ -562,7 +561,6 @@ export default function OpenFPLProjections() {
                                               metric === 'predicted_minutes' && value >= 60 ? 'text-blue-700' :
                                               metric.includes('predicted_goals') && value >= 0.5 ? 'text-green-700' :
                                               metric.includes('predicted_assists') && value >= 0.3 ? 'text-green-700' :
-                                              metric.includes('predicted_bonus') && value >= 1.0 ? 'text-green-700' :
                                               'text-gray-700'
                                             }`}>
                                               {metric === 'predicted_minutes' ? `${Math.round(value)}'` :
