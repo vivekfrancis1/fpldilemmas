@@ -1064,8 +1064,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       },
       
       getTierMultiplier: (teamId: number, tierSeed: number) => {
-        // Tier multiplier removed - all teams use base multiplier of 1.0
-        return 1.0;
+        // Generic 25% multiplier applied to all teams for projected goals
+        return 1.25;
       },
       
       getConfidenceMultiplier: (teamId: number) => {
