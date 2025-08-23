@@ -2594,6 +2594,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Goal Share API called for gameweek=${targetGameweek} (0 means all gameweeks)`);
       
+      // Create team service once for efficiency
+      const teamService = await createTeamService();
+      const bettingData = teamService.getBettingData();
+      
       // Generate goal share data for all upcoming 6 gameweeks (GW2-GW7)
       const allGoalShareData: any[] = [];
       
@@ -2627,7 +2631,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (!opponent) continue;
             
             // EXACT same 8-phase calculation as team-goal-projections endpoint
-            const bettingData = getSpreadBettingData();
             const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
             const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
             
@@ -2766,6 +2769,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       const startGameweek = Math.max(2, currentGameweek);
       
+      // Create team service once for efficiency
+      const teamService = await createTeamService();
+      const bettingData = teamService.getBettingData();
+      
       for (let gameweek = startGameweek; gameweek <= 38; gameweek++) {
         // Generate team goal projections for this gameweek
         const teams = bootstrapData.teams;
@@ -2790,7 +2797,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
               if (!opponent) continue;
               
-              const bettingData = getSpreadBettingData();
               const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
               const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
               
