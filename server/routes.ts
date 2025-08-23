@@ -3065,6 +3065,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Predicted Scores endpoint - rounds match projections to whole numbers with outcomes
+  app.get("/api/predicted-scores", async (req, res) => {
+    try {
+      // Fetch match projections data
+      const matchProjectionsResponse = await fetch(`http://localhost:5000/api/projected-goals-cs`);
+      if (!matchProjectionsResponse.ok) {
+        throw new Error("Failed to fetch match projections data");
+      }
+      
+      const matchProjections = await matchProjectionsResponse.json();
+
+      // Process each match to create predicted scores
+      const predictedScores = matchProjections.map((match: any) => {
+        // Round expected goals to nearest whole number
+        const homeScore = Math.round(match.homeTeam.expectedGoals);
+        const awayScore = Math.round(match.awayTeam.expectedGoals);
+        
+        // Determine match outcome
+        let predictedResult;
+        let homeResult;
+        let awayResult;
+        
+        if (homeScore > awayScore) {
+          predictedResult = 'home_win';
+          homeResult = 'win';
+          awayResult = 'loss';
+        } else if (awayScore > homeScore) {
+          predictedResult = 'away_win';
+          homeResult = 'loss';
+          awayResult = 'win';
+        } else {
+          predictedResult = 'draw';
+          homeResult = 'draw';
+          awayResult = 'draw';
+        }
+
+        return {
+          id: match.id,
+          gameweek: match.gameweek,
+          kickoffTime: match.kickoffTime,
+          finished: match.finished,
+          predictedResult,
+          actualResult: match.matchResult, // Keep actual result for comparison
+          homeTeam: {
+            id: match.homeTeam.id,
+            name: match.homeTeam.name,
+            shortName: match.homeTeam.shortName,
+            predictedScore: homeScore,
+            expectedGoals: match.homeTeam.expectedGoals, // Keep original for reference
+            cleanSheetOdds: match.homeTeam.cleanSheetOdds,
+            result: homeResult
+          },
+          awayTeam: {
+            id: match.awayTeam.id,
+            name: match.awayTeam.name,
+            shortName: match.awayTeam.shortName,
+            predictedScore: awayScore,
+            expectedGoals: match.awayTeam.expectedGoals, // Keep original for reference
+            cleanSheetOdds: match.awayTeam.cleanSheetOdds,
+            result: awayResult
+          },
+          totalPredictedGoals: homeScore + awayScore,
+          totalExpectedGoals: match.totalExpectedGoals,
+          confidence: match.confidence
+        };
+      });
+
+      res.json(predictedScores);
+    } catch (error) {
+      console.error("Error generating predicted scores:", error);
+      res.status(500).json({ error: "Failed to generate predicted scores" });
+    }
+  });
+
   // Team Goals Against Projections endpoint - shows goals conceded (defensive analysis)
   app.get("/api/team-goals-against-projections", async (req, res) => {
     try {
