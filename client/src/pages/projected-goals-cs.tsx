@@ -179,7 +179,7 @@ export default function ProjectedGoalsCS() {
                   return (
                     <div key={groupKey}>
                       {/* Day Header */}
-                      <div className="bg-gradient-to-r from-gray-100 to-gray-50 px-6 py-3 border-b border-gray-200">
+                      <div className="bg-gradient-to-r from-gray-100 to-gray-50 px-3 sm:px-6 py-2 sm:py-3 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-base text-gray-800">
                             {selectedGameweek === "all" ? `GW${projections[0]?.gameweek}` : `GW${selectedGameweek}`}
@@ -192,10 +192,10 @@ export default function ProjectedGoalsCS() {
                       {projections.map((match, index) => (
                         <div 
                           key={`${match.id}-${index}`} 
-                          className="px-6 py-4 border-b border-gray-100 last:border-b-0 hover:bg-blue-50/50 transition-colors duration-200"
+                          className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-100 last:border-b-0 hover:bg-blue-50/50 transition-colors duration-200"
                           data-testid={`match-row-${match.homeTeam.shortName}-${match.awayTeam.shortName}`}
                         >
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
                             {/* Home Team */}
                             <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100">
                               <div className="flex items-center gap-2">
@@ -205,7 +205,7 @@ export default function ProjectedGoalsCS() {
                                 </span>
                                 <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">HOME</span>
                               </div>
-                              <div className="flex items-center space-x-4">
+                              <div className="flex items-center space-x-2 sm:space-x-4">
                                 <div className="text-center">
                                   <div className="text-xs font-semibold text-gray-600 mb-1">GOALS</div>
                                   <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.homeTeam.expectedGoals)}`}>
@@ -230,7 +230,7 @@ export default function ProjectedGoalsCS() {
                                 </span>
                                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">AWAY</span>
                               </div>
-                              <div className="flex items-center space-x-4">
+                              <div className="flex items-center space-x-2 sm:space-x-4">
                                 <div className="text-center">
                                   <div className="text-xs font-semibold text-gray-600 mb-1">GOALS</div>
                                   <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.awayTeam.expectedGoals)}`}>

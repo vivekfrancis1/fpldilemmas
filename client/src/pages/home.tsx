@@ -8,29 +8,29 @@ import { ArrowRight, BarChart3, Calendar, RefreshCw, Award, Eye, TrendingUp, Use
 export default function Home() {
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         {/* Hero Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4" data-testid="text-main-title">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4" data-testid="text-main-title">
             FPL Analysis Tools
           </h1>
-          <p className="text-xl text-gray-600 mb-2" data-testid="text-main-subtitle">
+          <p className="text-lg sm:text-xl text-gray-600 mb-2" data-testid="text-main-subtitle">
             Analytical tools to beat the deadline blues
           </p>
-          <p className="text-gray-600 max-w-2xl mx-auto" data-testid="text-main-description">
+          <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto px-2" data-testid="text-main-description">
             Choose the right tool for your FPL decisions. Our most popular tools are highlighted for quick access.
           </p>
         </div>
 
         {/* Most Popular Tools */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <Star className="h-6 w-6 text-yellow-500 fill-yellow-500" />
+        <div className="mb-8 sm:mb-12">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+            <Star className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500 fill-yellow-500" />
             Most Popular Tools
           </h2>
-          <p className="text-gray-600 mb-6">Our users' favorite FPL analysis tools</p>
+          <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Our users' favorite FPL analysis tools</p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
             {/* Live Rank Tracker - Featured */}
             <Card className="border-2 border-red-200 bg-gradient-to-br from-red-50 to-red-100 hover:shadow-xl transition-all duration-300 cursor-pointer group" data-testid="card-live-rank-featured">
               <CardHeader className="pb-4">
