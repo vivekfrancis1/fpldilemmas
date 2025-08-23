@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "../components/layout";
-import { Users, TrendingUp, Filter, Search, Zap } from "lucide-react";
+import { Users, TrendingUp, Filter, Search, Zap, ChevronUp, ChevronDown } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,6 +24,7 @@ export default function PlayerAssistProjections() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("assists");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const { data: bootstrapData, isLoading: bootstrapLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -51,24 +52,45 @@ export default function PlayerAssistProjections() {
 
     // Sort the filtered data
     filtered.sort((a, b) => {
+      let result = 0;
       switch (sortBy) {
         case "assists":
-          return b.projectedAssists - a.projectedAssists;
+          result = b.projectedAssists - a.projectedAssists;
+          break;
         case "share":
-          return b.assistShare - a.assistShare;
+          result = b.assistShare - a.assistShare;
+          break;
         case "price":
-          return a.currentPrice - b.currentPrice;
+          result = a.currentPrice - b.currentPrice;
+          break;
         case "name":
-          return a.name.localeCompare(b.name);
+          result = a.name.localeCompare(b.name);
+          break;
         case "team":
-          return a.team.localeCompare(b.team);
+          result = a.team.localeCompare(b.team);
+          break;
         default:
-          return b.projectedAssists - a.projectedAssists;
+          result = b.projectedAssists - a.projectedAssists;
       }
+      return sortDirection === "asc" ? -result : result;
     });
 
     return filtered;
-  }, [playerProjections, searchTerm, selectedTeam, selectedPosition, sortBy]);
+  }, [playerProjections, searchTerm, selectedTeam, selectedPosition, sortBy, sortDirection]);
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortDirection(column === "price" || column === "name" || column === "team" ? "asc" : "desc");
+    }
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />;
+  };
 
   const isLoading = bootstrapLoading || projectionsLoading;
 
@@ -207,12 +229,57 @@ export default function PlayerAssistProjections() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="text-left py-4 px-6 font-semibold text-gray-700">Player</th>
-                      <th className="text-left py-4 px-4 font-semibold text-gray-700">Team</th>
+                      <th 
+                        className="text-left py-4 px-6 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        onClick={() => handleSort("name")}
+                        data-testid="header-name"
+                      >
+                        <div className="flex items-center">
+                          Player
+                          {getSortIcon("name")}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-left py-4 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        onClick={() => handleSort("team")}
+                        data-testid="header-team"
+                      >
+                        <div className="flex items-center">
+                          Team
+                          {getSortIcon("team")}
+                        </div>
+                      </th>
                       <th className="text-left py-4 px-4 font-semibold text-gray-700">Position</th>
-                      <th className="text-center py-4 px-4 font-semibold text-gray-700">Price</th>
-                      <th className="text-center py-4 px-4 font-semibold text-gray-700">Projected Assists</th>
-                      <th className="text-center py-4 px-4 font-semibold text-gray-700">Team Share %</th>
+                      <th 
+                        className="text-center py-4 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        onClick={() => handleSort("price")}
+                        data-testid="header-price"
+                      >
+                        <div className="flex items-center justify-center">
+                          Price
+                          {getSortIcon("price")}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-4 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        onClick={() => handleSort("assists")}
+                        data-testid="header-assists"
+                      >
+                        <div className="flex items-center justify-center">
+                          Projected Assists
+                          {getSortIcon("assists")}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-4 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        onClick={() => handleSort("share")}
+                        data-testid="header-share"
+                      >
+                        <div className="flex items-center justify-center">
+                          Team Share %
+                          {getSortIcon("share")}
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">

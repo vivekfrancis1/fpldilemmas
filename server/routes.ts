@@ -3238,6 +3238,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (currentPlayer && playerData.projectedAssists > 0) {
               const assistShare = (playerData.projectedAssists / teamData.expectedAssists) * 100;
               
+              // Ensure projected assists are reasonable (max 15 for any player)
+              const cappedProjectedAssists = Math.min(playerData.projectedAssists, 15);
+              
               allPlayerProjections.push({
                 id: playerId,
                 name: playerData.name,
@@ -3245,7 +3248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 teamShort: team.short_name,
                 position: playerData.position,
                 currentPrice: currentPlayer.now_cost / 10,
-                projectedAssists: playerData.projectedAssists,
+                projectedAssists: Math.round(cappedProjectedAssists * 10) / 10,
                 assistShare: Math.round(assistShare * 10) / 10
               });
             }
