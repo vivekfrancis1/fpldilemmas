@@ -73,16 +73,16 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-          <div key={i} className="bg-white rounded-lg shadow-md p-6 border-l-4 border-gray-200">
+          <div key={i} className="bg-white rounded-lg shadow-md p-4 border-l-4 border-gray-200">
             <div className="flex items-center justify-between">
               <div className="space-y-2 flex-1">
                 <Skeleton className="h-4 w-20" />
                 <Skeleton className="h-6 w-16" />
                 <Skeleton className="h-3 w-24" />
               </div>
-              <Skeleton className="h-12 w-12 rounded-full flex-shrink-0" />
+              <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
             </div>
           </div>
         ))}
@@ -176,15 +176,15 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {statCards.map((card) => (
-        <div key={card.testId} className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${card.bgColor}`}>
+        <div key={card.testId} className={`bg-white rounded-lg shadow-md p-4 border-l-4 ${card.bgColor}`}>
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-sm text-gray-600 mb-1" data-testid={`text-${card.testId}-label`}>
                 {card.title}
               </p>
-              <p className="text-xl font-bold text-gray-900 mb-1" data-testid={`text-${card.testId}-value`}>
+              <p className="text-lg font-bold text-gray-900 mb-1" data-testid={`text-${card.testId}-value`}>
                 {card.value}
               </p>
               {card.player && (
@@ -193,8 +193,8 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
                 </p>
               )}
             </div>
-            <div className={`w-12 h-12 ${card.iconBg} rounded-full flex items-center justify-center ml-3 flex-shrink-0`}>
-              <card.icon className={`${card.iconColor} h-6 w-6`} />
+            <div className={`w-10 h-10 ${card.iconBg} rounded-full flex items-center justify-center ml-3 flex-shrink-0`}>
+              <card.icon className={`${card.iconColor} h-5 w-5`} />
             </div>
           </div>
         </div>
