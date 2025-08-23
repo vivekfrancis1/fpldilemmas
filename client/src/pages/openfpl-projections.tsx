@@ -45,7 +45,7 @@ export default function OpenFPLProjections() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [horizonFilter, setHorizonFilter] = useState("6");
-  const [gameweekFilter, setGameweekFilter] = useState("all");
+  const gameweekFilter = "all"; // Always use all available data
   const [minOwnership, setMinOwnership] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [activeMetric, setActiveMetric] = useState("predicted_points");
@@ -219,7 +219,7 @@ export default function OpenFPLProjections() {
               <CardTitle className="text-lg md:text-xl">🔍 Smart Filters & Search</CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
                 <div className="relative sm:col-span-2 md:col-span-1">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
@@ -265,22 +265,7 @@ export default function OpenFPLProjections() {
                   </Select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">
-                    Data Source
-                    <span className="block text-xs text-gray-400 font-normal">Which gameweeks to include</span>
-                  </label>
-                  <Select value={gameweekFilter} onValueChange={setGameweekFilter}>
-                    <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-gameweek">
-                      <SelectValue placeholder="All Available" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Available Data</SelectItem>
-                      <SelectItem value="next">Next GW Only</SelectItem>
-                      <SelectItem value="current">Current GW Only</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600">Min Ownership</label>
