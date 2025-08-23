@@ -75,7 +75,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Admin Tools",
       items: [
-        { path: "/admin/goal-projections", label: "Goal Projection Settings", icon: Settings, description: "Configure projection model", popular: false, isNew: true }
+        { path: "/admin/goal-projections", label: "Goal Projection Settings", icon: Settings, description: "Configure goal projection model", popular: false, isNew: true },
+        { path: "/admin/cs-projections", label: "Clean Sheet Settings", icon: Shield, description: "Configure clean sheet model", popular: false, isNew: true }
       ]
     }
   ];

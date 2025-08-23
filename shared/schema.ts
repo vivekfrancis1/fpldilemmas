@@ -288,3 +288,98 @@ export const adminGoalProjectionSettings = pgTable("admin_goal_projection_settin
 
 export type AdminGoalProjectionSettings = typeof adminGoalProjectionSettings.$inferSelect;
 export type InsertAdminGoalProjectionSettings = typeof adminGoalProjectionSettings.$inferInsert;
+
+// Admin settings for Team Clean Sheet Projections model
+export const adminCSProjectionSettings = pgTable("admin_cs_projection_settings", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  
+  // Core CS parameters
+  decayFactor: decimal("decay_factor", { precision: 4, scale: 3 }).default("0.02"),
+  
+  // Base rate boosts for different defense tiers
+  weakDefenseBoost: decimal("weak_defense_boost", { precision: 4, scale: 2 }).default("3.0"), // 200% boost
+  averageDefenseBoost: decimal("average_defense_boost", { precision: 4, scale: 2 }).default("1.75"), // 75% boost
+  strongDefenseBoost: decimal("strong_defense_boost", { precision: 4, scale: 2 }).default("1.3"), // 30% boost
+  
+  // Defensive floors by tier
+  eliteDefensiveFloor: decimal("elite_defensive_floor", { precision: 4, scale: 1 }).default("25"),
+  strongDefensiveFloor: decimal("strong_defensive_floor", { precision: 4, scale: 1 }).default("22"),
+  averageDefensiveFloor: decimal("average_defensive_floor", { precision: 4, scale: 1 }).default("18"),
+  weakDefensiveFloor: decimal("weak_defensive_floor", { precision: 4, scale: 1 }).default("16"),
+  promotedDefensiveFloor: decimal("promoted_defensive_floor", { precision: 4, scale: 1 }).default("15"),
+  
+  // Context multipliers for clean sheets
+  derbyCSMultiplier: decimal("derby_cs_multiplier", { precision: 4, scale: 2 }).default("0.82"),
+  topSixCSMultiplier: decimal("top_six_cs_multiplier", { precision: 4, scale: 2 }).default("0.88"),
+  relegationBattleCSMultiplier: decimal("relegation_battle_cs_multiplier", { precision: 4, scale: 2 }).default("0.78"),
+  earlyKickoffCSMultiplier: decimal("early_kickoff_cs_multiplier", { precision: 4, scale: 2 }).default("1.06"),
+  lateKickoffCSMultiplier: decimal("late_kickoff_cs_multiplier", { precision: 4, scale: 2 }).default("0.93"),
+  postEuropeanCSMultiplier: decimal("post_european_cs_multiplier", { precision: 4, scale: 2 }).default("0.87"),
+  midweekFixtureCSMultiplier: decimal("midweek_fixture_cs_multiplier", { precision: 4, scale: 2 }).default("0.95"),
+  seasonFinaleCSMultiplier: decimal("season_finale_cs_multiplier", { precision: 4, scale: 2 }).default("0.90"),
+  newManagerBounceCSMultiplier: decimal("new_manager_bounce_cs_multiplier", { precision: 4, scale: 2 }).default("1.03"),
+  weatherConditionsCSMultiplier: decimal("weather_conditions_cs_multiplier", { precision: 4, scale: 2 }).default("1.02"),
+  
+  // Metadata
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  updatedBy: varchar("updated_by").default("admin"),
+});
+
+export type AdminCSProjectionSettings = typeof adminCSProjectionSettings.$inferSelect;
+export type InsertAdminCSProjectionSettings = typeof adminCSProjectionSettings.$inferInsert;
+
+// Admin settings for Team Goals Against Projections model
+export const adminGoalsAgainstSettings = pgTable("admin_goals_against_settings", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  
+  // Core defensive parameters
+  globalDefensiveMultiplier: decimal("global_defensive_multiplier", { precision: 4, scale: 2 }).default("1.0"),
+  defensiveConfidenceBoost: decimal("defensive_confidence_boost", { precision: 4, scale: 2 }).default("0.85"),
+  weakDefenseThreshold: decimal("weak_defense_threshold", { precision: 4, scale: 2 }).default("0.60"),
+  
+  // Defensive tier multipliers
+  eliteDefenseMultiplier: decimal("elite_defense_multiplier", { precision: 4, scale: 2 }).default("0.75"),
+  strongDefenseMultiplier: decimal("strong_defense_multiplier", { precision: 4, scale: 2 }).default("0.85"),
+  averageDefenseMultiplier: decimal("average_defense_multiplier", { precision: 4, scale: 2 }).default("1.0"),
+  weakDefenseMultiplier: decimal("weak_defense_multiplier", { precision: 4, scale: 2 }).default("1.15"),
+  promotedDefenseMultiplier: decimal("promoted_defense_multiplier", { precision: 4, scale: 2 }).default("1.25"),
+  
+  // Goals against bounds
+  minGoalsAgainst: decimal("min_goals_against", { precision: 4, scale: 2 }).default("0.5"),
+  maxGoalsAgainst: decimal("max_goals_against", { precision: 4, scale: 2 }).default("3.5"),
+  
+  // Metadata
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  updatedBy: varchar("updated_by").default("admin"),
+});
+
+export type AdminGoalsAgainstSettings = typeof adminGoalsAgainstSettings.$inferSelect;
+export type InsertAdminGoalsAgainstSettings = typeof adminGoalsAgainstSettings.$inferInsert;
+
+// Admin settings for Team Assist Projections model
+export const adminAssistProjectionSettings = pgTable("admin_assist_projection_settings", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  
+  // Core assist parameters
+  globalAssistMultiplier: decimal("global_assist_multiplier", { precision: 4, scale: 2 }).default("1.0"),
+  creativityBoost: decimal("creativity_boost", { precision: 4, scale: 2 }).default("1.15"),
+  lowCreativityThreshold: decimal("low_creativity_threshold", { precision: 4, scale: 2 }).default("0.65"),
+  
+  // Assist tier multipliers
+  eliteAttackMultiplier: decimal("elite_attack_multiplier", { precision: 4, scale: 2 }).default("1.25"),
+  strongAttackMultiplier: decimal("strong_attack_multiplier", { precision: 4, scale: 2 }).default("1.15"),
+  averageAttackMultiplier: decimal("average_attack_multiplier", { precision: 4, scale: 2 }).default("1.0"),
+  weakAttackMultiplier: decimal("weak_attack_multiplier", { precision: 4, scale: 2 }).default("0.85"),
+  promotedAttackMultiplier: decimal("promoted_attack_multiplier", { precision: 4, scale: 2 }).default("0.75"),
+  
+  // Assist bounds
+  minAssistsPerGame: decimal("min_assists_per_game", { precision: 4, scale: 2 }).default("0.3"),
+  maxAssistsPerGame: decimal("max_assists_per_game", { precision: 4, scale: 2 }).default("2.5"),
+  
+  // Metadata
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  updatedBy: varchar("updated_by").default("admin"),
+});
+
+export type AdminAssistProjectionSettings = typeof adminAssistProjectionSettings.$inferSelect;
+export type InsertAdminAssistProjectionSettings = typeof adminAssistProjectionSettings.$inferInsert;

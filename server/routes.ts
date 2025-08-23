@@ -1049,23 +1049,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamGoalRates,
           teamCleanSheetRates,
           contextMultipliers: {
-            derby: { goals: adminSettings.derbyGoalsMultiplier, cleanSheets: 0.82 },
-            topSix: { goals: adminSettings.topSixGoalsMultiplier, cleanSheets: 0.88 },
-            relegationBattle: { goals: adminSettings.relegationBattleGoalsMultiplier, cleanSheets: 0.78 },
-            earlyKickoff: { goals: adminSettings.earlyKickoffGoalsMultiplier, cleanSheets: 1.06 },
-            lateKickoff: { goals: adminSettings.lateKickoffGoalsMultiplier, cleanSheets: 0.93 },
-            postEuropean: { goals: adminSettings.postEuropeanGoalsMultiplier, cleanSheets: 0.87 },
-            midweekFixture: { goals: adminSettings.midweekFixtureGoalsMultiplier, cleanSheets: 0.95 },
-            seasonFinale: { goals: adminSettings.seasonFinaleGoalsMultiplier, cleanSheets: 0.90 },
-            newManagerBounce: { goals: adminSettings.newManagerBounceGoalsMultiplier, cleanSheets: 1.03 },
-            weatherConditions: { goals: adminSettings.weatherConditionsGoalsMultiplier, cleanSheets: 1.02 }
+            derby: { goals: adminGoalSettings.derbyGoalsMultiplier, cleanSheets: adminCSSettings.derbyCSMultiplier },
+            topSix: { goals: adminGoalSettings.topSixGoalsMultiplier, cleanSheets: adminCSSettings.topSixCSMultiplier },
+            relegationBattle: { goals: adminGoalSettings.relegationBattleGoalsMultiplier, cleanSheets: adminCSSettings.relegationBattleCSMultiplier },
+            earlyKickoff: { goals: adminGoalSettings.earlyKickoffGoalsMultiplier, cleanSheets: adminCSSettings.earlyKickoffCSMultiplier },
+            lateKickoff: { goals: adminGoalSettings.lateKickoffGoalsMultiplier, cleanSheets: adminCSSettings.lateKickoffCSMultiplier },
+            postEuropean: { goals: adminGoalSettings.postEuropeanGoalsMultiplier, cleanSheets: adminCSSettings.postEuropeanCSMultiplier },
+            midweekFixture: { goals: adminGoalSettings.midweekFixtureGoalsMultiplier, cleanSheets: adminCSSettings.midweekFixtureCSMultiplier },
+            seasonFinale: { goals: adminGoalSettings.seasonFinaleGoalsMultiplier, cleanSheets: adminCSSettings.seasonFinaleCSMultiplier },
+            newManagerBounce: { goals: adminGoalSettings.newManagerBounceGoalsMultiplier, cleanSheets: adminCSSettings.newManagerBounceCSMultiplier },
+            weatherConditions: { goals: adminGoalSettings.weatherConditionsGoalsMultiplier, cleanSheets: adminCSSettings.weatherConditionsCSMultiplier }
           }
         };
       },
       
       getTierMultiplier: (teamId: number, tierSeed: number) => {
         // Use configurable tier multiplier from admin settings
-        return adminSettings.globalTierMultiplier;
+        return adminGoalSettings.globalTierMultiplier;
       },
       
       getConfidenceMultiplier: (teamId: number) => {
@@ -1073,7 +1073,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!team) return 1.0;
         
         // Use configurable confidence multiplier and threshold from admin settings
-        if (team.confidence < adminSettings.lowConfidenceThreshold) return adminSettings.lowConfidenceBoost;
+        if (team.confidence < adminGoalSettings.lowConfidenceThreshold) return adminGoalSettings.lowConfidenceBoost;
         return 1.0;
       }
     };
@@ -1097,8 +1097,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== ADMIN ENDPOINTS FOR TEAM GOAL PROJECTIONS ====================
   
-  // In-memory admin settings (would be database in production)
-  let adminSettings = {
+  // In-memory admin settings for Goal Projections (would be database in production)
+  let adminGoalSettings = {
     globalTierMultiplier: 1.25,
     lowConfidenceBoost: 1.25,
     lowConfidenceThreshold: 0.65,
@@ -1120,10 +1120,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     updatedBy: "admin"
   };
 
+  // In-memory admin settings for CS Projections
+  let adminCSSettings = {
+    decayFactor: 0.02,
+    weakDefenseBoost: 3.0,
+    averageDefenseBoost: 1.75,
+    strongDefenseBoost: 1.3,
+    eliteDefensiveFloor: 25,
+    strongDefensiveFloor: 22,
+    averageDefensiveFloor: 18,
+    weakDefensiveFloor: 16,
+    promotedDefensiveFloor: 15,
+    derbyCSMultiplier: 0.82,
+    topSixCSMultiplier: 0.88,
+    relegationBattleCSMultiplier: 0.78,
+    earlyKickoffCSMultiplier: 1.06,
+    lateKickoffCSMultiplier: 0.93,
+    postEuropeanCSMultiplier: 0.87,
+    midweekFixtureCSMultiplier: 0.95,
+    seasonFinaleCSMultiplier: 0.90,
+    newManagerBounceCSMultiplier: 1.03,
+    weatherConditionsCSMultiplier: 1.02,
+    lastUpdated: new Date().toISOString(),
+    updatedBy: "admin"
+  };
+
+  // In-memory admin settings for Goals Against Projections
+  let adminGoalsAgainstSettings = {
+    globalDefensiveMultiplier: 1.0,
+    defensiveConfidenceBoost: 0.85,
+    weakDefenseThreshold: 0.60,
+    eliteDefenseMultiplier: 0.75,
+    strongDefenseMultiplier: 0.85,
+    averageDefenseMultiplier: 1.0,
+    weakDefenseMultiplier: 1.15,
+    promotedDefenseMultiplier: 1.25,
+    minGoalsAgainst: 0.5,
+    maxGoalsAgainst: 3.5,
+    lastUpdated: new Date().toISOString(),
+    updatedBy: "admin"
+  };
+
+  // In-memory admin settings for Assist Projections
+  let adminAssistSettings = {
+    globalAssistMultiplier: 1.0,
+    creativityBoost: 1.15,
+    lowCreativityThreshold: 0.65,
+    eliteAttackMultiplier: 1.25,
+    strongAttackMultiplier: 1.15,
+    averageAttackMultiplier: 1.0,
+    weakAttackMultiplier: 0.85,
+    promotedAttackMultiplier: 0.75,
+    minAssistsPerGame: 0.3,
+    maxAssistsPerGame: 2.5,
+    lastUpdated: new Date().toISOString(),
+    updatedBy: "admin"
+  };
+
+  // ==================== GOAL PROJECTION ADMIN ENDPOINTS ====================
+
   // Get admin settings
   app.get("/api/admin/goal-projection-settings", async (req, res) => {
     try {
-      res.json(adminSettings);
+      res.json(adminGoalSettings);
     } catch (error) {
       console.error("Error fetching admin settings:", error);
       res.status(500).json({ error: "Failed to fetch admin settings" });
@@ -1134,13 +1193,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/admin/goal-projection-settings", async (req, res) => {
     try {
       const updatedSettings = {
-        ...adminSettings,
+        ...adminGoalSettings,
         ...req.body,
         lastUpdated: new Date().toISOString(),
         updatedBy: "admin"
       };
       
-      adminSettings = updatedSettings;
+      adminGoalSettings = updatedSettings;
       
       // Clear cached data to force recalculation with new settings
       // Note: In production this would clear database cache
@@ -1149,7 +1208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true, 
         message: "Admin settings updated successfully",
-        settings: adminSettings 
+        settings: adminGoalSettings 
       });
     } catch (error) {
       console.error("Error updating admin settings:", error);
@@ -1160,7 +1219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reset admin settings to defaults
   app.post("/api/admin/goal-projection-settings/reset", async (req, res) => {
     try {
-      adminSettings = {
+      adminGoalSettings = {
         globalTierMultiplier: 1.25,
         lowConfidenceBoost: 1.25,
         lowConfidenceThreshold: 0.65,
@@ -1185,11 +1244,218 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true, 
         message: "Admin settings reset to defaults",
-        settings: adminSettings 
+        settings: adminGoalSettings 
       });
     } catch (error) {
       console.error("Error resetting admin settings:", error);
       res.status(500).json({ error: "Failed to reset admin settings" });
+    }
+  });
+
+  // ==================== CLEAN SHEET PROJECTION ADMIN ENDPOINTS ====================
+
+  // Get CS admin settings
+  app.get("/api/admin/cs-projection-settings", async (req, res) => {
+    try {
+      res.json(adminCSSettings);
+    } catch (error) {
+      console.error("Error fetching CS admin settings:", error);
+      res.status(500).json({ error: "Failed to fetch CS admin settings" });
+    }
+  });
+
+  // Update CS admin settings
+  app.put("/api/admin/cs-projection-settings", async (req, res) => {
+    try {
+      const updatedSettings = {
+        ...adminCSSettings,
+        ...req.body,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      adminCSSettings = updatedSettings;
+      
+      console.log("CS admin settings updated, projection model will use new parameters");
+      
+      res.json({ 
+        success: true, 
+        message: "CS admin settings updated successfully",
+        settings: adminCSSettings 
+      });
+    } catch (error) {
+      console.error("Error updating CS admin settings:", error);
+      res.status(500).json({ error: "Failed to update CS admin settings" });
+    }
+  });
+
+  // Reset CS admin settings to defaults
+  app.post("/api/admin/cs-projection-settings/reset", async (req, res) => {
+    try {
+      adminCSSettings = {
+        decayFactor: 0.02,
+        weakDefenseBoost: 3.0,
+        averageDefenseBoost: 1.75,
+        strongDefenseBoost: 1.3,
+        eliteDefensiveFloor: 25,
+        strongDefensiveFloor: 22,
+        averageDefensiveFloor: 18,
+        weakDefensiveFloor: 16,
+        promotedDefensiveFloor: 15,
+        derbyCSMultiplier: 0.82,
+        topSixCSMultiplier: 0.88,
+        relegationBattleCSMultiplier: 0.78,
+        earlyKickoffCSMultiplier: 1.06,
+        lateKickoffCSMultiplier: 0.93,
+        postEuropeanCSMultiplier: 0.87,
+        midweekFixtureCSMultiplier: 0.95,
+        seasonFinaleCSMultiplier: 0.90,
+        newManagerBounceCSMultiplier: 1.03,
+        weatherConditionsCSMultiplier: 1.02,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      res.json({ 
+        success: true, 
+        message: "CS admin settings reset to defaults",
+        settings: adminCSSettings 
+      });
+    } catch (error) {
+      console.error("Error resetting CS admin settings:", error);
+      res.status(500).json({ error: "Failed to reset CS admin settings" });
+    }
+  });
+
+  // ==================== GOALS AGAINST PROJECTION ADMIN ENDPOINTS ====================
+
+  // Get Goals Against admin settings
+  app.get("/api/admin/goals-against-settings", async (req, res) => {
+    try {
+      res.json(adminGoalsAgainstSettings);
+    } catch (error) {
+      console.error("Error fetching Goals Against admin settings:", error);
+      res.status(500).json({ error: "Failed to fetch Goals Against admin settings" });
+    }
+  });
+
+  // Update Goals Against admin settings
+  app.put("/api/admin/goals-against-settings", async (req, res) => {
+    try {
+      const updatedSettings = {
+        ...adminGoalsAgainstSettings,
+        ...req.body,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      adminGoalsAgainstSettings = updatedSettings;
+      
+      console.log("Goals Against admin settings updated, projection model will use new parameters");
+      
+      res.json({ 
+        success: true, 
+        message: "Goals Against admin settings updated successfully",
+        settings: adminGoalsAgainstSettings 
+      });
+    } catch (error) {
+      console.error("Error updating Goals Against admin settings:", error);
+      res.status(500).json({ error: "Failed to update Goals Against admin settings" });
+    }
+  });
+
+  // Reset Goals Against admin settings to defaults
+  app.post("/api/admin/goals-against-settings/reset", async (req, res) => {
+    try {
+      adminGoalsAgainstSettings = {
+        globalDefensiveMultiplier: 1.0,
+        defensiveConfidenceBoost: 0.85,
+        weakDefenseThreshold: 0.60,
+        eliteDefenseMultiplier: 0.75,
+        strongDefenseMultiplier: 0.85,
+        averageDefenseMultiplier: 1.0,
+        weakDefenseMultiplier: 1.15,
+        promotedDefenseMultiplier: 1.25,
+        minGoalsAgainst: 0.5,
+        maxGoalsAgainst: 3.5,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      res.json({ 
+        success: true, 
+        message: "Goals Against admin settings reset to defaults",
+        settings: adminGoalsAgainstSettings 
+      });
+    } catch (error) {
+      console.error("Error resetting Goals Against admin settings:", error);
+      res.status(500).json({ error: "Failed to reset Goals Against admin settings" });
+    }
+  });
+
+  // ==================== ASSIST PROJECTION ADMIN ENDPOINTS ====================
+
+  // Get Assist admin settings
+  app.get("/api/admin/assist-projection-settings", async (req, res) => {
+    try {
+      res.json(adminAssistSettings);
+    } catch (error) {
+      console.error("Error fetching Assist admin settings:", error);
+      res.status(500).json({ error: "Failed to fetch Assist admin settings" });
+    }
+  });
+
+  // Update Assist admin settings
+  app.put("/api/admin/assist-projection-settings", async (req, res) => {
+    try {
+      const updatedSettings = {
+        ...adminAssistSettings,
+        ...req.body,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      adminAssistSettings = updatedSettings;
+      
+      console.log("Assist admin settings updated, projection model will use new parameters");
+      
+      res.json({ 
+        success: true, 
+        message: "Assist admin settings updated successfully",
+        settings: adminAssistSettings 
+      });
+    } catch (error) {
+      console.error("Error updating Assist admin settings:", error);
+      res.status(500).json({ error: "Failed to update Assist admin settings" });
+    }
+  });
+
+  // Reset Assist admin settings to defaults
+  app.post("/api/admin/assist-projection-settings/reset", async (req, res) => {
+    try {
+      adminAssistSettings = {
+        globalAssistMultiplier: 1.0,
+        creativityBoost: 1.15,
+        lowCreativityThreshold: 0.65,
+        eliteAttackMultiplier: 1.25,
+        strongAttackMultiplier: 1.15,
+        averageAttackMultiplier: 1.0,
+        weakAttackMultiplier: 0.85,
+        promotedAttackMultiplier: 0.75,
+        minAssistsPerGame: 0.3,
+        maxAssistsPerGame: 2.5,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      res.json({ 
+        success: true, 
+        message: "Assist admin settings reset to defaults",
+        settings: adminAssistSettings 
+      });
+    } catch (error) {
+      console.error("Error resetting Assist admin settings:", error);
+      res.status(500).json({ error: "Failed to reset Assist admin settings" });
     }
   });
 
@@ -1354,8 +1620,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
           
           // Phase 8: Realistic Premier League goal bounds with market precision
-          const marketFloor = Math.max(adminSettings.absoluteMinGoals, teamBettingData.expectedGoalsPerGame * adminSettings.marketFloorMultiplier); // Dynamic minimum
-          const marketCeiling = Math.min(adminSettings.absoluteMaxGoals, teamBettingData.expectedGoalsPerGame * adminSettings.marketCeilingMultiplier); // Dynamic maximum
+          const marketFloor = Math.max(adminGoalSettings.absoluteMinGoals, teamBettingData.expectedGoalsPerGame * adminGoalSettings.marketFloorMultiplier); // Dynamic minimum
+          const marketCeiling = Math.min(adminGoalSettings.absoluteMaxGoals, teamBettingData.expectedGoalsPerGame * adminGoalSettings.marketCeilingMultiplier); // Dynamic maximum
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
           // Apply confidence multiplier from centralized team service
@@ -1532,8 +1798,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
           
           // Apply the same goal bounds and confidence multiplier as goals
-          const marketFloor = Math.max(adminSettings.absoluteMinGoals, teamBettingData.expectedGoalsPerGame * adminSettings.marketFloorMultiplier); // Dynamic minimum
-          const marketCeiling = Math.min(adminSettings.absoluteMaxGoals, teamBettingData.expectedGoalsPerGame * adminSettings.marketCeilingMultiplier); // Dynamic maximum
+          const marketFloor = Math.max(adminGoalSettings.absoluteMinGoals, teamBettingData.expectedGoalsPerGame * adminGoalSettings.marketFloorMultiplier); // Dynamic minimum
+          const marketCeiling = Math.min(adminGoalSettings.absoluteMaxGoals, teamBettingData.expectedGoalsPerGame * adminGoalSettings.marketCeilingMultiplier); // Dynamic maximum
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
           // Apply confidence multiplier from centralized team service
@@ -1669,27 +1935,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Phase 1: Inverse relationship to opponent's projected goals - more gradual and realistic
           // Higher opponent goals = lower clean sheet %, lower opponent goals = higher clean sheet %
           // Using gentler exponential decay and adjusted base rates
-          const decayFactor = 0.02; // Extremely gradual decay for realistic Premier League ranges
+          const decayFactor = adminCSSettings.decayFactor; // Configurable decay factor
           let adjustedBaseRate = teamBettingData.baseCleanSheetRate;
           
-          // Boost base rates with specified percentages
-          if (adjustedBaseRate < 0.20) adjustedBaseRate *= 3.0; // Weak defenses get 200% boost
-          else if (adjustedBaseRate < 0.30) adjustedBaseRate *= 1.75; // Average defenses get 75% boost
-          else adjustedBaseRate *= 1.3; // Strong defenses get 30% boost
+          // Boost base rates with configurable percentages
+          if (adjustedBaseRate < 0.20) adjustedBaseRate *= adminCSSettings.weakDefenseBoost; // Weak defenses
+          else if (adjustedBaseRate < 0.30) adjustedBaseRate *= adminCSSettings.averageDefenseBoost; // Average defenses
+          else adjustedBaseRate *= adminCSSettings.strongDefenseBoost; // Strong defenses
           
           const baseCSPercentage = adjustedBaseRate * 100;
           let baseCSProbability = baseCSPercentage * Math.exp(-decayFactor * opponentExpectedGoals);
           
-          // Add higher defensive floors for more realistic Premier League clean sheet %
+          // Add configurable defensive floors for realistic Premier League clean sheet %
           const teamData = teamService.getTeamData(team.id);
-          let defensiveFloor = 18; // Higher default minimum
+          let defensiveFloor = adminCSSettings.averageDefensiveFloor; // Configurable default minimum
           if (teamData) {
             switch (teamData.defensiveTier) {
-              case 'elite': defensiveFloor = 25; break;
-              case 'strong': defensiveFloor = 22; break;
-              case 'average': defensiveFloor = 18; break;
-              case 'promoted': defensiveFloor = 15; break; // Even promoted teams get better floor
-              case 'weak': defensiveFloor = 16; break;
+              case 'elite': defensiveFloor = adminCSSettings.eliteDefensiveFloor; break;
+              case 'strong': defensiveFloor = adminCSSettings.strongDefensiveFloor; break;
+              case 'average': defensiveFloor = adminCSSettings.averageDefensiveFloor; break;
+              case 'promoted': defensiveFloor = adminCSSettings.promotedDefensiveFloor; break;
+              case 'weak': defensiveFloor = adminCSSettings.weakDefensiveFloor; break;
             }
           }
           
