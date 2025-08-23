@@ -1212,13 +1212,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             12: { expectedAssistsPerGame: 1.72, variance: 0.38, confidence: 0.80 }, // Liverpool - Attacking fullbacks
             
             // Strong creative teams with quality playmakers
-            6: { expectedAssistsPerGame: 1.45, variance: 0.45, confidence: 0.75 }, // Chelsea - Transition period creativity
-            14: { expectedAssistsPerGame: 1.35, variance: 0.42, confidence: 0.73 }, // Man United - Individual brilliance
-            18: { expectedAssistsPerGame: 1.32, variance: 0.48, confidence: 0.70 }, // Tottenham - Creative attackers
+            6: { expectedAssistsPerGame: 1.65, variance: 0.40, confidence: 0.82 }, // Chelsea - Elite creative rebuild
+            14: { expectedAssistsPerGame: 1.25, variance: 0.44, confidence: 0.70 }, // Man United - Individual brilliance
+            18: { expectedAssistsPerGame: 1.45, variance: 0.42, confidence: 0.78 }, // Tottenham - Creative attackers
             
             // Moderate creative teams with structured play
             5: { expectedAssistsPerGame: 1.25, variance: 0.40, confidence: 0.72 }, // Brighton - Possession-based
-            2: { expectedAssistsPerGame: 1.18, variance: 0.38, confidence: 0.71 }, // Aston Villa - Creative wingers
+            2: { expectedAssistsPerGame: 1.30, variance: 0.38, confidence: 0.74 }, // Aston Villa - Strong creative unit
             15: { expectedAssistsPerGame: 1.15, variance: 0.45, confidence: 0.68 }, // Newcastle - Wing play
             16: { expectedAssistsPerGame: 1.12, variance: 0.42, confidence: 0.69 }, // Nottingham Forest - Counter-attacks
             
@@ -1300,7 +1300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           baseExpectedAssists *= Math.max(0.80, Math.min(1.12, creativePenetration));
           
           // Phase 4: Tactical context for creativity
-          const isEliteClash = [1, 12, 13].includes(team.id) && [1, 12, 13].includes(opponent.id);
+          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id);
           const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
           const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) ||
                                (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) ||
@@ -1318,9 +1318,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Phase 5: Creative tier performance modeling
           let creativeTierMultiplier = 1.0;
           const tierSeed = (team.id * fixture.event * 13) % 100;
-          if ([13, 1, 12].includes(team.id)) { // Elite creative units
+          if ([13, 1, 12, 6].includes(team.id)) { // Elite creative units
             creativeTierMultiplier = 1.08 + (tierSeed / 2500); // 108-112%
-          } else if ([18, 6, 5, 2].includes(team.id)) { // Strong creative teams
+          } else if ([18, 5, 2].includes(team.id)) { // Strong creative teams
             creativeTierMultiplier = 1.04 + (tierSeed / 3333); // 104-107%
           } else if ([15, 14, 16, 9].includes(team.id)) { // Average creativity
             creativeTierMultiplier = 1.00 + (tierSeed / 2500); // 100-104%
@@ -1345,17 +1345,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const assistCeiling = Math.min(3.5, teamAssistData.expectedAssistsPerGame * 1.8); // Dynamic maximum
           baseExpectedAssists = Math.max(assistFloor, Math.min(assistCeiling, baseExpectedAssists));
           
-          // Confidence-based assist adjustment to match realistic Premier League totals
+          // Confidence-based assist adjustment - higher confidence = higher output (fixed logic)
           let confidenceMultiplier = 1.0;
           if (teamAssistData.confidence >= 0.80) {
-            // High confidence teams: moderate increase (10-15%)
-            confidenceMultiplier = 1.10 + (teamAssistData.confidence - 0.80) * 0.5; // 1.10 to 1.15
+            // High confidence teams: strong increase (30-40%)
+            confidenceMultiplier = 1.30 + (teamAssistData.confidence - 0.80) * 0.67; // 1.30 to 1.40
           } else if (teamAssistData.confidence >= 0.60) {
-            // Medium confidence teams: significant increase (25-35%)
-            confidenceMultiplier = 1.25 + (0.80 - teamAssistData.confidence) * 0.5; // 1.25 to 1.35
+            // Medium confidence teams: moderate increase (15-30%)
+            confidenceMultiplier = 1.15 + (teamAssistData.confidence - 0.60) * 0.75; // 1.15 to 1.30
           } else {
-            // Low confidence teams: major increase (50-70%)
-            confidenceMultiplier = 1.50 + (0.60 - teamAssistData.confidence) * 1.0; // 1.50 to 1.70
+            // Low confidence teams: minimal increase (5-15%)
+            confidenceMultiplier = 1.05 + (teamAssistData.confidence - 0.40) * 0.5; // 1.05 to 1.15
           }
           
           const expectedAssists = baseExpectedAssists * confidenceMultiplier;
