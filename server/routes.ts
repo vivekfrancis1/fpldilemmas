@@ -2848,12 +2848,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const seasonData = historicalData[season];
             if (seasonData && seasonData.length > 0) {
               // Calculate goal shares for this team in this season
-              const teamSeasonPlayers = seasonData.filter(p => p.team === teamId);
-              const teamTotalGoals = teamSeasonPlayers.reduce((sum, p) => sum + (p.goals_scored || 0), 0);
+              let teamSeasonPlayers: any[] = [];
+              
+              if (season === "current") {
+                // For current season, use team ID
+                teamSeasonPlayers = seasonData.filter(p => p.team === teamId);
+              } else {
+                // For historical seasons, use team name matching since team IDs may differ
+                const currentTeamName = team.name;
+                teamSeasonPlayers = seasonData.filter(p => {
+                  const playerTeamName = p.team_name || p.teamName;
+                  return playerTeamName === currentTeamName;
+                });
+              }
+              
+              const teamTotalGoals = teamSeasonPlayers.reduce((sum, p) => sum + (p.goals_scored || p.goalsScored || 0), 0);
+              
+              console.log(`DEBUG: ${season} - Team ${team.name} has ${teamSeasonPlayers.length} players with ${teamTotalGoals} total goals`);
               
               if (teamTotalGoals > 0) {
                 teamSeasonPlayers.forEach(player => {
-                  const goals = player.goals_scored || 0;
+                  const goals = player.goals_scored || player.goalsScored || 0;
                   if (goals > 0) {
                     const seasonGoalShare = (goals / teamTotalGoals) * 100;
                     
@@ -2864,7 +2879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       matchedPlayerId = player.id;
                     } else {
                       // Name matching for historical seasons
-                      const playerName = `${player.first_name} ${player.second_name}`.toLowerCase();
+                      const playerName = `${player.first_name || player.firstName} ${player.second_name || player.secondName}`.toLowerCase();
                       for (const currentPlayer of teamPlayers) {
                         const currentName = `${currentPlayer.first_name} ${currentPlayer.second_name}`.toLowerCase();
                         if (currentName === playerName) {
@@ -2879,6 +2894,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       weightedPlayerShares[matchedPlayerId].totalWeightedShare += seasonGoalShare * 0.3333;
                       weightedPlayerShares[matchedPlayerId].totalWeight += 0.3333;
                       console.log(`DEBUG: Added ${season} data for ${weightedPlayerShares[matchedPlayerId].name}: ${seasonGoalShare.toFixed(1)}% (${goals} goals of ${teamTotalGoals})`);
+                    } else if (season !== "current") {
+                      console.log(`DEBUG: Could not match historical player ${playerName} from ${season} (${goals} goals) to current squad`);
                     }
                   }
                 });
