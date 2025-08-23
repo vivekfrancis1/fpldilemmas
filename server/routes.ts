@@ -3786,143 +3786,186 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Team Goals Against Projections endpoint - shows goals conceded (defensive analysis)
+  // Team Goals Against Projections endpoint - PERFECT MIRROR of Team Goal Projections (shows goals conceded)
   app.get("/api/team-goals-against-projections", async (req, res) => {
     try {
-      console.log(`DEBUG: Team Goals Against Projections API called - generating all 38 gameweeks`);
+      console.log(`DEBUG: Team Goals Against Projections API called - using IDENTICAL logic to Team Goals for perfect consistency`);
       
-      // Fetch match projections data which contains expected goals for both teams
-      const matchProjectionsResponse = await fetch(`http://localhost:5000/api/projected-goals-cs`);
-      if (!matchProjectionsResponse.ok) {
-        throw new Error("Failed to fetch match projections data");
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
       }
       
-      const matchProjections = await matchProjectionsResponse.json();
-      const [bootstrapResponse] = await Promise.all([
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
-      ]);
       const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
       const teams = bootstrapData.teams;
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      
+      // Use centralized team service (IDENTICAL to Team Goals API)
+      const teamService = await createTeamService();
+      const bettingData = teamService.getBettingData();
 
-      // Define team metadata for defensive tiers
-      const projectionMetadata: Record<number, {
-        expectedGoalsPerGame: number;
-        goalVariance: number;
-        goalConfidence: number;
-        baseCleanSheetRate: number;
-        homeBonus: number;
-        cleanSheetConfidence: number;
-        attackingTier: string;
-        defensiveTier: string;
-      }> = {
-        13: { expectedGoalsPerGame: 1.97, goalVariance: 0.35, goalConfidence: 0.88, baseCleanSheetRate: 0.33, homeBonus: 0.07, cleanSheetConfidence: 0.89, attackingTier: 'elite', defensiveTier: 'elite' }, // Man City
-        1: { expectedGoalsPerGame: 1.67, goalVariance: 0.32, goalConfidence: 0.86, baseCleanSheetRate: 0.39, homeBonus: 0.08, cleanSheetConfidence: 0.93, attackingTier: 'elite', defensiveTier: 'elite' }, // Arsenal
-        12: { expectedGoalsPerGame: 2.14, goalVariance: 0.30, goalConfidence: 0.85, baseCleanSheetRate: 0.36, homeBonus: 0.09, cleanSheetConfidence: 0.91, attackingTier: 'elite', defensiveTier: 'elite' }, // Liverpool
-        7: { expectedGoalsPerGame: 1.95, goalVariance: 0.36, goalConfidence: 0.86, baseCleanSheetRate: 0.14, homeBonus: 0.03, cleanSheetConfidence: 0.60, attackingTier: 'elite', defensiveTier: 'average' }, // Chelsea
-        11: { expectedGoalsPerGame: 1.72, goalVariance: 0.38, goalConfidence: 0.82, baseCleanSheetRate: 0.22, homeBonus: 0.05, cleanSheetConfidence: 0.76, attackingTier: 'strong', defensiveTier: 'average' }, // Everton
-        18: { expectedGoalsPerGame: 1.67, goalVariance: 0.44, goalConfidence: 0.76, baseCleanSheetRate: 0.11, homeBonus: 0.03, cleanSheetConfidence: 0.54, attackingTier: 'strong', defensiveTier: 'average' }, // Tottenham
-        6: { expectedGoalsPerGame: 1.85, goalVariance: 0.43, goalConfidence: 0.78, baseCleanSheetRate: 0.30, homeBonus: 0.07, cleanSheetConfidence: 0.86, attackingTier: 'strong', defensiveTier: 'strong' }, // Brighton
-        15: { expectedGoalsPerGame: 1.60, goalVariance: 0.40, goalConfidence: 0.76, baseCleanSheetRate: 0.27, homeBonus: 0.07, cleanSheetConfidence: 0.82, attackingTier: 'strong', defensiveTier: 'strong' }, // Newcastle
-        2: { expectedGoalsPerGame: 1.47, goalVariance: 0.42, goalConfidence: 0.74, baseCleanSheetRate: 0.25, homeBonus: 0.06, cleanSheetConfidence: 0.79, attackingTier: 'strong', defensiveTier: 'strong' }, // Aston Villa
-        14: { expectedGoalsPerGame: 1.45, goalVariance: 0.46, goalConfidence: 0.68, baseCleanSheetRate: 0.17, homeBonus: 0.04, cleanSheetConfidence: 0.66, attackingTier: 'strong', defensiveTier: 'average' }, // Man United
-        16: { expectedGoalsPerGame: 1.18, goalVariance: 0.48, goalConfidence: 0.60, baseCleanSheetRate: 0.29, homeBonus: 0.07, cleanSheetConfidence: 0.84, attackingTier: 'average', defensiveTier: 'strong' }, // Nottingham Forest
-        5: { expectedGoalsPerGame: 1.42, goalVariance: 0.44, goalConfidence: 0.61, baseCleanSheetRate: 0.23, homeBonus: 0.06, cleanSheetConfidence: 0.77, attackingTier: 'average', defensiveTier: 'strong' }, // Brentford
-        4: { expectedGoalsPerGame: 1.53, goalVariance: 0.44, goalConfidence: 0.70, baseCleanSheetRate: 0.21, homeBonus: 0.05, cleanSheetConfidence: 0.74, attackingTier: 'average', defensiveTier: 'average' }, // Bournemouth
-        10: { expectedGoalsPerGame: 1.20, goalVariance: 0.46, goalConfidence: 0.64, baseCleanSheetRate: 0.16, homeBonus: 0.04, cleanSheetConfidence: 0.63, attackingTier: 'average', defensiveTier: 'average' }, // Fulham
-        20: { expectedGoalsPerGame: 1.38, goalVariance: 0.42, goalConfidence: 0.63, baseCleanSheetRate: 0.19, homeBonus: 0.05, cleanSheetConfidence: 0.71, attackingTier: 'average', defensiveTier: 'average' }, // West Ham
-        3: { expectedGoalsPerGame: 0.96, goalVariance: 0.52, goalConfidence: 0.58, baseCleanSheetRate: 0.13, homeBonus: 0.03, cleanSheetConfidence: 0.57, attackingTier: 'weak', defensiveTier: 'weak' }, // Brentford
-        8: { expectedGoalsPerGame: 1.08, goalVariance: 0.50, goalConfidence: 0.56, baseCleanSheetRate: 0.15, homeBonus: 0.04, cleanSheetConfidence: 0.61, attackingTier: 'weak', defensiveTier: 'weak' }, // Crystal Palace
-        9: { expectedGoalsPerGame: 0.89, goalVariance: 0.54, goalConfidence: 0.52, baseCleanSheetRate: 0.11, homeBonus: 0.03, cleanSheetConfidence: 0.53, attackingTier: 'weak', defensiveTier: 'promoted' }, // Leicester
-        17: { expectedGoalsPerGame: 0.67, goalVariance: 0.58, goalConfidence: 0.48, baseCleanSheetRate: 0.08, homeBonus: 0.02, cleanSheetConfidence: 0.45, attackingTier: 'promoted', defensiveTier: 'promoted' }, // Sheffield United
-        19: { expectedGoalsPerGame: 0.84, goalVariance: 0.56, goalConfidence: 0.50, baseCleanSheetRate: 0.09, homeBonus: 0.02, cleanSheetConfidence: 0.48, attackingTier: 'promoted', defensiveTier: 'promoted' } // Luton Town
-      };
-
-      // Initialize goals against data for each team
-      const teamsGoalsAgainst = new Map();
-      teams.forEach((team: any) => {
-        teamsGoalsAgainst.set(team.id, {
+      console.log(`DEBUG: Processing all 38 gameweeks for goals against, current GW: ${currentGameweek}`);
+      
+      const teamProjections = teams.map((team: any) => {
+        // Get ALL fixtures for this team across all 38 gameweeks (IDENTICAL to Team Goals API)
+        const allFixtures = fixturesData
+          .filter((f: any) => 
+            (f.team_h === team.id || f.team_a === team.id) && 
+            f.event >= 1 && f.event <= 38
+          );
+        
+        const projections = allFixtures.map((fixture: any) => {
+          const isHome = fixture.team_h === team.id;
+          const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
+          
+          if (!opponent) return null;
+          
+          // Check if fixture is finished - use actual goals conceded, otherwise use projections
+          if (fixture.finished) {
+            // For finished fixtures, use actual goals conceded
+            const actualGoalsConceded = isHome ? (fixture.team_a_score || 0) : (fixture.team_h_score || 0);
+            return {
+              gameweek: fixture.event,
+              opponent: opponent.short_name,
+              goalsAgainst: actualGoalsConceded, // Actual goals conceded for finished games
+              isHome: isHome,
+              isActual: true // Flag to indicate this is actual data
+            };
+          }
+          
+          // For unfinished fixtures, calculate goals CONCEDED using IDENTICAL logic to Team Goals API
+          // Start with opponent's attacking ability (what they will score against this team)
+          const opponentBettingData = bettingData.teamGoalRates[opponent.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
+          const teamDefenseData = bettingData.teamCleanSheetRates[team.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
+          
+          // Phase 1: Core market probability foundation (opponent's attacking potential)
+          let baseGoalsConceded = opponentBettingData.expectedGoalsPerGame;
+          
+          // Phase 2: Advanced venue-specific market adjustments (opponent gets venue advantage)
+          const opponentVenueMultiplier = !isHome ? 
+            (1.12 + ((opponent.id * fixture.event * 7) % 100) / 1667) : // Opponent at home gets advantage 112-118%
+            (0.85 + ((opponent.id * fixture.event * 11) % 100) / 1667); // Opponent away factor 85-91%
+          baseGoalsConceded *= opponentVenueMultiplier;
+          
+          // Phase 3: Balanced defensive resistance matrix (this team's defense)
+          const teamDefenseStrength = teamDefenseData.baseCleanSheetRate;
+          const defensiveReduction = teamDefenseStrength * 0.4; // Max 20% reduction for best defenses
+          const attackingPenetration = 1.0 - defensiveReduction;
+          baseGoalsConceded *= Math.max(0.75, Math.min(1.15, attackingPenetration));
+          
+          // Phase 4: Market-informed tactical context analysis (IDENTICAL logic)
+          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id);
+          const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
+          const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) ||
+                               (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) ||
+                               (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13);
+          
+          if (isEliteClash) {
+            baseGoalsConceded *= 1.08; // Elite clashes feature quality attacking play
+          } else if (isTopSixBattle) {
+            baseGoalsConceded *= bettingData.contextMultipliers.topSix.goals * 1.02;
+          }
+          if (isRivalryMatch) {
+            baseGoalsConceded *= 1.14; // Rivalry games typically more open and emotional
+          }
+          
+          // Phase 5: UNIFIED opponent attacking tier performance (what opponent scores against this team)
+          const getAttackingTier = (teamId: number) => {
+            const tierMapping: { [key: number]: string } = {
+              13: 'elite', 1: 'elite', 12: 'elite', 7: 'elite',  // Man City, Arsenal, Liverpool, Chelsea
+              11: 'strong', 18: 'strong', 6: 'strong', 15: 'strong', 2: 'strong', 14: 'strong',
+              16: 'average', 5: 'average', 4: 'average', 10: 'average', 20: 'average',
+              3: 'weak', 8: 'weak', 9: 'weak',
+              17: 'promoted', 19: 'promoted'
+            };
+            return tierMapping[teamId] || 'average';
+          };
+          
+          const opponentAttackingTier = getAttackingTier(opponent.id);
+          let opponentAttackingTierMultiplier = 1.0;
+          switch (opponentAttackingTier) {
+            case 'elite': opponentAttackingTierMultiplier = unifiedProjectionSettings.eliteAttackMultiplier; break;
+            case 'strong': opponentAttackingTierMultiplier = unifiedProjectionSettings.strongAttackMultiplier; break;
+            case 'average': opponentAttackingTierMultiplier = unifiedProjectionSettings.averageAttackMultiplier; break;
+            case 'weak': opponentAttackingTierMultiplier = unifiedProjectionSettings.weakAttackMultiplier; break;
+            case 'promoted': opponentAttackingTierMultiplier = unifiedProjectionSettings.promotedAttackMultiplier; break;
+          }
+          baseGoalsConceded *= opponentAttackingTierMultiplier;
+          
+          // Phase 6: Market momentum and fixture complexity factors (IDENTICAL)
+          const marketMomentum = 0.97 + ((team.id * fixture.event * 17) % 100) / 1667;
+          const fixtureComplexity = fixture.event <= 10 ? 1.01 : fixture.event <= 20 ? 1.0 : 0.99;
+          baseGoalsConceded *= marketMomentum * fixtureComplexity;
+          
+          // Phase 7: Statistical variance modeling with confidence weighting (IDENTICAL)
+          const marketVolatility = 0.96 + ((team.id * fixture.event * 19) % 100) / 1250;
+          const confidenceAdjustment = Math.pow(opponentBettingData.confidence, 0.75);
+          const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * opponentBettingData.variance * 0.8;
+          baseGoalsConceded *= marketVolatility * confidenceAdjustment * varianceImpact;
+          
+          // Phase 8: Realistic Premier League goal bounds with UNIFIED market precision
+          const marketFloor = Math.max(unifiedProjectionSettings.absoluteMinGoals, opponentBettingData.expectedGoalsPerGame * unifiedProjectionSettings.marketFloorMultiplier);
+          const marketCeiling = Math.min(unifiedProjectionSettings.absoluteMaxGoals, opponentBettingData.expectedGoalsPerGame * unifiedProjectionSettings.marketCeilingMultiplier);
+          baseGoalsConceded = Math.max(marketFloor, Math.min(marketCeiling, baseGoalsConceded));
+          
+          // Apply confidence multiplier from centralized team service (for opponent)
+          const confidenceMultiplier = teamService.getConfidenceMultiplier(opponent.id);
+          
+          // Final goals conceded with confidence adjustment
+          const goalsConceded = baseGoalsConceded * confidenceMultiplier;
+          
+          return {
+            gameweek: fixture.event,
+            opponent: opponent.short_name,
+            isHome,
+            goalsAgainst: Math.round(goalsConceded * 100) / 100,
+            isActual: false // Flag to indicate this is projected data
+          };
+        }).filter(Boolean);
+        
+        const totalGoalsAgainst = projections.reduce((sum: number, p: any) => sum + p.goalsAgainst, 0);
+        
+        // Convert projections array to gameweekProjections object
+        const gameweekProjections: { [gameweek: number]: number } = {};
+        projections.forEach((p: any) => {
+          gameweekProjections[p.gameweek] = p.goalsAgainst;
+        });
+        
+        // Determine confidence based on defensive quality (IDENTICAL logic to Team Goals)
+        const teamBettingData = bettingData.teamCleanSheetRates[team.id] || { confidence: 0.70 };
+        const averageGoalsAgainst = totalGoalsAgainst / Math.max(1, projections.length);
+        let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
+        
+        // Determine confidence based on defensive quality (lower goals against = higher confidence)
+        if (averageGoalsAgainst <= 1.0) confidence = 'High';
+        else if (averageGoalsAgainst <= 1.5) confidence = 'Medium';
+        else confidence = 'Low';
+        
+        return {
           id: team.id,
           team: team.short_name,
           teamShort: team.short_name,
           teamName: team.name,
-          gameweekProjections: {},
-          totalGoalsAgainst: 0,
-          averageGoalsAgainstPerGame: 0,
-          confidence: 'Medium',
-          position: 0
-        });
+          gameweekProjections,
+          totalGoalsAgainst: Math.round(totalGoalsAgainst * 100) / 100,
+          averageGoalsAgainstPerGame: Math.round(averageGoalsAgainst * 100) / 100,
+          confidence,
+          position: 0 // Will be set based on sorting
+        };
       });
-
-      // Process each match to calculate goals against using UNIFIED settings for perfect consistency
-      matchProjections.forEach((match: any) => {
-        const homeTeam = teamsGoalsAgainst.get(match.homeTeam.id);
-        const awayTeam = teamsGoalsAgainst.get(match.awayTeam.id);
-
-        if (homeTeam && awayTeam) {
-          // Calculate goals against with UNIFIED defensive multipliers for perfect consistency
-          let homeGoalsAgainst = match.awayTeam.expectedGoals; // Start with base expected goals
-          let awayGoalsAgainst = match.homeTeam.expectedGoals;
-
-          // Get defensive tier based on team ID (using the same mapping as projectionMetadata)
-          const getDefensiveTier = (teamId: number) => {
-            const teamMetadata = projectionMetadata[teamId];
-            return teamMetadata ? teamMetadata.defensiveTier : 'average';
-          };
-
-          const homeDefensiveTier = getDefensiveTier(match.homeTeam.id);
-          const awayDefensiveTier = getDefensiveTier(match.awayTeam.id);
-
-          // Apply UNIFIED defensive tier multipliers for perfect consistency
-          switch (homeDefensiveTier) {
-            case 'elite': homeGoalsAgainst *= unifiedProjectionSettings.eliteDefenseMultiplier; break;
-            case 'strong': homeGoalsAgainst *= unifiedProjectionSettings.strongDefenseMultiplier; break;
-            case 'average': homeGoalsAgainst *= unifiedProjectionSettings.averageDefenseMultiplier; break;
-            case 'weak': homeGoalsAgainst *= unifiedProjectionSettings.weakDefenseMultiplier; break;
-            case 'promoted': homeGoalsAgainst *= unifiedProjectionSettings.promotedDefenseMultiplier; break;
-          }
-
-          // Apply UNIFIED defensive tier multipliers for away team
-          switch (awayDefensiveTier) {
-            case 'elite': awayGoalsAgainst *= unifiedProjectionSettings.eliteDefenseMultiplier; break;
-            case 'strong': awayGoalsAgainst *= unifiedProjectionSettings.strongDefenseMultiplier; break;
-            case 'average': awayGoalsAgainst *= unifiedProjectionSettings.averageDefenseMultiplier; break;
-            case 'weak': awayGoalsAgainst *= unifiedProjectionSettings.weakDefenseMultiplier; break;
-            case 'promoted': awayGoalsAgainst *= unifiedProjectionSettings.promotedDefenseMultiplier; break;
-          }
-
-          // Apply UNIFIED bounds for consistency
-          homeGoalsAgainst = Math.max(unifiedProjectionSettings.absoluteMinGoals, Math.min(unifiedProjectionSettings.absoluteMaxGoals, homeGoalsAgainst));
-          awayGoalsAgainst = Math.max(unifiedProjectionSettings.absoluteMinGoals, Math.min(unifiedProjectionSettings.absoluteMaxGoals, awayGoalsAgainst));
-
-          // Store the adjusted values
-          homeTeam.gameweekProjections[match.gameweek] = homeGoalsAgainst;
-          homeTeam.totalGoalsAgainst += homeGoalsAgainst;
-
-          awayTeam.gameweekProjections[match.gameweek] = awayGoalsAgainst;
-          awayTeam.totalGoalsAgainst += awayGoalsAgainst;
-        }
-      });
-
-      // Calculate averages and determine confidence based on defensive strength
-      const finalProjections = Array.from(teamsGoalsAgainst.values()).map((team: any) => {
-        const gamesPlayed = Object.keys(team.gameweekProjections).length;
-        team.averageGoalsAgainstPerGame = gamesPlayed > 0 ? team.totalGoalsAgainst / gamesPlayed : 0;
-
-        // Determine confidence based on defensive quality (lower goals against = higher confidence)
-        if (team.averageGoalsAgainstPerGame <= 1.0) team.confidence = 'High';
-        else if (team.averageGoalsAgainstPerGame <= 1.5) team.confidence = 'Medium';
-        else team.confidence = 'Low';
-
-        return team;
-      });
-
-      // Sort by total goals against (ascending - best defenses first)
-      finalProjections.sort((a, b) => a.totalGoalsAgainst - b.totalGoalsAgainst);
       
-      // Add position based on defensive ranking
-      finalProjections.forEach((team, index) => {
-        team.position = index + 1;
-      });
+      // Sort by goals against ascending (best defense first) and set positions
+      const finalProjections = teamProjections
+        .sort((a, b) => a.averageGoalsAgainstPerGame - b.averageGoalsAgainstPerGame)
+        .map((team, index) => ({
+          ...team,
+          position: index + 1
+        }));
 
       res.json(finalProjections);
     } catch (error) {
