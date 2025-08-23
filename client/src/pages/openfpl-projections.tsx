@@ -220,8 +220,8 @@ export default function OpenFPLProjections() {
               </div>
             </div>
             <div className="fpl-card-content">
-              <div className="fpl-filters-grid">
-                <div className="relative sm:col-span-2 md:col-span-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="relative sm:col-span-2 lg:col-span-1">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Search players..."
@@ -231,70 +231,72 @@ export default function OpenFPLProjections() {
                     data-testid="input-search"
                   />
                 </div>
-                
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Position</label>
-                  <Select value={positionFilter} onValueChange={setPositionFilter}>
-                    <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-position">
-                      <SelectValue placeholder="All Positions" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Positions</SelectItem>
-                      {getPlayersByPosition().map(position => (
-                        <SelectItem key={position.id} value={position.name}>
-                          {position.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-1">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600">Horizon</label>
+                    <Select value={horizonFilter} onValueChange={setHorizonFilter}>
+                      <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-horizon">
+                        <SelectValue placeholder="6 GWs" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 GW</SelectItem>
+                        <SelectItem value="2">2 GWs</SelectItem>
+                        <SelectItem value="3">3 GWs</SelectItem>
+                        <SelectItem value="4">4 GWs</SelectItem>
+                        <SelectItem value="5">5 GWs</SelectItem>
+                        <SelectItem value="6">6 GWs</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600">Position</label>
+                    <Select value={positionFilter} onValueChange={setPositionFilter}>
+                      <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-position">
+                        <SelectValue placeholder="All Positions" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Positions</SelectItem>
+                        {getPlayersByPosition().map(position => (
+                          <SelectItem key={position.id} value={position.name}>
+                            {position.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Horizon</label>
-                  <Select value={horizonFilter} onValueChange={setHorizonFilter}>
-                    <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-horizon">
-                      <SelectValue placeholder="6 GWs" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 GW</SelectItem>
-                      <SelectItem value="2">2 GWs</SelectItem>
-                      <SelectItem value="3">3 GWs</SelectItem>
-                      <SelectItem value="4">4 GWs</SelectItem>
-                      <SelectItem value="5">5 GWs</SelectItem>
-                      <SelectItem value="6">6 GWs</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-1">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600">Min Ownership</label>
+                    <Input
+                      placeholder="Min own %"
+                      value={minOwnership}
+                      onChange={(e) => setMinOwnership(e.target.value)}
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="h-10 md:h-12 border-2"
+                      data-testid="input-ownership"
+                    />
+                  </div>
 
-
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Min Ownership</label>
-                  <Input
-                    placeholder="Min own %"
-                    value={minOwnership}
-                    onChange={(e) => setMinOwnership(e.target.value)}
-                    type="number"
-                    min="0"
-                    max="100"
-                    className="h-10 md:h-12 border-2"
-                    data-testid="input-ownership"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Max Price</label>
-                  <Input
-                    placeholder="Max £X.Xm"
-                    value={maxPrice}
-                    onChange={(e) => setMaxPrice(e.target.value)}
-                    type="number"
-                    step="0.1"
-                    min="3.9"
-                    max="15.0"
-                    className="h-10 md:h-12 border-2"
-                    data-testid="input-price"
-                  />
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600">Max Price</label>
+                    <Input
+                      placeholder="Max £X.Xm"
+                      value={maxPrice}
+                      onChange={(e) => setMaxPrice(e.target.value)}
+                      type="number"
+                      step="0.1"
+                      min="3.9"
+                      max="15.0"
+                      className="h-10 md:h-12 border-2"
+                      data-testid="input-price"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
