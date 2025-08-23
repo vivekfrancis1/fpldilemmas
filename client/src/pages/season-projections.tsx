@@ -15,9 +15,9 @@ interface SeasonProjection {
 
 const seasonProjectionsData: SeasonProjection[] = [
   { rank: 1, name: "Haaland", team: "MCI", goals: 24.5, assists: 4.1, totalInvolvements: 28.6 },
-  { rank: 2, name: "Salah", team: "LIV", goals: 18.3, assists: 10.3, totalInvolvements: 28.5 },
-  { rank: 3, name: "Palmer", team: "CHE", goals: 9.8, assists: 10.3, totalInvolvements: 20.1 },
-  { rank: 4, name: "Saka", team: "ARS", goals: 12.3, assists: 10.3, totalInvolvements: 22.5 },
+  { rank: 2, name: "Salah", team: "LIV", goals: 18.3, assists: 10.3, totalInvolvements: 28.6 },
+  { rank: 3, name: "Palmer", team: "CHE", goals: 14.8, assists: 10.3, totalInvolvements: 25.1 },
+  { rank: 4, name: "Saka", team: "ARS", goals: 12.3, assists: 10.3, totalInvolvements: 22.6 },
   { rank: 5, name: "Isak", team: "NEW", goals: 17.3, assists: 4.1, totalInvolvements: 21.4 },
   { rank: 6, name: "Fernandes", team: "MUN", goals: 10.8, assists: 10.0, totalInvolvements: 20.8 },
   { rank: 7, name: "Gyokeres", team: "SCP", goals: 16.3, assists: 4.4, totalInvolvements: 20.6 },
