@@ -458,15 +458,16 @@ export default function OpenFPLProjections() {
                                       } else {
                                         // GWn = n horizon - (n-1) horizon
                                         const diff = getHorizonValue(gwIndex) - getHorizonValue(gwIndex - 1);
-                                        // Handle negative values - they can occur due to AI model predictions
-                                        // For metrics like bonus, a negative difference might indicate
-                                        // the model expects lower performance in later weeks
+                                        // For bonus points, set negative values to 0
+                                        if (metric === 'predicted_bonus' && diff < 0) {
+                                          return 0;
+                                        }
                                         return diff;
                                       }
                                     });
 
-                                    // Total is the highest horizon value (cumulative)
-                                    const total = getHorizonValue(parseInt(horizonFilter));
+                                    // Total is the sum of all individual gameweek values
+                                    const total = gwValues.reduce((sum, value) => sum + value, 0);
 
                                     // Calculate minutes and ownership totals for additional columns
                                     const minutesTotal = horizonData[parseInt(horizonFilter)]?.predicted_minutes || 0;
