@@ -219,7 +219,7 @@ export default function OpenFPLProjections() {
               <CardTitle className="text-lg md:text-xl">🔍 Smart Filters & Search</CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                 <div className="relative sm:col-span-2 md:col-span-1">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
@@ -351,21 +351,21 @@ export default function OpenFPLProjections() {
 
                     {['predicted_points', 'predicted_goals', 'predicted_assists'].map((metric) => (
                       <TabsContent key={metric} value={metric} className="mt-0">
-                        <div className="w-full overflow-x-auto overflow-y-auto max-h-[70vh] bg-white rounded-xl border-2 border-gray-200 shadow-lg">
-                          <table className="text-xs min-w-[800px] w-full">
+                        <div className="w-full table-scroll overflow-y-auto max-h-[70vh] bg-white rounded-xl border-2 border-gray-200 shadow-lg">
+                          <table className="text-xs min-w-[800px] w-full lg:min-w-full xl:min-w-full">
                             <thead className="sticky top-0 z-10">
                               <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
-                                <th className="px-3 py-3 text-left min-w-[160px] font-semibold text-gray-900">
+                                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left min-w-[120px] sm:min-w-[160px] font-semibold text-gray-900 text-xs sm:text-sm">
                                   Player
                                 </th>
-                                <th className="px-2 py-3 text-center min-w-[50px] font-semibold text-gray-900">Team</th>
-                                <th className="px-2 py-3 text-center min-w-[50px] font-semibold text-gray-900">Pos</th>
-                                <th className="px-2 py-3 text-center min-w-[60px] font-semibold text-gray-900">Price</th>
+                                <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[40px] sm:min-w-[50px] font-semibold text-gray-900 text-xs sm:text-sm">Team</th>
+                                <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[35px] sm:min-w-[50px] font-semibold text-gray-900 text-xs sm:text-sm">Pos</th>
+                                <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[50px] sm:min-w-[60px] font-semibold text-gray-900 text-xs sm:text-sm">Price</th>
 
-                                <th className="px-2 py-3 text-center min-w-[60px] font-semibold text-gray-900">
+                                <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[50px] sm:min-w-[60px] font-semibold text-gray-900 text-xs sm:text-sm">
                                   <button 
                                     onClick={() => handleTableSort("ownership_total")}
-                                    className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors"
+                                    className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs sm:text-sm"
                                   >
                                     Own% {getTableSortIcon("ownership_total")}
                                   </button>
@@ -376,20 +376,20 @@ export default function OpenFPLProjections() {
                                   const actualGW = currentGW + i + 1; // Next gameweek starts from current + 1
                                   
                                   return (
-                                    <th key={i} className="px-2 py-3 text-center min-w-[70px] font-semibold text-gray-900">
+                                    <th key={i} className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[50px] sm:min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
                                       <button 
                                         onClick={() => handleTableSort(`gw${i}`)}
-                                        className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors"
+                                        className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs sm:text-sm"
                                       >
                                         GW{actualGW} {getTableSortIcon(`gw${i}`)}
                                       </button>
                                     </th>
                                   );
                                 })}
-                                <th className="px-2 py-3 text-center min-w-[70px] font-semibold text-blue-900 bg-blue-50">
+                                <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[50px] sm:min-w-[70px] font-semibold text-blue-900 bg-blue-50 text-xs sm:text-sm">
                                   <button 
                                     onClick={() => handleTableSort("total")}
-                                    className="flex items-center justify-center gap-1 hover:text-blue-800 transition-colors"
+                                    className="flex items-center justify-center gap-1 hover:text-blue-800 transition-colors text-xs sm:text-sm"
                                   >
                                     Total {getTableSortIcon("total")}
                                   </button>
@@ -481,18 +481,18 @@ export default function OpenFPLProjections() {
                                         index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
                                       }`}
                                     >
-                                      <td className="px-3 py-3 text-left">
+                                      <td className="px-2 sm:px-3 py-2 sm:py-3 text-left">
                                         <div className="flex flex-col">
-                                          <span className="font-medium text-gray-900 text-sm">
+                                          <span className="font-medium text-gray-900 text-xs sm:text-sm">
                                             {player.player_name}
                                           </span>
                                         </div>
                                       </td>
-                                      <td className="px-2 py-3 text-center">
+                                      <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
                                         <span className="text-xs text-gray-600">{player.team_name}</span>
                                       </td>
-                                      <td className="px-2 py-3 text-center">
-                                        <span className={`inline-block w-6 h-6 rounded-full text-xs font-bold text-white flex items-center justify-center ${
+                                      <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
+                                        <span className={`inline-block w-4 h-4 sm:w-6 sm:h-6 rounded-full text-xs font-bold text-white flex items-center justify-center ${
                                           player.position === 'GKP' ? 'bg-yellow-500' :
                                           player.position === 'DEF' ? 'bg-green-500' :
                                           player.position === 'MID' ? 'bg-blue-500' :
@@ -501,11 +501,11 @@ export default function OpenFPLProjections() {
                                           {player.position.charAt(0)}
                                         </span>
                                       </td>
-                                      <td className="px-2 py-3 text-center">
-                                        <span className="text-sm font-medium">£{(player.current_price / 10).toFixed(1)}m</span>
+                                      <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
+                                        <span className="text-xs sm:text-sm font-medium">£{(player.current_price / 10).toFixed(1)}m</span>
                                       </td>
-                                      <td className="px-2 py-3 text-center">
-                                        <span className="text-sm font-medium text-purple-700">
+                                      <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
+                                        <span className="text-xs sm:text-sm font-medium text-purple-700">
                                           {group.ownershipTotal.toFixed(1)}%
                                         </span>
                                       </td>
@@ -513,8 +513,8 @@ export default function OpenFPLProjections() {
                                         const value = group.gwValues[i] || 0;
                                         
                                         return (
-                                          <td key={i} className="px-2 py-3 text-center">
-                                            <span className={`text-sm font-medium ${
+                                          <td key={i} className="px-1 sm:px-2 py-2 sm:py-3 text-center">
+                                            <span className={`text-xs sm:text-sm font-medium ${
                                               metric === 'predicted_points' && value >= 6 ? 'text-green-700' :
                                               metric === 'predicted_points' && value >= 4 ? 'text-blue-700' :
                                               metric === 'predicted_minutes' && value >= 75 ? 'text-green-700' :
@@ -529,8 +529,8 @@ export default function OpenFPLProjections() {
                                           </td>
                                         );
                                       })}
-                                      <td className="px-2 py-3 text-center bg-blue-50">
-                                        <span className="text-sm font-bold text-blue-900">
+                                      <td className="px-1 sm:px-2 py-2 sm:py-3 text-center bg-blue-50">
+                                        <span className="text-xs sm:text-sm font-bold text-blue-900">
                                           {metric === 'predicted_minutes' ? `${Math.round(total)}'` :
                                            total.toFixed(metric.includes('predicted_') && !metric.includes('minutes') ? 2 : 1)}
                                         </span>

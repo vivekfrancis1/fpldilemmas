@@ -81,17 +81,17 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       <aside 
         className={`fixed left-0 top-0 h-full bg-fpl-purple text-white z-50 transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 lg:static lg:z-auto w-72 sm:w-80 max-w-[85vw] sm:max-w-80 overflow-y-auto`}
+        } lg:translate-x-0 lg:static lg:z-auto w-64 sm:w-72 md:w-80 max-w-[90vw] sm:max-w-[85vw] md:max-w-80 overflow-y-auto`}
       >
         {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-purple-400/20">
+        <div className="p-3 sm:p-4 md:p-6 border-b border-purple-400/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-fpl-green rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-fpl-green rounded-full flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-futbol text-fpl-purple text-xs sm:text-sm"></i>
               </div>
               <div className="min-w-0">
-                <h1 className="text-sm sm:text-lg font-bold truncate">FPL Dilemmas</h1>
+                <h1 className="text-sm sm:text-base md:text-lg font-bold truncate">FPL Dilemmas</h1>
                 <p className="text-purple-200 text-xs hidden sm:block">Analytical tools to beat the deadline blues</p>
               </div>
             </div>
@@ -107,10 +107,10 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="p-3 sm:p-6 space-y-4 sm:space-y-6 pb-20">
+        <nav className="p-2 sm:p-3 md:p-6 space-y-3 sm:space-y-4 md:space-y-6 pb-16 sm:pb-20">
           {navItems.map((section) => (
             <div key={section.section} className="space-y-2 sm:space-y-3">
-              <h2 className="text-purple-200 text-xs font-semibold uppercase tracking-wider px-1">
+              <h2 className="text-purple-200 text-xs sm:text-xs font-semibold uppercase tracking-wider px-1">
                 {section.section}
               </h2>
               <div className="space-y-1">
