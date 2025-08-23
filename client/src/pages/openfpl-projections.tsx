@@ -370,18 +370,16 @@ export default function OpenFPLProjections() {
 
                   {/* Metric Tabs with Gameweek Columns */}
                   <Tabs value={activeMetric} onValueChange={setActiveMetric} className="w-full">
-                    <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 mb-6">
+                    <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 mb-6">
                       <TabsTrigger value="predicted_points" className="text-xs">Pts</TabsTrigger>
-                      <TabsTrigger value="predicted_minutes" className="text-xs">Mins</TabsTrigger>
                       <TabsTrigger value="predicted_goals" className="text-xs">Goals</TabsTrigger>
                       <TabsTrigger value="predicted_assists" className="text-xs">Assists</TabsTrigger>
                       <TabsTrigger value="predicted_clean_sheets" className="text-xs">CS</TabsTrigger>
                       <TabsTrigger value="predicted_bonus" className="text-xs">Bonus</TabsTrigger>
                       <TabsTrigger value="cbit_percentage" className="text-xs">CBIT%</TabsTrigger>
-                      <TabsTrigger value="ownership_percentage" className="text-xs">Own%</TabsTrigger>
                     </TabsList>
 
-                    {['predicted_points', 'predicted_minutes', 'predicted_goals', 'predicted_assists', 'predicted_clean_sheets', 'predicted_bonus', 'cbit_percentage', 'ownership_percentage'].map((metric) => (
+                    {['predicted_points', 'predicted_goals', 'predicted_assists', 'predicted_clean_sheets', 'predicted_bonus', 'cbit_percentage'].map((metric) => (
                       <TabsContent key={metric} value={metric} className="mt-0">
                         <div className="w-full overflow-x-auto overflow-y-auto max-h-[70vh] bg-white rounded-xl border-2 border-gray-200 shadow-lg">
                           <table className="text-xs min-w-[800px] w-full">
@@ -393,6 +391,22 @@ export default function OpenFPLProjections() {
                                 <th className="px-2 py-3 text-center min-w-[50px] font-semibold text-gray-900">Team</th>
                                 <th className="px-2 py-3 text-center min-w-[50px] font-semibold text-gray-900">Pos</th>
                                 <th className="px-2 py-3 text-center min-w-[60px] font-semibold text-gray-900">Price</th>
+                                <th className="px-2 py-3 text-center min-w-[60px] font-semibold text-gray-900">
+                                  <button 
+                                    onClick={() => handleTableSort("minutes_total")}
+                                    className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors"
+                                  >
+                                    Mins {getTableSortIcon("minutes_total")}
+                                  </button>
+                                </th>
+                                <th className="px-2 py-3 text-center min-w-[60px] font-semibold text-gray-900">
+                                  <button 
+                                    onClick={() => handleTableSort("ownership_total")}
+                                    className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors"
+                                  >
+                                    Own% {getTableSortIcon("ownership_total")}
+                                  </button>
+                                </th>
                                 {Array.from({length: parseInt(horizonFilter)}, (_, i) => (
                                   <th key={i} className="px-2 py-3 text-center min-w-[70px] font-semibold text-gray-900">
                                     <button 
@@ -452,7 +466,11 @@ export default function OpenFPLProjections() {
                                     // Total is the highest horizon value (cumulative)
                                     const total = getHorizonValue(parseInt(horizonFilter));
 
-                                    return { ...group, total, gwValues };
+                                    // Calculate minutes and ownership totals for additional columns
+                                    const minutesTotal = horizonData[parseInt(horizonFilter)]?.predicted_minutes || 0;
+                                    const ownershipTotal = horizonData[parseInt(horizonFilter)]?.ownership_percentage || 0;
+
+                                    return { ...group, total, gwValues, minutesTotal, ownershipTotal };
                                   })
                                   .sort((a: any, b: any) => {
                                     let aValue: number, bValue: number;
@@ -460,6 +478,12 @@ export default function OpenFPLProjections() {
                                     if (sortColumn === "total") {
                                       aValue = a.total;
                                       bValue = b.total;
+                                    } else if (sortColumn === "minutes_total") {
+                                      aValue = a.minutesTotal;
+                                      bValue = b.minutesTotal;
+                                    } else if (sortColumn === "ownership_total") {
+                                      aValue = a.ownershipTotal;
+                                      bValue = b.ownershipTotal;
                                     } else if (sortColumn.startsWith("gw")) {
                                       const gwIndex = parseInt(sortColumn.replace("gw", ""));
                                       aValue = a.gwValues[gwIndex] || 0;
@@ -505,6 +529,16 @@ export default function OpenFPLProjections() {
                                       </td>
                                       <td className="px-2 py-3 text-center">
                                         <span className="text-sm font-medium">£{(player.current_price / 10).toFixed(1)}m</span>
+                                      </td>
+                                      <td className="px-2 py-3 text-center">
+                                        <span className="text-sm font-medium text-blue-700">
+                                          {Math.round(group.minutesTotal)}'
+                                        </span>
+                                      </td>
+                                      <td className="px-2 py-3 text-center">
+                                        <span className="text-sm font-medium text-purple-700">
+                                          {group.ownershipTotal.toFixed(1)}%
+                                        </span>
                                       </td>
                                       {Array.from({length: parseInt(horizonFilter)}, (_, i) => {
                                         const value = group.gwValues[i] || 0;
