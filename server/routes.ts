@@ -4222,25 +4222,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamGoalLookup.set(team.id, team.gameweekProjections);
       });
       
-      // PERFECT MIRROR: For each fixture, what team A scores = what team B concedes
+      // Check which gameweeks are COMPLETELY finished - EXACT SAME LOGIC AS TEAM GOAL PROJECTIONS
+      const completeGameweeks = new Set();
+      for (let gw = 1; gw <= 38; gw++) {
+        const gameweekFixtures = fixturesData.filter((f: any) => f.event === gw);
+        const finishedFixtures = gameweekFixtures.filter((f: any) => f.finished);
+        
+        if (gameweekFixtures.length > 0 && finishedFixtures.length === gameweekFixtures.length) {
+          completeGameweeks.add(gw);
+        }
+      }
+
+      // PERFECT MIRROR: For each fixture, what home scores = what away concedes (and vice versa)
       fixturesData.forEach((fixture: any) => {
         if (fixture.event >= 1 && fixture.event <= 38) {
           const homeTeamAgainst = teamsGoalsAgainst.get(fixture.team_h);
           const awayTeamAgainst = teamsGoalsAgainst.get(fixture.team_a);
           
           if (homeTeamAgainst && awayTeamAgainst) {
-            if (fixture.finished) {
-              // Use actual data for finished fixtures
+            // Use actual data only if the ENTIRE gameweek is complete - MATCHING TEAM GOAL PROJECTIONS LOGIC
+            if (completeGameweeks.has(fixture.event)) {
+              // Use actual data for complete gameweeks only
               homeTeamAgainst.gameweekProjections[fixture.event] = fixture.team_a_score || 0;
               awayTeamAgainst.gameweekProjections[fixture.event] = fixture.team_h_score || 0;
             } else {
-              // DIRECT MIRROR: Home team concedes exactly what away team scores
-              const homeTeamGoals = teamGoalLookup.get(fixture.team_h);
-              const awayTeamGoals = teamGoalLookup.get(fixture.team_a);
+              // For incomplete gameweeks, use projections for ALL fixtures (even finished ones)
+              const homeTeamScored = teamGoalProjections.find((t: any) => t.id === fixture.team_h);
+              const awayTeamScored = teamGoalProjections.find((t: any) => t.id === fixture.team_a);
               
-              if (homeTeamGoals && awayTeamGoals) {
-                homeTeamAgainst.gameweekProjections[fixture.event] = awayTeamGoals[fixture.event] || 0;
-                awayTeamAgainst.gameweekProjections[fixture.event] = homeTeamGoals[fixture.event] || 0;
+              if (homeTeamScored && awayTeamScored) {
+                // Direct mirror: home concedes what away scores, away concedes what home scores
+                homeTeamAgainst.gameweekProjections[fixture.event] = awayTeamScored.gameweekProjections[fixture.event] || 0;
+                awayTeamAgainst.gameweekProjections[fixture.event] = homeTeamScored.gameweekProjections[fixture.event] || 0;
               }
             }
           }
