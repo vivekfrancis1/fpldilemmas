@@ -447,13 +447,15 @@ export default function OpenFPLProjections() {
                                         value = Math.abs(difference);
                                       }
                                       
-                                      // If minutes are 0, set all other stats to 0
-                                      const minutesValue = metric === 'predicted_minutes' ? value : 
-                                        (gwIndex === 1 ? Math.abs(horizonData[1]?.predicted_minutes || 0) :
-                                         Math.abs((horizonData[gwIndex]?.predicted_minutes || 0) - (horizonData[gwIndex - 1]?.predicted_minutes || 0)));
-                                      
-                                      if (minutesValue === 0 && metric !== 'predicted_minutes') {
-                                        return 0;
+                                      // If this gameweek has 0 minutes, set all other stats to 0
+                                      if (metric !== 'predicted_minutes') {
+                                        const minutesValue = gwIndex === 1 ? 
+                                          Math.abs(horizonData[1]?.predicted_minutes || 0) :
+                                          Math.abs((horizonData[gwIndex]?.predicted_minutes || 0) - (horizonData[gwIndex - 1]?.predicted_minutes || 0));
+                                        
+                                        if (minutesValue === 0) {
+                                          return 0;
+                                        }
                                       }
                                       
                                       return value;
@@ -463,9 +465,11 @@ export default function OpenFPLProjections() {
                                     let total = getHorizonValue(parseInt(horizonFilter));
                                     
                                     // If total minutes are 0, set all other stats to 0
-                                    const totalMinutes = horizonData[parseInt(horizonFilter)]?.predicted_minutes || 0;
-                                    if (totalMinutes === 0 && metric !== 'predicted_minutes') {
-                                      total = 0;
+                                    if (metric !== 'predicted_minutes') {
+                                      const totalMinutes = horizonData[parseInt(horizonFilter)]?.predicted_minutes || 0;
+                                      if (totalMinutes === 0) {
+                                        total = 0;
+                                      }
                                     }
 
                                     // Calculate minutes and ownership totals for additional columns
