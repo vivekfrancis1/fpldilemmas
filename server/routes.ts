@@ -845,28 +845,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         17: { expectedGoalsPerGame: 1.12, variance: 0.52, confidence: 0.48 }  // Southampton - Attacking struggles
       },
       
-      // Elite defensive market data - Premium accuracy for high confidence
+      // Elite defensive market data - Adjusted for higher scoring environment (reduced ~18% to match goal increase)
       teamCleanSheetRates: {
-        1: { baseCleanSheetRate: 0.47, homeBonus: 0.10, confidence: 0.93 }, // Arsenal - Saliba-Gabriel wall
-        12: { baseCleanSheetRate: 0.44, homeBonus: 0.11, confidence: 0.91 }, // Liverpool - Van Dijk leadership  
-        13: { baseCleanSheetRate: 0.40, homeBonus: 0.09, confidence: 0.89 }, // Man City - Dias-Stones
-        5: { baseCleanSheetRate: 0.36, homeBonus: 0.08, confidence: 0.86 }, // Brighton - Dunk system
-        16: { baseCleanSheetRate: 0.35, homeBonus: 0.08, confidence: 0.84 }, // Nottingham Forest - Resilient
-        15: { baseCleanSheetRate: 0.33, homeBonus: 0.09, confidence: 0.82 }, // Newcastle - Trippier quality
-        2: { baseCleanSheetRate: 0.30, homeBonus: 0.07, confidence: 0.79 }, // Aston Villa - Martinez factor
-        4: { baseCleanSheetRate: 0.28, homeBonus: 0.07, confidence: 0.77 }, // Brentford - Organized low block
-        3: { baseCleanSheetRate: 0.26, homeBonus: 0.06, confidence: 0.74 }, // Bournemouth - Senesi improvement
-        8: { baseCleanSheetRate: 0.24, homeBonus: 0.06, confidence: 0.71 }, // Everton - Tarkowski-Branthwaite
-        11: { baseCleanSheetRate: 0.22, homeBonus: 0.05, confidence: 0.68 }, // Leicester - Experience
-        14: { baseCleanSheetRate: 0.21, homeBonus: 0.05, confidence: 0.66 }, // Man United - Individual errors
-        9: { baseCleanSheetRate: 0.19, homeBonus: 0.05, confidence: 0.63 }, // Fulham - Attacking focus
-        6: { baseCleanSheetRate: 0.17, homeBonus: 0.04, confidence: 0.60 }, // Chelsea - Transition period
-        7: { baseCleanSheetRate: 0.15, homeBonus: 0.04, confidence: 0.57 }, // Crystal Palace - Age concerns
-        18: { baseCleanSheetRate: 0.14, homeBonus: 0.04, confidence: 0.54 }, // Tottenham - High-line risks
-        19: { baseCleanSheetRate: 0.13, homeBonus: 0.03, confidence: 0.51 }, // West Ham - Defensive frailty
-        20: { baseCleanSheetRate: 0.11, homeBonus: 0.03, confidence: 0.48 }, // Wolves - Lack of pace
-        10: { baseCleanSheetRate: 0.09, homeBonus: 0.02, confidence: 0.45 }, // Ipswich - Championship level
-        17: { baseCleanSheetRate: 0.07, homeBonus: 0.02, confidence: 0.42 }  // Southampton - Leaky defense
+        1: { baseCleanSheetRate: 0.39, homeBonus: 0.08, confidence: 0.93 }, // Arsenal - Saliba-Gabriel wall
+        12: { baseCleanSheetRate: 0.36, homeBonus: 0.09, confidence: 0.91 }, // Liverpool - Van Dijk leadership  
+        13: { baseCleanSheetRate: 0.33, homeBonus: 0.07, confidence: 0.89 }, // Man City - Dias-Stones
+        5: { baseCleanSheetRate: 0.30, homeBonus: 0.07, confidence: 0.86 }, // Brighton - Dunk system
+        16: { baseCleanSheetRate: 0.29, homeBonus: 0.07, confidence: 0.84 }, // Nottingham Forest - Resilient
+        15: { baseCleanSheetRate: 0.27, homeBonus: 0.07, confidence: 0.82 }, // Newcastle - Trippier quality
+        2: { baseCleanSheetRate: 0.25, homeBonus: 0.06, confidence: 0.79 }, // Aston Villa - Martinez factor
+        4: { baseCleanSheetRate: 0.23, homeBonus: 0.06, confidence: 0.77 }, // Brentford - Organized low block
+        3: { baseCleanSheetRate: 0.21, homeBonus: 0.05, confidence: 0.74 }, // Bournemouth - Senesi improvement
+        8: { baseCleanSheetRate: 0.20, homeBonus: 0.05, confidence: 0.71 }, // Everton - Tarkowski-Branthwaite
+        11: { baseCleanSheetRate: 0.18, homeBonus: 0.04, confidence: 0.68 }, // Leicester - Experience
+        14: { baseCleanSheetRate: 0.17, homeBonus: 0.04, confidence: 0.66 }, // Man United - Individual errors
+        9: { baseCleanSheetRate: 0.16, homeBonus: 0.04, confidence: 0.63 }, // Fulham - Attacking focus
+        6: { baseCleanSheetRate: 0.14, homeBonus: 0.03, confidence: 0.60 }, // Chelsea - Transition period
+        7: { baseCleanSheetRate: 0.12, homeBonus: 0.03, confidence: 0.57 }, // Crystal Palace - Age concerns
+        18: { baseCleanSheetRate: 0.11, homeBonus: 0.03, confidence: 0.54 }, // Tottenham - High-line risks
+        19: { baseCleanSheetRate: 0.11, homeBonus: 0.03, confidence: 0.51 }, // West Ham - Defensive frailty
+        20: { baseCleanSheetRate: 0.09, homeBonus: 0.02, confidence: 0.48 }, // Wolves - Lack of pace
+        10: { baseCleanSheetRate: 0.07, homeBonus: 0.02, confidence: 0.45 }, // Ipswich - Championship level
+        17: { baseCleanSheetRate: 0.06, homeBonus: 0.02, confidence: 0.42 }  // Southampton - Leaky defense
       },
       
       // Advanced market-based contextual adjustments with statistical backing
