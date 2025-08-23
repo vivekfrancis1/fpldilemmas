@@ -54,6 +54,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/team-assist-projections", label: "Team Assist Projections", icon: Users, description: "Expected team assists", popular: false, isNew: true },
         { path: "/team-cs-projections", label: "Team CS Projections", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/goal-share", label: "Goal Share", icon: Target, description: "Team goal distribution by player", popular: false },
+        { path: "/assist-share", label: "Assist Share", icon: Users, description: "Team assist distribution by player", popular: false },
         { path: "/season-projections", label: "Season Projections", icon: TrendingUp, description: "Season-long goal involvements", popular: false, isNew: true },
         { path: "/openfpl-projections", label: "Open FPL Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false, isNew: true }
       ]
