@@ -2020,10 +2020,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const currentLeagueTotal = teamProjections.reduce((sum: number, team: any) => sum + team.totalGoals, 0);
           const leagueScaling = unifiedProjectionSettings.leagueGoalsPerSeason / currentLeagueTotal;
           
-          // Apply scaling to all teams
+          // Apply scaling to all teams AND their individual gameweek projections
           teamProjections.forEach((team: any) => {
-            team.totalGoals = Math.round(team.totalGoals * leagueScaling * 100) / 100;
-            team.averageGoalsPerGame = Math.round(team.averageGoalsPerGame * leagueScaling * 100) / 100;
+            // Scale the gameweek projections that frontend uses for calculations
+            Object.keys(team.gameweekProjections).forEach((gw: any) => {
+              if (typeof team.gameweekProjections[gw] === 'number') {
+                team.gameweekProjections[gw] = Math.round(team.gameweekProjections[gw] * leagueScaling * 100) / 100;
+              }
+            });
+            
+            // Now recalculate totals from the scaled gameweek data
+            const scaledGameweekGoals = Object.values(team.gameweekProjections).filter((v: any) => typeof v === 'number');
+            team.totalGoals = Math.round(scaledGameweekGoals.reduce((sum: any, goals: any) => sum + goals, 0) * 100) / 100;
+            team.averageGoalsPerGame = Math.round((team.totalGoals / Math.max(1, scaledGameweekGoals.length)) * 100) / 100;
           });
         }
       }
