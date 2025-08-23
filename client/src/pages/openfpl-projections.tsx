@@ -152,6 +152,17 @@ export default function OpenFPLProjections() {
     }
   }) : [];
 
+  // Calculate unique player counts for display
+  const uniqueFilteredPlayers = filteredProjections.reduce((acc, proj) => {
+    acc[proj.player_id] = true;
+    return acc;
+  }, {} as Record<number, boolean>);
+
+  const uniqueTotalPlayers = (Array.isArray(projections) ? projections : []).reduce((acc, proj) => {
+    acc[proj.player_id] = true;
+    return acc;
+  }, {} as Record<number, boolean>);
+
   const formatPrice = (price: number) => `£${(price / 10).toFixed(1)}m`;
   
   const getAvailabilityColor = (status: number) => {
@@ -579,19 +590,7 @@ export default function OpenFPLProjections() {
                   {/* Results Summary */}
                   <div className="mt-12 text-center bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-xl border border-gray-200">
                     <div className="text-lg text-gray-700 font-medium">
-                      Showing <span className="font-bold text-blue-600">{(() => {
-                        const playerGroups = filteredProjections.reduce((acc, proj) => {
-                          acc[proj.player_id] = true;
-                          return acc;
-                        }, {} as Record<number, boolean>);
-                        return Object.keys(playerGroups).length;
-                      })()}</span> unique players from <span className="font-bold">{(() => {
-                        const allPlayerGroups = (Array.isArray(projections) ? projections : []).reduce((acc, proj) => {
-                          acc[proj.player_id] = true;
-                          return acc;
-                        }, {} as Record<number, boolean>);
-                        return Object.keys(allPlayerGroups).length;
-                      })()}</span> total players
+                      Showing <span className="font-bold text-blue-600">{Object.keys(uniqueFilteredPlayers).length}</span> unique players from <span className="font-bold">{Object.keys(uniqueTotalPlayers).length}</span> total players
                     </div>
                     <div className="text-sm text-gray-500 mt-2">
                       Updated every hour • Processing all 693 active FPL players
