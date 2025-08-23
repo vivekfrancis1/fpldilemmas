@@ -413,7 +413,7 @@ export default function PlayerStatsTable({
                     </div>
                   </td>
                   <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{player.total_points || 0}</td>
-                  <td className="px-2 py-4 text-center text-sm text-fpl-green font-medium">{formatValue(player.value_season || player.value_form || 0, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-green-700 font-semibold">{formatValue(player.value_season || player.value_form || 0, 'decimal')}</td>
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.points_per_game || player.form || 0, 'decimal')}</td>
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.form || 0, 'decimal')}</td>
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.selected_by_percent || 0, 'decimal')}%</td>
@@ -432,7 +432,7 @@ export default function PlayerStatsTable({
                   <td className="px-2 py-4 text-center text-sm text-red-600">{(player.transfers_out_event || 0).toLocaleString()}</td>
                   <td className="px-2 py-4 text-center text-sm text-green-600">{(player.transfers_in || 0).toLocaleString()}</td>
                   <td className="px-2 py-4 text-center text-sm text-red-600">{(player.transfers_out || 0).toLocaleString()}</td>
-                  <td className="px-2 py-4 text-center text-sm text-fpl-green font-medium">{formatValue(player.value_form || 0, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-sm text-green-700 font-semibold">{formatValue(player.value_form || 0, 'decimal')}</td>
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.influence || 0, 'decimal')}</td>
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.creativity || 0, 'decimal')}</td>
                   <td className="px-2 py-4 text-center text-sm text-gray-900">{formatValue(player.threat || 0, 'decimal')}</td>
