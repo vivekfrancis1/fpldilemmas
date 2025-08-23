@@ -353,32 +353,6 @@ export default function OpenFPLProjections() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Responsive Summary Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-                    <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 md:p-6 rounded-lg md:rounded-xl border-2 border-blue-200 shadow-md">
-                      <div className="text-2xl md:text-3xl font-bold text-blue-700">{filteredProjections.length}</div>
-                      <div className="text-xs md:text-sm text-blue-600 font-medium">Players Available</div>
-                    </div>
-                    <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 md:p-6 rounded-lg md:rounded-xl border-2 border-green-200 shadow-md">
-                      <div className="text-2xl md:text-3xl font-bold text-green-700">
-                        {filteredProjections[0]?.predicted_points?.toFixed(1) || "0.0"}
-                      </div>
-                      <div className="text-xs md:text-sm text-green-600 font-medium">Top Prediction</div>
-                    </div>
-                    <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 md:p-6 rounded-lg md:rounded-xl border-2 border-purple-200 shadow-md">
-                      <div className="text-2xl md:text-3xl font-bold text-purple-700">
-                        {(filteredProjections.reduce((sum, p) => sum + (p.ensemble_confidence || 0), 0) / filteredProjections.length)?.toFixed(1) || "0.0"}%
-                      </div>
-                      <div className="text-xs md:text-sm text-purple-600 font-medium">Avg Confidence</div>
-                    </div>
-                    <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 md:p-6 rounded-lg md:rounded-xl border-2 border-orange-200 shadow-md">
-                      <div className="text-2xl md:text-3xl font-bold text-orange-700">
-                        {(filteredProjections.reduce((sum, p) => sum + p.current_price, 0) / filteredProjections.length / 10)?.toFixed(1) || "0.0"}m
-                      </div>
-                      <div className="text-xs md:text-sm text-orange-600 font-medium">Avg Price</div>
-                    </div>
-                  </div>
-
                   {/* Metric Tabs with Gameweek Columns */}
                   <Tabs value={activeMetric} onValueChange={setActiveMetric} className="w-full">
                     <TabsList className="grid w-full grid-cols-3 mb-6">
@@ -600,6 +574,13 @@ export default function OpenFPLProjections() {
                               })()}
                             </tbody>
                           </table>
+                        </div>
+                        
+                        {/* Table Footer with Average Confidence */}
+                        <div className="mt-4 text-center bg-gradient-to-r from-purple-50 to-purple-100 p-3 rounded-lg border border-purple-200">
+                          <div className="text-sm text-purple-700">
+                            Average Model Confidence: <span className="font-bold">{(filteredProjections.reduce((sum, p) => sum + (p.ensemble_confidence || 0), 0) / filteredProjections.length)?.toFixed(1) || "0.0"}%</span>
+                          </div>
                         </div>
                       </TabsContent>
                     ))}
