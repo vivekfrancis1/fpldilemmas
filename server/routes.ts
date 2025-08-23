@@ -4291,44 +4291,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Calculate totals and apply normalization to ensure perfect mathematical consistency
-      let totalGoalsAgainstBeforeNormalization = 0;
-      const teamTotalsBeforeNormalization = new Map();
+      // Apply GAMEWEEK-BY-GAMEWEEK balancing for perfect mathematical consistency
+      console.log(`DEBUG: Applying gameweek-by-gameweek balancing to ensure perfect goals scored = goals conceded per GW`);
       
-      Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
-        let teamTotal = 0;
-        Object.values(team.gameweekProjections).forEach((goals: any) => {
-          if (typeof goals === 'number') {
-            teamTotal += goals;
-          }
-        });
-        teamTotalsBeforeNormalization.set(team.id, teamTotal);
-        totalGoalsAgainstBeforeNormalization += teamTotal;
-      });
-      
-      // Calculate normalization factor to ensure Goals Against = Goals Scored exactly
-      const normalizationFactor = exactGoalsScoredTotal / totalGoalsAgainstBeforeNormalization;
-      console.log(`DEBUG: Normalization factor: ${normalizationFactor.toFixed(4)} (${exactGoalsScoredTotal.toFixed(2)} / ${totalGoalsAgainstBeforeNormalization.toFixed(2)})`);
-      
-      // Apply normalization while preserving actual data for finished fixtures
-      let totalGoalsAgainst = 0;
-      Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
-        // Apply normalization ONLY to projected gameweeks, preserve actual data for complete gameweeks
-        Object.keys(team.gameweekProjections).forEach((gw: any) => {
-          if (typeof team.gameweekProjections[gw] === 'number') {
-            const gameweekNumber = parseInt(gw);
-            
-            if (completeGameweeks.has(gameweekNumber)) {
-              // Keep actual data unchanged for complete gameweeks
-              console.log(`DEBUG: GW${gw} Team ${team.teamShort} - PRESERVING ACTUAL: ${team.gameweekProjections[gw]} goals conceded`);
-            } else {
-              // Apply normalization only to projected gameweeks
-              team.gameweekProjections[gw] = Math.round(team.gameweekProjections[gw] * normalizationFactor * 100) / 100;
-            }
-          }
+      // For each gameweek, balance goals scored vs goals conceded
+      for (let gw = 1; gw <= 38; gw++) {
+        if (completeGameweeks.has(gw)) {
+          // Skip actual gameweeks - they're already balanced by definition
+          continue;
+        }
+        
+        // Calculate total goals scored this gameweek from team goal projections
+        let gwGoalsScored = 0;
+        teamGoalProjections.forEach((team: any) => {
+          gwGoalsScored += team.gameweekProjections[gw] || 0;
         });
         
-        // Calculate final team totals
+        // Calculate total goals conceded this gameweek before balancing
+        let gwGoalsConcededBefore = 0;
+        Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
+          gwGoalsConcededBefore += team.gameweekProjections[gw] || 0;
+        });
+        
+        // Apply gameweek-specific balancing factor
+        if (gwGoalsConcededBefore > 0) {
+          const gwBalancingFactor = gwGoalsScored / gwGoalsConcededBefore;
+          console.log(`DEBUG: GW${gw} balancing - Scored: ${gwGoalsScored.toFixed(2)}, Conceded before: ${gwGoalsConcededBefore.toFixed(2)}, Factor: ${gwBalancingFactor.toFixed(4)}`);
+          
+          // Apply balancing to each team for this gameweek
+          Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
+            if (team.gameweekProjections[gw] > 0) {
+              team.gameweekProjections[gw] = Math.round(team.gameweekProjections[gw] * gwBalancingFactor * 100) / 100;
+            }
+          });
+          
+          // Verify balance for this gameweek
+          let gwGoalsConcededAfter = 0;
+          Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
+            gwGoalsConcededAfter += team.gameweekProjections[gw] || 0;
+          });
+          console.log(`DEBUG: GW${gw} balanced - Scored: ${gwGoalsScored.toFixed(2)}, Conceded after: ${gwGoalsConcededAfter.toFixed(2)}`);
+        }
+      }
+      
+      // Calculate final team totals after gameweek-by-gameweek balancing
+      let totalGoalsAgainst = 0;
+      Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
         let teamTotal = 0;
         Object.values(team.gameweekProjections).forEach((goals: any) => {
           if (typeof goals === 'number') {
@@ -4343,6 +4351,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Set confidence based on defensive quality
         team.confidence = team.averageGoalsAgainstPerGame <= 1.0 ? 'High' : 
                          team.averageGoalsAgainstPerGame <= 1.5 ? 'Medium' : 'Low';
+        
+        // Preserve actual data logging for complete gameweeks
+        Object.keys(team.gameweekProjections).forEach((gw: any) => {
+          const gameweekNumber = parseInt(gw);
+          if (completeGameweeks.has(gameweekNumber)) {
+            console.log(`DEBUG: GW${gw} Team ${team.teamShort} - PRESERVING ACTUAL: ${team.gameweekProjections[gw]} goals conceded`);
+          }
+        });
       });
       
       console.log(`DEBUG: PERFECT MIRROR SUCCESS - Goals Scored: ${exactGoalsScoredTotal.toFixed(2)}, Goals Against: ${totalGoalsAgainst.toFixed(2)}`);
