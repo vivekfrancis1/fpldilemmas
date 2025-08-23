@@ -592,6 +592,9 @@ export default function OpenFPLProjections() {
                     <div className="text-lg text-gray-700 font-medium">
                       Showing <span className="font-bold text-blue-600">{Object.keys(uniqueFilteredPlayers).length}</span> unique players from <span className="font-bold">{Object.keys(uniqueTotalPlayers).length}</span> total players
                     </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Debug: {filteredProjections.length} total projections
+                    </div>
                     <div className="text-sm text-gray-500 mt-2">
                       Updated every hour • Processing all 693 active FPL players
                     </div>
