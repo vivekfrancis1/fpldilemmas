@@ -1932,14 +1932,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use current gameweek from bootstrap data (GW2 is current, so we want GW3+)
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Get upcoming fixtures and match with projection data - exclude current gameweek (GW2)
+      // Get upcoming fixtures and match with projection data - exclude current and finished gameweeks
+      // Find all unfinished gameweeks to ensure we get exactly 6 weeks of data
+      const unfinishedGameweeks = [...new Set(
+        fixturesData
+          .filter((fixture: any) => !fixture.finished && fixture.event > currentGameweek)
+          .map((fixture: any) => fixture.event)
+          .sort((a: number, b: number) => a - b)
+      )].slice(0, weeks);
+      
       const upcomingFixtures = fixturesData
         .filter((fixture: any) => 
           !fixture.finished && 
           fixture.event > currentGameweek && 
-          fixture.event <= currentGameweek + weeks
+          unfinishedGameweeks.includes(fixture.event)
         )
-        .slice(0, 50);
+        .slice(0, 60); // Increase limit to accommodate more gameweeks
       
       const matchOdds = upcomingFixtures.map((fixture: any) => {
         const homeTeam = teamLookup.get(fixture.team_h);
