@@ -243,9 +243,9 @@ export default function PredictedScores() {
                               {match.homeTeam.shortName}
                             </span>
                             <Badge className={`${getResultColor(match.homeTeam.result)} text-white text-xs`}>
-                              {match.homeTeam.result === 'win' ? (match.finished ? 'Win' : 'Projected Win') :
-                               match.homeTeam.result === 'loss' ? (match.finished ? 'Loss' : 'Projected Loss') :
-                               (match.finished ? 'Draw' : 'Projected Draw')}
+                              {match.homeTeam.result === 'win' ? (match.finished ? 'W' : 'PW') :
+                               match.homeTeam.result === 'loss' ? (match.finished ? 'L' : 'PL') :
+                               (match.finished ? 'D' : 'PD')}
                             </Badge>
                           </div>
                         </td>
@@ -271,9 +271,9 @@ export default function PredictedScores() {
                               {match.awayTeam.shortName}
                             </span>
                             <Badge className={`${getResultColor(match.awayTeam.result)} text-white text-xs`}>
-                              {match.awayTeam.result === 'win' ? (match.finished ? 'Win' : 'Projected Win') :
-                               match.awayTeam.result === 'loss' ? (match.finished ? 'Loss' : 'Projected Loss') :
-                               (match.finished ? 'Draw' : 'Projected Draw')}
+                              {match.awayTeam.result === 'win' ? (match.finished ? 'W' : 'PW') :
+                               match.awayTeam.result === 'loss' ? (match.finished ? 'L' : 'PL') :
+                               (match.finished ? 'D' : 'PD')}
                             </Badge>
                           </div>
                         </td>
