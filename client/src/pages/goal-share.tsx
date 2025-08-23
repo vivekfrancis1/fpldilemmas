@@ -99,7 +99,7 @@ export default function GoalShare() {
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
               {selectedSeason === "current" 
-                ? "Each player's percentage share of their team's expected goals for the entire remaining season"
+                ? "Each player's percentage share of their team's expected goals for the entire remaining season, optimized using historical patterns"
                 : `Each player's percentage share of their team's actual goals scored in the ${selectedSeason} season`
               }
             </p>
