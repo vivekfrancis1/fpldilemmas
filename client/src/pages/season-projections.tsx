@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp, Target, Users, Search } from "lucide-react";
+import { TrendingUp, Target, Users, Search, ChevronUp, ChevronDown } from "lucide-react";
 import Layout from "@/components/layout";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -129,17 +129,17 @@ export default function SeasonProjections() {
         </div>
 
         <div className="fpl-section-spacing">
-          {/* Filters */}
+          {/* Smart Filters */}
           <div className="fpl-filters">
             <div className="fpl-card-header">
               <div className="fpl-card-title">
                 <Search className="h-5 w-5 text-blue-600" />
-                Filter Season Projections
+                Smart Filters & Search
               </div>
             </div>
             <div className="fpl-card-content">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                <div className="relative">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="relative sm:col-span-2 lg:col-span-2">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Search players or teams..."
@@ -150,18 +150,20 @@ export default function SeasonProjections() {
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Sort By</label>
-                  <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-                    <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-sort">
-                      <SelectValue placeholder="Sort by..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="totalInvolvements">Total Involvements</SelectItem>
-                      <SelectItem value="goals">Goals</SelectItem>
-                      <SelectItem value="assists">Assists</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:col-span-2">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600">Sort By</label>
+                    <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                      <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-sort">
+                        <SelectValue placeholder="Sort by..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="totalInvolvements">G+A (Total Involvements)</SelectItem>
+                        <SelectItem value="goals">Goals</SelectItem>
+                        <SelectItem value="assists">Assists</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -235,25 +237,40 @@ export default function SeasonProjections() {
                       <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
                         <button 
                           onClick={() => setSortBy("goals")}
-                          className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs sm:text-sm"
+                          className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs sm:text-sm w-full"
                         >
                           Goals
+                          {sortBy === "goals" ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronUp className="h-3 w-3 opacity-50" />
+                          )}
                         </button>
                       </th>
                       <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
                         <button 
                           onClick={() => setSortBy("assists")}
-                          className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs sm:text-sm"
+                          className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs sm:text-sm w-full"
                         >
                           Assists
+                          {sortBy === "assists" ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronUp className="h-3 w-3 opacity-50" />
+                          )}
                         </button>
                       </th>
                       <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[80px] font-semibold text-blue-900 bg-blue-50 text-xs sm:text-sm">
                         <button 
                           onClick={() => setSortBy("totalInvolvements")}
-                          className="flex items-center justify-center gap-1 hover:text-blue-800 transition-colors text-xs sm:text-sm"
+                          className="flex items-center justify-center gap-1 hover:text-blue-800 transition-colors text-xs sm:text-sm w-full"
                         >
                           G+A
+                          {sortBy === "totalInvolvements" ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronUp className="h-3 w-3 opacity-50" />
+                          )}
                         </button>
                       </th>
                     </tr>
