@@ -2351,14 +2351,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const tierMultiplier = teamService.getTierMultiplier(team.id, tierSeed);
           baseExpectedGoals *= tierMultiplier;
           
-          // Apply the same market momentum and variance as goals
-          const marketMomentum = 0.97 + ((team.id * fixture.event * 17) % 100) / 1667; // 97-103% market sentiment
-          const fixtureComplexity = fixture.event <= 10 ? 1.01 : fixture.event <= 20 ? 1.0 : 0.99; // Season stage
+          // Apply the same COMPRESSED market momentum and variance as goals (UNIFIED)
+          const marketMomentum = 0.99 + ((team.id * fixture.event * 17) % 100) / 5000; // 99-101% market sentiment (compressed)
+          const fixtureComplexity = fixture.event <= 10 ? 1.005 : fixture.event <= 20 ? 1.0 : 0.995; // Minimal season stage impact
           baseExpectedGoals *= marketMomentum * fixtureComplexity;
           
-          const marketVolatility = 0.96 + ((team.id * fixture.event * 19) % 100) / 1250; // 96-104% natural variation
-          const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.75); // Higher confidence = less variance
-          const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamBettingData.variance * 0.8;
+          const marketVolatility = 0.99 + ((team.id * fixture.event * 19) % 100) / 5000; // 99-101% minimal variation (compressed)
+          const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.95); // Reduced confidence impact
+          const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamBettingData.variance * 0.2; // Reduced variance impact
           baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
           
           // Apply the same goal bounds and confidence multiplier as goals
@@ -2667,20 +2667,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const tierMultiplier = teamService.getTierMultiplier(team.id, tierSeed);
             baseExpectedGoals *= tierMultiplier;
             
-            // Phase 6: Market momentum and fixture complexity factors
-            const marketMomentum = 0.97 + ((team.id * fixture.event * 17) % 100) / 1667; // 97-103% market sentiment
-            const fixtureComplexity = fixture.event <= 10 ? 1.01 : fixture.event <= 20 ? 1.0 : 0.99; // Season stage
+            // Phase 6: Minimal market momentum and fixture complexity factors (COMPRESSED FOR GOALS AGAINST)
+            const marketMomentum = 0.99 + ((team.id * fixture.event * 17) % 100) / 5000; // 99-101% market sentiment (compressed)
+            const fixtureComplexity = fixture.event <= 10 ? 1.005 : fixture.event <= 20 ? 1.0 : 0.995; // Minimal season stage impact
             baseExpectedGoals *= marketMomentum * fixtureComplexity;
             
-            // Phase 7: Statistical variance modeling with confidence weighting
-            const marketVolatility = 0.96 + ((team.id * fixture.event * 19) % 100) / 1250; // 96-104% natural variation
-            const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.75); // Higher confidence = less variance
-            const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamBettingData.variance * 0.8;
+            // Phase 7: Minimal variance modeling for tight range (COMPRESSED FOR GOALS AGAINST)
+            const marketVolatility = 0.99 + ((team.id * fixture.event * 19) % 100) / 5000; // 99-101% minimal variation (compressed)
+            const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.95); // Reduced confidence impact
+            const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamBettingData.variance * 0.2; // Reduced variance impact
             baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
             
-            // Phase 8: Realistic Premier League goal bounds with market precision
-            const marketFloor = Math.max(0.3, teamBettingData.expectedGoalsPerGame * 0.4); // Dynamic minimum
-            const marketCeiling = Math.min(4.2, teamBettingData.expectedGoalsPerGame * 2.0); // Dynamic maximum
+            // Phase 8: Compressed Premier League goal bounds for tight range (UNIFIED WITH GOALS SCORED)
+            const marketFloor = Math.max(0.6, teamBettingData.expectedGoalsPerGame * 0.6); // Dynamic minimum (compressed)
+            const marketCeiling = Math.min(2.2, teamBettingData.expectedGoalsPerGame * 1.4); // Dynamic maximum (compressed)
             baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
             
             // Final expected goals with market precision
