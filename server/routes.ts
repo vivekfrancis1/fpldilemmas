@@ -1043,7 +1043,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // For unfinished fixtures, use advanced spread betting market-based goal calculation with 8-phase statistical modeling
-          const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
+          const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 0.8, variance: 0.6, confidence: 0.40 };
           const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
           
           // Phase 1: Core market probability foundation
@@ -1674,7 +1674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // EXACT same 8-phase calculation as team-goal-projections endpoint
             const bettingData = getSpreadBettingData();
-            const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
+            const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 0.8, variance: 0.6, confidence: 0.40 };
             const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
             
             // Phase 1: Core market probability foundation
@@ -1846,7 +1846,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (!opponent) continue;
               
               const bettingData = getSpreadBettingData();
-              const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
+              const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 0.8, variance: 0.6, confidence: 0.40 };
               const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
               
               // Simplified goal calculation for aggregation
