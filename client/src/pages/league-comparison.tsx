@@ -85,18 +85,18 @@ export default function LeagueComparison() {
     }
   }, [leagueId]);
 
+  const { data: leagueData, isLoading, error } = useQuery({
+    queryKey: ['/api/leagues', leagueId, 'analyze'],
+    enabled: !!leagueId,
+    refetchOnWindowFocus: false,
+  });
+
   // Auto-analyze when league data becomes available for cached league ID
   useEffect(() => {
     if (leagueData && !analyzedLeague) {
       setAnalyzedLeague(leagueData as LeagueData);
     }
   }, [leagueData, analyzedLeague]);
-
-  const { data: leagueData, isLoading, error } = useQuery({
-    queryKey: ['/api/leagues', leagueId, 'analyze'],
-    enabled: !!leagueId,
-    refetchOnWindowFocus: false,
-  });
 
   const analyzeLeague = () => {
     if (leagueData) {
