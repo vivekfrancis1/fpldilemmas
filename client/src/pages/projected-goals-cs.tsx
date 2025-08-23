@@ -30,7 +30,6 @@ interface MatchProjection {
 }
 
 export default function ProjectedGoalsCS() {
-  const [weeks, setWeeks] = useState<number>(35);
   const [selectedGameweek, setSelectedGameweek] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
 
@@ -39,7 +38,7 @@ export default function ProjectedGoalsCS() {
   });
 
   const { data: projectionsData, isLoading: projectionsLoading } = useQuery<MatchProjection[]>({
-    queryKey: [`/api/projected-goals-cs?weeks=${weeks}`],
+    queryKey: ["/api/projected-goals-cs"],
   });
 
   const filteredProjections = useMemo(() => {
@@ -113,11 +112,11 @@ export default function ProjectedGoalsCS() {
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
               {selectedGameweek === "all" ? 
-                `PL Match Projections - Next ${weeks === 35 ? 'Remaining' : weeks}GW` : 
+                `PL Match Projections - All 38 Gameweeks` : 
                 `PL GW${selectedGameweek}: Match Projections`}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Expected goals and clean sheet probabilities for the next {weeks === 35 ? 'remaining' : weeks} gameweeks
+              Goals and clean sheets across all 38 gameweeks - actual results for completed games, projections for upcoming games
             </p>
           </div>
 
@@ -125,24 +124,6 @@ export default function ProjectedGoalsCS() {
           <Card className="mb-6 shadow-md border-0">
             <CardContent className="p-6">
               <div className="flex flex-wrap gap-6 items-center">
-                <div className="flex items-center gap-3">
-                  <Trophy className="h-5 w-5 text-blue-600" />
-                  <label className="text-sm font-semibold text-gray-700">Weeks:</label>
-                  <Select value={weeks.toString()} onValueChange={(v) => setWeeks(parseInt(v))}>
-                    <SelectTrigger className="w-36 border-2 border-gray-200 hover:border-blue-400 transition-colors">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="6">6 weeks</SelectItem>
-                      <SelectItem value="10">10 weeks</SelectItem>
-                      <SelectItem value="15">15 weeks</SelectItem>
-                      <SelectItem value="20">20 weeks</SelectItem>
-                      <SelectItem value="25">25 weeks</SelectItem>
-                      <SelectItem value="30">30 weeks</SelectItem>
-                      <SelectItem value="35">Rest of Season</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
                 <div className="flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-blue-600" />
@@ -153,7 +134,7 @@ export default function ProjectedGoalsCS() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Available</SelectItem>
-                      {Array.from({ length: Math.min(36, 38 - currentGameweek) }, (_, i) => currentGameweek + i + 1).map(gw => (
+                      {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
                         <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                       ))}
                     </SelectContent>

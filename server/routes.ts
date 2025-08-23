@@ -2829,12 +2829,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Match Odds (Projected Goals & CS) endpoint - pure aggregator of Team Goal and CS projection data
   app.get("/api/projected-goals-cs", async (req, res) => {
     try {
-      const weeks = parseInt(req.query.weeks as string) || 35;
+      console.log(`DEBUG: Match Projections API called - generating all 38 gameweeks`);
       
       // Fetch data ONLY from Team Goal and CS projection endpoints
       const [goalProjectionsResponse, csProjectionsResponse, fixturesResponse] = await Promise.all([
-        fetch(`http://localhost:5000/api/team-goal-projections?weeks=${weeks}`),
-        fetch(`http://localhost:5000/api/team-cs-projections?weeks=${weeks}`),
+        fetch(`http://localhost:5000/api/team-goal-projections`),
+        fetch(`http://localhost:5000/api/team-cs-projections`),
         fetch("https://fantasy.premierleague.com/api/fixtures/")
       ]);
       
@@ -2871,27 +2871,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ]);
       const bootstrapData = await bootstrapResponse.json();
       
-      // Use current gameweek from bootstrap data (GW2 is current, so we want GW3+)
+      // Use current gameweek from bootstrap data
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Get upcoming fixtures and match with projection data - exclude current and finished gameweeks
-      // Find all unfinished gameweeks to ensure we get exactly 6 weeks of data
-      const unfinishedGameweeks = [...new Set(
-        fixturesData
-          .filter((fixture: any) => !fixture.finished && fixture.event > currentGameweek)
-          .map((fixture: any) => fixture.event)
-          .sort((a: number, b: number) => a - b)
-      )].slice(0, Math.min(weeks, 36)); // Cap at 36 remaining gameweeks
+      console.log(`DEBUG: Processing all 38 gameweeks for match projections, current GW: ${currentGameweek}`);
       
-      const upcomingFixtures = fixturesData
+      // Get all fixtures for all 38 gameweeks (both finished and unfinished)
+      const allFixtures = fixturesData
         .filter((fixture: any) => 
-          !fixture.finished && 
-          fixture.event > currentGameweek && 
-          unfinishedGameweeks.includes(fixture.event)
+          fixture.event >= 1 && fixture.event <= 38
         )
         .slice(0, 380); // Allow for full season coverage
       
-      const matchOdds = upcomingFixtures.map((fixture: any) => {
+      const matchOdds = allFixtures.map((fixture: any) => {
         const homeTeam = teamLookup.get(fixture.team_h);
         const awayTeam = teamLookup.get(fixture.team_a);
         
@@ -2899,11 +2891,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const gameweek = fixture.event;
         
-        // Get data directly from projection outputs
-        const homeExpectedGoals = homeTeam.goalProjections?.[gameweek.toString()] || 0;
-        const awayExpectedGoals = awayTeam.goalProjections?.[gameweek.toString()] || 0;
-        const homeCleanSheetOdds = homeTeam.csProjections?.[gameweek.toString()] || 0;
-        const awayCleanSheetOdds = awayTeam.csProjections?.[gameweek.toString()] || 0;
+        // Check if fixture is finished - use actual data, otherwise use projections
+        let homeExpectedGoals, awayExpectedGoals, homeCleanSheetOdds, awayCleanSheetOdds;
+        
+        if (fixture.finished) {
+          // For finished fixtures, use actual goals and clean sheet results
+          homeExpectedGoals = fixture.team_h_score || 0;
+          awayExpectedGoals = fixture.team_a_score || 0;
+          homeCleanSheetOdds = (fixture.team_a_score === 0) ? 100 : 0;
+          awayCleanSheetOdds = (fixture.team_h_score === 0) ? 100 : 0;
+        } else {
+          // For unfinished fixtures, use projection data
+          homeExpectedGoals = homeTeam.goalProjections?.[gameweek.toString()] || 0;
+          awayExpectedGoals = awayTeam.goalProjections?.[gameweek.toString()] || 0;
+          homeCleanSheetOdds = homeTeam.csProjections?.[gameweek.toString()] || 0;
+          awayCleanSheetOdds = awayTeam.csProjections?.[gameweek.toString()] || 0;
+        }
         
         // Confidence based purely on data availability from projections
         const dataPoints = [homeExpectedGoals, awayExpectedGoals, homeCleanSheetOdds, awayCleanSheetOdds].filter(val => val > 0).length;
