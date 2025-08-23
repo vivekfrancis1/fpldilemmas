@@ -1015,12 +1015,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       
       const teamProjections = teams.map((team: any) => {
+        // Limit fixtures to only the specified number of weeks
+        const maxGameweek = weeks === 35 ? 38 : currentGameweek + weeks;
         const upcomingFixtures = fixturesData
           .filter((f: any) => 
             (f.team_h === team.id || f.team_a === team.id) && 
             !f.finished && 
             f.event > currentGameweek && 
-            f.event <= 38
+            f.event <= maxGameweek
           );
         
         const projections = upcomingFixtures.map((fixture: any) => {
@@ -1213,12 +1215,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assistBettingData = getAssistBettingData();
       
       const teamProjections = teams.map((team: any) => {
+        // Limit fixtures to only the specified number of weeks
+        const maxGameweek = weeks === 35 ? 38 : currentGameweek + weeks;
         const upcomingFixtures = fixturesData
           .filter((f: any) => 
             (f.team_h === team.id || f.team_a === team.id) && 
             !f.finished && 
             f.event > currentGameweek && 
-            f.event <= 38
+            f.event <= maxGameweek
           );
         
         const projections = upcomingFixtures.map((fixture: any) => {
@@ -1368,12 +1372,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bettingData = getSpreadBettingData();
       
       const teamProjections = teams.map((team: any) => {
+        // Limit fixtures to only the specified number of weeks
+        const maxGameweek = weeks === 35 ? 38 : currentGameweek + weeks;
         const upcomingFixtures = fixturesData
           .filter((f: any) => 
             (f.team_h === team.id || f.team_a === team.id) && 
             !f.finished && 
             f.event > currentGameweek && 
-            f.event <= 38
+            f.event <= maxGameweek
           );
         
         const projections = upcomingFixtures.map((fixture: any) => {
