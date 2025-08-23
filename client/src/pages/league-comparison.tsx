@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Trophy, TrendingUp, BarChart3, Search, Target, Crown, Medal, Star, Activity } from "lucide-react";
+import { Users, Trophy, TrendingUp, BarChart3, Search, Target, Crown, Medal, Star, Activity, X } from "lucide-react";
 import Layout from "../components/layout";
 
 interface LeagueData {
@@ -60,6 +60,38 @@ export default function LeagueComparison() {
   const [leagueId, setLeagueId] = useState("");
   const [analyzedLeague, setAnalyzedLeague] = useState<LeagueData | null>(null);
 
+  // Load cached league ID on component mount
+  useEffect(() => {
+    try {
+      const cachedLeagueId = localStorage.getItem('fpl-league-analysis-id');
+      if (cachedLeagueId) {
+        setLeagueId(cachedLeagueId);
+      }
+    } catch (error) {
+      // localStorage not available, continue without caching
+      console.log('localStorage not available for league ID caching');
+    }
+  }, []);
+
+  // Save league ID to localStorage whenever it changes
+  useEffect(() => {
+    if (leagueId) {
+      try {
+        localStorage.setItem('fpl-league-analysis-id', leagueId);
+      } catch (error) {
+        // localStorage not available, continue without caching
+        console.log('Failed to cache league ID');
+      }
+    }
+  }, [leagueId]);
+
+  // Auto-analyze when league data becomes available for cached league ID
+  useEffect(() => {
+    if (leagueData && !analyzedLeague) {
+      setAnalyzedLeague(leagueData as LeagueData);
+    }
+  }, [leagueData, analyzedLeague]);
+
   const { data: leagueData, isLoading, error } = useQuery({
     queryKey: ['/api/leagues', leagueId, 'analyze'],
     enabled: !!leagueId,
@@ -69,6 +101,16 @@ export default function LeagueComparison() {
   const analyzeLeague = () => {
     if (leagueData) {
       setAnalyzedLeague(leagueData as LeagueData);
+    }
+  };
+
+  const clearCachedData = () => {
+    try {
+      localStorage.removeItem('fpl-league-analysis-id');
+      setLeagueId("");
+      setAnalyzedLeague(null);
+    } catch (error) {
+      console.log('Failed to clear cached data');
     }
   };
 
@@ -137,7 +179,7 @@ export default function LeagueComparison() {
               Analyze League Performance
             </CardTitle>
             <CardDescription>
-              Enter a league ID to analyze player performance and compare managers
+              Enter a league ID to analyze player performance and compare managers. Your last searched league will be remembered.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -157,12 +199,27 @@ export default function LeagueComparison() {
                 <BarChart3 className="h-4 w-4 mr-2" />
                 {isLoading ? "Loading..." : "Analyze League"}
               </Button>
+              {leagueId && (
+                <Button 
+                  variant="outline"
+                  onClick={clearCachedData}
+                  data-testid="button-clear-cache"
+                  title="Clear cached league ID"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
             {leagueId && (
-              <p className="text-sm text-muted-foreground">
-                Analyzing League ID: <span className="font-medium">{leagueId}</span>
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Analyzing League ID: <span className="font-medium">{leagueId}</span>
+                </p>
+                <p className="text-xs text-blue-600">
+                  League ID saved for next visit
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
