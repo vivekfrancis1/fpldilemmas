@@ -2263,6 +2263,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ OpenFPL Projection routes registered successfully");
 
+  // Get My Player Projections - custom algorithm based on historical data
+  app.get('/api/my-projections', async (req: any, res) => {
+    try {
+      const horizon = parseInt(req.query.horizon) || 6;
+      console.log(`Generating custom projections for horizon=${horizon}`);
+      
+      // Get bootstrap data for player information
+      const bootstrap = await storage.getBootstrapData();
+      if (!bootstrap) {
+        throw new Error('Bootstrap data not available');
+      }
+
+      // Get current season stats
+      const currentStats = await storage.getPlayerStatsForSeason('2024/25');
+      
+      // Get previous season stats for comparison (weighted historical data)
+      const previousStats = await storage.getPlayerStatsForSeason('2023/24');
+      
+      const projections = [];
+      
+      for (const player of bootstrap.elements) {
+        // Skip injured/unavailable players
+        if (player.chance_of_playing_next_round === 0) continue;
+        
+        // Get current season performance
+        const currentPerf = currentStats.find(stat => stat.id === player.id);
+        const previousPerf = previousStats.find(stat => stat.id === player.id);
+        
+        // Calculate weighted averages with higher weight to recent performance
+        const currentWeight = 0.7;
+        const previousWeight = 0.3;
+        
+        // Base calculations on points per game, form, and historical consistency
+        const currentPpg = currentPerf ? currentPerf.total_points / (currentPerf.minutes > 0 ? Math.max(currentPerf.minutes / 90, 1) : 1) : 0;
+        const previousPpg = previousPerf ? previousPerf.total_points / (previousPerf.minutes > 0 ? Math.max(previousPerf.minutes / 90, 1) : 1) : 0;
+        
+        const weightedPpg = (currentPpg * currentWeight) + (previousPpg * previousWeight);
+        
+        // Form factor based on recent games
+        const formFactor = player.form ? parseFloat(player.form) / 10 : 0.5;
+        
+        // ICT factor for creativity
+        const ictFactor = player.ict_index ? parseFloat(player.ict_index) / 100 : 0.5;
+        
+        // Position-specific multipliers
+        const positionMultiplier = {
+          1: 0.8, // GKP
+          2: 0.9, // DEF  
+          3: 1.0, // MID
+          4: 1.1  // FWD
+        }[player.element_type] || 1.0;
+        
+        // Fixture difficulty adjustment (simplified)
+        const fixtureDifficulty = 3; // Neutral difficulty
+        const fixtureAdjustment = (6 - fixtureDifficulty) / 5; // 0.6 for difficulty 3
+        
+        // Calculate base projection
+        const baseProjection = weightedPpg * formFactor * ictFactor * positionMultiplier * fixtureAdjustment;
+        
+        // Calculate individual metrics
+        const predictedPoints = Math.max(baseProjection * horizon, 0);
+        
+        // Goals prediction based on goals per game and position
+        const currentGoals = currentPerf ? currentPerf.goals_scored : 0;
+        const previousGoals = previousPerf ? previousPerf.goals_scored : 0;
+        const avgGoals = (currentGoals * currentWeight) + (previousGoals * previousWeight);
+        const goalsPerGame = avgGoals / Math.max((currentPerf?.minutes || 90) / 90, 1);
+        const predictedGoals = Math.max(goalsPerGame * horizon * positionMultiplier, 0);
+        
+        // Assists prediction
+        const currentAssists = currentPerf ? currentPerf.assists : 0;
+        const previousAssists = previousPerf ? previousPerf.assists : 0;
+        const avgAssists = (currentAssists * currentWeight) + (previousAssists * previousWeight);
+        const assistsPerGame = avgAssists / Math.max((currentPerf?.minutes || 90) / 90, 1);
+        const predictedAssists = Math.max(assistsPerGame * horizon * (player.element_type === 3 ? 1.2 : 1.0), 0);
+        
+        // Minutes prediction based on availability and form
+        const predictedMinutes = Math.min(90 * horizon * (player.chance_of_playing_next_round / 100) * formFactor, 90 * horizon);
+        
+        // Confidence score based on data quality and consistency
+        const dataQuality = (currentPerf && previousPerf) ? 0.9 : (currentPerf ? 0.7 : 0.3);
+        const consistencyScore = 1 - Math.abs(currentPpg - previousPpg) / Math.max(currentPpg, previousPpg, 1);
+        const confidenceScore = Math.min((dataQuality * consistencyScore) * 100, 95);
+        
+        const team = bootstrap.teams.find(t => t.id === player.team);
+        const position = bootstrap.element_types.find(p => p.id === player.element_type);
+        
+        projections.push({
+          player_id: player.id,
+          player_name: `${player.first_name} ${player.second_name}`,
+          team_name: team ? team.short_name : 'Unknown',
+          position: position ? position.singular_name_short : 'Unknown',
+          current_price: player.now_cost,
+          predicted_points: Math.round(predictedPoints * 100) / 100,
+          predicted_goals: Math.round(predictedGoals * 100) / 100,
+          predicted_assists: Math.round(predictedAssists * 100) / 100,
+          predicted_minutes: Math.round(predictedMinutes),
+          ownership_percentage: parseFloat(player.selected_by_percent),
+          form_score: formFactor * 100,
+          fixture_difficulty: fixtureDifficulty,
+          confidence_score: Math.round(confidenceScore)
+        });
+      }
+      
+      // Sort by predicted points
+      projections.sort((a, b) => b.predicted_points - a.predicted_points);
+      
+      console.log(`Generated ${projections.length} custom projections`);
+      res.json(projections);
+      
+    } catch (error) {
+      console.error('Error generating custom projections:', error);
+      res.status(500).json({ error: 'Failed to generate projections' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
