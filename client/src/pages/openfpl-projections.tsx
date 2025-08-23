@@ -441,11 +441,38 @@ export default function OpenFPLProjections() {
                                         value = Math.abs(difference);
                                       }
                                       
+                                      // Check if this gameweek has 0 minutes, if so set non-minutes stats to 0
+                                      if (metric !== 'predicted_minutes') {
+                                        const getMinutesValue = (horizon: number) => {
+                                          return horizonData[horizon]?.predicted_minutes || 0;
+                                        };
+                                        
+                                        let minutesForThisGW;
+                                        if (gwIndex === 1) {
+                                          minutesForThisGW = Math.abs(getMinutesValue(1));
+                                        } else {
+                                          const minutesDiff = getMinutesValue(gwIndex) - getMinutesValue(gwIndex - 1);
+                                          minutesForThisGW = Math.abs(minutesDiff);
+                                        }
+                                        
+                                        if (minutesForThisGW === 0) {
+                                          return 0;
+                                        }
+                                      }
+                                      
                                       return value;
                                     });
 
                                     // Total is the highest horizon value (cumulative)
-                                    const total = getHorizonValue(parseInt(horizonFilter));
+                                    let total = getHorizonValue(parseInt(horizonFilter));
+                                    
+                                    // If total minutes are 0, set non-minutes stats to 0
+                                    if (metric !== 'predicted_minutes') {
+                                      const totalMinutes = horizonData[parseInt(horizonFilter)]?.predicted_minutes || 0;
+                                      if (totalMinutes === 0) {
+                                        total = 0;
+                                      }
+                                    }
 
                                     // Calculate minutes and ownership totals for additional columns
                                     const minutesTotal = horizonData[parseInt(horizonFilter)]?.predicted_minutes || 0;
