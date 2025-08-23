@@ -3625,19 +3625,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
 
-      // Process each match to calculate goals against
+      // Process each match to calculate goals against using admin settings
       matchProjections.forEach((match: any) => {
         const homeTeam = teamsGoalsAgainst.get(match.homeTeam.id);
         const awayTeam = teamsGoalsAgainst.get(match.awayTeam.id);
 
         if (homeTeam && awayTeam) {
-          // Home team concedes away team's expected goals
-          homeTeam.gameweekProjections[match.gameweek] = match.awayTeam.expectedGoals;
-          homeTeam.totalGoalsAgainst += match.awayTeam.expectedGoals;
+          // Get team defensive data to apply multipliers
+          const homeTeamData = teamService.getTeamData(match.homeTeam.id);
+          const awayTeamData = teamService.getTeamData(match.awayTeam.id);
 
-          // Away team concedes home team's expected goals
-          awayTeam.gameweekProjections[match.gameweek] = match.homeTeam.expectedGoals;
-          awayTeam.totalGoalsAgainst += match.homeTeam.expectedGoals;
+          // Calculate goals against with defensive multipliers
+          let homeGoalsAgainst = match.awayTeam.expectedGoals * adminGoalsAgainstSettings.globalDefensiveMultiplier;
+          let awayGoalsAgainst = match.homeTeam.expectedGoals * adminGoalsAgainstSettings.globalDefensiveMultiplier;
+
+          // Apply defensive tier multipliers for home team
+          if (homeTeamData) {
+            switch (homeTeamData.defensiveTier) {
+              case 'elite': homeGoalsAgainst *= adminGoalsAgainstSettings.eliteDefenseMultiplier; break;
+              case 'strong': homeGoalsAgainst *= adminGoalsAgainstSettings.strongDefenseMultiplier; break;
+              case 'average': homeGoalsAgainst *= adminGoalsAgainstSettings.averageDefenseMultiplier; break;
+              case 'weak': homeGoalsAgainst *= adminGoalsAgainstSettings.weakDefenseMultiplier; break;
+              case 'promoted': homeGoalsAgainst *= adminGoalsAgainstSettings.promotedDefenseMultiplier; break;
+            }
+          }
+
+          // Apply defensive tier multipliers for away team
+          if (awayTeamData) {
+            switch (awayTeamData.defensiveTier) {
+              case 'elite': awayGoalsAgainst *= adminGoalsAgainstSettings.eliteDefenseMultiplier; break;
+              case 'strong': awayGoalsAgainst *= adminGoalsAgainstSettings.strongDefenseMultiplier; break;
+              case 'average': awayGoalsAgainst *= adminGoalsAgainstSettings.averageDefenseMultiplier; break;
+              case 'weak': awayGoalsAgainst *= adminGoalsAgainstSettings.weakDefenseMultiplier; break;
+              case 'promoted': awayGoalsAgainst *= adminGoalsAgainstSettings.promotedDefenseMultiplier; break;
+            }
+          }
+
+          // Apply bounds
+          homeGoalsAgainst = Math.max(adminGoalsAgainstSettings.minGoalsAgainst, Math.min(adminGoalsAgainstSettings.maxGoalsAgainst, homeGoalsAgainst));
+          awayGoalsAgainst = Math.max(adminGoalsAgainstSettings.minGoalsAgainst, Math.min(adminGoalsAgainstSettings.maxGoalsAgainst, awayGoalsAgainst));
+
+          // Store the adjusted values
+          homeTeam.gameweekProjections[match.gameweek] = homeGoalsAgainst;
+          homeTeam.totalGoalsAgainst += homeGoalsAgainst;
+
+          awayTeam.gameweekProjections[match.gameweek] = awayGoalsAgainst;
+          awayTeam.totalGoalsAgainst += awayGoalsAgainst;
         }
       });
 
