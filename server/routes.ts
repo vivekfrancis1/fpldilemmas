@@ -2009,6 +2009,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Assist Share Historical endpoint - historical season assist data
+  app.get("/api/assist-share-historical/:season", async (req, res) => {
+    try {
+      const season = req.params.season;
+      console.log(`DEBUG: Historical Assist Share API called for season ${season}`);
+      
+      // Fetch historical player data for the specified season
+      const historicalPlayers = await storage.getHistoricalPlayers(season);
+      
+      if (!historicalPlayers || historicalPlayers.length === 0) {
+        return res.status(404).json({ 
+          error: "No historical data found", 
+          season: season,
+          message: `No player data available for the ${season} season` 
+        });
+      }
+      
+      console.log(`DEBUG: Found ${historicalPlayers.length} historical players for ${season}`);
+      
+      // Group players by team and calculate assist shares based on actual assists
+      const teamAssistShares: { [teamName: string]: { 
+        teamName: string, 
+        teamShort: string, 
+        totalAssists: number, 
+        players: any[] 
+      } } = {};
+      
+      // Process each player and group by team
+      historicalPlayers.forEach(player => {
+        const teamName = player.team_name || player.teamName || 'Unknown Team';
+        const teamShort = player.team_short_name || player.teamShortName || 'UNK';
+        const assists = player.assists || 0;
+        
+        if (!teamAssistShares[teamName]) {
+          teamAssistShares[teamName] = {
+            teamName: teamName,
+            teamShort: teamShort,
+            totalAssists: 0,
+            players: []
+          };
+        }
+        
+        teamAssistShares[teamName].totalAssists += assists;
+        teamAssistShares[teamName].players.push({
+          id: player.id || player.playerId,
+          name: `${player.first_name || player.firstName} ${player.second_name || player.secondName}`,
+          position: player.position || player.positionName,
+          assists: assists,
+          minutes: player.minutes || 0,
+          totalPoints: player.total_points || player.totalPoints || 0
+        });
+      });
+      
+      // Get current bootstrap data for team ID mapping
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      let bootstrapData = null;
+      if (bootstrapResponse.ok) {
+        bootstrapData = await bootstrapResponse.json();
+      }
+      
+      // Calculate assist share percentages and format response
+      const historicalAssistShareData: any[] = [];
+      
+      Object.values(teamAssistShares).forEach((team, teamIndex) => {
+        if (team.totalAssists > 0) {
+          // Calculate assist share for each player
+          const playersWithShares = team.players.map(player => ({
+            id: player.id,
+            name: player.name,
+            position: player.position,
+            assistShare: team.totalAssists > 0 ? Math.round((player.assists / team.totalAssists) * 1000) / 10 : 0.0,
+            projectedAssists: player.assists // For historical data, this is actual assists
+          })).filter(player => player.assistShare > 0).sort((a, b) => b.assistShare - a.assistShare);
+          
+          // Get team ID from current bootstrap data for consistency
+          let teamId = teamIndex + 1; // Fallback
+          
+          if (bootstrapData) {
+            const currentTeam = bootstrapData.teams.find((t: any) => 
+              t.name === team.teamName || t.short_name === team.teamShort
+            );
+            if (currentTeam) teamId = currentTeam.id;
+          }
+          
+          historicalAssistShareData.push({
+            gameweek: 0, // Historical data is season-long
+            teamId: teamId,
+            teamName: team.teamName,
+            teamShort: team.teamShort,
+            expectedAssists: team.totalAssists, // For historical, this is actual total assists
+            players: playersWithShares
+          });
+        }
+      });
+      
+      // Sort by total assists descending
+      historicalAssistShareData.sort((a, b) => b.expectedAssists - a.expectedAssists);
+      
+      console.log(`DEBUG: Generated historical assist share data for ${historicalAssistShareData.length} teams in ${season}`);
+      res.json(historicalAssistShareData);
+      
+    } catch (error) {
+      console.error(`Error generating historical assist share data for ${req.params.season}:`, error);
+      res.status(500).json({ 
+        error: "Failed to generate historical assist share data",
+        season: req.params.season,
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Data Consistency Validation endpoint
   app.get("/api/validate-consistency/:gameweek", async (req, res) => {
     try {

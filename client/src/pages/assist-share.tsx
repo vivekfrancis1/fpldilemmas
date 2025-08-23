@@ -7,24 +7,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
-interface AssistShareData {
-  gameweek: number;
+interface SeasonAssistShareData {
+  gameweek: number; // Always 0 for season-long data
   teamId: number;
   teamName: string;
   teamShort: string;
-  expectedAssists: number;
+  expectedAssists: number; // Season total
   players: {
     id: number;
     name: string;
     position: string;
-    rawShare: number;
-    assistShare: number; // Percentage
-    projectedAssists: number;
+    assistShare: number; // Percentage of team's season assists
+    projectedAssists: number; // Season total projected assists
   }[];
 }
 
 export default function AssistShare() {
-  const [selectedGameweek, setSelectedGameweek] = useState<string>("all");
+  const [selectedSeason, setSelectedSeason] = useState<string>("current");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
@@ -32,37 +31,37 @@ export default function AssistShare() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Get current gameweek for the API call - use next unfinished gameweek
-  const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 2;
-    
-    // Find the next unfinished gameweek for forward-looking projections
-    const nextEvent = bootstrapData.events.find((event: any) => !event.finished && !event.is_current);
-    return nextEvent?.id || 2;
-  }, [bootstrapData]);
-
-  // Use the dedicated assist-share API endpoint - fetch all gameweeks (GW2-GW7)
-  const { data: assistShareData = [], isLoading: assistShareLoading } = useQuery<AssistShareData[]>({
-    queryKey: ["/api/assist-share", 0], // 0 = fetch all gameweeks
-    staleTime: 10 * 60 * 1000,
-    enabled: true
+  // Fetch available seasons
+  const { data: seasonsData } = useQuery<string[]>({
+    queryKey: ["/api/seasons"],
+    staleTime: 15 * 60 * 1000,
   });
 
-  // Filter data
+  // Fetch assist share data based on selected season
+  const { data: assistShareData, isLoading: assistShareLoading } = useQuery<SeasonAssistShareData[]>({
+    queryKey: selectedSeason === "current" ? ["/api/assist-share-season"] : ["/api/assist-share-historical", selectedSeason],
+    enabled: selectedSeason === "current" || (selectedSeason !== "current" && !!selectedSeason),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Use season assist share data directly from API
+  const processedAssistShareData = useMemo(() => {
+    if (!assistShareData || !Array.isArray(assistShareData)) return [];
+    return assistShareData;
+  }, [assistShareData]);
+
+  // Filter data by team only (no gameweek filtering for season data)
   const filteredData = useMemo(() => {
-    return assistShareData.filter(item => {
-      if (selectedGameweek !== "all" && item.gameweek !== parseInt(selectedGameweek)) return false;
+    return processedAssistShareData.filter(item => {
       if (selectedTeam !== "all" && item.teamId !== parseInt(selectedTeam)) return false;
       return true;
     });
-  }, [assistShareData, selectedGameweek, selectedTeam]);
+  }, [processedAssistShareData, selectedTeam]);
 
-  // Get available gameweeks - hardcode to ensure consistency 
-  const availableGameweeks = useMemo(() => {
-    if (assistShareData.length === 0) return [2, 3, 4, 5, 6, 7];
-    const gameweeks = [...new Set(assistShareData.map(item => item.gameweek))].sort((a, b) => a - b);
-    return gameweeks.length > 0 ? gameweeks : [2, 3, 4, 5, 6, 7];
-  }, [assistShareData]);
+  // Sort teams by total expected assists for better display
+  const sortedData = useMemo(() => {
+    return [...filteredData].sort((a, b) => b.expectedAssists - a.expectedAssists);
+  }, [filteredData]);
 
   if (error) {
     return (
@@ -96,10 +95,13 @@ export default function AssistShare() {
               <Zap className="h-8 w-8 text-green-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              Assist Involvement Share
+              {selectedSeason === "current" ? "Season Assist Share Projections" : `${selectedSeason} Assist Share Analysis`}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Team expected assists breakdown by player percentage share for next 6 gameweeks (GW2-GW7)
+              {selectedSeason === "current" 
+                ? "Each player's percentage share of their team's expected assists for the entire remaining season, optimized using historical patterns"
+                : `Each player's percentage share of their team's actual assists provided in the ${selectedSeason} season`
+              }
             </p>
           </div>
 
@@ -107,16 +109,17 @@ export default function AssistShare() {
           <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex flex-wrap gap-4 items-end">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Gameweek:</label>
-                  <Select value={selectedGameweek} onValueChange={setSelectedGameweek}>
-                    <SelectTrigger className="w-32">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-5 w-5 text-green-600" />
+                  <label className="text-sm font-semibold text-gray-700">Season:</label>
+                  <Select value={selectedSeason} onValueChange={setSelectedSeason}>
+                    <SelectTrigger className="w-44 border-2 border-gray-200 hover:border-green-400 transition-colors">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All GWs</SelectItem>
-                      {availableGameweeks.map(gw => (
-                        <SelectItem key={gw} value={gw.toString()}>GW {gw}</SelectItem>
+                      <SelectItem value="current">Current Projections</SelectItem>
+                      {seasonsData?.map(season => (
+                        <SelectItem key={season} value={season}>{season}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -152,20 +155,20 @@ export default function AssistShare() {
           {/* Assist Share Cards */}
           {!isLoading && !assistShareLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredData.map((teamData, index) => (
+              {sortedData.map((teamData, index) => (
                 <Card key={`${teamData.teamId}_${teamData.gameweek}`} className="overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+                  <CardHeader className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white">
                     <CardTitle className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Zap className="h-5 w-5" />
+                        <Users className="h-5 w-5" />
                         <span>{teamData.teamShort}</span>
                       </div>
-                      <Badge variant="secondary" className="bg-white text-green-600">
-                        GW {teamData.gameweek}
+                      <Badge variant="secondary" className="bg-white text-teal-600">
+                        {selectedSeason === "current" ? "Season Projection" : selectedSeason}
                       </Badge>
                     </CardTitle>
                     <div className="text-sm opacity-90">
-                      Expected Assists: <span className="font-bold text-lg">{teamData.expectedAssists}</span>
+                      {selectedSeason === "current" ? "Expected" : "Total"} Assists: <span className="font-bold text-lg">{teamData.expectedAssists.toFixed(0)}</span>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4">
@@ -196,7 +199,7 @@ export default function AssistShare() {
                               {player.assistShare.toFixed(1)}%
                             </span>
                             <span className="text-xs text-gray-500">
-                              {player.projectedAssists.toFixed(2)}
+                              {player.projectedAssists.toFixed(1)} {selectedSeason === "current" ? "proj" : "actual"}
                             </span>
                           </div>
                         </div>
@@ -213,7 +216,7 @@ export default function AssistShare() {
             </div>
           )}
 
-          {!isLoading && !assistShareLoading && filteredData.length === 0 && (
+          {!isLoading && !assistShareLoading && sortedData.length === 0 && (
             <Card>
               <CardContent className="p-12 text-center">
                 <Zap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -233,12 +236,25 @@ export default function AssistShare() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Enhanced with historical assist data from 2016-2024 seasons</li>
-                    <li>• Elite assist providers identified from 5+ year Premier League history</li>
-                    <li>• Advanced creativity metrics and ICT index correlation analysis</li>
-                    <li>• Set piece responsibility and playing time factors included</li>
-                    <li>• Position-specific adjustments for fullbacks vs center-backs</li>
-                    <li>• All players in a team total 100% with logical consistency</li>
+                    {selectedSeason === "current" ? (
+                      <>
+                        <li>• Season-long assist projections using advanced statistical modeling</li>
+                        <li>• Enhanced with historical assist data from 2016-2024 seasons</li>
+                        <li>• Elite assist providers identified from 5+ year Premier League history</li>
+                        <li>• Advanced creativity metrics and ICT index correlation analysis</li>
+                        <li>• Set piece responsibility and playing time factors included</li>
+                        <li>• All players in a team total 100% with logical consistency</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>• Historical assist data from actual {selectedSeason} season performance</li>
+                        <li>• Shows each player's actual assist contribution to their team</li>
+                        <li>• Based on real match results and official FPL records</li>
+                        <li>• Percentage shares calculated from total team assists scored</li>
+                        <li>• Useful for identifying consistent assist providers over time</li>
+                        <li>• All percentages add up to 100% per team for accuracy</li>
+                      </>
+                    )}
                   </ul>
                 </div>
                 <div>
