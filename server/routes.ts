@@ -949,7 +949,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         20: { expectedGoalsPerGame: 1.12, variance: 0.52, confidence: 0.50 }, // Wolves - Defensive setup (42.7 goals)
         11: { expectedGoalsPerGame: 1.10, variance: 0.54, confidence: 0.48 }, // Leicester - Struggle to adapt
         10: { expectedGoalsPerGame: 1.00, variance: 0.58, confidence: 0.45 }, // Ipswich - Promoted team
-        17: { expectedGoalsPerGame: 0.95, variance: 0.55, confidence: 0.43 }  // Southampton - Relegation battle
+        17: { expectedGoalsPerGame: 0.95, variance: 0.55, confidence: 0.43 }, // Southampton - Relegation battle
+        
+        // Promoted teams - relegated-tier projections
+        21: { expectedGoalsPerGame: 0.90, variance: 0.58, confidence: 0.40 }, // Burnley - Championship level (34.2 goals)
+        22: { expectedGoalsPerGame: 0.94, variance: 0.56, confidence: 0.42 }, // Leeds United - Promotion struggle (35.7 goals) 
+        23: { expectedGoalsPerGame: 0.86, variance: 0.60, confidence: 0.38 }  // Sunderland - Lowest tier (32.8 goals)
       },
       
       // Elite defensive market data - Adjusted for higher scoring environment (reduced ~18% to match goal increase)
@@ -2847,13 +2852,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Initialize team standings - only for current Premier League teams
       const teamStandings = new Map();
       
-      // Filter to only include current Premier League teams (20 teams with IDs 1-20)
+      // Include all current Premier League teams (20 teams)
       const currentTeams = bootstrapData.teams.filter((team: any) => 
-        team.id >= 1 && team.id <= 20 && 
-        ['Arsenal', 'Aston Villa', 'Bournemouth', 'Brentford', 'Brighton', 'Chelsea', 
-         'Crystal Palace', 'Everton', 'Fulham', 'Ipswich', 'Leicester', 'Liverpool', 
-         'Man City', 'Man Utd', 'Newcastle', 'Nott\'m Forest', 'Southampton', 'Tottenham', 
-         'West Ham', 'Wolves'].includes(team.name)
+        team.id >= 1 && team.id <= 20
       );
       
       console.log(`DEBUG: Processing ${currentTeams.length} valid Premier League teams`);
