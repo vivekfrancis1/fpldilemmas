@@ -579,7 +579,19 @@ export default function OpenFPLProjections() {
                   {/* Results Summary */}
                   <div className="mt-12 text-center bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-xl border border-gray-200">
                     <div className="text-lg text-gray-700 font-medium">
-                      Showing <span className="font-bold text-blue-600">{filteredProjections.length}</span> of <span className="font-bold">{Array.isArray(projections) ? projections.length : 0}</span> total predictions
+                      Showing <span className="font-bold text-blue-600">{(() => {
+                        const playerGroups = filteredProjections.reduce((acc, proj) => {
+                          acc[proj.player_id] = true;
+                          return acc;
+                        }, {} as Record<number, boolean>);
+                        return Object.keys(playerGroups).length;
+                      })()}</span> unique players from <span className="font-bold">{(() => {
+                        const allPlayerGroups = (Array.isArray(projections) ? projections : []).reduce((acc, proj) => {
+                          acc[proj.player_id] = true;
+                          return acc;
+                        }, {} as Record<number, boolean>);
+                        return Object.keys(allPlayerGroups).length;
+                      })()}</span> total players
                     </div>
                     <div className="text-sm text-gray-500 mt-2">
                       Updated every hour • Processing all 693 active FPL players
