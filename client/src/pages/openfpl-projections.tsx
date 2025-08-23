@@ -249,18 +249,21 @@ export default function OpenFPLProjections() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Horizon</label>
+                  <label className="text-xs font-medium text-gray-600">
+                    Gameweeks
+                    <span className="block text-xs text-gray-400 font-normal">Columns to show</span>
+                  </label>
                   <Select value={horizonFilter} onValueChange={setHorizonFilter}>
                     <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-horizon">
-                      <SelectValue placeholder="1 GW" />
+                      <SelectValue placeholder="6 GWs" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">1 GW</SelectItem>
-                      <SelectItem value="2">2 GW</SelectItem>
-                      <SelectItem value="3">3 GW</SelectItem>
-                      <SelectItem value="4">4 GW</SelectItem>
-                      <SelectItem value="5">5 GW</SelectItem>
-                      <SelectItem value="6">6 GW</SelectItem>
+                      <SelectItem value="1">1 Column</SelectItem>
+                      <SelectItem value="2">2 Columns</SelectItem>
+                      <SelectItem value="3">3 Columns</SelectItem>
+                      <SelectItem value="4">4 Columns</SelectItem>
+                      <SelectItem value="5">5 Columns</SelectItem>
+                      <SelectItem value="6">6 Columns</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
