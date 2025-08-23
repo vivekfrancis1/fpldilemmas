@@ -888,7 +888,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Goal Projections endpoint  
   app.get("/api/team-goal-projections", async (req, res) => {
     try {
-      const weeks = parseInt(req.query.weeks as string) || 6;
+      const weeks = parseInt(req.query.weeks as string) || 35;
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -913,9 +913,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             (f.team_h === team.id || f.team_a === team.id) && 
             !f.finished && 
             f.event > currentGameweek && 
-            f.event <= currentGameweek + weeks
-          )
-          .slice(0, weeks);
+            f.event <= 38
+          );
         
         const projections = upcomingFixtures.map((fixture: any) => {
           const isHome = fixture.team_h === team.id;
@@ -1045,7 +1044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Clean Sheet Projections endpoint
   app.get("/api/team-cs-projections", async (req, res) => {
     try {
-      const weeks = parseInt(req.query.weeks as string) || 6;
+      const weeks = parseInt(req.query.weeks as string) || 35;
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -1069,9 +1068,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             (f.team_h === team.id || f.team_a === team.id) && 
             !f.finished && 
             f.event > currentGameweek && 
-            f.event <= currentGameweek + weeks
-          )
-          .slice(0, weeks);
+            f.event <= 38
+          );
         
         const projections = upcomingFixtures.map((fixture: any) => {
           const isHome = fixture.team_h === team.id;
