@@ -3195,6 +3195,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player Total Assist Projections endpoint - uses saved Assist Share data
+  app.get("/api/player-assist-projections", async (req, res) => {
+    try {
+      console.log(`DEBUG: Player Assist Projections API called`);
+      
+      // Check if we have saved assist share data
+      if (!savedAssistShareData) {
+        console.log(`DEBUG: No saved assist share data found, triggering Assist Share calculation first`);
+        // Trigger assist share calculation first
+        const assistShareResponse = await fetch("http://localhost:5000/api/assist-share-season");
+        if (!assistShareResponse.ok) {
+          throw new Error("Failed to fetch assist share data");
+        }
+        await assistShareResponse.json(); // This will populate savedAssistShareData
+      }
+      
+      if (!savedAssistShareData) {
+        throw new Error("Could not generate assist share data");
+      }
+      
+      console.log(`DEBUG: Using saved Assist Share data from ${new Date(savedAssistShareData.timestamp).toISOString()}`);
+      
+      const { teamSeasonTotals, bootstrapData } = savedAssistShareData;
+      const teams = bootstrapData.teams;
+      const players = bootstrapData.elements;
+      
+      // Convert the saved assist share data to individual player projections
+      const allPlayerProjections: any[] = [];
+      
+      Object.keys(teamSeasonTotals).forEach(teamIdStr => {
+        const teamId = parseInt(teamIdStr);
+        const team = teams.find((t: any) => t.id === teamId);
+        const teamData = teamSeasonTotals[teamId];
+        
+        if (team && teamData.expectedAssists > 0 && teamData.players) {
+          Object.keys(teamData.players).forEach(playerIdStr => {
+            const playerId = parseInt(playerIdStr);
+            const playerData = teamData.players[playerId];
+            const currentPlayer = players.find((p: any) => p.id === playerId);
+            
+            if (currentPlayer && playerData.projectedAssists > 0) {
+              const assistShare = (playerData.projectedAssists / teamData.expectedAssists) * 100;
+              
+              allPlayerProjections.push({
+                id: playerId,
+                name: playerData.name,
+                team: team.name,
+                teamShort: team.short_name,
+                position: playerData.position,
+                currentPrice: currentPlayer.now_cost / 10,
+                projectedAssists: playerData.projectedAssists,
+                assistShare: Math.round(assistShare * 10) / 10
+              });
+            }
+          });
+        }
+      });
+      
+      // Sort by projected assists (highest first)
+      allPlayerProjections.sort((a, b) => b.projectedAssists - a.projectedAssists);
+      
+      console.log(`DEBUG: Generated player assist projections for ${allPlayerProjections.length} players using saved Assist Share data`);
+      res.json(allPlayerProjections);
+    } catch (error) {
+      console.error("Error generating player assist projections:", error);
+      res.status(500).json({ error: "Failed to generate player assist projections" });
+    }
+  });
+
   // Assist Share Historical endpoint - historical season assist data
   app.get("/api/assist-share-historical/:season", async (req, res) => {
     try {
