@@ -1571,7 +1571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Phase 1: Inverse relationship to opponent's projected goals - more gradual and realistic
           // Higher opponent goals = lower clean sheet %, lower opponent goals = higher clean sheet %
           // Using gentler exponential decay and adjusted base rates
-          const decayFactor = 0.15; // More gradual decay for realistic Premier League ranges
+          const decayFactor = 0.1; // Very gradual decay for realistic Premier League ranges
           let adjustedBaseRate = teamBettingData.baseCleanSheetRate;
           
           // Boost base rates for more realistic Premier League clean sheet %
@@ -1582,16 +1582,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const baseCSPercentage = adjustedBaseRate * 100;
           let baseCSProbability = baseCSPercentage * Math.exp(-decayFactor * opponentExpectedGoals);
           
-          // Add defensive floor based on team tier to prevent unrealistically low values (increased by ~50%)
+          // Add defensive floor based on team tier to prevent unrealistically low values
           const teamData = teamService.getTeamData(team.id);
-          let defensiveFloor = 18; // Default minimum (increased from 12)
+          let defensiveFloor = 15; // Default minimum
           if (teamData) {
             switch (teamData.defensiveTier) {
-              case 'elite': defensiveFloor = 27; break; // Increased from 18
-              case 'strong': defensiveFloor = 23; break; // Increased from 15
-              case 'average': defensiveFloor = 18; break; // Increased from 12
-              case 'promoted': defensiveFloor = 12; break; // Increased from 8
-              case 'weak': defensiveFloor = 15; break; // Increased from 10
+              case 'elite': defensiveFloor = 20; break;
+              case 'strong': defensiveFloor = 18; break;
+              case 'average': defensiveFloor = 15; break;
+              case 'weak': defensiveFloor = 12; break;
+              case 'promoted': defensiveFloor = 10; break;
             }
           }
           
