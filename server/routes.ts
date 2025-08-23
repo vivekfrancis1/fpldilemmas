@@ -2784,10 +2784,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("DEBUG: Calculated season totals from Team Goal Projections");
       
-      // Fetch historical data from past two years for goal share weighting
-      console.log("DEBUG: Fetching historical data for 3-year weighted goal shares...");
+      // Fetch historical data from past two years PLUS current year actual data for goal share weighting
+      console.log("DEBUG: Fetching historical data and current year actual data for 3-year weighted goal shares...");
       const historicalSeasons = ["2024/25", "2023/24"];
       const historicalData: { [season: string]: any[] } = {};
+      
+      // Get current year actual goal data from completed matches
+      const currentYearActualData: any[] = [];
+      bootstrapData.elements.forEach((player: any) => {
+        if (player.goals_scored > 0) {
+          currentYearActualData.push({
+            id: player.id,
+            team: player.team,
+            first_name: player.first_name,
+            second_name: player.second_name,
+            goals_scored: player.goals_scored
+          });
+        }
+      });
+      
+      console.log(`DEBUG: Found ${currentYearActualData.length} players with goals in current season actual data`);
+      historicalData["current"] = currentYearActualData;
       
       await Promise.all(historicalSeasons.map(async (season) => {
         try {
@@ -2814,56 +2831,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Calculate weighted goal shares using equal weighting (33.33% each year)
           const weightedPlayerShares: { [playerId: number]: { name: string, position: string, totalWeightedShare: number, totalWeight: number } } = {};
           
-          // 1. Current season projections (33.33% weight)
-          const currentShares = distributeGoalShares(teamPlayers, bootstrapData.element_types);
-          currentShares.forEach(player => {
+          // Initialize all current players
+          teamPlayers.forEach(player => {
             weightedPlayerShares[player.id] = {
-              name: player.name,
-              position: player.position,
-              totalWeightedShare: player.goalShare * 0.3333,
-              totalWeight: 0.3333
+              name: `${player.first_name} ${player.second_name}`,
+              position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
+              totalWeightedShare: 0,
+              totalWeight: 0
             };
           });
           
-          // 2. Historical seasons (33.33% weight each)
-          historicalSeasons.forEach(season => {
+          // Process all three data sources with equal weighting (33.33% each)
+          const allSeasons = ["current", "2024/25", "2023/24"];
+          
+          allSeasons.forEach(season => {
             const seasonData = historicalData[season];
             if (seasonData && seasonData.length > 0) {
-              // Calculate historical goal shares for this team
-              const teamHistoricalPlayers = seasonData.filter(p => p.team === teamId);
-              const teamTotalGoals = teamHistoricalPlayers.reduce((sum, p) => sum + (p.goals_scored || 0), 0);
+              // Calculate goal shares for this team in this season
+              const teamSeasonPlayers = seasonData.filter(p => p.team === teamId);
+              const teamTotalGoals = teamSeasonPlayers.reduce((sum, p) => sum + (p.goals_scored || 0), 0);
               
               if (teamTotalGoals > 0) {
-                teamHistoricalPlayers.forEach(player => {
+                teamSeasonPlayers.forEach(player => {
                   const goals = player.goals_scored || 0;
                   if (goals > 0) {
-                    const historicalGoalShare = (goals / teamTotalGoals) * 100;
+                    const seasonGoalShare = (goals / teamTotalGoals) * 100;
                     
-                    // Try to match by name (since IDs change between seasons)
-                    const playerName = `${player.first_name} ${player.second_name}`.toLowerCase();
                     let matchedPlayerId: number | null = null;
                     
-                    // First try exact name match
-                    for (const currentPlayer of teamPlayers) {
-                      const currentName = `${currentPlayer.first_name} ${currentPlayer.second_name}`.toLowerCase();
-                      if (currentName === playerName) {
-                        matchedPlayerId = currentPlayer.id;
-                        break;
+                    if (season === "current") {
+                      // Direct ID match for current season
+                      matchedPlayerId = player.id;
+                    } else {
+                      // Name matching for historical seasons
+                      const playerName = `${player.first_name} ${player.second_name}`.toLowerCase();
+                      for (const currentPlayer of teamPlayers) {
+                        const currentName = `${currentPlayer.first_name} ${currentPlayer.second_name}`.toLowerCase();
+                        if (currentName === playerName) {
+                          matchedPlayerId = currentPlayer.id;
+                          break;
+                        }
                       }
                     }
                     
-                    // If exact match found, add historical weight
+                    // Add weighted goal share if player matched
                     if (matchedPlayerId && weightedPlayerShares[matchedPlayerId]) {
-                      weightedPlayerShares[matchedPlayerId].totalWeightedShare += historicalGoalShare * 0.3333;
+                      weightedPlayerShares[matchedPlayerId].totalWeightedShare += seasonGoalShare * 0.3333;
                       weightedPlayerShares[matchedPlayerId].totalWeight += 0.3333;
+                      console.log(`DEBUG: Added ${season} data for ${weightedPlayerShares[matchedPlayerId].name}: ${seasonGoalShare.toFixed(1)}% (${goals} goals of ${teamTotalGoals})`);
                     }
                   }
                 });
+              } else {
+                console.log(`DEBUG: No goals found for team ${team.name} in ${season}`);
               }
             }
           });
           
           // Calculate final goal shares and projected goals
+          const finalPlayerShares: any[] = [];
+          
           Object.keys(weightedPlayerShares).forEach(playerIdStr => {
             const playerId = parseInt(playerIdStr);
             const playerData = weightedPlayerShares[playerId];
@@ -2872,14 +2899,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const finalGoalShare = playerData.totalWeight > 0 ? 
               playerData.totalWeightedShare / playerData.totalWeight : 0;
             
-            const projectedGoals = (teamSeasonTotals[teamId].expectedGoals * finalGoalShare / 100);
-            
-            teamSeasonTotals[teamId].players[playerId] = {
-              name: playerData.name,
-              position: playerData.position,
-              projectedGoals: Math.round(projectedGoals * 100) / 100
-            };
+            if (finalGoalShare > 0) {
+              finalPlayerShares.push({
+                id: playerId,
+                name: playerData.name,
+                position: playerData.position,
+                goalShare: finalGoalShare
+              });
+            }
           });
+          
+          // Normalize to ensure team totals 100%
+          const totalShare = finalPlayerShares.reduce((sum, p) => sum + p.goalShare, 0);
+          if (totalShare > 0) {
+            finalPlayerShares.forEach(player => {
+              player.goalShare = (player.goalShare / totalShare) * 100;
+              const projectedGoals = (teamSeasonTotals[teamId].expectedGoals * player.goalShare / 100);
+              
+              teamSeasonTotals[teamId].players[player.id] = {
+                name: player.name,
+                position: player.position,
+                projectedGoals: Math.round(projectedGoals * 100) / 100
+              };
+            });
+          }
         }
       });
       
