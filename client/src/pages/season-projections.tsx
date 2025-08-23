@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { TrendingUp, Target, Users, Search, Trophy, Zap, UserPlus } from "lucide-react";
+import { TrendingUp, Target, Users, Search } from "lucide-react";
 import Layout from "@/components/layout";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SeasonProjection {
   rank: number;
@@ -12,87 +11,64 @@ interface SeasonProjection {
   goals: number;
   assists: number;
   totalInvolvements: number;
-  projectedPoints: number;
-  position: string;
 }
 
-// Calculate projected points using FPL scoring: Goals (4-6pts), Assists (3pts), Appearance (2pts), Bonus (~1.5pt/game)
-const calculateProjectedPoints = (goals: number, assists: number, position: string): number => {
-  const goalPoints = position === "FWD" ? goals * 4 : position === "MID" ? goals * 5 : goals * 6;
-  const assistPoints = assists * 3;
-  const appearancePoints = 32 * 2; // ~32 appearances * 2pts
-  const bonusPoints = (goals + assists) * 0.8; // Bonus correlation
-  const cleanSheetPoints = position === "DEF" ? 12 * 4 : position === "GK" ? 15 * 4 : 0;
-  return Math.round(goalPoints + assistPoints + appearancePoints + bonusPoints + cleanSheetPoints);
-};
-
 const seasonProjectionsData: SeasonProjection[] = [
-  { rank: 1, name: "Haaland", team: "MCI", goals: 24.5, assists: 4.1, totalInvolvements: 28.6, projectedPoints: calculateProjectedPoints(24.5, 4.1, "FWD"), position: "FWD" },
-  { rank: 2, name: "Salah", team: "LIV", goals: 18.3, assists: 10.3, totalInvolvements: 28.6, projectedPoints: calculateProjectedPoints(18.3, 10.3, "MID"), position: "MID" },
-  { rank: 3, name: "Palmer", team: "CHE", goals: 14.8, assists: 10.3, totalInvolvements: 25.1, projectedPoints: calculateProjectedPoints(14.8, 10.3, "MID"), position: "MID" },
-  { rank: 4, name: "Saka", team: "ARS", goals: 12.3, assists: 10.3, totalInvolvements: 22.6, projectedPoints: calculateProjectedPoints(12.3, 10.3, "MID"), position: "MID" },
-  { rank: 5, name: "Isak", team: "NEW", goals: 17.3, assists: 4.1, totalInvolvements: 21.4, projectedPoints: calculateProjectedPoints(17.3, 4.1, "FWD"), position: "FWD" },
-  { rank: 6, name: "Fernandes", team: "MUN", goals: 10.8, assists: 10.0, totalInvolvements: 20.8, projectedPoints: calculateProjectedPoints(10.8, 10.0, "MID"), position: "MID" },
-  { rank: 7, name: "Gyokeres", team: "SCP", goals: 16.3, assists: 4.4, totalInvolvements: 20.7, projectedPoints: calculateProjectedPoints(16.3, 4.4, "FWD"), position: "FWD" },
-  { rank: 8, name: "Marmous", team: "LIV", goals: 11.8, assists: 6.5, totalInvolvements: 18.3, projectedPoints: calculateProjectedPoints(11.8, 6.5, "MID"), position: "MID" },
-  { rank: 9, name: "Wirtz", team: "LEV", goals: 9.8, assists: 8.3, totalInvolvements: 18.0, projectedPoints: calculateProjectedPoints(9.8, 8.3, "MID"), position: "MID" },
-  { rank: 10, name: "Watkins", team: "AVL", goals: 13.3, assists: 4.6, totalInvolvements: 17.9, projectedPoints: calculateProjectedPoints(13.3, 4.6, "FWD"), position: "FWD" },
-  { rank: 11, name: "Solanke", team: "TOT", goals: 13.8, assists: 3.6, totalInvolvements: 17.4, projectedPoints: calculateProjectedPoints(13.8, 3.6, "FWD"), position: "FWD" },
-  { rank: 12, name: "Bowen", team: "WHU", goals: 10.3, assists: 6.8, totalInvolvements: 17.1, projectedPoints: calculateProjectedPoints(10.3, 6.8, "MID"), position: "MID" },
-  { rank: 13, name: "Gordon", team: "NEW", goals: 10.3, assists: 6.5, totalInvolvements: 16.8, projectedPoints: calculateProjectedPoints(10.3, 6.5, "MID"), position: "MID" },
-  { rank: 14, name: "Rogers", team: "AVL", goals: 9.0, assists: 7.3, totalInvolvements: 16.3, projectedPoints: calculateProjectedPoints(9.0, 7.3, "MID"), position: "MID" },
-  { rank: 15, name: "Joao Pedro", team: "BHA", goals: 10.8, assists: 5.5, totalInvolvements: 16.3, projectedPoints: calculateProjectedPoints(10.8, 5.5, "FWD"), position: "FWD" },
-  { rank: 16, name: "Foden", team: "MCI", goals: 9.5, assists: 6.8, totalInvolvements: 16.3, projectedPoints: calculateProjectedPoints(9.5, 6.8, "MID"), position: "MID" },
-  { rank: 17, name: "Mateta", team: "CRY", goals: 12.8, assists: 2.9, totalInvolvements: 15.6, projectedPoints: calculateProjectedPoints(12.8, 2.9, "FWD"), position: "FWD" },
-  { rank: 18, name: "Cunha", team: "WOL", goals: 9.0, assists: 6.5, totalInvolvements: 15.5, projectedPoints: calculateProjectedPoints(9.0, 6.5, "MID"), position: "MID" },
-  { rank: 19, name: "Wood", team: "NEW", goals: 12.3, assists: 2.9, totalInvolvements: 15.2, projectedPoints: calculateProjectedPoints(12.3, 2.9, "FWD"), position: "FWD" },
-  { rank: 20, name: "Elanga", team: "NFO", goals: 7.5, assists: 7.0, totalInvolvements: 14.5, projectedPoints: calculateProjectedPoints(7.5, 7.0, "MID"), position: "MID" },
-  { rank: 21, name: "Gibbs-White", team: "NFO", goals: 7.0, assists: 7.5, totalInvolvements: 14.5, projectedPoints: calculateProjectedPoints(7.0, 7.5, "MID"), position: "MID" },
-  { rank: 22, name: "Barnes", team: "NEW", goals: 8.0, assists: 6.3, totalInvolvements: 14.3, projectedPoints: calculateProjectedPoints(8.0, 6.3, "MID"), position: "MID" },
-  { rank: 23, name: "Evanilson", team: "BOU", goals: 11.3, assists: 2.9, totalInvolvements: 14.2, projectedPoints: calculateProjectedPoints(11.3, 2.9, "FWD"), position: "FWD" },
-  { rank: 24, name: "Str.Larsen", team: "WOL", goals: 10.8, assists: 3.4, totalInvolvements: 14.2, projectedPoints: calculateProjectedPoints(10.8, 3.4, "FWD"), position: "FWD" },
-  { rank: 25, name: "Odegaard", team: "ARS", goals: 6.0, assists: 8.0, totalInvolvements: 14.0, projectedPoints: calculateProjectedPoints(6.0, 8.0, "MID"), position: "MID" },
-  { rank: 26, name: "Sarr", team: "CRY", goals: 7.8, assists: 6.3, totalInvolvements: 14.1, projectedPoints: calculateProjectedPoints(7.8, 6.3, "MID"), position: "MID" },
-  { rank: 27, name: "Mbeumo", team: "BRE", goals: 8.0, assists: 6.0, totalInvolvements: 14.0, projectedPoints: calculateProjectedPoints(8.0, 6.0, "MID"), position: "MID" },
-  { rank: 28, name: "Johnson", team: "FUL", goals: 9.0, assists: 5.0, totalInvolvements: 14.0, projectedPoints: calculateProjectedPoints(9.0, 5.0, "FWD"), position: "FWD" },
-  { rank: 29, name: "Semenyo", team: "BOU", goals: 9.3, assists: 4.6, totalInvolvements: 13.9, projectedPoints: calculateProjectedPoints(9.3, 4.6, "FWD"), position: "FWD" },
-  { rank: 30, name: "Gakpo", team: "LIV", goals: 9.0, assists: 4.9, totalInvolvements: 13.9, projectedPoints: calculateProjectedPoints(9.0, 4.9, "MID"), position: "MID" },
-  { rank: 31, name: "Martinelli", team: "ARS", goals: 7.3, assists: 6.5, totalInvolvements: 13.8, projectedPoints: calculateProjectedPoints(7.3, 6.5, "MID"), position: "MID" },
-  { rank: 32, name: "Cherki", team: "LYO", goals: 6.0, assists: 7.8, totalInvolvements: 13.8, projectedPoints: calculateProjectedPoints(6.0, 7.8, "MID"), position: "MID" },
-  { rank: 33, name: "Neto", team: "CHE", goals: 6.3, assists: 7.3, totalInvolvements: 13.6, projectedPoints: calculateProjectedPoints(6.3, 7.3, "MID"), position: "MID" },
-  { rank: 34, name: "Kluivert", team: "BOU", goals: 8.8, assists: 4.6, totalInvolvements: 13.4, projectedPoints: calculateProjectedPoints(8.8, 4.6, "MID"), position: "MID" },
-  { rank: 35, name: "Sesko", team: "RBL", goals: 10.8, assists: 2.6, totalInvolvements: 13.4, projectedPoints: calculateProjectedPoints(10.8, 2.6, "FWD"), position: "FWD" },
-  { rank: 36, name: "Rice", team: "ARS", goals: 5.3, assists: 7.8, totalInvolvements: 13.1, projectedPoints: calculateProjectedPoints(5.3, 7.8, "MID"), position: "MID" },
-  { rank: 37, name: "Mitoma", team: "BHA", goals: 7.8, assists: 5.3, totalInvolvements: 13.1, projectedPoints: calculateProjectedPoints(7.8, 5.3, "MID"), position: "MID" },
-  { rank: 38, name: "Georginio", team: "LIV", goals: 7.5, assists: 5.3, totalInvolvements: 12.8, projectedPoints: calculateProjectedPoints(7.5, 5.3, "MID"), position: "MID" },
-  { rank: 39, name: "Delap", team: "IPS", goals: 9.5, assists: 2.9, totalInvolvements: 12.4, projectedPoints: calculateProjectedPoints(9.5, 2.9, "FWD"), position: "FWD" },
-  { rank: 40, name: "Raul", team: "WOL", goals: 9.8, assists: 2.6, totalInvolvements: 12.4, projectedPoints: calculateProjectedPoints(9.8, 2.6, "FWD"), position: "FWD" },
-  { rank: 41, name: "Kudus", team: "WHU", goals: 7.3, assists: 5.0, totalInvolvements: 12.3, projectedPoints: calculateProjectedPoints(7.3, 5.0, "MID"), position: "MID" },
-  { rank: 42, name: "Havertz", team: "ARS", goals: 8.5, assists: 3.6, totalInvolvements: 12.1, projectedPoints: calculateProjectedPoints(8.5, 3.6, "FWD"), position: "FWD" },
-  { rank: 43, name: "Schade", team: "BRE", goals: 7.8, assists: 4.1, totalInvolvements: 11.9, projectedPoints: calculateProjectedPoints(7.8, 4.1, "FWD"), position: "FWD" },
-  { rank: 44, name: "Szoboszlai", team: "LIV", goals: 5.8, assists: 6.0, totalInvolvements: 11.8, projectedPoints: calculateProjectedPoints(5.8, 6.0, "MID"), position: "MID" },
-  { rank: 45, name: "Thiago", team: "SOU", goals: 9.3, assists: 2.4, totalInvolvements: 11.6, projectedPoints: calculateProjectedPoints(9.3, 2.4, "FWD"), position: "FWD" },
-  { rank: 46, name: "Enzo", team: "CHE", goals: 5.5, assists: 6.0, totalInvolvements: 11.5, projectedPoints: calculateProjectedPoints(5.5, 6.0, "MID"), position: "MID" },
-  { rank: 47, name: "Murphy", team: "NEW", goals: 4.9, assists: 6.5, totalInvolvements: 11.4, projectedPoints: calculateProjectedPoints(4.9, 6.5, "MID"), position: "MID" },
-  { rank: 48, name: "Paqueta", team: "WHU", goals: 6.8, assists: 4.6, totalInvolvements: 11.4, projectedPoints: calculateProjectedPoints(6.8, 4.6, "MID"), position: "MID" },
-  { rank: 49, name: "Amad", team: "MUN", goals: 5.5, assists: 5.8, totalInvolvements: 11.3, projectedPoints: calculateProjectedPoints(5.5, 5.8, "MID"), position: "MID" },
-  { rank: 50, name: "Doku", team: "MCI", goals: 4.9, assists: 6.3, totalInvolvements: 11.1, projectedPoints: calculateProjectedPoints(4.9, 6.3, "MID"), position: "MID" }
+  { rank: 1, name: "Haaland", team: "MCI", goals: 24.5, assists: 4.1, totalInvolvements: 28.6 },
+  { rank: 2, name: "Salah", team: "LIV", goals: 18.3, assists: 10.3, totalInvolvements: 28.6 },
+  { rank: 3, name: "Palmer", team: "CHE", goals: 14.8, assists: 10.3, totalInvolvements: 25.1 },
+  { rank: 4, name: "Saka", team: "ARS", goals: 12.3, assists: 10.3, totalInvolvements: 22.6 },
+  { rank: 5, name: "Isak", team: "NEW", goals: 17.3, assists: 4.1, totalInvolvements: 21.4 },
+  { rank: 6, name: "Fernandes", team: "MUN", goals: 10.8, assists: 10.0, totalInvolvements: 20.8 },
+  { rank: 7, name: "Gyokeres", team: "SCP", goals: 16.3, assists: 4.4, totalInvolvements: 20.7 },
+  { rank: 8, name: "Marmous", team: "LIV", goals: 11.8, assists: 6.5, totalInvolvements: 18.3 },
+  { rank: 9, name: "Wirtz", team: "LEV", goals: 9.8, assists: 8.3, totalInvolvements: 18.0 },
+  { rank: 10, name: "Watkins", team: "AVL", goals: 13.3, assists: 4.6, totalInvolvements: 17.9 },
+  { rank: 11, name: "Solanke", team: "TOT", goals: 13.8, assists: 3.6, totalInvolvements: 17.4 },
+  { rank: 12, name: "Bowen", team: "WHU", goals: 10.3, assists: 6.8, totalInvolvements: 17.1 },
+  { rank: 13, name: "Gordon", team: "NEW", goals: 10.3, assists: 6.5, totalInvolvements: 16.8 },
+  { rank: 14, name: "Rogers", team: "AVL", goals: 9.0, assists: 7.3, totalInvolvements: 16.3 },
+  { rank: 15, name: "Joao Pedro", team: "BHA", goals: 10.8, assists: 5.5, totalInvolvements: 16.3 },
+  { rank: 16, name: "Foden", team: "MCI", goals: 9.5, assists: 6.8, totalInvolvements: 16.3 },
+  { rank: 17, name: "Mateta", team: "CRY", goals: 12.8, assists: 2.9, totalInvolvements: 15.6 },
+  { rank: 18, name: "Cunha", team: "WOL", goals: 9.0, assists: 6.5, totalInvolvements: 15.5 },
+  { rank: 19, name: "Wood", team: "NEW", goals: 12.3, assists: 2.9, totalInvolvements: 15.2 },
+  { rank: 20, name: "Elanga", team: "NFO", goals: 7.5, assists: 7.0, totalInvolvements: 14.5 },
+  { rank: 21, name: "Gibbs-White", team: "NFO", goals: 7.0, assists: 7.5, totalInvolvements: 14.5 },
+  { rank: 22, name: "Barnes", team: "NEW", goals: 8.0, assists: 6.3, totalInvolvements: 14.3 },
+  { rank: 23, name: "Evanilson", team: "BOU", goals: 11.3, assists: 2.9, totalInvolvements: 14.2 },
+  { rank: 24, name: "Str.Larsen", team: "WOL", goals: 10.8, assists: 3.4, totalInvolvements: 14.2 },
+  { rank: 25, name: "Odegaard", team: "ARS", goals: 6.0, assists: 8.0, totalInvolvements: 14.0 },
+  { rank: 26, name: "Sarr", team: "CRY", goals: 7.8, assists: 6.3, totalInvolvements: 14.1 },
+  { rank: 27, name: "Mbeumo", team: "BRE", goals: 8.0, assists: 6.0, totalInvolvements: 14.0 },
+  { rank: 28, name: "Johnson", team: "FUL", goals: 9.0, assists: 5.0, totalInvolvements: 14.0 },
+  { rank: 29, name: "Semenyo", team: "BOU", goals: 9.3, assists: 4.6, totalInvolvements: 13.9 },
+  { rank: 30, name: "Gakpo", team: "LIV", goals: 9.0, assists: 4.9, totalInvolvements: 13.9 },
+  { rank: 31, name: "Martinelli", team: "ARS", goals: 7.3, assists: 6.5, totalInvolvements: 13.8 },
+  { rank: 32, name: "Cherki", team: "LYO", goals: 6.0, assists: 7.8, totalInvolvements: 13.8 },
+  { rank: 33, name: "Neto", team: "CHE", goals: 6.3, assists: 7.3, totalInvolvements: 13.6 },
+  { rank: 34, name: "Kluivert", team: "BOU", goals: 8.8, assists: 4.6, totalInvolvements: 13.4 },
+  { rank: 35, name: "Sesko", team: "RBL", goals: 10.8, assists: 2.6, totalInvolvements: 13.4 },
+  { rank: 36, name: "Rice", team: "ARS", goals: 5.3, assists: 7.8, totalInvolvements: 13.1 },
+  { rank: 37, name: "Mitoma", team: "BHA", goals: 7.8, assists: 5.3, totalInvolvements: 13.1 },
+  { rank: 38, name: "Georginio", team: "LIV", goals: 7.5, assists: 5.3, totalInvolvements: 12.8 },
+  { rank: 39, name: "Delap", team: "IPS", goals: 9.5, assists: 2.9, totalInvolvements: 12.4 },
+  { rank: 40, name: "Raul", team: "WOL", goals: 9.8, assists: 2.6, totalInvolvements: 12.4 },
+  { rank: 41, name: "Kudus", team: "WHU", goals: 7.3, assists: 5.0, totalInvolvements: 12.3 },
+  { rank: 42, name: "Havertz", team: "ARS", goals: 8.5, assists: 3.6, totalInvolvements: 12.1 },
+  { rank: 43, name: "Schade", team: "BRE", goals: 7.8, assists: 4.1, totalInvolvements: 11.9 },
+  { rank: 44, name: "Szoboszlai", team: "LIV", goals: 5.8, assists: 6.0, totalInvolvements: 11.8 },
+  { rank: 45, name: "Thiago", team: "SOU", goals: 9.3, assists: 2.4, totalInvolvements: 11.6 },
+  { rank: 46, name: "Enzo", team: "CHE", goals: 5.5, assists: 6.0, totalInvolvements: 11.5 },
+  { rank: 47, name: "Murphy", team: "NEW", goals: 4.9, assists: 6.5, totalInvolvements: 11.4 },
+  { rank: 48, name: "Paqueta", team: "WHU", goals: 6.8, assists: 4.6, totalInvolvements: 11.4 },
+  { rank: 49, name: "Amad", team: "MUN", goals: 5.5, assists: 5.8, totalInvolvements: 11.3 },
+  { rank: 50, name: "Doku", team: "MCI", goals: 4.9, assists: 6.3, totalInvolvements: 11.1 }
 ];
 
 export default function SeasonProjections() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<"goals" | "assists" | "totalInvolvements" | "projectedPoints">("totalInvolvements");
-  const [activeTab, setActiveTab] = useState("involvements");
-
-  // Update sort when tab changes
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    if (tab === "points") {
-      setSortBy("projectedPoints");
-    } else {
-      setSortBy("totalInvolvements");
-    }
-  };
+  const [sortBy, setSortBy] = useState<"goals" | "assists" | "totalInvolvements">("totalInvolvements");
   const [positionFilter, setPositionFilter] = useState("all");
 
   const getTeamColor = (team: string): string => {
@@ -132,8 +108,6 @@ export default function SeasonProjections() {
           return b.goals - a.goals;
         case "assists":
           return b.assists - a.assists;
-        case "projectedPoints":
-          return b.projectedPoints - a.projectedPoints;
         case "totalInvolvements":
         default:
           return b.totalInvolvements - a.totalInvolvements;
@@ -186,7 +160,6 @@ export default function SeasonProjections() {
                       <SelectItem value="totalInvolvements">Total Involvements</SelectItem>
                       <SelectItem value="goals">Goals</SelectItem>
                       <SelectItem value="assists">Assists</SelectItem>
-                      <SelectItem value="projectedPoints">Projected Points</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
