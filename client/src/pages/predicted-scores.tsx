@@ -69,13 +69,12 @@ export default function PredictedScores() {
     });
   }, [predictedScoresData, selectedGameweek, selectedTeam, showFinished]);
 
-  const getResultColor = (result: string, isActual = false) => {
-    const prefix = isActual ? 'border' : 'bg';
-    switch (result) {
-      case 'home_win': return `${prefix}-green-500`;
-      case 'away_win': return `${prefix}-blue-500`;
-      case 'draw': return `${prefix}-yellow-500`;
-      default: return `${prefix}-gray-500`;
+  const getResultColor = (teamResult: string) => {
+    switch (teamResult) {
+      case 'win': return 'bg-green-500';
+      case 'loss': return 'bg-red-500';
+      case 'draw': return 'bg-yellow-500';
+      default: return 'bg-gray-500';
     }
   };
 
@@ -219,9 +218,6 @@ export default function PredictedScores() {
                         Expected Goals
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Confidence
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
                     </tr>
@@ -246,7 +242,7 @@ export default function PredictedScores() {
                             <span className="text-sm font-medium text-gray-900">
                               {match.homeTeam.shortName}
                             </span>
-                            <Badge className={`${getResultColor(match.predictedResult)} text-white text-xs`}>
+                            <Badge className={`${getResultColor(match.homeTeam.result)} text-white text-xs`}>
                               {match.homeTeam.result === 'win' ? (match.finished ? 'Win' : 'Projected Win') :
                                match.homeTeam.result === 'loss' ? (match.finished ? 'Loss' : 'Projected Loss') :
                                (match.finished ? 'Draw' : 'Projected Draw')}
@@ -274,7 +270,7 @@ export default function PredictedScores() {
                             <span className="text-sm font-medium text-gray-900">
                               {match.awayTeam.shortName}
                             </span>
-                            <Badge className={`${getResultColor(match.predictedResult)} text-white text-xs`}>
+                            <Badge className={`${getResultColor(match.awayTeam.result)} text-white text-xs`}>
                               {match.awayTeam.result === 'win' ? (match.finished ? 'Win' : 'Projected Win') :
                                match.awayTeam.result === 'loss' ? (match.finished ? 'Loss' : 'Projected Loss') :
                                (match.finished ? 'Draw' : 'Projected Draw')}
@@ -288,12 +284,6 @@ export default function PredictedScores() {
                           <div className="text-xs text-gray-500">
                             ({match.totalPredictedGoals} predicted)
                           </div>
-                        </td>
-                        
-                        <td className="px-4 py-4 text-center">
-                          <Badge variant={match.confidence === 'High' ? 'default' : match.confidence === 'Medium' ? 'secondary' : 'destructive'}>
-                            {match.confidence}
-                          </Badge>
                         </td>
                         
                         <td className="px-4 py-4 text-center">
