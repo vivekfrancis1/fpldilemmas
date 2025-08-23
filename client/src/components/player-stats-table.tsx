@@ -259,12 +259,14 @@ export default function PlayerStatsTable({
 
       {/* Comprehensive Player Statistics Table */}
       <div className="overflow-x-auto">
-        <table className="fpl-table min-w-[1200px] sm:min-w-[2400px]">
+        <table className="fpl-table text-xs min-w-[800px] w-full lg:min-w-full xl:min-w-full">
           <thead className="fpl-table-header">
             <tr>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left min-w-[150px] sm:min-w-[200px] font-semibold text-gray-900 text-xs sm:text-sm">
+              <th className="px-2 sm:px-3 py-2 sm:py-3 text-left min-w-[120px] sm:min-w-[160px] font-semibold text-gray-900 text-xs sm:text-sm">
                 Player
               </th>
+              <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[40px] sm:min-w-[50px] font-semibold text-gray-900 text-xs sm:text-sm">Team</th>
+              <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[35px] sm:min-w-[50px] font-semibold text-gray-900 text-xs sm:text-sm">Pos</th>
               {/* Priority columns first */}
               <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[60px] sm:min-w-[80px]">
                 <SortableHeader field="now_cost" label="Price" />
@@ -388,28 +390,25 @@ export default function PlayerStatsTable({
                 <tr key={player.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${
                   index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
                 }`} data-testid={`row-player-${player.id}`}>
-                  <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap min-w-[150px] sm:min-w-[200px]">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8">
-                        <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-fpl-purple flex items-center justify-center text-white font-semibold text-xs">
-                          {player.first_name[0]}{player.second_name[0]}
-                        </div>
-                      </div>
-                      <div className="ml-2 sm:ml-3 min-w-0">
-                        <div className="text-xs sm:text-sm font-medium text-gray-900 truncate">{player.web_name}</div>
-                        <div className="text-xs text-gray-500">
-                          <span className={`inline-block w-4 h-4 sm:w-6 sm:h-6 rounded-full text-xs font-bold text-white flex items-center justify-center mr-1 ${
-                            position === 'GKP' ? 'bg-yellow-500' :
-                            position === 'DEF' ? 'bg-green-500' :
-                            position === 'MID' ? 'bg-blue-500' :
-                            'bg-red-500'
-                          }`}>
-                            {position.charAt(0)}
-                          </span>
-                          <span className="hidden sm:inline">{teamName}</span>
-                        </div>
-                      </div>
+                  <td className="px-2 sm:px-3 py-2 sm:py-3 text-left">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-900 text-xs sm:text-sm">
+                        {player.web_name}
+                      </span>
                     </div>
+                  </td>
+                  <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
+                    <span className="text-xs text-gray-600">{teamName}</span>
+                  </td>
+                  <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
+                    <span className={`inline-block w-4 h-4 sm:w-6 sm:h-6 rounded-full text-xs font-bold text-white flex items-center justify-center ${
+                      position === 'GKP' ? 'bg-yellow-500' :
+                      position === 'DEF' ? 'bg-green-500' :
+                      position === 'MID' ? 'bg-blue-500' :
+                      'bg-red-500'
+                    }`}>
+                      {position.charAt(0)}
+                    </span>
                   </td>
                   {/* Priority columns first */}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-gray-900">
