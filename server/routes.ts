@@ -3953,8 +3953,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         leagueScaling = unifiedProjectionSettings.leagueGoalsPerSeason / totalOriginalGoals;
         console.log(`DEBUG: League Goals Per Season scaling: ${leagueScaling.toFixed(4)} (target: ${unifiedProjectionSettings.leagueGoalsPerSeason})`);
         
-        // Apply league scaling to both totals so balance calculations remain correct
-        totalOriginalGoals *= leagueScaling;
+        // Apply league scaling to the original goals scored total only 
+        // Goals against will be mirrored perfectly after defensive variance is applied
+        totalOriginalGoals = unifiedProjectionSettings.leagueGoalsPerSeason;
         totalAdjustedGoals *= leagueScaling;
       }
 
@@ -3990,19 +3991,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate average goals against and apply selective adjustment
       const avgGoalsAgainst = Array.from(teamTotals.values()).reduce((sum: any, total: any) => sum + total, 0) / teamTotals.size;
       
-      // Apply graduated normalization that preserves tier differences
-      Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
+      // Apply defensive variance first, then balance globally for perfect consistency
+      const totalGoalsBeforeBalance = Array.from(teamsGoalsAgainst.values()).reduce((sum, team: any) => {
         const currentTotal = teamTotals.get(team.id);
         const defensiveTier = getDefensiveTier(team.id);
-        
-        // Use defensive multipliers directly from admin portal settings 
-        let targetMultiplier = getDefensiveMultiplier(defensiveTier);
-        
+        const targetMultiplier = getDefensiveMultiplier(defensiveTier);
         const targetTotal = avgGoalsAgainst * targetMultiplier;
         const teamAdjustmentFactor = currentTotal > 0 ? targetTotal / currentTotal : 1;
         
-        // Apply team-specific adjustment with global balance factor
-        const finalAdjustment = teamAdjustmentFactor * rawNormalizationFactor;
+        // Apply defensive variance without balance factor yet
+        const newTotal = Math.max(0.1, currentTotal * teamAdjustmentFactor);
+        return sum + newTotal;
+      }, 0);
+      
+      // Calculate global balance factor to ensure perfect Goals Scored = Goals Against
+      const globalBalanceFactor = totalOriginalGoals / totalGoalsBeforeBalance;
+      console.log(`DEBUG: Global balance factor: ${globalBalanceFactor.toFixed(4)} (Goals Scored: ${totalOriginalGoals.toFixed(2)}, Goals Against before balance: ${totalGoalsBeforeBalance.toFixed(2)})`);
+      
+      // Apply defensive variance AND global balance factor
+      Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
+        const currentTotal = teamTotals.get(team.id);
+        const defensiveTier = getDefensiveTier(team.id);
+        const targetMultiplier = getDefensiveMultiplier(defensiveTier);
+        const targetTotal = avgGoalsAgainst * targetMultiplier;
+        const teamAdjustmentFactor = currentTotal > 0 ? targetTotal / currentTotal : 1;
+        
+        // Apply both defensive variance AND perfect balance
+        const finalAdjustment = teamAdjustmentFactor * globalBalanceFactor;
         
         // Apply the adjustment to all gameweeks for this team
         Object.keys(team.gameweekProjections).forEach((gw: any) => {
@@ -4010,6 +4025,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             team.gameweekProjections[gw] *= finalAdjustment;
           }
         });
+        
+        console.log(`DEBUG: Team ${team.teamShort} - Tier: ${defensiveTier} (${targetMultiplier.toFixed(2)}x), Base: ${currentTotal.toFixed(2)}, After Variance: ${(currentTotal * teamAdjustmentFactor).toFixed(2)}, Final: ${(currentTotal * finalAdjustment).toFixed(2)}`);
       });
       
       console.log(`DEBUG: Applied graduated normalization with defensive tier preservation`);
