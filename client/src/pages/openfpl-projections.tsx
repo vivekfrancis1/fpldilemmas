@@ -191,64 +191,79 @@ export default function OpenFPLProjections() {
                   />
                 </div>
                 
-                <Select value={positionFilter} onValueChange={setPositionFilter}>
-                  <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-position">
-                    <SelectValue placeholder="Position" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Positions</SelectItem>
-                    {getPlayersByPosition().map(position => (
-                      <SelectItem key={position.id} value={position.name}>
-                        {position.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">Position</label>
+                  <Select value={positionFilter} onValueChange={setPositionFilter}>
+                    <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-position">
+                      <SelectValue placeholder="All Positions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Positions</SelectItem>
+                      {getPlayersByPosition().map(position => (
+                        <SelectItem key={position.id} value={position.name}>
+                          {position.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <Select value={horizonFilter} onValueChange={setHorizonFilter}>
-                  <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-horizon">
-                    <SelectValue placeholder="Horizon" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 GW</SelectItem>
-                    <SelectItem value="2">2 GW</SelectItem>
-                    <SelectItem value="3">3 GW</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">Horizon</label>
+                  <Select value={horizonFilter} onValueChange={setHorizonFilter}>
+                    <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-horizon">
+                      <SelectValue placeholder="1 GW" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 GW</SelectItem>
+                      <SelectItem value="2">2 GW</SelectItem>
+                      <SelectItem value="3">3 GW</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <Select value={gameweekFilter} onValueChange={setGameweekFilter}>
-                  <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-gameweek">
-                    <SelectValue placeholder="Target GW" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="next">Next GW</SelectItem>
-                    <SelectItem value="current">Current GW</SelectItem>
-                    <SelectItem value="all">All Available</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">Target</label>
+                  <Select value={gameweekFilter} onValueChange={setGameweekFilter}>
+                    <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-gameweek">
+                      <SelectValue placeholder="Next GW" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="next">Next GW</SelectItem>
+                      <SelectItem value="current">Current GW</SelectItem>
+                      <SelectItem value="all">All Available</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <Input
-                  placeholder="Min own %"
-                  value={minOwnership}
-                  onChange={(e) => setMinOwnership(e.target.value)}
-                  type="number"
-                  min="0"
-                  max="100"
-                  className="h-10 md:h-12 border-2"
-                  data-testid="input-ownership"
-                />
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">Min Ownership</label>
+                  <Input
+                    placeholder="Min own %"
+                    value={minOwnership}
+                    onChange={(e) => setMinOwnership(e.target.value)}
+                    type="number"
+                    min="0"
+                    max="100"
+                    className="h-10 md:h-12 border-2"
+                    data-testid="input-ownership"
+                  />
+                </div>
 
-                <Input
-                  placeholder="Max £X.Xm"
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
-                  type="number"
-                  step="0.1"
-                  min="3.9"
-                  max="15.0"
-                  className="h-10 md:h-12 border-2"
-                  data-testid="input-price"
-                />
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">Max Price</label>
+                  <Input
+                    placeholder="Max £X.Xm"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    type="number"
+                    step="0.1"
+                    min="3.9"
+                    max="15.0"
+                    className="h-10 md:h-12 border-2"
+                    data-testid="input-price"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
