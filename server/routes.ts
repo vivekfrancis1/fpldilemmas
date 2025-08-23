@@ -2989,6 +2989,223 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player Total Goal Projections endpoint - individual player season projections
+  app.get("/api/player-goal-projections", async (req, res) => {
+    try {
+      console.log(`DEBUG: Player Goal Projections API called`);
+      
+      // Reuse the same calculation logic from Goal Share but format for individual players
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      
+      const teams = bootstrapData.teams;
+      const players = bootstrapData.elements;
+      const positions = bootstrapData.element_types;
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      
+      // Use Team Goal Projections data for team totals
+      const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
+      
+      // Initialize team data
+      teams.forEach((team: any) => {
+        teamSeasonTotals[team.id] = {
+          expectedGoals: 0,
+          players: {}
+        };
+      });
+      
+      // Calculate team season totals using same logic as Team Goal Projections
+      for (let gw = currentGameweek; gw <= 38; gw++) {
+        const gwFixtures = fixturesData.filter((fixture: any) => fixture.event === gw);
+        
+        gwFixtures.forEach((fixture: any) => {
+          if (fixture.team_h && fixture.team_a) {
+            const homeTeamId = fixture.team_h;
+            const awayTeamId = fixture.team_a;
+            
+            // Use same seeded goal calculation as team projections
+            const seed = homeTeamId * 1000 + awayTeamId * 100 + gw;
+            const random = (seed * 9301 + 49297) % 233280;
+            const homeGoals = 0.6 + (random / 233280) * 3.4;
+            const awayGoals = 0.6 + ((random * 137) % 233280 / 233280) * 3.4;
+            
+            teamSeasonTotals[homeTeamId].expectedGoals += homeGoals;
+            teamSeasonTotals[awayTeamId].expectedGoals += awayGoals;
+          }
+        });
+      }
+      
+      console.log("DEBUG: Calculated season totals from Team Goal Projections for Player projections");
+      
+      // Get historical data (same as Goal Share)
+      const historicalSeasons = ["2024/25", "2023/24"];
+      const historicalData: { [season: string]: any[] } = {};
+      
+      // Current year actual data
+      const currentYearActualData: any[] = [];
+      bootstrapData.elements.forEach((player: any) => {
+        if (player.goals_scored > 0) {
+          currentYearActualData.push({
+            id: player.id,
+            team: player.team,
+            first_name: player.first_name,
+            second_name: player.second_name,
+            goals_scored: player.goals_scored
+          });
+        }
+      });
+      
+      historicalData["current"] = currentYearActualData;
+      
+      await Promise.all(historicalSeasons.map(async (season) => {
+        try {
+          const historicalPlayers = await storage.getHistoricalPlayers(season);
+          if (historicalPlayers && historicalPlayers.length > 0) {
+            historicalData[season] = historicalPlayers;
+          }
+        } catch (error) {
+          historicalData[season] = [];
+        }
+      }));
+      
+      // Calculate player projections using the same weighted approach
+      const allPlayerProjections: any[] = [];
+      
+      Object.keys(teamSeasonTotals).forEach(teamIdStr => {
+        const teamId = parseInt(teamIdStr);
+        const team = teams.find((t: any) => t.id === teamId);
+        const teamData = teamSeasonTotals[teamId];
+        
+        if (team && teamData.expectedGoals > 0) {
+          const teamPlayers = players.filter((p: any) => p.team === teamId);
+          
+          const weightedPlayerShares: { [playerId: number]: { name: string, position: string, totalWeightedShare: number, totalWeight: number } } = {};
+          
+          // Initialize all current players
+          teamPlayers.forEach(player => {
+            weightedPlayerShares[player.id] = {
+              name: `${player.first_name} ${player.second_name}`,
+              position: positions.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
+              totalWeightedShare: 0,
+              totalWeight: 0
+            };
+          });
+          
+          // Process all three data sources with equal weighting
+          const allSeasons = ["current", "2024/25", "2023/24"];
+          
+          allSeasons.forEach(season => {
+            const seasonData = historicalData[season];
+            if (seasonData && seasonData.length > 0) {
+              let teamSeasonPlayers: any[] = [];
+              
+              if (season === "current") {
+                teamSeasonPlayers = seasonData.filter(p => p.team === teamId);
+              } else {
+                const currentTeamName = team.name;
+                teamSeasonPlayers = seasonData.filter(p => {
+                  const playerTeamName = p.team_name || p.teamName;
+                  return playerTeamName === currentTeamName;
+                });
+              }
+              
+              const teamTotalGoals = teamSeasonPlayers.reduce((sum, p) => sum + (p.goals_scored || p.goalsScored || 0), 0);
+              
+              if (teamTotalGoals > 0) {
+                teamSeasonPlayers.forEach(player => {
+                  const goals = player.goals_scored || player.goalsScored || 0;
+                  if (goals > 0) {
+                    const seasonGoalShare = (goals / teamTotalGoals) * 100;
+                    
+                    let matchedPlayerId: number | null = null;
+                    
+                    if (season === "current") {
+                      matchedPlayerId = player.id;
+                    } else {
+                      const playerName = `${player.first_name || player.firstName} ${player.second_name || player.secondName}`.toLowerCase();
+                      for (const currentPlayer of teamPlayers) {
+                        const currentName = `${currentPlayer.first_name} ${currentPlayer.second_name}`.toLowerCase();
+                        if (currentName === playerName) {
+                          matchedPlayerId = currentPlayer.id;
+                          break;
+                        }
+                      }
+                    }
+                    
+                    if (matchedPlayerId && weightedPlayerShares[matchedPlayerId]) {
+                      weightedPlayerShares[matchedPlayerId].totalWeightedShare += seasonGoalShare * 0.3333;
+                      weightedPlayerShares[matchedPlayerId].totalWeight += 0.3333;
+                    }
+                  }
+                });
+              }
+            }
+          });
+          
+          // Calculate final projections and add to results
+          const finalPlayerShares: any[] = [];
+          
+          Object.keys(weightedPlayerShares).forEach(playerIdStr => {
+            const playerId = parseInt(playerIdStr);
+            const playerData = weightedPlayerShares[playerId];
+            
+            const finalGoalShare = playerData.totalWeight > 0 ? 
+              playerData.totalWeightedShare / playerData.totalWeight : 0;
+            
+            if (finalGoalShare > 0) {
+              finalPlayerShares.push({
+                id: playerId,
+                name: playerData.name,
+                position: playerData.position,
+                goalShare: finalGoalShare
+              });
+            }
+          });
+          
+          // Normalize and calculate projections
+          const totalShare = finalPlayerShares.reduce((sum, p) => sum + p.goalShare, 0);
+          if (totalShare > 0) {
+            finalPlayerShares.forEach(player => {
+              player.goalShare = (player.goalShare / totalShare) * 100;
+              const projectedGoals = (teamData.expectedGoals * player.goalShare / 100);
+              
+              const currentPlayer = players.find((p: any) => p.id === player.id);
+              
+              allPlayerProjections.push({
+                id: player.id,
+                name: player.name,
+                team: team.name,
+                teamShort: team.short_name,
+                position: player.position,
+                currentPrice: currentPlayer ? currentPlayer.now_cost / 10 : 0,
+                projectedGoals: Math.round(projectedGoals * 100) / 100,
+                goalShare: Math.round(player.goalShare * 10) / 10
+              });
+            });
+          }
+        }
+      });
+      
+      // Sort by projected goals (highest first)
+      allPlayerProjections.sort((a, b) => b.projectedGoals - a.projectedGoals);
+      
+      console.log(`DEBUG: Generated player goal projections for ${allPlayerProjections.length} players`);
+      res.json(allPlayerProjections);
+    } catch (error) {
+      console.error("Error generating player goal projections:", error);
+      res.status(500).json({ error: "Failed to generate player goal projections" });
+    }
+  });
+
   // Assist Share Season endpoint - season-long assist projections for current season
   app.get("/api/assist-share-season", async (req, res) => {
     try {
