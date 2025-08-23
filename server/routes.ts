@@ -1392,6 +1392,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Season-long Goal Share endpoint - aggregates expected goals across all remaining gameweeks
+  app.get("/api/goal-share-season", async (req, res) => {
+    try {
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      
+      console.log("DEBUG: Season Goal Share API called");
+      
+      // Aggregate goal shares across all remaining gameweeks for season totals
+      const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
+      
+      // Generate data for entire remaining season
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      const startGameweek = Math.max(2, currentGameweek);
+      
+      for (let gameweek = startGameweek; gameweek <= 38; gameweek++) {
+        // Generate team goal projections for this gameweek
+        const teams = bootstrapData.teams;
+        const teamProjections: any[] = [];
+        
+        teams.forEach((team: any) => {
+          const gameweekProjections: any = {};
+          
+          // Generate projections for this specific gameweek
+          for (let gw = gameweek; gw <= gameweek; gw++) {
+            const gwFixtures = fixturesData.filter((fixture: any) => 
+              !fixture.finished && 
+              fixture.event === gw &&
+              (fixture.team_h === team.id || fixture.team_a === team.id)
+            );
+            
+            if (gwFixtures.length > 0) {
+              const fixture = gwFixtures[0];
+              const isHome = fixture.team_h === team.id;
+              
+              // Use same goal projection calculation logic
+              const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
+              if (!opponent) continue;
+              
+              const bettingData = getSpreadBettingData();
+              const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
+              const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
+              
+              // Simplified goal calculation for aggregation
+              let baseExpectedGoals = teamBettingData.expectedGoalsPerGame;
+              
+              // Apply key modifiers
+              const venueMultiplier = isHome ? 1.15 : 0.88;
+              baseExpectedGoals *= venueMultiplier;
+              
+              const opponentDefenseStrength = opponentDefenseData.baseCleanSheetRate;
+              const defensiveImpact = Math.pow(opponentDefenseStrength * 2.5, 1.2);
+              const attackingPenetration = 1.25 - (defensiveImpact * 0.65);
+              baseExpectedGoals *= Math.max(0.55, Math.min(1.35, attackingPenetration));
+              
+              // Final bounds
+              const expectedGoals = Math.max(0.3, Math.min(4.2, baseExpectedGoals));
+              gameweekProjections[gw.toString()] = Math.round(expectedGoals * 100) / 100;
+            }
+          }
+          
+          teamProjections.push({
+            id: team.id,
+            team: team.short_name,
+            teamShort: team.short_name,
+            teamName: team.name,
+            gameweekProjections
+          });
+        });
+        
+        // Generate goal share data for this gameweek and aggregate
+        const weekGoalShareData = generateGoalShareFromTeamProjections(bootstrapData, fixturesData, teamProjections, gameweek);
+        
+        weekGoalShareData.forEach((teamData: any) => {
+          if (!teamSeasonTotals[teamData.teamId]) {
+            teamSeasonTotals[teamData.teamId] = {
+              expectedGoals: 0,
+              players: {}
+            };
+          }
+          
+          teamSeasonTotals[teamData.teamId].expectedGoals += teamData.expectedGoals;
+          
+          teamData.players.forEach((player: any) => {
+            if (!teamSeasonTotals[teamData.teamId].players[player.id]) {
+              teamSeasonTotals[teamData.teamId].players[player.id] = {
+                name: player.name,
+                position: player.position,
+                projectedGoals: 0
+              };
+            }
+            teamSeasonTotals[teamData.teamId].players[player.id].projectedGoals += player.projectedGoals;
+          });
+        });
+      }
+      
+      // Convert aggregated data to season-long goal share format
+      const seasonGoalShareData: any[] = [];
+      
+      Object.keys(teamSeasonTotals).forEach(teamIdStr => {
+        const teamId = parseInt(teamIdStr);
+        const teamData = teamSeasonTotals[teamId];
+        const team = bootstrapData.teams.find((t: any) => t.id === teamId);
+        
+        if (team && teamData.expectedGoals > 0) {
+          // Calculate season-long goal share percentages
+          const playersWithShares = Object.keys(teamData.players).map(playerIdStr => {
+            const playerId = parseInt(playerIdStr);
+            const playerData = teamData.players[playerId];
+            const goalSharePercent = (playerData.projectedGoals / teamData.expectedGoals) * 100;
+            
+            return {
+              id: playerId,
+              name: playerData.name,
+              position: playerData.position,
+              goalShare: Math.round(goalSharePercent * 10) / 10, // One decimal place
+              projectedGoals: Math.round(playerData.projectedGoals * 100) / 100
+            };
+          }).filter(p => p.goalShare > 0.1).sort((a, b) => b.goalShare - a.goalShare);
+          
+          seasonGoalShareData.push({
+            gameweek: 0, // Season-long data
+            teamId: teamId,
+            teamName: team.name,
+            teamShort: team.short_name,
+            expectedGoals: Math.round(teamData.expectedGoals * 100) / 100,
+            players: playersWithShares
+          });
+        }
+      });
+      
+      console.log(`DEBUG: Generated season-long goal share data for ${seasonGoalShareData.length} teams`);
+      
+      // Log sample entries for debugging
+      if (seasonGoalShareData.length > 0) {
+        seasonGoalShareData.forEach(team => {
+          team.players.slice(0, 2).forEach((player: any) => {
+            if (['Erling Haaland', 'Mohamed Salah', 'Harry Kane'].includes(player.name)) {
+              console.log(`SEASON_GOAL_SHARE ${player.name}: goalShare=${player.goalShare}%, projectedGoals=${player.projectedGoals}, teamGoals=${team.expectedGoals}`);
+            }
+          });
+        });
+      }
+      
+      res.json(seasonGoalShareData);
+    } catch (error) {
+      console.error("Error generating season goal share data:", error);
+      res.status(500).json({ error: "Failed to generate season goal share data" });
+    }
+  });
+
   // Data Consistency Validation endpoint
   app.get("/api/validate-consistency/:gameweek", async (req, res) => {
     try {
