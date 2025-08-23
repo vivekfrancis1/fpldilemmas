@@ -458,9 +458,9 @@ export default function OpenFPLProjections() {
                                       } else {
                                         // GWn = n horizon - (n-1) horizon
                                         const diff = getHorizonValue(gwIndex) - getHorizonValue(gwIndex - 1);
-                                        // For bonus points, set negative values to 0
-                                        if (metric === 'predicted_bonus' && diff < 0) {
-                                          return 0;
+                                        // If we get negative value, use the longer horizon value instead
+                                        if (diff < 0) {
+                                          return getHorizonValue(gwIndex);
                                         }
                                         return diff;
                                       }
