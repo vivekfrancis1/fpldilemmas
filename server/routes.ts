@@ -3852,7 +3852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return tierMapping[teamId] || 'average';
       };
 
-      // Get defensive multipliers from unified settings
+      // Get defensive multipliers from unified admin settings (consistent with admin portal)
       const getDefensiveMultiplier = (tier: string): number => {
         switch (tier) {
           case 'elite': return unifiedProjectionSettings.eliteDefenseMultiplier;
@@ -3951,15 +3951,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const currentTotal = teamTotals.get(team.id);
         const defensiveTier = getDefensiveTier(team.id);
         
-        // Apply EXTREME tier-specific target adjustments for maximum defensive variance
-        let targetMultiplier = 1.0;
-        switch (defensiveTier) {
-          case 'elite': targetMultiplier = 0.35; break;     // Elite defenses: ~25-30 goals (65% fewer)
-          case 'strong': targetMultiplier = 0.60; break;    // Strong defenses: ~35-40 goals (40% fewer)  
-          case 'average': targetMultiplier = 1.0; break;    // Average defenses: ~55-60 goals (baseline)
-          case 'weak': targetMultiplier = 1.50; break;      // Weak defenses: ~75-80 goals (50% more)
-          case 'promoted': targetMultiplier = 1.85; break;  // Promoted defenses: ~85-90 goals (85% more)
-        }
+        // Use defensive multipliers directly from admin portal settings 
+        let targetMultiplier = getDefensiveMultiplier(defensiveTier);
         
         const targetTotal = avgGoalsAgainst * targetMultiplier;
         const teamAdjustmentFactor = currentTotal > 0 ? targetTotal / currentTotal : 1;
