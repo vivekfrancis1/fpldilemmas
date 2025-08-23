@@ -928,7 +928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         1: { expectedGoalsPerGame: 1.67, variance: 0.32, confidence: 0.86 }, // Arsenal - Consistent attack (63.5 goals)
         12: { expectedGoalsPerGame: 2.14, variance: 0.30, confidence: 0.85 }, // Liverpool - Top attacking prediction (81.2 goals)
         18: { expectedGoalsPerGame: 1.67, variance: 0.44, confidence: 0.76 }, // Tottenham - Quality attack (63.5 goals)
-        6: { expectedGoalsPerGame: 1.79, variance: 0.38, confidence: 0.80 }, // Chelsea - Strong attacking unit (68.1 goals)
+        6: { expectedGoalsPerGame: 1.95, variance: 0.36, confidence: 0.86 }, // Chelsea - Elite attacking rebuild (68.1 goals)
         
         // Strong attacking mid-table teams
         5: { expectedGoalsPerGame: 1.49, variance: 0.40, confidence: 0.74 }, // Brighton - Tactical system (56.7 goals)
@@ -1063,7 +1063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           baseExpectedGoals *= Math.max(0.75, Math.min(1.15, attackingPenetration));
           
           // Phase 4: Market-informed tactical context analysis
-          const isEliteClash = [1, 12, 13].includes(team.id) && [1, 12, 13].includes(opponent.id); // Big 3 clash
+          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
           const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
           const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
                                (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
@@ -1081,9 +1081,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Phase 5: Advanced attacking tier performance modeling
           let tierMultiplier = 1.0;
           const tierSeed = (team.id * fixture.event * 13) % 100;
-          if ([13, 1, 12].includes(team.id)) { // Elite attacking units
+          if ([13, 1, 12, 6].includes(team.id)) { // Elite attacking units
             tierMultiplier = 1.06 + (tierSeed / 2500); // 106-110%
-          } else if ([6, 18].includes(team.id)) { // Premium big-6 teams
+          } else if ([18].includes(team.id)) { // Premium big-6 teams
             tierMultiplier = 1.04 + (tierSeed / 2857); // 104-107.5%
           } else if ([5, 15, 2, 14].includes(team.id)) { // Strong attacking teams
             tierMultiplier = 1.01 + (tierSeed / 3333); // 101-104%
@@ -1485,7 +1485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           baseCSProbability *= Math.max(0.7, Math.min(1.2, defensiveSusceptibility));
           
           // Phase 4: Market-informed tactical context analysis
-          const isEliteClash = [1, 12, 13].includes(team.id) && [1, 12, 13].includes(opponent.id); // Big 3 clash
+          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
           const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
           const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
                                (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
@@ -1693,7 +1693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             baseExpectedGoals *= Math.max(0.55, Math.min(1.35, attackingPenetration));
             
             // Phase 4: Market-informed tactical context analysis
-            const isEliteClash = [1, 12, 13].includes(team.id) && [1, 12, 13].includes(opponent.id); // Big 3 clash
+            const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
             const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
             const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
                                  (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
