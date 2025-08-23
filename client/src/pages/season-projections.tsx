@@ -138,23 +138,23 @@ export default function SeasonProjections() {
               </div>
             </div>
             <div className="fpl-card-content">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <div className="relative sm:col-span-2 lg:col-span-2">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="relative w-full">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Search players or teams..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-10 md:h-12 border-2"
+                    className="pl-10 h-12 border-2 text-base"
                     data-testid="input-search"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:col-span-2">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600">Sort By</label>
+                <div className="w-full">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-600">Sort By</label>
                     <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-                      <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-sort">
+                      <SelectTrigger className="h-12 border-2 text-base" data-testid="select-sort">
                         <SelectValue placeholder="Sort by..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -170,44 +170,44 @@ export default function SeasonProjections() {
           </div>
 
           {/* Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div className="fpl-card border-2 border-green-200">
-              <div className="fpl-card-content p-4">
+              <div className="fpl-card-content p-3 sm:p-4">
                 <div className="flex items-center">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                    <Target className="h-5 w-5 text-green-600" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-full flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0">
+                    <Target className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Top Goal Scorer</p>
-                    <p className="text-lg font-bold text-gray-900">Haaland (24.5)</p>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-gray-600">Top Goal Scorer</p>
+                    <p className="text-sm sm:text-lg font-bold text-gray-900 truncate">Haaland (24.5)</p>
                   </div>
                 </div>
               </div>
             </div>
             
             <div className="fpl-card border-2 border-blue-200">
-              <div className="fpl-card-content p-4">
+              <div className="fpl-card-content p-3 sm:p-4">
                 <div className="flex items-center">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                    <Users className="h-5 w-5 text-blue-600" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0">
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Top Assists</p>
-                    <p className="text-lg font-bold text-gray-900">Salah & Palmer (10.3)</p>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-gray-600">Top Assists</p>
+                    <p className="text-sm sm:text-lg font-bold text-gray-900 truncate">Salah & Palmer (10.3)</p>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="fpl-card border-2 border-purple-200">
-              <div className="fpl-card-content p-4">
+              <div className="fpl-card-content p-3 sm:p-4">
                 <div className="flex items-center">
-                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                    <TrendingUp className="h-5 w-5 text-purple-600" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0">
+                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Top Goal Involvements</p>
-                    <p className="text-lg font-bold text-gray-900">Haaland (28.6)</p>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-gray-600">Top Goal Involvements</p>
+                    <p className="text-sm sm:text-lg font-bold text-gray-900 truncate">Haaland (28.6)</p>
                   </div>
                 </div>
               </div>
@@ -223,21 +223,21 @@ export default function SeasonProjections() {
               </div>
             </div>
             <div className="fpl-card-content">
-              <div className="w-full table-scroll overflow-y-auto max-h-[70vh] bg-white rounded-xl border border-gray-200">
-                <table className="fpl-table text-xs min-w-[600px] w-full">
+              <div className="w-full table-scroll overflow-x-auto overflow-y-auto max-h-[70vh] bg-white rounded-xl border border-gray-200 -mx-2 sm:mx-0">
+                <table className="fpl-table text-xs min-w-[580px] sm:min-w-[600px] w-full">
                   <thead className="fpl-table-header">
                     <tr>
-                      <th className="px-2 sm:px-3 py-2 sm:py-3 text-center min-w-[50px] font-semibold text-gray-900 text-xs sm:text-sm">
-                        Rank
+                      <th className="px-2 py-3 text-center min-w-[40px] font-semibold text-gray-900 text-xs">
+                        #
                       </th>
-                      <th className="px-2 sm:px-3 py-2 sm:py-3 text-left min-w-[140px] font-semibold text-gray-900 text-xs sm:text-sm">
+                      <th className="px-2 py-3 text-left min-w-[120px] font-semibold text-gray-900 text-xs">
                         Player
                       </th>
-                      <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[50px] font-semibold text-gray-900 text-xs sm:text-sm">Team</th>
-                      <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
+                      <th className="px-1 py-3 text-center min-w-[45px] font-semibold text-gray-900 text-xs">Team</th>
+                      <th className="px-1 py-3 text-center min-w-[65px] font-semibold text-gray-900 text-xs">
                         <button 
                           onClick={() => setSortBy("goals")}
-                          className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs sm:text-sm w-full"
+                          className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs w-full py-2 px-1 -my-2 -mx-1 rounded touch-manipulation"
                         >
                           Goals
                           {sortBy === "goals" ? (
@@ -247,10 +247,10 @@ export default function SeasonProjections() {
                           )}
                         </button>
                       </th>
-                      <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
+                      <th className="px-1 py-3 text-center min-w-[70px] font-semibold text-gray-900 text-xs">
                         <button 
                           onClick={() => setSortBy("assists")}
-                          className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs sm:text-sm w-full"
+                          className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs w-full py-2 px-1 -my-2 -mx-1 rounded touch-manipulation"
                         >
                           Assists
                           {sortBy === "assists" ? (
@@ -260,10 +260,10 @@ export default function SeasonProjections() {
                           )}
                         </button>
                       </th>
-                      <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[80px] font-semibold text-blue-900 bg-blue-50 text-xs sm:text-sm">
+                      <th className="px-1 py-3 text-center min-w-[70px] font-semibold text-blue-900 bg-blue-50 text-xs">
                         <button 
                           onClick={() => setSortBy("totalInvolvements")}
-                          className="flex items-center justify-center gap-1 hover:text-blue-800 transition-colors text-xs sm:text-sm w-full"
+                          className="flex items-center justify-center gap-1 hover:text-blue-800 transition-colors text-xs w-full py-2 px-1 -my-2 -mx-1 rounded touch-manipulation"
                         >
                           G+A
                           {sortBy === "totalInvolvements" ? (
@@ -283,33 +283,33 @@ export default function SeasonProjections() {
                           index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
                         }`}
                       >
-                        <td className="px-2 sm:px-3 py-2 sm:py-3 text-center">
-                          <span className="text-xs sm:text-sm font-medium text-gray-600">
+                        <td className="px-2 py-3 text-center">
+                          <span className="text-xs font-medium text-gray-600">
                             {player.rank}
                           </span>
                         </td>
-                        <td className="px-2 sm:px-3 py-2 sm:py-3 text-left">
-                          <span className="font-medium text-gray-900 text-xs sm:text-sm">
+                        <td className="px-2 py-3 text-left">
+                          <span className="font-medium text-gray-900 text-xs leading-tight">
                             {player.name}
                           </span>
                         </td>
-                        <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
-                          <span className={`inline-block w-6 h-6 rounded-full text-xs font-bold text-white flex items-center justify-center ${getTeamColor(player.team)}`}>
+                        <td className="px-1 py-3 text-center">
+                          <span className={`inline-block w-5 h-5 rounded-full text-xs font-bold text-white flex items-center justify-center ${getTeamColor(player.team)}`}>
                             {player.team.substring(0, 2)}
                           </span>
                         </td>
-                        <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
-                          <span className="text-xs sm:text-sm font-medium text-green-700">
+                        <td className="px-1 py-3 text-center">
+                          <span className="text-xs font-medium text-green-700">
                             {player.goals.toFixed(1)}
                           </span>
                         </td>
-                        <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
-                          <span className="text-xs sm:text-sm font-medium text-blue-700">
+                        <td className="px-1 py-3 text-center">
+                          <span className="text-xs font-medium text-blue-700">
                             {player.assists.toFixed(1)}
                           </span>
                         </td>
-                        <td className="px-1 sm:px-2 py-2 sm:py-3 text-center bg-blue-50">
-                          <span className="text-xs sm:text-sm font-bold text-blue-900">
+                        <td className="px-1 py-3 text-center bg-blue-50">
+                          <span className="text-xs font-bold text-blue-900">
                             {player.totalInvolvements.toFixed(1)}
                           </span>
                         </td>
@@ -321,8 +321,9 @@ export default function SeasonProjections() {
               
               {/* Table Footer */}
               <div className="mt-4 text-center bg-gradient-to-r from-purple-50 to-purple-100 p-3 rounded-lg border border-purple-200">
-                <div className="text-sm text-purple-700">
-                  Showing <span className="font-bold">{filteredAndSortedData.length}</span> players • Data by @robtfpl/@SpreadexSport
+                <div className="text-xs sm:text-sm text-purple-700">
+                  Showing <span className="font-bold">{filteredAndSortedData.length}</span> players<br className="sm:hidden" />
+                  <span className="hidden sm:inline"> • </span>Data by @robtfpl/@SpreadexSport
                 </div>
               </div>
             </div>
