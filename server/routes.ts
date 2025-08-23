@@ -1257,14 +1257,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Check if fixture is finished - use actual assists, otherwise use projections
           if (fixture.finished) {
-            // For finished fixtures, calculate actual assists (assists typically ~70% of goals in Premier League)
-            const actualGoals = isHome ? (fixture.team_h_score || 0) : (fixture.team_a_score || 0);
-            // Convert goals to approximate assists based on historical data (assists are ~65-75% of goals)
-            const actualAssists = Math.round((actualGoals * 0.7) * 100) / 100;
+            // For finished fixtures, extract actual assists from stats
+            let actualAssists = 0;
+            if (fixture.stats && Array.isArray(fixture.stats)) {
+              const assistsStats = fixture.stats.find((stat: any) => stat.identifier === "assists");
+              if (assistsStats) {
+                const teamAssists = isHome ? assistsStats.h : assistsStats.a;
+                if (Array.isArray(teamAssists)) {
+                  actualAssists = teamAssists.reduce((sum: number, assist: any) => sum + (assist.value || 0), 0);
+                }
+              }
+            }
             return {
               gameweek: fixture.event,
               opponent: opponent.short_name,
-              expectedAssists: actualAssists, // Actual assists estimate for finished games
+              expectedAssists: actualAssists, // Actual assists for finished games
               isHome: isHome,
               isActual: true // Flag to indicate this is actual data
             };
