@@ -418,11 +418,6 @@ export default function OpenFPLProjections() {
                                 }, {} as Record<number, any>);
 
                                 return Object.values(playerGroups)
-                                  .filter((group: any) => {
-                                    // Hide players with 0 total minutes
-                                    const minutesTotal = group.horizons[parseInt(horizonFilter)]?.predicted_minutes || 0;
-                                    return minutesTotal > 0;
-                                  })
                                   .map((group: any) => {
                                     const player = group.player;
                                     const horizonData = group.horizons;
