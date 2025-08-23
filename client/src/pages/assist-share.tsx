@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Layout from "../components/layout";
 import { Users, TrendingUp, Calendar, Trophy, Filter, Zap } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,7 +64,7 @@ export default function AssistShare() {
 
   if (error) {
     return (
-      <Layout>
+      
         <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30">
           <div className="w-full max-w-7xl mx-auto px-4 py-8">
             <Card className="border-red-200 bg-red-50">
@@ -81,12 +80,12 @@ export default function AssistShare() {
             </Card>
           </div>
         </div>
-      </Layout>
+      
     );
   }
 
   return (
-    <Layout>
+    
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50/30">
         <div className="w-full max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
@@ -272,6 +271,6 @@ export default function AssistShare() {
           </Card>
         </div>
       </div>
-    </Layout>
+    
   );
 }

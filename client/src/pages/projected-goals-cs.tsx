@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Layout from "../components/layout";
 import { Target, TrendingUp, Filter, Calendar, Trophy } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -119,18 +118,18 @@ export default function ProjectedGoalsCS() {
 
   if (isLoading || projectionsLoading) {
     return (
-      <Layout>
+      
         <div className="flex justify-center items-center min-h-screen">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
-      </Layout>
+      
     );
   }
 
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
 
   return (
-    <Layout>
+    
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50/30">
         <div className="w-full max-w-6xl mx-auto px-4 py-8">
           {/* Header */}
@@ -342,6 +341,6 @@ export default function ProjectedGoalsCS() {
           </Card>
         </div>
       </div>
-    </Layout>
+    
   );
 }

@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, Target, BarChart3, RefreshCw } from "lucide-react";
-import Layout from "../components/layout";
 import { BootstrapData } from "@shared/schema";
 
 interface PriceChange {
@@ -133,7 +132,7 @@ export default function PriceTracker() {
   };
 
   return (
-    <Layout>
+    
       <div className="fpl-page-container">
         {/* Unified Page Header */}
         <div className="fpl-page-header">
@@ -501,6 +500,6 @@ export default function PriceTracker() {
         </Tabs>
         </div>
       </div>
-    </Layout>
+    
   );
 }

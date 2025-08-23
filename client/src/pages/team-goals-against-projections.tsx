@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Layout from "../components/layout";
 import { Shield, TrendingUp, Filter, BarChart3, Trophy } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,16 +93,16 @@ export default function TeamGoalsAgainstProjections() {
 
   if (isLoading || projectionsLoading) {
     return (
-      <Layout>
+      
         <div className="flex justify-center items-center min-h-screen">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
-      </Layout>
+      
     );
   }
 
   return (
-    <Layout>
+    
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50/30">
         <div className="w-full max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
@@ -342,6 +341,6 @@ export default function TeamGoalsAgainstProjections() {
           </Card>
         </div>
       </div>
-    </Layout>
+    
   );
 }

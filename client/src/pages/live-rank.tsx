@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Layout from "../components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -138,7 +137,7 @@ export default function LiveRank() {
   const error = managerError || historyError;
 
   return (
-    <Layout>
+    
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30 overflow-x-hidden">
         <div className="w-full max-w-7xl mx-auto px-1 sm:px-3 lg:px-4 py-2 sm:py-4 lg:py-8">
           <div className="space-y-6">
@@ -426,6 +425,6 @@ export default function LiveRank() {
           </div>
         </div>
       </div>
-    </Layout>
+    
   );
 }

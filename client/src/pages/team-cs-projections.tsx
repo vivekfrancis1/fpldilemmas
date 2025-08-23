@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Layout from "../components/layout";
 import { Shield, TrendingUp, Filter, BarChart3, Trophy } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,19 +76,16 @@ export default function TeamCSProjections() {
 
   if (isLoading || projectionsLoading) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      </Layout>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
     );
   }
 
   const gameweeks = getGameweeks();
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50/30">
         <div className="w-full max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
           <div className="text-center mb-8">
@@ -272,6 +268,5 @@ export default function TeamCSProjections() {
           </Card>
         </div>
       </div>
-    </Layout>
   );
 }

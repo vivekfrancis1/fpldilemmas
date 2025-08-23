@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Calendar } from "lucide-react";
-import Layout from "../components/layout";
 import StatsCards from "../components/stats-cards";
 import FiltersPanel from "../components/filters-panel";
 import PlayerStatsTable from "../components/player-stats-table";
@@ -53,7 +52,7 @@ export default function PlayerStats() {
 
   if (error) {
     return (
-      <Layout>
+      
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50/30 overflow-x-hidden">
           <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
             <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8 shadow-sm" data-testid="error-state">
@@ -74,12 +73,12 @@ export default function PlayerStats() {
             </div>
           </div>
         </div>
-      </Layout>
+      
     );
   }
 
   return (
-    <Layout>
+    
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 overflow-x-hidden">
         <div className="w-full max-w-7xl mx-auto px-1 sm:px-3 lg:px-4 py-2 sm:py-4 lg:py-8">
           {/* Header Section */}
@@ -172,6 +171,6 @@ export default function PlayerStats() {
           )}
         </div>
       </div>
-    </Layout>
+    
   );
 }

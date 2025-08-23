@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Trophy, TrendingUp, BarChart3, Search, Target, Crown, Medal, Star, Activity } from "lucide-react";
-import Layout from "../components/layout";
 
 interface LeagueData {
   id: number;
@@ -113,7 +112,7 @@ export default function LeagueComparison() {
   const metrics = analyzedLeague ? getPerformanceMetrics(analyzedLeague.standings) : null;
 
   return (
-    <Layout>
+    
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50/30 overflow-x-hidden">
         <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
           {/* Header Section */}
@@ -399,6 +398,6 @@ export default function LeagueComparison() {
         )}
         </div>
       </div>
-    </Layout>
+    
   );
 }

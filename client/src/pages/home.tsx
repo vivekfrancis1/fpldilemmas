@@ -1,5 +1,4 @@
 import { Link } from "wouter";
-import Layout from "../components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +6,7 @@ import { ArrowRight, BarChart3, Calendar, RefreshCw, Award, Eye, TrendingUp, Use
 
 export default function Home() {
   return (
-    <Layout>
+    
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         {/* Hero Section */}
         <div className="text-center mb-8 sm:mb-12">
@@ -397,6 +396,6 @@ export default function Home() {
           <p className="text-sm text-gray-500 mt-2">Player statistics are now integrated within each tool for focused analysis</p>
         </div>
       </div>
-    </Layout>
+    
   );
 }

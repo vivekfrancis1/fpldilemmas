@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Brain, BarChart3, Target, AlertTriangle, TrendingUp, Star, Clock, DollarSign, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import Layout from "@/components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -196,7 +195,7 @@ export default function OpenFPLProjections() {
   };
 
   return (
-    <Layout>
+    
       <div className="fpl-page-container">
         {/* Unified Page Header */}
         <div className="fpl-page-header">
@@ -617,6 +616,6 @@ export default function OpenFPLProjections() {
           )}
         </div>
       </div>
-    </Layout>
+    
   );
 }

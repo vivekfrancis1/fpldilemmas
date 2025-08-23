@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Layout from "../components/layout";
 import { Calendar, Home, Plane, Info } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -160,7 +159,7 @@ export default function Fixtures() {
 
   if (error) {
     return (
-      <Layout>
+      
         <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30">
           <div className="w-full max-w-7xl mx-auto px-1 sm:px-3 lg:px-4 py-2 sm:py-4 lg:py-8">
             <Card className="border-red-200 bg-red-50">
@@ -176,12 +175,12 @@ export default function Fixtures() {
             </Card>
           </div>
         </div>
-      </Layout>
+      
     );
   }
 
   return (
-    <Layout>
+    
       <div className="fpl-page-container">
         {/* Unified Page Header */}
         <div className="fpl-page-header">
@@ -406,6 +405,6 @@ export default function Fixtures() {
           </Card>
         </div>
       </div>
-    </Layout>
+    
   );
 }

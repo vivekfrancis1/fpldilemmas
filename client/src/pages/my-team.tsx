@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Layout from "../components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -265,19 +264,19 @@ export default function MyTeam() {
 
   if (!bootstrapData) {
     return (
-      <Layout>
+      
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading FPL data...</p>
           </div>
         </div>
-      </Layout>
+      
     );
   }
 
   return (
-    <Layout>
+    
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30 overflow-x-hidden">
         <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
           <div className="space-y-6">
@@ -634,6 +633,6 @@ export default function MyTeam() {
           </div>
         </div>
       </div>
-    </Layout>
+    
   );
 }

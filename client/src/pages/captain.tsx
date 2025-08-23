@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Layout from "../components/layout";
 import { Crown } from "lucide-react";
 import CaptainSelector from "@/components/captain-selector";
 import { BootstrapData } from "@shared/schema";
@@ -12,7 +11,7 @@ export default function Captain() {
 
   if (error) {
     return (
-      <Layout>
+      
         <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30 overflow-x-hidden">
           <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
             <div className="text-center">
@@ -21,12 +20,12 @@ export default function Captain() {
             </div>
           </div>
         </div>
-      </Layout>
+      
     );
   }
 
   return (
-    <Layout>
+    
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-amber-50/30 overflow-x-hidden">
         <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
           {/* Header Section */}
@@ -45,6 +44,6 @@ export default function Captain() {
           <CaptainSelector data={bootstrapData} isLoading={isLoading} />
         </div>
       </div>
-    </Layout>
+    
   );
 }

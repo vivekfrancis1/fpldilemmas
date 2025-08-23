@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { TrendingUp, Target, Users, Search, ChevronUp, ChevronDown } from "lucide-react";
-import Layout from "@/components/layout";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -115,7 +114,7 @@ export default function SeasonProjections() {
     });
 
   return (
-    <Layout>
+    
       <div className="fpl-page-container">
         {/* Page Header */}
         <div className="fpl-page-header">
@@ -330,6 +329,6 @@ export default function SeasonProjections() {
           </div>
         </div>
       </div>
-    </Layout>
+    
   );
 }
