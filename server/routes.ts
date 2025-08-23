@@ -1568,12 +1568,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Base clean sheet calculation inversely proportional to opponent's projected goals
           const teamBettingData = bettingData.teamCleanSheetRates[team.id] || { baseCleanSheetRate: 0.25, homeBonus: 0.05, confidence: 0.70 };
           
-          // Phase 1: Inverse relationship to opponent's projected goals
+          // Phase 1: Inverse relationship to opponent's projected goals - more gradual and realistic
           // Higher opponent goals = lower clean sheet %, lower opponent goals = higher clean sheet %
-          // Using exponential decay: CS% = base * e^(-k * opponent_goals)
-          const decayFactor = 0.4; // Controls how sharply CS% decreases with opponent goals
-          const baseCSPercentage = teamBettingData.baseCleanSheetRate * 100;
+          // Using gentler exponential decay and adjusted base rates
+          const decayFactor = 0.15; // More gradual decay for realistic Premier League ranges
+          let adjustedBaseRate = teamBettingData.baseCleanSheetRate;
+          
+          // Boost base rates for more realistic Premier League clean sheet %
+          if (adjustedBaseRate < 0.20) adjustedBaseRate *= 1.8; // Weak defenses get 80% boost
+          else if (adjustedBaseRate < 0.30) adjustedBaseRate *= 1.5; // Average defenses get 50% boost
+          else adjustedBaseRate *= 1.3; // Strong defenses get 30% boost
+          
+          const baseCSPercentage = adjustedBaseRate * 100;
           let baseCSProbability = baseCSPercentage * Math.exp(-decayFactor * opponentExpectedGoals);
+          
+          // Add defensive floor based on team tier to prevent unrealistically low values
+          const teamData = teamService.getTeamData(team.id);
+          let defensiveFloor = 12; // Default minimum
+          if (teamData) {
+            switch (teamData.defensiveTier) {
+              case 'elite': defensiveFloor = 18; break;
+              case 'strong': defensiveFloor = 15; break;
+              case 'average': defensiveFloor = 12; break;
+              case 'promoted': defensiveFloor = 8; break;
+              case 'weak': defensiveFloor = 10; break;
+            }
+          }
+          
+          // Ensure clean sheet percentage never goes below the defensive floor
+          baseCSProbability = Math.max(defensiveFloor, baseCSProbability);
           
           // Phase 2: Venue-specific adjustments
           const venueMultiplier = isHome ? 
@@ -1581,19 +1604,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             (0.78 + ((team.id * fixture.event * 11) % 100) / 1250); // Away factor 78-86%
           baseCSProbability *= venueMultiplier;
           
-          // Phase 3: Defensive tier adjustments  
+          // Phase 3: Additional tier-based adjustments (smaller since we already applied floor)
           const tierSeed = (team.id * fixture.event * 13) % 100;
-          const teamData = teamService.getTeamData(team.id);
           let tierMultiplier = 1.0;
           
           if (teamData) {
             switch (teamData.defensiveTier) {
-              case 'elite': tierMultiplier = 1.08 + (tierSeed / 2500); break;
-              case 'strong': tierMultiplier = 1.04 + (tierSeed / 3333); break;
-              case 'average': tierMultiplier = 1.0 + (tierSeed / 2500); break;
-              case 'promoted': tierMultiplier = 0.92 + (tierSeed / 2000); break; 
+              case 'elite': tierMultiplier = 1.05 + (tierSeed / 3333); break; // Smaller bonuses
+              case 'strong': tierMultiplier = 1.02 + (tierSeed / 4000); break;
+              case 'average': tierMultiplier = 1.0 + (tierSeed / 5000); break;
+              case 'promoted': tierMultiplier = 0.96 + (tierSeed / 3000); break; 
               case 'weak': 
-              default: tierMultiplier = 0.96 + (tierSeed / 1667); break;
+              default: tierMultiplier = 0.98 + (tierSeed / 3500); break;
             }
           }
           baseCSProbability *= tierMultiplier;
@@ -1618,8 +1640,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.8);
           baseCSProbability *= confidenceAdjustment;
           
-          // Ensure realistic clean sheet bounds (5-60%)
-          const cleanSheetProbability = Math.max(5, Math.min(60, baseCSProbability));
+          // Ensure realistic Premier League clean sheet bounds (8-45%)
+          const cleanSheetProbability = Math.max(8, Math.min(45, baseCSProbability));
           
           return {
             gameweek: fixture.event,
