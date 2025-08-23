@@ -23,6 +23,7 @@ interface SeasonGoalShareData {
 }
 
 export default function GoalShare() {
+  const [selectedSeason, setSelectedSeason] = useState<string>("current");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
@@ -30,8 +31,16 @@ export default function GoalShare() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch available seasons
+  const { data: seasonsData } = useQuery<string[]>({
+    queryKey: ["/api/seasons"],
+    staleTime: 15 * 60 * 1000,
+  });
+
+  // Fetch goal share data based on selected season
   const { data: goalShareData, isLoading: goalShareLoading } = useQuery<SeasonGoalShareData[]>({
-    queryKey: ["/api/goal-share-season"],
+    queryKey: selectedSeason === "current" ? ["/api/goal-share-season"] : ["/api/goal-share-historical", selectedSeason],
+    enabled: selectedSeason === "current" || (selectedSeason !== "current" && !!selectedSeason),
     staleTime: 10 * 60 * 1000,
   });
 
@@ -86,10 +95,13 @@ export default function GoalShare() {
               <Target className="h-8 w-8 text-blue-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              Season Goal Share Analysis
+              {selectedSeason === "current" ? "Season Goal Share Projections" : `${selectedSeason} Goal Share Analysis`}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Each player's percentage share of their team's expected goals for the entire remaining season
+              {selectedSeason === "current" 
+                ? "Each player's percentage share of their team's expected goals for the entire remaining season"
+                : `Each player's percentage share of their team's actual goals scored in the ${selectedSeason} season`
+              }
             </p>
           </div>
 
@@ -97,6 +109,22 @@ export default function GoalShare() {
           <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex flex-wrap gap-4 items-end">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                  <label className="text-sm font-semibold text-gray-700">Season:</label>
+                  <Select value={selectedSeason} onValueChange={setSelectedSeason}>
+                    <SelectTrigger className="w-44 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="current">Current Projections</SelectItem>
+                      {seasonsData?.map(season => (
+                        <SelectItem key={season} value={season}>{season}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-gray-700">Team:</label>
                   <Select value={selectedTeam} onValueChange={setSelectedTeam}>
@@ -149,7 +177,10 @@ export default function GoalShare() {
                         </div>
                         <div>
                           <CardTitle className="text-xl font-bold text-gray-900">{team.teamName}</CardTitle>
-                          <p className="text-sm text-gray-500">Season Expected Goals: <span className="font-semibold text-gray-700">{team.expectedGoals.toFixed(1)}</span></p>
+                          <p className="text-sm text-gray-500">
+                            {selectedSeason === "current" ? "Expected Goals:" : "Actual Goals:"} 
+                            <span className="font-semibold text-gray-700">{team.expectedGoals.toFixed(0)}</span>
+                          </p>
                         </div>
                       </div>
                       <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
@@ -179,7 +210,7 @@ export default function GoalShare() {
                                 {player.goalShare.toFixed(1)}%
                               </Badge>
                               <span className="text-xs text-gray-500 font-medium">
-                                {player.projectedGoals.toFixed(1)} goals
+                                {selectedSeason === "current" ? player.projectedGoals.toFixed(1) : player.projectedGoals} goals
                               </span>
                             </div>
                           </div>
@@ -211,20 +242,43 @@ export default function GoalShare() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Aggregates expected goals across entire remaining season</li>
-                    <li>• Position-weighted goal distribution</li>
-                    <li>• Adjusted by historical performance and form</li>
-                    <li>• All players in a team total 100%</li>
-                    <li>• Shows season-long goal involvement patterns</li>
+                    {selectedSeason === "current" ? (
+                      <>
+                        <li>• Aggregates expected goals across entire remaining season</li>
+                        <li>• Position-weighted goal distribution</li>
+                        <li>• Adjusted by historical performance and form</li>
+                        <li>• All players in a team total 100%</li>
+                        <li>• Shows season-long goal involvement patterns</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>• Based on actual goals scored in {selectedSeason}</li>
+                        <li>• Calculated from real historical data</li>
+                        <li>• Shows actual goal distribution patterns</li>
+                        <li>• All players in a team total 100%</li>
+                        <li>• Reveals past season performance trends</li>
+                      </>
+                    )}
                   </ul>
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Use Cases</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Identify season-long goal threats per team</li>
-                    <li>• Compare player value for long-term planning</li>
-                    <li>• Season captain and transfer decision support</li>
-                    <li>• Understand team attacking hierarchy</li>
+                    {selectedSeason === "current" ? (
+                      <>
+                        <li>• Identify season-long goal threats per team</li>
+                        <li>• Compare player value for long-term planning</li>
+                        <li>• Season captain and transfer decision support</li>
+                        <li>• Understand team attacking hierarchy</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>• Analyze historical goal involvement patterns</li>
+                        <li>• Compare past vs current season performances</li>
+                        <li>• Identify consistent goal threats over time</li>
+                        <li>• Understand historical team dynamics</li>
+                      </>
+                    )}
                   </ul>
                 </div>
               </div>

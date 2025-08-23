@@ -57,6 +57,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Historical Goal Share endpoint - based on actual goals scored in previous seasons
+  app.get("/api/goal-share-historical/:season", async (req, res) => {
+    try {
+      const season = req.params.season;
+      console.log(`DEBUG: Historical Goal Share API called for season ${season}`);
+      
+      // Fetch historical player data for the specified season
+      const historicalPlayers = await storage.getHistoricalPlayers(season);
+      
+      if (!historicalPlayers || historicalPlayers.length === 0) {
+        return res.status(404).json({ 
+          error: "No historical data found", 
+          season: season,
+          message: `No player data available for the ${season} season` 
+        });
+      }
+      
+      console.log(`DEBUG: Found ${historicalPlayers.length} historical players for ${season}`);
+      
+      // Group players by team and calculate goal shares based on actual goals scored
+      const teamGoalShares: { [teamName: string]: { 
+        teamName: string, 
+        teamShort: string, 
+        totalGoals: number, 
+        players: any[] 
+      } } = {};
+      
+      // Process each player and group by team
+      historicalPlayers.forEach(player => {
+        const teamName = player.team_name || player.teamName || 'Unknown Team';
+        const teamShort = player.team_short_name || player.teamShortName || 'UNK';
+        const goals = player.goals_scored || player.goalsScored || 0;
+        
+        if (!teamGoalShares[teamName]) {
+          teamGoalShares[teamName] = {
+            teamName: teamName,
+            teamShort: teamShort,
+            totalGoals: 0,
+            players: []
+          };
+        }
+        
+        teamGoalShares[teamName].totalGoals += goals;
+        teamGoalShares[teamName].players.push({
+          id: player.id || player.playerId,
+          name: `${player.first_name || player.firstName} ${player.second_name || player.secondName}`,
+          position: player.position || player.positionName,
+          goals: goals,
+          minutes: player.minutes || 0,
+          totalPoints: player.total_points || player.totalPoints || 0
+        });
+      });
+      
+      // Calculate goal share percentages and format response
+      const historicalGoalShareData: any[] = [];
+      
+      Object.values(teamGoalShares).forEach((team, teamIndex) => {
+        if (team.totalGoals > 0) {
+          // Calculate goal share for each player
+          const playersWithShares = team.players.map(player => ({
+            id: player.id,
+            name: player.name,
+            position: player.position,
+            goalShare: team.totalGoals > 0 ? Math.round((player.goals / team.totalGoals) * 1000) / 10 : 0.0,
+            projectedGoals: player.goals, // Actual goals for historical data
+            minutes: player.minutes,
+            totalPoints: player.totalPoints
+          })).filter(p => p.goalShare > 0).sort((a, b) => b.goalShare - a.goalShare);
+          
+          historicalGoalShareData.push({
+            gameweek: 0, // Historical season data (not gameweek-specific)
+            teamId: teamIndex + 1, // Assign sequential team IDs
+            teamName: team.teamName,
+            teamShort: team.teamShort,
+            expectedGoals: team.totalGoals, // Actual goals for historical data
+            players: playersWithShares,
+            season: season,
+            isHistorical: true
+          });
+        }
+      });
+      
+      // Sort teams by total goals descending
+      historicalGoalShareData.sort((a, b) => b.expectedGoals - a.expectedGoals);
+      
+      console.log(`DEBUG: Generated historical goal share data for ${historicalGoalShareData.length} teams in ${season}`);
+      
+      // Log sample entries for debugging
+      if (historicalGoalShareData.length > 0) {
+        historicalGoalShareData.slice(0, 3).forEach(team => {
+          team.players.slice(0, 2).forEach((player: any) => {
+            console.log(`HISTORICAL_GOAL_SHARE ${season} ${player.name}: goalShare=${player.goalShare}%, actualGoals=${player.projectedGoals}, teamGoals=${team.expectedGoals}`);
+          });
+        });
+      }
+      
+      res.json(historicalGoalShareData);
+    } catch (error) {
+      console.error(`Error generating historical goal share data for ${req.params.season}:`, error);
+      res.status(500).json({ 
+        error: "Failed to generate historical goal share data",
+        season: req.params.season,
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Individual player detailed data
   app.get("/api/element-summary/:playerId", async (req, res) => {
     try {
