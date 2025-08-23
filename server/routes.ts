@@ -1049,31 +1049,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamGoalRates,
           teamCleanSheetRates,
           contextMultipliers: {
-            derby: { goals: adminGoalSettings.derbyGoalsMultiplier, cleanSheets: adminCSSettings.derbyCSMultiplier },
-            topSix: { goals: adminGoalSettings.topSixGoalsMultiplier, cleanSheets: adminCSSettings.topSixCSMultiplier },
-            relegationBattle: { goals: adminGoalSettings.relegationBattleGoalsMultiplier, cleanSheets: adminCSSettings.relegationBattleCSMultiplier },
-            earlyKickoff: { goals: adminGoalSettings.earlyKickoffGoalsMultiplier, cleanSheets: adminCSSettings.earlyKickoffCSMultiplier },
-            lateKickoff: { goals: adminGoalSettings.lateKickoffGoalsMultiplier, cleanSheets: adminCSSettings.lateKickoffCSMultiplier },
-            postEuropean: { goals: adminGoalSettings.postEuropeanGoalsMultiplier, cleanSheets: adminCSSettings.postEuropeanCSMultiplier },
-            midweekFixture: { goals: adminGoalSettings.midweekFixtureGoalsMultiplier, cleanSheets: adminCSSettings.midweekFixtureCSMultiplier },
-            seasonFinale: { goals: adminGoalSettings.seasonFinaleGoalsMultiplier, cleanSheets: adminCSSettings.seasonFinaleCSMultiplier },
-            newManagerBounce: { goals: adminGoalSettings.newManagerBounceGoalsMultiplier, cleanSheets: adminCSSettings.newManagerBounceCSMultiplier },
-            weatherConditions: { goals: adminGoalSettings.weatherConditionsGoalsMultiplier, cleanSheets: adminCSSettings.weatherConditionsCSMultiplier }
+            derby: { goals: unifiedProjectionSettings.derbyMatchMultiplier, cleanSheets: adminCSSettings.derbyCSMultiplier },
+            topSix: { goals: unifiedProjectionSettings.topSixMatchMultiplier, cleanSheets: adminCSSettings.topSixCSMultiplier },
+            relegationBattle: { goals: unifiedProjectionSettings.relegationBattleMultiplier, cleanSheets: adminCSSettings.relegationBattleCSMultiplier },
+            earlyKickoff: { goals: unifiedProjectionSettings.earlyKickoffMultiplier, cleanSheets: adminCSSettings.earlyKickoffCSMultiplier },
+            lateKickoff: { goals: unifiedProjectionSettings.lateKickoffMultiplier, cleanSheets: adminCSSettings.lateKickoffCSMultiplier },
+            postEuropean: { goals: unifiedProjectionSettings.postEuropeanMultiplier, cleanSheets: adminCSSettings.postEuropeanCSMultiplier },
+            midweekFixture: { goals: unifiedProjectionSettings.midweekFixtureMultiplier, cleanSheets: adminCSSettings.midweekFixtureCSMultiplier },
+            seasonFinale: { goals: unifiedProjectionSettings.seasonFinaleMultiplier, cleanSheets: adminCSSettings.seasonFinaleCSMultiplier },
+            newManagerBounce: { goals: unifiedProjectionSettings.newManagerBounceMultiplier, cleanSheets: adminCSSettings.newManagerBounceCSMultiplier },
+            weatherConditions: { goals: unifiedProjectionSettings.weatherConditionsMultiplier, cleanSheets: adminCSSettings.weatherConditionsCSMultiplier }
           }
         };
       },
       
       getTierMultiplier: (teamId: number, tierSeed: number) => {
-        // Use configurable tier multiplier from admin settings
-        return adminGoalSettings.globalTierMultiplier;
+        // Use configurable tier multiplier from unified settings
+        return unifiedProjectionSettings.globalTierMultiplier;
       },
       
       getConfidenceMultiplier: (teamId: number) => {
         const team = teamProjectionData[teamId];
         if (!team) return 1.0;
         
-        // Use configurable confidence multiplier and threshold from admin settings
-        if (team.confidence < adminGoalSettings.lowConfidenceThreshold) return adminGoalSettings.lowConfidenceBoost;
+        // Use configurable confidence multiplier and threshold from unified settings
+        if (team.confidence < unifiedProjectionSettings.lowConfidenceThreshold) return unifiedProjectionSettings.lowConfidenceBoost;
         return 1.0;
       }
     };
@@ -1863,10 +1863,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             baseExpectedGoals *= 1.14; // Rivalry games typically more open and emotional
           }
           
-          // Phase 5: Advanced attacking tier performance modeling using centralized data
-          const tierSeed = (team.id * fixture.event * 13) % 100;
-          const tierMultiplier = teamService.getTierMultiplier(team.id, tierSeed);
-          baseExpectedGoals *= tierMultiplier;
+          // Phase 5: UNIFIED attacking tier performance modeling for perfect consistency
+          const getAttackingTier = (teamId: number) => {
+            // Use the same tier mapping as Goals Against for perfect consistency
+            const tierMapping: { [key: number]: string } = {
+              13: 'elite', 1: 'elite', 12: 'elite', 7: 'elite',  // Man City, Arsenal, Liverpool, Chelsea
+              11: 'strong', 18: 'strong', 6: 'strong', 15: 'strong', 2: 'strong', 14: 'strong', // Everton, Tottenham, Brighton, Newcastle, Aston Villa, Man United  
+              16: 'average', 5: 'average', 4: 'average', 10: 'average', 20: 'average', // Forest, Brentford, Bournemouth, Fulham, West Ham
+              3: 'weak', 8: 'weak', 9: 'weak', // Crystal Palace, Leicester, etc
+              17: 'promoted', 19: 'promoted' // Sheffield United, Luton Town
+            };
+            return tierMapping[teamId] || 'average';
+          };
+          
+          const attackingTier = getAttackingTier(team.id);
+          let attackingTierMultiplier = 1.0;
+          switch (attackingTier) {
+            case 'elite': attackingTierMultiplier = unifiedProjectionSettings.eliteAttackMultiplier; break;
+            case 'strong': attackingTierMultiplier = unifiedProjectionSettings.strongAttackMultiplier; break;
+            case 'average': attackingTierMultiplier = unifiedProjectionSettings.averageAttackMultiplier; break;
+            case 'weak': attackingTierMultiplier = unifiedProjectionSettings.weakAttackMultiplier; break;
+            case 'promoted': attackingTierMultiplier = unifiedProjectionSettings.promotedAttackMultiplier; break;
+          }
+          baseExpectedGoals *= attackingTierMultiplier;
           
           // Phase 6: Market momentum and fixture complexity factors
           const marketMomentum = 0.97 + ((team.id * fixture.event * 17) % 100) / 1667; // 97-103% market sentiment
@@ -1879,9 +1898,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamBettingData.variance * 0.8;
           baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
           
-          // Phase 8: Realistic Premier League goal bounds with market precision
-          const marketFloor = Math.max(adminGoalSettings.absoluteMinGoals, teamBettingData.expectedGoalsPerGame * adminGoalSettings.marketFloorMultiplier); // Dynamic minimum
-          const marketCeiling = Math.min(adminGoalSettings.absoluteMaxGoals, teamBettingData.expectedGoalsPerGame * adminGoalSettings.marketCeilingMultiplier); // Dynamic maximum
+          // Phase 8: Realistic Premier League goal bounds with UNIFIED market precision for perfect consistency
+          const marketFloor = Math.max(unifiedProjectionSettings.absoluteMinGoals, teamBettingData.expectedGoalsPerGame * unifiedProjectionSettings.marketFloorMultiplier); // Dynamic minimum
+          const marketCeiling = Math.min(unifiedProjectionSettings.absoluteMaxGoals, teamBettingData.expectedGoalsPerGame * unifiedProjectionSettings.marketCeilingMultiplier); // Dynamic maximum
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
           // Apply confidence multiplier from centralized team service
@@ -3834,15 +3853,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
 
-      // Process each match to calculate goals against using admin settings
+      // Process each match to calculate goals against using UNIFIED settings for perfect consistency
       matchProjections.forEach((match: any) => {
         const homeTeam = teamsGoalsAgainst.get(match.homeTeam.id);
         const awayTeam = teamsGoalsAgainst.get(match.awayTeam.id);
 
         if (homeTeam && awayTeam) {
-          // Calculate goals against with defensive multipliers
-          let homeGoalsAgainst = match.awayTeam.expectedGoals * adminGoalsAgainstSettings.globalDefensiveMultiplier;
-          let awayGoalsAgainst = match.homeTeam.expectedGoals * adminGoalsAgainstSettings.globalDefensiveMultiplier;
+          // Calculate goals against with UNIFIED defensive multipliers for perfect consistency
+          let homeGoalsAgainst = match.awayTeam.expectedGoals; // Start with base expected goals
+          let awayGoalsAgainst = match.homeTeam.expectedGoals;
 
           // Get defensive tier based on team ID (using the same mapping as projectionMetadata)
           const getDefensiveTier = (teamId: number) => {
@@ -3853,27 +3872,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const homeDefensiveTier = getDefensiveTier(match.homeTeam.id);
           const awayDefensiveTier = getDefensiveTier(match.awayTeam.id);
 
-          // Apply defensive tier multipliers for home team
+          // Apply UNIFIED defensive tier multipliers for perfect consistency
           switch (homeDefensiveTier) {
-            case 'elite': homeGoalsAgainst *= adminGoalsAgainstSettings.eliteDefenseMultiplier; break;
-            case 'strong': homeGoalsAgainst *= adminGoalsAgainstSettings.strongDefenseMultiplier; break;
-            case 'average': homeGoalsAgainst *= adminGoalsAgainstSettings.averageDefenseMultiplier; break;
-            case 'weak': homeGoalsAgainst *= adminGoalsAgainstSettings.weakDefenseMultiplier; break;
-            case 'promoted': homeGoalsAgainst *= adminGoalsAgainstSettings.promotedDefenseMultiplier; break;
+            case 'elite': homeGoalsAgainst *= unifiedProjectionSettings.eliteDefenseMultiplier; break;
+            case 'strong': homeGoalsAgainst *= unifiedProjectionSettings.strongDefenseMultiplier; break;
+            case 'average': homeGoalsAgainst *= unifiedProjectionSettings.averageDefenseMultiplier; break;
+            case 'weak': homeGoalsAgainst *= unifiedProjectionSettings.weakDefenseMultiplier; break;
+            case 'promoted': homeGoalsAgainst *= unifiedProjectionSettings.promotedDefenseMultiplier; break;
           }
 
-          // Apply defensive tier multipliers for away team
+          // Apply UNIFIED defensive tier multipliers for away team
           switch (awayDefensiveTier) {
-            case 'elite': awayGoalsAgainst *= adminGoalsAgainstSettings.eliteDefenseMultiplier; break;
-            case 'strong': awayGoalsAgainst *= adminGoalsAgainstSettings.strongDefenseMultiplier; break;
-            case 'average': awayGoalsAgainst *= adminGoalsAgainstSettings.averageDefenseMultiplier; break;
-            case 'weak': awayGoalsAgainst *= adminGoalsAgainstSettings.weakDefenseMultiplier; break;
-            case 'promoted': awayGoalsAgainst *= adminGoalsAgainstSettings.promotedDefenseMultiplier; break;
+            case 'elite': awayGoalsAgainst *= unifiedProjectionSettings.eliteDefenseMultiplier; break;
+            case 'strong': awayGoalsAgainst *= unifiedProjectionSettings.strongDefenseMultiplier; break;
+            case 'average': awayGoalsAgainst *= unifiedProjectionSettings.averageDefenseMultiplier; break;
+            case 'weak': awayGoalsAgainst *= unifiedProjectionSettings.weakDefenseMultiplier; break;
+            case 'promoted': awayGoalsAgainst *= unifiedProjectionSettings.promotedDefenseMultiplier; break;
           }
 
-          // Apply bounds
-          homeGoalsAgainst = Math.max(adminGoalsAgainstSettings.minGoalsAgainst, Math.min(adminGoalsAgainstSettings.maxGoalsAgainst, homeGoalsAgainst));
-          awayGoalsAgainst = Math.max(adminGoalsAgainstSettings.minGoalsAgainst, Math.min(adminGoalsAgainstSettings.maxGoalsAgainst, awayGoalsAgainst));
+          // Apply UNIFIED bounds for consistency
+          homeGoalsAgainst = Math.max(unifiedProjectionSettings.absoluteMinGoals, Math.min(unifiedProjectionSettings.absoluteMaxGoals, homeGoalsAgainst));
+          awayGoalsAgainst = Math.max(unifiedProjectionSettings.absoluteMinGoals, Math.min(unifiedProjectionSettings.absoluteMaxGoals, awayGoalsAgainst));
 
           // Store the adjusted values
           homeTeam.gameweekProjections[match.gameweek] = homeGoalsAgainst;
