@@ -182,23 +182,30 @@ export default function Fixtures() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50/30">
-        <div className="w-full max-w-full mx-auto px-1 sm:px-3 py-2 sm:py-4">
-          {/* Header */}
-          <div className="text-center mb-4 sm:mb-6">
-            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full mb-3 sm:mb-4">
-              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
-            </div>
-            <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2 px-2" data-testid="text-page-title">
-              Fixture Difficulty Table
-            </h1>
-            <p className="text-sm sm:text-lg text-gray-600 max-w-2xl mx-auto px-2" data-testid="text-page-description">
-              Fixture difficulty ratings showing 6 gameweeks by default (customizable up to GW38)
-            </p>
+      <div className="fpl-page-container">
+        {/* Unified Page Header */}
+        <div className="fpl-page-header">
+          <div className="fpl-page-title">
+            <Calendar className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
+            Fixture Analyzer
           </div>
+          <p className="fpl-page-subtitle">
+            Analyze upcoming fixtures with difficulty ratings and plan your transfers strategically
+          </p>
+        </div>
 
-          {/* Controls */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6 items-center justify-center px-2">
+        <div className="fpl-section-spacing">
+
+          {/* Unified Controls */}
+          <div className="fpl-filters">
+            <div className="fpl-card-header">
+              <div className="fpl-card-title">
+                <Calendar className="h-5 w-5 text-blue-600" />
+                Fixture Controls
+              </div>
+            </div>
+            <div className="fpl-card-content">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center">
             <div className="flex items-center gap-2">
               <label className="text-xs sm:text-sm font-medium text-gray-700">Gameweeks:</label>
               <select 
@@ -257,6 +264,8 @@ export default function Fixtures() {
               </div>
               <div className="text-xs text-gray-600">
                 Format: TEAM (H/A)
+              </div>
+            </div>
               </div>
             </div>
           </div>

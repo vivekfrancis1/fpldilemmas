@@ -197,29 +197,30 @@ export default function OpenFPLProjections() {
 
   return (
     <Layout>
-      <div className="w-full max-w-full px-2 md:px-4 py-4 md:py-6 overflow-x-hidden">
-        {/* Compact Header */}
-        <div className="text-center mb-4 md:mb-6">
-          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white rounded-lg p-3 md:p-4 shadow-lg">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Brain className="h-5 w-5 md:h-6 md:w-6" />
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Player Projections</h1>
-            </div>
-            <p className="text-blue-100 text-xs md:text-sm">
-              🤖 Advanced ML ensemble predictions using XGBoost + Random Forest models
-            </p>
+      <div className="fpl-page-container">
+        {/* Unified Page Header */}
+        <div className="fpl-page-header">
+          <div className="fpl-page-title">
+            <Brain className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
+            Open FPL Player Projections
           </div>
+          <p className="fpl-page-subtitle">
+            🤖 Advanced ML ensemble predictions using XGBoost + Random Forest models
+          </p>
         </div>
 
-        <div className="w-full space-y-4 md:space-y-6">
+        <div className="fpl-section-spacing">
 
-          {/* Responsive Filters */}
-          <Card className="shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-gray-50 to-green-50 p-4 md:p-6">
-              <CardTitle className="text-lg md:text-xl">🔍 Smart Filters & Search</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 md:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+          {/* Unified Filters */}
+          <div className="fpl-filters">
+            <div className="fpl-card-header">
+              <div className="fpl-card-title">
+                <Search className="h-5 w-5 text-blue-600" />
+                Smart Filters & Search
+              </div>
+            </div>
+            <div className="fpl-card-content">
+              <div className="fpl-filters-grid">
                 <div className="relative sm:col-span-2 md:col-span-1">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
@@ -296,35 +297,32 @@ export default function OpenFPLProjections() {
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Responsive Projections Results */}
-          <Card className="shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 p-4 md:p-6">
-              <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-lg md:text-xl lg:text-2xl">
-                <div className="flex items-center gap-2">
-                  <Target className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
-                  <span className="hidden sm:inline">Open FPL Player Projections</span>
-                  <span className="sm:hidden">Open FPL Player Projections</span>
-                </div>
+          {/* Unified Results Section */}
+          <div className="fpl-table-container">
+            <div className="fpl-card-header">
+              <div className="fpl-card-title">
+                <Target className="h-5 w-5 text-blue-600" />
+                ML Projections Results
                 {horizonFilter && (
-                  <Badge variant="outline" className="text-xs md:text-sm px-2 md:px-3 py-1">
+                  <Badge variant="outline" className="fpl-badge-info text-xs px-2 py-1 ml-2">
                     {horizonFilter} GW{horizonFilter !== "1" ? "s" : ""} Ahead
                   </Badge>
                 )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
+              </div>
+            </div>
+            <div className="fpl-card-content">
               {isLoadingProjections ? (
                 <div className="grid gap-4">
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-32 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl animate-pulse shadow-sm" />
+                    <div key={i} className="fpl-loading-card" />
                   ))}
                 </div>
               ) : projectionsError ? (
                 <div className="text-center py-16">
-                  <div className="bg-red-50 p-8 rounded-2xl border-2 border-red-200 shadow-lg">
+                  <div className="fpl-error-container">
                     <AlertTriangle className="h-20 w-20 text-red-500 mx-auto mb-4" />
                     <h3 className="text-2xl font-bold text-red-700 mb-2">OpenFPL System Offline</h3>
                     <p className="text-red-600 text-lg">Model training in progress or API temporarily unavailable</p>
@@ -333,7 +331,7 @@ export default function OpenFPLProjections() {
                 </div>
               ) : !Array.isArray(projections) || projections.length === 0 ? (
                 <div className="text-center py-16">
-                  <div className="bg-gray-50 p-8 rounded-2xl border-2 border-gray-200 shadow-lg">
+                  <div className="fpl-empty-state">
                     <Brain className="h-20 w-20 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-2xl font-bold text-gray-600 mb-2">No predictions match your criteria</h3>
                     <p className="text-gray-500 text-lg">Try adjusting your filters or selecting a different gameweek</p>
@@ -351,10 +349,10 @@ export default function OpenFPLProjections() {
 
                     {['predicted_points', 'predicted_goals', 'predicted_assists'].map((metric) => (
                       <TabsContent key={metric} value={metric} className="mt-0">
-                        <div className="w-full table-scroll overflow-y-auto max-h-[70vh] bg-white rounded-xl border-2 border-gray-200 shadow-lg">
-                          <table className="text-xs min-w-[800px] w-full lg:min-w-full xl:min-w-full">
-                            <thead className="sticky top-0 z-10">
-                              <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
+                        <div className="w-full table-scroll overflow-y-auto max-h-[70vh] bg-white rounded-xl border border-gray-200">
+                          <table className="fpl-table text-xs min-w-[800px] w-full lg:min-w-full xl:min-w-full">
+                            <thead className="fpl-table-header">
+                              <tr>
                                 <th className="px-2 sm:px-3 py-2 sm:py-3 text-left min-w-[120px] sm:min-w-[160px] font-semibold text-gray-900 text-xs sm:text-sm">
                                   Player
                                 </th>
@@ -565,23 +563,23 @@ export default function OpenFPLProjections() {
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Responsive Model Performance Metrics - Moved to Bottom */}
           {modelMetrics && (
-            <Card className="border-2 border-gradient shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 p-4 md:p-6">
-                <CardTitle className="flex items-center gap-2 text-lg md:text-xl lg:text-2xl">
-                  <BarChart3 className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
+            <div className="fpl-card border-2 border-blue-200 shadow-lg">
+              <div className="fpl-card-header">
+                <div className="fpl-card-title">
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
                   <span className="hidden sm:inline">Model Performance vs Commercial Benchmarks</span>
                   <span className="sm:hidden">Model Performance</span>
-                </CardTitle>
-                <CardDescription className="text-sm md:text-base lg:text-lg">
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
                   Real-time accuracy metrics compared to leading FPL services
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 md:p-6">
+                </p>
+              </div>
+              <div className="fpl-card-content">
                 <div className="grid grid-cols-5 gap-2 md:gap-4">
                   <div className="text-center p-2 md:p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="text-lg md:text-xl font-bold text-green-600">{(modelMetrics as any).rmse_overall?.toFixed(3)}</div>
@@ -612,8 +610,8 @@ export default function OpenFPLProjections() {
                 <div className="mt-4 text-center text-xs text-gray-500 bg-blue-50 p-3 rounded-lg border border-blue-200">
                   Projections powered by <strong>OpenFPL</strong> research • Position-specific ensemble models trained on 4 seasons of FPL + Understat data
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
         </div>
       </div>
