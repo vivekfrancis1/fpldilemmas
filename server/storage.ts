@@ -37,9 +37,6 @@ export interface IStorage {
   // Manager ID caching operations
   getLastManagerId(): Promise<string | undefined>;
   setLastManagerId(managerId: string): Promise<void>;
-  
-  // Player statistics for projections
-  getPlayerStatsForSeason(season: string): Promise<any[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -182,12 +179,6 @@ export class MemStorage implements IStorage {
 
   async setLastManagerId(managerId: string): Promise<void> {
     this.lastManagerId = managerId;
-  }
-
-  async getPlayerStatsForSeason(season: string): Promise<any[]> {
-    // For memory storage, return the historical players data
-    const historicalData = await this.getHistoricalPlayers(season);
-    return historicalData;
   }
 
   // Daily price tracking methods
@@ -395,11 +386,6 @@ export class DatabaseStorage implements IStorage {
 
   async setLastManagerId(managerId: string): Promise<void> {
     return this.memFallback.setLastManagerId(managerId);
-  }
-
-  async getPlayerStatsForSeason(season: string): Promise<any[]> {
-    // Use historical players data for projections
-    return this.getHistoricalPlayers(season);
   }
 
   // Daily price tracking methods (use database for persistence)

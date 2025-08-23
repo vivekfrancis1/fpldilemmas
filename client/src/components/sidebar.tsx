@@ -15,8 +15,7 @@ import {
   Trophy,
   Target,
   Shield,
-  Zap,
-  Brain
+  Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,8 +53,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/team-goal-projections", label: "Team Goal Projections", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-cs-projections", label: "Team CS Projections", icon: Shield, description: "Clean sheet probabilities", popular: false },
 
-        { path: "/openfpl-projections", label: "Open FPL Player Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false, isNew: true },
-        { path: "/my-player-projections", label: "My Player Projections", icon: Zap, description: "Custom historical analysis", popular: false, isNew: true }
+        { path: "/openfpl-projections", label: "Open FPL Player Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false, isNew: true }
       ]
     },
     {
