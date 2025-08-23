@@ -1571,7 +1571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Phase 1: Inverse relationship to opponent's projected goals - more gradual and realistic
           // Higher opponent goals = lower clean sheet %, lower opponent goals = higher clean sheet %
           // Using gentler exponential decay and adjusted base rates
-          const decayFactor = 0.05; // Very gradual decay for realistic Premier League ranges
+          const decayFactor = 0.02; // Extremely gradual decay for realistic Premier League ranges
           let adjustedBaseRate = teamBettingData.baseCleanSheetRate;
           
           // Boost base rates for more realistic Premier League clean sheet %
