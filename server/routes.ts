@@ -2478,83 +2478,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const opponentProjections = opponentGoalProjections.get(opponent.id);
           const opponentExpectedGoals = opponentProjections?.[fixture.event.toString()] || 1.5; // Default to average
           
-          // Base clean sheet calculation inversely proportional to opponent's projected goals
-          const teamBettingData = bettingData.teamCleanSheetRates[team.id] || { baseCleanSheetRate: 0.25, homeBonus: 0.05, confidence: 0.70 };
+          // NEW SIMPLIFIED FORMULA: Clean sheet = 55 - 10 * Goals against (expressed as percentage)
+          let cleanSheetProbability = 55 - (10 * opponentExpectedGoals);
           
-          // Phase 1: Inverse relationship to opponent's projected goals - more gradual and realistic
-          // Higher opponent goals = lower clean sheet %, lower opponent goals = higher clean sheet %
-          // Using gentler exponential decay and adjusted base rates
-          const decayFactor = adminCSSettings.decayFactor; // Configurable decay factor
-          let adjustedBaseRate = teamBettingData.baseCleanSheetRate;
-          
-          // Boost base rates with configurable percentages
-          if (adjustedBaseRate < 0.20) adjustedBaseRate *= adminCSSettings.weakDefenseBoost; // Weak defenses
-          else if (adjustedBaseRate < 0.30) adjustedBaseRate *= adminCSSettings.averageDefenseBoost; // Average defenses
-          else adjustedBaseRate *= adminCSSettings.strongDefenseBoost; // Strong defenses
-          
-          const baseCSPercentage = adjustedBaseRate * 100;
-          let baseCSProbability = baseCSPercentage * Math.exp(-decayFactor * opponentExpectedGoals);
-          
-          // Add configurable defensive floors for realistic Premier League clean sheet %
-          const teamData = teamService.getTeamData(team.id);
-          let defensiveFloor = adminCSSettings.averageDefensiveFloor; // Configurable default minimum
-          if (teamData) {
-            switch (teamData.defensiveTier) {
-              case 'elite': defensiveFloor = adminCSSettings.eliteDefensiveFloor; break;
-              case 'strong': defensiveFloor = adminCSSettings.strongDefensiveFloor; break;
-              case 'average': defensiveFloor = adminCSSettings.averageDefensiveFloor; break;
-              case 'promoted': defensiveFloor = adminCSSettings.promotedDefensiveFloor; break;
-              case 'weak': defensiveFloor = adminCSSettings.weakDefensiveFloor; break;
-            }
-          }
-          
-          // Ensure clean sheet percentage never goes below the defensive floor
-          baseCSProbability = Math.max(defensiveFloor, baseCSProbability);
-          
-          // Phase 2: Venue-specific adjustments
-          const venueMultiplier = isHome ? 
-            (1 + teamBettingData.homeBonus + (0.08 + ((team.id * fixture.event * 7) % 100) / 1667)) : // Dynamic home advantage 8-14%
-            (0.78 + ((team.id * fixture.event * 11) % 100) / 1250); // Away factor 78-86%
-          baseCSProbability *= venueMultiplier;
-          
-          // Phase 3: Additional tier-based adjustments (smaller since we already applied floor)
-          const tierSeed = (team.id * fixture.event * 13) % 100;
-          let tierMultiplier = 1.0;
-          
-          if (teamData) {
-            switch (teamData.defensiveTier) {
-              case 'elite': tierMultiplier = 1.05 + (tierSeed / 3333); break; // Smaller bonuses
-              case 'strong': tierMultiplier = 1.02 + (tierSeed / 4000); break;
-              case 'average': tierMultiplier = 1.0 + (tierSeed / 5000); break;
-              case 'promoted': tierMultiplier = 0.96 + (tierSeed / 3000); break; 
-              case 'weak': 
-              default: tierMultiplier = 0.98 + (tierSeed / 3500); break;
-            }
-          }
-          baseCSProbability *= tierMultiplier;
-          
-          // Phase 4: Tactical context adjustments
-          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id);
-          const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
-          const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) ||
-                               (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) ||
-                               (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13);
-          
-          if (isEliteClash) {
-            baseCSProbability *= 0.90; // Elite clashes tend to be more cagey but quality attacks break through
-          } else if (isTopSixBattle) {
-            baseCSProbability *= 0.95;
-          }
-          if (isRivalryMatch) {
-            baseCSProbability *= 0.88; // Rivalry games more open and emotional
-          }
-          
-          // Phase 5: Final bounds and confidence adjustment
-          const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.8);
-          baseCSProbability *= confidenceAdjustment;
-          
-          // Ensure realistic Premier League clean sheet bounds (8-45%)
-          const cleanSheetProbability = Math.max(8, Math.min(45, baseCSProbability));
+          // Ensure realistic bounds (0-100%)
+          cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
           
           return {
             gameweek: fixture.event,
