@@ -3951,14 +3951,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const currentTotal = teamTotals.get(team.id);
         const defensiveTier = getDefensiveTier(team.id);
         
-        // Apply tier-specific target adjustments for realistic variance
+        // Apply dramatic tier-specific target adjustments for 30-85 goal range
         let targetMultiplier = 1.0;
         switch (defensiveTier) {
-          case 'elite': targetMultiplier = 0.82; break;     // Elite defenses: ~18% fewer goals
-          case 'strong': targetMultiplier = 0.92; break;    // Strong defenses: ~8% fewer goals  
-          case 'average': targetMultiplier = 1.0; break;    // Average defenses: baseline
-          case 'weak': targetMultiplier = 1.12; break;      // Weak defenses: ~12% more goals
-          case 'promoted': targetMultiplier = 1.22; break;  // Promoted defenses: ~22% more goals
+          case 'elite': targetMultiplier = 0.55; break;     // Elite defenses: ~30-35 goals (45% fewer)
+          case 'strong': targetMultiplier = 0.75; break;    // Strong defenses: ~40-45 goals (25% fewer)  
+          case 'average': targetMultiplier = 1.0; break;    // Average defenses: ~55-60 goals (baseline)
+          case 'weak': targetMultiplier = 1.35; break;      // Weak defenses: ~70-75 goals (35% more)
+          case 'promoted': targetMultiplier = 1.55; break;  // Promoted defenses: ~80-85 goals (55% more)
         }
         
         const targetTotal = avgGoalsAgainst * targetMultiplier;
