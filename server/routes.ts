@@ -2129,25 +2129,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             if (positionName === "GKP") {
               predictedPoints = 2 + (form * 0.5);
-              predictedGoals = Math.random() < 0.02 ? 1 : 0;
-              predictedCleanSheets = Math.random() < 0.35 ? 1 : 0;
-              predictedBonus = Math.random() < 0.25 ? Math.floor(Math.random() * 3) + 1 : 0;
+              // Deterministic goal probability for GKP (penalty takers)
+              const goalSeed = (player.id * currentGW * 13) % 100;
+              predictedGoals = goalSeed < 2 ? 1 : 0;
+              // Deterministic clean sheet probability
+              const csSeed = (player.id * currentGW * 17) % 100;
+              predictedCleanSheets = csSeed < 35 ? 1 : 0;
+              // Deterministic bonus probability
+              const bonusSeed = (player.id * currentGW * 19) % 100;
+              predictedBonus = bonusSeed < 25 ? Math.floor(((player.id * currentGW * 23) % 100) / 33) + 1 : 0;
             } else if (positionName === "DEF") {
               predictedPoints = 2 + (form * 0.4);
-              predictedGoals = xgPerGame * horizon * (0.8 + Math.random() * 0.4);
-              predictedAssists = xaPerGame * horizon * (0.9 + Math.random() * 0.2);
-              predictedCleanSheets = Math.random() < 0.3 ? 1 : 0;
-              predictedBonus = Math.random() < 0.2 ? Math.floor(Math.random() * 3) + 1 : 0;
+              // Deterministic goal calculations for DEF
+              const goalVariance = 0.8 + ((player.id * currentGW * 13) % 100) / 250; // 0.8-1.2
+              predictedGoals = xgPerGame * horizon * goalVariance;
+              // Deterministic assist calculations 
+              const assistVariance = 0.9 + ((player.id * currentGW * 17) % 100) / 500; // 0.9-1.1
+              predictedAssists = xaPerGame * horizon * assistVariance;
+              // Deterministic clean sheet probability
+              const csSeed = (player.id * currentGW * 19) % 100;
+              predictedCleanSheets = csSeed < 30 ? 1 : 0;
+              // Deterministic bonus probability
+              const bonusSeed = (player.id * currentGW * 23) % 100;
+              predictedBonus = bonusSeed < 20 ? Math.floor(((player.id * currentGW * 29) % 100) / 33) + 1 : 0;
             } else if (positionName === "MID") {
               predictedPoints = 2 + (form * 0.6);
-              predictedGoals = xgPerGame * horizon * (0.9 + Math.random() * 0.2);
-              predictedAssists = xaPerGame * horizon * (1.0 + Math.random() * 0.1);
-              predictedBonus = Math.random() < 0.3 ? Math.floor(Math.random() * 3) + 1 : 0;
+              // Deterministic goal calculations for MID
+              const goalVariance = 0.9 + ((player.id * currentGW * 13) % 100) / 500; // 0.9-1.1
+              predictedGoals = xgPerGame * horizon * goalVariance;
+              // Deterministic assist calculations
+              const assistVariance = 1.0 + ((player.id * currentGW * 17) % 100) / 1000; // 1.0-1.1
+              predictedAssists = xaPerGame * horizon * assistVariance;
+              // Deterministic bonus probability
+              const bonusSeed = (player.id * currentGW * 19) % 100;
+              predictedBonus = bonusSeed < 30 ? Math.floor(((player.id * currentGW * 23) % 100) / 33) + 1 : 0;
             } else if (positionName === "FWD") {
               predictedPoints = 2 + (form * 0.7);
-              predictedGoals = xgPerGame * horizon * (1.1 + Math.random() * 0.2);
-              predictedAssists = xaPerGame * horizon * (0.8 + Math.random() * 0.3);
-              predictedBonus = Math.random() < 0.35 ? Math.floor(Math.random() * 3) + 1 : 0;
+              // Deterministic goal calculations for FWD
+              const goalVariance = 1.1 + ((player.id * currentGW * 13) % 100) / 500; // 1.1-1.3
+              predictedGoals = xgPerGame * horizon * goalVariance;
+              // Deterministic assist calculations
+              const assistVariance = 0.8 + ((player.id * currentGW * 17) % 100) / 333; // 0.8-1.1
+              predictedAssists = xaPerGame * horizon * assistVariance;
+              // Deterministic bonus probability
+              const bonusSeed = (player.id * currentGW * 19) % 100;
+              predictedBonus = bonusSeed < 35 ? Math.floor(((player.id * currentGW * 23) % 100) / 33) + 1 : 0;
             }
             
             predictedPoints = 2 + 
@@ -2159,7 +2185,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const dataQuality = Math.min(100, (minutesPlayed / 10) + (gamesPlayed * 5));
           const baseConfidence = 60 + (dataQuality * 0.3);
-          const ensembleConfidence = Math.min(95, Math.max(30, baseConfidence + (Math.random() * 20 - 10)));
+          // Deterministic confidence variance
+          const confidenceVariance = ((player.id * currentGW * 31) % 200 - 100) / 10; // -10 to +10
+          const ensembleConfidence = Math.min(95, Math.max(30, baseConfidence + confidenceVariance));
           
           let injuryRisk = "Low";
           if (availability <= 50) injuryRisk = "High";
@@ -2186,22 +2214,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             predicted_bonus: Math.max(0, predictedBonus),
             
             ensemble_confidence: Math.round(ensembleConfidence),
-            xgboost_score: predictedPoints * (0.9 + Math.random() * 0.2),
-            random_forest_score: predictedPoints * (0.8 + Math.random() * 0.4),
-            position_rank: Math.floor(Math.random() * 50) + 1,
+            // Deterministic model scores
+            xgboost_score: predictedPoints * (0.9 + ((player.id * currentGW * 37) % 100) / 500), // 0.9-1.1
+            random_forest_score: predictedPoints * (0.8 + ((player.id * currentGW * 41) % 100) / 250), // 0.8-1.2
+            position_rank: ((player.id * currentGW * 43) % 50) + 1,
             
             availability_status: availability,
             form_1gw: form,
-            form_3gw: form * 0.9 + Math.random() * 0.2,
-            form_5gw: form * 0.85 + Math.random() * 0.3,
+            // Deterministic form calculations
+            form_3gw: form * 0.9 + ((player.id * currentGW * 47) % 100) / 500, // 0.9*form + 0-0.2
+            form_5gw: form * 0.85 + ((player.id * currentGW * 53) % 100) / 333, // 0.85*form + 0-0.3
             xg_per_game: xgPerGame,
             xa_per_game: xaPerGame,
-            shots_per_game: xgPerGame * (4 + Math.random() * 2),
-            key_passes_per_game: xaPerGame * (3 + Math.random() * 2),
+            // Deterministic shot and key pass calculations
+            shots_per_game: xgPerGame * (4 + ((player.id * currentGW * 59) % 100) / 50), // 4-6 multiplier
+            key_passes_per_game: xaPerGame * (3 + ((player.id * currentGW * 61) % 100) / 50), // 3-5 multiplier
             
             injury_risk: injuryRisk,
             rotation_risk: rotationRisk,
-            fixture_difficulty: 2 + Math.floor(Math.random() * 3),
+            // Deterministic fixture difficulty (2-4 scale)
+            fixture_difficulty: 2 + Math.floor(((player.id * currentGW * 67) % 100) / 33),
             ownership_percentage: ownership
           };
           
