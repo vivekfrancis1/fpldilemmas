@@ -995,7 +995,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Goal Projections endpoint  
   app.get("/api/team-goal-projections", async (req, res) => {
     try {
-      const weeks = parseInt(req.query.weeks as string) || 35;
+      console.log(`DEBUG: Team Goal Projections API called - generating all 38 gameweeks`);
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -1013,25 +1013,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       const bettingData = getSpreadBettingData();
       
+      console.log(`DEBUG: Processing all 38 gameweeks, current GW: ${currentGameweek}`);
       
       const teamProjections = teams.map((team: any) => {
-        // Limit fixtures to only the specified number of weeks
-        const maxGameweek = weeks === 35 ? 38 : currentGameweek + weeks;
-        const upcomingFixtures = fixturesData
+        // Get ALL fixtures for this team across all 38 gameweeks
+        const allFixtures = fixturesData
           .filter((f: any) => 
             (f.team_h === team.id || f.team_a === team.id) && 
-            !f.finished && 
-            f.event > currentGameweek && 
-            f.event <= maxGameweek
+            f.event >= 1 && f.event <= 38
           );
         
-        const projections = upcomingFixtures.map((fixture: any) => {
+        const projections = allFixtures.map((fixture: any) => {
           const isHome = fixture.team_h === team.id;
           const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
           
           if (!opponent) return null;
           
-          // Advanced spread betting market-based goal calculation with 8-phase statistical modeling
+          // Check if fixture is finished - use actual goals, otherwise use projections
+          if (fixture.finished) {
+            // For finished fixtures, use actual goals scored
+            const actualGoals = isHome ? (fixture.team_h_score || 0) : (fixture.team_a_score || 0);
+            return {
+              gameweek: fixture.event,
+              opponent: opponent.short_name,
+              expectedGoals: actualGoals, // Actual goals for finished games
+              isHome: isHome,
+              isActual: true // Flag to indicate this is actual data
+            };
+          }
+          
+          // For unfinished fixtures, use advanced spread betting market-based goal calculation with 8-phase statistical modeling
           const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
           const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
           
@@ -1117,7 +1128,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             gameweek: fixture.event,
             opponent: opponent.short_name,
             isHome,
-            expectedGoals: Math.round(expectedGoals * 100) / 100
+            expectedGoals: Math.round(expectedGoals * 100) / 100,
+            isActual: false // Flag to indicate this is projected data
           };
         }).filter(Boolean);
         

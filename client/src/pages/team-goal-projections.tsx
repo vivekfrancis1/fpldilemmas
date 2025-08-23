@@ -22,7 +22,7 @@ interface TeamGoalProjection {
 }
 
 export default function TeamGoalProjections() {
-  const [weeks, setWeeks] = useState<number>(6);
+  const [weeks, setWeeks] = useState<number>(38);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
 
@@ -31,7 +31,7 @@ export default function TeamGoalProjections() {
   });
 
   const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamGoalProjection[]>({
-    queryKey: [`/api/team-goal-projections?weeks=${weeks}`],
+    queryKey: ["/api/team-goal-projections"],
   });
 
   const filteredProjections = useMemo(() => {
@@ -59,22 +59,20 @@ export default function TeamGoalProjections() {
   const totalGoals = useMemo(() => {
     if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, averagePerGame: 0 };
     
-    const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
     const gameweekTotals: { [gameweek: number]: number } = {};
     let overallTotal = 0;
     
-    // Calculate totals for each gameweek
-    for (let i = 0; i < weeks; i++) {
-      const gwNumber = currentGW + i + 1;
+    // Calculate totals for all 38 gameweeks
+    for (let gwNumber = 1; gwNumber <= 38; gwNumber++) {
       const gwTotal = filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
       gameweekTotals[gwNumber] = gwTotal;
       overallTotal += gwTotal;
     }
     
-    const averagePerGame = weeks > 0 ? overallTotal / weeks : 0;
+    const averagePerGame = overallTotal / 38;
     
     return { gameweekTotals, overallTotal, averagePerGame };
-  }, [filteredProjections, weeks, bootstrapData]);
+  }, [filteredProjections, bootstrapData]);
 
   const getConfidenceColor = (confidence: string) => {
     switch (confidence) {
@@ -116,7 +114,7 @@ export default function TeamGoalProjections() {
               Team Goal Projections
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Expected goals for each team over the next {weeks === 35 ? 'remaining' : weeks} gameweeks based on betting market analysis
+              Goals for each team across all 38 gameweeks - actual goals for completed games, projections for upcoming games
             </p>
           </div>
 
@@ -124,23 +122,6 @@ export default function TeamGoalProjections() {
           <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex flex-wrap gap-4 items-end">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Weeks:</label>
-                  <Select value={weeks.toString()} onValueChange={(v) => setWeeks(parseInt(v))}>
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="6">6 weeks</SelectItem>
-                      <SelectItem value="10">10 weeks</SelectItem>
-                      <SelectItem value="15">15 weeks</SelectItem>
-                      <SelectItem value="20">20 weeks</SelectItem>
-                      <SelectItem value="25">25 weeks</SelectItem>
-                      <SelectItem value="30">30 weeks</SelectItem>
-                      <SelectItem value="35">Rest of Season</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-gray-700">Team:</label>
@@ -169,13 +150,9 @@ export default function TeamGoalProjections() {
                       <SelectItem value="total">Total Goals</SelectItem>
                       <SelectItem value="average">Goals/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
-                      {bootstrapData?.events && Array.from({ length: weeks }, (_, i) => {
-                        const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-                        const gwNumber = currentGW + i + 1;
-                        return (
-                          <SelectItem key={`gw${gwNumber}`} value={`gw${gwNumber}`}>GW{gwNumber}</SelectItem>
-                        );
-                      })}
+                      {Array.from({ length: 38 }, (_, i) => (
+                        <SelectItem key={`gw${i + 1}`} value={`gw${i + 1}`}>GW{i + 1}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -188,7 +165,7 @@ export default function TeamGoalProjections() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Team Goal Projections: Next {weeks === 35 ? 'Remaining' : weeks}GW
+                Team Goal Projections: All 38 Gameweeks
                 <Badge variant="outline" className="ml-2">
                   {filteredProjections.length} teams
                 </Badge>
@@ -205,9 +182,8 @@ export default function TeamGoalProjections() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
                         Team
                       </th>
-                      {bootstrapData?.events && Array.from({ length: weeks }, (_, i) => {
-                        const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-                        const gwNumber = currentGW + i + 1;
+                      {Array.from({ length: 38 }, (_, i) => {
+                        const gwNumber = i + 1;
                         return (
                           <th 
                             key={gwNumber} 
@@ -260,13 +236,12 @@ export default function TeamGoalProjections() {
                           </div>
                         </td>
                         
-                        {bootstrapData?.events && Array.from({ length: weeks }, (_, weekIndex) => {
-                          const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-                          const gwNumber = currentGW + weekIndex + 1;
+                        {Array.from({ length: 38 }, (_, weekIndex) => {
+                          const gwNumber = weekIndex + 1;
                           const goals = team.gameweekProjections[gwNumber] || 0;
                           return (
                             <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsColor(goals)}`}>
-                              {goals.toFixed(2)}
+                              {goals > 0 ? goals.toFixed(2) : "-"}
                             </td>
                           );
                         })}
@@ -304,13 +279,12 @@ export default function TeamGoalProjections() {
                         </div>
                       </td>
                       
-                      {bootstrapData?.events && Array.from({ length: weeks }, (_, weekIndex) => {
-                        const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-                        const gwNumber = currentGW + weekIndex + 1;
+                      {Array.from({ length: 38 }, (_, weekIndex) => {
+                        const gwNumber = weekIndex + 1;
                         const gwTotal = totalGoals.gameweekTotals[gwNumber] || 0;
                         return (
                           <td key={weekIndex} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
-                            {gwTotal.toFixed(2)}
+                            {gwTotal > 0 ? gwTotal.toFixed(2) : "-"}
                           </td>
                         );
                       })}
