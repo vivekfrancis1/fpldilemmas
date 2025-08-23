@@ -2957,28 +2957,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
-      // Fetch goal and CS projections for unfinished games
-      const [goalProjectionsResponse, csProjectionsResponse] = await Promise.all([
-        fetch(`http://localhost:5000/api/team-goal-projections`),
-        fetch(`http://localhost:5000/api/team-cs-projections`)
-      ]);
+      // Fetch predicted scores for all matches
+      const predictedScoresResponse = await fetch(`http://localhost:5000/api/predicted-scores`);
+      if (!predictedScoresResponse.ok) {
+        throw new Error("Failed to fetch predicted scores data");
+      }
       
-      const goalProjections = await goalProjectionsResponse.json();
-      const csProjections = await csProjectionsResponse.json();
+      const predictedScores = await predictedScoresResponse.json();
       
-      // Create team lookup from projection data
-      const teamProjections = new Map();
-      goalProjections.forEach((team: any) => {
-        teamProjections.set(team.id, {
-          goalProjections: team.gameweekProjections
+      // Create a lookup map for predicted match results by fixture ID
+      const predictedMatchResults = new Map();
+      predictedScores.forEach((match: any) => {
+        predictedMatchResults.set(match.id, {
+          homeScore: match.homeTeam.predictedScore,
+          awayScore: match.awayTeam.predictedScore,
+          result: match.predictedResult
         });
-      });
-      
-      csProjections.forEach((team: any) => {
-        const existingTeam = teamProjections.get(team.id);
-        if (existingTeam) {
-          existingTeam.csProjections = team.gameweekProjections;
-        }
       });
       
       // Process all fixtures
@@ -2999,12 +2993,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           homeTeam.actualGames++;
           awayTeam.actualGames++;
         } else {
-          // Use projected results for unfinished games
-          const homeProjection = teamProjections.get(fixture.team_h);
-          const awayProjection = teamProjections.get(fixture.team_a);
+          // Use predicted scores for unfinished games
+          const predictedMatch = predictedMatchResults.get(fixture.id);
           
-          homeGoals = homeProjection?.goalProjections?.[fixture.event.toString()] || 0;
-          awayGoals = awayProjection?.goalProjections?.[fixture.event.toString()] || 0;
+          if (predictedMatch) {
+            homeGoals = predictedMatch.homeScore;
+            awayGoals = predictedMatch.awayScore;
+          } else {
+            homeGoals = 0;
+            awayGoals = 0;
+          }
           homeTeam.projectedGames++;
           awayTeam.projectedGames++;
         }
