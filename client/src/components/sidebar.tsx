@@ -51,18 +51,18 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Projection Tools", 
       items: [
         { path: "/projected-goals-cs", label: "Match Projections", icon: Target, description: "Projected goals & clean sheets", popular: false },
-        { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false, isNew: true },
-        { path: "/projected-standings", label: "Projected Standings", icon: Trophy, description: "Final league table projection", popular: false, isNew: true },
+        { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
+        { path: "/projected-standings", label: "Projected Standings", icon: Trophy, description: "Final league table projection", popular: false },
         { path: "/team-goal-projections", label: "Team Goal Projections", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-goals-against-projections", label: "Team Goals Against", icon: Shield, description: "Expected goals conceded", popular: false },
-        { path: "/team-assist-projections", label: "Team Assist Projections", icon: Users, description: "Expected team assists", popular: false, isNew: true },
+        { path: "/team-assist-projections", label: "Team Assist Projections", icon: Users, description: "Expected team assists", popular: false },
         { path: "/team-cs-projections", label: "Team CS Projections", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/goal-share", label: "Goal Share", icon: Target, description: "Team goal distribution by player", popular: false },
         { path: "/assist-share", label: "Assist Share", icon: Users, description: "Team assist distribution by player", popular: false },
-        { path: "/player-goal-projections", label: "Player Goal Projections", icon: Target, description: "Individual player season goal projections", popular: false, isNew: true },
-        { path: "/player-assist-projections", label: "Player Assist Projections", icon: Users, description: "Individual player season assist projections", popular: false, isNew: true },
-        { path: "/season-projections", label: "Season Projections", icon: TrendingUp, description: "Season-long goal involvements", popular: false, isNew: true },
-        { path: "/openfpl-projections", label: "Open FPL Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false, isNew: true }
+        { path: "/player-goal-projections", label: "Player Goal Projections", icon: Target, description: "Individual player season goal projections", popular: false },
+        { path: "/player-assist-projections", label: "Player Assist Projections", icon: Users, description: "Individual player season assist projections", popular: false },
+        { path: "/season-projections", label: "Season Projections", icon: TrendingUp, description: "Season-long goal involvements", popular: false },
+        { path: "/openfpl-projections", label: "Open FPL Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false }
       ]
     },
     {
