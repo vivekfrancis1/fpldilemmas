@@ -2478,8 +2478,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const opponentProjections = opponentGoalProjections.get(opponent.id);
           const opponentExpectedGoals = opponentProjections?.[fixture.event.toString()] || 1.5; // Default to average
           
-          // NEW SIMPLIFIED FORMULA: Clean sheet = 55 - 10 * Goals against (expressed as percentage)
-          let cleanSheetProbability = 55 - (10 * opponentExpectedGoals);
+          // NEW SIMPLIFIED FORMULA: Clean sheet = 50 - Goals against (expressed as percentage)
+          let cleanSheetProbability = 50 - opponentExpectedGoals;
           
           // Ensure realistic bounds (0-100%)
           cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
