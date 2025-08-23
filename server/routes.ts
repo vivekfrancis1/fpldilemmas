@@ -2745,270 +2745,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Season-long Goal Share endpoint - optimized with historical data weights
+  // Season-long Goal Share endpoint - uses Team Goal Projections totals
   app.get("/api/goal-share-season", async (req, res) => {
     try {
-      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+      const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("https://fantasy.premierleague.com/api/fixtures/")
+        fetch("http://localhost:5000/api/team-goal-projections")
       ]);
       
-      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API");
+      if (!bootstrapResponse.ok || !teamProjectionsResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API or Team Goal Projections");
       }
       
       const bootstrapData = await bootstrapResponse.json();
-      const fixturesData = await fixturesResponse.json();
+      const teamProjectionsData = await teamProjectionsResponse.json();
       
-      console.log("DEBUG: Optimized Season Goal Share API called");
+      console.log("DEBUG: Season Goal Share API called - using Team Goal Projections totals");
       
-      // Aggregate goal shares across all remaining gameweeks for season totals
+      // Calculate team season totals from Team Goal Projections
       const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
       
-      // Generate data for entire remaining season
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-      const startGameweek = Math.max(2, currentGameweek);
-      
-      // Create team service once for efficiency
-      const teamService = await createTeamService();
-      const bettingData = teamService.getBettingData();
-      
-      for (let gameweek = startGameweek; gameweek <= 38; gameweek++) {
-        // Generate team goal projections for this gameweek
-        const teams = bootstrapData.teams;
-        const teamProjections: any[] = [];
-        
-        teams.forEach((team: any) => {
-          const gameweekProjections: any = {};
-          
-          // Generate projections for this specific gameweek
-          for (let gw = gameweek; gw <= gameweek; gw++) {
-            const gwFixtures = fixturesData.filter((fixture: any) => 
-              !fixture.finished && 
-              fixture.event === gw &&
-              (fixture.team_h === team.id || fixture.team_a === team.id)
-            );
-            
-            if (gwFixtures.length > 0) {
-              const fixture = gwFixtures[0];
-              const isHome = fixture.team_h === team.id;
-              
-              // Use same goal projection calculation logic
-              const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
-              if (!opponent) continue;
-              
-              const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
-              const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
-              
-              // Simplified goal calculation for aggregation
-              let baseExpectedGoals = teamBettingData.expectedGoalsPerGame;
-              
-              // Apply key modifiers
-              const venueMultiplier = isHome ? 1.15 : 0.88;
-              baseExpectedGoals *= venueMultiplier;
-              
-              const opponentDefenseStrength = opponentDefenseData.baseCleanSheetRate;
-              const defensiveImpact = Math.pow(opponentDefenseStrength * 2.5, 1.2);
-              const attackingPenetration = 1.25 - (defensiveImpact * 0.65);
-              baseExpectedGoals *= Math.max(0.55, Math.min(1.35, attackingPenetration));
-              
-              // Final bounds
-              const expectedGoals = Math.max(0.3, Math.min(4.2, baseExpectedGoals));
-              gameweekProjections[gw.toString()] = Math.round(expectedGoals * 100) / 100;
-            }
-          }
-          
-          teamProjections.push({
-            id: team.id,
-            team: team.short_name,
-            teamShort: team.short_name,
-            teamName: team.name,
-            gameweekProjections
-          });
-        });
-        
-        // Generate goal share data for this gameweek and aggregate
-        const weekGoalShareData = generateGoalShareFromTeamProjections(bootstrapData, fixturesData, teamProjections, gameweek);
-        
-        weekGoalShareData.forEach((teamData: any) => {
-          if (!teamSeasonTotals[teamData.teamId]) {
-            teamSeasonTotals[teamData.teamId] = {
-              expectedGoals: 0,
-              players: {}
-            };
-          }
-          
-          teamSeasonTotals[teamData.teamId].expectedGoals += teamData.expectedGoals;
-          
-          teamData.players.forEach((player: any) => {
-            if (!teamSeasonTotals[teamData.teamId].players[player.id]) {
-              teamSeasonTotals[teamData.teamId].players[player.id] = {
-                name: player.name,
-                position: player.position,
-                projectedGoals: 0
-              };
-            }
-            teamSeasonTotals[teamData.teamId].players[player.id].projectedGoals += player.projectedGoals;
-          });
-        });
-      }
-      
-      // OPTIMIZATION: Fetch historical data for weighted goal share calculations
-      const historicalSeasons = ["2024/25", "2023/24", "2022/23", "2021/22", "2020/21"];
-      const seasonWeights = {
-        "current": 0.40,  // Current projections: 40%
-        "2024/25": 0.25,  // Most recent complete: 25%
-        "2023/24": 0.20,  // Second most recent: 20%
-        "2022/23": 0.10,  // Third: 10%
-        "2021/22": 0.03,  // Fourth: 3%
-        "2020/21": 0.02   // Fifth: 2%
-      };
-      
-      console.log("DEBUG: Fetching historical data for optimization...");
-      const historicalData: { [season: string]: any[] } = {};
-      
-      // Fetch historical goal share data for each season in parallel
-      await Promise.all(historicalSeasons.map(async (season) => {
-        try {
-          const historicalPlayers = await storage.getHistoricalPlayers(season);
-          if (historicalPlayers && historicalPlayers.length > 0) {
-            console.log(`DEBUG: Found ${historicalPlayers.length} historical players for ${season}`);
-            
-            // Convert to goal share format by team
-            const teamGoalShares: { [teamName: string]: { totalGoals: number, players: any[] } } = {};
-            
-            historicalPlayers.forEach(player => {
-              const teamName = player.team_name || player.teamName || 'Unknown Team';
-              const goals = player.goals_scored || player.goalsScored || 0;
-              
-              if (!teamGoalShares[teamName]) {
-                teamGoalShares[teamName] = { totalGoals: 0, players: [] };
-              }
-              
-              teamGoalShares[teamName].totalGoals += goals;
-              teamGoalShares[teamName].players.push({
-                id: player.id || player.playerId,
-                name: `${player.first_name || player.firstName} ${player.second_name || player.secondName}`,
-                goals: goals
-              });
-            });
-            
-            // Calculate goal shares
-            const seasonData: any[] = [];
-            Object.entries(teamGoalShares).forEach(([teamName, team]) => {
-              if (team.totalGoals > 0) {
-                team.players.forEach(player => {
-                  seasonData.push({
-                    teamName: teamName,
-                    playerId: player.id,
-                    playerName: player.name,
-                    goalShare: (player.goals / team.totalGoals) * 100
-                  });
-                });
-              }
-            });
-            
-            historicalData[season] = seasonData;
-          }
-        } catch (error) {
-          console.warn(`Could not fetch historical data for ${season}:`, error.message);
+      // Aggregate expected goals from Team Goal Projections data
+      teamProjectionsData.forEach((team: any) => {
+        if (!teamSeasonTotals[team.id]) {
+          teamSeasonTotals[team.id] = {
+            expectedGoals: 0,
+            players: {}
+          };
         }
-      }));
+        
+        // Sum all gameweek projections for this team's season total
+        Object.values(team.gameweekProjections).forEach((goals: any) => {
+          if (typeof goals === 'number') {
+            teamSeasonTotals[team.id].expectedGoals += goals;
+          }
+        });
+      });
       
-      // OPTIMIZATION: Apply weighted averaging using historical data
-      const seasonGoalShareData: any[] = [];
+      console.log("DEBUG: Calculated season totals from Team Goal Projections");
       
+      // Now distribute goal shares among players for each team
       Object.keys(teamSeasonTotals).forEach(teamIdStr => {
         const teamId = parseInt(teamIdStr);
-        const teamData = teamSeasonTotals[teamId];
         const team = bootstrapData.teams.find((t: any) => t.id === teamId);
         
-        if (team && teamData.expectedGoals > 0) {
-          // Calculate optimized goal share percentages using historical weights
-          const playersWithShares = Object.keys(teamData.players).map(playerIdStr => {
-            const playerId = parseInt(playerIdStr);
-            const playerData = teamData.players[playerId];
-            
-            // Start with current projection
-            let weightedGoalShare = 0;
-            let totalWeight = 0;
-            
-            // Current season projection weight
-            const currentGoalShare = (playerData.projectedGoals / teamData.expectedGoals) * 100;
-            weightedGoalShare += currentGoalShare * seasonWeights.current;
-            totalWeight += seasonWeights.current;
-            
-            // Add historical weights
-            historicalSeasons.forEach(season => {
-              const seasonData = historicalData[season];
-              if (seasonData) {
-                // Find this player's historical goal share in this season
-                const historicalRecord = seasonData.find(record => 
-                  record.teamName === team.name && 
-                  record.playerName.toLowerCase() === playerData.name.toLowerCase()
-                );
-                
-                if (historicalRecord && historicalRecord.goalShare > 0) {
-                  const weight = seasonWeights[season as keyof typeof seasonWeights];
-                  weightedGoalShare += historicalRecord.goalShare * weight;
-                  totalWeight += weight;
-                }
-              }
-            });
-            
-            // Calculate final optimized goal share
-            const optimizedGoalShare = totalWeight > 0 ? weightedGoalShare / totalWeight : currentGoalShare;
-            
-            return {
-              id: playerId,
-              name: playerData.name,
-              position: playerData.position,
-              goalShare: optimizedGoalShare,
-              projectedGoals: (optimizedGoalShare / 100) * teamData.expectedGoals
+        if (team && teamSeasonTotals[teamId].expectedGoals > 0) {
+          // Get all players for this team
+          const teamPlayers = bootstrapData.elements.filter((p: any) => p.team === teamId);
+          
+          // Distribute goal shares using the same logic
+          const playerShares = distributeGoalShares(teamPlayers, bootstrapData.element_types);
+          
+          // Calculate projected goals for each player based on team's total expected goals
+          playerShares.forEach(player => {
+            const projectedGoals = (teamSeasonTotals[teamId].expectedGoals * player.goalShare / 100);
+            teamSeasonTotals[teamId].players[player.id] = {
+              name: player.name,
+              position: player.position,
+              projectedGoals: Math.round(projectedGoals * 100) / 100
             };
-          }).filter(p => p.goalShare > 0.1);
-          
-          // Normalize to ensure team total is 100%
-          const totalShare = playersWithShares.reduce((sum, p) => sum + p.goalShare, 0);
-          if (totalShare > 0) {
-            playersWithShares.forEach(player => {
-              player.goalShare = (player.goalShare / totalShare) * 100;
-              player.projectedGoals = (player.goalShare / 100) * teamData.expectedGoals;
-            });
-          }
-          
-          // Sort by goal share and round values
-          playersWithShares.sort((a, b) => b.goalShare - a.goalShare);
-          playersWithShares.forEach(player => {
-            player.goalShare = Math.round(player.goalShare * 10) / 10;
-            player.projectedGoals = Math.round(player.projectedGoals * 100) / 100;
-          });
-          
-          seasonGoalShareData.push({
-            gameweek: 0, // Season-long data
-            teamId: teamId,
-            teamName: team.name,
-            teamShort: team.short_name,
-            expectedGoals: Math.round(teamData.expectedGoals * 100) / 100,
-            players: playersWithShares
           });
         }
       });
       
-      console.log(`DEBUG: Generated optimized season-long goal share data for ${seasonGoalShareData.length} teams`);
-      
-      // Log sample entries for debugging
-      if (seasonGoalShareData.length > 0) {
-        seasonGoalShareData.forEach(team => {
-          team.players.slice(0, 2).forEach((player: any) => {
-            if (['Erling Haaland', 'Mohamed Salah', 'Harry Kane'].includes(player.name)) {
-              console.log(`OPTIMIZED_GOAL_SHARE ${player.name}: goalShare=${player.goalShare}%, projectedGoals=${player.projectedGoals}, teamGoals=${team.expectedGoals}`);
-            }
-          });
+      const response = Object.keys(teamSeasonTotals).map(teamIdStr => {
+        const teamId = parseInt(teamIdStr);
+        const team = bootstrapData.teams.find((t: any) => t.id === teamId);
+        const teamData = teamSeasonTotals[teamId];
+        
+        if (!team) return null;
+        
+        const players = Object.keys(teamData.players).map(playerIdStr => {
+          const playerId = parseInt(playerIdStr);
+          const player = teamData.players[playerId];
+          const goalShare = (player.projectedGoals / teamData.expectedGoals) * 100;
+          
+          return {
+            id: playerId,
+            name: player.name,
+            position: player.position,
+            goalShare: Math.round(goalShare * 10) / 10,
+            projectedGoals: player.projectedGoals
+          };
+        }).sort((a, b) => b.goalShare - a.goalShare);
+        
+        // Debug logging for key players
+        players.forEach(player => {
+          if (player.name && (player.name.includes('Salah') || player.name.includes('Haaland'))) {
+            console.log(`GOAL_SHARE_FROM_TEAM_PROJECTIONS ${player.name}: goalShare=${player.goalShare}%, projectedGoals=${player.projectedGoals}, teamGoals=${teamData.expectedGoals}`);
+          }
         });
-      }
+        
+        return {
+          gameweek: 0, // Season-long data
+          teamId: teamId,
+          teamName: team.name,
+          teamShort: team.short_name,
+          expectedGoals: Math.round(teamData.expectedGoals * 100) / 100,
+          players: players
+        };
+      }).filter(Boolean);
       
-      res.json(seasonGoalShareData);
+      console.log(`DEBUG: Generated season-long goal share data using Team Goal Projections totals for ${response.length} teams`);
+      res.json(response);
     } catch (error) {
       console.error("Error generating optimized season goal share data:", error);
       res.status(500).json({ error: "Failed to generate optimized season goal share data" });
