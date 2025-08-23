@@ -462,18 +462,37 @@ export default function OpenFPLProjections() {
                                     // Calculate individual gameweek values using horizon differences
                                     const gwValues = Array.from({length: parseInt(horizonFilter)}, (_, i) => {
                                       const gwIndex = i + 1;
+                                      let value;
+                                      
                                       if (gwIndex === 1) {
                                         // GW1 = 1 horizon value
-                                        return Math.abs(getHorizonValue(1));
+                                        value = Math.abs(getHorizonValue(1));
                                       } else {
                                         // GWn = n horizon - (n-1) horizon, use absolute value to avoid negatives
                                         const difference = getHorizonValue(gwIndex) - getHorizonValue(gwIndex - 1);
-                                        return Math.abs(difference);
+                                        value = Math.abs(difference);
                                       }
+                                      
+                                      // If minutes are 0, set all other stats to 0
+                                      const minutesValue = metric === 'predicted_minutes' ? value : 
+                                        (gwIndex === 1 ? Math.abs(horizonData[1]?.predicted_minutes || 0) :
+                                         Math.abs((horizonData[gwIndex]?.predicted_minutes || 0) - (horizonData[gwIndex - 1]?.predicted_minutes || 0)));
+                                      
+                                      if (minutesValue === 0 && metric !== 'predicted_minutes') {
+                                        return 0;
+                                      }
+                                      
+                                      return value;
                                     });
 
                                     // Total is the highest horizon value (cumulative)
-                                    const total = getHorizonValue(parseInt(horizonFilter));
+                                    let total = getHorizonValue(parseInt(horizonFilter));
+                                    
+                                    // If total minutes are 0, set all other stats to 0
+                                    const totalMinutes = horizonData[parseInt(horizonFilter)]?.predicted_minutes || 0;
+                                    if (totalMinutes === 0 && metric !== 'predicted_minutes') {
+                                      total = 0;
+                                    }
 
                                     // Calculate minutes and ownership totals for additional columns
                                     const minutesTotal = horizonData[parseInt(horizonFilter)]?.predicted_minutes || 0;
