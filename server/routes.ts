@@ -2246,180 +2246,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Team Assist Projections endpoint - similar to goal projections with assist-specific calculations
+  // Team Assist Projections endpoint - directly derived from Team Goal Projections * 0.72
   app.get("/api/team-assist-projections", async (req, res) => {
     try {
-      console.log(`DEBUG: Team Assist Projections API called - generating all 38 gameweeks`);
+      console.log(`DEBUG: Team Assist Projections API called - using Team Goal Projections * 0.72`);
       
-      const [bootstrapResponse, fixturesResponse] = await Promise.all([
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("https://fantasy.premierleague.com/api/fixtures/")
-      ]);
+      // Fetch Team Goal Projections data directly
+      const teamGoalProjectionsResponse = await fetch("http://localhost:5000/api/team-goal-projections");
       
-      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API");
+      if (!teamGoalProjectionsResponse.ok) {
+        throw new Error("Failed to fetch Team Goal Projections data");
       }
       
-      const bootstrapData = await bootstrapResponse.json();
-      const fixturesData = await fixturesResponse.json();
+      const teamGoalProjections = await teamGoalProjectionsResponse.json();
       
-      const teams = bootstrapData.teams;
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-      
-      console.log(`DEBUG: Processing all 38 gameweeks for assists, current GW: ${currentGameweek}`);
-      
-      // Use centralized team service for consistent data
-      const teamService = await createTeamService();
-      const bettingData = teamService.getBettingData();
-      
-      // Note: Using centralized team data for consistency across all projection tools
-      
-      const teamProjections = teams.map((team: any) => {
-        // Get ALL fixtures for this team across all 38 gameweeks
-        const allFixtures = fixturesData
-          .filter((f: any) => 
-            (f.team_h === team.id || f.team_a === team.id) && 
-            f.event >= 1 && f.event <= 38
-          );
-        
-        const projections = allFixtures.map((fixture: any) => {
-          const isHome = fixture.team_h === team.id;
-          const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
-          
-          if (!opponent) return null;
-          
-          // Check if fixture is finished - use actual assists, otherwise use projections
-          if (fixture.finished) {
-            // For finished fixtures, extract actual assists from stats
-            let actualAssists = 0;
-            if (fixture.stats && Array.isArray(fixture.stats)) {
-              const assistsStats = fixture.stats.find((stat: any) => stat.identifier === "assists");
-              if (assistsStats) {
-                const teamAssists = isHome ? assistsStats.h : assistsStats.a;
-                if (Array.isArray(teamAssists)) {
-                  actualAssists = teamAssists.reduce((sum: number, assist: any) => sum + (assist.value || 0), 0);
-                }
-              }
-            }
-            return {
-              gameweek: fixture.event,
-              opponent: opponent.short_name,
-              expectedAssists: actualAssists, // Actual assists for finished games
-              isHome: isHome,
-              isActual: true // Flag to indicate this is actual data
-            };
-          }
-          
-          // For unfinished fixtures, calculate assists as 0.72 * projected goals for perfect consistency
-          // First, get the projected goals for this specific fixture from team goal projections
-          const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
-          const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
-          
-          // Use the same goal projection logic to get the expected goals for this fixture
-          let baseExpectedGoals = teamBettingData.expectedGoalsPerGame;
-          
-          // Apply the same venue multiplier as goals
-          const venueMultiplier = isHome ? 
-            (1.12 + ((team.id * fixture.event * 7) % 100) / 1667) : // Home advantage 112-118%
-            (0.85 + ((team.id * fixture.event * 11) % 100) / 1667); // Away factor 85-91%
-          baseExpectedGoals *= venueMultiplier;
-          
-          // Apply the same opponent defense impact as goals
-          const opponentDefenseStrength = opponentDefenseData.baseCleanSheetRate;
-          const defensiveReduction = opponentDefenseStrength * 0.4; // Max 20% reduction for best defenses
-          const attackingPenetration = 1.0 - defensiveReduction;
-          baseExpectedGoals *= Math.max(0.75, Math.min(1.15, attackingPenetration));
-          
-          // Apply the same tactical context as goals
-          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
-          const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
-          const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
-                               (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
-                               (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13); // Manchester
-          
-          if (isEliteClash) {
-            baseExpectedGoals *= 1.12; // Elite clashes feature exceptional attacking quality
-          } else if (isTopSixBattle) {
-            baseExpectedGoals *= bettingData.contextMultipliers.topSix.goals * 1.02;
-          }
-          if (isRivalryMatch) {
-            baseExpectedGoals *= 1.14; // Rivalry games typically more open and emotional
-          }
-          
-          // Apply centralized tier multiplier
-          const tierSeed = (team.id * fixture.event * 13) % 100;
-          const tierMultiplier = teamService.getTierMultiplier(team.id, tierSeed);
-          baseExpectedGoals *= tierMultiplier;
-          
-          // Apply the same COMPRESSED market momentum and variance as goals (UNIFIED)
-          const marketMomentum = 0.99 + ((team.id * fixture.event * 17) % 100) / 5000; // 99-101% market sentiment (compressed)
-          const fixtureComplexity = fixture.event <= 10 ? 1.005 : fixture.event <= 20 ? 1.0 : 0.995; // Minimal season stage impact
-          baseExpectedGoals *= marketMomentum * fixtureComplexity;
-          
-          const marketVolatility = 0.99 + ((team.id * fixture.event * 19) % 100) / 5000; // 99-101% minimal variation (compressed)
-          const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.95); // Reduced confidence impact
-          const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamBettingData.variance * 0.2; // Reduced variance impact
-          baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
-          
-          // Apply the same goal bounds and confidence multiplier as goals
-          const marketFloor = Math.max(adminGoalSettings.absoluteMinGoals, teamBettingData.expectedGoalsPerGame * adminGoalSettings.marketFloorMultiplier); // Dynamic minimum
-          const marketCeiling = Math.min(adminGoalSettings.absoluteMaxGoals, teamBettingData.expectedGoalsPerGame * adminGoalSettings.marketCeilingMultiplier); // Dynamic maximum
-          baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
-          
-          // Apply confidence multiplier from centralized team service
-          const confidenceMultiplier = teamService.getConfidenceMultiplier(team.id);
-          
-          const projectedGoals = baseExpectedGoals * confidenceMultiplier;
-          
-          // Calculate assists as exactly 0.72 * projected goals for perfect consistency
-          const expectedAssists = projectedGoals * 0.72;
-          
-          return {
-            gameweek: fixture.event,
-            opponent: opponent.short_name,
-            isHome,
-            expectedAssists: Math.round(expectedAssists * 100) / 100,
-            isActual: false // Flag to indicate this is projected data
-          };
-        }).filter(Boolean);
-        
-        const totalAssists = projections.reduce((sum: number, p: any) => sum + p.expectedAssists, 0);
-        
-        // Convert projections array to gameweekProjections object
+      // Convert goal projections to assist projections by multiplying by 0.72
+      const teamAssistProjections = teamGoalProjections.map((team: any) => {
+        // Convert gameweek goals to assists (goals * 0.72)
         const gameweekProjections: { [gameweek: number]: number } = {};
-        projections.forEach((p: any) => {
-          gameweekProjections[p.gameweek] = p.expectedAssists;
+        Object.keys(team.gameweekProjections).forEach(gameweek => {
+          const goals = team.gameweekProjections[gameweek];
+          gameweekProjections[parseInt(gameweek)] = Math.round(goals * 0.72 * 100) / 100;
         });
         
-        // Determine confidence based on centralized team data
-        const teamData = teamService.getTeamData(team.id);
-        const averageAssists = totalAssists / Math.max(1, projections.length);
-        let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
-        
-        // Enhanced confidence calculation using centralized team data
-        if (teamData && teamData.confidence >= 0.80) confidence = 'High';
-        else if (teamData && teamData.confidence <= 0.60) confidence = 'Low';
+        // Calculate total and average assists from the converted data
+        const totalAssists = Math.round(team.totalGoals * 0.72 * 100) / 100;
+        const averageAssistsPerGame = Math.round(team.averageGoalsPerGame * 0.72 * 100) / 100;
         
         return {
           id: team.id,
-          team: team.short_name,
-          teamShort: team.short_name,
-          teamName: team.name,
+          team: team.team,
+          teamShort: team.teamShort,
+          teamName: team.teamName,
           gameweekProjections,
-          totalAssists: Math.round(totalAssists * 100) / 100,
-          averageAssistsPerGame: Math.round(averageAssists * 100) / 100,
-          confidence,
+          totalAssists,
+          averageAssistsPerGame,
+          confidence: team.confidence, // Use same confidence as goals
           position: 0 // Will be set after sorting
         };
       });
       
       // Sort by total expected assists descending and set positions
-      teamProjections.sort((a: any, b: any) => b.totalAssists - a.totalAssists);
-      teamProjections.forEach((team: any, index: number) => {
+      teamAssistProjections.sort((a: any, b: any) => b.totalAssists - a.totalAssists);
+      teamAssistProjections.forEach((team: any, index: number) => {
         team.position = index + 1;
       });
       
-      res.json(teamProjections);
+      console.log(`DEBUG: Generated assist projections for ${teamAssistProjections.length} teams using Team Goal Projections * 0.72`);
+      res.json(teamAssistProjections);
     } catch (error) {
       console.error("Error generating team assist projections:", error);
       res.status(500).json({ error: "Failed to generate team assist projections" });
