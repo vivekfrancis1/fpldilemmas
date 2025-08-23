@@ -15,42 +15,42 @@ interface SeasonProjection {
 
 const seasonProjectionsData: SeasonProjection[] = [
   { rank: 1, name: "Haaland", team: "MCI", goals: 24.5, assists: 4.1, totalInvolvements: 28.6 },
-  { rank: 2, name: "Salah", team: "LIV", goals: 18.3, assists: 10.3, totalInvolvements: 28.6 },
-  { rank: 3, name: "Palmer", team: "CHE", goals: 14.8, assists: 10.3, totalInvolvements: 25.1 },
-  { rank: 4, name: "Saka", team: "ARS", goals: 12.3, assists: 10.3, totalInvolvements: 22.6 },
+  { rank: 2, name: "Salah", team: "LIV", goals: 18.3, assists: 10.3, totalInvolvements: 28.5 },
+  { rank: 3, name: "Palmer", team: "CHE", goals: 9.8, assists: 10.3, totalInvolvements: 20.1 },
+  { rank: 4, name: "Saka", team: "ARS", goals: 12.3, assists: 10.3, totalInvolvements: 22.5 },
   { rank: 5, name: "Isak", team: "NEW", goals: 17.3, assists: 4.1, totalInvolvements: 21.4 },
   { rank: 6, name: "Fernandes", team: "MUN", goals: 10.8, assists: 10.0, totalInvolvements: 20.8 },
-  { rank: 7, name: "Gyokeres", team: "SCP", goals: 16.3, assists: 4.4, totalInvolvements: 20.7 },
+  { rank: 7, name: "Gyokeres", team: "SCP", goals: 16.3, assists: 4.4, totalInvolvements: 20.6 },
   { rank: 8, name: "Marmous", team: "LIV", goals: 11.8, assists: 6.5, totalInvolvements: 18.3 },
   { rank: 9, name: "Wirtz", team: "LEV", goals: 9.8, assists: 8.3, totalInvolvements: 18.0 },
   { rank: 10, name: "Watkins", team: "AVL", goals: 13.3, assists: 4.6, totalInvolvements: 17.9 },
   { rank: 11, name: "Solanke", team: "TOT", goals: 13.8, assists: 3.6, totalInvolvements: 17.4 },
-  { rank: 12, name: "Bowen", team: "WHU", goals: 10.3, assists: 6.8, totalInvolvements: 17.1 },
+  { rank: 12, name: "Bowen", team: "WHU", goals: 10.3, assists: 6.8, totalInvolvements: 17.0 },
   { rank: 13, name: "Gordon", team: "NEW", goals: 10.3, assists: 6.5, totalInvolvements: 16.8 },
   { rank: 14, name: "Rogers", team: "AVL", goals: 9.0, assists: 7.3, totalInvolvements: 16.3 },
   { rank: 15, name: "Joao Pedro", team: "BHA", goals: 10.8, assists: 5.5, totalInvolvements: 16.3 },
   { rank: 16, name: "Foden", team: "MCI", goals: 9.5, assists: 6.8, totalInvolvements: 16.3 },
   { rank: 17, name: "Mateta", team: "CRY", goals: 12.8, assists: 2.9, totalInvolvements: 15.6 },
   { rank: 18, name: "Cunha", team: "WOL", goals: 9.0, assists: 6.5, totalInvolvements: 15.5 },
-  { rank: 19, name: "Wood", team: "NEW", goals: 12.3, assists: 2.9, totalInvolvements: 15.2 },
+  { rank: 19, name: "Wood", team: "NEW", goals: 12.3, assists: 2.9, totalInvolvements: 15.1 },
   { rank: 20, name: "Elanga", team: "NFO", goals: 7.5, assists: 7.0, totalInvolvements: 14.5 },
   { rank: 21, name: "Gibbs-White", team: "NFO", goals: 7.0, assists: 7.5, totalInvolvements: 14.5 },
   { rank: 22, name: "Barnes", team: "NEW", goals: 8.0, assists: 6.3, totalInvolvements: 14.3 },
-  { rank: 23, name: "Evanilson", team: "BOU", goals: 11.3, assists: 2.9, totalInvolvements: 14.2 },
-  { rank: 24, name: "Str.Larsen", team: "WOL", goals: 10.8, assists: 3.4, totalInvolvements: 14.2 },
+  { rank: 23, name: "Evanilson", team: "BOU", goals: 11.3, assists: 2.9, totalInvolvements: 14.1 },
+  { rank: 24, name: "Str.Larsen", team: "WOL", goals: 10.8, assists: 3.4, totalInvolvements: 14.1 },
   { rank: 25, name: "Odegaard", team: "ARS", goals: 6.0, assists: 8.0, totalInvolvements: 14.0 },
-  { rank: 26, name: "Sarr", team: "CRY", goals: 7.8, assists: 6.3, totalInvolvements: 14.1 },
+  { rank: 26, name: "Sarr", team: "CRY", goals: 7.8, assists: 6.3, totalInvolvements: 14.0 },
   { rank: 27, name: "Mbeumo", team: "BRE", goals: 8.0, assists: 6.0, totalInvolvements: 14.0 },
   { rank: 28, name: "Johnson", team: "FUL", goals: 9.0, assists: 5.0, totalInvolvements: 14.0 },
   { rank: 29, name: "Semenyo", team: "BOU", goals: 9.3, assists: 4.6, totalInvolvements: 13.9 },
   { rank: 30, name: "Gakpo", team: "LIV", goals: 9.0, assists: 4.9, totalInvolvements: 13.9 },
   { rank: 31, name: "Martinelli", team: "ARS", goals: 7.3, assists: 6.5, totalInvolvements: 13.8 },
   { rank: 32, name: "Cherki", team: "LYO", goals: 6.0, assists: 7.8, totalInvolvements: 13.8 },
-  { rank: 33, name: "Neto", team: "CHE", goals: 6.3, assists: 7.3, totalInvolvements: 13.6 },
+  { rank: 33, name: "Neto", team: "CHE", goals: 6.3, assists: 7.3, totalInvolvements: 13.5 },
   { rank: 34, name: "Kluivert", team: "BOU", goals: 8.8, assists: 4.6, totalInvolvements: 13.4 },
   { rank: 35, name: "Sesko", team: "RBL", goals: 10.8, assists: 2.6, totalInvolvements: 13.4 },
-  { rank: 36, name: "Rice", team: "ARS", goals: 5.3, assists: 7.8, totalInvolvements: 13.1 },
-  { rank: 37, name: "Mitoma", team: "BHA", goals: 7.8, assists: 5.3, totalInvolvements: 13.1 },
+  { rank: 36, name: "Rice", team: "ARS", goals: 5.3, assists: 7.8, totalInvolvements: 13.0 },
+  { rank: 37, name: "Mitoma", team: "BHA", goals: 7.8, assists: 5.3, totalInvolvements: 13.0 },
   { rank: 38, name: "Georginio", team: "LIV", goals: 7.5, assists: 5.3, totalInvolvements: 12.8 },
   { rank: 39, name: "Delap", team: "IPS", goals: 9.5, assists: 2.9, totalInvolvements: 12.4 },
   { rank: 40, name: "Raul", team: "WOL", goals: 9.8, assists: 2.6, totalInvolvements: 12.4 },
@@ -167,113 +167,50 @@ export default function SeasonProjections() {
             </div>
           </div>
 
-          {/* Tabs for switching between views */}
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="involvements" className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Goals & Assists
-              </TabsTrigger>
-              <TabsTrigger value="points" className="flex items-center gap-2">
-                <Trophy className="h-4 w-4" />
-                Projected Points
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="involvements">
-              {/* Summary Stats for Goals/Assists */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="fpl-card border-2 border-green-200">
-                  <div className="fpl-card-content p-4">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                        <Target className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Top Scorer</p>
-                        <p className="text-lg font-bold text-gray-900">Haaland (24.5)</p>
-                      </div>
-                    </div>
+          {/* Summary Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="fpl-card border-2 border-green-200">
+              <div className="fpl-card-content p-4">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <Target className="h-5 w-5 text-green-600" />
                   </div>
-                </div>
-                
-                <div className="fpl-card border-2 border-blue-200">
-                  <div className="fpl-card-content p-4">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                        <Users className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Top Assists</p>
-                        <p className="text-lg font-bold text-gray-900">Salah & Palmer (10.3)</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="fpl-card border-2 border-purple-200">
-                  <div className="fpl-card-content p-4">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                        <TrendingUp className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Top Involvements</p>
-                        <p className="text-lg font-bold text-gray-900">Haaland (28.6)</p>
-                      </div>
-                    </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Top Scorer</p>
+                    <p className="text-lg font-bold text-gray-900">Haaland (24.5)</p>
                   </div>
                 </div>
               </div>
-            </TabsContent>
-
-            <TabsContent value="points">
-              {/* Summary Stats for Points */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="fpl-card border-2 border-yellow-200">
-                  <div className="fpl-card-content p-4">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
-                        <Trophy className="h-5 w-5 text-yellow-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Top Points</p>
-                        <p className="text-lg font-bold text-gray-900">Salah ({Math.max(...seasonProjectionsData.map(p => p.projectedPoints))})</p>
-                      </div>
-                    </div>
+            </div>
+            
+            <div className="fpl-card border-2 border-blue-200">
+              <div className="fpl-card-content p-4">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                    <Users className="h-5 w-5 text-blue-600" />
                   </div>
-                </div>
-                
-                <div className="fpl-card border-2 border-orange-200">
-                  <div className="fpl-card-content p-4">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mr-3">
-                        <Zap className="h-5 w-5 text-orange-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Avg Top 10</p>
-                        <p className="text-lg font-bold text-gray-900">{Math.round(seasonProjectionsData.slice(0, 10).reduce((sum, p) => sum + p.projectedPoints, 0) / 10)} pts</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="fpl-card border-2 border-purple-200">
-                  <div className="fpl-card-content p-4">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                        <UserPlus className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Top Forward</p>
-                        <p className="text-lg font-bold text-gray-900">Haaland ({seasonProjectionsData.find(p => p.name === "Haaland")?.projectedPoints})</p>
-                      </div>
-                    </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Top Assists</p>
+                    <p className="text-lg font-bold text-gray-900">Salah & Palmer (10.3)</p>
                   </div>
                 </div>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+
+            <div className="fpl-card border-2 border-purple-200">
+              <div className="fpl-card-content p-4">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                    <TrendingUp className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Top Involvements</p>
+                    <p className="text-lg font-bold text-gray-900">Haaland (28.6)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Results Table */}
           <div className="fpl-table-container">
@@ -295,45 +232,30 @@ export default function SeasonProjections() {
                         Player
                       </th>
                       <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[50px] font-semibold text-gray-900 text-xs sm:text-sm">Team</th>
-                      {activeTab === "involvements" && (
-                        <>
-                          <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
-                            <button 
-                              onClick={() => setSortBy("goals")}
-                              className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs sm:text-sm"
-                            >
-                              Goals
-                            </button>
-                          </th>
-                          <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
-                            <button 
-                              onClick={() => setSortBy("assists")}
-                              className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs sm:text-sm"
-                            >
-                              Assists
-                            </button>
-                          </th>
-                        </>
-                      )}
-                      {activeTab === "involvements" ? (
-                        <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[80px] font-semibold text-blue-900 bg-blue-50 text-xs sm:text-sm">
-                          <button 
-                            onClick={() => setSortBy("totalInvolvements")}
-                            className="flex items-center justify-center gap-1 hover:text-blue-800 transition-colors text-xs sm:text-sm"
-                          >
-                            G+A
-                          </button>
-                        </th>
-                      ) : (
-                        <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[80px] font-semibold text-yellow-900 bg-yellow-50 text-xs sm:text-sm">
-                          <button 
-                            onClick={() => setSortBy("projectedPoints")}
-                            className="flex items-center justify-center gap-1 hover:text-yellow-800 transition-colors text-xs sm:text-sm"
-                          >
-                            Points
-                          </button>
-                        </th>
-                      )}
+                      <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
+                        <button 
+                          onClick={() => setSortBy("goals")}
+                          className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs sm:text-sm"
+                        >
+                          Goals
+                        </button>
+                      </th>
+                      <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
+                        <button 
+                          onClick={() => setSortBy("assists")}
+                          className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors text-xs sm:text-sm"
+                        >
+                          Assists
+                        </button>
+                      </th>
+                      <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[80px] font-semibold text-blue-900 bg-blue-50 text-xs sm:text-sm">
+                        <button 
+                          onClick={() => setSortBy("totalInvolvements")}
+                          className="flex items-center justify-center gap-1 hover:text-blue-800 transition-colors text-xs sm:text-sm"
+                        >
+                          G+A
+                        </button>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -359,33 +281,21 @@ export default function SeasonProjections() {
                             {player.team.substring(0, 2)}
                           </span>
                         </td>
-                        {activeTab === "involvements" && (
-                          <>
-                            <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
-                              <span className="text-xs sm:text-sm font-medium text-green-700">
-                                {player.goals.toFixed(1)}
-                              </span>
-                            </td>
-                            <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
-                              <span className="text-xs sm:text-sm font-medium text-blue-700">
-                                {player.assists.toFixed(1)}
-                              </span>
-                            </td>
-                          </>
-                        )}
-                        {activeTab === "involvements" ? (
-                          <td className="px-1 sm:px-2 py-2 sm:py-3 text-center bg-blue-50">
-                            <span className="text-xs sm:text-sm font-bold text-blue-900">
-                              {player.totalInvolvements.toFixed(1)}
-                            </span>
-                          </td>
-                        ) : (
-                          <td className="px-1 sm:px-2 py-2 sm:py-3 text-center bg-yellow-50">
-                            <span className="text-xs sm:text-sm font-bold text-yellow-900">
-                              {player.projectedPoints}
-                            </span>
-                          </td>
-                        )}
+                        <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
+                          <span className="text-xs sm:text-sm font-medium text-green-700">
+                            {player.goals.toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
+                          <span className="text-xs sm:text-sm font-medium text-blue-700">
+                            {player.assists.toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="px-1 sm:px-2 py-2 sm:py-3 text-center bg-blue-50">
+                          <span className="text-xs sm:text-sm font-bold text-blue-900">
+                            {player.totalInvolvements.toFixed(1)}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
