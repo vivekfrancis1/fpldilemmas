@@ -199,13 +199,18 @@ export default function AdminUnifiedProjections() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center justify-between p-4 border rounded-lg bg-blue-50 dark:bg-blue-950">
-                <div className="space-y-1">
-                  <Label htmlFor="autoBalance" className="text-base font-semibold text-blue-900 dark:text-blue-100">
+              <div className="flex items-center justify-between p-6 border rounded-lg bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950">
+                <div className="space-y-2">
+                  <Label htmlFor="autoBalance" className="text-xl font-bold text-blue-900 dark:text-blue-100">
                     Auto Balance Goals
                   </Label>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    Automatically ensures Goals Scored = Goals Against across all teams
+                  <p className="text-base text-blue-700 dark:text-blue-300 max-w-md">
+                    <strong>Single Setting Control:</strong> Automatically ensures Goals Scored = Goals Against across all teams with perfect mathematical consistency.
+                  </p>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    ✓ Maintains your defensive variance (Arsenal ~30 goals, West Ham ~85 goals)<br/>
+                    ✓ Handles all balancing automatically<br/>
+                    ✓ No manual adjustments needed
                   </p>
                 </div>
                 <Switch
@@ -213,51 +218,55 @@ export default function AdminUnifiedProjections() {
                   checked={formData.autoBalance || false}
                   onCheckedChange={(checked) => handleSwitchChange('autoBalance', checked)}
                   data-testid="switch-autoBalance"
+                  className="scale-150"
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="globalTierMultiplier">Global Tier Multiplier</Label>
-                  <Input
-                    id="globalTierMultiplier"
-                    type="number"
-                    step="0.01"
-                    value={formData.globalTierMultiplier || ''}
-                    onChange={(e) => handleInputChange('globalTierMultiplier', e.target.value)}
-                    disabled={formData.autoBalance}
-                    data-testid="input-globalTierMultiplier"
-                    className={formData.autoBalance ? "opacity-50" : ""}
-                  />
-                  {formData.autoBalance && (
-                    <p className="text-xs text-gray-500">Auto-calculated when Auto Balance is enabled</p>
-                  )}
-                </div>
+              {!formData.autoBalance && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border rounded-lg bg-orange-50 dark:bg-orange-950">
+                  <div className="col-span-full">
+                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-4">
+                      <strong>Manual Mode:</strong> Auto Balance is disabled. Manual controls available (not recommended for perfect consistency).
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="globalTierMultiplier">Global Tier Multiplier</Label>
+                    <Input
+                      id="globalTierMultiplier"
+                      type="number"
+                      step="0.01"
+                      value={formData.globalTierMultiplier || ''}
+                      onChange={(e) => handleInputChange('globalTierMultiplier', e.target.value)}
+                      data-testid="input-globalTierMultiplier"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="lowConfidenceBoost">Low Confidence Boost</Label>
-                  <Input
-                    id="lowConfidenceBoost"
-                    type="number"
-                    step="0.01"
-                    value={formData.lowConfidenceBoost || ''}
-                    onChange={(e) => handleInputChange('lowConfidenceBoost', e.target.value)}
-                    data-testid="input-lowConfidenceBoost"
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lowConfidenceBoost">Low Confidence Boost</Label>
+                    <Input
+                      id="lowConfidenceBoost"
+                      type="number"
+                      step="0.01"
+                      value={formData.lowConfidenceBoost || ''}
+                      onChange={(e) => handleInputChange('lowConfidenceBoost', e.target.value)}
+                      data-testid="input-lowConfidenceBoost"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="lowConfidenceThreshold">Low Confidence Threshold</Label>
-                  <Input
-                    id="lowConfidenceThreshold"
-                    type="number"
-                    step="0.01"
-                    value={formData.lowConfidenceThreshold || ''}
-                    onChange={(e) => handleInputChange('lowConfidenceThreshold', e.target.value)}
-                    data-testid="input-lowConfidenceThreshold"
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="lowConfidenceThreshold">Low Confidence Threshold</Label>
+                    <Input
+                      id="lowConfidenceThreshold"
+                      type="number"
+                      step="0.01"
+                      value={formData.lowConfidenceThreshold || ''}
+                      onChange={(e) => handleInputChange('lowConfidenceThreshold', e.target.value)}
+                      data-testid="input-lowConfidenceThreshold"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -345,7 +354,18 @@ export default function AdminUnifiedProjections() {
         </TabsContent>
 
         <TabsContent value="attacking" className="space-y-6">
-          <Card>
+          {formData.autoBalance && (
+            <div className="p-4 border rounded-lg bg-green-50 dark:bg-green-950 text-center">
+              <p className="text-lg font-semibold text-green-700 dark:text-green-300">
+                🤖 Auto Balance Mode Active
+              </p>
+              <p className="text-sm text-green-600 dark:text-green-400 mt-2">
+                Attacking multipliers are automatically managed for perfect balance. Turn off Auto Balance to see manual controls.
+              </p>
+            </div>
+          )}
+          
+          <Card className={formData.autoBalance ? "opacity-50 pointer-events-none" : ""}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-green-600" />
@@ -433,6 +453,11 @@ export default function AdminUnifiedProjections() {
               </CardTitle>
               <CardDescription>
                 Controls how many goals teams concede based on their defensive strength. Lower values = stronger defense.
+                {formData.autoBalance && (
+                  <span className="block mt-2 text-green-600 font-medium">
+                    ✓ These settings work with Auto Balance - your defensive variance is preserved!
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
