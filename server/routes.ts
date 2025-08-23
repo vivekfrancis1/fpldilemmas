@@ -2622,6 +2622,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // In-memory storage for 2025/26 goal share data
   let savedGoalShareData: any = null;
   
+  // In-memory storage for 2025/26 assist share data
+  let savedAssistShareData: any = null;
+  
   // Season-long Goal Share endpoint - uses Team Goal Projections totals
   app.get("/api/goal-share-season", async (req, res) => {
     try {
@@ -3175,6 +3178,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).filter(Boolean);
       
       console.log(`DEBUG: Generated season-long assist share data using Team Assist Projections totals for ${response.length} teams`);
+      
+      // Save the assist share data for future use
+      savedAssistShareData = {
+        timestamp: Date.now(),
+        teamSeasonTotals: teamSeasonTotals,
+        bootstrapData: bootstrapData,
+        response: response
+      };
+      console.log(`DEBUG: Saved 2025/26 assist share data for future use`);
+      
       res.json(response);
     } catch (error) {
       console.error("Error generating season assist share data:", error);
