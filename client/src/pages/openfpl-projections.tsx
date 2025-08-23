@@ -218,6 +218,9 @@ export default function OpenFPLProjections() {
                       <SelectItem value="1">1 GW</SelectItem>
                       <SelectItem value="2">2 GW</SelectItem>
                       <SelectItem value="3">3 GW</SelectItem>
+                      <SelectItem value="4">4 GW</SelectItem>
+                      <SelectItem value="5">5 GW</SelectItem>
+                      <SelectItem value="6">6 GW</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
