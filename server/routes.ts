@@ -2431,29 +2431,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log(`DEBUG: Team CS Projections API called - generating all 38 gameweeks`);
       
-      const [bootstrapResponse, fixturesResponse, goalProjectionsResponse] = await Promise.all([
+      const [bootstrapResponse, fixturesResponse, goalsAgainstResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
         fetch("https://fantasy.premierleague.com/api/fixtures/"),
-        fetch(`http://localhost:5000/api/team-goal-projections`)
+        fetch(`http://localhost:5000/api/team-goals-against-projections`)
       ]);
       
-      if (!bootstrapResponse.ok || !fixturesResponse.ok || !goalProjectionsResponse.ok) {
+      if (!bootstrapResponse.ok || !fixturesResponse.ok || !goalsAgainstResponse.ok) {
         throw new Error("Failed to fetch data from FPL API");
       }
       
       const bootstrapData = await bootstrapResponse.json();
       const fixturesData = await fixturesResponse.json();
-      const goalProjections = await goalProjectionsResponse.json();
+      const goalsAgainstData = await goalsAgainstResponse.json();
       
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
       console.log(`DEBUG: Processing all 38 gameweeks for clean sheets, current GW: ${currentGameweek}`);
       
-      // Create lookup map for opponent goal projections by team and gameweek
-      const opponentGoalProjections = new Map();
-      goalProjections.forEach((team: any) => {
-        opponentGoalProjections.set(team.id, team.gameweekProjections);
+      // Create lookup map for team Goals Against totals for new formula
+      const teamGoalsAgainstMap = new Map();
+      goalsAgainstData.forEach((team: any) => {
+        teamGoalsAgainstMap.set(team.id, team.totalGoalsAgainst);
       });
       
       // Use centralized team service for consistent data
@@ -2489,12 +2489,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           }
           
-          // Get opponent's specific goal projection for this gameweek
-          const opponentProjections = opponentGoalProjections.get(opponent.id);
-          const opponentExpectedGoals = opponentProjections?.[fixture.event.toString()] || 1.5; // Default to average
+          // Get team's total Goals Against for the season
+          const teamGoalsAgainst = teamGoalsAgainstMap.get(team.id) || 55; // Default to 55 if not found
           
-          // NEW SIMPLIFIED FORMULA: Clean sheet = 50 - 10 * Goals against (expressed as percentage)
-          let cleanSheetProbability = 50 - (10 * opponentExpectedGoals);
+          // NEW FORMULA: Clean sheet = (55 - Goals Against) / 55 * 100 (expressed as percentage)
+          let cleanSheetProbability = ((55 - teamGoalsAgainst) / 55) * 100;
           
           // Ensure realistic bounds (0-100%)
           cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
@@ -2504,7 +2503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             opponent: opponent.short_name,
             isHome,
             cleanSheetOdds: Math.round(cleanSheetProbability * 10) / 10,
-            expectedGoalsAgainst: opponentExpectedGoals, // Use opponent's actual projected goals
+            expectedGoalsAgainst: teamGoalsAgainst, // Team's total Goals Against for season
             isActual: false // Flag to indicate this is projected data
           };
         }).filter(Boolean);
