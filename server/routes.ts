@@ -4107,13 +4107,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const normalizationFactor = exactGoalsScoredTotal / totalGoalsAgainstBeforeNormalization;
       console.log(`DEBUG: Normalization factor: ${normalizationFactor.toFixed(4)} (${exactGoalsScoredTotal.toFixed(2)} / ${totalGoalsAgainstBeforeNormalization.toFixed(2)})`);
       
-      // Apply normalization while preserving team-specific variance
+      // Apply normalization while preserving actual data for finished fixtures
       let totalGoalsAgainst = 0;
       Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
-        // Apply normalization to all gameweek projections
+        // Apply normalization ONLY to projected gameweeks, preserve actual data for finished fixtures
         Object.keys(team.gameweekProjections).forEach((gw: any) => {
           if (typeof team.gameweekProjections[gw] === 'number') {
-            team.gameweekProjections[gw] = Math.round(team.gameweekProjections[gw] * normalizationFactor * 100) / 100;
+            // Check if this gameweek has finished fixtures - if so, preserve actual data
+            const gameweekNumber = parseInt(gw);
+            const hasFinishedFixture = fixturesData.some((fixture: any) => 
+              fixture.event === gameweekNumber && 
+              fixture.finished && 
+              (fixture.team_h === team.id || fixture.team_a === team.id)
+            );
+            
+            if (hasFinishedFixture) {
+              // Keep actual data unchanged for finished fixtures
+              console.log(`DEBUG: GW${gw} Team ${team.teamShort} - PRESERVING ACTUAL: ${team.gameweekProjections[gw]} goals conceded`);
+            } else {
+              // Apply normalization only to projected data
+              team.gameweekProjections[gw] = Math.round(team.gameweekProjections[gw] * normalizationFactor * 100) / 100;
+            }
           }
         });
         
