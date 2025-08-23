@@ -454,10 +454,14 @@ export default function OpenFPLProjections() {
                                       const gwIndex = i + 1;
                                       if (gwIndex === 1) {
                                         // GW1 = 1 horizon value
-                                        return getHorizonValue(1);
+                                        return Math.max(0, getHorizonValue(1));
                                       } else {
                                         // GWn = n horizon - (n-1) horizon
-                                        return getHorizonValue(gwIndex) - getHorizonValue(gwIndex - 1);
+                                        const diff = getHorizonValue(gwIndex) - getHorizonValue(gwIndex - 1);
+                                        // Handle negative values - they can occur due to AI model predictions
+                                        // For metrics like bonus, a negative difference might indicate
+                                        // the model expects lower performance in later weeks
+                                        return diff;
                                       }
                                     });
 
@@ -544,6 +548,7 @@ export default function OpenFPLProjections() {
                                         return (
                                           <td key={i} className="px-2 py-3 text-center">
                                             <span className={`text-sm font-medium ${
+                                              value < 0 ? 'text-red-600' :
                                               metric === 'predicted_points' && value >= 6 ? 'text-green-700' :
                                               metric === 'predicted_points' && value >= 4 ? 'text-blue-700' :
                                               metric === 'predicted_minutes' && value >= 75 ? 'text-green-700' :
