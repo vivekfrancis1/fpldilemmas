@@ -383,3 +383,34 @@ export const adminAssistProjectionSettings = pgTable("admin_assist_projection_se
 
 export type AdminAssistProjectionSettings = typeof adminAssistProjectionSettings.$inferSelect;
 export type InsertAdminAssistProjectionSettings = typeof adminAssistProjectionSettings.$inferInsert;
+
+// Admin settings for Match Projections model
+export const adminMatchProjectionSettings = pgTable("admin_match_projection_settings", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  
+  // Core match projection parameters
+  homeAdvantageMultiplier: decimal("home_advantage_multiplier", { precision: 4, scale: 2 }).default("1.15"),
+  strengthMultiplierBase: decimal("strength_multiplier_base", { precision: 4, scale: 2 }).default("2.2"),
+  
+  // Goal bounds for match projections
+  homeMinGoals: decimal("home_min_goals", { precision: 4, scale: 2 }).default("0.5"),
+  homeMaxGoals: decimal("home_max_goals", { precision: 4, scale: 2 }).default("4.0"),
+  awayMinGoals: decimal("away_min_goals", { precision: 4, scale: 2 }).default("0.3"),
+  awayMaxGoals: decimal("away_max_goals", { precision: 4, scale: 2 }).default("3.5"),
+  
+  // Clean sheet calculation parameters
+  cleanSheetExponent: decimal("clean_sheet_exponent", { precision: 4, scale: 2 }).default("1.0"), // For Math.exp(-goals * exponent)
+  cleanSheetMultiplier: decimal("clean_sheet_multiplier", { precision: 4, scale: 2 }).default("100"), // Convert to percentage
+  
+  // Match context adjustments
+  derbyMatchMultiplier: decimal("derby_match_multiplier", { precision: 4, scale: 2 }).default("0.92"),
+  topSixMatchMultiplier: decimal("top_six_match_multiplier", { precision: 4, scale: 2 }).default("1.08"),
+  relegationBattleMultiplier: decimal("relegation_battle_multiplier", { precision: 4, scale: 2 }).default("0.88"),
+  
+  // Metadata
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  updatedBy: varchar("updated_by").default("admin"),
+});
+
+export type AdminMatchProjectionSettings = typeof adminMatchProjectionSettings.$inferSelect;
+export type InsertAdminMatchProjectionSettings = typeof adminMatchProjectionSettings.$inferInsert;

@@ -28,6 +28,9 @@ import TeamCSProjections from "./pages/team-cs-projections";
 import SeasonProjections from "./pages/season-projections";
 import AdminGoalProjections from "./pages/admin-goal-projections";
 import AdminCSProjections from "./pages/admin-cs-projections";
+import AdminGoalsAgainst from "./pages/admin-goals-against";
+import AdminAssistProjections from "./pages/admin-assist-projections";
+import AdminMatchProjections from "./pages/admin-match-projections";
 
 function Router() {
   return (
@@ -58,6 +61,9 @@ function Router() {
       <Route path="/season-projections" component={SeasonProjections} />
       <Route path="/admin/goal-projections" component={AdminGoalProjections} />
       <Route path="/admin/cs-projections" component={AdminCSProjections} />
+      <Route path="/admin/goals-against" component={AdminGoalsAgainst} />
+      <Route path="/admin/assist-projections" component={AdminAssistProjections} />
+      <Route path="/admin/match-projections" component={AdminMatchProjections} />
       <Route component={NotFound} />
     </Switch>
   );

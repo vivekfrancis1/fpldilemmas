@@ -882,13 +882,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const homeDefence = (homeTeam.strength_defence_home || 1000) / 1000;
         const awayDefence = (awayTeam.strength_defence_away || 1000) / 1000;
         
-        // Model expected goals using Poisson-based approach with market adjustments
-        const homeExpectedGoals = Math.max(0.5, Math.min(4.0, homeAttack * (2.2 - awayDefence) * 1.15));
-        const awayExpectedGoals = Math.max(0.3, Math.min(3.5, awayAttack * (2.2 - homeDefence)));
+        // Model expected goals using configurable parameters
+        const homeExpectedGoals = Math.max(adminMatchSettings.homeMinGoals, Math.min(adminMatchSettings.homeMaxGoals, homeAttack * (adminMatchSettings.strengthMultiplierBase - awayDefence) * adminMatchSettings.homeAdvantageMultiplier));
+        const awayExpectedGoals = Math.max(adminMatchSettings.awayMinGoals, Math.min(adminMatchSettings.awayMaxGoals, awayAttack * (adminMatchSettings.strengthMultiplierBase - homeDefence)));
         
-        // Clean sheet probabilities using compound probability
-        const homeCleanSheetOdds = Math.exp(-awayExpectedGoals) * 100;
-        const awayCleanSheetOdds = Math.exp(-homeExpectedGoals) * 100;
+        // Clean sheet probabilities using configurable parameters
+        const homeCleanSheetOdds = Math.exp(-awayExpectedGoals * adminMatchSettings.cleanSheetExponent) * adminMatchSettings.cleanSheetMultiplier;
+        const awayCleanSheetOdds = Math.exp(-homeExpectedGoals * adminMatchSettings.cleanSheetExponent) * adminMatchSettings.cleanSheetMultiplier;
         
         return {
           id: fixture.id,
@@ -1177,6 +1177,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     updatedBy: "admin"
   };
 
+  // In-memory admin settings for Match Projections
+  let adminMatchSettings = {
+    homeAdvantageMultiplier: 1.15,
+    strengthMultiplierBase: 2.2,
+    homeMinGoals: 0.5,
+    homeMaxGoals: 4.0,
+    awayMinGoals: 0.3,
+    awayMaxGoals: 3.5,
+    cleanSheetExponent: 1.0,
+    cleanSheetMultiplier: 100,
+    derbyMatchMultiplier: 0.92,
+    topSixMatchMultiplier: 1.08,
+    relegationBattleMultiplier: 0.88,
+    lastUpdated: new Date().toISOString(),
+    updatedBy: "admin"
+  };
+
   // ==================== GOAL PROJECTION ADMIN ENDPOINTS ====================
 
   // Get admin settings
@@ -1456,6 +1473,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error resetting Assist admin settings:", error);
       res.status(500).json({ error: "Failed to reset Assist admin settings" });
+    }
+  });
+
+  // ==================== MATCH PROJECTION ADMIN ENDPOINTS ====================
+
+  // Get Match admin settings
+  app.get("/api/admin/match-projection-settings", async (req, res) => {
+    try {
+      res.json(adminMatchSettings);
+    } catch (error) {
+      console.error("Error fetching Match admin settings:", error);
+      res.status(500).json({ error: "Failed to fetch Match admin settings" });
+    }
+  });
+
+  // Update Match admin settings
+  app.put("/api/admin/match-projection-settings", async (req, res) => {
+    try {
+      const updatedSettings = {
+        ...adminMatchSettings,
+        ...req.body,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      adminMatchSettings = updatedSettings;
+      
+      console.log("Match admin settings updated, projection model will use new parameters");
+      
+      res.json({ 
+        success: true, 
+        message: "Match admin settings updated successfully",
+        settings: adminMatchSettings 
+      });
+    } catch (error) {
+      console.error("Error updating Match admin settings:", error);
+      res.status(500).json({ error: "Failed to update Match admin settings" });
+    }
+  });
+
+  // Reset Match admin settings to defaults
+  app.post("/api/admin/match-projection-settings/reset", async (req, res) => {
+    try {
+      adminMatchSettings = {
+        homeAdvantageMultiplier: 1.15,
+        strengthMultiplierBase: 2.2,
+        homeMinGoals: 0.5,
+        homeMaxGoals: 4.0,
+        awayMinGoals: 0.3,
+        awayMaxGoals: 3.5,
+        cleanSheetExponent: 1.0,
+        cleanSheetMultiplier: 100,
+        derbyMatchMultiplier: 0.92,
+        topSixMatchMultiplier: 1.08,
+        relegationBattleMultiplier: 0.88,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      res.json({ 
+        success: true, 
+        message: "Match admin settings reset to defaults",
+        settings: adminMatchSettings 
+      });
+    } catch (error) {
+      console.error("Error resetting Match admin settings:", error);
+      res.status(500).json({ error: "Failed to reset Match admin settings" });
     }
   });
 

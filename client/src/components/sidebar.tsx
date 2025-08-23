@@ -76,7 +76,10 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Admin Tools",
       items: [
         { path: "/admin/goal-projections", label: "Goal Projection Settings", icon: Settings, description: "Configure goal projection model", popular: false, isNew: true },
-        { path: "/admin/cs-projections", label: "Clean Sheet Settings", icon: Shield, description: "Configure clean sheet model", popular: false, isNew: true }
+        { path: "/admin/cs-projections", label: "Clean Sheet Settings", icon: Shield, description: "Configure clean sheet model", popular: false, isNew: true },
+        { path: "/admin/goals-against", label: "Goals Against Settings", icon: Target, description: "Configure goals against model", popular: false, isNew: true },
+        { path: "/admin/assist-projections", label: "Assist Projection Settings", icon: Zap, description: "Configure assist projection model", popular: false, isNew: true },
+        { path: "/admin/match-projections", label: "Match Projection Settings", icon: Calendar, description: "Configure match projection model", popular: false, isNew: true }
       ]
     }
   ];
