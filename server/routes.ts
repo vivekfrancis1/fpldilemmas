@@ -2844,9 +2844,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fixture.event >= 1 && fixture.event <= 38
       );
       
-      // Initialize team standings
+      // Initialize team standings - only for current Premier League teams
       const teamStandings = new Map();
-      bootstrapData.teams.forEach((team: any) => {
+      
+      // Filter to only include current Premier League teams (20 teams with IDs 1-20)
+      const currentTeams = bootstrapData.teams.filter((team: any) => 
+        team.id >= 1 && team.id <= 20 && 
+        ['Arsenal', 'Aston Villa', 'Bournemouth', 'Brentford', 'Brighton', 'Chelsea', 
+         'Crystal Palace', 'Everton', 'Fulham', 'Ipswich', 'Leicester', 'Liverpool', 
+         'Man City', 'Man Utd', 'Newcastle', 'Nott\'m Forest', 'Southampton', 'Tottenham', 
+         'West Ham', 'Wolves'].includes(team.name)
+      );
+      
+      console.log(`DEBUG: Processing ${currentTeams.length} valid Premier League teams`);
+      
+      currentTeams.forEach((team: any) => {
         teamStandings.set(team.id, {
           id: team.id,
           name: team.name,
