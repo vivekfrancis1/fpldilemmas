@@ -121,10 +121,10 @@ export default function SeasonProjections() {
         <div className="fpl-page-header">
           <div className="fpl-page-title">
             <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
-            Season-Long Projections
+            Season long Projections
           </div>
           <p className="fpl-page-subtitle">
-            🎯 PL 25-26: Season-long goal involvements by @robtfpl | Data: @SpreadexSport
+            🎯 PL 25-26: Season long goal involvements by @robtfpl | Data: @SpreadexSport
           </p>
         </div>
 
@@ -158,7 +158,7 @@ export default function SeasonProjections() {
                         <SelectValue placeholder="Sort by..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="totalInvolvements">G+A (Total Involvements)</SelectItem>
+                        <SelectItem value="totalInvolvements">G+A (Total Goal Involvements)</SelectItem>
                         <SelectItem value="goals">Goals</SelectItem>
                         <SelectItem value="assists">Assists</SelectItem>
                       </SelectContent>
@@ -178,7 +178,7 @@ export default function SeasonProjections() {
                     <Target className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Top Scorer</p>
+                    <p className="text-sm text-gray-600">Top Goal Scorer</p>
                     <p className="text-lg font-bold text-gray-900">Haaland (24.5)</p>
                   </div>
                 </div>
@@ -206,7 +206,7 @@ export default function SeasonProjections() {
                     <TrendingUp className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Top Involvements</p>
+                    <p className="text-sm text-gray-600">Top Goal Involvements</p>
                     <p className="text-lg font-bold text-gray-900">Haaland (28.6)</p>
                   </div>
                 </div>
@@ -219,7 +219,7 @@ export default function SeasonProjections() {
             <div className="fpl-card-header">
               <div className="fpl-card-title">
                 <TrendingUp className="h-5 w-5 text-blue-600" />
-                Season Projections Results
+                Season Long Projections
               </div>
             </div>
             <div className="fpl-card-content">
