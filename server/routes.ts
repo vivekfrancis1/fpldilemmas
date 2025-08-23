@@ -3065,6 +3065,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team Goals Against Projections endpoint - shows goals conceded (defensive analysis)
+  app.get("/api/team-goals-against-projections", async (req, res) => {
+    try {
+      console.log(`DEBUG: Team Goals Against Projections API called - generating all 38 gameweeks`);
+      
+      // Fetch match projections data which contains expected goals for both teams
+      const matchProjectionsResponse = await fetch(`http://localhost:5000/api/projected-goals-cs`);
+      if (!matchProjectionsResponse.ok) {
+        throw new Error("Failed to fetch match projections data");
+      }
+      
+      const matchProjections = await matchProjectionsResponse.json();
+      const [bootstrapResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
+      ]);
+      const bootstrapData = await bootstrapResponse.json();
+      const teams = bootstrapData.teams;
+
+      // Initialize goals against data for each team
+      const teamsGoalsAgainst = new Map();
+      teams.forEach((team: any) => {
+        teamsGoalsAgainst.set(team.id, {
+          id: team.id,
+          team: team.short_name,
+          teamShort: team.short_name,
+          teamName: team.name,
+          gameweekProjections: {},
+          totalGoalsAgainst: 0,
+          averageGoalsAgainstPerGame: 0,
+          confidence: 'Medium',
+          position: 0
+        });
+      });
+
+      // Process each match to calculate goals against
+      matchProjections.forEach((match: any) => {
+        const homeTeam = teamsGoalsAgainst.get(match.homeTeam.id);
+        const awayTeam = teamsGoalsAgainst.get(match.awayTeam.id);
+
+        if (homeTeam && awayTeam) {
+          // Home team concedes away team's expected goals
+          homeTeam.gameweekProjections[match.gameweek] = match.awayTeam.expectedGoals;
+          homeTeam.totalGoalsAgainst += match.awayTeam.expectedGoals;
+
+          // Away team concedes home team's expected goals
+          awayTeam.gameweekProjections[match.gameweek] = match.homeTeam.expectedGoals;
+          awayTeam.totalGoalsAgainst += match.homeTeam.expectedGoals;
+        }
+      });
+
+      // Calculate averages and determine confidence based on defensive strength
+      const finalProjections = Array.from(teamsGoalsAgainst.values()).map((team: any) => {
+        const gamesPlayed = Object.keys(team.gameweekProjections).length;
+        team.averageGoalsAgainstPerGame = gamesPlayed > 0 ? team.totalGoalsAgainst / gamesPlayed : 0;
+
+        // Determine confidence based on defensive quality (lower goals against = higher confidence)
+        if (team.averageGoalsAgainstPerGame <= 1.0) team.confidence = 'High';
+        else if (team.averageGoalsAgainstPerGame <= 1.5) team.confidence = 'Medium';
+        else team.confidence = 'Low';
+
+        return team;
+      });
+
+      // Sort by total goals against (ascending - best defenses first)
+      finalProjections.sort((a, b) => a.totalGoalsAgainst - b.totalGoalsAgainst);
+      
+      // Add position based on defensive ranking
+      finalProjections.forEach((team, index) => {
+        team.position = index + 1;
+      });
+
+      res.json(finalProjections);
+    } catch (error) {
+      console.error("Error generating team goals against projections:", error);
+      res.status(500).json({ error: "Failed to generate goals against projections" });
+    }
+  });
+
   // Match Odds (Projected Goals & CS) endpoint - pure aggregator of Team Goal and CS projection data
   app.get("/api/projected-goals-cs", async (req, res) => {
     try {
