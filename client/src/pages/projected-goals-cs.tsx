@@ -34,7 +34,8 @@ interface MatchProjection {
 }
 
 export default function ProjectedGoalsCS() {
-  const [selectedGameweek, setSelectedGameweek] = useState<string>("all");
+  const [startGameweek, setStartGameweek] = useState<string>("3");
+  const [endGameweek, setEndGameweek] = useState<string>("8");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
 
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
@@ -48,9 +49,12 @@ export default function ProjectedGoalsCS() {
   const filteredProjections = useMemo(() => {
     if (!projectionsData) return [];
     
+    const startGW = parseInt(startGameweek);
+    const endGW = parseInt(endGameweek);
+    
     return projectionsData
       .filter(match => 
-        (selectedGameweek === "all" || match.gameweek.toString() === selectedGameweek) &&
+        (match.gameweek >= startGW && match.gameweek <= endGW) &&
         (selectedTeam === "all" || 
         match.homeTeam.shortName === selectedTeam || 
         match.awayTeam.shortName === selectedTeam)
@@ -62,7 +66,7 @@ export default function ProjectedGoalsCS() {
         }
         return new Date(a.kickoffTime).getTime() - new Date(b.kickoffTime).getTime();
       });
-  }, [projectionsData, selectedTeam]);
+  }, [projectionsData, startGameweek, endGameweek, selectedTeam]);
 
   // Group by gameweek for display
   const groupedProjections = useMemo(() => {
@@ -135,12 +139,12 @@ export default function ProjectedGoalsCS() {
               <Target className="h-8 w-8 text-blue-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              {selectedGameweek === "all" ? 
-                `PL Match Projections - All 38 Gameweeks` : 
-                `PL GW${selectedGameweek}: Match Projections`}
+              {startGameweek === endGameweek ? 
+                `PL GW${startGameweek}: Match Projections` : 
+                `PL GW${startGameweek}-${endGameweek}: Match Projections`}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Goals and clean sheets across all 38 gameweeks - actual results for completed games, projections for upcoming games
+              Goals and clean sheets for gameweeks {startGameweek} to {endGameweek} - actual results for completed games, projections for upcoming games
             </p>
           </div>
 
@@ -151,13 +155,27 @@ export default function ProjectedGoalsCS() {
 
                 <div className="flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-blue-600" />
-                  <label className="text-sm font-semibold text-gray-700">Gameweek:</label>
-                  <Select value={selectedGameweek} onValueChange={setSelectedGameweek}>
-                    <SelectTrigger className="w-36 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                  <label className="text-sm font-semibold text-gray-700">Starting Gameweek:</label>
+                  <Select value={startGameweek} onValueChange={setStartGameweek}>
+                    <SelectTrigger className="w-28 border-2 border-gray-200 hover:border-blue-400 transition-colors">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Available</SelectItem>
+                      {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
+                        <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                  <label className="text-sm font-semibold text-gray-700">Ending Gameweek:</label>
+                  <Select value={endGameweek} onValueChange={setEndGameweek}>
+                    <SelectTrigger className="w-28 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
                       {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
                         <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                       ))}
@@ -208,7 +226,7 @@ export default function ProjectedGoalsCS() {
                       <div className="bg-gradient-to-r from-gray-100 to-gray-50 px-3 sm:px-6 py-2 sm:py-3 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-base text-gray-800">
-                            {selectedGameweek === "all" ? `GW${projections[0]?.gameweek}` : `GW${selectedGameweek}`}
+                            GW{projections[0]?.gameweek}
                           </span>
                           <span className="text-sm text-gray-600 font-medium">{projections.length} matches</span>
                         </div>
