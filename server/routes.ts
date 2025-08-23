@@ -1887,7 +1887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Match Odds (Projected Goals & CS) endpoint - pure aggregator of Team Goal and CS projection data
   app.get("/api/projected-goals-cs", async (req, res) => {
     try {
-      const weeks = parseInt(req.query.weeks as string) || 6;
+      const weeks = parseInt(req.query.weeks as string) || 35;
       
       // Fetch data ONLY from Team Goal and CS projection endpoints
       const [goalProjectionsResponse, csProjectionsResponse, fixturesResponse] = await Promise.all([
@@ -1939,7 +1939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .filter((fixture: any) => !fixture.finished && fixture.event > currentGameweek)
           .map((fixture: any) => fixture.event)
           .sort((a: number, b: number) => a - b)
-      )].slice(0, weeks);
+      )].slice(0, Math.min(weeks, 36)); // Cap at 36 remaining gameweeks
       
       const upcomingFixtures = fixturesData
         .filter((fixture: any) => 
@@ -1947,7 +1947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fixture.event > currentGameweek && 
           unfinishedGameweeks.includes(fixture.event)
         )
-        .slice(0, 60); // Increase limit to accommodate more gameweeks
+        .slice(0, 380); // Allow for full season coverage
       
       const matchOdds = upcomingFixtures.map((fixture: any) => {
         const homeTeam = teamLookup.get(fixture.team_h);
