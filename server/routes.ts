@@ -928,7 +928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         1: { expectedGoalsPerGame: 2.35, variance: 0.32, confidence: 0.85 }, // Arsenal - Creative midfield depth
         12: { expectedGoalsPerGame: 2.25, variance: 0.30, confidence: 0.83 }, // Liverpool - Salah-Nunez combination
         18: { expectedGoalsPerGame: 1.92, variance: 0.48, confidence: 0.74 }, // Tottenham - Son-Richarlison inconsistent
-        6: { expectedGoalsPerGame: 1.88, variance: 0.45, confidence: 0.72 }, // Chelsea - Transition period
+        6: { expectedGoalsPerGame: 2.05, variance: 0.42, confidence: 0.78 }, // Chelsea - High-value squad rebuilding
         
         // Strong attacking mid-table teams
         5: { expectedGoalsPerGame: 1.78, variance: 0.38, confidence: 0.76 }, // Brighton - System-based attack
@@ -939,7 +939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Average attacking output
         9: { expectedGoalsPerGame: 1.58, variance: 0.41, confidence: 0.66 }, // Fulham - Well-organized
-        4: { expectedGoalsPerGame: 1.55, variance: 0.40, confidence: 0.64 }, // Brentford - Post-Toney era
+        4: { expectedGoalsPerGame: 1.42, variance: 0.44, confidence: 0.61 }, // Brentford - Post-Toney transition
         16: { expectedGoalsPerGame: 1.48, variance: 0.44, confidence: 0.62 }, // Nottingham Forest - Limited creativity
         19: { expectedGoalsPerGame: 1.45, variance: 0.48, confidence: 0.60 }, // West Ham - Bowen reliance
         
@@ -1083,12 +1083,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const tierSeed = (team.id * fixture.event * 13) % 100;
           if ([13, 1, 12].includes(team.id)) { // Elite attacking units
             tierMultiplier = 1.06 + (tierSeed / 2500); // 106-110%
-          } else if ([18, 6, 5, 15].includes(team.id)) { // Strong attacking teams
-            tierMultiplier = 1.03 + (tierSeed / 3333); // 103-106%
-          } else if ([2, 14, 3, 9].includes(team.id)) { // Average attacking output
-            tierMultiplier = 0.99 + (tierSeed / 2500); // 99-103%
+          } else if ([6, 18].includes(team.id)) { // Premium big-6 teams
+            tierMultiplier = 1.04 + (tierSeed / 2857); // 104-107.5%
+          } else if ([5, 15, 2, 14].includes(team.id)) { // Strong attacking teams
+            tierMultiplier = 1.01 + (tierSeed / 3333); // 101-104%
+          } else if ([3, 9, 16, 19].includes(team.id)) { // Average attacking output
+            tierMultiplier = 0.98 + (tierSeed / 2500); // 98-102%
           } else { // Weaker attacking units
-            tierMultiplier = 0.95 + (tierSeed / 1667); // 95-101%
+            tierMultiplier = 0.94 + (tierSeed / 1667); // 94-100%
           }
           baseExpectedGoals *= tierMultiplier;
           
