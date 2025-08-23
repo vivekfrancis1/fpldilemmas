@@ -2188,19 +2188,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const currentLeagueTotal = teamProjections.reduce((sum: number, team: any) => sum + team.totalGoals, 0);
           const leagueScaling = unifiedProjectionSettings.leagueGoalsPerSeason / currentLeagueTotal;
           
-          // Apply scaling to all teams AND their individual gameweek projections
+          // Apply scaling to all teams AND their individual gameweek projections (EXCLUDING actual data)
           teamProjections.forEach((team: any) => {
-            // Scale the gameweek projections that frontend uses for calculations
+            // Scale only the PROJECTED gameweek data, preserve actual data
             Object.keys(team.gameweekProjections).forEach((gw: any) => {
               if (typeof team.gameweekProjections[gw] === 'number') {
-                team.gameweekProjections[gw] = Math.round(team.gameweekProjections[gw] * leagueScaling * 100) / 100;
+                // Check if this gameweek has finished fixtures - don't scale actual data
+                const gameweekNum = parseInt(gw);
+                const teamFixtures = fixturesData.filter((f: any) => 
+                  (f.team_h === team.id || f.team_a === team.id) && f.event === gameweekNum
+                );
+                
+                // Only scale if no finished fixtures exist for this team in this gameweek
+                const hasFinishedFixture = teamFixtures.some((f: any) => f.finished);
+                
+                if (!hasFinishedFixture) {
+                  // This is projected data - apply scaling
+                  team.gameweekProjections[gw] = Math.round(team.gameweekProjections[gw] * leagueScaling * 100) / 100;
+                }
+                // If finished fixture exists, preserve actual goals exactly as they are
               }
             });
             
-            // Now recalculate totals from the scaled gameweek data
-            const scaledGameweekGoals = Object.values(team.gameweekProjections).filter((v: any) => typeof v === 'number');
-            team.totalGoals = Math.round(scaledGameweekGoals.reduce((sum: any, goals: any) => sum + goals, 0) * 100) / 100;
-            team.averageGoalsPerGame = Math.round((team.totalGoals / Math.max(1, scaledGameweekGoals.length)) * 100) / 100;
+            // Now recalculate totals from the mix of actual + scaled projected data
+            const allGameweekGoals = Object.values(team.gameweekProjections).filter((v: any) => typeof v === 'number');
+            team.totalGoals = Math.round(allGameweekGoals.reduce((sum: any, goals: any) => sum + goals, 0) * 100) / 100;
+            team.averageGoalsPerGame = Math.round((team.totalGoals / Math.max(1, allGameweekGoals.length)) * 100) / 100;
           });
         }
       }
