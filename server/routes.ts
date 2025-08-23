@@ -4173,10 +4173,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Team Goals Against Projections endpoint - PERFECT 1:1 MATHEMATICAL MIRROR
+  // Team Goals Against Projections endpoint - PERFECT MIRROR IMAGE
   app.get("/api/team-goals-against-projections", async (req, res) => {
     try {
-      console.log(`DEBUG: Creating PERFECT 1:1 mirror - Goals Against = Goals Scored exactly`);
+      console.log(`DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping`);
       
       // Fetch Team Goal projections to create perfect mirror
       const teamGoalResponse = await fetch(`http://localhost:5000/api/team-goal-projections`);
@@ -4185,10 +4185,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const teamGoalProjections = await teamGoalResponse.json();
-      
-      // Calculate exact total from goals scored for verification
-      const exactGoalsScoredTotal = teamGoalProjections.reduce((sum: number, team: any) => sum + team.totalGoals, 0);
-      console.log(`DEBUG: Goals Scored Total: ${exactGoalsScoredTotal.toFixed(2)} - Goals Against will match EXACTLY`);
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -4220,121 +4216,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
-      // Check which gameweeks are COMPLETELY finished (all 10 fixtures done)
-      const completeGameweeks = new Set();
-      for (let gw = 1; gw <= 38; gw++) {
-        const gameweekFixtures = fixturesData.filter((f: any) => f.event === gw);
-        const finishedFixtures = gameweekFixtures.filter((f: any) => f.finished);
-        
-        if (gameweekFixtures.length > 0 && finishedFixtures.length === gameweekFixtures.length) {
-          completeGameweeks.add(gw);
-          console.log(`DEBUG: GW${gw} COMPLETE - All ${gameweekFixtures.length} fixtures finished, using ACTUAL data`);
-        } else if (gameweekFixtures.length > 0) {
-          console.log(`DEBUG: GW${gw} INCOMPLETE - ${finishedFixtures.length}/${gameweekFixtures.length} fixtures finished, using PROJECTIONS`);
-        }
-      }
-
-      // Create realistic defensive variance while maintaining mathematical consistency
+      // Create lookup map for team goal projections
+      const teamGoalLookup = new Map();
+      teamGoalProjections.forEach((team: any) => {
+        teamGoalLookup.set(team.id, team.gameweekProjections);
+      });
+      
+      // PERFECT MIRROR: For each fixture, what team A scores = what team B concedes
       fixturesData.forEach((fixture: any) => {
         if (fixture.event >= 1 && fixture.event <= 38) {
           const homeTeamAgainst = teamsGoalsAgainst.get(fixture.team_h);
           const awayTeamAgainst = teamsGoalsAgainst.get(fixture.team_a);
           
           if (homeTeamAgainst && awayTeamAgainst) {
-            // Use actual data only if the ENTIRE gameweek is complete
-            if (completeGameweeks.has(fixture.event)) {
-              // For complete gameweeks, use actual goals conceded
+            if (fixture.finished) {
+              // Use actual data for finished fixtures
               homeTeamAgainst.gameweekProjections[fixture.event] = fixture.team_a_score || 0;
               awayTeamAgainst.gameweekProjections[fixture.event] = fixture.team_h_score || 0;
-              console.log(`DEBUG: GW${fixture.event} ACTUAL - Home conceded: ${fixture.team_a_score || 0}, Away conceded: ${fixture.team_h_score || 0}`);
             } else {
-              // For unfinished fixtures, apply defensive tier multipliers for realistic variance
-              const homeTeamGoals = teamGoalProjections.find((t: any) => t.id === fixture.team_h);
-              const awayTeamGoals = teamGoalProjections.find((t: any) => t.id === fixture.team_a);
+              // DIRECT MIRROR: Home team concedes exactly what away team scores
+              const homeTeamGoals = teamGoalLookup.get(fixture.team_h);
+              const awayTeamGoals = teamGoalLookup.get(fixture.team_a);
               
               if (homeTeamGoals && awayTeamGoals) {
-                const homeTeamScoredThisGW = homeTeamGoals.gameweekProjections[fixture.event] || 0;
-                const awayTeamScoredThisGW = awayTeamGoals.gameweekProjections[fixture.event] || 0;
-                
-                // Apply defensive multipliers based on team defensive quality
-                const getDefensiveTier = (teamId: number): string => {
-                  if ([13, 1, 6].includes(teamId)) return 'elite';      // Man City, Arsenal, Chelsea
-                  if ([12, 2, 14].includes(teamId)) return 'strong';    // Liverpool, Aston Villa, Man Utd
-                  if ([18, 5, 15, 4].includes(teamId)) return 'average'; // Spurs, Brighton, Newcastle, Bournemouth
-                  if ([11, 10, 20].includes(teamId)) return 'weak';     // Everton, Fulham, West Ham
-                  return 'promoted'; // Rest treated as promoted/weaker defenses
-                };
-                
-                const homeDefensiveTier = getDefensiveTier(fixture.team_h);
-                const awayDefensiveTier = getDefensiveTier(fixture.team_a);
-                
-                const getDefensiveMultiplier = (tier: string): number => {
-                  switch (tier) {
-                    case 'elite': return unifiedProjectionSettings.eliteDefenseMultiplier;
-                    case 'strong': return unifiedProjectionSettings.strongDefenseMultiplier;
-                    case 'average': return unifiedProjectionSettings.averageDefenseMultiplier;
-                    case 'weak': return unifiedProjectionSettings.weakDefenseMultiplier;
-                    case 'promoted': return unifiedProjectionSettings.promotedDefenseMultiplier;
-                    default: return 1.0;
-                  }
-                };
-                
-                const homeDefenseMultiplier = getDefensiveMultiplier(homeDefensiveTier);
-                const awayDefenseMultiplier = getDefensiveMultiplier(awayDefensiveTier);
-                
-                // Home concedes with defensive adjustment, away concedes with defensive adjustment
-                homeTeamAgainst.gameweekProjections[fixture.event] = awayTeamScoredThisGW * homeDefenseMultiplier;
-                awayTeamAgainst.gameweekProjections[fixture.event] = homeTeamScoredThisGW * awayDefenseMultiplier;
+                homeTeamAgainst.gameweekProjections[fixture.event] = awayTeamGoals[fixture.event] || 0;
+                awayTeamAgainst.gameweekProjections[fixture.event] = homeTeamGoals[fixture.event] || 0;
               }
             }
           }
         }
       });
       
-      // Apply GAMEWEEK-BY-GAMEWEEK balancing for perfect mathematical consistency
-      console.log(`DEBUG: Applying gameweek-by-gameweek balancing to ensure perfect goals scored = goals conceded per GW`);
-      
-      // For each gameweek, balance goals scored vs goals conceded
-      for (let gw = 1; gw <= 38; gw++) {
-        if (completeGameweeks.has(gw)) {
-          // Skip actual gameweeks - they're already balanced by definition
-          continue;
-        }
-        
-        // Calculate total goals scored this gameweek from team goal projections
-        let gwGoalsScored = 0;
-        teamGoalProjections.forEach((team: any) => {
-          gwGoalsScored += team.gameweekProjections[gw] || 0;
-        });
-        
-        // Calculate total goals conceded this gameweek before balancing
-        let gwGoalsConcededBefore = 0;
-        Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
-          gwGoalsConcededBefore += team.gameweekProjections[gw] || 0;
-        });
-        
-        // Apply gameweek-specific balancing factor
-        if (gwGoalsConcededBefore > 0) {
-          const gwBalancingFactor = gwGoalsScored / gwGoalsConcededBefore;
-          console.log(`DEBUG: GW${gw} balancing - Scored: ${gwGoalsScored.toFixed(2)}, Conceded before: ${gwGoalsConcededBefore.toFixed(2)}, Factor: ${gwBalancingFactor.toFixed(4)}`);
-          
-          // Apply balancing to each team for this gameweek
-          Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
-            if (team.gameweekProjections[gw] > 0) {
-              team.gameweekProjections[gw] = Math.round(team.gameweekProjections[gw] * gwBalancingFactor * 100) / 100;
-            }
-          });
-          
-          // Verify balance for this gameweek
-          let gwGoalsConcededAfter = 0;
-          Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
-            gwGoalsConcededAfter += team.gameweekProjections[gw] || 0;
-          });
-          console.log(`DEBUG: GW${gw} balanced - Scored: ${gwGoalsScored.toFixed(2)}, Conceded after: ${gwGoalsConcededAfter.toFixed(2)}`);
-        }
-      }
-      
-      // Calculate final team totals after gameweek-by-gameweek balancing
+      // Calculate final team totals
       let totalGoalsAgainst = 0;
       Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
         let teamTotal = 0;
@@ -4351,16 +4264,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Set confidence based on defensive quality
         team.confidence = team.averageGoalsAgainstPerGame <= 1.0 ? 'High' : 
                          team.averageGoalsAgainstPerGame <= 1.5 ? 'Medium' : 'Low';
-        
-        // Preserve actual data logging for complete gameweeks
-        Object.keys(team.gameweekProjections).forEach((gw: any) => {
-          const gameweekNumber = parseInt(gw);
-          if (completeGameweeks.has(gameweekNumber)) {
-            console.log(`DEBUG: GW${gw} Team ${team.teamShort} - PRESERVING ACTUAL: ${team.gameweekProjections[gw]} goals conceded`);
-          }
-        });
       });
       
+      // Calculate exact total from goals scored for verification
+      const exactGoalsScoredTotal = teamGoalProjections.reduce((sum: number, team: any) => sum + team.totalGoals, 0);
       console.log(`DEBUG: PERFECT MIRROR SUCCESS - Goals Scored: ${exactGoalsScoredTotal.toFixed(2)}, Goals Against: ${totalGoalsAgainst.toFixed(2)}`);
       
       // Convert to array and sort by goals against (best defense first)
