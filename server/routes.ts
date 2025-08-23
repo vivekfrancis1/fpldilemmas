@@ -2282,18 +2282,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Bootstrap data fetched and cached');
       }
 
-      // Use bootstrap data for simplified projections based on current form and stats
+      // Get historical data for enhanced projections
+      let lastSeasonStats = [];
+      let currentSeasonStats = [];
+      let olderSeasonStats = [];
+      
+      try {
+        lastSeasonStats = await storage.getPlayerStatsForSeason('2023/24') || [];
+        currentSeasonStats = await storage.getPlayerStatsForSeason('2024/25') || [];
+        olderSeasonStats = await storage.getPlayerStatsForSeason('2022/23') || [];
+      } catch (error) {
+        console.log('Historical data not available, using bootstrap data only');
+      }
+      
       const projections = [];
       
       for (const player of bootstrap.elements) {
         // Skip injured/unavailable players
         if (player.chance_of_playing_next_round === 0) continue;
         
-        // Base calculations on current season data from bootstrap
-        const currentPpg = player.total_points && player.minutes > 0 ? 
-          player.total_points / Math.max(player.minutes / 90, 1) : 0;
+        // Get historical performance data
+        const lastSeasonPerf = lastSeasonStats.find(p => 
+          p.web_name === player.web_name || 
+          `${p.first_name} ${p.second_name}` === `${player.first_name} ${player.second_name}`
+        );
+        const currentSeasonPerf = currentSeasonStats.find(p => 
+          p.web_name === player.web_name || 
+          `${p.first_name} ${p.second_name}` === `${player.first_name} ${player.second_name}`
+        );
+        const olderSeasonPerf = olderSeasonStats.find(p => 
+          p.web_name === player.web_name || 
+          `${p.first_name} ${p.second_name}` === `${player.first_name} ${player.second_name}`
+        );
         
-        // Form factor based on recent games (current form in bootstrap)
+        // Weighted performance calculation with requested priority:
+        // Last season (2023/24): 50% weight
+        // Current season (2024/25): 30% weight  
+        // Bootstrap current data: 15% weight
+        // Older seasons: 5% weight
+        
+        // Points per game calculations
+        const lastSeasonPpg = lastSeasonPerf && lastSeasonPerf.minutes > 0 ? 
+          lastSeasonPerf.total_points / Math.max(lastSeasonPerf.minutes / 90, 1) : 0;
+        const currentSeasonPpg = currentSeasonPerf && currentSeasonPerf.minutes > 0 ?
+          currentSeasonPerf.total_points / Math.max(currentSeasonPerf.minutes / 90, 1) : 0;
+        const bootstrapPpg = player.total_points && player.minutes > 0 ? 
+          player.total_points / Math.max(player.minutes / 90, 1) : 0;
+        const olderSeasonPpg = olderSeasonPerf && olderSeasonPerf.minutes > 0 ?
+          olderSeasonPerf.total_points / Math.max(olderSeasonPerf.minutes / 90, 1) : 0;
+        
+        // Weighted points per game
+        const weightedPpg = (lastSeasonPpg * 0.5) + (currentSeasonPpg * 0.3) + 
+                           (bootstrapPpg * 0.15) + (olderSeasonPpg * 0.05);
+        
+        // Goals per game calculations
+        const lastSeasonGoalsPerGame = lastSeasonPerf && lastSeasonPerf.minutes > 0 ?
+          lastSeasonPerf.goals_scored / Math.max(lastSeasonPerf.minutes / 90, 1) : 0;
+        const currentSeasonGoalsPerGame = currentSeasonPerf && currentSeasonPerf.minutes > 0 ?
+          currentSeasonPerf.goals_scored / Math.max(currentSeasonPerf.minutes / 90, 1) : 0;
+        const bootstrapGoalsPerGame = player.goals_scored && player.minutes > 0 ? 
+          player.goals_scored / Math.max(player.minutes / 90, 1) : 0;
+        const olderSeasonGoalsPerGame = olderSeasonPerf && olderSeasonPerf.minutes > 0 ?
+          olderSeasonPerf.goals_scored / Math.max(olderSeasonPerf.minutes / 90, 1) : 0;
+        
+        const weightedGoalsPerGame = (lastSeasonGoalsPerGame * 0.5) + (currentSeasonGoalsPerGame * 0.3) + 
+                                   (bootstrapGoalsPerGame * 0.15) + (olderSeasonGoalsPerGame * 0.05);
+        
+        // Assists per game calculations
+        const lastSeasonAssistsPerGame = lastSeasonPerf && lastSeasonPerf.minutes > 0 ?
+          lastSeasonPerf.assists / Math.max(lastSeasonPerf.minutes / 90, 1) : 0;
+        const currentSeasonAssistsPerGame = currentSeasonPerf && currentSeasonPerf.minutes > 0 ?
+          currentSeasonPerf.assists / Math.max(currentSeasonPerf.minutes / 90, 1) : 0;
+        const bootstrapAssistsPerGame = player.assists && player.minutes > 0 ? 
+          player.assists / Math.max(player.minutes / 90, 1) : 0;
+        const olderSeasonAssistsPerGame = olderSeasonPerf && olderSeasonPerf.minutes > 0 ?
+          olderSeasonPerf.assists / Math.max(olderSeasonPerf.minutes / 90, 1) : 0;
+        
+        const weightedAssistsPerGame = (lastSeasonAssistsPerGame * 0.5) + (currentSeasonAssistsPerGame * 0.3) + 
+                                     (bootstrapAssistsPerGame * 0.15) + (olderSeasonAssistsPerGame * 0.05);
+        
+        // Form factor based on recent games (from bootstrap)
         const formFactor = player.form ? Math.max(parseFloat(player.form) / 10, 0.1) : 0.5;
         
         // ICT factor for creativity
@@ -2310,44 +2378,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Availability factor based on chance of playing
         const availabilityFactor = (player.chance_of_playing_next_round || 100) / 100;
         
-        // Value factor based on ownership and form
-        const ownershipFactor = Math.min(parseFloat(player.selected_by_percent) / 50, 1.5); // Cap at 1.5x
-        
-        // Calculate base projection using multiple factors
+        // Calculate base projection using weighted historical data
         const baseProjection = Math.max(
-          currentPpg * formFactor * ictFactor * positionMultiplier * availabilityFactor * 0.8, 
-          0.5
+          weightedPpg * formFactor * ictFactor * positionMultiplier * availabilityFactor, 
+          0.1
         );
         
         // Calculate individual metrics
         const predictedPoints = Math.max(baseProjection * horizon, 0);
-        
-        // Goals prediction based on current goals and position
-        const currentGoalsPerGame = player.goals_scored && player.minutes > 0 ? 
-          player.goals_scored / Math.max(player.minutes / 90, 1) : 0;
-        const predictedGoals = Math.max(
-          currentGoalsPerGame * horizon * positionMultiplier * formFactor, 
-          0
-        );
-        
-        // Assists prediction based on current assists
-        const currentAssistsPerGame = player.assists && player.minutes > 0 ? 
-          player.assists / Math.max(player.minutes / 90, 1) : 0;
+        const predictedGoals = Math.max(weightedGoalsPerGame * horizon * positionMultiplier * formFactor, 0);
         const predictedAssists = Math.max(
-          currentAssistsPerGame * horizon * (player.element_type === 3 ? 1.2 : 1.0) * formFactor, 
+          weightedAssistsPerGame * horizon * (player.element_type === 3 ? 1.2 : 1.0) * formFactor, 
           0
         );
         
-        // Minutes prediction based on availability and form
+        // Minutes prediction based on availability and historical consistency
+        const historicalMinutesAvg = [lastSeasonPerf?.minutes, currentSeasonPerf?.minutes, player.minutes]
+          .filter(m => m && m > 0)
+          .reduce((acc, m, _, arr) => acc + (m / arr.length), 0) || 90;
+        
         const predictedMinutes = Math.min(
-          90 * horizon * availabilityFactor * formFactor, 
+          (historicalMinutesAvg / 38) * horizon * availabilityFactor * formFactor, 
           90 * horizon
         );
         
-        // Confidence score based on form and data availability
-        const formConfidence = Math.min(formFactor * 100, 80);
-        const availabilityConfidence = availabilityFactor * 100;
-        const confidenceScore = Math.round((formConfidence + availabilityConfidence) / 2);
+        // Confidence score based on data quality and consistency
+        const dataQuality = (lastSeasonPerf ? 0.5 : 0) + (currentSeasonPerf ? 0.3 : 0) + 
+                           (player.total_points ? 0.15 : 0) + (olderSeasonPerf ? 0.05 : 0);
+        const formConfidence = Math.min(formFactor * 100, 85);
+        const confidenceScore = Math.round((dataQuality * 100 + formConfidence) / 2);
         
         const team = bootstrap.teams.find(t => t.id === player.team);
         const position = bootstrap.element_types.find(p => p.id === player.element_type);
