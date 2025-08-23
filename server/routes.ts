@@ -1947,15 +1947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (teamBettingData.confidence >= 0.85) confidence = 'High';
         else if (teamBettingData.confidence <= 0.65) confidence = 'Low';
         
-        // Apply league goals per season scaling if specified in auto balance mode
-        let scaledTotalGoals = totalGoals;
-        let scaledAverageGoals = averageGoals;
-        if (unifiedProjectionSettings.autoBalance && unifiedProjectionSettings.leagueGoalsPerSeason > 0) {
-          // Calculate current league total for scaling reference
-          const leagueScaling = unifiedProjectionSettings.leagueGoalsPerSeason / 895.17; // Base league total
-          scaledTotalGoals = totalGoals * leagueScaling;
-          scaledAverageGoals = averageGoals * leagueScaling;
-        }
+        // League scaling will be applied after teamProjections array is created
         
         return {
           id: team.id,
@@ -1963,13 +1955,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections,
-          totalGoals: Math.round(scaledTotalGoals * 100) / 100,
-          averageGoalsPerGame: Math.round(scaledAverageGoals * 100) / 100,
+          totalGoals: Math.round(totalGoals * 100) / 100,
+          averageGoalsPerGame: Math.round(averageGoals * 100) / 100,
           confidence,
           position: 0 // Will be set after sorting
         };
       });
       
+      // Apply league goals per season scaling if specified in auto balance mode
+      if (unifiedProjectionSettings.autoBalance && unifiedProjectionSettings.leagueGoalsPerSeason > 0) {
+        // Calculate current league total
+        const currentLeagueTotal = teamProjections.reduce((sum: number, team: any) => sum + team.totalGoals, 0);
+        const leagueScaling = unifiedProjectionSettings.leagueGoalsPerSeason / currentLeagueTotal;
+        
+        // Apply scaling to all teams
+        teamProjections.forEach((team: any) => {
+          team.totalGoals = Math.round(team.totalGoals * leagueScaling * 100) / 100;
+          team.averageGoalsPerGame = Math.round(team.averageGoalsPerGame * leagueScaling * 100) / 100;
+        });
+      }
+
       // Sort by total expected goals descending and set positions
       teamProjections.sort((a: any, b: any) => b.totalGoals - a.totalGoals);
       teamProjections.forEach((team: any, index: number) => {
@@ -4048,7 +4053,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...team,
           totalGoalsAgainst: Math.round(totalGoalsAgainst * 100) / 100,
           averageGoalsAgainstPerGame: Math.round(averageGoalsAgainstPerGame * 100) / 100,
-          confidence
+          confidence,
+          position: 0 // Will be set after sorting
         };
       });
       
