@@ -276,7 +276,7 @@ export class DatabaseStorage implements IStorage {
         return dbPlayers.map(player => ({
           ...player,
           // Add fields expected by frontend
-          id: player.playerId || 0,
+          id: String(player.playerId || 0),
           first_name: player.firstName,
           second_name: player.secondName,
           web_name: player.webName,

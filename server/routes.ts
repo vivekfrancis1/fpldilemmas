@@ -86,9 +86,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Process each player and group by team
       historicalPlayers.forEach(player => {
-        const teamName = player.team_name || player.teamName || 'Unknown Team';
-        const teamShort = player.team_short_name || player.teamShortName || 'UNK';
-        const goals = player.goals_scored || player.goalsScored || 0;
+        const teamName = player.teamName || 'Unknown Team';
+        const teamShort = player.teamShortName || 'UNK';
+        const goals = player.goalsScored || 0;
         
         if (!teamGoalShares[teamName]) {
           teamGoalShares[teamName] = {
@@ -102,11 +102,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamGoalShares[teamName].totalGoals += goals;
         teamGoalShares[teamName].players.push({
           id: player.id || player.playerId,
-          name: `${player.first_name || player.firstName} ${player.second_name || player.secondName}`,
-          position: player.position || player.positionName,
+          name: `${player.firstName} ${player.secondName}`,
+          position: player.positionName,
           goals: goals,
           minutes: player.minutes || 0,
-          totalPoints: player.total_points || player.totalPoints || 0
+          totalPoints: player.totalPoints || 0
         });
       });
       
@@ -446,7 +446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const bootstrapData = await bootstrapResponse.json();
           currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
         } else {
-          currentGameweek = 1; // fallback
+          currentGameweek = '1'; // fallback
         }
       }
       
