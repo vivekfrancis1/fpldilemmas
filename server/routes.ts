@@ -1072,8 +1072,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const team = teamProjectionData[teamId];
         if (!team) return 1.0;
         
-        // 1.2x confidence multiplier for teams with low confidence (below 65%)
-        if (team.confidence < 0.65) return 1.2;
+        // 1.25x confidence multiplier for teams with low confidence (below 65%)
+        if (team.confidence < 0.65) return 1.25;
         return 1.0;
       }
     };
