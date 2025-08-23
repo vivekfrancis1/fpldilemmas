@@ -1129,6 +1129,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     weakAttackMultiplier: 0.85,
     promotedAttackMultiplier: 0.70,
     
+    // Offensive variance controls (when enabled, overrides tier multipliers)
+    offensiveVarianceEnabled: false,
+    eliteAttackingGoals: 80,
+    weakAttackingGoals: 35,
+    
     // Team tier multipliers for defending (goals conceded) - lower = stronger defense
     eliteDefenseMultiplier: 0.60,
     strongDefenseMultiplier: 0.75,
@@ -1962,17 +1967,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      // Apply league goals per season scaling if specified in auto balance mode
-      if (unifiedProjectionSettings.autoBalance && unifiedProjectionSettings.leagueGoalsPerSeason > 0) {
-        // Calculate current league total
-        const currentLeagueTotal = teamProjections.reduce((sum: number, team: any) => sum + team.totalGoals, 0);
-        const leagueScaling = unifiedProjectionSettings.leagueGoalsPerSeason / currentLeagueTotal;
+      // Apply offensive variance control if enabled (similar to defensive variance logic)
+      if (unifiedProjectionSettings.autoBalance && unifiedProjectionSettings.offensiveVarianceEnabled) {
+        console.log(`DEBUG: Applying offensive variance control`);
         
-        // Apply scaling to all teams
+        // Define attacking tiers (similar to defensive tiers)
+        const getAttackingTier = (teamId: number): string => {
+          if ([13, 1, 12].includes(teamId)) return 'elite';        // Man City, Arsenal, Liverpool
+          if ([6, 18, 5, 14].includes(teamId)) return 'strong';     // Chelsea, Tottenham, Brighton, Newcastle
+          if ([9, 19, 17].includes(teamId)) return 'weak';         // Burnley, Crystal Palace, Everton
+          if ([20, 16].includes(teamId)) return 'promoted';        // Sheffield, Southampton (promoted teams)
+          return 'average';
+        };
+        
+        // Calculate target goals for each tier based on user settings
+        const eliteTarget = unifiedProjectionSettings.eliteAttackingGoals;
+        const weakTarget = unifiedProjectionSettings.weakAttackingGoals;
+        
+        // Linear interpolation for intermediate tiers
+        const strongTarget = eliteTarget - (eliteTarget - weakTarget) * 0.25; // 75% toward elite
+        const averageTarget = eliteTarget - (eliteTarget - weakTarget) * 0.5;  // 50% toward elite
+        const promotedTarget = weakTarget - 5; // Even worse than weak
+        
+        console.log(`DEBUG: Offensive targets - Elite: ${eliteTarget}, Strong: ${strongTarget.toFixed(1)}, Average: ${averageTarget.toFixed(1)}, Weak: ${weakTarget}, Promoted: ${promotedTarget}`);
+        
+        // Apply offensive variance adjustments
         teamProjections.forEach((team: any) => {
-          team.totalGoals = Math.round(team.totalGoals * leagueScaling * 100) / 100;
-          team.averageGoalsPerGame = Math.round(team.averageGoalsPerGame * leagueScaling * 100) / 100;
+          const attackingTier = getAttackingTier(team.id);
+          let targetGoals;
+          
+          switch (attackingTier) {
+            case 'elite': targetGoals = eliteTarget; break;
+            case 'strong': targetGoals = strongTarget; break;
+            case 'average': targetGoals = averageTarget; break;
+            case 'weak': targetGoals = weakTarget; break;
+            case 'promoted': targetGoals = promotedTarget; break;
+            default: targetGoals = averageTarget;
+          }
+          
+          const originalGoals = team.totalGoals;
+          const adjustmentFactor = targetGoals / originalGoals;
+          
+          team.totalGoals = Math.round(targetGoals * 100) / 100;
+          team.averageGoalsPerGame = Math.round((team.averageGoalsPerGame * adjustmentFactor) * 100) / 100;
+          
+          console.log(`DEBUG: Team ${team.teamShort} - Tier: ${attackingTier}, Original: ${originalGoals.toFixed(2)}, Target: ${targetGoals}, Final: ${team.totalGoals}`);
         });
+      } else {
+        // Apply league goals per season scaling if specified in auto balance mode (normal mode)
+        if (unifiedProjectionSettings.autoBalance && unifiedProjectionSettings.leagueGoalsPerSeason > 0) {
+          // Calculate current league total
+          const currentLeagueTotal = teamProjections.reduce((sum: number, team: any) => sum + team.totalGoals, 0);
+          const leagueScaling = unifiedProjectionSettings.leagueGoalsPerSeason / currentLeagueTotal;
+          
+          // Apply scaling to all teams
+          teamProjections.forEach((team: any) => {
+            team.totalGoals = Math.round(team.totalGoals * leagueScaling * 100) / 100;
+            team.averageGoalsPerGame = Math.round(team.averageGoalsPerGame * leagueScaling * 100) / 100;
+          });
+        }
       }
 
       // Sort by total expected goals descending and set positions

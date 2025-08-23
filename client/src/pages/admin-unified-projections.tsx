@@ -42,6 +42,11 @@ interface UnifiedProjectionSettings {
   weakAttackMultiplier: number;
   promotedAttackMultiplier: number;
   
+  // Offensive variance controls (when enabled, overrides tier multipliers)
+  offensiveVarianceEnabled: boolean;
+  eliteAttackingGoals: number;
+  weakAttackingGoals: number;
+  
   // Team tier multipliers for defending (goals conceded)
   eliteDefenseMultiplier: number;
   strongDefenseMultiplier: number;
@@ -221,30 +226,87 @@ export default function AdminUnifiedProjections() {
               </div>
               
               {formData.autoBalance && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-green-50 dark:bg-green-950">
-                  <div className="space-y-2">
-                    <Label htmlFor="leagueGoalsPerSeason" className="text-base font-semibold text-green-800 dark:text-green-200">
-                      League Goals Per Season
-                    </Label>
-                    <Input
-                      id="leagueGoalsPerSeason"
-                      type="number"
-                      step="10"
-                      value={formData.leagueGoalsPerSeason || ''}
-                      onChange={(e) => handleInputChange('leagueGoalsPerSeason', e.target.value)}
-                      data-testid="input-leagueGoalsPerSeason"
-                      className="font-medium"
-                    />
-                    <p className="text-xs text-green-600 dark:text-green-400">
-                      Controls average goals across all teams (typical: 800-1200 goals per season)
-                    </p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-green-50 dark:bg-green-950">
+                    <div className="space-y-2">
+                      <Label htmlFor="leagueGoalsPerSeason" className="text-base font-semibold text-green-800 dark:text-green-200">
+                        League Goals Per Season
+                      </Label>
+                      <Input
+                        id="leagueGoalsPerSeason"
+                        type="number"
+                        step="10"
+                        value={formData.leagueGoalsPerSeason || ''}
+                        onChange={(e) => handleInputChange('leagueGoalsPerSeason', e.target.value)}
+                        data-testid="input-leagueGoalsPerSeason"
+                        className="font-medium"
+                      />
+                      <p className="text-xs text-green-600 dark:text-green-400">
+                        Controls average goals across all teams (typical: 800-1200 goals per season)
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+                        ✓ Auto Balance: ON<br/>
+                        ✓ Variance: Controlled via tier settings<br/>
+                        ✓ Average: Controlled via League Goals
+                      </p>
+                    </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    <p className="text-sm text-green-700 dark:text-green-300 font-medium">
-                      ✓ Auto Balance: ON<br/>
-                      ✓ Variance: Controlled via Defending Tiers<br/>
-                      ✓ Average: Controlled via League Goals
+                  <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-950">
+                    <div className="flex items-center justify-between mb-3">
+                      <Label htmlFor="offensiveVarianceEnabled" className="text-base font-semibold text-blue-800 dark:text-blue-200">
+                        Manual Offensive Variance Control
+                      </Label>
+                      <Switch
+                        id="offensiveVarianceEnabled"
+                        checked={formData.offensiveVarianceEnabled || false}
+                        onCheckedChange={(checked) => handleSwitchChange('offensiveVarianceEnabled', checked)}
+                        data-testid="switch-offensiveVarianceEnabled"
+                      />
+                    </div>
+                    
+                    {formData.offensiveVarianceEnabled && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="eliteAttackingGoals" className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                            Elite Attacking Teams (Total Goals)
+                          </Label>
+                          <Input
+                            id="eliteAttackingGoals"
+                            type="number"
+                            step="5"
+                            value={formData.eliteAttackingGoals || ''}
+                            onChange={(e) => handleInputChange('eliteAttackingGoals', e.target.value)}
+                            data-testid="input-eliteAttackingGoals"
+                          />
+                          <p className="text-xs text-blue-600 dark:text-blue-400">Man City, Arsenal, Liverpool</p>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="weakAttackingGoals" className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                            Weak Attacking Teams (Total Goals)
+                          </Label>
+                          <Input
+                            id="weakAttackingGoals"
+                            type="number"
+                            step="5"
+                            value={formData.weakAttackingGoals || ''}
+                            onChange={(e) => handleInputChange('weakAttackingGoals', e.target.value)}
+                            data-testid="input-weakAttackingGoals"
+                          />
+                          <p className="text-xs text-blue-600 dark:text-blue-400">Burnley, Sheffield, promoted teams</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                      {formData.offensiveVarianceEnabled ? 
+                        "Manual control: Set exact goal ranges for elite vs weak attacking teams" :
+                        "Use default attacking variance based on tier multipliers"
+                      }
                     </p>
                   </div>
                 </div>
