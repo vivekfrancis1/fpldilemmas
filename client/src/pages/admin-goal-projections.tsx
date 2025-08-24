@@ -657,7 +657,7 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 1: Foundation</h4>
                       <p className="text-sm text-muted-foreground">
-                        Starts with <strong>Average Base xG per Team per Game</strong> (1.35)<br/>
+                        Starts with <strong>Average Base xG per Team per Game:</strong> <span className="font-mono text-blue-600">{formData.averageBaseXGPerTeamPerGame || 1.35}</span><br/>
                         Universal foundation - all teams begin with the same base value
                       </p>
                     </div>
@@ -665,64 +665,70 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 2: Venue Adjustments</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Home:</strong> xG × {formData.homeAdvantageGoalsMultiplier || 1.15} (configurable)<br/>
-                        <strong>Away:</strong> xG × {formData.awayFactorGoalsMultiplier || 0.88} (configurable)
+                        <strong>Home:</strong> xG × <span className="font-mono text-green-600">{formData.homeAdvantageGoalsMultiplier || 1.15}</span><br/>
+                        <strong>Away:</strong> xG × <span className="font-mono text-red-600">{formData.awayFactorGoalsMultiplier || 0.88}</span>
                       </p>
                     </div>
                     
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 3: Defensive Tiers</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Elite Defense:</strong> × {formData.eliteDefenseMultiplier || 0.65} (configurable)<br/>
-                        <strong>Strong Defense:</strong> × {formData.strongDefenseMultiplier || 0.80}<br/>
-                        <strong>Average Defense:</strong> × {formData.averageDefenseMultiplier || 1.0}<br/>
-                        <strong>Weak Defense:</strong> × {formData.weakDefenseMultiplier || 1.25}
+                        <strong>Elite Defense:</strong> × <span className="font-mono text-blue-600">{formData.eliteDefenseMultiplier || 0.65}</span><br/>
+                        <strong>Strong Defense:</strong> × <span className="font-mono text-blue-600">{formData.strongDefenseMultiplier || 0.80}</span><br/>
+                        <strong>Average Defense:</strong> × <span className="font-mono text-blue-600">{formData.averageDefenseMultiplier || 1.0}</span><br/>
+                        <strong>Weak Defense:</strong> × <span className="font-mono text-blue-600">{formData.weakDefenseMultiplier || 1.25}</span><br/>
+                        <strong>Promoted Defense:</strong> × <span className="font-mono text-blue-600">{formData.promotedDefenseMultiplier || 1.40}</span>
                       </p>
                     </div>
                     
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 4: Attacking Tiers</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Elite:</strong> × {formData.eliteAttackMultiplier || 1.5} (configurable)<br/>
-                        <strong>Strong:</strong> × {formData.strongAttackMultiplier || 1.25}<br/>
-                        <strong>Average:</strong> × {formData.averageAttackMultiplier || 1.0}<br/>
-                        <strong>Weak:</strong> × {formData.weakAttackMultiplier || 0.75}
+                        <strong>Elite:</strong> × <span className="font-mono text-orange-600">{formData.eliteAttackMultiplier || 1.5}</span><br/>
+                        <strong>Strong:</strong> × <span className="font-mono text-orange-600">{formData.strongAttackMultiplier || 1.25}</span><br/>
+                        <strong>Average:</strong> × <span className="font-mono text-orange-600">{formData.averageAttackMultiplier || 1.0}</span><br/>
+                        <strong>Weak:</strong> × <span className="font-mono text-orange-600">{formData.weakAttackMultiplier || 0.75}</span><br/>
+                        <strong>Promoted:</strong> × <span className="font-mono text-orange-600">{formData.promotedAttackMultiplier || 0.60}</span>
                       </p>
                     </div>
                   </div>
                   
                   <div className="space-y-3">
                     <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 5: Context Analysis</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 5: Context Multipliers</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Elite Clashes:</strong> +8% boost<br/>
-                        <strong>Top 6 Battles:</strong> +2% boost<br/>
-                        <strong>Derby Matches:</strong> +14% boost
+                        <strong>Derby Matches:</strong> × <span className="font-mono text-purple-600">{formData.derbyGoalsMultiplier || 0.87}</span><br/>
+                        <strong>Top Six Battles:</strong> × <span className="font-mono text-purple-600">{formData.topSixGoalsMultiplier || 1.12}</span><br/>
+                        <strong>Relegation Battles:</strong> × <span className="font-mono text-purple-600">{formData.relegationBattleGoalsMultiplier || 0.83}</span><br/>
+                        <strong>Early Kickoff:</strong> × <span className="font-mono text-purple-600">{formData.earlyKickoffGoalsMultiplier || 0.94}</span><br/>
+                        <strong>Late Kickoff:</strong> × <span className="font-mono text-purple-600">{formData.lateKickoffGoalsMultiplier || 1.07}</span>
                       </p>
                     </div>
                     
                     <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 6-7: Market Factors</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 6: Market Bounds</h4>
                       <p className="text-sm text-muted-foreground">
-                        Small adjustments for market momentum and variance<br/>
-                        Range: 99-101% (minimal seasonal fluctuations)
+                        <strong>Min Goals/Match:</strong> <span className="font-mono text-indigo-600">{formData.minGoalsPerMatch || 0.0}</span><br/>
+                        <strong>Max Goals/Match:</strong> <span className="font-mono text-indigo-600">{formData.maxGoalsPerMatch || 5.0}</span><br/>
+                        <strong>Market Floor Multiplier:</strong> <span className="font-mono text-indigo-600">{formData.marketFloorMultiplier || 0.5}</span><br/>
+                        <strong>Market Ceiling Multiplier:</strong> <span className="font-mono text-indigo-600">{formData.marketCeilingMultiplier || 2.0}</span>
                       </p>
                     </div>
                     
                     <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 8: Final Bounds</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 7: Team Confidence</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Floor:</strong> Min {formData.absoluteMinGoals || 0.6} goals/match<br/>
-                        <strong>Ceiling:</strong> Max {formData.absoluteMaxGoals || 2.2} goals/match<br/>
-                        Ensures realistic Premier League ranges
+                        <strong>Low Confidence Threshold:</strong> <span className="font-mono text-teal-600">{((formData.lowConfidenceThreshold || 0.65) * 100).toFixed(0)}%</span><br/>
+                        <strong>Low Confidence Boost:</strong> × <span className="font-mono text-teal-600">{formData.lowConfidenceBoost || 1.05}</span>
                       </p>
                     </div>
                     
                     <div className="p-3 border rounded-lg bg-fpl-purple/5">
-                      <h4 className="font-semibold text-sm mb-2">Final Step: Confidence Boost</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 8: Final Bounds</h4>
                       <p className="text-sm text-muted-foreground">
-                        Teams with confidence below {formData.lowConfidenceThreshold * 100}%<br/>
-                        receive a <strong>{formData.lowConfidenceBoost}×</strong> multiplier boost
+                        <strong>Absolute Min Goals:</strong> <span className="font-mono text-gray-600">{formData.absoluteMinGoals || 0.0}</span><br/>
+                        <strong>Absolute Max Goals:</strong> <span className="font-mono text-gray-600">{formData.absoluteMaxGoals || 5.0}</span><br/>
+                        Final safety bounds to ensure realistic ranges
                       </p>
                     </div>
                   </div>
