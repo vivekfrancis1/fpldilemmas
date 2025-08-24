@@ -183,6 +183,14 @@ export default function AdminGoalProjections() {
     return 'average';
   };
 
+  const getDefaultTier = (teamId: number): string => {
+    if (DEFAULT_TEAM_TIERS.eliteAttackTeams.includes(teamId)) return 'elite';
+    if (DEFAULT_TEAM_TIERS.strongAttackTeams.includes(teamId)) return 'strong';
+    if (DEFAULT_TEAM_TIERS.weakAttackTeams.includes(teamId)) return 'weak';
+    if (DEFAULT_TEAM_TIERS.promotedAttackTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+
   const getTeamsByTier = (tier: string) => {
     return teams.filter(team => getTeamTier(team.id) === tier);
   };
@@ -282,199 +290,179 @@ export default function AdminGoalProjections() {
                 Team Attacking Tier Assignments
               </CardTitle>
               <CardDescription>
-                Configure which teams belong to each attacking tier. These assignments determine the attacking multipliers applied in projections.
+                Assign all 20 Premier League teams to attacking tiers that determine their goal-scoring multipliers in projections. 
+                Drag and drop or use the dropdown to move teams between tiers.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+            <CardContent className="space-y-8">
+              
+              {/* Overview Section */}
+              <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">How Team Tiers Work</h3>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-xs">
+                  <div className="text-center">
+                    <Badge className="bg-purple-600 hover:bg-purple-700 mb-1">Elite</Badge>
+                    <p className="text-purple-900 dark:text-purple-100">×{formData.eliteAttackMultiplier} multiplier</p>
+                    <p className="text-muted-foreground">Top attacking teams</p>
+                  </div>
+                  <div className="text-center">
+                    <Badge className="bg-blue-600 hover:bg-blue-700 mb-1">Strong</Badge>
+                    <p className="text-blue-900 dark:text-blue-100">×{formData.strongAttackMultiplier} multiplier</p>
+                    <p className="text-muted-foreground">Good attacking sides</p>
+                  </div>
+                  <div className="text-center">
+                    <Badge className="bg-gray-600 hover:bg-gray-700 mb-1">Average</Badge>
+                    <p className="text-gray-900 dark:text-gray-100">×{formData.averageAttackMultiplier} multiplier</p>
+                    <p className="text-muted-foreground">Mid-table teams</p>
+                  </div>
+                  <div className="text-center">
+                    <Badge className="bg-orange-600 hover:bg-orange-700 mb-1">Weak</Badge>
+                    <p className="text-orange-900 dark:text-orange-100">×{formData.weakAttackMultiplier} multiplier</p>
+                    <p className="text-muted-foreground">Defensive teams</p>
+                  </div>
+                  <div className="text-center">
+                    <Badge className="bg-red-600 hover:bg-red-700 mb-1">Promoted</Badge>
+                    <p className="text-red-900 dark:text-red-100">×{formData.promotedAttackMultiplier} multiplier</p>
+                    <p className="text-muted-foreground">New to league</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* All Teams List */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">All Premier League Teams</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Use the dropdown next to each team to assign them to the appropriate attacking tier.
+                </p>
                 
-                {/* Elite Attack Teams */}
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default" className="bg-purple-600 hover:bg-purple-700">Elite Attack</Badge>
-                    <span className="text-sm text-muted-foreground">x{formData.eliteAttackMultiplier}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default:</strong> Liverpool, Manchester City, Arsenal, Chelsea
-                  </p>
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {getTeamsByTier('elite').map(team => (
-                      <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
-                        <span className="text-sm font-medium truncate pr-2">{team.name}</span>
-                        <Select value={getTeamTier(team.id)} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                          <SelectTrigger className="w-28 h-8 text-xs">
-                            <SelectValue placeholder="Select tier" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="elite">Elite</SelectItem>
-                            <SelectItem value="strong">Strong</SelectItem>
-                            <SelectItem value="average">Average</SelectItem>
-                            <SelectItem value="weak">Weak</SelectItem>
-                            <SelectItem value="promoted">Promoted</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                  {teams.map(team => {
+                    const currentTier = getTeamTier(team.id);
+                    const defaultTier = getDefaultTier(team.id);
+                    const hasChanged = currentTier !== defaultTier;
+                    
+                    const tierColor = {
+                      'elite': 'bg-purple-50 border-purple-200 dark:bg-purple-950 dark:border-purple-800',
+                      'strong': 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800', 
+                      'average': 'bg-gray-50 border-gray-200 dark:bg-gray-950 dark:border-gray-800',
+                      'weak': 'bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800',
+                      'promoted': 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
+                    }[currentTier] || 'bg-gray-50 border-gray-200 dark:bg-gray-950 dark:border-gray-800';
+                    
+                    const getTierBadge = (tier: string, variant: 'current' | 'default') => {
+                      const isDefault = variant === 'default';
+                      const badgeClass = isDefault ? "text-xs border" : "text-xs";
+                      const badgeVariant = isDefault ? "outline" : "default";
+                      
+                      const colors = {
+                        'elite': isDefault ? 'border-purple-300 text-purple-700 bg-purple-50' : 'bg-purple-600 hover:bg-purple-700',
+                        'strong': isDefault ? 'border-blue-300 text-blue-700 bg-blue-50' : 'bg-blue-600 hover:bg-blue-700',
+                        'average': isDefault ? 'border-gray-300 text-gray-700 bg-gray-50' : 'bg-gray-600 hover:bg-gray-700',
+                        'weak': isDefault ? 'border-orange-300 text-orange-700 bg-orange-50' : 'bg-orange-600 hover:bg-orange-700',
+                        'promoted': isDefault ? 'border-red-300 text-red-700 bg-red-50' : 'bg-red-600 hover:bg-red-700'
+                      }[tier] || (isDefault ? 'border-gray-300 text-gray-700 bg-gray-50' : 'bg-gray-600 hover:bg-gray-700');
+                      
+                      const tierNames = {
+                        'elite': 'Elite',
+                        'strong': 'Strong', 
+                        'average': 'Average',
+                        'weak': 'Weak',
+                        'promoted': 'Promoted'
+                      };
+                      
+                      return (
+                        <Badge 
+                          variant={badgeVariant as "default" | "outline"} 
+                          className={`${badgeClass} ${colors}`}
+                        >
+                          {tierNames[tier as keyof typeof tierNames] || 'Average'}
+                        </Badge>
+                      );
+                    };
 
-                {/* Strong Attack Teams */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">Strong Attack</Badge>
-                    <span className="text-sm text-muted-foreground">x{formData.strongAttackMultiplier}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default:</strong> Newcastle, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
-                  </p>
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {getTeamsByTier('strong').map(team => (
-                      <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
-                        <span className="text-sm font-medium truncate pr-2">{team.name}</span>
-                        <Select value={getTeamTier(team.id)} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                          <SelectTrigger className="w-28 h-8 text-xs">
-                            <SelectValue placeholder="Select tier" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="elite">Elite</SelectItem>
-                            <SelectItem value="strong">Strong</SelectItem>
-                            <SelectItem value="average">Average</SelectItem>
-                            <SelectItem value="weak">Weak</SelectItem>
-                            <SelectItem value="promoted">Promoted</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Average Attack Teams */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default" className="bg-gray-600 hover:bg-gray-700">Average Attack</Badge>
-                    <span className="text-sm text-muted-foreground">x{formData.averageAttackMultiplier}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default:</strong> Manchester United, Crystal Palace, Fulham, West Ham
-                  </p>
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {getTeamsByTier('average').map(team => (
-                      <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
-                        <span className="text-sm font-medium truncate pr-2">{team.name}</span>
-                        <Select value={getTeamTier(team.id)} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                          <SelectTrigger className="w-28 h-8 text-xs">
-                            <SelectValue placeholder="Select tier" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="elite">Elite</SelectItem>
-                            <SelectItem value="strong">Strong</SelectItem>
-                            <SelectItem value="average">Average</SelectItem>
-                            <SelectItem value="weak">Weak</SelectItem>
-                            <SelectItem value="promoted">Promoted</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Weak Attack Teams */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default" className="bg-orange-600 hover:bg-orange-700">Weak Attack</Badge>
-                    <span className="text-sm text-muted-foreground">x{formData.weakAttackMultiplier}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default:</strong> Everton, Nottingham Forest, Wolverhampton Wanderers
-                  </p>
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {getTeamsByTier('weak').map(team => (
-                      <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
-                        <span className="text-sm font-medium truncate pr-2">{team.name}</span>
-                        <Select value={getTeamTier(team.id)} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                          <SelectTrigger className="w-28 h-8 text-xs">
-                            <SelectValue placeholder="Select tier" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="elite">Elite</SelectItem>
-                            <SelectItem value="strong">Strong</SelectItem>
-                            <SelectItem value="average">Average</SelectItem>
-                            <SelectItem value="weak">Weak</SelectItem>
-                            <SelectItem value="promoted">Promoted</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Promoted Teams */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default" className="bg-red-600 hover:bg-red-700">Promoted Teams</Badge>
-                    <span className="text-sm text-muted-foreground">x{formData.promotedAttackMultiplier}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default:</strong> Leeds, Burnley, Sunderland
-                  </p>
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {getTeamsByTier('promoted').map(team => (
-                      <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
-                        <span className="text-sm font-medium truncate pr-2">{team.name}</span>
-                        <Select value={getTeamTier(team.id)} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                          <SelectTrigger className="w-28 h-8 text-xs">
-                            <SelectValue placeholder="Select tier" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="elite">Elite</SelectItem>
-                            <SelectItem value="strong">Strong</SelectItem>
-                            <SelectItem value="average">Average</SelectItem>
-                            <SelectItem value="weak">Weak</SelectItem>
-                            <SelectItem value="promoted">Promoted</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Unassigned Teams */}
-                {teams.filter(team => getTeamTier(team.id) === 'average' && !formData.averageAttackTeams?.includes(team.id)).length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">Unassigned Teams</Badge>
-                      <span className="text-sm text-muted-foreground">Default: Average</span>
-                    </div>
-                    <div className="space-y-2 max-h-80 overflow-y-auto">
-                      {teams.filter(team => getTeamTier(team.id) === 'average' && !formData.averageAttackTeams?.includes(team.id)).map(team => (
-                        <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
-                          <span className="text-sm font-medium truncate pr-2">{team.name}</span>
-                          <Select value={getTeamTier(team.id)} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                            <SelectTrigger className="w-28 h-8 text-xs">
-                              <SelectValue placeholder="Select tier" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="elite">Elite</SelectItem>
-                              <SelectItem value="strong">Strong</SelectItem>
-                              <SelectItem value="average">Average</SelectItem>
-                              <SelectItem value="weak">Weak</SelectItem>
-                              <SelectItem value="promoted">Promoted</SelectItem>
-                            </SelectContent>
-                          </Select>
+                    return (
+                      <div key={team.id} className={`p-4 border rounded-lg ${tierColor} ${hasChanged ? 'ring-2 ring-blue-300 dark:ring-blue-600' : ''}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-medium text-sm truncate">{team.name}</span>
+                              {hasChanged && (
+                                <Badge variant="outline" className="text-xs bg-blue-50 border-blue-300 text-blue-700">
+                                  Modified
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-4 text-xs">
+                              <div className="flex items-center gap-1">
+                                <span className="text-muted-foreground">Default:</span>
+                                {getTierBadge(defaultTier, 'default')}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-muted-foreground">Current:</span>
+                                {getTierBadge(currentTier, 'current')}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="ml-4">
+                            <Label htmlFor={`team-${team.id}`} className="text-xs text-muted-foreground mb-1 block">
+                              Change Tier
+                            </Label>
+                            <Select value={currentTier} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
+                              <SelectTrigger id={`team-${team.id}`} className="w-28 h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="elite">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                                    Elite
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="strong">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                    Strong
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="average">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                                    Average
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="weak">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
+                                    Weak
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="promoted">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                                    Promoted
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
               
               <Separator />
               
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Team assignments affect attacking multipliers in goal projections. Changes apply immediately when saved.
-                </p>
+                <div className="text-sm text-muted-foreground">
+                  <p className="mb-1">
+                    <strong>Current Assignment:</strong> {teams.length} teams total
+                  </p>
+                  <p>Changes apply immediately to all goal projections when saved.</p>
+                </div>
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
@@ -489,6 +477,7 @@ export default function AdminGoalProjections() {
                     onClick={handleSave} 
                     disabled={!hasChanges || updateSettingsMutation.isPending}
                     data-testid="button-save-team-assignments"
+                    className="bg-green-600 hover:bg-green-700"
                   >
                     <Save className="h-4 w-4 mr-2" />
                     Save Changes
