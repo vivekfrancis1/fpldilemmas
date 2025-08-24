@@ -964,97 +964,105 @@ export default function AdminGoalProjections() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="eliteAttackMultiplier">Elite Attack</Label>
-                  <Input
-                    id="eliteAttackMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="1.0"
-                    max="2.0"
-                    value={formData.eliteAttackMultiplier || 0}
-                    onChange={(e) => handleInputChange('eliteAttackMultiplier', e.target.value)}
-                    data-testid="input-elite-attack-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.5</strong><br/>
-                    Premier League elite attacking teams (Man City, Arsenal).<br/>
-                    <em>Range: 1.0-2.0</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="strongAttackMultiplier">Strong Attack</Label>
-                  <Input
-                    id="strongAttackMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="1.0"
-                    max="1.5"
-                    value={formData.strongAttackMultiplier || 0}
-                    onChange={(e) => handleInputChange('strongAttackMultiplier', e.target.value)}
-                    data-testid="input-strong-attack-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.25</strong><br/>
-                    Teams with strong attacking potential and good goal records.<br/>
-                    <em>Range: 1.0-1.5</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="averageAttackMultiplier">Average Attack</Label>
-                  <Input
-                    id="averageAttackMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.8"
-                    max="1.2"
-                    value={formData.averageAttackMultiplier || 0}
-                    onChange={(e) => handleInputChange('averageAttackMultiplier', e.target.value)}
-                    data-testid="input-average-attack-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.00</strong><br/>
-                    Mid-table teams with average attacking capability (baseline).<br/>
-                    <em>Range: 0.8-1.2</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="weakAttackMultiplier">Weak Attack</Label>
-                  <Input
-                    id="weakAttackMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.5"
-                    max="1.0"
-                    value={formData.weakAttackMultiplier || 0}
-                    onChange={(e) => handleInputChange('weakAttackMultiplier', e.target.value)}
-                    data-testid="input-weak-attack-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.75</strong><br/>
-                    Teams with attacking struggles and low goal tallies.<br/>
-                    <em>Range: 0.5-1.0</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="promotedAttackMultiplier">Promoted Attack</Label>
-                  <Input
-                    id="promotedAttackMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.3"
-                    max="1.0"
-                    value={formData.promotedAttackMultiplier || 0}
-                    onChange={(e) => handleInputChange('promotedAttackMultiplier', e.target.value)}
-                    data-testid="input-promoted-attack-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.5</strong><br/>
-                    Newly promoted teams adapting to Premier League defensive quality.<br/>
-                    <em>Range: 0.3-1.0</em>
-                  </p>
-                </div>
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Phase 5 Settings:</strong> These attacking tier multipliers are applied in Phase 5 of the goal projection calculation. Teams are assigned to tiers in the Attack Teams tab.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2 font-medium">Multiplier</th>
+                      <th className="text-center p-2 font-medium">Default</th>
+                      <th className="text-center p-2 font-medium">Current</th>
+                      <th className="text-center p-2 font-medium">New Value</th>
+                      <th className="text-center p-2 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { key: 'eliteAttackMultiplier', name: 'Elite Attack', default: 1.5, min: 1.0, max: 2.0, description: 'Premier League elite attacking teams' },
+                      { key: 'strongAttackMultiplier', name: 'Strong Attack', default: 1.25, min: 1.0, max: 1.5, description: 'Teams with strong attacking potential' },
+                      { key: 'averageAttackMultiplier', name: 'Average Attack', default: 1.0, min: 0.8, max: 1.2, description: 'Mid-table teams (baseline)' },
+                      { key: 'weakAttackMultiplier', name: 'Weak Attack', default: 0.75, min: 0.5, max: 1.0, description: 'Teams with attacking struggles' },
+                      { key: 'promotedAttackMultiplier', name: 'Promoted Attack', default: 0.5, min: 0.3, max: 1.0, description: 'Newly promoted teams' }
+                    ].map((setting) => {
+                      const currentValue = (formData as any)[setting.key] || setting.default;
+                      const isChanged = Math.abs(currentValue - setting.default) > 0.01;
+                      
+                      return (
+                        <tr key={setting.key} className="border-b hover:bg-muted/50">
+                          <td className="p-2">
+                            <div>
+                              <p className="font-medium">{setting.name}</p>
+                              <p className="text-sm text-muted-foreground">{setting.description}</p>
+                            </div>
+                          </td>
+                          <td className="text-center p-2">
+                            <span className="font-mono text-sm text-muted-foreground">
+                              {setting.default.toFixed(2)}
+                            </span>
+                          </td>
+                          <td className="text-center p-2">
+                            <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
+                              {currentValue.toFixed(2)}
+                            </span>
+                            {isChanged && (
+                              <div className="text-xs text-blue-600 mt-1">Modified</div>
+                            )}
+                          </td>
+                          <td className="text-center p-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={setting.min}
+                              max={setting.max}
+                              className="w-20 mx-auto text-center"
+                              value={currentValue.toFixed(2)}
+                              onChange={(e) => handleInputChange(setting.key as keyof AdminSettings, e.target.value)}
+                              data-testid={`input-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                            />
+                          </td>
+                          <td className="text-center p-2">
+                            <div className="flex gap-1 justify-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  toast({
+                                    title: "Multiplier Updated",
+                                    description: `${setting.name} updated to ${currentValue.toFixed(2)}`,
+                                  });
+                                }}
+                                data-testid={`button-update-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                              >
+                                Update
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  handleInputChange(setting.key as keyof AdminSettings, setting.default.toString());
+                                  toast({
+                                    title: "Reset to Default",
+                                    description: `${setting.name} reset to ${setting.default.toFixed(2)}`,
+                                  });
+                                }}
+                                data-testid={`button-reset-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                                title="Reset to default"
+                              >
+                                ↺
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
@@ -1228,97 +1236,105 @@ export default function AdminGoalProjections() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="eliteDefenseMultiplier">Elite Defense</Label>
-                  <Input
-                    id="eliteDefenseMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.3"
-                    max="0.8"
-                    value={formData.eliteDefenseMultiplier || 0}
-                    onChange={(e) => handleInputChange('eliteDefenseMultiplier', e.target.value)}
-                    data-testid="input-elite-defense-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.5</strong><br/>
-                    Premier League elite defensive teams (Arsenal, Liverpool).<br/>
-                    <em>Range: 0.3-0.8</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="strongDefenseMultiplier">Strong Defense</Label>
-                  <Input
-                    id="strongDefenseMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.5"
-                    max="1.0"
-                    value={formData.strongDefenseMultiplier || 0}
-                    onChange={(e) => handleInputChange('strongDefenseMultiplier', e.target.value)}
-                    data-testid="input-strong-defense-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.75</strong><br/>
-                    Teams with strong defensive records and low goals conceded.<br/>
-                    <em>Range: 0.5-1.0</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="averageDefenseMultiplier">Average Defense</Label>
-                  <Input
-                    id="averageDefenseMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.8"
-                    max="1.2"
-                    value={formData.averageDefenseMultiplier || 0}
-                    onChange={(e) => handleInputChange('averageDefenseMultiplier', e.target.value)}
-                    data-testid="input-average-defense-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.00</strong><br/>
-                    Mid-table teams with average defensive capability (baseline).<br/>
-                    <em>Range: 0.8-1.2</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="weakDefenseMultiplier">Weak Defense</Label>
-                  <Input
-                    id="weakDefenseMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="1.0"
-                    max="1.8"
-                    value={formData.weakDefenseMultiplier || 0}
-                    onChange={(e) => handleInputChange('weakDefenseMultiplier', e.target.value)}
-                    data-testid="input-weak-defense-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.25</strong><br/>
-                    Teams with defensive vulnerabilities and high goals conceded.<br/>
-                    <em>Range: 1.0-1.8</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="promotedDefenseMultiplier">Promoted Defense</Label>
-                  <Input
-                    id="promotedDefenseMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="1.2"
-                    max="2.0"
-                    value={formData.promotedDefenseMultiplier || 0}
-                    onChange={(e) => handleInputChange('promotedDefenseMultiplier', e.target.value)}
-                    data-testid="input-promoted-defense-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.5</strong><br/>
-                    Newly promoted teams adapting to Premier League attacking quality.<br/>
-                    <em>Range: 1.2-2.0</em>
-                  </p>
-                </div>
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Defense Settings:</strong> These defensive tier multipliers are applied to goals against calculations. Teams are assigned to tiers in the Defense Teams tab.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2 font-medium">Multiplier</th>
+                      <th className="text-center p-2 font-medium">Default</th>
+                      <th className="text-center p-2 font-medium">Current</th>
+                      <th className="text-center p-2 font-medium">New Value</th>
+                      <th className="text-center p-2 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { key: 'eliteDefenseMultiplier', name: 'Elite Defense', default: 0.5, min: 0.3, max: 0.8, description: 'Premier League elite defensive teams' },
+                      { key: 'strongDefenseMultiplier', name: 'Strong Defense', default: 0.75, min: 0.5, max: 1.0, description: 'Teams with strong defensive records' },
+                      { key: 'averageDefenseMultiplier', name: 'Average Defense', default: 1.0, min: 0.8, max: 1.2, description: 'Mid-table teams (baseline)' },
+                      { key: 'weakDefenseMultiplier', name: 'Weak Defense', default: 1.25, min: 1.0, max: 1.8, description: 'Teams with defensive vulnerabilities' },
+                      { key: 'promotedDefenseMultiplier', name: 'Promoted Defense', default: 1.5, min: 1.2, max: 2.0, description: 'Newly promoted teams' }
+                    ].map((setting) => {
+                      const currentValue = (formData as any)[setting.key] || setting.default;
+                      const isChanged = Math.abs(currentValue - setting.default) > 0.01;
+                      
+                      return (
+                        <tr key={setting.key} className="border-b hover:bg-muted/50">
+                          <td className="p-2">
+                            <div>
+                              <p className="font-medium">{setting.name}</p>
+                              <p className="text-sm text-muted-foreground">{setting.description}</p>
+                            </div>
+                          </td>
+                          <td className="text-center p-2">
+                            <span className="font-mono text-sm text-muted-foreground">
+                              {setting.default.toFixed(2)}
+                            </span>
+                          </td>
+                          <td className="text-center p-2">
+                            <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
+                              {currentValue.toFixed(2)}
+                            </span>
+                            {isChanged && (
+                              <div className="text-xs text-blue-600 mt-1">Modified</div>
+                            )}
+                          </td>
+                          <td className="text-center p-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={setting.min}
+                              max={setting.max}
+                              className="w-20 mx-auto text-center"
+                              value={currentValue.toFixed(2)}
+                              onChange={(e) => handleInputChange(setting.key as keyof AdminSettings, e.target.value)}
+                              data-testid={`input-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                            />
+                          </td>
+                          <td className="text-center p-2">
+                            <div className="flex gap-1 justify-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  toast({
+                                    title: "Multiplier Updated",
+                                    description: `${setting.name} updated to ${currentValue.toFixed(2)}`,
+                                  });
+                                }}
+                                data-testid={`button-update-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                              >
+                                Update
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  handleInputChange(setting.key as keyof AdminSettings, setting.default.toString());
+                                  toast({
+                                    title: "Reset to Default",
+                                    description: `${setting.name} reset to ${setting.default.toFixed(2)}`,
+                                  });
+                                }}
+                                data-testid={`button-reset-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                                title="Reset to default"
+                              >
+                                ↺
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
@@ -1492,61 +1508,103 @@ export default function AdminGoalProjections() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="globalTierMultiplier">Global Tier Multiplier</Label>
-                  <Input
-                    id="globalTierMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.5"
-                    max="2.0"
-                    value={formData.globalTierMultiplier || 0}
-                    onChange={(e) => handleInputChange('globalTierMultiplier', e.target.value)}
-                    data-testid="input-global-tier-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.00</strong><br/>
-                    Master multiplier applied to all tier-based calculations.<br/>
-                    <em>Range: 0.5-2.0</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lowConfidenceBoost">Low Confidence Boost</Label>
-                  <Input
-                    id="lowConfidenceBoost"
-                    type="number"
-                    step="0.01"
-                    min="1.0"
-                    max="2.0"
-                    value={formData.lowConfidenceBoost || 0}
-                    onChange={(e) => handleInputChange('lowConfidenceBoost', e.target.value)}
-                    data-testid="input-low-confidence-boost"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.15</strong><br/>
-                    Boost applied to projections with low confidence scores.<br/>
-                    <em>Range: 1.0-2.0</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lowConfidenceThreshold">Low Confidence Threshold</Label>
-                  <Input
-                    id="lowConfidenceThreshold"
-                    type="number"
-                    step="0.01"
-                    min="0.1"
-                    max="0.9"
-                    value={formData.lowConfidenceThreshold || 0}
-                    onChange={(e) => handleInputChange('lowConfidenceThreshold', e.target.value)}
-                    data-testid="input-low-confidence-threshold"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.30</strong><br/>
-                    Confidence score below which low confidence boost is applied.<br/>
-                    <em>Range: 0.1-0.9</em>
-                  </p>
-                </div>
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>System-Wide Settings:</strong> These global multipliers affect all projection calculations across the entire system.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2 font-medium">Setting</th>
+                      <th className="text-center p-2 font-medium">Default</th>
+                      <th className="text-center p-2 font-medium">Current</th>
+                      <th className="text-center p-2 font-medium">New Value</th>
+                      <th className="text-center p-2 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { key: 'globalTierMultiplier', name: 'Global Tier Multiplier', default: 1.0, min: 0.5, max: 2.0, description: 'Master multiplier for all tier-based calculations' },
+                      { key: 'lowConfidenceBoost', name: 'Low Confidence Boost', default: 1.15, min: 1.0, max: 2.0, description: 'Boost for projections with low confidence scores' },
+                      { key: 'lowConfidenceThreshold', name: 'Low Confidence Threshold', default: 0.30, min: 0.1, max: 0.9, description: 'Confidence score threshold for boost application' }
+                    ].map((setting) => {
+                      const currentValue = (formData as any)[setting.key] || setting.default;
+                      const isChanged = Math.abs(currentValue - setting.default) > 0.01;
+                      
+                      return (
+                        <tr key={setting.key} className="border-b hover:bg-muted/50">
+                          <td className="p-2">
+                            <div>
+                              <p className="font-medium">{setting.name}</p>
+                              <p className="text-sm text-muted-foreground">{setting.description}</p>
+                            </div>
+                          </td>
+                          <td className="text-center p-2">
+                            <span className="font-mono text-sm text-muted-foreground">
+                              {setting.default.toFixed(2)}
+                            </span>
+                          </td>
+                          <td className="text-center p-2">
+                            <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
+                              {currentValue.toFixed(2)}
+                            </span>
+                            {isChanged && (
+                              <div className="text-xs text-blue-600 mt-1">Modified</div>
+                            )}
+                          </td>
+                          <td className="text-center p-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={setting.min}
+                              max={setting.max}
+                              className="w-20 mx-auto text-center"
+                              value={currentValue.toFixed(2)}
+                              onChange={(e) => handleInputChange(setting.key as keyof AdminSettings, e.target.value)}
+                              data-testid={`input-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                            />
+                          </td>
+                          <td className="text-center p-2">
+                            <div className="flex gap-1 justify-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  toast({
+                                    title: "Setting Updated",
+                                    description: `${setting.name} updated to ${currentValue.toFixed(2)}`,
+                                  });
+                                }}
+                                data-testid={`button-update-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                              >
+                                Update
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  handleInputChange(setting.key as keyof AdminSettings, setting.default.toString());
+                                  toast({
+                                    title: "Reset to Default",
+                                    description: `${setting.name} reset to ${setting.default.toFixed(2)}`,
+                                  });
+                                }}
+                                data-testid={`button-reset-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                                title="Reset to default"
+                              >
+                                ↺
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
@@ -1571,169 +1629,109 @@ export default function AdminGoalProjections() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="derbyGoalsMultiplier">Derby Matches</Label>
-                  <Input
-                    id="derbyGoalsMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.6"
-                    max="1.3"
-                    value={formData.derbyGoalsMultiplier || 0}
-                    onChange={(e) => handleInputChange('derbyGoalsMultiplier', e.target.value)}
-                    data-testid="input-derby-goals-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.87</strong><br/>
-                    Adjustment for local rivalries and derby matches.<br/>
-                    <em>Range: 0.6-1.3</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="topSixGoalsMultiplier">Top Six Battles</Label>
-                  <Input
-                    id="topSixGoalsMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.8"
-                    max="1.5"
-                    value={formData.topSixGoalsMultiplier || 0}
-                    onChange={(e) => handleInputChange('topSixGoalsMultiplier', e.target.value)}
-                    data-testid="input-top-six-goals-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.12</strong><br/>
-                    Multiplier for matches between traditional "Big Six" teams.<br/>
-                    <em>Range: 0.8-1.5</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="relegationBattleGoalsMultiplier">Relegation Battles</Label>
-                  <Input
-                    id="relegationBattleGoalsMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.6"
-                    max="1.2"
-                    value={formData.relegationBattleGoalsMultiplier || 0}
-                    onChange={(e) => handleInputChange('relegationBattleGoalsMultiplier', e.target.value)}
-                    data-testid="input-relegation-battle-goals-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.83</strong><br/>
-                    Adjustment for matches between teams fighting relegation.<br/>
-                    <em>Range: 0.6-1.2</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="earlyKickoffGoalsMultiplier">Early Kickoff</Label>
-                  <Input
-                    id="earlyKickoffGoalsMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.8"
-                    max="1.1"
-                    value={formData.earlyKickoffGoalsMultiplier || 0}
-                    onChange={(e) => handleInputChange('earlyKickoffGoalsMultiplier', e.target.value)}
-                    data-testid="input-early-kickoff-goals-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.94</strong><br/>
-                    Adjustment for early kickoff times (12:30 PM).<br/>
-                    <em>Range: 0.8-1.1</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lateKickoffGoalsMultiplier">Late Kickoff</Label>
-                  <Input
-                    id="lateKickoffGoalsMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.9"
-                    max="1.2"
-                    value={formData.lateKickoffGoalsMultiplier || 0}
-                    onChange={(e) => handleInputChange('lateKickoffGoalsMultiplier', e.target.value)}
-                    data-testid="input-late-kickoff-goals-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.07</strong><br/>
-                    Adjustment for late kickoff times (17:30/20:00).<br/>
-                    <em>Range: 0.9-1.2</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="postEuropeanGoalsMultiplier">Post-European Fixtures</Label>
-                  <Input
-                    id="postEuropeanGoalsMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.7"
-                    max="1.0"
-                    value={formData.postEuropeanGoalsMultiplier || 0}
-                    onChange={(e) => handleInputChange('postEuropeanGoalsMultiplier', e.target.value)}
-                    data-testid="input-post-european-goals-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.88</strong><br/>
-                    Reduction for teams playing after midweek European competitions.<br/>
-                    <em>Range: 0.7-1.0</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="midweekFixtureGoalsMultiplier">Midweek Fixtures</Label>
-                  <Input
-                    id="midweekFixtureGoalsMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.8"
-                    max="1.1"
-                    value={formData.midweekFixtureGoalsMultiplier || 0}
-                    onChange={(e) => handleInputChange('midweekFixtureGoalsMultiplier', e.target.value)}
-                    data-testid="input-midweek-fixture-goals-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.91</strong><br/>
-                    Adjustment for midweek Premier League fixtures.<br/>
-                    <em>Range: 0.8-1.1</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="seasonFinaleGoalsMultiplier">Season Finale</Label>
-                  <Input
-                    id="seasonFinaleGoalsMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.9"
-                    max="1.3"
-                    value={formData.seasonFinaleGoalsMultiplier || 0}
-                    onChange={(e) => handleInputChange('seasonFinaleGoalsMultiplier', e.target.value)}
-                    data-testid="input-season-finale-goals-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.05</strong><br/>
-                    Adjustment for final gameweek matches.<br/>
-                    <em>Range: 0.9-1.3</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newManagerBounceGoalsMultiplier">New Manager Bounce</Label>
-                  <Input
-                    id="newManagerBounceGoalsMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="1.0"
-                    max="1.3"
-                    value={formData.newManagerBounceGoalsMultiplier || 0}
-                    onChange={(e) => handleInputChange('newManagerBounceGoalsMultiplier', e.target.value)}
-                    data-testid="input-new-manager-bounce-goals-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.08</strong><br/>
-                    Boost applied when teams have a new manager.<br/>
-                    <em>Range: 1.0-1.3</em>
-                  </p>
-                </div>
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Phase 4 Settings:</strong> These context multipliers are applied in Phase 4 of the goal projection calculation based on match circumstances and timing.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2 font-medium">Context Multiplier</th>
+                      <th className="text-center p-2 font-medium">Default</th>
+                      <th className="text-center p-2 font-medium">Current</th>
+                      <th className="text-center p-2 font-medium">New Value</th>
+                      <th className="text-center p-2 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { key: 'derbyGoalsMultiplier', name: 'Derby Matches', default: 0.87, min: 0.6, max: 1.3, description: 'Local rivalries and derby matches' },
+                      { key: 'topSixGoalsMultiplier', name: 'Top Six Battles', default: 1.12, min: 0.8, max: 1.5, description: 'Matches between traditional Big Six teams' },
+                      { key: 'relegationBattleGoalsMultiplier', name: 'Relegation Battles', default: 0.83, min: 0.6, max: 1.2, description: 'Matches between teams fighting relegation' },
+                      { key: 'earlyKickoffGoalsMultiplier', name: 'Early Kickoff', default: 0.94, min: 0.8, max: 1.1, description: 'Early kickoff times (12:30 PM)' },
+                      { key: 'lateKickoffGoalsMultiplier', name: 'Late Kickoff', default: 1.07, min: 0.9, max: 1.2, description: 'Late kickoff times (17:30/20:00)' },
+                      { key: 'postEuropeanGoalsMultiplier', name: 'Post-European Fixtures', default: 0.88, min: 0.7, max: 1.0, description: 'After midweek European competitions' },
+                      { key: 'midweekFixtureGoalsMultiplier', name: 'Midweek Fixtures', default: 0.91, min: 0.8, max: 1.1, description: 'Midweek Premier League fixtures' },
+                      { key: 'seasonFinaleGoalsMultiplier', name: 'Season Finale', default: 1.05, min: 0.9, max: 1.3, description: 'Final gameweek matches' },
+                      { key: 'newManagerBounceGoalsMultiplier', name: 'New Manager Bounce', default: 1.08, min: 1.0, max: 1.3, description: 'Teams with a new manager' }
+                    ].map((setting) => {
+                      const currentValue = (formData as any)[setting.key] || setting.default;
+                      const isChanged = Math.abs(currentValue - setting.default) > 0.01;
+                      
+                      return (
+                        <tr key={setting.key} className="border-b hover:bg-muted/50">
+                          <td className="p-2">
+                            <div>
+                              <p className="font-medium">{setting.name}</p>
+                              <p className="text-sm text-muted-foreground">{setting.description}</p>
+                            </div>
+                          </td>
+                          <td className="text-center p-2">
+                            <span className="font-mono text-sm text-muted-foreground">
+                              {setting.default.toFixed(2)}
+                            </span>
+                          </td>
+                          <td className="text-center p-2">
+                            <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
+                              {currentValue.toFixed(2)}
+                            </span>
+                            {isChanged && (
+                              <div className="text-xs text-blue-600 mt-1">Modified</div>
+                            )}
+                          </td>
+                          <td className="text-center p-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={setting.min}
+                              max={setting.max}
+                              className="w-20 mx-auto text-center"
+                              value={currentValue.toFixed(2)}
+                              onChange={(e) => handleInputChange(setting.key as keyof AdminSettings, e.target.value)}
+                              data-testid={`input-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                            />
+                          </td>
+                          <td className="text-center p-2">
+                            <div className="flex gap-1 justify-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  toast({
+                                    title: "Context Updated",
+                                    description: `${setting.name} updated to ${currentValue.toFixed(2)}`,
+                                  });
+                                }}
+                                data-testid={`button-update-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                              >
+                                Update
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  handleInputChange(setting.key as keyof AdminSettings, setting.default.toString());
+                                  toast({
+                                    title: "Reset to Default",
+                                    description: `${setting.name} reset to ${setting.default.toFixed(2)}`,
+                                  });
+                                }}
+                                data-testid={`button-reset-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                                title="Reset to default"
+                              >
+                                ↺
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
@@ -1758,90 +1756,202 @@ export default function AdminGoalProjections() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Goals Scored admin doesn't have per-match bounds */}
-                <div className="space-y-2">
-                  <Label htmlFor="absoluteMinGoals">Absolute Min Goals</Label>
-                  <Input
-                    id="absoluteMinGoals"
-                    type="number"
-                    step="0.01"
-                    min="0.0"
-                    max="0.8"
-                    value={formData.absoluteMinGoals || 0}
-                    onChange={(e) => handleInputChange('absoluteMinGoals', e.target.value)}
-                    data-testid="input-absolute-min-goals"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.0</strong><br/>
-                    Hard minimum goals per match that cannot be exceeded.<br/>
-                    <em>Range: 0.0-0.8</em>
-                  </p>
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Phase 8 Settings:</strong> Market bounds and venue factors applied in the final phases of goal projection calculations to ensure realistic ranges.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="space-y-6">
+                {/* Market Bounds */}
+                <div>
+                  <h3 className="font-semibold mb-3">Goal Limits</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2 font-medium">Bound</th>
+                          <th className="text-center p-2 font-medium">Default</th>
+                          <th className="text-center p-2 font-medium">Current</th>
+                          <th className="text-center p-2 font-medium">New Value</th>
+                          <th className="text-center p-2 font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { key: 'absoluteMinGoals', name: 'Absolute Min Goals', default: 0.0, min: 0.0, max: 0.8, description: 'Hard minimum goals per match floor' },
+                          { key: 'absoluteMaxGoals', name: 'Absolute Max Goals', default: 7.0, min: 3.0, max: 10.0, description: 'Hard maximum goals per match ceiling' }
+                        ].map((setting) => {
+                          const currentValue = (formData as any)[setting.key] || setting.default;
+                          const isChanged = Math.abs(currentValue - setting.default) > 0.01;
+                          
+                          return (
+                            <tr key={setting.key} className="border-b hover:bg-muted/50">
+                              <td className="p-2">
+                                <div>
+                                  <p className="font-medium">{setting.name}</p>
+                                  <p className="text-sm text-muted-foreground">{setting.description}</p>
+                                </div>
+                              </td>
+                              <td className="text-center p-2">
+                                <span className="font-mono text-sm text-muted-foreground">
+                                  {setting.default.toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="text-center p-2">
+                                <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
+                                  {currentValue.toFixed(2)}
+                                </span>
+                                {isChanged && (
+                                  <div className="text-xs text-blue-600 mt-1">Modified</div>
+                                )}
+                              </td>
+                              <td className="text-center p-2">
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min={setting.min}
+                                  max={setting.max}
+                                  className="w-20 mx-auto text-center"
+                                  value={currentValue.toFixed(2)}
+                                  onChange={(e) => handleInputChange(setting.key as keyof AdminSettings, e.target.value)}
+                                  data-testid={`input-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                                />
+                              </td>
+                              <td className="text-center p-2">
+                                <div className="flex gap-1 justify-center">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      toast({
+                                        title: "Bound Updated",
+                                        description: `${setting.name} updated to ${currentValue.toFixed(2)}`,
+                                      });
+                                    }}
+                                    data-testid={`button-update-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                                  >
+                                    Update
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      handleInputChange(setting.key as keyof AdminSettings, setting.default.toString());
+                                      toast({
+                                        title: "Reset to Default",
+                                        description: `${setting.name} reset to ${setting.default.toFixed(2)}`,
+                                      });
+                                    }}
+                                    data-testid={`button-reset-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                                    title="Reset to default"
+                                  >
+                                    ↺
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="absoluteMaxGoals">Absolute Max Goals</Label>
-                  <Input
-                    id="absoluteMaxGoals"
-                    type="number"
-                    step="0.01"
-                    min="3.0"
-                    max="10.0"
-                    value={formData.absoluteMaxGoals || 0}
-                    onChange={(e) => handleInputChange('absoluteMaxGoals', e.target.value)}
-                    data-testid="input-absolute-max-goals"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 7.0</strong><br/>
-                    Hard maximum goals per match that cannot be exceeded.<br/>
-                    <em>Range: 3.0-10.0</em>
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Venue Factors</CardTitle>
-              <CardDescription>Home advantage and away factor multipliers for realistic venue-based goal adjustments</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="homeAdvantageGoalsMultiplier">Home Advantage Multiplier</Label>
-                  <Input
-                    id="homeAdvantageGoalsMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="1.00"
-                    max="1.30"
-                    value={formData.homeAdvantageGoalsMultiplier || 0}
-                    onChange={(e) => handleInputChange('homeAdvantageGoalsMultiplier', e.target.value)}
-                    data-testid="input-home-advantage-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.15</strong><br/>
-                    Multiplier for teams playing at home (15% advantage).<br/>
-                    <em>Range: 1.00-1.30</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="awayFactorGoalsMultiplier">Away Factor Multiplier</Label>
-                  <Input
-                    id="awayFactorGoalsMultiplier"
-                    type="number"
-                    step="0.01"
-                    min="0.70"
-                    max="1.00"
-                    value={formData.awayFactorGoalsMultiplier || 0}
-                    onChange={(e) => handleInputChange('awayFactorGoalsMultiplier', e.target.value)}
-                    data-testid="input-away-factor-multiplier"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.88</strong><br/>
-                    Multiplier for teams playing away (12% disadvantage).<br/>
-                    <em>Range: 0.70-1.00</em>
-                  </p>
+                
+                {/* Venue Factors */}
+                <div>
+                  <h3 className="font-semibold mb-3">Venue Factors (Phase 2)</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2 font-medium">Venue Factor</th>
+                          <th className="text-center p-2 font-medium">Default</th>
+                          <th className="text-center p-2 font-medium">Current</th>
+                          <th className="text-center p-2 font-medium">New Value</th>
+                          <th className="text-center p-2 font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { key: 'homeAdvantageGoalsMultiplier', name: 'Home Advantage', default: 1.15, min: 1.0, max: 1.3, description: 'Multiplier for teams playing at home (15% advantage)' },
+                          { key: 'awayFactorGoalsMultiplier', name: 'Away Factor', default: 0.88, min: 0.7, max: 1.0, description: 'Multiplier for teams playing away (12% disadvantage)' }
+                        ].map((setting) => {
+                          const currentValue = (formData as any)[setting.key] || setting.default;
+                          const isChanged = Math.abs(currentValue - setting.default) > 0.01;
+                          
+                          return (
+                            <tr key={setting.key} className="border-b hover:bg-muted/50">
+                              <td className="p-2">
+                                <div>
+                                  <p className="font-medium">{setting.name}</p>
+                                  <p className="text-sm text-muted-foreground">{setting.description}</p>
+                                </div>
+                              </td>
+                              <td className="text-center p-2">
+                                <span className="font-mono text-sm text-muted-foreground">
+                                  {setting.default.toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="text-center p-2">
+                                <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
+                                  {currentValue.toFixed(2)}
+                                </span>
+                                {isChanged && (
+                                  <div className="text-xs text-blue-600 mt-1">Modified</div>
+                                )}
+                              </td>
+                              <td className="text-center p-2">
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min={setting.min}
+                                  max={setting.max}
+                                  className="w-20 mx-auto text-center"
+                                  value={currentValue.toFixed(2)}
+                                  onChange={(e) => handleInputChange(setting.key as keyof AdminSettings, e.target.value)}
+                                  data-testid={`input-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                                />
+                              </td>
+                              <td className="text-center p-2">
+                                <div className="flex gap-1 justify-center">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      toast({
+                                        title: "Venue Factor Updated",
+                                        description: `${setting.name} updated to ${currentValue.toFixed(2)}`,
+                                      });
+                                    }}
+                                    data-testid={`button-update-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                                  >
+                                    Update
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      handleInputChange(setting.key as keyof AdminSettings, setting.default.toString());
+                                      toast({
+                                        title: "Reset to Default",
+                                        description: `${setting.name} reset to ${setting.default.toFixed(2)}`,
+                                      });
+                                    }}
+                                    data-testid={`button-reset-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                                    title="Reset to default"
+                                  >
+                                    ↺
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </CardContent>
