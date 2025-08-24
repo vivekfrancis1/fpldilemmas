@@ -1557,8 +1557,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         averageAttackMultiplier: 1.00,
         weakAttackMultiplier: 0.75,
         promotedAttackMultiplier: 0.5,
-        eliteAttackTeams: [12, 13, 1, 7],
-        strongAttackTeams: [15, 18, 2, 4, 5, 6],
+        eliteAttackTeams: [12, 13, 7],
+        strongAttackTeams: [15, 18, 2, 4, 5, 6, 1],
         averageAttackTeams: [14, 3, 10, 20, 11], // Crystal Palace and Everton moved here
         weakAttackTeams: [16, 21],
         promotedAttackTeams: [8, 9, 17],
