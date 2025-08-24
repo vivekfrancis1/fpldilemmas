@@ -74,8 +74,8 @@ interface AdminSettings {
 
 // Default team tier assignments based on user specifications
 const DEFAULT_TEAM_TIERS = {
-  eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Man City, Arsenal, Chelsea
-  strongAttackTeams: [15, 18, 2], // Newcastle, Spurs, Aston Villa
+  eliteAttackTeams: [12, 13, 7], // Liverpool, Man City, Chelsea
+  strongAttackTeams: [15, 18, 2, 1], // Newcastle, Spurs, Aston Villa, Arsenal
   averageAttackTeams: [4, 5, 6, 8, 14, 19, 10], // Bournemouth, Brentford, Brighton, Crystal Palace, Man Utd, West Ham, Fulham
   weakAttackTeams: [16, 9, 20], // Nott'm Forest, Everton, Wolves
   promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
