@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, Home, Plane, Info, Sword, Shield } from "lucide-react";
-import { BootstrapData } from "@shared/schema";
+import { BootstrapData, PREMIER_LEAGUE_TEAMS } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -170,7 +170,10 @@ export default function Fixtures() {
 
   // Build fixture matrix with average FDR calculation
   const { fixtureMatrix, teamAverageFDR } = useMemo(() => {
-    if (!bootstrapData?.teams || !fixturesData || !bootstrapData?.events) return { fixtureMatrix: {}, teamAverageFDR: {} };
+    if (!fixturesData || !bootstrapData?.events) return { fixtureMatrix: {}, teamAverageFDR: {} };
+    
+    // Use hardcoded teams for better performance
+    const teams = PREMIER_LEAGUE_TEAMS;
 
     const matrix: Record<number, Record<number, { opponent: string, difficulty: number, isHome: boolean, finished: boolean }>> = {};
     const avgFDR: Record<number, number> = {};
@@ -230,9 +233,8 @@ export default function Fixtures() {
 
   // Sort teams based on selected sort option
   const sortedTeams = useMemo(() => {
-    if (!bootstrapData?.teams) return [];
-    
-    const teams = [...bootstrapData.teams];
+    // Use hardcoded teams for better performance
+    const teams = [...PREMIER_LEAGUE_TEAMS];
     
     switch (sortBy) {
       case 'fdr-asc':

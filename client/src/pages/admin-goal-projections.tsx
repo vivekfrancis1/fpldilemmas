@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, RotateCcw, Save, AlertTriangle, Users, Shield, TrendingUp, Target, BarChart3 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PREMIER_LEAGUE_TEAMS } from "@shared/schema";
 
 interface Team {
   id: number;
@@ -88,13 +89,8 @@ export default function AdminGoalProjections() {
   const [formData, setFormData] = useState<AdminSettings>({} as AdminSettings);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Fetch team data from bootstrap
-  const { data: bootstrapData } = useQuery({
-    queryKey: ['/api/bootstrap-static'],
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const teams: Team[] = (bootstrapData as any)?.teams || [];
+  // Use hardcoded team data for consistency and performance
+  const teams: Team[] = [...PREMIER_LEAGUE_TEAMS];
 
   // Fetch current admin settings from goals scored settings
   const { data: settings, isLoading } = useQuery<AdminSettings>({
