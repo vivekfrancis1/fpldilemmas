@@ -413,8 +413,8 @@ export default function AdminGoalProjections() {
     },
     // Market Bounds
     marketBounds: {
-      absoluteMinGoals: 0.30,
-      absoluteMaxGoals: 4.20,
+      absoluteMinGoals: 0.0,
+      absoluteMaxGoals: 7.0,
       marketFloorMultiplier: 0.40,
       marketCeilingMultiplier: 2.00,
     },
@@ -1422,16 +1422,16 @@ export default function AdminGoalProjections() {
                     id="absoluteMinGoals"
                     type="number"
                     step="0.01"
-                    min="0.1"
+                    min="0.0"
                     max="0.8"
                     value={formData.absoluteMinGoals || 0}
                     onChange={(e) => handleInputChange('absoluteMinGoals', e.target.value)}
                     data-testid="input-absolute-min-goals"
                   />
                   <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.30</strong><br/>
+                    <strong>Default: 0.0</strong><br/>
                     Hard minimum goals per match that cannot be exceeded.<br/>
-                    <em>Range: 0.1-0.8</em>
+                    <em>Range: 0.0-0.8</em>
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -1441,15 +1441,15 @@ export default function AdminGoalProjections() {
                     type="number"
                     step="0.01"
                     min="3.0"
-                    max="6.0"
+                    max="10.0"
                     value={formData.absoluteMaxGoals || 0}
                     onChange={(e) => handleInputChange('absoluteMaxGoals', e.target.value)}
                     data-testid="input-absolute-max-goals"
                   />
                   <p className="text-xs text-muted-foreground">
-                    <strong>Default: 4.20</strong><br/>
+                    <strong>Default: 7.0</strong><br/>
                     Hard maximum goals per match that cannot be exceeded.<br/>
-                    <em>Range: 3.0-6.0</em>
+                    <em>Range: 3.0-10.0</em>
                   </p>
                 </div>
               </div>
