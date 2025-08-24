@@ -1209,11 +1209,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         averageAttackTeams: JSON.stringify([14, 3, 10, 20]), // Manchester United, Crystal Palace, Fulham, West Ham
         weakAttackTeams: JSON.stringify([11, 16, 21]), // Everton, Nottingham Forest, Wolverhampton Wanderers
         promotedAttackTeams: JSON.stringify([8, 9, 17]), // Leeds, Burnley, Sunderland
-        eliteDefenseTeams: JSON.stringify([1, 13]), // Arsenal, Man City
-        strongDefenseTeams: JSON.stringify([12, 15, 6, 2]), // Liverpool, Newcastle, Brighton, Aston Villa
-        averageDefenseTeams: JSON.stringify([7, 18, 21, 8, 5, 11]), // Chelsea, Tottenham, West Ham, Crystal Palace, Bournemouth, Fulham
-        weakDefenseTeams: JSON.stringify([20, 10, 4, 16, 14]), // Wolves, Everton, Brentford, Nottm Forest, Man Utd
-        promotedDefenseTeams: JSON.stringify([9, 17, 19]), // Leicester, Ipswich, Southampton
+        eliteDefenseTeams: JSON.stringify([1]), // Arsenal
+        strongDefenseTeams: JSON.stringify([12, 13, 7, 16, 15, 9]), // Liverpool, Man City, Chelsea, Nottm Forest, Newcastle, Crystal Palace
+        averageDefenseTeams: JSON.stringify([8, 14, 18, 2, 10]), // Leeds, Man Utd, Tottenham, Aston Villa, Fulham
+        weakDefenseTeams: JSON.stringify([6, 19, 20, 4, 5]), // Brighton, Southampton, West Ham, Brentford, Bournemouth
+        promotedDefenseTeams: JSON.stringify([3, 11, 17]), // Burnley, Everton, Ipswich
         absoluteMinGoals: "0.30",
         absoluteMaxGoals: "4.20",
         marketFloorMultiplier: "0.40",
@@ -1262,6 +1262,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       averageDefenseMultiplier: 1.00,
       weakDefenseMultiplier: 1.35,
       promotedDefenseMultiplier: 1.60,
+      // Team tier assignments (using same defaults as database)
+      eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Manchester City, Arsenal, Chelsea
+      strongAttackTeams: [15, 18, 2, 4, 5, 6], // Newcastle United, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
+      averageAttackTeams: [14, 3, 10, 20], // Manchester United, Crystal Palace, Fulham, West Ham
+      weakAttackTeams: [11, 16, 21], // Everton, Nottingham Forest, Wolverhampton Wanderers
+      promotedAttackTeams: [8, 9, 17], // Leeds, Burnley, Sunderland
+      eliteDefenseTeams: [1], // Arsenal
+      strongDefenseTeams: [12, 13, 7, 16, 15, 9], // Liverpool, Man City, Chelsea, Nottm Forest, Newcastle, Crystal Palace
+      averageDefenseTeams: [8, 14, 18, 2, 10], // Leeds, Man Utd, Tottenham, Aston Villa, Fulham
+      weakDefenseTeams: [6, 19, 20, 4, 5], // Brighton, Southampton, West Ham, Brentford, Bournemouth
+      promotedDefenseTeams: [3, 11, 17], // Burnley, Everton, Ipswich
       absoluteMinGoals: 0.3,
       absoluteMaxGoals: 4.2,
       marketFloorMultiplier: 0.4,
