@@ -33,6 +33,8 @@ import AdminUnifiedProjections from "./pages/admin-unified-projections";
 import AdminCSProjections from "./pages/admin-cs-projections";
 import AdminAssistProjections from "./pages/admin-assist-projections";
 import AdminMatchProjections from "./pages/admin-match-projections";
+import AdminGoalProjections from "./pages/admin-goal-projections";
+import AdminGoalsAgainst from "./pages/admin-goals-against";
 
 function Router() {
   return (
@@ -63,10 +65,12 @@ function Router() {
       <Route path="/player-assist-projections" component={PlayerAssistProjections} />
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
       <Route path="/season-projections" component={SeasonProjections} />
-      <Route path="/admin/unified-projections" component={AdminUnifiedProjections} />
-      <Route path="/admin/cs-projections" component={AdminCSProjections} />
-      <Route path="/admin/assist-projections" component={AdminAssistProjections} />
-      <Route path="/admin/match-projections" component={AdminMatchProjections} />
+      <Route path="/admin-unified-projections" component={AdminUnifiedProjections} />
+      <Route path="/admin-goal-projections" component={AdminGoalProjections} />
+      <Route path="/admin-goals-against" component={AdminGoalsAgainst} />
+      <Route path="/admin-cs-projections" component={AdminCSProjections} />
+      <Route path="/admin-assist-projections" component={AdminAssistProjections} />
+      <Route path="/admin-match-projections" component={AdminMatchProjections} />
       <Route component={NotFound} />
     </Switch>
   );
