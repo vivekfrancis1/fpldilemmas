@@ -413,11 +413,14 @@ export default function AdminGoalProjections() {
       </Alert>
 
       <Tabs defaultValue="attacking-multipliers" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="flex flex-wrap gap-1 h-auto p-1">
           <TabsTrigger value="attacking-multipliers">Attack Multipliers</TabsTrigger>
           <TabsTrigger value="attacking-teams">Attack Teams</TabsTrigger>
           <TabsTrigger value="defensive-multipliers">Defense Multipliers</TabsTrigger>
           <TabsTrigger value="defensive-teams">Defense Teams</TabsTrigger>
+          <TabsTrigger value="global">Global Settings</TabsTrigger>
+          <TabsTrigger value="context">Context Multipliers</TabsTrigger>
+          <TabsTrigger value="market">Market Bounds</TabsTrigger>
         </TabsList>
 
         <TabsContent value="attacking-multipliers" className="space-y-6">
@@ -895,6 +898,333 @@ export default function AdminGoalProjections() {
                     </div>
                   );
                 })}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="global" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Global Settings</CardTitle>
+              <CardDescription>System-wide multipliers that affect all projection calculations</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="globalTierMultiplier">Global Tier Multiplier</Label>
+                  <Input
+                    id="globalTierMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="0.5"
+                    max="2.0"
+                    value={formData.globalTierMultiplier || 0}
+                    onChange={(e) => handleInputChange('globalTierMultiplier', e.target.value)}
+                    data-testid="input-global-tier-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 1.00</strong><br/>
+                    Master multiplier applied to all tier-based calculations.<br/>
+                    <em>Range: 0.5-2.0</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lowConfidenceBoost">Low Confidence Boost</Label>
+                  <Input
+                    id="lowConfidenceBoost"
+                    type="number"
+                    step="0.01"
+                    min="1.0"
+                    max="2.0"
+                    value={formData.lowConfidenceBoost || 0}
+                    onChange={(e) => handleInputChange('lowConfidenceBoost', e.target.value)}
+                    data-testid="input-low-confidence-boost"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 1.15</strong><br/>
+                    Boost applied to projections with low confidence scores.<br/>
+                    <em>Range: 1.0-2.0</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lowConfidenceThreshold">Low Confidence Threshold</Label>
+                  <Input
+                    id="lowConfidenceThreshold"
+                    type="number"
+                    step="0.01"
+                    min="0.1"
+                    max="0.9"
+                    value={formData.lowConfidenceThreshold || 0}
+                    onChange={(e) => handleInputChange('lowConfidenceThreshold', e.target.value)}
+                    data-testid="input-low-confidence-threshold"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 0.30</strong><br/>
+                    Confidence score below which low confidence boost is applied.<br/>
+                    <em>Range: 0.1-0.9</em>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="context" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Context Multipliers</CardTitle>
+              <CardDescription>Situational adjustments based on match circumstances and timing</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="derbyGoalsMultiplier">Derby Matches</Label>
+                  <Input
+                    id="derbyGoalsMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="0.6"
+                    max="1.3"
+                    value={formData.derbyGoalsMultiplier || 0}
+                    onChange={(e) => handleInputChange('derbyGoalsMultiplier', e.target.value)}
+                    data-testid="input-derby-goals-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 0.87</strong><br/>
+                    Adjustment for local rivalries and derby matches.<br/>
+                    <em>Range: 0.6-1.3</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="topSixGoalsMultiplier">Top Six Battles</Label>
+                  <Input
+                    id="topSixGoalsMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="0.8"
+                    max="1.5"
+                    value={formData.topSixGoalsMultiplier || 0}
+                    onChange={(e) => handleInputChange('topSixGoalsMultiplier', e.target.value)}
+                    data-testid="input-top-six-goals-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 1.12</strong><br/>
+                    Multiplier for matches between traditional "Big Six" teams.<br/>
+                    <em>Range: 0.8-1.5</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="relegationBattleGoalsMultiplier">Relegation Battles</Label>
+                  <Input
+                    id="relegationBattleGoalsMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="0.6"
+                    max="1.2"
+                    value={formData.relegationBattleGoalsMultiplier || 0}
+                    onChange={(e) => handleInputChange('relegationBattleGoalsMultiplier', e.target.value)}
+                    data-testid="input-relegation-battle-goals-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 0.83</strong><br/>
+                    Adjustment for matches between teams fighting relegation.<br/>
+                    <em>Range: 0.6-1.2</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="earlyKickoffGoalsMultiplier">Early Kickoff</Label>
+                  <Input
+                    id="earlyKickoffGoalsMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="0.8"
+                    max="1.1"
+                    value={formData.earlyKickoffGoalsMultiplier || 0}
+                    onChange={(e) => handleInputChange('earlyKickoffGoalsMultiplier', e.target.value)}
+                    data-testid="input-early-kickoff-goals-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 0.94</strong><br/>
+                    Adjustment for early kickoff times (12:30 PM).<br/>
+                    <em>Range: 0.8-1.1</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lateKickoffGoalsMultiplier">Late Kickoff</Label>
+                  <Input
+                    id="lateKickoffGoalsMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="0.9"
+                    max="1.2"
+                    value={formData.lateKickoffGoalsMultiplier || 0}
+                    onChange={(e) => handleInputChange('lateKickoffGoalsMultiplier', e.target.value)}
+                    data-testid="input-late-kickoff-goals-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 1.07</strong><br/>
+                    Adjustment for late kickoff times (17:30/20:00).<br/>
+                    <em>Range: 0.9-1.2</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="postEuropeanGoalsMultiplier">Post-European Fixtures</Label>
+                  <Input
+                    id="postEuropeanGoalsMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="0.7"
+                    max="1.0"
+                    value={formData.postEuropeanGoalsMultiplier || 0}
+                    onChange={(e) => handleInputChange('postEuropeanGoalsMultiplier', e.target.value)}
+                    data-testid="input-post-european-goals-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 0.88</strong><br/>
+                    Reduction for teams playing after midweek European competitions.<br/>
+                    <em>Range: 0.7-1.0</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="midweekFixtureGoalsMultiplier">Midweek Fixtures</Label>
+                  <Input
+                    id="midweekFixtureGoalsMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="0.8"
+                    max="1.1"
+                    value={formData.midweekFixtureGoalsMultiplier || 0}
+                    onChange={(e) => handleInputChange('midweekFixtureGoalsMultiplier', e.target.value)}
+                    data-testid="input-midweek-fixture-goals-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 0.91</strong><br/>
+                    Adjustment for midweek Premier League fixtures.<br/>
+                    <em>Range: 0.8-1.1</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="seasonFinaleGoalsMultiplier">Season Finale</Label>
+                  <Input
+                    id="seasonFinaleGoalsMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="0.9"
+                    max="1.3"
+                    value={formData.seasonFinaleGoalsMultiplier || 0}
+                    onChange={(e) => handleInputChange('seasonFinaleGoalsMultiplier', e.target.value)}
+                    data-testid="input-season-finale-goals-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 1.05</strong><br/>
+                    Adjustment for final gameweek matches.<br/>
+                    <em>Range: 0.9-1.3</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newManagerBounceGoalsMultiplier">New Manager Bounce</Label>
+                  <Input
+                    id="newManagerBounceGoalsMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="1.0"
+                    max="1.3"
+                    value={formData.newManagerBounceGoalsMultiplier || 0}
+                    onChange={(e) => handleInputChange('newManagerBounceGoalsMultiplier', e.target.value)}
+                    data-testid="input-new-manager-bounce-goals-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 1.08</strong><br/>
+                    Boost applied when teams have a new manager.<br/>
+                    <em>Range: 1.0-1.3</em>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="market" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Market Bounds</CardTitle>
+              <CardDescription>Hard limits and boundaries for goal projections to maintain realistic ranges</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="minGoalsPerMatch">Min Goals Per Match</Label>
+                  <Input
+                    id="minGoalsPerMatch"
+                    type="number"
+                    step="0.01"
+                    min="1.0"
+                    max="2.0"
+                    value={formData.minGoalsPerMatch || 0}
+                    onChange={(e) => handleInputChange('minGoalsPerMatch', e.target.value)}
+                    data-testid="input-min-goals-per-match"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 1.20</strong><br/>
+                    Minimum goals per match across all projections.<br/>
+                    <em>Range: 1.0-2.0</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maxGoalsPerMatch">Max Goals Per Match</Label>
+                  <Input
+                    id="maxGoalsPerMatch"
+                    type="number"
+                    step="0.01"
+                    min="2.5"
+                    max="4.0"
+                    value={formData.maxGoalsPerMatch || 0}
+                    onChange={(e) => handleInputChange('maxGoalsPerMatch', e.target.value)}
+                    data-testid="input-max-goals-per-match"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 3.20</strong><br/>
+                    Maximum goals per match across all projections.<br/>
+                    <em>Range: 2.5-4.0</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="absoluteMinGoals">Absolute Min Goals</Label>
+                  <Input
+                    id="absoluteMinGoals"
+                    type="number"
+                    step="0.01"
+                    min="0.1"
+                    max="0.8"
+                    value={formData.absoluteMinGoals || 0}
+                    onChange={(e) => handleInputChange('absoluteMinGoals', e.target.value)}
+                    data-testid="input-absolute-min-goals"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 0.30</strong><br/>
+                    Hard minimum goals per match that cannot be exceeded.<br/>
+                    <em>Range: 0.1-0.8</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="absoluteMaxGoals">Absolute Max Goals</Label>
+                  <Input
+                    id="absoluteMaxGoals"
+                    type="number"
+                    step="0.01"
+                    min="3.0"
+                    max="6.0"
+                    value={formData.absoluteMaxGoals || 0}
+                    onChange={(e) => handleInputChange('absoluteMaxGoals', e.target.value)}
+                    data-testid="input-absolute-max-goals"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 4.20</strong><br/>
+                    Hard maximum goals per match that cannot be exceeded.<br/>
+                    <em>Range: 3.0-6.0</em>
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
