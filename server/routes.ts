@@ -1567,11 +1567,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         averageDefenseMultiplier: 1.00,
         weakDefenseMultiplier: 1.25,
         promotedDefenseMultiplier: 1.5,
-        eliteDefenseTeams: [1, 12, 13], // Arsenal, Liverpool, Man City
-        strongDefenseTeams: [7, 15, 16, 9, 2], // Chelsea, Newcastle, Nott'm Forest, Everton, Aston Villa
-        averageDefenseTeams: [14, 8, 18, 6, 10], // Man Utd, Crystal Palace, Spurs, Brighton, Fulham
-        weakDefenseTeams: [4, 5, 19, 20, 11, 3], // Bournemouth, Brentford, West Ham, Wolves, Leeds, Burnley
-        promotedDefenseTeams: [17], // Sunderland
+        eliteDefenseTeams: [1, 12], // Arsenal, Liverpool
+        strongDefenseTeams: [13, 7, 15, 16, 9], // Man City, Chelsea, Newcastle, Nott'm Forest, Everton
+        averageDefenseTeams: [2, 14, 8, 18, 10], // Aston Villa, Man Utd, Crystal Palace, Spurs, Fulham
+        weakDefenseTeams: [6, 4, 5, 19, 20], // Brighton, Bournemouth, Brentford, West Ham, Wolves
+        promotedDefenseTeams: [17, 11, 3], // Sunderland, Leeds, Burnley
         derbyGoalsMultiplier: 0.87,
         topSixGoalsMultiplier: 1.12,
         relegationBattleGoalsMultiplier: 0.83,
