@@ -59,13 +59,13 @@ interface AdminSettings {
   updatedBy: string;
 }
 
-// Default team tier assignments based on current Premier League standings and performance
+// Default team tier assignments based on user specifications
 const DEFAULT_TEAM_TIERS = {
-  eliteAttackTeams: [1, 2], // Arsenal, Man City
-  strongAttackTeams: [3, 4, 5, 6], // Liverpool, Newcastle, Chelsea, Tottenham
-  averageAttackTeams: [7, 8, 9, 10, 11, 12, 13, 14], // Brighton, Aston Villa, West Ham, Crystal Palace, Bournemouth, Fulham, Wolves, Everton
-  weakAttackTeams: [15, 16, 17], // Brentford, Nottm Forest, Man Utd
-  promotedAttackTeams: [18, 19, 20], // Leicester, Ipswich, Southampton
+  eliteAttackTeams: [12, 13, 1, 7], // Fulham, Wolves, Arsenal, Brighton
+  strongAttackTeams: [15, 18, 2], // Brentford, Leicester, Man City
+  averageAttackTeams: [4, 5, 6, 8, 14, 19, 10], // Newcastle, Chelsea, Tottenham, Aston Villa, Everton, Ipswich, Crystal Palace
+  weakAttackTeams: [16, 9, 20], // Nottm Forest, West Ham, Southampton
+  promotedAttackTeams: [3, 11, 17], // Liverpool, Bournemouth, Man Utd
 };
 
 export default function AdminGoalProjections() {
