@@ -2161,8 +2161,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (Array.isArray(teamString)) return teamString;
               if (typeof teamString === 'string') {
                 try {
-                  return JSON.parse(teamString);
-                } catch {
+                  // Handle double-escaped JSON strings from database
+                  let cleanString = teamString;
+                  if (cleanString.startsWith('"') && cleanString.endsWith('"')) {
+                    cleanString = cleanString.slice(1, -1); // Remove outer quotes
+                  }
+                  if (cleanString.startsWith('\\"') && cleanString.endsWith('\\"')) {
+                    cleanString = cleanString.slice(2, -2); // Remove escaped quotes
+                  }
+                  return JSON.parse(cleanString);
+                } catch (e) {
+                  console.error(`Failed to parse defensive team array: ${teamString}`, e);
                   return [];
                 }
               }
@@ -2173,6 +2182,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const strongDefenseTeams = parseTeamArray(unifiedProjectionSettings.strongDefenseTeams) || [12, 13, 7, 16, 15, 9];
             const weakDefenseTeams = parseTeamArray(unifiedProjectionSettings.weakDefenseTeams) || [6, 19, 20, 4, 5];
             const promotedDefenseTeams = parseTeamArray(unifiedProjectionSettings.promotedDefenseTeams) || [3, 11, 17];
+
+            console.log(`DEBUG: Team ${teamId} defense tier check - Elite: ${eliteDefenseTeams}, Strong: ${strongDefenseTeams}, Weak: ${weakDefenseTeams}`);
 
             if (eliteDefenseTeams.includes(teamId)) return 'elite';
             if (strongDefenseTeams.includes(teamId)) return 'strong';
@@ -2190,7 +2201,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             case 'weak': opponentDefensiveMultiplier = unifiedProjectionSettings.weakDefenseMultiplier; break;
             case 'promoted': opponentDefensiveMultiplier = unifiedProjectionSettings.promotedDefenseMultiplier; break;
           }
+          
+          console.log(`DEBUG: ${team.short_name} vs ${opponent.short_name} - Opponent tier: ${opponentDefensiveTier}, Multiplier: ${opponentDefensiveMultiplier}, Goals before: ${baseExpectedGoals.toFixed(2)}`);
           baseExpectedGoals *= opponentDefensiveMultiplier;
+          console.log(`DEBUG: Goals after defensive multiplier: ${baseExpectedGoals.toFixed(2)}`);
           
           // Phase 6: Minimal market momentum and fixture complexity factors (COMPRESSED)
           const marketMomentum = 0.99 + ((team.id * fixture.event * 17) % 100) / 5000; // 99-101% market sentiment (compressed)
