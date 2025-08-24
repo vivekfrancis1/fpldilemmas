@@ -593,7 +593,7 @@ export default function AdminGoalProjections() {
                     type="number"
                     step="0.01"
                     min="1.0"
-                    max="1.3"
+                    max="2.0"
                     value={formData.eliteAttackMultiplier || 0}
                     onChange={(e) => handleInputChange('eliteAttackMultiplier', e.target.value)}
                     data-testid="input-elite-attack-multiplier"
@@ -601,7 +601,7 @@ export default function AdminGoalProjections() {
                   <p className="text-xs text-muted-foreground">
                     <strong>Default: 1.5</strong><br/>
                     Premier League elite attacking teams (Man City, Arsenal).<br/>
-                    <em>Range: 1.0-1.3</em>
+                    <em>Range: 1.0-2.0</em>
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -611,7 +611,7 @@ export default function AdminGoalProjections() {
                     type="number"
                     step="0.01"
                     min="1.0"
-                    max="1.2"
+                    max="1.5"
                     value={formData.strongAttackMultiplier || 0}
                     onChange={(e) => handleInputChange('strongAttackMultiplier', e.target.value)}
                     data-testid="input-strong-attack-multiplier"
@@ -619,7 +619,7 @@ export default function AdminGoalProjections() {
                   <p className="text-xs text-muted-foreground">
                     <strong>Default: 1.25</strong><br/>
                     Teams with strong attacking potential and good goal records.<br/>
-                    <em>Range: 1.0-1.2</em>
+                    <em>Range: 1.0-1.5</em>
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -646,7 +646,7 @@ export default function AdminGoalProjections() {
                     id="weakAttackMultiplier"
                     type="number"
                     step="0.01"
-                    min="0.7"
+                    min="0.5"
                     max="1.0"
                     value={formData.weakAttackMultiplier || 0}
                     onChange={(e) => handleInputChange('weakAttackMultiplier', e.target.value)}
@@ -655,7 +655,7 @@ export default function AdminGoalProjections() {
                   <p className="text-xs text-muted-foreground">
                     <strong>Default: 0.75</strong><br/>
                     Teams with attacking struggles and low goal tallies.<br/>
-                    <em>Range: 0.7-1.0</em>
+                    <em>Range: 0.5-1.0</em>
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -664,7 +664,7 @@ export default function AdminGoalProjections() {
                     id="promotedAttackMultiplier"
                     type="number"
                     step="0.01"
-                    min="0.6"
+                    min="0.3"
                     max="1.0"
                     value={formData.promotedAttackMultiplier || 0}
                     onChange={(e) => handleInputChange('promotedAttackMultiplier', e.target.value)}
@@ -673,7 +673,7 @@ export default function AdminGoalProjections() {
                   <p className="text-xs text-muted-foreground">
                     <strong>Default: 0.5</strong><br/>
                     Newly promoted teams adapting to Premier League defensive quality.<br/>
-                    <em>Range: 0.6-1.0</em>
+                    <em>Range: 0.3-1.0</em>
                   </p>
                 </div>
               </div>
