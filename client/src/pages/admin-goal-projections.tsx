@@ -421,7 +421,7 @@ export default function AdminGoalProjections() {
                           
                           <div className="ml-4">
                             <Label htmlFor={`team-${team.id}`} className="text-xs text-muted-foreground mb-1 block">
-                              Change Tier
+                              Change Current Tier
                             </Label>
                             <Select value={currentTier} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
                               <SelectTrigger id={`team-${team.id}`} className="w-28 h-8 text-xs">
