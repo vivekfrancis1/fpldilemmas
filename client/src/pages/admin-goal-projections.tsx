@@ -787,10 +787,7 @@ export default function AdminGoalProjections() {
                       </tr>
                     </thead>
                     <tbody>
-                      {teams.map((team) => {
-                        const currentTier = getTeamTier(team.id);
-                        const tierColor = getTierBadgeColor(currentTier);
-                        
+                      {(() => {
                         // Default xG values based on team tier and quality
                         const getDefaultXG = (teamId: number) => {
                           const defaults: Record<number, number> = {
@@ -817,10 +814,13 @@ export default function AdminGoalProjections() {
                           };
                           return defaults[teamId] || 1.30;
                         };
-                        
-                        const defaultXG = getDefaultXG(team.id);
-                        const currentXG = defaultXG; // TODO: Get from actual settings
-                        const isChanged = Math.abs(currentXG - defaultXG) > 0.01;
+
+                        return teams.slice().sort((a, b) => getDefaultXG(b.id) - getDefaultXG(a.id)).map((team) => {
+                          const currentTier = getTeamTier(team.id);
+                          const tierColor = getTierBadgeColor(currentTier);
+                          const defaultXG = getDefaultXG(team.id);
+                          const currentXG = defaultXG; // TODO: Get from actual settings
+                          const isChanged = Math.abs(currentXG - defaultXG) > 0.01;
                         
                         return (
                           <tr key={team.id} className="border-b hover:bg-muted/50">
@@ -894,7 +894,8 @@ export default function AdminGoalProjections() {
                             </td>
                           </tr>
                         );
-                      })}
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
