@@ -1484,15 +1484,15 @@ export default function AdminGoalProjections() {
                   </thead>
                   <tbody>
                     {[
-                      { key: 'derbyGoalsMultiplier', name: 'Derby Matches', default: 0.87, min: 0.6, max: 1.3, description: 'Local rivalries and derby matches' },
-                      { key: 'topSixGoalsMultiplier', name: 'Top Six Battles', default: 1.12, min: 0.8, max: 1.5, description: 'Matches between traditional Big Six teams' },
-                      { key: 'relegationBattleGoalsMultiplier', name: 'Relegation Battles', default: 0.83, min: 0.6, max: 1.2, description: 'Matches between teams fighting relegation' },
-                      { key: 'earlyKickoffGoalsMultiplier', name: 'Early Kickoff', default: 0.94, min: 0.8, max: 1.1, description: 'Early kickoff times (12:30 PM)' },
-                      { key: 'lateKickoffGoalsMultiplier', name: 'Late Kickoff', default: 1.07, min: 0.9, max: 1.2, description: 'Late kickoff times (17:30/20:00)' },
-                      { key: 'postEuropeanGoalsMultiplier', name: 'Post-European Fixtures', default: 0.88, min: 0.7, max: 1.0, description: 'After midweek European competitions' },
-                      { key: 'midweekFixtureGoalsMultiplier', name: 'Midweek Fixtures', default: 0.91, min: 0.8, max: 1.1, description: 'Midweek Premier League fixtures' },
-                      { key: 'seasonFinaleGoalsMultiplier', name: 'Season Finale', default: 1.05, min: 0.9, max: 1.3, description: 'Final gameweek matches' },
-                      { key: 'newManagerBounceGoalsMultiplier', name: 'New Manager Bounce', default: 1.08, min: 1.0, max: 1.3, description: 'Teams with a new manager' }
+                      { key: 'derbyGoalsMultiplier', name: 'Derby Matches', default: 0.87, min: 0.6, max: 1.3, description: 'Local rivalries (-13%): More defensive, cagey affairs where teams prioritize not losing. Increased physicality and tactical caution suppress goal scoring.' },
+                      { key: 'topSixGoalsMultiplier', name: 'Top Six Battles', default: 1.12, min: 0.8, max: 1.5, description: 'Elite team clashes (+12%): High-quality attacking teams create more open, end-to-end games with superior technical ability breaking down defenses.' },
+                      { key: 'relegationBattleGoalsMultiplier', name: 'Relegation Battles', default: 0.83, min: 0.6, max: 1.2, description: 'Bottom table clashes (-17%): Teams prioritize defensive solidity and avoiding defeat. Conservative tactics and "grind-out" mentalities suppress attacking risk-taking.' },
+                      { key: 'earlyKickoffGoalsMultiplier', name: 'Early Kickoff', default: 0.94, min: 0.8, max: 1.1, description: 'Weekend early starts (-6%): Players not fully warmed up physically/mentally for 12:30 PM kickoffs. Harder to achieve full intensity in early matches.' },
+                      { key: 'lateKickoffGoalsMultiplier', name: 'Late Kickoff', default: 1.07, min: 0.9, max: 1.2, description: 'Evening matches (+7%): Players naturally more alert in evening hours. Prime-time TV matches feature enhanced atmospheres and more expansive play.' },
+                      { key: 'postEuropeanGoalsMultiplier', name: 'Post-European Fixtures', default: 0.88, min: 0.7, max: 1.0, description: 'After European games (-12%): Player fatigue from Champions/Europa League matches leads to reduced intensity and squad rotation affecting performance.' },
+                      { key: 'midweekFixtureGoalsMultiplier', name: 'Midweek Fixtures', default: 0.91, min: 0.8, max: 1.1, description: 'Tuesday/Wednesday games (-9%): Tired players, reduced crowd attendance, disrupted preparation routines. Fixture congestion leads to conservative play.' },
+                      { key: 'seasonFinaleGoalsMultiplier', name: 'Season Finale', default: 1.05, min: 0.9, max: 1.3, description: 'Final gameweek (+5%): More open matches as teams with nothing to play for take risks, though modest increase as some teams already in vacation mode.' },
+                      { key: 'newManagerBounceGoalsMultiplier', name: 'New Manager Bounce', default: 1.08, min: 1.0, max: 1.3, description: 'Honeymoon period (+8%): New tactical changes, renewed motivation, players trying to impress. Fresh approach leads to more attacking, adventurous play.' }
                     ].map((setting) => {
                       const currentValue = (formData as any)[setting.key] || setting.default;
                       const isChanged = Math.abs(currentValue - setting.default) > 0.01;
