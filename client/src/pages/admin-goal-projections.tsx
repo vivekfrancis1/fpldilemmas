@@ -1621,8 +1621,6 @@ export default function AdminGoalProjections() {
                           <th className="text-left p-2 font-medium">Team</th>
                           <th className="text-center p-2 font-medium">Confidence</th>
                           <th className="text-center p-2 font-medium">Level</th>
-                          <th className="text-center p-2 font-medium">Attack Tier</th>
-                          <th className="text-center p-2 font-medium">Defense Tier</th>
                           <th className="text-center p-2 font-medium">xG/Game</th>
                           <th className="text-center p-2 font-medium">CS Rate</th>
                           <th className="text-center p-2 font-medium">Confidence Multiplier</th>
@@ -1643,16 +1641,6 @@ export default function AdminGoalProjections() {
                             <td className="text-center p-2">
                               <Badge className={getConfidenceBadgeColor(team.confidenceLevel)}>
                                 {team.confidenceLevel}
-                              </Badge>
-                            </td>
-                            <td className="text-center p-2">
-                              <Badge className={getTierBadgeColor(team.attackingTier)}>
-                                {team.attackingTier}
-                              </Badge>
-                            </td>
-                            <td className="text-center p-2">
-                              <Badge className={getTierBadgeColor(team.defensiveTier)}>
-                                {team.defensiveTier}
                               </Badge>
                             </td>
                             <td className="text-center p-2">
