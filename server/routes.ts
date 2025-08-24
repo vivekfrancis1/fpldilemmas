@@ -2137,12 +2137,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Phase 5: UNIFIED attacking tier performance modeling using configurable team assignments
           const getAttackingTier = (teamId: number) => {
-            // Use configurable team assignments from unified projection settings
-            console.log(`DEBUG: Team ${teamId} attack tier check - Elite: ${unifiedProjectionSettings.eliteAttackTeams}, Strong: ${unifiedProjectionSettings.strongAttackTeams}, Weak: ${unifiedProjectionSettings.weakAttackTeams}`);
-            if (unifiedProjectionSettings.eliteAttackTeams?.includes(teamId)) return 'elite';
-            if (unifiedProjectionSettings.strongAttackTeams?.includes(teamId)) return 'strong';
-            if (unifiedProjectionSettings.weakAttackTeams?.includes(teamId)) return 'weak';
-            if (unifiedProjectionSettings.promotedAttackTeams?.includes(teamId)) return 'promoted';
+            // Parse attacking team arrays if they come as strings from database
+            const parseTeamArray = (teamData: any): number[] => {
+              if (Array.isArray(teamData)) return teamData;
+              if (typeof teamData === 'string') {
+                try {
+                  return JSON.parse(teamData);
+                } catch {
+                  return [];
+                }
+              }
+              return [];
+            };
+
+            const eliteAttackTeams = parseTeamArray(unifiedProjectionSettings.eliteAttackTeams) || [12, 13, 1, 7];
+            const strongAttackTeams = parseTeamArray(unifiedProjectionSettings.strongAttackTeams) || [15, 18, 2];
+            const averageAttackTeams = parseTeamArray(unifiedProjectionSettings.averageAttackTeams) || [4,5,6,8,14,19,10];
+            const weakAttackTeams = parseTeamArray(unifiedProjectionSettings.weakAttackTeams) || [9, 20, 16];
+            const promotedAttackTeams = parseTeamArray(unifiedProjectionSettings.promotedAttackTeams) || [3, 11, 17];
+
+            console.log(`DEBUG: Team ${teamId} attack tier check - Elite: ${eliteAttackTeams}, Strong: ${strongAttackTeams}, Weak: ${weakAttackTeams}`);
+            
+            if (eliteAttackTeams.includes(teamId)) return 'elite';
+            if (strongAttackTeams.includes(teamId)) return 'strong';
+            if (weakAttackTeams.includes(teamId)) return 'weak';
+            if (promotedAttackTeams.includes(teamId)) return 'promoted';
             return 'average'; // Default tier for teams not explicitly assigned
           };
           
