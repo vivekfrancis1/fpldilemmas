@@ -1785,7 +1785,11 @@ export default function AdminGoalProjections() {
               {getCurrentTabResetFunction() && (
                 <Button
                   variant="outline"
-                  onClick={getCurrentTabResetFunction()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const resetFn = getCurrentTabResetFunction();
+                    if (resetFn) resetFn();
+                  }}
                   className="flex items-center gap-2"
                   data-testid="button-reset-current-tab"
                 >
