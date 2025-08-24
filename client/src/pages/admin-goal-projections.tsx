@@ -379,11 +379,11 @@ export default function AdminGoalProjections() {
   const DEFAULT_VALUES = {
     // Attack Multipliers
     attackMultipliers: {
-      eliteAttackMultiplier: 1.05,
-      strongAttackMultiplier: 1.02,
+      eliteAttackMultiplier: 1.5,
+      strongAttackMultiplier: 1.25,
       averageAttackMultiplier: 1.00,
-      weakAttackMultiplier: 0.98,
-      promotedAttackMultiplier: 0.95,
+      weakAttackMultiplier: 0.75,
+      promotedAttackMultiplier: 0.5,
     },
     // Defense Multipliers
     defenseMultipliers: {
@@ -599,7 +599,7 @@ export default function AdminGoalProjections() {
                     data-testid="input-elite-attack-multiplier"
                   />
                   <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.05</strong><br/>
+                    <strong>Default: 1.5</strong><br/>
                     Premier League elite attacking teams (Man City, Arsenal).<br/>
                     <em>Range: 1.0-1.3</em>
                   </p>
@@ -617,7 +617,7 @@ export default function AdminGoalProjections() {
                     data-testid="input-strong-attack-multiplier"
                   />
                   <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.02</strong><br/>
+                    <strong>Default: 1.25</strong><br/>
                     Teams with strong attacking potential and good goal records.<br/>
                     <em>Range: 1.0-1.2</em>
                   </p>
@@ -653,7 +653,7 @@ export default function AdminGoalProjections() {
                     data-testid="input-weak-attack-multiplier"
                   />
                   <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.98</strong><br/>
+                    <strong>Default: 0.75</strong><br/>
                     Teams with attacking struggles and low goal tallies.<br/>
                     <em>Range: 0.7-1.0</em>
                   </p>
@@ -671,7 +671,7 @@ export default function AdminGoalProjections() {
                     data-testid="input-promoted-attack-multiplier"
                   />
                   <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.95</strong><br/>
+                    <strong>Default: 0.5</strong><br/>
                     Newly promoted teams adapting to Premier League defensive quality.<br/>
                     <em>Range: 0.6-1.0</em>
                   </p>
