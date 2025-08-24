@@ -13,6 +13,18 @@ interface AdminSettings {
   globalTierMultiplier: number;
   lowConfidenceBoost: number;
   lowConfidenceThreshold: number;
+  // Attacking Tier Multipliers
+  eliteAttackMultiplier: number;
+  strongAttackMultiplier: number;
+  averageAttackMultiplier: number;
+  weakAttackMultiplier: number;
+  promotedAttackMultiplier: number;
+  // Defensive Tier Multipliers
+  eliteDefenseMultiplier: number;
+  strongDefenseMultiplier: number;
+  averageDefenseMultiplier: number;
+  weakDefenseMultiplier: number;
+  promotedDefenseMultiplier: number;
   derbyGoalsMultiplier: number;
   topSixGoalsMultiplier: number;
   relegationBattleGoalsMultiplier: number;
@@ -144,7 +156,7 @@ export default function AdminGoalProjections() {
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
           <strong>Configuration Portal - Team Goals Scored</strong><br/>
-          This interface controls 17 advanced parameters that determine how teams score goals across all gameweeks. 
+          This interface controls 27 advanced parameters that determine how teams score goals across all gameweeks. 
           Changes apply immediately and maintain perfect mathematical consistency with Goals Against projections.
           <br/><br/>
           <strong>Mathematical Integration:</strong> These parameters work with the Goals Against system to ensure total league goals scored = total league goals conceded, 
@@ -213,6 +225,210 @@ export default function AdminGoalProjections() {
                   <strong>Default: 0.65</strong><br/>
                   Confidence score below which the Low Confidence Boost is applied (0.0-1.0 scale).<br/>
                   <em>Range: 0.3-0.8</em>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Attacking Tier Multipliers */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Attacking Tier Multipliers</CardTitle>
+            <CardDescription>Team quality-based multipliers for goal scoring ability</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="eliteAttackMultiplier">Elite Attack</Label>
+                <Input
+                  id="eliteAttackMultiplier"
+                  type="number"
+                  step="0.01"
+                  min="0.8"
+                  max="1.5"
+                  value={formData.eliteAttackMultiplier || 0}
+                  onChange={(e) => handleInputChange('eliteAttackMultiplier', e.target.value)}
+                  data-testid="input-elite-attack-multiplier"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Default: 1.15</strong><br/>
+                  Premier League elite attacking teams (Man City, Arsenal).<br/>
+                  <em>Range: 0.8-1.5</em>
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="strongAttackMultiplier">Strong Attack</Label>
+                <Input
+                  id="strongAttackMultiplier"
+                  type="number"
+                  step="0.01"
+                  min="0.8"
+                  max="1.3"
+                  value={formData.strongAttackMultiplier || 0}
+                  onChange={(e) => handleInputChange('strongAttackMultiplier', e.target.value)}
+                  data-testid="input-strong-attack-multiplier"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Default: 1.10</strong><br/>
+                  Strong attacking teams with consistent goal threats.<br/>
+                  <em>Range: 0.8-1.3</em>
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="averageAttackMultiplier">Average Attack</Label>
+                <Input
+                  id="averageAttackMultiplier"
+                  type="number"
+                  step="0.01"
+                  min="0.8"
+                  max="1.2"
+                  value={formData.averageAttackMultiplier || 0}
+                  onChange={(e) => handleInputChange('averageAttackMultiplier', e.target.value)}
+                  data-testid="input-average-attack-multiplier"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Default: 1.00</strong><br/>
+                  Mid-table teams with average attacking output (baseline).<br/>
+                  <em>Range: 0.8-1.2</em>
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="weakAttackMultiplier">Weak Attack</Label>
+                <Input
+                  id="weakAttackMultiplier"
+                  type="number"
+                  step="0.01"
+                  min="0.6"
+                  max="1.0"
+                  value={formData.weakAttackMultiplier || 0}
+                  onChange={(e) => handleInputChange('weakAttackMultiplier', e.target.value)}
+                  data-testid="input-weak-attack-multiplier"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Default: 0.90</strong><br/>
+                  Teams with limited attacking threats and low goal output.<br/>
+                  <em>Range: 0.6-1.0</em>
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="promotedAttackMultiplier">Promoted Attack</Label>
+                <Input
+                  id="promotedAttackMultiplier"
+                  type="number"
+                  step="0.01"
+                  min="0.5"
+                  max="1.0"
+                  value={formData.promotedAttackMultiplier || 0}
+                  onChange={(e) => handleInputChange('promotedAttackMultiplier', e.target.value)}
+                  data-testid="input-promoted-attack-multiplier"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Default: 0.85</strong><br/>
+                  Newly promoted teams adapting to Premier League level.<br/>
+                  <em>Range: 0.5-1.0</em>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Defensive Tier Multipliers */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Defensive Tier Multipliers</CardTitle>
+            <CardDescription>Team quality-based multipliers for defensive solidity (applied to goals conceded)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="eliteDefenseMultiplier">Elite Defense</Label>
+                <Input
+                  id="eliteDefenseMultiplier"
+                  type="number"
+                  step="0.01"
+                  min="0.4"
+                  max="0.8"
+                  value={formData.eliteDefenseMultiplier || 0}
+                  onChange={(e) => handleInputChange('eliteDefenseMultiplier', e.target.value)}
+                  data-testid="input-elite-defense-multiplier"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Default: 0.60</strong><br/>
+                  Premier League elite defensive teams (Arsenal, Man City).<br/>
+                  <em>Range: 0.4-0.8</em>
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="strongDefenseMultiplier">Strong Defense</Label>
+                <Input
+                  id="strongDefenseMultiplier"
+                  type="number"
+                  step="0.01"
+                  min="0.5"
+                  max="1.0"
+                  value={formData.strongDefenseMultiplier || 0}
+                  onChange={(e) => handleInputChange('strongDefenseMultiplier', e.target.value)}
+                  data-testid="input-strong-defense-multiplier"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Default: 0.75</strong><br/>
+                  Strong defensive teams with solid structure.<br/>
+                  <em>Range: 0.5-1.0</em>
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="averageDefenseMultiplier">Average Defense</Label>
+                <Input
+                  id="averageDefenseMultiplier"
+                  type="number"
+                  step="0.01"
+                  min="0.8"
+                  max="1.2"
+                  value={formData.averageDefenseMultiplier || 0}
+                  onChange={(e) => handleInputChange('averageDefenseMultiplier', e.target.value)}
+                  data-testid="input-average-defense-multiplier"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Default: 1.00</strong><br/>
+                  Mid-table teams with average defensive capability (baseline).<br/>
+                  <em>Range: 0.8-1.2</em>
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="weakDefenseMultiplier">Weak Defense</Label>
+                <Input
+                  id="weakDefenseMultiplier"
+                  type="number"
+                  step="0.01"
+                  min="1.0"
+                  max="1.8"
+                  value={formData.weakDefenseMultiplier || 0}
+                  onChange={(e) => handleInputChange('weakDefenseMultiplier', e.target.value)}
+                  data-testid="input-weak-defense-multiplier"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Default: 1.35</strong><br/>
+                  Teams with defensive vulnerabilities and high goals conceded.<br/>
+                  <em>Range: 1.0-1.8</em>
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="promotedDefenseMultiplier">Promoted Defense</Label>
+                <Input
+                  id="promotedDefenseMultiplier"
+                  type="number"
+                  step="0.01"
+                  min="1.2"
+                  max="2.0"
+                  value={formData.promotedDefenseMultiplier || 0}
+                  onChange={(e) => handleInputChange('promotedDefenseMultiplier', e.target.value)}
+                  data-testid="input-promoted-defense-multiplier"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Default: 1.60</strong><br/>
+                  Newly promoted teams adapting to Premier League attacking quality.<br/>
+                  <em>Range: 1.2-2.0</em>
                 </p>
               </div>
             </div>
