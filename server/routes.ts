@@ -2152,6 +2152,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           baseExpectedGoals *= attackingTierMultiplier;
           
+          // Apply opponent's defensive tier multiplier
+          const getDefensiveTier = (teamId: number): string => {
+            // Parse defensive team arrays from JSON strings if needed
+            const parseTeamArray = (teamString: string | number[]): number[] => {
+              if (Array.isArray(teamString)) return teamString;
+              if (typeof teamString === 'string') {
+                try {
+                  return JSON.parse(teamString);
+                } catch {
+                  return [];
+                }
+              }
+              return [];
+            };
+
+            const eliteDefenseTeams = parseTeamArray(unifiedProjectionSettings.eliteDefenseTeams) || [1];
+            const strongDefenseTeams = parseTeamArray(unifiedProjectionSettings.strongDefenseTeams) || [12, 13, 7, 16, 15, 9];
+            const weakDefenseTeams = parseTeamArray(unifiedProjectionSettings.weakDefenseTeams) || [6, 19, 20, 4, 5];
+            const promotedDefenseTeams = parseTeamArray(unifiedProjectionSettings.promotedDefenseTeams) || [3, 11, 17];
+
+            if (eliteDefenseTeams.includes(teamId)) return 'elite';
+            if (strongDefenseTeams.includes(teamId)) return 'strong';
+            if (weakDefenseTeams.includes(teamId)) return 'weak';
+            if (promotedDefenseTeams.includes(teamId)) return 'promoted';
+            return 'average'; // Default tier for teams not explicitly assigned
+          };
+          
+          const opponentDefensiveTier = getDefensiveTier(opponent.id);
+          let opponentDefensiveMultiplier = 1.0;
+          switch (opponentDefensiveTier) {
+            case 'elite': opponentDefensiveMultiplier = unifiedProjectionSettings.eliteDefenseMultiplier; break;
+            case 'strong': opponentDefensiveMultiplier = unifiedProjectionSettings.strongDefenseMultiplier; break;
+            case 'average': opponentDefensiveMultiplier = unifiedProjectionSettings.averageDefenseMultiplier; break;
+            case 'weak': opponentDefensiveMultiplier = unifiedProjectionSettings.weakDefenseMultiplier; break;
+            case 'promoted': opponentDefensiveMultiplier = unifiedProjectionSettings.promotedDefenseMultiplier; break;
+          }
+          baseExpectedGoals *= opponentDefensiveMultiplier;
+          
           // Phase 6: Minimal market momentum and fixture complexity factors (COMPRESSED)
           const marketMomentum = 0.99 + ((team.id * fixture.event * 17) % 100) / 5000; // 99-101% market sentiment (compressed)
           const fixtureComplexity = fixture.event <= 10 ? 1.005 : fixture.event <= 20 ? 1.0 : 0.995; // Minimal season stage impact
