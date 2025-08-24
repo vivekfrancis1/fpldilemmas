@@ -2033,12 +2033,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Team Goal Projections endpoint  
   app.get("/api/team-goal-projections", async (req, res) => {
-    // Disable caching to ensure admin changes reflect immediately
-    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    // FORCE disable all caching to ensure admin changes reflect immediately
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
+    res.set('Last-Modified', new Date().toUTCString());
+    res.set('ETag', `"${Date.now()}"`);
     try {
-      console.log(`DEBUG: Team Goal Projections API called - generating all 38 gameweeks`);
+      console.log(`🚀🚀🚀 FRESH REQUEST - Team Goal Projections API called - ${new Date().toISOString()}`);
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
