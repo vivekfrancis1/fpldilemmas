@@ -41,6 +41,12 @@ interface AdminSettings {
   averageDefenseMultiplier: number;
   weakDefenseMultiplier: number;
   promotedDefenseMultiplier: number;
+  // Defensive Team Tier Assignments
+  eliteDefenseTeams: number[];
+  strongDefenseTeams: number[];
+  averageDefenseTeams: number[];
+  weakDefenseTeams: number[];
+  promotedDefenseTeams: number[];
   derbyGoalsMultiplier: number;
   topSixGoalsMultiplier: number;
   relegationBattleGoalsMultiplier: number;
@@ -201,6 +207,97 @@ export default function AdminGoalProjections() {
     if (DEFAULT_TEAM_TIERS.weakAttackTeams.includes(teamId)) return 'weak';
     if (DEFAULT_TEAM_TIERS.promotedAttackTeams.includes(teamId)) return 'promoted';
     return 'average';
+  };
+
+  // Default defensive tier assignments
+  const DEFAULT_DEFENSIVE_TIERS = {
+    eliteDefenseTeams: [1, 12, 13, 7], // Arsenal, Liverpool, Man City, Chelsea
+    strongDefenseTeams: [15, 6, 18], // Newcastle, Brighton, Spurs
+    averageDefenseTeams: [2, 4, 5, 8, 10, 14, 19], // Aston Villa, Bournemouth, Brentford, Crystal Palace, Fulham, Man Utd, West Ham
+    weakDefenseTeams: [9, 16, 20], // Everton, Nott'm Forest, Wolves
+    promotedDefenseTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
+  };
+
+  // Defensive tier assignment helper functions
+  const getTeamDefenseTier = (teamId: number): string => {
+    const parseTeamArray = (teamString: string | number[]): number[] => {
+      if (Array.isArray(teamString)) return teamString;
+      if (typeof teamString === 'string') {
+        try {
+          return JSON.parse(teamString);
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const eliteDefenseTeams = parseTeamArray(formData.eliteDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.eliteDefenseTeams;
+    const strongDefenseTeams = parseTeamArray(formData.strongDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.strongDefenseTeams;
+    const weakDefenseTeams = parseTeamArray(formData.weakDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.weakDefenseTeams;
+    const promotedDefenseTeams = parseTeamArray(formData.promotedDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.promotedDefenseTeams;
+
+    if (eliteDefenseTeams.includes(teamId)) return 'elite';
+    if (strongDefenseTeams.includes(teamId)) return 'strong';
+    if (weakDefenseTeams.includes(teamId)) return 'weak';
+    if (promotedDefenseTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+
+  const getDefaultDefenseTier = (teamId: number): string => {
+    if (DEFAULT_DEFENSIVE_TIERS.eliteDefenseTeams.includes(teamId)) return 'elite';
+    if (DEFAULT_DEFENSIVE_TIERS.strongDefenseTeams.includes(teamId)) return 'strong';
+    if (DEFAULT_DEFENSIVE_TIERS.weakDefenseTeams.includes(teamId)) return 'weak';
+    if (DEFAULT_DEFENSIVE_TIERS.promotedDefenseTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+
+  const handleTeamDefenseTierChange = (teamId: number, newTier: string) => {
+    setFormData(prev => {
+      const updated = { ...prev };
+      
+      // Parse existing arrays or use defaults
+      const parseTeamArray = (teamString: string | number[]): number[] => {
+        if (Array.isArray(teamString)) return teamString;
+        if (typeof teamString === 'string') {
+          try {
+            return JSON.parse(teamString);
+          } catch {
+            return [];
+          }
+        }
+        return [];
+      };
+
+      // Remove team from all defensive tier arrays
+      updated.eliteDefenseTeams = parseTeamArray(updated.eliteDefenseTeams).filter(id => id !== teamId);
+      updated.strongDefenseTeams = parseTeamArray(updated.strongDefenseTeams).filter(id => id !== teamId);
+      updated.averageDefenseTeams = parseTeamArray(updated.averageDefenseTeams).filter(id => id !== teamId);
+      updated.weakDefenseTeams = parseTeamArray(updated.weakDefenseTeams).filter(id => id !== teamId);
+      updated.promotedDefenseTeams = parseTeamArray(updated.promotedDefenseTeams).filter(id => id !== teamId);
+
+      // Add team to new tier
+      switch (newTier) {
+        case 'elite':
+          updated.eliteDefenseTeams = [...updated.eliteDefenseTeams, teamId];
+          break;
+        case 'strong':
+          updated.strongDefenseTeams = [...updated.strongDefenseTeams, teamId];
+          break;
+        case 'average':
+          updated.averageDefenseTeams = [...updated.averageDefenseTeams, teamId];
+          break;
+        case 'weak':
+          updated.weakDefenseTeams = [...updated.weakDefenseTeams, teamId];
+          break;
+        case 'promoted':
+          updated.promotedDefenseTeams = [...updated.promotedDefenseTeams, teamId];
+          break;
+      }
+
+      return updated;
+    });
+    setHasChanges(true);
   };
 
   const getTeamsByTier = (tier: string) => {
@@ -942,6 +1039,142 @@ export default function AdminGoalProjections() {
               </div>
             </div>
           </CardContent>
+          </Card>
+
+          {/* Defensive Team Tier Assignments */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Team Defensive Tier Assignments
+              </CardTitle>
+              <CardDescription>
+                Assign all 20 Premier League teams to defensive tiers that determine their clean sheet probability and goals against projections.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              
+              {/* Overview Section */}
+              <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">How Defensive Tiers Work</h3>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-xs">
+                  <div className="text-center">
+                    <Badge className="bg-purple-600 hover:bg-purple-700 mb-1">Elite</Badge>
+                    <p className="text-purple-900 dark:text-purple-100">×{formData.eliteDefenseMultiplier} multiplier</p>
+                    <p className="text-muted-foreground">Best defensive teams</p>
+                  </div>
+                  <div className="text-center">
+                    <Badge className="bg-blue-600 hover:bg-blue-700 mb-1">Strong</Badge>
+                    <p className="text-blue-900 dark:text-blue-100">×{formData.strongDefenseMultiplier} multiplier</p>
+                    <p className="text-muted-foreground">Good defensive sides</p>
+                  </div>
+                  <div className="text-center">
+                    <Badge className="bg-gray-600 hover:bg-gray-700 mb-1">Average</Badge>
+                    <p className="text-gray-900 dark:text-gray-100">×{formData.averageDefenseMultiplier} multiplier</p>
+                    <p className="text-muted-foreground">Mid-table defense</p>
+                  </div>
+                  <div className="text-center">
+                    <Badge className="bg-orange-600 hover:bg-orange-700 mb-1">Weak</Badge>
+                    <p className="text-orange-900 dark:text-orange-100">×{formData.weakDefenseMultiplier} multiplier</p>
+                    <p className="text-muted-foreground">Poor defensive teams</p>
+                  </div>
+                  <div className="text-center">
+                    <Badge className="bg-red-600 hover:bg-red-700 mb-1">Promoted</Badge>
+                    <p className="text-red-900 dark:text-red-100">×{formData.promotedDefenseMultiplier} multiplier</p>
+                    <p className="text-muted-foreground">Newly promoted teams</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Team Assignment Grid */}
+              <div className="grid gap-4">
+                {teams.map(team => {
+                  const currentDefenseTier = getTeamDefenseTier(team.id);
+                  const defaultDefenseTier = getDefaultDefenseTier(team.id);
+                  const hasDefenseChanged = currentDefenseTier !== defaultDefenseTier;
+                  
+                  const tierColor = {
+                    'elite': 'bg-purple-50 border-purple-200',
+                    'strong': 'bg-blue-50 border-blue-200',
+                    'average': 'bg-gray-50 border-gray-200',
+                    'weak': 'bg-orange-50 border-orange-200',
+                    'promoted': 'bg-red-50 border-red-200'
+                  }[currentDefenseTier] || 'bg-gray-50 border-gray-200';
+
+                  return (
+                    <div key={`defense-${team.id}`} className={`p-4 border rounded-lg ${tierColor} ${hasDefenseChanged ? 'ring-2 ring-blue-300 dark:ring-blue-600' : ''}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-medium text-sm truncate">{team.name}</span>
+                            <span className="text-xs text-muted-foreground font-mono">ID: {team.id}</span>
+                            {hasDefenseChanged && (
+                              <Badge variant="outline" className="text-xs bg-blue-50 border-blue-300 text-blue-700">
+                                Modified
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-4 text-xs">
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground">Default:</span>
+                              {getTierBadge(defaultDefenseTier, 'default')}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground">Current:</span>
+                              {getTierBadge(currentDefenseTier, 'current')}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="ml-4">
+                          <Label htmlFor={`defense-team-${team.id}`} className="text-xs text-muted-foreground mb-1 block">
+                            Change Current Tier
+                          </Label>
+                          <Select value={currentDefenseTier} onValueChange={(value) => handleTeamDefenseTierChange(team.id, value)}>
+                            <SelectTrigger id={`defense-team-${team.id}`} className="w-28 h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="elite">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                                  Elite
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="strong">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                  Strong
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="average">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                                  Average
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="weak">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
+                                  Weak
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="promoted">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                                  Promoted
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
 
