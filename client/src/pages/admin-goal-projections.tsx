@@ -387,6 +387,7 @@ export default function AdminGoalProjections() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <span className="font-medium text-sm truncate">{team.name}</span>
+                              <span className="text-xs text-muted-foreground font-mono">ID: {team.id}</span>
                               {hasChanged && (
                                 <Badge variant="outline" className="text-xs bg-blue-50 border-blue-300 text-blue-700">
                                   Modified
