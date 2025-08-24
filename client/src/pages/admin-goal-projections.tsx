@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, RotateCcw, Save, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -164,75 +165,84 @@ export default function AdminGoalProjections() {
         </AlertDescription>
       </Alert>
 
-      <div className="grid gap-6">
-        {/* Global Multipliers */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Global Multipliers</CardTitle>
-            <CardDescription>Core multipliers applied across all teams</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="globalTierMultiplier">Global Tier Multiplier</Label>
-                <Input
-                  id="globalTierMultiplier"
-                  type="number"
-                  step="0.01"
-                  min="0.5"
-                  max="3.0"
-                  value={formData.globalTierMultiplier || 0}
-                  onChange={(e) => handleInputChange('globalTierMultiplier', e.target.value)}
-                  data-testid="input-global-tier-multiplier"
-                />
-                <p className="text-xs text-muted-foreground">
-                  <strong>Default: 1.25</strong><br/>
-                  Master scaling factor applied to all team goal calculations. Higher values increase overall goal output across the league.<br/>
-                  <em>Range: 0.5-3.0</em>
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lowConfidenceBoost">Low Confidence Boost</Label>
-                <Input
-                  id="lowConfidenceBoost"
-                  type="number"
-                  step="0.01"
-                  min="1.0"
-                  max="2.0"
-                  value={formData.lowConfidenceBoost || 0}
-                  onChange={(e) => handleInputChange('lowConfidenceBoost', e.target.value)}
-                  data-testid="input-low-confidence-boost"
-                />
-                <p className="text-xs text-muted-foreground">
-                  <strong>Default: 1.25</strong><br/>
-                  Multiplier applied to teams below the confidence threshold to prevent unrealistically low projections.<br/>
-                  <em>Range: 1.0-2.0</em>
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lowConfidenceThreshold">Low Confidence Threshold</Label>
-                <Input
-                  id="lowConfidenceThreshold"
-                  type="number"
-                  step="0.01"
-                  min="0.3"
-                  max="0.8"
-                  value={formData.lowConfidenceThreshold || 0}
-                  onChange={(e) => handleInputChange('lowConfidenceThreshold', e.target.value)}
-                  data-testid="input-low-confidence-threshold"
-                />
-                <p className="text-xs text-muted-foreground">
-                  <strong>Default: 0.65</strong><br/>
-                  Confidence score below which the Low Confidence Boost is applied (0.0-1.0 scale).<br/>
-                  <em>Range: 0.3-0.8</em>
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="global" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="global">Global Multipliers</TabsTrigger>
+          <TabsTrigger value="attacking">Attacking Tier</TabsTrigger>
+          <TabsTrigger value="defensive">Defensive Tier</TabsTrigger>
+          <TabsTrigger value="context">Context Multipliers</TabsTrigger>
+          <TabsTrigger value="market">Market Bounds</TabsTrigger>
+        </TabsList>
 
-        {/* Attacking Tier Multipliers */}
-        <Card>
+        <TabsContent value="global" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Global Multipliers</CardTitle>
+              <CardDescription>Core multipliers applied across all teams</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="globalTierMultiplier">Global Tier Multiplier</Label>
+                  <Input
+                    id="globalTierMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="0.5"
+                    max="3.0"
+                    value={formData.globalTierMultiplier || 0}
+                    onChange={(e) => handleInputChange('globalTierMultiplier', e.target.value)}
+                    data-testid="input-global-tier-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 1.25</strong><br/>
+                    Master scaling factor applied to all team goal calculations. Higher values increase overall goal output across the league.<br/>
+                    <em>Range: 0.5-3.0</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lowConfidenceBoost">Low Confidence Boost</Label>
+                  <Input
+                    id="lowConfidenceBoost"
+                    type="number"
+                    step="0.01"
+                    min="1.0"
+                    max="2.0"
+                    value={formData.lowConfidenceBoost || 0}
+                    onChange={(e) => handleInputChange('lowConfidenceBoost', e.target.value)}
+                    data-testid="input-low-confidence-boost"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 1.25</strong><br/>
+                    Multiplier applied to teams below the confidence threshold to prevent unrealistically low projections.<br/>
+                    <em>Range: 1.0-2.0</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lowConfidenceThreshold">Low Confidence Threshold</Label>
+                  <Input
+                    id="lowConfidenceThreshold"
+                    type="number"
+                    step="0.01"
+                    min="0.3"
+                    max="0.8"
+                    value={formData.lowConfidenceThreshold || 0}
+                    onChange={(e) => handleInputChange('lowConfidenceThreshold', e.target.value)}
+                    data-testid="input-low-confidence-threshold"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 0.65</strong><br/>
+                    Confidence score below which the Low Confidence Boost is applied (0.0-1.0 scale).<br/>
+                    <em>Range: 0.3-0.8</em>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="attacking" className="space-y-6">
+          <Card>
           <CardHeader>
             <CardTitle>Attacking Tier Multipliers</CardTitle>
             <CardDescription>Team quality-based multipliers for goal scoring ability</CardDescription>
@@ -331,10 +341,11 @@ export default function AdminGoalProjections() {
               </div>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </TabsContent>
 
-        {/* Defensive Tier Multipliers */}
-        <Card>
+        <TabsContent value="defensive" className="space-y-6">
+          <Card>
           <CardHeader>
             <CardTitle>Defensive Tier Multipliers</CardTitle>
             <CardDescription>Team quality-based multipliers for defensive solidity (applied to goals conceded)</CardDescription>
@@ -433,10 +444,11 @@ export default function AdminGoalProjections() {
               </div>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </TabsContent>
 
-        {/* Context Multipliers */}
-        <Card>
+        <TabsContent value="context" className="space-y-6">
+          <Card>
           <CardHeader>
             <CardTitle>Context Multipliers</CardTitle>
             <CardDescription>Situational adjustments for different match contexts</CardDescription>
@@ -625,10 +637,11 @@ export default function AdminGoalProjections() {
               </div>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </TabsContent>
 
-        {/* Market Bounds */}
-        <Card>
+        <TabsContent value="market" className="space-y-6">
+          <Card>
           <CardHeader>
             <CardTitle>Market Bounds</CardTitle>
             <CardDescription>Constraints for realistic Premier League goal ranges</CardDescription>
@@ -709,9 +722,12 @@ export default function AdminGoalProjections() {
               </div>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
-        {/* Actions */}
+      {/* Actions */}
+      <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Actions</CardTitle>
