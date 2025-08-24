@@ -195,6 +195,37 @@ export default function AdminGoalProjections() {
     return teams.filter(team => getTeamTier(team.id) === tier);
   };
 
+  const getTierBadge = (tier: string, variant: 'current' | 'default') => {
+    const isDefault = variant === 'default';
+    const badgeClass = isDefault ? "text-xs border" : "text-xs";
+    const badgeVariant = isDefault ? "outline" : "default";
+    
+    const colors = {
+      'elite': isDefault ? 'border-purple-300 text-purple-700 bg-purple-50' : 'bg-purple-600 hover:bg-purple-700',
+      'strong': isDefault ? 'border-blue-300 text-blue-700 bg-blue-50' : 'bg-blue-600 hover:bg-blue-700',
+      'average': isDefault ? 'border-gray-300 text-gray-700 bg-gray-50' : 'bg-gray-600 hover:bg-gray-700',
+      'weak': isDefault ? 'border-orange-300 text-orange-700 bg-orange-50' : 'bg-orange-600 hover:bg-orange-700',
+      'promoted': isDefault ? 'border-red-300 text-red-700 bg-red-50' : 'bg-red-600 hover:bg-red-700'
+    }[tier] || (isDefault ? 'border-gray-300 text-gray-700 bg-gray-50' : 'bg-gray-600 hover:bg-gray-700');
+    
+    const tierNames = {
+      'elite': 'Elite',
+      'strong': 'Strong', 
+      'average': 'Average',
+      'weak': 'Weak',
+      'promoted': 'Promoted'
+    };
+    
+    return (
+      <Badge 
+        variant={badgeVariant as "default" | "outline"} 
+        className={`${badgeClass} ${colors}`}
+      >
+        {tierNames[tier as keyof typeof tierNames] || 'Average'}
+      </Badge>
+    );
+  };
+
   const handleTeamTierChange = (teamId: number, newTier: string) => {
     setFormData(prev => {
       // Remove team from all tier arrays
@@ -349,36 +380,6 @@ export default function AdminGoalProjections() {
                       'promoted': 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
                     }[currentTier] || 'bg-gray-50 border-gray-200 dark:bg-gray-950 dark:border-gray-800';
                     
-                    const getTierBadge = (tier: string, variant: 'current' | 'default') => {
-                      const isDefault = variant === 'default';
-                      const badgeClass = isDefault ? "text-xs border" : "text-xs";
-                      const badgeVariant = isDefault ? "outline" : "default";
-                      
-                      const colors = {
-                        'elite': isDefault ? 'border-purple-300 text-purple-700 bg-purple-50' : 'bg-purple-600 hover:bg-purple-700',
-                        'strong': isDefault ? 'border-blue-300 text-blue-700 bg-blue-50' : 'bg-blue-600 hover:bg-blue-700',
-                        'average': isDefault ? 'border-gray-300 text-gray-700 bg-gray-50' : 'bg-gray-600 hover:bg-gray-700',
-                        'weak': isDefault ? 'border-orange-300 text-orange-700 bg-orange-50' : 'bg-orange-600 hover:bg-orange-700',
-                        'promoted': isDefault ? 'border-red-300 text-red-700 bg-red-50' : 'bg-red-600 hover:bg-red-700'
-                      }[tier] || (isDefault ? 'border-gray-300 text-gray-700 bg-gray-50' : 'bg-gray-600 hover:bg-gray-700');
-                      
-                      const tierNames = {
-                        'elite': 'Elite',
-                        'strong': 'Strong', 
-                        'average': 'Average',
-                        'weak': 'Weak',
-                        'promoted': 'Promoted'
-                      };
-                      
-                      return (
-                        <Badge 
-                          variant={badgeVariant as "default" | "outline"} 
-                          className={`${badgeClass} ${colors}`}
-                        >
-                          {tierNames[tier as keyof typeof tierNames] || 'Average'}
-                        </Badge>
-                      );
-                    };
 
                     return (
                       <div key={team.id} className={`p-4 border rounded-lg ${tierColor} ${hasChanged ? 'ring-2 ring-blue-300 dark:ring-blue-600' : ''}`}>
