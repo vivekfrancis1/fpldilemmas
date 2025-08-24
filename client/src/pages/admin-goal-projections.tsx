@@ -694,23 +694,23 @@ export default function AdminGoalProjections() {
                     </div>
                     
                     <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 4: Context Analysis</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 4: Attacking Tiers</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Elite Clashes:</strong> +8% boost<br/>
-                        <strong>Top 6 Battles:</strong> +2% boost<br/>
-                        <strong>Derby Matches:</strong> +14% boost
+                        <strong>Elite:</strong> × {formData.eliteAttackMultiplier || 1.5} (configurable)<br/>
+                        <strong>Strong:</strong> × {formData.strongAttackMultiplier || 1.25}<br/>
+                        <strong>Average:</strong> × {formData.averageAttackMultiplier || 1.0}<br/>
+                        <strong>Weak:</strong> × {formData.weakAttackMultiplier || 0.75}
                       </p>
                     </div>
                   </div>
                   
                   <div className="space-y-3">
                     <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 5: Attacking Tiers</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 5: Context Analysis</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Elite:</strong> × {formData.eliteAttackMultiplier || 1.5} (configurable)<br/>
-                        <strong>Strong:</strong> × {formData.strongAttackMultiplier || 1.25}<br/>
-                        <strong>Average:</strong> × {formData.averageAttackMultiplier || 1.0}<br/>
-                        <strong>Weak:</strong> × {formData.weakAttackMultiplier || 0.75}
+                        <strong>Elite Clashes:</strong> +8% boost<br/>
+                        <strong>Top 6 Battles:</strong> +2% boost<br/>
+                        <strong>Derby Matches:</strong> +14% boost
                       </p>
                     </div>
                     
@@ -888,7 +888,7 @@ export default function AdminGoalProjections() {
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
                           <div className="text-center">
-                            <p className="font-medium text-purple-600">Phase 5: Attack Tiers</p>
+                            <p className="font-medium text-purple-600">Phase 4: Attack Tiers</p>
                             <p className="text-muted-foreground">Elite (×1.5), Strong (×1.25), etc.</p>
                           </div>
                           <div className="text-center">
@@ -900,7 +900,7 @@ export default function AdminGoalProjections() {
                             <p className="text-muted-foreground">Home advantage, away factor</p>
                           </div>
                           <div className="text-center">
-                            <p className="font-medium text-orange-600">Phase 4: Context</p>
+                            <p className="font-medium text-orange-600">Phase 5: Context</p>
                             <p className="text-muted-foreground">Derby, top six, relegation battles</p>
                           </div>
                         </div>
