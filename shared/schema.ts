@@ -479,6 +479,10 @@ export const unifiedProjectionSettings = pgTable("unified_projection_settings", 
   marketFloorMultiplier: decimal("market_floor_multiplier", { precision: 4, scale: 2 }).default("0.40"),
   marketCeilingMultiplier: decimal("market_ceiling_multiplier", { precision: 4, scale: 2 }).default("2.00"),
   
+  // Venue Factors
+  homeAdvantageMultiplier: decimal("home_advantage_multiplier", { precision: 4, scale: 2 }).default("1.15"),
+  awayFactorMultiplier: decimal("away_factor_multiplier", { precision: 4, scale: 2 }).default("0.88"),
+  
   // Metadata
   lastUpdated: timestamp("last_updated").defaultNow(),
   updatedBy: varchar("updated_by").default("admin"),

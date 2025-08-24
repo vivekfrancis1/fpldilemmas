@@ -195,6 +195,9 @@ export default function AdminGoalProjections() {
         marketFloorMultiplier: settings.marketFloorMultiplier ?? DEFAULT_VALUES.marketBounds.marketFloorMultiplier,
         marketCeilingMultiplier: settings.marketCeilingMultiplier ?? DEFAULT_VALUES.marketBounds.marketCeilingMultiplier,
         
+        homeAdvantageMultiplier: settings.homeAdvantageMultiplier ?? DEFAULT_VALUES.venueFactors.homeAdvantageMultiplier,
+        awayFactorMultiplier: settings.awayFactorMultiplier ?? DEFAULT_VALUES.venueFactors.awayFactorMultiplier,
+        
         eliteAttackTeams: parseTeamArray(settings.eliteAttackTeams) || DEFAULT_TEAM_TIERS.eliteAttackTeams,
         strongAttackTeams: parseTeamArray(settings.strongAttackTeams) || DEFAULT_TEAM_TIERS.strongAttackTeams,
         averageAttackTeams: parseTeamArray(settings.averageAttackTeams) || DEFAULT_TEAM_TIERS.averageAttackTeams,
@@ -440,6 +443,11 @@ export default function AdminGoalProjections() {
       marketFloorMultiplier: 0.40,
       marketCeilingMultiplier: 2.00,
     },
+    // Venue Factors
+    venueFactors: {
+      homeAdvantageMultiplier: 1.15,
+      awayFactorMultiplier: 0.88,
+    },
   };
 
   // Individual reset functions for each tab
@@ -510,12 +518,12 @@ export default function AdminGoalProjections() {
   };
 
   const resetMarketBounds = () => {
-    if (confirm('Reset only this tab\'s market bounds to default values? Other settings will remain unchanged.')) {
-      setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.marketBounds }));
+    if (confirm('Reset only this tab\'s market bounds and venue factors to default values? Other settings will remain unchanged.')) {
+      setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.marketBounds, ...DEFAULT_VALUES.venueFactors }));
       setHasChanges(true);
       toast({
-        title: "Market Bounds Reset",
-        description: "Only market bounds have been reset to default values.",
+        title: "Market Bounds & Venue Factors Reset",
+        description: "Market bounds and venue factors have been reset to default values.",
       });
     }
   };
@@ -529,13 +537,14 @@ export default function AdminGoalProjections() {
         ...DEFAULT_VALUES.globalSettings,
         ...DEFAULT_VALUES.contextMultipliers,
         ...DEFAULT_VALUES.marketBounds,
+        ...DEFAULT_VALUES.venueFactors,
         ...DEFAULT_TEAM_TIERS,
         ...DEFAULT_DEFENSIVE_TIERS,
       }));
       setHasChanges(true);
       toast({
         title: "Page Settings Reset",
-        description: "All Team Goals admin page settings have been reset to default values.",
+        description: "All Team Goals admin page settings including venue factors have been reset to default values.",
       });
     }
   };
@@ -1472,6 +1481,53 @@ export default function AdminGoalProjections() {
                     <strong>Default: 7.0</strong><br/>
                     Hard maximum goals per match that cannot be exceeded.<br/>
                     <em>Range: 3.0-10.0</em>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Venue Factors</CardTitle>
+              <CardDescription>Home advantage and away factor multipliers for realistic venue-based goal adjustments</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="homeAdvantageMultiplier">Home Advantage Multiplier</Label>
+                  <Input
+                    id="homeAdvantageMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="1.00"
+                    max="1.30"
+                    value={formData.homeAdvantageMultiplier || 0}
+                    onChange={(e) => handleInputChange('homeAdvantageMultiplier', e.target.value)}
+                    data-testid="input-home-advantage-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 1.15</strong><br/>
+                    Multiplier for teams playing at home (15% advantage).<br/>
+                    <em>Range: 1.00-1.30</em>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="awayFactorMultiplier">Away Factor Multiplier</Label>
+                  <Input
+                    id="awayFactorMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="0.70"
+                    max="1.00"
+                    value={formData.awayFactorMultiplier || 0}
+                    onChange={(e) => handleInputChange('awayFactorMultiplier', e.target.value)}
+                    data-testid="input-away-factor-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 0.88</strong><br/>
+                    Multiplier for teams playing away (12% disadvantage).<br/>
+                    <em>Range: 0.70-1.00</em>
                   </p>
                 </div>
               </div>

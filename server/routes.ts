@@ -2102,10 +2102,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Phase 1: Core market probability foundation
           let baseExpectedGoals = teamBettingData.expectedGoalsPerGame;
           
-          // Phase 2: Advanced venue-specific market adjustments with dynamic factors
+          // Phase 2: Advanced venue-specific market adjustments using configurable factors
           const venueMultiplier = isHome ? 
-            (1.12 + ((team.id * fixture.event * 7) % 100) / 1667) : // Home advantage 112-118%
-            (0.85 + ((team.id * fixture.event * 11) % 100) / 1667); // Away factor 85-91%
+            (unifiedProjectionSettings.homeAdvantageMultiplier || 1.15) : // Configurable home advantage
+            (unifiedProjectionSettings.awayFactorMultiplier || 0.88); // Configurable away factor
           baseExpectedGoals *= venueMultiplier;
           
           // Phase 3: Balanced opponent defensive resistance matrix
@@ -2615,10 +2615,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Phase 1: Core market probability foundation
             let baseExpectedGoals = teamBettingData.expectedGoalsPerGame;
             
-            // Phase 2: Advanced venue-specific market adjustments with dynamic factors
+            // Phase 2: Advanced venue-specific market adjustments using configurable factors
             const venueMultiplier = isHome ? 
-              (1.12 + ((team.id * fixture.event * 7) % 100) / 1667) : // Home advantage 112-118%
-              (0.85 + ((team.id * fixture.event * 11) % 100) / 1667); // Away factor 85-91%
+              (unifiedProjectionSettings.homeAdvantageMultiplier || 1.15) : // Configurable home advantage
+              (unifiedProjectionSettings.awayFactorMultiplier || 0.88); // Configurable away factor
             baseExpectedGoals *= venueMultiplier;
             
             // Phase 3: Sophisticated opponent defensive resistance matrix
