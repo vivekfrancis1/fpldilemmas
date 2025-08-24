@@ -779,8 +779,10 @@ export default function AdminGoalProjections() {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left p-2 font-medium">Team</th>
-                        <th className="text-center p-2 font-medium">Current Tier</th>
-                        <th className="text-center p-2 font-medium">Base xG per Game</th>
+                        <th className="text-center p-2 font-medium">Tier</th>
+                        <th className="text-center p-2 font-medium">Default xG</th>
+                        <th className="text-center p-2 font-medium">Current xG</th>
+                        <th className="text-center p-2 font-medium">New xG</th>
                         <th className="text-center p-2 font-medium">Actions</th>
                       </tr>
                     </thead>
@@ -788,6 +790,37 @@ export default function AdminGoalProjections() {
                       {teams.map((team) => {
                         const currentTier = getTeamTier(team.id);
                         const tierColor = getTierBadgeColor(currentTier);
+                        
+                        // Default xG values based on team tier and quality
+                        const getDefaultXG = (teamId: number) => {
+                          const defaults: Record<number, number> = {
+                            13: 1.97, // Man City
+                            12: 2.14, // Liverpool  
+                            1: 1.67,  // Arsenal
+                            7: 1.95,  // Chelsea
+                            18: 1.67, // Tottenham
+                            15: 1.60, // Newcastle
+                            2: 1.47,  // Aston Villa
+                            6: 1.85,  // Brighton
+                            14: 1.45, // Man United
+                            4: 1.53,  // Bournemouth
+                            10: 1.20, // Fulham
+                            5: 1.42,  // Brentford
+                            16: 1.18, // Nottingham Forest
+                            19: 1.27, // West Ham
+                            8: 1.35,  // Crystal Palace
+                            9: 1.10,  // Everton
+                            20: 1.05, // Wolves
+                            3: 0.88,  // Burnley
+                            11: 0.95, // Leeds
+                            17: 0.85  // Sunderland
+                          };
+                          return defaults[teamId] || 1.30;
+                        };
+                        
+                        const defaultXG = getDefaultXG(team.id);
+                        const currentXG = defaultXG; // TODO: Get from actual settings
+                        const isChanged = Math.abs(currentXG - defaultXG) > 0.01;
                         
                         return (
                           <tr key={team.id} className="border-b hover:bg-muted/50">
@@ -803,30 +836,61 @@ export default function AdminGoalProjections() {
                               </Badge>
                             </td>
                             <td className="text-center p-2">
+                              <span className="font-mono text-sm text-muted-foreground">
+                                {defaultXG.toFixed(2)}
+                              </span>
+                            </td>
+                            <td className="text-center p-2">
+                              <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
+                                {currentXG.toFixed(2)}
+                              </span>
+                              {isChanged && (
+                                <div className="text-xs text-blue-600 mt-1">Modified</div>
+                              )}
+                            </td>
+                            <td className="text-center p-2">
                               <Input
                                 type="number"
                                 step="0.01"
                                 min="0.5"
                                 max="3.0"
                                 className="w-20 mx-auto text-center"
-                                defaultValue="1.50"
+                                defaultValue={currentXG.toFixed(2)}
                                 data-testid={`input-base-xg-${team.id}`}
                               />
                             </td>
                             <td className="text-center p-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  toast({
-                                    title: "xG Updated",
-                                    description: `Base xG updated for ${team.short_name}`,
-                                  });
-                                }}
-                                data-testid={`button-update-xg-${team.id}`}
-                              >
-                                Update
-                              </Button>
+                              <div className="flex gap-1 justify-center">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    toast({
+                                      title: "xG Updated",
+                                      description: `Base xG updated for ${team.short_name}`,
+                                    });
+                                  }}
+                                  data-testid={`button-update-xg-${team.id}`}
+                                >
+                                  Update
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const input = document.querySelector(`[data-testid="input-base-xg-${team.id}"]`) as HTMLInputElement;
+                                    if (input) input.value = defaultXG.toFixed(2);
+                                    toast({
+                                      title: "Reset to Default",
+                                      description: `${team.short_name} xG reset to default ${defaultXG.toFixed(2)}`,
+                                    });
+                                  }}
+                                  data-testid={`button-reset-xg-${team.id}`}
+                                  title="Reset to default"
+                                >
+                                  ↺
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         );
