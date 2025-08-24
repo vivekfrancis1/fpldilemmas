@@ -33,7 +33,7 @@ import AdminUnifiedProjections from "./pages/admin-unified-projections";
 import AdminCSProjections from "./pages/admin-cs-projections";
 import AdminAssistProjections from "./pages/admin-assist-projections";
 import AdminMatchProjections from "./pages/admin-match-projections";
-import AdminGoalProjections from "./pages/admin-goal-projections-simple";
+import AdminGoalProjections from "./pages/admin-goal-projections";
 import AdminGoalsAgainst from "./pages/admin-goals-against";
 
 function Router() {
