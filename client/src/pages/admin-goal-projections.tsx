@@ -142,13 +142,13 @@ export default function AdminGoalProjections() {
     },
   });
 
-  // Default team tier assignments
+  // Default team tier assignments - Updated per user specifications
   const DEFAULT_TEAM_TIERS = {
-    eliteAttackTeams: [1, 13], // Arsenal, Man City
-    strongAttackTeams: [12, 15, 7, 18], // Liverpool, Newcastle, Chelsea, Tottenham
-    averageAttackTeams: [6, 2, 21, 8, 5, 11, 20, 10], // Brighton, Aston Villa, West Ham, Crystal Palace, Bournemouth, Fulham, Wolves, Everton
-    weakAttackTeams: [4, 16, 14], // Brentford, Nottm Forest, Man Utd
-    promotedAttackTeams: [9, 17, 19], // Leicester, Ipswich, Southampton
+    eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Manchester City, Arsenal, Chelsea
+    strongAttackTeams: [15, 18, 2, 4, 5, 6], // Newcastle United, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
+    averageAttackTeams: [14, 3, 10, 20], // Manchester United, Crystal Palace, Fulham, West Ham
+    weakAttackTeams: [11, 16, 21], // Everton, Nottingham Forest, Wolverhampton Wanderers
+    promotedAttackTeams: [8, 9, 17], // Leeds, Burnley, Sunderland (using available IDs)
   };
 
   // Initialize form data when settings are loaded

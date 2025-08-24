@@ -1204,11 +1204,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weakDefenseMultiplier: "1.35",
         promotedDefenseMultiplier: "1.60",
         // Default team assignments (matching current Premier League 2025/26 season)
-        eliteAttackTeams: JSON.stringify([1, 13]), // Arsenal, Man City
-        strongAttackTeams: JSON.stringify([12, 15, 7, 18]), // Liverpool, Newcastle, Chelsea, Tottenham
-        averageAttackTeams: JSON.stringify([6, 2, 21, 8, 5, 11, 20, 10]), // Brighton, Aston Villa, West Ham, Crystal Palace, Bournemouth, Fulham, Wolves, Everton
-        weakAttackTeams: JSON.stringify([4, 16, 14]), // Brentford, Nottm Forest, Man Utd
-        promotedAttackTeams: JSON.stringify([9, 17, 19]), // Leicester, Ipswich, Southampton
+        eliteAttackTeams: JSON.stringify([12, 13, 1, 7]), // Liverpool, Manchester City, Arsenal, Chelsea
+        strongAttackTeams: JSON.stringify([15, 18, 2, 4, 5, 6]), // Newcastle United, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
+        averageAttackTeams: JSON.stringify([14, 3, 10, 20]), // Manchester United, Crystal Palace, Fulham, West Ham
+        weakAttackTeams: JSON.stringify([11, 16, 21]), // Everton, Nottingham Forest, Wolverhampton Wanderers
+        promotedAttackTeams: JSON.stringify([8, 9, 17]), // Leeds, Burnley, Sunderland
         eliteDefenseTeams: JSON.stringify([1, 13]), // Arsenal, Man City
         strongDefenseTeams: JSON.stringify([12, 15, 6, 2]), // Liverpool, Newcastle, Brighton, Aston Villa
         averageDefenseTeams: JSON.stringify([7, 18, 21, 8, 5, 11]), // Chelsea, Tottenham, West Ham, Crystal Palace, Bournemouth, Fulham
