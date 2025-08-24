@@ -387,11 +387,11 @@ export default function AdminGoalProjections() {
     },
     // Defense Multipliers
     defenseMultipliers: {
-      eliteDefenseMultiplier: 0.65,
-      strongDefenseMultiplier: 0.80,
+      eliteDefenseMultiplier: 0.5,
+      strongDefenseMultiplier: 0.75,
       averageDefenseMultiplier: 1.00,
       weakDefenseMultiplier: 1.25,
-      promotedDefenseMultiplier: 1.40,
+      promotedDefenseMultiplier: 1.5,
     },
     // Global Settings
     globalSettings: {
@@ -856,16 +856,16 @@ export default function AdminGoalProjections() {
                     id="eliteDefenseMultiplier"
                     type="number"
                     step="0.01"
-                    min="0.4"
+                    min="0.3"
                     max="0.8"
                     value={formData.eliteDefenseMultiplier || 0}
                     onChange={(e) => handleInputChange('eliteDefenseMultiplier', e.target.value)}
                     data-testid="input-elite-defense-multiplier"
                   />
                   <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.65</strong><br/>
+                    <strong>Default: 0.5</strong><br/>
                     Premier League elite defensive teams (Arsenal, Liverpool).<br/>
-                    <em>Range: 0.4-0.8</em>
+                    <em>Range: 0.3-0.8</em>
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -874,16 +874,16 @@ export default function AdminGoalProjections() {
                     id="strongDefenseMultiplier"
                     type="number"
                     step="0.01"
-                    min="0.6"
+                    min="0.5"
                     max="1.0"
                     value={formData.strongDefenseMultiplier || 0}
                     onChange={(e) => handleInputChange('strongDefenseMultiplier', e.target.value)}
                     data-testid="input-strong-defense-multiplier"
                   />
                   <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.80</strong><br/>
+                    <strong>Default: 0.75</strong><br/>
                     Teams with strong defensive records and low goals conceded.<br/>
-                    <em>Range: 0.6-1.0</em>
+                    <em>Range: 0.5-1.0</em>
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -935,7 +935,7 @@ export default function AdminGoalProjections() {
                     data-testid="input-promoted-defense-multiplier"
                   />
                   <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.40</strong><br/>
+                    <strong>Default: 1.5</strong><br/>
                     Newly promoted teams adapting to Premier League attacking quality.<br/>
                     <em>Range: 1.2-2.0</em>
                   </p>
