@@ -1353,6 +1353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await loadUnifiedProjectionSettings();
       console.log("✓ Unified projection settings saved to database");
       console.log("✓ In-memory settings cache refreshed - changes now active");
+      console.log(`DEBUG: Current elite defense multiplier: ${unifiedProjectionSettings.eliteDefenseMultiplier}`);
       
     } catch (error) {
       console.error("Failed to save unified projection settings to database:", error);
