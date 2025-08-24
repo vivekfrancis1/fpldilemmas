@@ -1619,7 +1619,7 @@ export default function AdminGoalProjections() {
                       <thead>
                         <tr className="border-b">
                           <th className="text-left p-2 font-medium">Team</th>
-                          <th className="text-center p-2 font-medium">Confidence</th>
+                          <th className="text-center p-2 font-medium">Confidence Score</th>
                           <th className="text-center p-2 font-medium">Level</th>
                           <th className="text-center p-2 font-medium">xG/Game</th>
                           <th className="text-center p-2 font-medium">CS Rate</th>
