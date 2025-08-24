@@ -19,25 +19,11 @@ interface Team {
   code: number;
 }
 
-interface TeamConfidenceData {
-  id: number;
-  team: string;
-  teamName: string;
-  confidenceScore: number;
-  confidenceLevel: 'High' | 'Medium' | 'Low';
-  attackingTier: string;
-  defensiveTier: string;
-  expectedGoalsPerGame: number;
-  baseCleanSheetRate: number;
-  tierMultiplier: number;
-  confidenceMultiplier: number;
-}
 
 interface AdminSettings {
   // Base Calculation Parameters - Previously Hardcoded
   averageBaseXGPerTeamPerGame: number;
   defaultTeamVariance: number;
-  defaultTeamConfidence: number;
   defaultExpectedGoalsPerGame: number;
   globalTierMultiplier: number;
   // Venue Multipliers
@@ -94,23 +80,6 @@ const DEFAULT_TEAM_TIERS = {
   promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
 };
 
-const getConfidenceBadgeColor = (level: string) => {
-  switch (level) {
-    case 'High': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-    case 'Low': return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
-    default: return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
-  }
-};
-
-const getTierBadgeColor = (tier: string) => {
-  switch (tier) {
-    case 'elite': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400';
-    case 'strong': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
-    case 'weak': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
-    case 'promoted': return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
-    default: return 'bg-slate-100 text-slate-800 dark:bg-slate-900/20 dark:text-slate-400';
-  }
-};
 
 export default function AdminGoalProjections() {
   const { toast } = useToast();
@@ -132,9 +101,6 @@ export default function AdminGoalProjections() {
     queryKey: ['/api/admin/goal-scored-settings'],
   });
 
-  const { data: confidenceData, isLoading: confidenceLoading } = useQuery<TeamConfidenceData[]>({
-    queryKey: ["/api/team-confidence-analysis"],
-  });
 
   // Update settings mutation using goals scored settings endpoint
   const updateSettingsMutation = useMutation({
@@ -637,7 +603,6 @@ export default function AdminGoalProjections() {
           <TabsTrigger value="context">Context Multipliers</TabsTrigger>
           <TabsTrigger value="venue">Venue Factors</TabsTrigger>
           <TabsTrigger value="market">Market Bounds</TabsTrigger>
-          <TabsTrigger value="confidence">Team Confidence</TabsTrigger>
         </TabsList>
 
         {/* Calculation Base Tab */}
@@ -803,7 +768,6 @@ export default function AdminGoalProjections() {
                         { key: 'averageBaseXGPerTeamPerGame', name: 'Universal Base xG per Team per Game', default: 1.35, min: 0.8, max: 2.0, description: 'Universal foundation xG that all teams start from before adjustments' },
                         { key: 'defaultExpectedGoalsPerGame', name: 'Default Expected Goals per Game', default: 1.3, min: 1.0, max: 2.0, description: 'Fallback value for unknown teams' },
                         { key: 'defaultTeamVariance', name: 'Default Team Variance', default: 0.45, min: 0.2, max: 0.8, description: 'Goal prediction variance for teams' },
-                        { key: 'defaultTeamConfidence', name: 'Default Team Confidence', default: 0.70, min: 0.5, max: 1.0, description: 'Prediction confidence level for teams' },
                         { key: 'globalTierMultiplier', name: 'Global Tier Multiplier', default: 1.25, min: 1.0, max: 2.0, description: 'Global tier impact factor' }
                       ].map((setting) => {
                         const currentValue = (formData as any)[setting.key] || setting.default;
@@ -1835,157 +1799,6 @@ export default function AdminGoalProjections() {
           </Card>
         </TabsContent>
 
-        {/* Team Confidence Tab - DEPRECATED */}
-        <TabsContent value="confidence" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Confidence Analysis</CardTitle>
-              <CardDescription>
-                Team confidence parameters have been removed from projection calculations. This tab shows historical confidence data for reference only.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {confidenceLoading ? (
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fpl-purple mx-auto"></div>
-                  <p className="mt-2 text-sm text-muted-foreground">Loading team confidence analysis...</p>
-                </div>
-              ) : confidenceData ? (
-                <div className="space-y-6">
-                  {/* Overview Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <TrendingUp className="h-5 w-5 text-green-600" />
-                          <div>
-                            <p className="text-sm font-medium">High Confidence</p>
-                            <p className="text-2xl font-bold">
-                              {confidenceData.filter(t => t.confidenceLevel === 'High').length}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <BarChart3 className="h-5 w-5 text-yellow-600" />
-                          <div>
-                            <p className="text-sm font-medium">Medium Confidence</p>
-                            <p className="text-2xl font-bold">
-                              {confidenceData.filter(t => t.confidenceLevel === 'Medium').length}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <Target className="h-5 w-5 text-red-600" />
-                          <div>
-                            <p className="text-sm font-medium">Low Confidence</p>
-                            <p className="text-2xl font-bold">
-                              {confidenceData.filter(t => t.confidenceLevel === 'Low').length}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <Shield className="h-5 w-5 text-fpl-purple" />
-                          <div>
-                            <p className="text-sm font-medium">Total Teams</p>
-                            <p className="text-2xl font-bold">{confidenceData.length}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Team Confidence Table */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left p-2 font-medium">Team</th>
-                          <th className="text-center p-2 font-medium">Confidence Score</th>
-                          <th className="text-center p-2 font-medium">Level</th>
-                          <th className="text-center p-2 font-medium">CS Rate</th>
-                          <th className="text-center p-2 font-medium">Confidence Multiplier</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {confidenceData.slice().sort((a, b) => b.confidenceScore - a.confidenceScore).map((team) => (
-                          <tr key={team.id} className="border-b hover:bg-muted/50">
-                            <td className="p-2">
-                              <div>
-                                <p className="font-medium">{team.team}</p>
-                                <p className="text-sm text-muted-foreground">{team.teamName}</p>
-                              </div>
-                            </td>
-                            <td className="text-center p-2">
-                              <span className="font-mono font-medium">{team.confidenceScore}%</span>
-                            </td>
-                            <td className="text-center p-2">
-                              <Badge className={getConfidenceBadgeColor(team.confidenceLevel)}>
-                                {team.confidenceLevel}
-                              </Badge>
-                            </td>
-                            <td className="text-center p-2">
-                              <span className="font-mono">{team.baseCleanSheetRate}%</span>
-                            </td>
-                            <td className="text-center p-2">
-                              <span className={`font-mono font-medium ${team.confidenceMultiplier > 1 ? 'text-green-600' : ''}`}>
-                                {team.confidenceMultiplier}x
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Explanation */}
-                  <Alert>
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      <div className="space-y-3">
-                        <div>
-                          <strong>How Confidence Score is Calculated:</strong>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p><strong>Market Data (40%):</strong> Betting market assessment of team reliability</p>
-                            <p><strong>Performance Consistency (25%):</strong> Player minutes and reliability metrics</p>
-                          </div>
-                          <div>
-                            <p><strong>Volume Confidence (20%):</strong> Amount of available projection data</p>
-                            <p><strong>Quality Bonus (15%):</strong> CS Rate ≥35% earns defensive quality bonus</p>
-                          </div>
-                        </div>
-                        <div>
-                          <strong>Confidence Levels:</strong> High ≥85% | Medium 65-84% | Low ≤64%
-                        </div>
-                        <div>
-                          <strong>Impact:</strong> <span className="text-red-600 font-medium">REMOVED</span> - Confidence multipliers are no longer applied to goal projections. All teams use the same calculation base without confidence adjustments.
-                        </div>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground">Failed to load team confidence data.</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* Actions */}
