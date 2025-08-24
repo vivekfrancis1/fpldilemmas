@@ -1099,7 +1099,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== ADMIN ENDPOINTS FOR TEAM GOAL PROJECTIONS ====================
   
+  // UNIFIED PROJECTION SETTINGS STORAGE
+  let unifiedProjectionSettings: any = null;
 
+  // Load settings from database
+  async function loadUnifiedProjectionSettings() {
+    try {
+      const [settings] = await db.select().from(unifiedProjectionSettingsTable).limit(1);
+      
+      if (!settings) {
+        console.log("No unified projection settings found in database, creating defaults...");
+        return await createDefaultUnifiedProjectionSettings();
+      }
+      
+      // Convert database strings back to numbers and parse JSON arrays
+      unifiedProjectionSettings = {
+        autoBalance: settings.autoBalance,
+        leagueGoalsPerSeason: settings.leagueGoalsPerSeason,
+        globalTierMultiplier: parseFloat(settings.globalTierMultiplier || "1.25"),
+        lowConfidenceBoost: parseFloat(settings.lowConfidenceBoost || "1.25"),
+        lowConfidenceThreshold: parseFloat(settings.lowConfidenceThreshold || "0.65"),
+        derbyMatchMultiplier: parseFloat(settings.derbyMatchMultiplier || "0.87"),
+        topSixMatchMultiplier: parseFloat(settings.topSixMatchMultiplier || "1.12"),
+        relegationBattleMultiplier: parseFloat(settings.relegationBattleMultiplier || "0.83"),
+        earlyKickoffMultiplier: parseFloat(settings.earlyKickoffMultiplier || "0.94"),
+        lateKickoffMultiplier: parseFloat(settings.lateKickoffMultiplier || "1.07"),
+        postEuropeanMultiplier: parseFloat(settings.postEuropeanMultiplier || "0.88"),
+        midweekFixtureMultiplier: parseFloat(settings.midweekFixtureMultiplier || "0.91"),
+        seasonFinaleMultiplier: parseFloat(settings.seasonFinaleMultiplier || "1.05"),
+        newManagerBounceMultiplier: parseFloat(settings.newManagerBounceMultiplier || "1.08"),
+        weatherConditionsMultiplier: parseFloat(settings.weatherConditionsMultiplier || "0.96"),
+        eliteAttackMultiplier: parseFloat(settings.eliteAttackMultiplier || "1.15"),
+        strongAttackMultiplier: parseFloat(settings.strongAttackMultiplier || "1.10"),
+        averageAttackMultiplier: parseFloat(settings.averageAttackMultiplier || "1.00"),
+        weakAttackMultiplier: parseFloat(settings.weakAttackMultiplier || "0.90"),
+        promotedAttackMultiplier: parseFloat(settings.promotedAttackMultiplier || "0.85"),
+        offensiveVarianceEnabled: settings.offensiveVarianceEnabled,
+        eliteAttackingGoals: settings.eliteAttackingGoals,
+        weakAttackingGoals: settings.weakAttackingGoals,
+        eliteDefenseMultiplier: parseFloat(settings.eliteDefenseMultiplier || "0.60"),
+        strongDefenseMultiplier: parseFloat(settings.strongDefenseMultiplier || "0.75"),
+        averageDefenseMultiplier: parseFloat(settings.averageDefenseMultiplier || "1.00"),
+        weakDefenseMultiplier: parseFloat(settings.weakDefenseMultiplier || "1.35"),
+        promotedDefenseMultiplier: parseFloat(settings.promotedDefenseMultiplier || "1.60"),
+        // Parse team assignments from JSON
+        eliteAttackTeams: JSON.parse(settings.eliteAttackTeams || "[]"),
+        strongAttackTeams: JSON.parse(settings.strongAttackTeams || "[]"),
+        averageAttackTeams: JSON.parse(settings.averageAttackTeams || "[]"),
+        weakAttackTeams: JSON.parse(settings.weakAttackTeams || "[]"),
+        promotedAttackTeams: JSON.parse(settings.promotedAttackTeams || "[]"),
+        eliteDefenseTeams: JSON.parse(settings.eliteDefenseTeams || "[]"),
+        strongDefenseTeams: JSON.parse(settings.strongDefenseTeams || "[]"),
+        averageDefenseTeams: JSON.parse(settings.averageDefenseTeams || "[]"),
+        weakDefenseTeams: JSON.parse(settings.weakDefenseTeams || "[]"),
+        promotedDefenseTeams: JSON.parse(settings.promotedDefenseTeams || "[]"),
+        absoluteMinGoals: parseFloat(settings.absoluteMinGoals || "0.3"),
+        absoluteMaxGoals: parseFloat(settings.absoluteMaxGoals || "4.2"),
+        marketFloorMultiplier: parseFloat(settings.marketFloorMultiplier || "0.4"),
+        marketCeilingMultiplier: parseFloat(settings.marketCeilingMultiplier || "2.0"),
+        lastUpdated: settings.lastUpdated,
+        updatedBy: settings.updatedBy
+      };
+      
+      console.log("✓ Loaded unified projection settings from database");
+      return unifiedProjectionSettings;
+      
+    } catch (error) {
+      console.error("Failed to load unified projection settings from database:", error);
+      return createInMemoryDefaultSettings();
+    }
+  }
 
   // Create default settings in database
   async function createDefaultUnifiedProjectionSettings() {
@@ -1282,9 +1351,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("✓ Unified projection settings saved to database");
       
       // IMMEDIATELY refresh in-memory cache from database so changes reflect without restart
+      unifiedProjectionSettings = await loadUnifiedProjectionSettings();
       console.log("🔄 Refreshing in-memory cache...");
       console.log("✅ In-memory settings cache refreshed - changes now active");
-      console.log(`🔍 DEBUG: Current elite defense multiplier: ${unifiedProjectionSettings.eliteDefenseMultiplier}`);
+      console.log(`🔍 DEBUG: Current elite defense multiplier: ${unifiedProjectionSettings?.eliteDefenseMultiplier || 'not set'}`);
       
     } catch (error) {
       console.error("Failed to save unified projection settings to database:", error);
