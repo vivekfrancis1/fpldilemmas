@@ -498,8 +498,28 @@ export default function AdminGoalProjections() {
     }
   };
 
+  const resetPageSettings = () => {
+    if (confirm('Reset all settings on this Team Goals admin page to default values? This will reset all 7 tabs: attacking multipliers, attacking teams, defensive multipliers, defensive teams, global settings, context multipliers, and market bounds. Other system configurations will remain unchanged.')) {
+      setFormData(prev => ({
+        ...prev,
+        ...DEFAULT_VALUES.attackMultipliers,
+        ...DEFAULT_VALUES.defenseMultipliers,
+        ...DEFAULT_VALUES.globalSettings,
+        ...DEFAULT_VALUES.contextMultipliers,
+        ...DEFAULT_VALUES.marketBounds,
+        ...DEFAULT_TEAM_TIERS,
+        ...DEFAULT_DEFENSIVE_TIERS,
+      }));
+      setHasChanges(true);
+      toast({
+        title: "Page Settings Reset",
+        description: "All Team Goals admin page settings have been reset to default values.",
+      });
+    }
+  };
+
   const handleReset = () => {
-    if (confirm('Reset ALL settings across ALL tabs to default values? This will reset attacking multipliers, team assignments, defensive settings, global settings, context multipliers, and market bounds. This action cannot be undone.')) {
+    if (confirm('Reset ALL settings across ALL pages and configurations in the entire system? This includes Team Goals, Team Clean Sheets, and all other projection configurations. This action cannot be undone.')) {
       resetSettingsMutation.mutate();
     }
   };
@@ -1462,13 +1482,22 @@ export default function AdminGoalProjections() {
               </Button>
               <Button
                 variant="outline"
+                onClick={resetPageSettings}
+                className="flex items-center gap-2"
+                data-testid="button-reset-page-settings"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Page
+              </Button>
+              <Button
+                variant="outline"
                 onClick={handleReset}
                 disabled={resetSettingsMutation.isPending}
                 className="flex items-center gap-2"
                 data-testid="button-reset-settings"
               >
                 <RotateCcw className="h-4 w-4" />
-                {resetSettingsMutation.isPending ? 'Resetting...' : 'Reset to Defaults'}
+                {resetSettingsMutation.isPending ? 'Resetting...' : 'Global Reset'}
               </Button>
             </div>
           </CardContent>
