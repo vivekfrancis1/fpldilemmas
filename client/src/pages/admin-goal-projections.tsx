@@ -684,10 +684,12 @@ export default function AdminGoalProjections() {
                     </div>
                     
                     <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 3: Opponent Defense</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 3: Defensive Tiers</h4>
                       <p className="text-sm text-muted-foreground">
-                        Opponent's clean sheet rate reduces goals by up to 20%<br/>
-                        Formula: xG × (1.0 - opponent_CS_rate × 0.4)
+                        <strong>Elite Defense:</strong> × {formData.eliteDefenseMultiplier || 0.65} (configurable)<br/>
+                        <strong>Strong Defense:</strong> × {formData.strongDefenseMultiplier || 0.80}<br/>
+                        <strong>Average Defense:</strong> × {formData.averageDefenseMultiplier || 1.0}<br/>
+                        <strong>Weak Defense:</strong> × {formData.weakDefenseMultiplier || 1.25}
                       </p>
                     </div>
                     
@@ -890,7 +892,7 @@ export default function AdminGoalProjections() {
                             <p className="text-muted-foreground">Elite (×1.5), Strong (×1.25), etc.</p>
                           </div>
                           <div className="text-center">
-                            <p className="font-medium text-blue-600">Phase 3: Defense Tiers</p>
+                            <p className="font-medium text-blue-600">Phase 3: Defensive Tiers</p>
                             <p className="text-muted-foreground">Elite (×0.65), Strong (×0.80), etc.</p>
                           </div>
                           <div className="text-center">
