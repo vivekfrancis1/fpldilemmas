@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Home, Plane, Info } from "lucide-react";
+import { Calendar, Home, Plane, Info, Sword, Shield } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Fixture {
   id: number;
@@ -36,6 +37,12 @@ export default function Fixtures() {
 
   const { data: fixturesData } = useQuery<Fixture[]>({
     queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch admin goal settings for tier analysis
+  const { data: adminSettings } = useQuery<any>({
+    queryKey: ['/api/admin/goal-scored-settings'],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -78,6 +85,86 @@ export default function Fixtures() {
       case 4: return 'bg-orange-500 text-white'; // Hard - Orange
       case 5: return 'bg-red-600 text-white'; // Very Hard - Red
       default: return 'bg-gray-300 text-gray-900';
+    }
+  };
+
+  // Get attacking tier for a team
+  const getAttackingTier = (teamId: number): string => {
+    if (!adminSettings) return 'average';
+    
+    const parseTeamArray = (teamData: any): number[] => {
+      if (Array.isArray(teamData)) return teamData;
+      if (typeof teamData === 'string') {
+        try {
+          return JSON.parse(teamData);
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const eliteAttackTeams = parseTeamArray(adminSettings.eliteAttackTeams) || [];
+    const strongAttackTeams = parseTeamArray(adminSettings.strongAttackTeams) || [];
+    const weakAttackTeams = parseTeamArray(adminSettings.weakAttackTeams) || [];
+    const promotedAttackTeams = parseTeamArray(adminSettings.promotedAttackTeams) || [];
+    
+    if (eliteAttackTeams.includes(teamId)) return 'elite';
+    if (strongAttackTeams.includes(teamId)) return 'strong';
+    if (weakAttackTeams.includes(teamId)) return 'weak';
+    if (promotedAttackTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+
+  // Get defensive tier for a team
+  const getDefensiveTier = (teamId: number): string => {
+    if (!adminSettings) return 'average';
+    
+    const parseTeamArray = (teamData: any): number[] => {
+      if (Array.isArray(teamData)) return teamData;
+      if (typeof teamData === 'string') {
+        try {
+          return JSON.parse(teamData);
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const eliteDefenseTeams = parseTeamArray(adminSettings.eliteDefenseTeams) || [];
+    const strongDefenseTeams = parseTeamArray(adminSettings.strongDefenseTeams) || [];
+    const weakDefenseTeams = parseTeamArray(adminSettings.weakDefenseTeams) || [];
+    const promotedDefenseTeams = parseTeamArray(adminSettings.promotedDefenseTeams) || [];
+    
+    if (eliteDefenseTeams.includes(teamId)) return 'elite';
+    if (strongDefenseTeams.includes(teamId)) return 'strong';
+    if (weakDefenseTeams.includes(teamId)) return 'weak';
+    if (promotedDefenseTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+
+  // Get tier color class
+  const getTierColor = (tier: string) => {
+    switch (tier) {
+      case 'elite': return 'bg-purple-600 text-white';
+      case 'strong': return 'bg-blue-600 text-white';
+      case 'average': return 'bg-gray-500 text-white';
+      case 'weak': return 'bg-orange-600 text-white';
+      case 'promoted': return 'bg-red-600 text-white';
+      default: return 'bg-gray-300 text-gray-900';
+    }
+  };
+
+  // Get tier numeric value for sorting
+  const getTierValue = (tier: string) => {
+    switch (tier) {
+      case 'elite': return 5;
+      case 'strong': return 4;
+      case 'average': return 3;
+      case 'weak': return 2;
+      case 'promoted': return 1;
+      default: return 3;
     }
   };
 
@@ -189,12 +276,11 @@ export default function Fixtures() {
             Fixture Analyzer
           </div>
           <p className="fpl-page-subtitle">
-            Analyze upcoming fixtures with difficulty ratings and plan your transfers strategically
+            Analyze upcoming fixtures from difficulty, attacking, and defensive perspectives
           </p>
         </div>
 
         <div className="fpl-section-spacing">
-
           {/* Unified Controls */}
           <div className="fpl-filters">
             <div className="fpl-card-header">
@@ -205,144 +291,378 @@ export default function Fixtures() {
             </div>
             <div className="fpl-card-content">
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center">
-            <div className="flex items-center gap-2">
-              <label className="text-xs sm:text-sm font-medium text-gray-700">Gameweeks:</label>
-              <select 
-                value={gameweekRange.start} 
-                onChange={(e) => setGameweekRange(prev => ({ ...prev, start: parseInt(e.target.value) }))}
-                className="px-3 py-1 border border-gray-300 rounded text-sm"
-                data-testid="select-start-gameweek"
-              >
-                {availableGameweeks.map(gw => (
-                  <option key={gw} value={gw}>GW{gw}</option>
-                ))}
-              </select>
-              <span className="text-gray-500">to</span>
-              <select 
-                value={gameweekRange.end} 
-                onChange={(e) => setGameweekRange(prev => ({ ...prev, end: parseInt(e.target.value) }))}
-                className="px-3 py-1 border border-gray-300 rounded text-sm"
-                data-testid="select-end-gameweek"
-              >
-                {availableGameweeks.filter(gw => gw >= gameweekRange.start).map(gw => (
-                  <option key={gw} value={gw}>GW{gw}</option>
-                ))}
-              </select>
-            </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Gameweeks:</label>
+                  <select 
+                    value={gameweekRange.start} 
+                    onChange={(e) => setGameweekRange(prev => ({ ...prev, start: parseInt(e.target.value) }))}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm"
+                    data-testid="select-start-gameweek"
+                  >
+                    {availableGameweeks.map(gw => (
+                      <option key={gw} value={gw}>GW{gw}</option>
+                    ))}
+                  </select>
+                  <span className="text-gray-500">to</span>
+                  <select 
+                    value={gameweekRange.end} 
+                    onChange={(e) => setGameweekRange(prev => ({ ...prev, end: parseInt(e.target.value) }))}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm"
+                    data-testid="select-end-gameweek"
+                  >
+                    {availableGameweeks.filter(gw => gw >= gameweekRange.start).map(gw => (
+                      <option key={gw} value={gw}>GW{gw}</option>
+                    ))}
+                  </select>
+                </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Sort by:</label>
-              <select 
-                value={sortBy} 
-                onChange={(e) => setSortBy(e.target.value as 'team' | 'fdr-asc' | 'fdr-desc')}
-                className="px-3 py-1 border border-gray-300 rounded text-sm"
-                data-testid="select-sort-by"
-              >
-                <option value="team">Team Name</option>
-                <option value="fdr-asc">FDR (Easiest First)</option>
-                <option value="fdr-desc">FDR (Hardest First)</option>
-              </select>
-            </div>
-            
-            <div className="flex flex-wrap gap-3 text-xs justify-center">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-green-600 rounded"></div>
-                <span>1-2 Easy</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-yellow-400 rounded"></div>
-                <span>3 Medium</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-orange-500 rounded"></div>
-                <span>4 Hard</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-red-600 rounded"></div>
-                <span>5 Very Hard</span>
-              </div>
-              <div className="text-xs text-gray-600">
-                Format: TEAM (H/A)
-              </div>
-            </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Sort by:</label>
+                  <select 
+                    value={sortBy} 
+                    onChange={(e) => setSortBy(e.target.value as 'team' | 'fdr-asc' | 'fdr-desc')}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm"
+                    data-testid="select-sort-by"
+                  >
+                    <option value="team">Team Name</option>
+                    <option value="fdr-asc">FDR (Easiest First)</option>
+                    <option value="fdr-desc">FDR (Hardest First)</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Fixture Table */}
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-            </div>
-          ) : (
-            <Card className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b bg-gray-50">
-                      <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
-                      <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Avg FDR</th>
-                      {gameweeks.map(gw => (
-                        <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
-                          gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
-                        }`}>
-                          GW{gw}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedTeams.map(team => {
-                      const avgFDR = teamAverageFDR[team.id];
-                      return (
-                        <tr key={team.id} className="border-b hover:bg-gray-50">
-                          <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">{team.short_name}</span>
-                            </div>
-                          </td>
-                          <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
-                            <div className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                              avgFDR <= 2 ? 'bg-green-100 text-green-800' :
-                              avgFDR <= 3 ? 'bg-yellow-100 text-yellow-800' :
-                              avgFDR <= 4 ? 'bg-orange-100 text-orange-800' :
-                              'bg-red-100 text-red-800'
+          {/* Tabs for Different Analysis Views */}
+          <Tabs defaultValue="difficulty" className="space-y-6">
+            <TabsList className="grid grid-cols-3 w-full">
+              <TabsTrigger value="difficulty" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Fixture Difficulty
+              </TabsTrigger>
+              <TabsTrigger value="attacking" className="flex items-center gap-2">
+                <Sword className="h-4 w-4" />
+                Attacking Analysis
+              </TabsTrigger>
+              <TabsTrigger value="defensive" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Defensive Analysis
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Fixture Difficulty Tab */}
+            <TabsContent value="difficulty" className="space-y-6">
+              <div className="flex flex-wrap gap-3 text-xs justify-center">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-600 rounded"></div>
+                  <span>1-2 Easy</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-yellow-400 rounded"></div>
+                  <span>3 Medium</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-orange-500 rounded"></div>
+                  <span>4 Hard</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-600 rounded"></div>
+                  <span>5 Very Hard</span>
+                </div>
+                <div className="text-xs text-gray-600">
+                  Format: TEAM (H/A)
+                </div>
+              </div>
+
+              {isLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                </div>
+              ) : (
+                <Card className="overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b bg-gray-50">
+                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
+                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Avg FDR</th>
+                          {gameweeks.map(gw => (
+                            <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
+                              gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
                             }`}>
-                              {avgFDR > 0 ? avgFDR : '-'}
-                            </div>
-                          </td>
-                        {gameweeks.map(gw => {
-                          const fixture = fixtureMatrix[team.id]?.[gw];
+                              GW{gw}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedTeams.map(team => {
+                          const avgFDR = teamAverageFDR[team.id];
                           return (
-                            <td key={gw} className={`px-1 py-1 text-center ${
-                              gw === currentGameweek ? 'bg-blue-50' : ''
-                            }`}>
-                              {fixture ? (
-                                <div 
-                                  className={`px-1 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
-                                    fixture.finished ? 'opacity-50' : ''
-                                  }`}
-                                  title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} (FDR: ${fixture.difficulty})`}
-                                  data-testid={`fixture-${team.id}-${gw}`}
-                                >
-                                  <span className="truncate text-xs font-medium whitespace-nowrap">
-                                    {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})
-                                  </span>
+                            <tr key={team.id} className="border-b hover:bg-gray-50">
+                              <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold">{team.short_name}</span>
                                 </div>
-                              ) : (
-                                <div className="px-2 py-1 text-gray-300">-</div>
-                              )}
-                            </td>
+                              </td>
+                              <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
+                                <div className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                                  avgFDR <= 2 ? 'bg-green-100 text-green-800' :
+                                  avgFDR <= 3 ? 'bg-yellow-100 text-yellow-800' :
+                                  avgFDR <= 4 ? 'bg-orange-100 text-orange-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {avgFDR > 0 ? avgFDR : '-'}
+                                </div>
+                              </td>
+                              {gameweeks.map(gw => {
+                                const fixture = fixtureMatrix[team.id]?.[gw];
+                                return (
+                                  <td key={gw} className={`px-1 py-1 text-center ${
+                                    gw === currentGameweek ? 'bg-blue-50' : ''
+                                  }`}>
+                                    {fixture ? (
+                                      <div 
+                                        className={`px-1 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
+                                          fixture.finished ? 'opacity-50' : ''
+                                        }`}
+                                        title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} (FDR: ${fixture.difficulty})`}
+                                        data-testid={`fixture-${team.id}-${gw}`}
+                                      >
+                                        <span className="truncate text-xs font-medium whitespace-nowrap">
+                                          {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="px-2 py-1 text-gray-300">-</div>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
                           );
                         })}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Attacking Analysis Tab */}
+            <TabsContent value="attacking" className="space-y-6">
+              <div className="flex flex-wrap gap-3 text-xs justify-center">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-purple-600 rounded"></div>
+                  <span>Elite Attack</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-blue-600 rounded"></div>
+                  <span>Strong Attack</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-gray-500 rounded"></div>
+                  <span>Average Attack</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-orange-600 rounded"></div>
+                  <span>Weak Attack</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-600 rounded"></div>
+                  <span>Promoted Attack</span>
+                </div>
+                <div className="text-xs text-gray-600">
+                  Attacking Tier vs Defensive Tier
+                </div>
               </div>
-            </Card>
-          )}
+
+              {isLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                </div>
+              ) : (
+                <Card className="overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b bg-gray-50">
+                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
+                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Attack Tier</th>
+                          {gameweeks.map(gw => (
+                            <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
+                              gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
+                            }`}>
+                              GW{gw}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedTeams.map(team => {
+                          const attackTier = getAttackingTier(team.id);
+                          return (
+                            <tr key={team.id} className="border-b hover:bg-gray-50">
+                              <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold">{team.short_name}</span>
+                                </div>
+                              </td>
+                              <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
+                                <div className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getTierColor(attackTier)}`}>
+                                  {attackTier.charAt(0).toUpperCase() + attackTier.slice(1)}
+                                </div>
+                              </td>
+                              {gameweeks.map(gw => {
+                                const fixture = fixtureMatrix[team.id]?.[gw];
+                                if (!fixture) {
+                                  return (
+                                    <td key={gw} className={`px-1 py-1 text-center ${
+                                      gw === currentGameweek ? 'bg-blue-50' : ''
+                                    }`}>
+                                      <div className="px-2 py-1 text-gray-300">-</div>
+                                    </td>
+                                  );
+                                }
+
+                                const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
+                                const opponentDefenseTier = opponentId ? getDefensiveTier(opponentId) : 'average';
+                                
+                                return (
+                                  <td key={gw} className={`px-1 py-1 text-center ${
+                                    gw === currentGameweek ? 'bg-blue-50' : ''
+                                  }`}>
+                                    <div 
+                                      className={`px-1 py-1 rounded text-xs font-medium ${getTierColor(attackTier)} ${
+                                        fixture.finished ? 'opacity-50' : ''
+                                      }`}
+                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - ${attackTier} attack vs ${opponentDefenseTier} defense`}
+                                      data-testid={`attack-fixture-${team.id}-${gw}`}
+                                    >
+                                      <span className="truncate text-xs font-medium whitespace-nowrap">
+                                        {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})
+                                      </span>
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Defensive Analysis Tab */}
+            <TabsContent value="defensive" className="space-y-6">
+              <div className="flex flex-wrap gap-3 text-xs justify-center">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-purple-600 rounded"></div>
+                  <span>Elite Defense</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-blue-600 rounded"></div>
+                  <span>Strong Defense</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-gray-500 rounded"></div>
+                  <span>Average Defense</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-orange-600 rounded"></div>
+                  <span>Weak Defense</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-600 rounded"></div>
+                  <span>Promoted Defense</span>
+                </div>
+                <div className="text-xs text-gray-600">
+                  Defensive Tier vs Attacking Tier
+                </div>
+              </div>
+
+              {isLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                </div>
+              ) : (
+                <Card className="overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b bg-gray-50">
+                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
+                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Defense Tier</th>
+                          {gameweeks.map(gw => (
+                            <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
+                              gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
+                            }`}>
+                              GW{gw}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedTeams.map(team => {
+                          const defenseTier = getDefensiveTier(team.id);
+                          return (
+                            <tr key={team.id} className="border-b hover:bg-gray-50">
+                              <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold">{team.short_name}</span>
+                                </div>
+                              </td>
+                              <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
+                                <div className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getTierColor(defenseTier)}`}>
+                                  {defenseTier.charAt(0).toUpperCase() + defenseTier.slice(1)}
+                                </div>
+                              </td>
+                              {gameweeks.map(gw => {
+                                const fixture = fixtureMatrix[team.id]?.[gw];
+                                if (!fixture) {
+                                  return (
+                                    <td key={gw} className={`px-1 py-1 text-center ${
+                                      gw === currentGameweek ? 'bg-blue-50' : ''
+                                    }`}>
+                                      <div className="px-2 py-1 text-gray-300">-</div>
+                                    </td>
+                                  );
+                                }
+
+                                const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
+                                const opponentAttackTier = opponentId ? getAttackingTier(opponentId) : 'average';
+                                
+                                return (
+                                  <td key={gw} className={`px-1 py-1 text-center ${
+                                    gw === currentGameweek ? 'bg-blue-50' : ''
+                                  }`}>
+                                    <div 
+                                      className={`px-1 py-1 rounded text-xs font-medium ${getTierColor(defenseTier)} ${
+                                        fixture.finished ? 'opacity-50' : ''
+                                      }`}
+                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - ${defenseTier} defense vs ${opponentAttackTier} attack`}
+                                      data-testid={`defense-fixture-${team.id}-${gw}`}
+                                    >
+                                      <span className="truncate text-xs font-medium whitespace-nowrap">
+                                        {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})
+                                      </span>
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
 
           {/* Legend */}
           <Card className="mt-6">
