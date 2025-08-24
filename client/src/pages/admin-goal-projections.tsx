@@ -657,7 +657,7 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 1: Foundation</h4>
                       <p className="text-sm text-muted-foreground">
-                        Starts with <strong>Average Base xG per Team per Game:</strong> <span className="font-mono text-blue-600">{formData.averageBaseXG || 1.35}</span><br/>
+                        Starts with <strong>Average Base xG per Team per Game:</strong> <span className="font-mono text-blue-600">1.35</span><br/>
                         Universal foundation - all teams begin with the same base value
                       </p>
                     </div>
@@ -701,7 +701,11 @@ export default function AdminGoalProjections() {
                         <strong>Top Six Battles:</strong> × <span className="font-mono text-purple-600">{formData.topSixGoalsMultiplier || 1.12}</span><br/>
                         <strong>Relegation Battles:</strong> × <span className="font-mono text-purple-600">{formData.relegationBattleGoalsMultiplier || 0.83}</span><br/>
                         <strong>Early Kickoff:</strong> × <span className="font-mono text-purple-600">{formData.earlyKickoffGoalsMultiplier || 0.94}</span><br/>
-                        <strong>Late Kickoff:</strong> × <span className="font-mono text-purple-600">{formData.lateKickoffGoalsMultiplier || 1.07}</span>
+                        <strong>Late Kickoff:</strong> × <span className="font-mono text-purple-600">{formData.lateKickoffGoalsMultiplier || 1.07}</span><br/>
+                        <strong>Post-European:</strong> × <span className="font-mono text-purple-600">{formData.postEuropeanGoalsMultiplier || 0.88}</span><br/>
+                        <strong>Midweek Fixtures:</strong> × <span className="font-mono text-purple-600">{formData.midweekFixtureGoalsMultiplier || 0.91}</span><br/>
+                        <strong>Season Finale:</strong> × <span className="font-mono text-purple-600">{formData.seasonFinaleGoalsMultiplier || 1.05}</span><br/>
+                        <strong>New Manager Bounce:</strong> × <span className="font-mono text-purple-600">{formData.newManagerBounceGoalsMultiplier || 1.08}</span>
                       </p>
                     </div>
                     
@@ -709,8 +713,8 @@ export default function AdminGoalProjections() {
                       <h4 className="font-semibold text-sm mb-2">Phase 6: Market Bounds</h4>
                       <p className="text-sm text-muted-foreground">
                         <strong>Absolute Min Goals:</strong> <span className="font-mono text-indigo-600">{formData.absoluteMinGoals || 0.0}</span><br/>
-                        <strong>Absolute Max Goals:</strong> <span className="font-mono text-indigo-600">{formData.absoluteMaxGoals || 5.0}</span><br/>
-                        <strong>Market Floor Multiplier:</strong> <span className="font-mono text-indigo-600">{formData.marketFloorMultiplier || 0.5}</span><br/>
+                        <strong>Absolute Max Goals:</strong> <span className="font-mono text-indigo-600">{formData.absoluteMaxGoals || 7.0}</span><br/>
+                        <strong>Market Floor Multiplier:</strong> <span className="font-mono text-indigo-600">{formData.marketFloorMultiplier || 0.40}</span><br/>
                         <strong>Market Ceiling Multiplier:</strong> <span className="font-mono text-indigo-600">{formData.marketCeilingMultiplier || 2.0}</span>
                       </p>
                     </div>
@@ -718,8 +722,8 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 7: Team Confidence</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Low Confidence Threshold:</strong> <span className="font-mono text-teal-600">{((formData.lowConfidenceThreshold || 0.65) * 100).toFixed(0)}%</span><br/>
-                        <strong>Low Confidence Boost:</strong> × <span className="font-mono text-teal-600">{formData.lowConfidenceBoost || 1.05}</span>
+                        <strong>Low Confidence Threshold:</strong> <span className="font-mono text-teal-600">{((formData.lowConfidenceThreshold || 0.30) * 100).toFixed(0)}%</span><br/>
+                        <strong>Low Confidence Boost:</strong> × <span className="font-mono text-teal-600">{formData.lowConfidenceBoost || 1.15}</span>
                       </p>
                     </div>
                     
@@ -727,7 +731,7 @@ export default function AdminGoalProjections() {
                       <h4 className="font-semibold text-sm mb-2">Phase 8: Final Bounds</h4>
                       <p className="text-sm text-muted-foreground">
                         <strong>Absolute Min Goals:</strong> <span className="font-mono text-gray-600">{formData.absoluteMinGoals || 0.0}</span><br/>
-                        <strong>Absolute Max Goals:</strong> <span className="font-mono text-gray-600">{formData.absoluteMaxGoals || 5.0}</span><br/>
+                        <strong>Absolute Max Goals:</strong> <span className="font-mono text-gray-600">{formData.absoluteMaxGoals || 7.0}</span><br/>
                         Final safety bounds to ensure realistic ranges
                       </p>
                     </div>
