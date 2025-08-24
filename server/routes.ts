@@ -1756,13 +1756,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Phase 1: Universal Base xG Foundation - All teams start from 1.35 goals per game
           // This ensures consistent baseline across all teams with differences created through tier multipliers
-          let baseExpectedGoals = 1.35; // Universal base xG foundation
+          let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame || 1.35;
           
           // Phase 2: Venue Factors - Home advantage and away adjustments
-          const settings = unifiedProjectionSettings || await loadUnifiedProjectionSettings();
           const venueMultiplier = isHome ? 
-            (settings.homeAdvantageGoalsMultiplier || 1.15) : // Configurable home advantage
-            (settings.awayFactorGoalsMultiplier || 0.88); // Configurable away factor
+            (adminGoalSettings.homeAdvantageGoalsMultiplier || 1.15) : // Configurable home advantage
+            (adminGoalSettings.awayFactorGoalsMultiplier || 0.88); // Configurable away factor
           baseExpectedGoals *= venueMultiplier;
           
           // Phase 3: Defensive Tiers - Apply opponent's defensive tier multiplier
@@ -1783,11 +1782,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const opponentDefensiveTier = getDefensiveTier(opponent.id);
           let opponentDefensiveMultiplier = 1.0;
           switch (opponentDefensiveTier) {
-            case 'elite': opponentDefensiveMultiplier = settings.eliteDefenseMultiplier; break;
-            case 'strong': opponentDefensiveMultiplier = settings.strongDefenseMultiplier; break;
-            case 'average': opponentDefensiveMultiplier = settings.averageDefenseMultiplier; break;
-            case 'weak': opponentDefensiveMultiplier = settings.weakDefenseMultiplier; break;
-            case 'promoted': opponentDefensiveMultiplier = settings.promotedDefenseMultiplier; break;
+            case 'elite': opponentDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier; break;
+            case 'strong': opponentDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier; break;
+            case 'average': opponentDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier; break;
+            case 'weak': opponentDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier; break;
+            case 'promoted': opponentDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier; break;
           }
           
           baseExpectedGoals *= opponentDefensiveMultiplier;
