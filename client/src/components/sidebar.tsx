@@ -67,7 +67,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
         { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: false },
 
-        { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
+        // { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
       ]
     },
     {
