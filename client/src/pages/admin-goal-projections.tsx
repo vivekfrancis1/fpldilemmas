@@ -209,12 +209,12 @@ export default function AdminGoalProjections() {
     return 'average';
   };
 
-  // Default defensive tier assignments
+  // Default defensive tier assignments - Updated per user specifications
   const DEFAULT_DEFENSIVE_TIERS = {
-    eliteDefenseTeams: [1, 12, 13, 7], // Arsenal, Liverpool, Man City, Chelsea
-    strongDefenseTeams: [15, 6, 18], // Newcastle, Brighton, Spurs
-    averageDefenseTeams: [2, 4, 5, 8, 10, 14, 19], // Aston Villa, Bournemouth, Brentford, Crystal Palace, Fulham, Man Utd, West Ham
-    weakDefenseTeams: [9, 16, 20], // Everton, Nott'm Forest, Wolves
+    eliteDefenseTeams: [1], // Arsenal
+    strongDefenseTeams: [12, 13, 7, 16, 15, 9], // Liverpool, Man City, Chelsea, Nottm Forest, Newcastle, Everton
+    averageDefenseTeams: [8, 14, 18, 2, 10], // Crystal Palace, Man Utd, Spurs, Aston Villa, Fulham
+    weakDefenseTeams: [6, 19, 20, 4, 5], // Brighton, West Ham, Wolves, Bournemouth, Brentford
     promotedDefenseTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
   };
 
@@ -375,6 +375,129 @@ export default function AdminGoalProjections() {
     updateSettingsMutation.mutate(formData);
   };
 
+  // Define default values for each category
+  const DEFAULT_VALUES = {
+    // Attack Multipliers
+    attackMultipliers: {
+      eliteAttackMultiplier: 1.05,
+      strongAttackMultiplier: 1.02,
+      averageAttackMultiplier: 1.00,
+      weakAttackMultiplier: 0.98,
+      promotedAttackMultiplier: 0.95,
+    },
+    // Defense Multipliers
+    defenseMultipliers: {
+      eliteDefenseMultiplier: 0.65,
+      strongDefenseMultiplier: 0.80,
+      averageDefenseMultiplier: 1.00,
+      weakDefenseMultiplier: 1.25,
+      promotedDefenseMultiplier: 1.40,
+    },
+    // Global Settings
+    globalSettings: {
+      globalTierMultiplier: 1.00,
+      lowConfidenceBoost: 1.15,
+      lowConfidenceThreshold: 0.30,
+    },
+    // Context Multipliers
+    contextMultipliers: {
+      derbyGoalsMultiplier: 0.87,
+      topSixGoalsMultiplier: 1.12,
+      relegationBattleGoalsMultiplier: 0.83,
+      earlyKickoffGoalsMultiplier: 0.94,
+      lateKickoffGoalsMultiplier: 1.07,
+      postEuropeanGoalsMultiplier: 0.88,
+      midweekFixtureGoalsMultiplier: 0.91,
+      seasonFinaleGoalsMultiplier: 1.05,
+      newManagerBounceGoalsMultiplier: 1.08,
+    },
+    // Market Bounds
+    marketBounds: {
+      absoluteMinGoals: 0.30,
+      absoluteMaxGoals: 4.20,
+      marketFloorMultiplier: 0.40,
+      marketCeilingMultiplier: 2.00,
+    },
+  };
+
+  // Individual reset functions for each tab
+  const resetAttackMultipliers = () => {
+    if (confirm('Reset attacking multipliers to default values?')) {
+      setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.attackMultipliers }));
+      setHasChanges(true);
+      toast({
+        title: "Attack Multipliers Reset",
+        description: "Attacking tier multipliers have been reset to default values.",
+      });
+    }
+  };
+
+  const resetAttackTeams = () => {
+    if (confirm('Reset attacking team assignments to default values?')) {
+      setFormData(prev => ({ ...prev, ...DEFAULT_TEAM_TIERS }));
+      setHasChanges(true);
+      toast({
+        title: "Attack Teams Reset",
+        description: "Attacking team assignments have been reset to default values.",
+      });
+    }
+  };
+
+  const resetDefenseMultipliers = () => {
+    if (confirm('Reset defensive multipliers to default values?')) {
+      setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.defenseMultipliers }));
+      setHasChanges(true);
+      toast({
+        title: "Defense Multipliers Reset",
+        description: "Defensive tier multipliers have been reset to default values.",
+      });
+    }
+  };
+
+  const resetDefenseTeams = () => {
+    if (confirm('Reset defensive team assignments to default values?')) {
+      setFormData(prev => ({ ...prev, ...DEFAULT_DEFENSIVE_TIERS }));
+      setHasChanges(true);
+      toast({
+        title: "Defense Teams Reset",
+        description: "Defensive team assignments have been reset to default values.",
+      });
+    }
+  };
+
+  const resetGlobalSettings = () => {
+    if (confirm('Reset global settings to default values?')) {
+      setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.globalSettings }));
+      setHasChanges(true);
+      toast({
+        title: "Global Settings Reset",
+        description: "Global settings have been reset to default values.",
+      });
+    }
+  };
+
+  const resetContextMultipliers = () => {
+    if (confirm('Reset context multipliers to default values?')) {
+      setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.contextMultipliers }));
+      setHasChanges(true);
+      toast({
+        title: "Context Multipliers Reset",
+        description: "Context multipliers have been reset to default values.",
+      });
+    }
+  };
+
+  const resetMarketBounds = () => {
+    if (confirm('Reset market bounds to default values?')) {
+      setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.marketBounds }));
+      setHasChanges(true);
+      toast({
+        title: "Market Bounds Reset",
+        description: "Market bounds have been reset to default values.",
+      });
+    }
+  };
+
   const handleReset = () => {
     if (confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
       resetSettingsMutation.mutate();
@@ -425,9 +548,21 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="attacking-multipliers" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Attacking Tier Multipliers</CardTitle>
-              <CardDescription>Team quality-based multipliers for attacking prowess (applied to goals scored)</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Attacking Tier Multipliers</CardTitle>
+                <CardDescription>Team quality-based multipliers for attacking prowess (applied to goals scored)</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetAttackMultipliers}
+                className="flex items-center gap-2"
+                data-testid="button-reset-attack-multipliers"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Tab
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -528,14 +663,26 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="attacking-teams" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Team Attacking Tier Assignments
-              </CardTitle>
-              <CardDescription>
-                Assign all 20 Premier League teams to attacking tiers that determine their goal-scoring multipliers in projections.
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Team Attacking Tier Assignments
+                </CardTitle>
+                <CardDescription>
+                  Assign all 20 Premier League teams to attacking tiers that determine their goal-scoring multipliers in projections.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetAttackTeams}
+                className="flex items-center gap-2"
+                data-testid="button-reset-attack-teams"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Tab
+              </Button>
             </CardHeader>
             <CardContent className="space-y-8">
               
@@ -665,9 +812,21 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="defensive-multipliers" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Defensive Tier Multipliers</CardTitle>
-              <CardDescription>Team quality-based multipliers for defensive solidity (applied to goals conceded)</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Defensive Tier Multipliers</CardTitle>
+                <CardDescription>Team quality-based multipliers for defensive solidity (applied to goals conceded)</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetDefenseMultipliers}
+                className="flex items-center gap-2"
+                data-testid="button-reset-defense-multipliers"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Tab
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -768,14 +927,26 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="defensive-teams" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Team Defensive Tier Assignments
-              </CardTitle>
-              <CardDescription>
-                Assign all 20 Premier League teams to defensive tiers that determine their clean sheet probability and goals against projections.
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Team Defensive Tier Assignments
+                </CardTitle>
+                <CardDescription>
+                  Assign all 20 Premier League teams to defensive tiers that determine their clean sheet probability and goals against projections.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetDefenseTeams}
+                className="flex items-center gap-2"
+                data-testid="button-reset-defense-teams"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Tab
+              </Button>
             </CardHeader>
             <CardContent className="space-y-8">
               
@@ -905,9 +1076,21 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="global" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Global Settings</CardTitle>
-              <CardDescription>System-wide multipliers that affect all projection calculations</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Global Settings</CardTitle>
+                <CardDescription>System-wide multipliers that affect all projection calculations</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetGlobalSettings}
+                className="flex items-center gap-2"
+                data-testid="button-reset-global-settings"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Tab
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -972,9 +1155,21 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="context" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Context Multipliers</CardTitle>
-              <CardDescription>Situational adjustments based on match circumstances and timing</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Context Multipliers</CardTitle>
+                <CardDescription>Situational adjustments based on match circumstances and timing</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetContextMultipliers}
+                className="flex items-center gap-2"
+                data-testid="button-reset-context-multipliers"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Tab
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1147,9 +1342,21 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="market" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Market Bounds</CardTitle>
-              <CardDescription>Hard limits and boundaries for goal projections to maintain realistic ranges</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Market Bounds</CardTitle>
+                <CardDescription>Hard limits and boundaries for goal projections to maintain realistic ranges</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetMarketBounds}
+                className="flex items-center gap-2"
+                data-testid="button-reset-market-bounds"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Tab
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
