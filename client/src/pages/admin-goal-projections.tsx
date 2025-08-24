@@ -88,6 +88,7 @@ export default function AdminGoalProjections() {
   
   const [formData, setFormData] = useState<AdminSettings>({} as AdminSettings);
   const [hasChanges, setHasChanges] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Use hardcoded team data for consistency and performance
   const teams: Team[] = [...PREMIER_LEAGUE_TEAMS];
@@ -556,6 +557,63 @@ export default function AdminGoalProjections() {
     }
   };
 
+  // Function to get the reset function for the current tab
+  const getCurrentTabResetFunction = () => {
+    switch (activeTab) {
+      case 'base-xg':
+        return () => {
+          if (confirm('Reset all base xG values to default 2025/26 season projections?')) {
+            toast({
+              title: "Base xG Reset",
+              description: "All team base xG values have been reset to season defaults.",
+            });
+          }
+        };
+      case 'attacking-multipliers':
+        return resetAttackMultipliers;
+      case 'attacking-teams':
+        return resetAttackTeams;
+      case 'defensive-multipliers':
+        return resetDefenseMultipliers;
+      case 'defensive-teams':
+        return resetDefenseTeams;
+      case 'context':
+        return resetContextMultipliers;
+      case 'venue':
+        return resetVenueFactors;
+      case 'market':
+        return resetMarketBounds;
+      default:
+        return null;
+    }
+  };
+
+  // Function to get the reset button text for the current tab
+  const getCurrentTabResetText = () => {
+    switch (activeTab) {
+      case 'calculation-base':
+        return 'Reset Overview';
+      case 'base-xg':
+        return 'Reset Base xG';
+      case 'attacking-multipliers':
+        return 'Reset Attack Multipliers';
+      case 'attacking-teams':
+        return 'Reset Attack Teams';
+      case 'defensive-multipliers':
+        return 'Reset Defense Multipliers';
+      case 'defensive-teams':
+        return 'Reset Defense Teams';
+      case 'context':
+        return 'Reset Context Multipliers';
+      case 'venue':
+        return 'Reset Venue Factors';
+      case 'market':
+        return 'Reset Market Bounds';
+      default:
+        return 'Reset Tab';
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -588,7 +646,7 @@ export default function AdminGoalProjections() {
         </AlertDescription>
       </Alert>
 
-      <Tabs defaultValue="calculation-base" className="space-y-6">
+      <Tabs defaultValue="calculation-base" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="flex flex-wrap gap-1 h-auto p-1">
           <TabsTrigger value="calculation-base">Calculation Base</TabsTrigger>
           <TabsTrigger value="base-xg">Base xG Settings</TabsTrigger>
@@ -708,29 +766,11 @@ export default function AdminGoalProjections() {
         {/* Base xG Settings Tab */}
         <TabsContent value="base-xg" className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <div>
                 <CardTitle>Base Calculation Parameters</CardTitle>
                 <CardDescription>Core mathematical constants (previously hardcoded) that drive all team goal projections</CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (confirm('Reset all base xG values to default 2025/26 season projections?')) {
-                    // Reset logic would go here
-                    toast({
-                      title: "Base xG Reset",
-                      description: "All team base xG values have been reset to season defaults.",
-                    });
-                  }
-                }}
-                className="flex items-center gap-2"
-                data-testid="button-reset-base-xg"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Tab
-              </Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -871,21 +911,11 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="attacking-multipliers" className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <div>
                 <CardTitle>Attacking Tier Multipliers</CardTitle>
                 <CardDescription>Team quality-based multipliers for attacking prowess (applied to goals scored)</CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetAttackMultipliers}
-                className="flex items-center gap-2"
-                data-testid="button-reset-attack-multipliers"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Tab
-              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <Alert>
@@ -994,7 +1024,7 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="attacking-teams" className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
@@ -1004,16 +1034,6 @@ export default function AdminGoalProjections() {
                   Assign all 20 Premier League teams to attacking tiers that determine their goal-scoring multipliers in projections.
                 </CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetAttackTeams}
-                className="flex items-center gap-2"
-                data-testid="button-reset-attack-teams"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Tab
-              </Button>
             </CardHeader>
             <CardContent className="space-y-8">
               
@@ -1143,21 +1163,11 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="defensive-multipliers" className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <div>
                 <CardTitle>Defensive Tier Multipliers</CardTitle>
                 <CardDescription>Team quality-based multipliers for defensive solidity (applied to goals conceded)</CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetDefenseMultipliers}
-                className="flex items-center gap-2"
-                data-testid="button-reset-defense-multipliers"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Tab
-              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <Alert>
@@ -1266,7 +1276,7 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="defensive-teams" className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="h-5 w-5" />
@@ -1276,16 +1286,6 @@ export default function AdminGoalProjections() {
                   Assign all 20 Premier League teams to defensive tiers that determine their clean sheet probability and goals against projections.
                 </CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetDefenseTeams}
-                className="flex items-center gap-2"
-                data-testid="button-reset-defense-teams"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Tab
-              </Button>
             </CardHeader>
             <CardContent className="space-y-8">
               
@@ -1416,21 +1416,11 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="context" className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <div>
                 <CardTitle>Context Multipliers</CardTitle>
                 <CardDescription>Situational adjustments based on match circumstances and timing</CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetContextMultipliers}
-                className="flex items-center gap-2"
-                data-testid="button-reset-context-multipliers"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Tab
-              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <Alert>
@@ -1544,21 +1534,11 @@ export default function AdminGoalProjections() {
         {/* Venue Factors Tab */}
         <TabsContent value="venue" className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <div>
                 <CardTitle>Venue Factors</CardTitle>
                 <CardDescription>Home and away multipliers that adjust goals scored based on match venue (Phase 2)</CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetVenueFactors}
-                className="flex items-center gap-2"
-                data-testid="button-reset-venue-factors"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Tab
-              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <Alert>
@@ -1664,21 +1644,11 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="market" className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <div>
                 <CardTitle>Market Bounds</CardTitle>
                 <CardDescription>Hard limits and boundaries for goal projections to maintain realistic ranges</CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetMarketBounds}
-                className="flex items-center gap-2"
-                data-testid="button-reset-market-bounds"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Tab
-              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <Alert>
@@ -1812,6 +1782,17 @@ export default function AdminGoalProjections() {
                 <Save className="h-4 w-4" />
                 {updateSettingsMutation.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
+              {getCurrentTabResetFunction() && (
+                <Button
+                  variant="outline"
+                  onClick={getCurrentTabResetFunction()}
+                  className="flex items-center gap-2"
+                  data-testid="button-reset-current-tab"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  {getCurrentTabResetText()}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={resetPageSettings}
