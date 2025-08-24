@@ -4,11 +4,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, RotateCcw, Save, AlertTriangle } from "lucide-react";
+import { Settings, RotateCcw, Save, AlertTriangle, Users, Shield } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+interface Team {
+  id: number;
+  name: string;
+  short_name: string;
+  code: number;
+}
 
 interface AdminSettings {
   globalTierMultiplier: number;
@@ -20,6 +29,12 @@ interface AdminSettings {
   averageAttackMultiplier: number;
   weakAttackMultiplier: number;
   promotedAttackMultiplier: number;
+  // Team Tier Assignments
+  eliteAttackTeams: number[];
+  strongAttackTeams: number[];
+  averageAttackTeams: number[];
+  weakAttackTeams: number[];
+  promotedAttackTeams: number[];
   // Defensive Tier Multipliers
   eliteDefenseMultiplier: number;
   strongDefenseMultiplier: number;
@@ -44,12 +59,29 @@ interface AdminSettings {
   updatedBy: string;
 }
 
+// Default team tier assignments based on current Premier League standings and performance
+const DEFAULT_TEAM_TIERS = {
+  eliteAttackTeams: [1, 2], // Arsenal, Man City
+  strongAttackTeams: [3, 4, 5, 6], // Liverpool, Newcastle, Chelsea, Tottenham
+  averageAttackTeams: [7, 8, 9, 10, 11, 12, 13, 14], // Brighton, Aston Villa, West Ham, Crystal Palace, Bournemouth, Fulham, Wolves, Everton
+  weakAttackTeams: [15, 16, 17], // Brentford, Nottm Forest, Man Utd
+  promotedAttackTeams: [18, 19, 20], // Leicester, Ipswich, Southampton
+};
+
 export default function AdminGoalProjections() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState<AdminSettings>({} as AdminSettings);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Fetch team data from bootstrap
+  const { data: bootstrapData } = useQuery({
+    queryKey: ['/api/bootstrap-static'],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const teams: Team[] = (bootstrapData as any)?.teams || [];
 
   // Fetch current admin settings
   const { data: settings, isLoading } = useQuery<AdminSettings>({
@@ -113,7 +145,16 @@ export default function AdminGoalProjections() {
   // Initialize form data when settings are loaded
   useEffect(() => {
     if (settings) {
-      setFormData(settings);
+      // Initialize team tier assignments if they don't exist
+      const settingsWithDefaults = {
+        ...settings,
+        eliteAttackTeams: settings.eliteAttackTeams || DEFAULT_TEAM_TIERS.eliteAttackTeams,
+        strongAttackTeams: settings.strongAttackTeams || DEFAULT_TEAM_TIERS.strongAttackTeams,
+        averageAttackTeams: settings.averageAttackTeams || DEFAULT_TEAM_TIERS.averageAttackTeams,
+        weakAttackTeams: settings.weakAttackTeams || DEFAULT_TEAM_TIERS.weakAttackTeams,
+        promotedAttackTeams: settings.promotedAttackTeams || DEFAULT_TEAM_TIERS.promotedAttackTeams,
+      };
+      setFormData(settingsWithDefaults);
       setHasChanges(false);
     }
   }, [settings]);
@@ -122,6 +163,76 @@ export default function AdminGoalProjections() {
     const numericValue = parseFloat(value) || 0;
     setFormData(prev => ({ ...prev, [field]: numericValue }));
     setHasChanges(true);
+  };
+
+  // Team assignment handlers
+  const handleTeamTierChange = (teamId: number, newTier: string) => {
+    const teamIdNumber = Number(teamId);
+    
+    // Remove team from all tiers first
+    const updatedFormData = {
+      ...formData,
+      eliteAttackTeams: formData.eliteAttackTeams?.filter(id => id !== teamIdNumber) || [],
+      strongAttackTeams: formData.strongAttackTeams?.filter(id => id !== teamIdNumber) || [],
+      averageAttackTeams: formData.averageAttackTeams?.filter(id => id !== teamIdNumber) || [],
+      weakAttackTeams: formData.weakAttackTeams?.filter(id => id !== teamIdNumber) || [],
+      promotedAttackTeams: formData.promotedAttackTeams?.filter(id => id !== teamIdNumber) || [],
+    };
+
+    // Add team to new tier
+    switch (newTier) {
+      case 'elite':
+        updatedFormData.eliteAttackTeams.push(teamIdNumber);
+        break;
+      case 'strong':
+        updatedFormData.strongAttackTeams.push(teamIdNumber);
+        break;
+      case 'average':
+        updatedFormData.averageAttackTeams.push(teamIdNumber);
+        break;
+      case 'weak':
+        updatedFormData.weakAttackTeams.push(teamIdNumber);
+        break;
+      case 'promoted':
+        updatedFormData.promotedAttackTeams.push(teamIdNumber);
+        break;
+    }
+
+    setFormData(updatedFormData);
+    setHasChanges(true);
+  };
+
+  // Helper function to get team's current tier
+  const getTeamTier = (teamId: number): string => {
+    if (formData.eliteAttackTeams?.includes(teamId)) return 'elite';
+    if (formData.strongAttackTeams?.includes(teamId)) return 'strong';
+    if (formData.averageAttackTeams?.includes(teamId)) return 'average';
+    if (formData.weakAttackTeams?.includes(teamId)) return 'weak';
+    if (formData.promotedAttackTeams?.includes(teamId)) return 'promoted';
+    return 'average'; // default
+  };
+
+  // Helper function to get teams by tier
+  const getTeamsByTier = (tier: string): Team[] => {
+    let teamIds: number[] = [];
+    switch (tier) {
+      case 'elite':
+        teamIds = formData.eliteAttackTeams || [];
+        break;
+      case 'strong':
+        teamIds = formData.strongAttackTeams || [];
+        break;
+      case 'average':
+        teamIds = formData.averageAttackTeams || [];
+        break;
+      case 'weak':
+        teamIds = formData.weakAttackTeams || [];
+        break;
+      case 'promoted':
+        teamIds = formData.promotedAttackTeams || [];
+        break;
+    }
+    return teams.filter(team => teamIds.includes(team.id));
   };
 
   const handleSave = () => {
@@ -243,30 +354,33 @@ export default function AdminGoalProjections() {
 
         <TabsContent value="attacking" className="space-y-6">
           <Card>
-          <CardHeader>
-            <CardTitle>Attacking Tier Multipliers</CardTitle>
-            <CardDescription>Team quality-based multipliers for goal scoring ability</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="eliteAttackMultiplier">Elite Attack</Label>
-                <Input
-                  id="eliteAttackMultiplier"
-                  type="number"
-                  step="0.01"
-                  min="0.8"
-                  max="1.5"
-                  value={formData.eliteAttackMultiplier || 0}
-                  onChange={(e) => handleInputChange('eliteAttackMultiplier', e.target.value)}
-                  data-testid="input-elite-attack-multiplier"
-                />
-                <p className="text-xs text-muted-foreground">
-                  <strong>Default: 1.15</strong><br/>
-                  Premier League elite attacking teams (Man City, Arsenal).<br/>
-                  <em>Range: 0.8-1.5</em>
-                </p>
-              </div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Attacking Tier Multipliers & Team Assignments
+              </CardTitle>
+              <CardDescription>Team quality-based multipliers for goal scoring ability with configurable team assignments</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Multiplier Controls */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="eliteAttackMultiplier">Elite Attack Multiplier</Label>
+                  <Input
+                    id="eliteAttackMultiplier"
+                    type="number"
+                    step="0.01"
+                    min="0.8"
+                    max="1.5"
+                    value={formData.eliteAttackMultiplier || 0}
+                    onChange={(e) => handleInputChange('eliteAttackMultiplier', e.target.value)}
+                    data-testid="input-elite-attack-multiplier"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Default: 1.15</strong><br/>
+                    <em>Range: 0.8-1.5</em>
+                  </p>
+                </div>
               <div className="space-y-2">
                 <Label htmlFor="strongAttackMultiplier">Strong Attack</Label>
                 <Input
@@ -338,6 +452,173 @@ export default function AdminGoalProjections() {
                   Newly promoted teams adapting to Premier League level.<br/>
                   <em>Range: 0.5-1.0</em>
                 </p>
+              </div>
+            </div>
+
+            <Separator className="my-6" />
+
+            {/* Team Assignment Section */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Shield className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold">Team Tier Assignments</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                {/* Elite Attack Teams */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="bg-green-600">Elite Attack (×{formData.eliteAttackMultiplier || 1.15})</Badge>
+                  </div>
+                  <div className="border rounded-lg p-3 min-h-[120px] bg-green-50">
+                    <div className="space-y-2">
+                      {getTeamsByTier('elite').map(team => (
+                        <div key={team.id} className="flex items-center justify-between text-sm">
+                          <span className="font-medium">{team.short_name}</span>
+                          <Select 
+                            value="elite" 
+                            onValueChange={(value) => handleTeamTierChange(team.id, value)}
+                          >
+                            <SelectTrigger className="w-20 h-6 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="elite">Elite</SelectItem>
+                              <SelectItem value="strong">Strong</SelectItem>
+                              <SelectItem value="average">Average</SelectItem>
+                              <SelectItem value="weak">Weak</SelectItem>
+                              <SelectItem value="promoted">Promoted</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Strong Attack Teams */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="bg-blue-600">Strong Attack (×{formData.strongAttackMultiplier || 1.10})</Badge>
+                  </div>
+                  <div className="border rounded-lg p-3 min-h-[120px] bg-blue-50">
+                    <div className="space-y-2">
+                      {getTeamsByTier('strong').map(team => (
+                        <div key={team.id} className="flex items-center justify-between text-sm">
+                          <span className="font-medium">{team.short_name}</span>
+                          <Select 
+                            value="strong" 
+                            onValueChange={(value) => handleTeamTierChange(team.id, value)}
+                          >
+                            <SelectTrigger className="w-20 h-6 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="elite">Elite</SelectItem>
+                              <SelectItem value="strong">Strong</SelectItem>
+                              <SelectItem value="average">Average</SelectItem>
+                              <SelectItem value="weak">Weak</SelectItem>
+                              <SelectItem value="promoted">Promoted</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Average Attack Teams */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="bg-gray-600">Average Attack (×{formData.averageAttackMultiplier || 1.00})</Badge>
+                  </div>
+                  <div className="border rounded-lg p-3 min-h-[120px] bg-gray-50">
+                    <div className="space-y-2">
+                      {getTeamsByTier('average').map(team => (
+                        <div key={team.id} className="flex items-center justify-between text-sm">
+                          <span className="font-medium">{team.short_name}</span>
+                          <Select 
+                            value="average" 
+                            onValueChange={(value) => handleTeamTierChange(team.id, value)}
+                          >
+                            <SelectTrigger className="w-20 h-6 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="elite">Elite</SelectItem>
+                              <SelectItem value="strong">Strong</SelectItem>
+                              <SelectItem value="average">Average</SelectItem>
+                              <SelectItem value="weak">Weak</SelectItem>
+                              <SelectItem value="promoted">Promoted</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weak Attack Teams */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="bg-orange-600">Weak Attack (×{formData.weakAttackMultiplier || 0.90})</Badge>
+                  </div>
+                  <div className="border rounded-lg p-3 min-h-[120px] bg-orange-50">
+                    <div className="space-y-2">
+                      {getTeamsByTier('weak').map(team => (
+                        <div key={team.id} className="flex items-center justify-between text-sm">
+                          <span className="font-medium">{team.short_name}</span>
+                          <Select 
+                            value="weak" 
+                            onValueChange={(value) => handleTeamTierChange(team.id, value)}
+                          >
+                            <SelectTrigger className="w-20 h-6 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="elite">Elite</SelectItem>
+                              <SelectItem value="strong">Strong</SelectItem>
+                              <SelectItem value="average">Average</SelectItem>
+                              <SelectItem value="weak">Weak</SelectItem>
+                              <SelectItem value="promoted">Promoted</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Promoted Attack Teams */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="bg-red-600">Promoted Attack (×{formData.promotedAttackMultiplier || 0.85})</Badge>
+                  </div>
+                  <div className="border rounded-lg p-3 min-h-[120px] bg-red-50">
+                    <div className="space-y-2">
+                      {getTeamsByTier('promoted').map(team => (
+                        <div key={team.id} className="flex items-center justify-between text-sm">
+                          <span className="font-medium">{team.short_name}</span>
+                          <Select 
+                            value="promoted" 
+                            onValueChange={(value) => handleTeamTierChange(team.id, value)}
+                          >
+                            <SelectTrigger className="w-20 h-6 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="elite">Elite</SelectItem>
+                              <SelectItem value="strong">Strong</SelectItem>
+                              <SelectItem value="average">Average</SelectItem>
+                              <SelectItem value="weak">Weak</SelectItem>
+                              <SelectItem value="promoted">Promoted</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
