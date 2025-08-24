@@ -34,7 +34,6 @@ interface TeamConfidenceData {
 }
 
 interface AdminSettings {
-  globalTierMultiplier: number;
   lowConfidenceBoost: number;
   lowConfidenceThreshold: number;
   // Venue Multipliers
@@ -454,9 +453,8 @@ export default function AdminGoalProjections() {
       weakDefenseMultiplier: 1.25,
       promotedDefenseMultiplier: 1.5,
     },
-    // Global Settings
-    globalSettings: {
-      globalTierMultiplier: 1.00,
+    // Confidence Settings
+    confidenceSettings: {
       lowConfidenceBoost: 1.15,
       lowConfidenceThreshold: 0.30,
     },
@@ -533,16 +531,6 @@ export default function AdminGoalProjections() {
     }
   };
 
-  const resetGlobalSettings = () => {
-    if (confirm('Reset only this tab\'s global settings to default values? Other settings will remain unchanged.')) {
-      setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.globalSettings }));
-      setHasChanges(true);
-      toast({
-        title: "Global Settings Reset",
-        description: "Only global settings have been reset to default values.",
-      });
-    }
-  };
 
   const resetContextMultipliers = () => {
     if (confirm('Reset only this tab\'s context multipliers to default values? Other settings will remain unchanged.')) {
@@ -578,15 +566,15 @@ export default function AdminGoalProjections() {
   };
 
   const resetPageSettings = () => {
-    if (confirm('Reset all settings on this Team Goals admin page to default values? This will reset all 8 tabs: attacking multipliers, attacking teams, defensive multipliers, defensive teams, global settings, context multipliers, venue factors, and market bounds. Other system configurations will remain unchanged.')) {
+    if (confirm('Reset all settings on this Team Goals admin page to default values? This will reset all 7 tabs: attacking multipliers, attacking teams, defensive multipliers, defensive teams, context multipliers, venue factors, and market bounds. Other system configurations will remain unchanged.')) {
       setFormData(prev => ({
         ...prev,
         ...DEFAULT_VALUES.attackMultipliers,
         ...DEFAULT_VALUES.defenseMultipliers,
-        ...DEFAULT_VALUES.globalSettings,
         ...DEFAULT_VALUES.contextMultipliers,
         ...DEFAULT_VALUES.marketBounds,
         ...DEFAULT_VALUES.venueFactors,
+        ...DEFAULT_VALUES.confidenceSettings,
         ...DEFAULT_TEAM_TIERS,
         ...DEFAULT_DEFENSIVE_TIERS,
       }));
@@ -644,7 +632,6 @@ export default function AdminGoalProjections() {
           <TabsTrigger value="attacking-teams">Attack Teams</TabsTrigger>
           <TabsTrigger value="defensive-multipliers">Defense Multipliers</TabsTrigger>
           <TabsTrigger value="defensive-teams">Defense Teams</TabsTrigger>
-          <TabsTrigger value="global">Global Settings</TabsTrigger>
           <TabsTrigger value="context">Context Multipliers</TabsTrigger>
           <TabsTrigger value="venue">Venue Factors</TabsTrigger>
           <TabsTrigger value="market">Market Bounds</TabsTrigger>
@@ -1457,126 +1444,6 @@ export default function AdminGoalProjections() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="global" className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Global Settings</CardTitle>
-                <CardDescription>System-wide multipliers that affect all projection calculations</CardDescription>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetGlobalSettings}
-                className="flex items-center gap-2"
-                data-testid="button-reset-global-settings"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Tab
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>System-Wide Settings:</strong> These global multipliers affect all projection calculations across the entire system.
-                </AlertDescription>
-              </Alert>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2 font-medium">Setting</th>
-                      <th className="text-center p-2 font-medium">Default</th>
-                      <th className="text-center p-2 font-medium">Current</th>
-                      <th className="text-center p-2 font-medium">New Value</th>
-                      <th className="text-center p-2 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { key: 'globalTierMultiplier', name: 'Global Tier Multiplier', default: 1.0, min: 0.5, max: 2.0, description: 'Master multiplier for all tier-based calculations' },
-                      { key: 'lowConfidenceBoost', name: 'Low Confidence Boost', default: 1.15, min: 1.0, max: 2.0, description: 'Boost for projections with low confidence scores' },
-                      { key: 'lowConfidenceThreshold', name: 'Low Confidence Threshold', default: 0.30, min: 0.1, max: 0.9, description: 'Confidence score threshold for boost application' }
-                    ].map((setting) => {
-                      const currentValue = (formData as any)[setting.key] || setting.default;
-                      const isChanged = Math.abs(currentValue - setting.default) > 0.01;
-                      
-                      return (
-                        <tr key={setting.key} className="border-b hover:bg-muted/50">
-                          <td className="p-2">
-                            <div>
-                              <p className="font-medium">{setting.name}</p>
-                              <p className="text-sm text-muted-foreground">{setting.description}</p>
-                            </div>
-                          </td>
-                          <td className="text-center p-2">
-                            <span className="font-mono text-sm text-muted-foreground">
-                              {setting.default.toFixed(2)}
-                            </span>
-                          </td>
-                          <td className="text-center p-2">
-                            <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
-                              {currentValue.toFixed(2)}
-                            </span>
-                            {isChanged && (
-                              <div className="text-xs text-blue-600 mt-1">Modified</div>
-                            )}
-                          </td>
-                          <td className="text-center p-2">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min={setting.min}
-                              max={setting.max}
-                              className="w-20 mx-auto text-center"
-                              value={currentValue.toFixed(2)}
-                              onChange={(e) => handleInputChange(setting.key as keyof AdminSettings, e.target.value)}
-                              data-testid={`input-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
-                            />
-                          </td>
-                          <td className="text-center p-2">
-                            <div className="flex gap-1 justify-center">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  toast({
-                                    title: "Setting Updated",
-                                    description: `${setting.name} updated to ${currentValue.toFixed(2)}`,
-                                  });
-                                }}
-                                data-testid={`button-update-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
-                              >
-                                Update
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  handleInputChange(setting.key as keyof AdminSettings, setting.default.toString());
-                                  toast({
-                                    title: "Reset to Default",
-                                    description: `${setting.name} reset to ${setting.default.toFixed(2)}`,
-                                  });
-                                }}
-                                data-testid={`button-reset-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
-                                title="Reset to default"
-                              >
-                                ↺
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="context" className="space-y-6">
           <Card>
@@ -2091,7 +1958,7 @@ export default function AdminGoalProjections() {
                           <strong>Confidence Levels:</strong> High ≥85% | Medium 65-84% | Low ≤64%
                         </div>
                         <div>
-                          <strong>Impact:</strong> Teams with confidence below {formData.lowConfidenceThreshold * 100}% receive a {formData.lowConfidenceBoost}x boost to their expected goals. You can adjust these settings in the Global Settings tab.
+                          <strong>Impact:</strong> Teams with confidence below {formData.lowConfidenceThreshold * 100}% receive a {formData.lowConfidenceBoost}x boost to their expected goals. These boost values are configured in the team confidence calculation.
                         </div>
                       </div>
                     </AlertDescription>
