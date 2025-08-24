@@ -126,7 +126,7 @@ export default function AdminGoalProjections() {
       <div className="container mx-auto p-6">
         <div className="flex items-center gap-2 mb-6">
           <Settings className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Team Goal Projections Admin</h1>
+          <h1 className="text-2xl font-bold">Configuration Portal - Team Goals Scored</h1>
         </div>
         <div className="text-center py-8">Loading settings...</div>
       </div>
@@ -137,7 +137,7 @@ export default function AdminGoalProjections() {
     <div className="container mx-auto p-6">
       <div className="flex items-center gap-2 mb-6">
         <Settings className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Team Goal Projections Admin</h1>
+        <h1 className="text-2xl font-bold">Configuration Portal - Team Goals Scored</h1>
       </div>
 
       <Alert className="mb-6">
