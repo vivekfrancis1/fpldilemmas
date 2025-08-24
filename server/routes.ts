@@ -1396,6 +1396,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
 
+  // ==================== UNIFIED PROJECTION SETTINGS ENDPOINTS ====================
+
+  // GET unified projection settings endpoint
+  app.get("/api/admin/unified-projection-settings", async (req, res) => {
+    try {
+      // Add cache-busting headers to ensure immediate reflection of changes
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+      const settings = await loadUnifiedProjectionSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching unified projection settings:", error);
+      res.status(500).json({
+        error: "Failed to fetch unified projection settings",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // PUT unified projection settings endpoint
+  app.put("/api/admin/unified-projection-settings", async (req, res) => {
+    try {
+      const updatedSettings = {
+        ...req.body,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      await saveUnifiedProjectionSettings(updatedSettings);
+      
+      // Reload settings to get the updated values
+      const refreshedSettings = await loadUnifiedProjectionSettings();
+      
+      res.json({
+        success: true,
+        message: "Settings updated successfully",
+        settings: refreshedSettings
+      });
+    } catch (error) {
+      console.error("Error updating unified projection settings:", error);
+      res.status(500).json({
+        error: "Failed to update unified projection settings",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // ==================== LEGACY GOAL PROJECTION ADMIN ENDPOINTS ====================
 
   // Get admin settings
