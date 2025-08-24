@@ -73,6 +73,13 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
         { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
       ]
+    },
+    {
+      section: "Admin Tools",
+      items: [
+        { path: "/team-confidence", label: "Team Confidence", icon: Settings, description: "Team confidence analysis", popular: false },
+        { path: "/projection-settings", label: "Projection Settings", icon: Settings, description: "Configure projection parameters", popular: false }
+      ]
     }
   ];
 
