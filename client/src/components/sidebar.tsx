@@ -35,7 +35,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "My FPL",
       items: [
-        { path: "/live-rank", label: "My Live Rank", icon: TrendingUp, description: "Real-time FPL rank", popular: false },
+        { path: "/", label: "My Live Rank", icon: TrendingUp, description: "Real-time FPL rank", popular: false },
         { path: "/my-team", label: "My Team", icon: Users, description: "View your current team", popular: false },
         { path: "/my-leagues", label: "My Leagues", icon: Trophy, description: "League performance analysis", popular: false }
       ]
@@ -43,7 +43,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Most Popular",
       items: [
-        { path: "/", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: true },
+        { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: true },
         { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar, description: "Fixture difficulty analysis", popular: true }
       ]
     },

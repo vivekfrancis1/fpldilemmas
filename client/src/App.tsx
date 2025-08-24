@@ -34,17 +34,16 @@ import AdminGoalProjections from "./pages/admin-goal-projections";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={PlayerStats} />
+      <Route path="/" component={LiveRank} />
       <Route path="/fixtures" component={Fixtures} />
       <Route path="/transfers" component={Transfers} />
       <Route path="/captain" component={Captain} />
       <Route path="/watchlist" component={Watchlist} />
-      <Route path="/live-rank" component={LiveRank} />
       <Route path="/my-team" component={MyTeam} />
       <Route path="/my-leagues" component={MyLeagues} />
       <Route path="/price-tracker" component={PriceTracker} />
       <Route path="/league-comparison" component={LeagueComparison} />
-      <Route path="/player-stats" component={PlayerStats} />
+      <Route path="/player-statistics" component={PlayerStats} />
 
       <Route path="/projected-goals-cs" component={ProjectedGoalsCS} />
       <Route path="/projected-standings" component={ProjectedStandings} />
