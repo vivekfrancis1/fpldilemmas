@@ -1014,10 +1014,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       teamMap[team.id] = {
         expectedGoalsPerGame: adminGoalSettings.defaultExpectedGoalsPerGame,
         variance: adminGoalSettings.defaultTeamVariance,
-        confidence: adminGoalSettings.defaultTeamConfidence,
         baseCleanSheetRate: 0.25, // Generic baseline - could be made configurable
         homeBonus: 0.05, // Generic home bonus - could be made configurable
-        cleanSheetConfidence: adminGoalSettings.defaultTeamConfidence,
         attackingTier: 'average', // Tiers now determined dynamically from admin team assignments
         defensiveTier: 'average'  // Tiers now determined dynamically from admin team assignments
       };
@@ -1076,10 +1074,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return adminGoalSettings.globalTierMultiplier;
       },
       
-      getConfidenceMultiplier: (teamId: number) => {
-        // Confidence multiplier removed - always return 1.0 (no adjustment)
-        return 1.0;
-      }
     };
   };
 
@@ -1363,7 +1357,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Base Calculation Parameters - NO MORE HARDCODED VALUES
     averageBaseXGPerTeamPerGame: 1.35, // Universal starting point for all teams
     defaultTeamVariance: 0.45, // Default goal variance
-    defaultTeamConfidence: 0.70, // Default prediction confidence
     defaultExpectedGoalsPerGame: 1.3, // Fallback if team not found
     globalTierMultiplier: 1.25,
     // Venue Multipliers
@@ -1530,7 +1523,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Base Calculation Parameters - NO MORE HARDCODED VALUES
         averageBaseXGPerTeamPerGame: 1.35,
         defaultTeamVariance: 0.45,
-        defaultTeamConfidence: 0.70,
         defaultExpectedGoalsPerGame: 1.3,
         globalTierMultiplier: 1.25,
         homeAdvantageGoalsMultiplier: 1.15,
@@ -1692,60 +1684,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Team Confidence Analysis endpoint - shows confidence levels and multipliers
-  app.get("/api/team-confidence-analysis", async (req, res) => {
-    try {
-      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      if (!bootstrapResponse.ok) throw new Error("Failed to fetch FPL API data");
-      
-      const bootstrapData = await bootstrapResponse.json();
-      const teams = bootstrapData.teams;
-      
-      // Use centralized team service
-      const teamService = await createTeamService();
-      
-      const confidenceAnalysis = teams.map((team: any) => {
-        const teamData = teamService.getTeamData(team.id);
-        
-        // Calculate sample tier multiplier (using gameweek 5 as example)
-        const sampleTierSeed = (team.id * 5 * 13) % 100;
-        const tierMultiplier = teamService.getTierMultiplier(team.id, sampleTierSeed);
-        
-        // Confidence multiplier removed from projections
-        const confidenceMultiplier = 1.0;
-        
-        // Determine confidence level
-        let confidenceLevel: 'High' | 'Medium' | 'Low' = 'Medium';
-        if (teamData && teamData.confidence >= 0.85) confidenceLevel = 'High';
-        else if (teamData && teamData.confidence <= 0.65) confidenceLevel = 'Low';
-        
-        return {
-          id: team.id,
-          team: team.short_name,
-          teamName: team.name,
-          confidenceScore: teamData ? Math.round(teamData.confidence * 1000) / 10 : 0, // Convert to percentage
-          confidenceLevel,
-          attackingTier: teamData ? teamData.attackingTier : 'unknown',
-          defensiveTier: teamData ? teamData.defensiveTier : 'unknown',
-          expectedGoalsPerGame: teamData ? teamData.expectedGoalsPerGame : 0,
-          baseCleanSheetRate: teamData ? Math.round(teamData.baseCleanSheetRate * 1000) / 10 : 0, // Convert to percentage
-          
-          // Multipliers applied in projections
-          tierMultiplier: Math.round(tierMultiplier * 1000) / 1000, // Sample tier multiplier
-          confidenceMultiplier: Math.round(confidenceMultiplier * 1000) / 1000,
-          combinedMultiplier: Math.round(tierMultiplier * confidenceMultiplier * 1000) / 1000,
-          
-          // Final adjusted expected goals
-          adjustedExpectedGoals: teamData ? Math.round(teamData.expectedGoalsPerGame * tierMultiplier * confidenceMultiplier * 100) / 100 : 0
-        };
-      }).sort((a, b) => b.confidenceScore - a.confidenceScore); // Sort by confidence score descending
-      
-      res.json(confidenceAnalysis);
-    } catch (error) {
-      console.error("Error generating confidence analysis:", error);
-      res.status(500).json({ error: "Failed to generate team confidence analysis" });
-    }
-  });
 
   // Team Goal Projections endpoint  
   app.get("/api/team-goal-projections", async (req, res) => {
@@ -1826,11 +1764,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const teamBettingData = bettingData.teamGoalRates[team.id] || { 
             expectedGoalsPerGame: adminGoalSettings.defaultExpectedGoalsPerGame, 
             variance: adminGoalSettings.defaultTeamVariance, 
-            confidence: adminGoalSettings.defaultTeamConfidence 
+ 
           };
           const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { 
             baseCleanSheetRate: 0.25, 
-            confidence: adminGoalSettings.defaultTeamConfidence 
+ 
           };
           
           // Phase 1: Universal Base xG Foundation - Use ONLY admin configurable value

@@ -686,16 +686,9 @@ export default function AdminGoalProjections() {
                       </p>
                     </div>
                     
-                    <div className="p-3 border rounded-lg bg-gray-50 dark:bg-gray-900/20">
-                      <h4 className="font-semibold text-sm mb-2">Phase 7: Team Confidence</h4>
-                      <p className="text-sm text-muted-foreground">
-                        <strong>Status:</strong> <span className="font-mono text-gray-600">Removed from calculations</span><br/>
-                        <span className="text-gray-500">Confidence multipliers no longer affect projections</span>
-                      </p>
-                    </div>
                     
                     <div className="p-3 border rounded-lg bg-fpl-purple/5">
-                      <h4 className="font-semibold text-sm mb-2">Phase 8: Final Bounds</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 7: Final Bounds</h4>
                       <p className="text-sm text-muted-foreground">
                         <strong>Absolute Min Goals:</strong> <span className="font-mono text-gray-600">{formData.absoluteMinGoals || 0.0}</span><br/>
                         <strong>Absolute Max Goals:</strong> <span className="font-mono text-gray-600">{formData.absoluteMaxGoals || 7.0}</span><br/>
