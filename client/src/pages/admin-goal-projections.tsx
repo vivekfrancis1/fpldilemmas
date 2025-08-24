@@ -555,19 +555,30 @@ export default function AdminGoalProjections() {
     }
   };
 
-  const resetMarketBounds = () => {
-    if (confirm('Reset only this tab\'s market bounds and venue factors to default values? Other settings will remain unchanged.')) {
-      setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.marketBounds, ...DEFAULT_VALUES.venueFactors }));
+  const resetVenueFactors = () => {
+    if (confirm('Reset only this tab\'s venue factors to default values? Other settings will remain unchanged.')) {
+      setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.venueFactors }));
       setHasChanges(true);
       toast({
-        title: "Market Bounds & Venue Factors Reset",
-        description: "Market bounds and venue factors have been reset to default values.",
+        title: "Venue Factors Reset",
+        description: "Only venue factors have been reset to default values.",
+      });
+    }
+  };
+
+  const resetMarketBounds = () => {
+    if (confirm('Reset only this tab\'s market bounds to default values? Other settings will remain unchanged.')) {
+      setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.marketBounds }));
+      setHasChanges(true);
+      toast({
+        title: "Market Bounds Reset",
+        description: "Only market bounds have been reset to default values.",
       });
     }
   };
 
   const resetPageSettings = () => {
-    if (confirm('Reset all settings on this Team Goals admin page to default values? This will reset all 7 tabs: attacking multipliers, attacking teams, defensive multipliers, defensive teams, global settings, context multipliers, and market bounds. Other system configurations will remain unchanged.')) {
+    if (confirm('Reset all settings on this Team Goals admin page to default values? This will reset all 8 tabs: attacking multipliers, attacking teams, defensive multipliers, defensive teams, global settings, context multipliers, venue factors, and market bounds. Other system configurations will remain unchanged.')) {
       setFormData(prev => ({
         ...prev,
         ...DEFAULT_VALUES.attackMultipliers,
@@ -635,6 +646,7 @@ export default function AdminGoalProjections() {
           <TabsTrigger value="defensive-teams">Defense Teams</TabsTrigger>
           <TabsTrigger value="global">Global Settings</TabsTrigger>
           <TabsTrigger value="context">Context Multipliers</TabsTrigger>
+          <TabsTrigger value="venue">Venue Factors</TabsTrigger>
           <TabsTrigger value="market">Market Bounds</TabsTrigger>
           <TabsTrigger value="confidence">Team Confidence</TabsTrigger>
         </TabsList>
@@ -1691,6 +1703,127 @@ export default function AdminGoalProjections() {
           </Card>
         </TabsContent>
 
+        {/* Venue Factors Tab */}
+        <TabsContent value="venue" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Venue Factors</CardTitle>
+                <CardDescription>Home and away multipliers that adjust goals scored based on match venue (Phase 2)</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetVenueFactors}
+                className="flex items-center gap-2"
+                data-testid="button-reset-venue-factors"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Tab
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Phase 2 Settings:</strong> Venue adjustments applied early in the calculation process. Home teams typically score more goals while away teams score fewer due to travel, crowd support, and familiarity factors.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2 font-medium">Venue Factor</th>
+                      <th className="text-center p-2 font-medium">Default</th>
+                      <th className="text-center p-2 font-medium">Current</th>
+                      <th className="text-center p-2 font-medium">New Value</th>
+                      <th className="text-center p-2 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { key: 'homeAdvantageGoalsMultiplier', name: 'Home Advantage', default: 1.15, min: 1.0, max: 1.3, description: 'Multiplier for teams playing at home (15% advantage)' },
+                      { key: 'awayFactorGoalsMultiplier', name: 'Away Factor', default: 0.88, min: 0.7, max: 1.0, description: 'Multiplier for teams playing away (12% disadvantage)' }
+                    ].map((setting) => {
+                      const currentValue = (formData as any)[setting.key] || setting.default;
+                      const isChanged = Math.abs(currentValue - setting.default) > 0.01;
+                      
+                      return (
+                        <tr key={setting.key} className="border-b hover:bg-muted/50">
+                          <td className="p-2">
+                            <div>
+                              <p className="font-medium">{setting.name}</p>
+                              <p className="text-sm text-muted-foreground">{setting.description}</p>
+                            </div>
+                          </td>
+                          <td className="text-center p-2">
+                            <span className="font-mono text-sm text-muted-foreground">
+                              {setting.default.toFixed(2)}
+                            </span>
+                          </td>
+                          <td className="text-center p-2">
+                            <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
+                              {currentValue.toFixed(2)}
+                            </span>
+                            {isChanged && (
+                              <div className="text-xs text-blue-600 mt-1">Modified</div>
+                            )}
+                          </td>
+                          <td className="text-center p-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={setting.min}
+                              max={setting.max}
+                              className="w-20 mx-auto text-center"
+                              value={currentValue.toFixed(2)}
+                              onChange={(e) => handleInputChange(setting.key as keyof AdminSettings, e.target.value)}
+                              data-testid={`input-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                            />
+                          </td>
+                          <td className="text-center p-2">
+                            <div className="flex gap-1 justify-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  toast({
+                                    title: "Venue Factor Updated",
+                                    description: `${setting.name} updated to ${currentValue.toFixed(2)}`,
+                                  });
+                                }}
+                                data-testid={`button-update-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                              >
+                                Update
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  handleInputChange(setting.key as keyof AdminSettings, setting.default.toString());
+                                  toast({
+                                    title: "Reset to Default",
+                                    description: `${setting.name} reset to ${setting.default.toFixed(2)}`,
+                                  });
+                                }}
+                                data-testid={`button-reset-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                                title="Reset to default"
+                              >
+                                ↺
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="market" className="space-y-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -1713,7 +1846,7 @@ export default function AdminGoalProjections() {
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Phase 8 Settings:</strong> Market bounds and venue factors applied in the final phases of goal projection calculations to ensure realistic ranges.
+                  <strong>Phase 8 Settings:</strong> Market bounds applied in the final phases of goal projection calculations to ensure realistic ranges and prevent unrealistic goal totals.
                 </AlertDescription>
               </Alert>
               
@@ -1781,101 +1914,6 @@ export default function AdminGoalProjections() {
                                     onClick={() => {
                                       toast({
                                         title: "Bound Updated",
-                                        description: `${setting.name} updated to ${currentValue.toFixed(2)}`,
-                                      });
-                                    }}
-                                    data-testid={`button-update-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
-                                  >
-                                    Update
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      handleInputChange(setting.key as keyof AdminSettings, setting.default.toString());
-                                      toast({
-                                        title: "Reset to Default",
-                                        description: `${setting.name} reset to ${setting.default.toFixed(2)}`,
-                                      });
-                                    }}
-                                    data-testid={`button-reset-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
-                                    title="Reset to default"
-                                  >
-                                    ↺
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                
-                {/* Venue Factors */}
-                <div>
-                  <h3 className="font-semibold mb-3">Venue Factors (Phase 2)</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left p-2 font-medium">Venue Factor</th>
-                          <th className="text-center p-2 font-medium">Default</th>
-                          <th className="text-center p-2 font-medium">Current</th>
-                          <th className="text-center p-2 font-medium">New Value</th>
-                          <th className="text-center p-2 font-medium">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[
-                          { key: 'homeAdvantageGoalsMultiplier', name: 'Home Advantage', default: 1.15, min: 1.0, max: 1.3, description: 'Multiplier for teams playing at home (15% advantage)' },
-                          { key: 'awayFactorGoalsMultiplier', name: 'Away Factor', default: 0.88, min: 0.7, max: 1.0, description: 'Multiplier for teams playing away (12% disadvantage)' }
-                        ].map((setting) => {
-                          const currentValue = (formData as any)[setting.key] || setting.default;
-                          const isChanged = Math.abs(currentValue - setting.default) > 0.01;
-                          
-                          return (
-                            <tr key={setting.key} className="border-b hover:bg-muted/50">
-                              <td className="p-2">
-                                <div>
-                                  <p className="font-medium">{setting.name}</p>
-                                  <p className="text-sm text-muted-foreground">{setting.description}</p>
-                                </div>
-                              </td>
-                              <td className="text-center p-2">
-                                <span className="font-mono text-sm text-muted-foreground">
-                                  {setting.default.toFixed(2)}
-                                </span>
-                              </td>
-                              <td className="text-center p-2">
-                                <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
-                                  {currentValue.toFixed(2)}
-                                </span>
-                                {isChanged && (
-                                  <div className="text-xs text-blue-600 mt-1">Modified</div>
-                                )}
-                              </td>
-                              <td className="text-center p-2">
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min={setting.min}
-                                  max={setting.max}
-                                  className="w-20 mx-auto text-center"
-                                  value={currentValue.toFixed(2)}
-                                  onChange={(e) => handleInputChange(setting.key as keyof AdminSettings, e.target.value)}
-                                  data-testid={`input-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
-                                />
-                              </td>
-                              <td className="text-center p-2">
-                                <div className="flex gap-1 justify-center">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      toast({
-                                        title: "Venue Factor Updated",
                                         description: `${setting.name} updated to ${currentValue.toFixed(2)}`,
                                       });
                                     }}
