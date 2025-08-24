@@ -2138,6 +2138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Phase 5: UNIFIED attacking tier performance modeling using configurable team assignments
           const getAttackingTier = (teamId: number) => {
             // Use configurable team assignments from unified projection settings
+            console.log(`DEBUG: Team ${teamId} attack tier check - Elite: ${unifiedProjectionSettings.eliteAttackTeams}, Strong: ${unifiedProjectionSettings.strongAttackTeams}, Weak: ${unifiedProjectionSettings.weakAttackTeams}`);
             if (unifiedProjectionSettings.eliteAttackTeams?.includes(teamId)) return 'elite';
             if (unifiedProjectionSettings.strongAttackTeams?.includes(teamId)) return 'strong';
             if (unifiedProjectionSettings.weakAttackTeams?.includes(teamId)) return 'weak';
@@ -2154,7 +2155,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             case 'weak': attackingTierMultiplier = unifiedProjectionSettings.weakAttackMultiplier; break;
             case 'promoted': attackingTierMultiplier = unifiedProjectionSettings.promotedAttackMultiplier; break;
           }
+          
+          console.log(`DEBUG: ${team.short_name} attacking tier: ${attackingTier}, Multiplier: ${attackingTierMultiplier}, Goals before: ${baseExpectedGoals.toFixed(2)}`);
           baseExpectedGoals *= attackingTierMultiplier;
+          console.log(`DEBUG: Goals after attacking multiplier: ${baseExpectedGoals.toFixed(2)}`);
           
           // Apply opponent's defensive tier multiplier
           const getDefensiveTier = (teamId: number): string => {
