@@ -989,10 +989,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         16: { expectedGoalsPerGame: 1.18, goalVariance: 0.48, goalConfidence: 0.60, baseCleanSheetRate: 0.29, homeBonus: 0.07, cleanSheetConfidence: 0.84, attackingTier: 'average', defensiveTier: 'strong' }, // Nottingham Forest
         19: { expectedGoalsPerGame: 1.27, goalVariance: 0.50, goalConfidence: 0.58, baseCleanSheetRate: 0.16, homeBonus: 0.04, cleanSheetConfidence: 0.63, attackingTier: 'average', defensiveTier: 'average' }, // West Ham
         
-        // Weaker attacking units
-        8: { expectedGoalsPerGame: 1.06, goalVariance: 0.48, goalConfidence: 0.55, baseCleanSheetRate: 0.12, homeBonus: 0.03, cleanSheetConfidence: 0.57, attackingTier: 'weak', defensiveTier: 'average' }, // Crystal Palace
+        // Average attacking output
+        8: { expectedGoalsPerGame: 1.06, goalVariance: 0.48, goalConfidence: 0.55, baseCleanSheetRate: 0.12, homeBonus: 0.03, cleanSheetConfidence: 0.57, attackingTier: 'average', defensiveTier: 'average' }, // Crystal Palace
         20: { expectedGoalsPerGame: 1.12, goalVariance: 0.52, goalConfidence: 0.50, baseCleanSheetRate: 0.09, homeBonus: 0.02, cleanSheetConfidence: 0.48, attackingTier: 'weak', defensiveTier: 'weak' }, // Wolves
-        9: { expectedGoalsPerGame: 1.10, goalVariance: 0.54, goalConfidence: 0.48, baseCleanSheetRate: 0.20, homeBonus: 0.05, cleanSheetConfidence: 0.71, attackingTier: 'weak', defensiveTier: 'strong' }, // Everton
+        9: { expectedGoalsPerGame: 1.10, goalVariance: 0.54, goalConfidence: 0.48, baseCleanSheetRate: 0.20, homeBonus: 0.05, cleanSheetConfidence: 0.71, attackingTier: 'average', defensiveTier: 'strong' }, // Everton
         
         // Promoted teams (2025/26) - Championship level with no boosts
         3: { expectedGoalsPerGame: 0.88, goalVariance: 0.58, goalConfidence: 0.38, baseCleanSheetRate: 0.08, homeBonus: 0.02, cleanSheetConfidence: 0.42, attackingTier: 'promoted', defensiveTier: 'promoted' }, // Burnley
@@ -1559,9 +1559,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         promotedAttackMultiplier: 0.5,
         eliteAttackTeams: [12, 13, 7],
         strongAttackTeams: [15, 18, 2, 4, 5, 6, 1],
-        averageAttackTeams: [14, 3, 10, 20, 11], // Crystal Palace and Everton moved here
-        weakAttackTeams: [16, 21],
-        promotedAttackTeams: [8, 9, 17],
+        averageAttackTeams: [14, 3, 10, 20, 11, 8, 9], // Crystal Palace (8) and Everton (9) in average tier
+        weakAttackTeams: [16, 21], // Nottingham Forest, Wolves
+        promotedAttackTeams: [17], // Only Ipswich (actually promoted)
         eliteDefenseMultiplier: 0.5,
         strongDefenseMultiplier: 0.75,
         averageDefenseMultiplier: 1.00,
