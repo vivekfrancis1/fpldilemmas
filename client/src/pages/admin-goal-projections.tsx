@@ -142,14 +142,12 @@ export default function AdminGoalProjections() {
     },
   });
 
-  // Default team tier assignments (7 tiers)
+  // Default team tier assignments
   const DEFAULT_TEAM_TIERS = {
     eliteAttackTeams: [1, 13], // Arsenal, Man City
-    strongAttackTeams: [12, 7], // Liverpool, Chelsea
-    goodAttackTeams: [15, 18, 6], // Newcastle, Tottenham, Brighton
-    normalAttackTeams: [2, 21, 8, 5], // Aston Villa, West Ham, Crystal Palace, Bournemouth
-    weakAttackTeams: [11, 20, 10, 4], // Fulham, Wolves, Everton, Brentford
-    veryWeakAttackTeams: [16, 14], // Nottm Forest, Man Utd
+    strongAttackTeams: [12, 15, 7, 18], // Liverpool, Newcastle, Chelsea, Tottenham
+    averageAttackTeams: [6, 2, 21, 8, 5, 11, 20, 10], // Brighton, Aston Villa, West Ham, Crystal Palace, Bournemouth, Fulham, Wolves, Everton
+    weakAttackTeams: [4, 16, 14], // Brentford, Nottm Forest, Man Utd
     promotedAttackTeams: [9, 17, 19], // Leicester, Ipswich, Southampton
   };
 
@@ -161,10 +159,8 @@ export default function AdminGoalProjections() {
         ...settings,
         eliteAttackTeams: settings.eliteAttackTeams || DEFAULT_TEAM_TIERS.eliteAttackTeams,
         strongAttackTeams: settings.strongAttackTeams || DEFAULT_TEAM_TIERS.strongAttackTeams,
-        goodAttackTeams: settings.goodAttackTeams || DEFAULT_TEAM_TIERS.goodAttackTeams,
-        normalAttackTeams: settings.normalAttackTeams || DEFAULT_TEAM_TIERS.normalAttackTeams,
+        averageAttackTeams: settings.averageAttackTeams || DEFAULT_TEAM_TIERS.averageAttackTeams,
         weakAttackTeams: settings.weakAttackTeams || DEFAULT_TEAM_TIERS.weakAttackTeams,
-        veryWeakAttackTeams: settings.veryWeakAttackTeams || DEFAULT_TEAM_TIERS.veryWeakAttackTeams,
         promotedAttackTeams: settings.promotedAttackTeams || DEFAULT_TEAM_TIERS.promotedAttackTeams,
       };
       setFormData(settingsWithDefaults);
@@ -178,16 +174,13 @@ export default function AdminGoalProjections() {
     setHasChanges(true);
   };
 
-  // Team tier assignment helper functions (7 tiers)
+  // Team tier assignment helper functions
   const getTeamTier = (teamId: number): string => {
     if (formData.eliteAttackTeams?.includes(teamId)) return 'elite';
     if (formData.strongAttackTeams?.includes(teamId)) return 'strong';
-    if (formData.goodAttackTeams?.includes(teamId)) return 'good';
-    if (formData.normalAttackTeams?.includes(teamId)) return 'normal';
     if (formData.weakAttackTeams?.includes(teamId)) return 'weak';
-    if (formData.veryWeakAttackTeams?.includes(teamId)) return 'very-weak';
     if (formData.promotedAttackTeams?.includes(teamId)) return 'promoted';
-    return 'normal';
+    return 'average';
   };
 
   const getTeamsByTier = (tier: string) => {
@@ -201,10 +194,8 @@ export default function AdminGoalProjections() {
         ...prev,
         eliteAttackTeams: (prev.eliteAttackTeams || []).filter(id => id !== teamId),
         strongAttackTeams: (prev.strongAttackTeams || []).filter(id => id !== teamId),
-        goodAttackTeams: (prev.goodAttackTeams || []).filter(id => id !== teamId),
-        normalAttackTeams: (prev.normalAttackTeams || []).filter(id => id !== teamId),
+        averageAttackTeams: (prev.averageAttackTeams || []).filter(id => id !== teamId),
         weakAttackTeams: (prev.weakAttackTeams || []).filter(id => id !== teamId),
-        veryWeakAttackTeams: (prev.veryWeakAttackTeams || []).filter(id => id !== teamId),
         promotedAttackTeams: (prev.promotedAttackTeams || []).filter(id => id !== teamId),
       };
 
@@ -216,17 +207,11 @@ export default function AdminGoalProjections() {
         case 'strong':
           updated.strongAttackTeams = [...(updated.strongAttackTeams || []), teamId];
           break;
-        case 'good':
-          updated.goodAttackTeams = [...(updated.goodAttackTeams || []), teamId];
-          break;
-        case 'normal':
-          updated.normalAttackTeams = [...(updated.normalAttackTeams || []), teamId];
+        case 'average':
+          updated.averageAttackTeams = [...(updated.averageAttackTeams || []), teamId];
           break;
         case 'weak':
           updated.weakAttackTeams = [...(updated.weakAttackTeams || []), teamId];
-          break;
-        case 'very-weak':
-          updated.veryWeakAttackTeams = [...(updated.veryWeakAttackTeams || []), teamId];
           break;
         case 'promoted':
           updated.promotedAttackTeams = [...(updated.promotedAttackTeams || []), teamId];

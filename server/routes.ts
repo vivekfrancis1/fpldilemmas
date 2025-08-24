@@ -2120,17 +2120,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             baseExpectedGoals *= 1.14; // Rivalry games typically more open and emotional
           }
           
-          // Phase 5: UNIFIED attacking tier performance modeling using configurable team assignments (7 tiers)
+          // Phase 5: UNIFIED attacking tier performance modeling using configurable team assignments
           const getAttackingTier = (teamId: number) => {
             // Use configurable team assignments from unified projection settings
             if (unifiedProjectionSettings.eliteAttackTeams?.includes(teamId)) return 'elite';
             if (unifiedProjectionSettings.strongAttackTeams?.includes(teamId)) return 'strong';
-            if (unifiedProjectionSettings.goodAttackTeams?.includes(teamId)) return 'good';
-            if (unifiedProjectionSettings.normalAttackTeams?.includes(teamId)) return 'normal';
             if (unifiedProjectionSettings.weakAttackTeams?.includes(teamId)) return 'weak';
-            if (unifiedProjectionSettings.veryWeakAttackTeams?.includes(teamId)) return 'very-weak';
             if (unifiedProjectionSettings.promotedAttackTeams?.includes(teamId)) return 'promoted';
-            return 'normal'; // Default tier for teams not explicitly assigned
+            return 'average'; // Default tier for teams not explicitly assigned
           };
           
           const attackingTier = getAttackingTier(team.id);
@@ -2138,10 +2135,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           switch (attackingTier) {
             case 'elite': attackingTierMultiplier = unifiedProjectionSettings.eliteAttackMultiplier; break;
             case 'strong': attackingTierMultiplier = unifiedProjectionSettings.strongAttackMultiplier; break;
-            case 'good': attackingTierMultiplier = unifiedProjectionSettings.goodAttackMultiplier; break;
-            case 'normal': attackingTierMultiplier = unifiedProjectionSettings.normalAttackMultiplier; break;
+            case 'average': attackingTierMultiplier = unifiedProjectionSettings.averageAttackMultiplier; break;
             case 'weak': attackingTierMultiplier = unifiedProjectionSettings.weakAttackMultiplier; break;
-            case 'very-weak': attackingTierMultiplier = unifiedProjectionSettings.veryWeakAttackMultiplier; break;
             case 'promoted': attackingTierMultiplier = unifiedProjectionSettings.promotedAttackMultiplier; break;
           }
           baseExpectedGoals *= attackingTierMultiplier;
@@ -2213,17 +2208,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (unifiedProjectionSettings.autoBalance && unifiedProjectionSettings.offensiveVarianceEnabled) {
         console.log(`DEBUG: Applying offensive variance control`);
         
-        // Define attacking tiers using configurable team assignments (7 tiers)
+        // Define attacking tiers using configurable team assignments
         const getAttackingTier = (teamId: number): string => {
           // Use configurable team assignments from unified projection settings
           if (unifiedProjectionSettings.eliteAttackTeams?.includes(teamId)) return 'elite';
           if (unifiedProjectionSettings.strongAttackTeams?.includes(teamId)) return 'strong';
-          if (unifiedProjectionSettings.goodAttackTeams?.includes(teamId)) return 'good';
-          if (unifiedProjectionSettings.normalAttackTeams?.includes(teamId)) return 'normal';
           if (unifiedProjectionSettings.weakAttackTeams?.includes(teamId)) return 'weak';
-          if (unifiedProjectionSettings.veryWeakAttackTeams?.includes(teamId)) return 'very-weak';
           if (unifiedProjectionSettings.promotedAttackTeams?.includes(teamId)) return 'promoted';
-          return 'normal'; // Default tier for teams not explicitly assigned
+          return 'average'; // Default tier for teams not explicitly assigned
         };
         
         // Calculate target goals for each tier based on user settings
@@ -2245,10 +2237,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           switch (attackingTier) {
             case 'elite': targetGoals = eliteTarget; break;
             case 'strong': targetGoals = strongTarget; break;
-            case 'good': targetGoals = strongTarget - 5; break; // Between strong and normal
-            case 'normal': targetGoals = averageTarget; break;
+            case 'average': targetGoals = averageTarget; break;
             case 'weak': targetGoals = weakTarget; break;
-            case 'very-weak': targetGoals = weakTarget - 5; break; // Between weak and promoted
             case 'promoted': targetGoals = promotedTarget; break;
             default: targetGoals = averageTarget;
           }
