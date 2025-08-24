@@ -770,7 +770,7 @@ export default function AdminGoalProjections() {
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>Foundation Layer:</strong> These base xG values are the starting point (Phase 1) for all team goal projections. They represent each team's underlying attacking quality before any adjustments for venue, opponent, context, or tiers are applied.
+                    <strong>Foundation Layer:</strong> This average base xG value is the universal starting point (Phase 1) for all team goal projections. All teams begin with this same foundation value, and then attacking/defensive tier multipliers and other adjustments are applied to create team-specific projections.
                   </AlertDescription>
                 </Alert>
                 
@@ -778,71 +778,36 @@ export default function AdminGoalProjections() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left p-2 font-medium">Team</th>
-                        <th className="text-center p-2 font-medium">Tier</th>
-                        <th className="text-center p-2 font-medium">Default xG</th>
-                        <th className="text-center p-2 font-medium">Current xG</th>
-                        <th className="text-center p-2 font-medium">New xG</th>
+                        <th className="text-left p-2 font-medium">Setting</th>
+                        <th className="text-center p-2 font-medium">Default</th>
+                        <th className="text-center p-2 font-medium">Current</th>
+                        <th className="text-center p-2 font-medium">New Value</th>
                         <th className="text-center p-2 font-medium">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {(() => {
-                        // Default xG values based on team tier and quality
-                        const getDefaultXG = (teamId: number) => {
-                          const defaults: Record<number, number> = {
-                            13: 1.97, // Man City
-                            12: 2.14, // Liverpool  
-                            1: 1.67,  // Arsenal
-                            7: 1.95,  // Chelsea
-                            18: 1.67, // Tottenham
-                            15: 1.60, // Newcastle
-                            2: 1.47,  // Aston Villa
-                            6: 1.85,  // Brighton
-                            14: 1.45, // Man United
-                            4: 1.53,  // Bournemouth
-                            10: 1.20, // Fulham
-                            5: 1.42,  // Brentford
-                            16: 1.18, // Nottingham Forest
-                            19: 1.27, // West Ham
-                            8: 1.35,  // Crystal Palace
-                            9: 1.10,  // Everton
-                            20: 1.05, // Wolves
-                            3: 0.88,  // Burnley
-                            11: 0.95, // Leeds
-                            17: 0.85  // Sunderland
-                          };
-                          return defaults[teamId] || 1.30;
-                        };
-
-                        return teams.slice().sort((a, b) => getDefaultXG(b.id) - getDefaultXG(a.id)).map((team) => {
-                          const currentTier = getTeamTier(team.id);
-                          const tierColor = getTierBadgeColor(currentTier);
-                          const defaultXG = getDefaultXG(team.id);
-                          const currentXG = defaultXG; // TODO: Get from actual settings
-                          const isChanged = Math.abs(currentXG - defaultXG) > 0.01;
+                      {[
+                        { key: 'averageBaseXG', name: 'Average Base xG per Team per Game', default: 1.35, min: 0.8, max: 2.0, description: 'Universal foundation xG that all teams start from before adjustments' }
+                      ].map((setting) => {
+                        const currentValue = (formData as any)[setting.key] || setting.default;
+                        const isChanged = Math.abs(currentValue - setting.default) > 0.01;
                         
                         return (
-                          <tr key={team.id} className="border-b hover:bg-muted/50">
+                          <tr key={setting.key} className="border-b hover:bg-muted/50">
                             <td className="p-2">
                               <div>
-                                <p className="font-medium">{team.short_name}</p>
-                                <p className="text-sm text-muted-foreground">{team.name}</p>
+                                <p className="font-medium">{setting.name}</p>
+                                <p className="text-sm text-muted-foreground">{setting.description}</p>
                               </div>
                             </td>
                             <td className="text-center p-2">
-                              <Badge className={tierColor}>
-                                {currentTier}
-                              </Badge>
-                            </td>
-                            <td className="text-center p-2">
                               <span className="font-mono text-sm text-muted-foreground">
-                                {defaultXG.toFixed(2)}
+                                {setting.default.toFixed(2)}
                               </span>
                             </td>
                             <td className="text-center p-2">
                               <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
-                                {currentXG.toFixed(2)}
+                                {currentValue.toFixed(2)}
                               </span>
                               {isChanged && (
                                 <div className="text-xs text-blue-600 mt-1">Modified</div>
@@ -852,11 +817,12 @@ export default function AdminGoalProjections() {
                               <Input
                                 type="number"
                                 step="0.01"
-                                min="0.5"
-                                max="3.0"
+                                min={setting.min}
+                                max={setting.max}
                                 className="w-20 mx-auto text-center"
-                                defaultValue={currentXG.toFixed(2)}
-                                data-testid={`input-base-xg-${team.id}`}
+                                value={currentValue.toFixed(2)}
+                                onChange={(e) => handleInputChange(setting.key as keyof AdminSettings, e.target.value)}
+                                data-testid={`input-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
                               />
                             </td>
                             <td className="text-center p-2">
@@ -866,11 +832,11 @@ export default function AdminGoalProjections() {
                                   size="sm"
                                   onClick={() => {
                                     toast({
-                                      title: "xG Updated",
-                                      description: `Base xG updated for ${team.short_name}`,
+                                      title: "Base xG Updated",
+                                      description: `${setting.name} updated to ${currentValue.toFixed(2)}`,
                                     });
                                   }}
-                                  data-testid={`button-update-xg-${team.id}`}
+                                  data-testid={`button-update-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
                                 >
                                   Update
                                 </Button>
@@ -878,14 +844,13 @@ export default function AdminGoalProjections() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
-                                    const input = document.querySelector(`[data-testid="input-base-xg-${team.id}"]`) as HTMLInputElement;
-                                    if (input) input.value = defaultXG.toFixed(2);
+                                    handleInputChange(setting.key as keyof AdminSettings, setting.default.toString());
                                     toast({
                                       title: "Reset to Default",
-                                      description: `${team.short_name} xG reset to default ${defaultXG.toFixed(2)}`,
+                                      description: `${setting.name} reset to ${setting.default.toFixed(2)}`,
                                     });
                                   }}
-                                  data-testid={`button-reset-xg-${team.id}`}
+                                  data-testid={`button-reset-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
                                   title="Reset to default"
                                 >
                                   ↺
@@ -894,49 +859,37 @@ export default function AdminGoalProjections() {
                             </td>
                           </tr>
                         );
-                        });
-                      })()}
+                      })}
                     </tbody>
                   </table>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+                <div className="mt-6">
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-center">
-                        <p className="text-sm font-medium text-purple-600">Elite Range</p>
-                        <p className="text-2xl font-bold">1.8 - 2.2</p>
-                        <p className="text-xs text-muted-foreground">Man City, Liverpool, Arsenal</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-blue-600">Strong Range</p>
-                        <p className="text-2xl font-bold">1.4 - 1.7</p>
-                        <p className="text-xs text-muted-foreground">Newcastle, Spurs, Villa</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-slate-600">Average Range</p>
-                        <p className="text-2xl font-bold">1.1 - 1.4</p>
-                        <p className="text-xs text-muted-foreground">Fulham, Brighton, West Ham</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-orange-600">Weak/Promoted</p>
-                        <p className="text-2xl font-bold">0.8 - 1.1</p>
-                        <p className="text-xs text-muted-foreground">Promoted teams, relegation battlers</p>
+                        <h3 className="font-semibold mb-2">How It Works</h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          All teams start with the same base xG foundation. Team differences are created through:
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                          <div className="text-center">
+                            <p className="font-medium text-purple-600">Phase 5: Attack Tiers</p>
+                            <p className="text-muted-foreground">Elite (×1.5), Strong (×1.25), etc.</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="font-medium text-blue-600">Phase 3: Defense Tiers</p>
+                            <p className="text-muted-foreground">Elite (×0.65), Strong (×0.80), etc.</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="font-medium text-green-600">Phase 2: Venue</p>
+                            <p className="text-muted-foreground">Home advantage, away factor</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="font-medium text-orange-600">Phase 4: Context</p>
+                            <p className="text-muted-foreground">Derby, top six, relegation battles</p>
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
