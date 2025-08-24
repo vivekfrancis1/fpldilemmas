@@ -23,6 +23,9 @@ interface AdminSettings {
   globalTierMultiplier: number;
   lowConfidenceBoost: number;
   lowConfidenceThreshold: number;
+  // Venue Multipliers
+  homeAdvantageGoalsMultiplier: number;
+  awayFactorGoalsMultiplier: number;
   // Attacking Tier Multipliers
   eliteAttackMultiplier: number;
   strongAttackMultiplier: number;
@@ -188,15 +191,14 @@ export default function AdminGoalProjections() {
         weakDefenseMultiplier: settings.weakDefenseMultiplier ?? DEFAULT_VALUES.defenseMultipliers.weakDefenseMultiplier,
         promotedDefenseMultiplier: settings.promotedDefenseMultiplier ?? DEFAULT_VALUES.defenseMultipliers.promotedDefenseMultiplier,
         
-        minGoalsPerMatch: settings.minGoalsPerMatch ?? DEFAULT_VALUES.marketBounds.minGoalsPerMatch,
-        maxGoalsPerMatch: settings.maxGoalsPerMatch ?? DEFAULT_VALUES.marketBounds.maxGoalsPerMatch,
+        // Goals Scored admin doesn't have minGoalsPerMatch/maxGoalsPerMatch settings
         absoluteMinGoals: settings.absoluteMinGoals ?? DEFAULT_VALUES.marketBounds.absoluteMinGoals,
         absoluteMaxGoals: settings.absoluteMaxGoals ?? DEFAULT_VALUES.marketBounds.absoluteMaxGoals,
         marketFloorMultiplier: settings.marketFloorMultiplier ?? DEFAULT_VALUES.marketBounds.marketFloorMultiplier,
         marketCeilingMultiplier: settings.marketCeilingMultiplier ?? DEFAULT_VALUES.marketBounds.marketCeilingMultiplier,
         
-        homeAdvantageMultiplier: settings.homeAdvantageMultiplier ?? DEFAULT_VALUES.venueFactors.homeAdvantageMultiplier,
-        awayFactorMultiplier: settings.awayFactorMultiplier ?? DEFAULT_VALUES.venueFactors.awayFactorMultiplier,
+        homeAdvantageGoalsMultiplier: settings.homeAdvantageGoalsMultiplier ?? DEFAULT_VALUES.venueFactors.homeAdvantageMultiplier,
+        awayFactorGoalsMultiplier: settings.awayFactorGoalsMultiplier ?? DEFAULT_VALUES.venueFactors.awayFactorMultiplier,
         
         eliteAttackTeams: parseTeamArray(settings.eliteAttackTeams) || DEFAULT_TEAM_TIERS.eliteAttackTeams,
         strongAttackTeams: parseTeamArray(settings.strongAttackTeams) || DEFAULT_TEAM_TIERS.strongAttackTeams,
@@ -1495,15 +1497,15 @@ export default function AdminGoalProjections() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="homeAdvantageMultiplier">Home Advantage Multiplier</Label>
+                  <Label htmlFor="homeAdvantageGoalsMultiplier">Home Advantage Multiplier</Label>
                   <Input
-                    id="homeAdvantageMultiplier"
+                    id="homeAdvantageGoalsMultiplier"
                     type="number"
                     step="0.01"
                     min="1.00"
                     max="1.30"
-                    value={formData.homeAdvantageMultiplier || 0}
-                    onChange={(e) => handleInputChange('homeAdvantageMultiplier', e.target.value)}
+                    value={formData.homeAdvantageGoalsMultiplier || 0}
+                    onChange={(e) => handleInputChange('homeAdvantageGoalsMultiplier', e.target.value)}
                     data-testid="input-home-advantage-multiplier"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -1513,15 +1515,15 @@ export default function AdminGoalProjections() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="awayFactorMultiplier">Away Factor Multiplier</Label>
+                  <Label htmlFor="awayFactorGoalsMultiplier">Away Factor Multiplier</Label>
                   <Input
-                    id="awayFactorMultiplier"
+                    id="awayFactorGoalsMultiplier"
                     type="number"
                     step="0.01"
                     min="0.70"
                     max="1.00"
-                    value={formData.awayFactorMultiplier || 0}
-                    onChange={(e) => handleInputChange('awayFactorMultiplier', e.target.value)}
+                    value={formData.awayFactorGoalsMultiplier || 0}
+                    onChange={(e) => handleInputChange('awayFactorGoalsMultiplier', e.target.value)}
                     data-testid="input-away-factor-multiplier"
                   />
                   <p className="text-xs text-muted-foreground">
