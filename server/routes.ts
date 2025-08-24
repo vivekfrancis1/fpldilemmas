@@ -1077,11 +1077,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       },
       
       getConfidenceMultiplier: (teamId: number) => {
-        const team = teamProjectionData[teamId];
-        if (!team) return 1.0;
-        
-        // Use configurable confidence multiplier and threshold from Goals Scored admin settings
-        if (team.confidence < adminGoalSettings.lowConfidenceThreshold) return adminGoalSettings.lowConfidenceBoost;
+        // Confidence multiplier removed - always return 1.0 (no adjustment)
         return 1.0;
       }
     };
@@ -1123,8 +1119,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         autoBalance: settings.autoBalance,
         leagueGoalsPerSeason: settings.leagueGoalsPerSeason,
         globalTierMultiplier: parseFloat(settings.globalTierMultiplier || "1.25"),
-        lowConfidenceBoost: parseFloat(settings.lowConfidenceBoost || "1.25"),
-        lowConfidenceThreshold: parseFloat(settings.lowConfidenceThreshold || "0.65"),
         derbyMatchMultiplier: parseFloat(settings.derbyMatchMultiplier || "0.87"),
         topSixMatchMultiplier: parseFloat(settings.topSixMatchMultiplier || "1.12"),
         relegationBattleMultiplier: parseFloat(settings.relegationBattleMultiplier || "0.83"),
@@ -1183,8 +1177,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         autoBalance: true,
         leagueGoalsPerSeason: 1050,
         globalTierMultiplier: "1.25",
-        lowConfidenceBoost: "1.25",
-        lowConfidenceThreshold: "0.65",
         derbyMatchMultiplier: "0.87",
         topSixMatchMultiplier: "1.12",
         relegationBattleMultiplier: "0.83",
@@ -1242,8 +1234,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       autoBalance: true,
       leagueGoalsPerSeason: 1050,
       globalTierMultiplier: 1.25,
-      lowConfidenceBoost: 1.25,
-      lowConfidenceThreshold: 0.65,
       derbyMatchMultiplier: 0.87,
       topSixMatchMultiplier: 1.12,
       relegationBattleMultiplier: 0.83,
@@ -1297,8 +1287,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         autoBalance: newSettings.autoBalance,
         leagueGoalsPerSeason: newSettings.leagueGoalsPerSeason,
         globalTierMultiplier: newSettings.globalTierMultiplier?.toString(),
-        lowConfidenceBoost: newSettings.lowConfidenceBoost?.toString(),
-        lowConfidenceThreshold: newSettings.lowConfidenceThreshold?.toString(),
         derbyMatchMultiplier: newSettings.derbyMatchMultiplier?.toString(),
         topSixMatchMultiplier: newSettings.topSixMatchMultiplier?.toString(),
         relegationBattleMultiplier: newSettings.relegationBattleMultiplier?.toString(),
@@ -1378,8 +1366,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     defaultTeamConfidence: 0.70, // Default prediction confidence
     defaultExpectedGoalsPerGame: 1.3, // Fallback if team not found
     globalTierMultiplier: 1.25,
-    lowConfidenceBoost: 1.15,
-    lowConfidenceThreshold: 0.30,
     // Venue Multipliers
     homeAdvantageGoalsMultiplier: 1.15,
     awayFactorGoalsMultiplier: 0.88,
@@ -1547,8 +1533,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         defaultTeamConfidence: 0.70,
         defaultExpectedGoalsPerGame: 1.3,
         globalTierMultiplier: 1.25,
-        lowConfidenceBoost: 1.15,
-        lowConfidenceThreshold: 0.30,
         homeAdvantageGoalsMultiplier: 1.15,
         awayFactorGoalsMultiplier: 0.88,
         eliteAttackMultiplier: 1.5,
@@ -1655,8 +1639,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       adminGoalSettings = {
         globalTierMultiplier: 1.25,
-        lowConfidenceBoost: 1.25,
-        lowConfidenceThreshold: 0.65,
         // Venue Multipliers
         homeAdvantageGoalsMultiplier: 1.15,
         awayFactorGoalsMultiplier: 0.88,
@@ -1729,8 +1711,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sampleTierSeed = (team.id * 5 * 13) % 100;
         const tierMultiplier = teamService.getTierMultiplier(team.id, sampleTierSeed);
         
-        // Calculate confidence multiplier (same logic as in projections)
-        const confidenceMultiplier = teamService.getConfidenceMultiplier(team.id);
+        // Confidence multiplier removed from projections
+        const confidenceMultiplier = 1.0;
         
         // Determine confidence level
         let confidenceLevel: 'High' | 'Medium' | 'Low' = 'Medium';
@@ -1988,9 +1970,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const marketCeiling = Math.min(adminGoalSettings.absoluteMaxGoals || 5.0, adminGoalSettings.maxGoalsPerMatch || 5.0);
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
-          // Phase 7: Confidence Bounds - Apply team confidence adjustments
-          const confidenceMultiplier = teamService.getConfidenceMultiplier(team.id);
-          baseExpectedGoals *= confidenceMultiplier;
+          // Phase 7: Confidence Bounds - Confidence multiplier removed from projections
           
           // Phase 8: Final Bounds - Absolute min/max limits to ensure realistic ranges
           const absoluteMin = adminGoalSettings.absoluteMinGoals || 0.0;

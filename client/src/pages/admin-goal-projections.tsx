@@ -40,8 +40,6 @@ interface AdminSettings {
   defaultTeamConfidence: number;
   defaultExpectedGoalsPerGame: number;
   globalTierMultiplier: number;
-  lowConfidenceBoost: number;
-  lowConfidenceThreshold: number;
   // Venue Multipliers
   homeAdvantageGoalsMultiplier: number;
   awayFactorGoalsMultiplier: number;
@@ -461,8 +459,6 @@ export default function AdminGoalProjections() {
     },
     // Confidence Settings
     confidenceSettings: {
-      lowConfidenceBoost: 1.15,
-      lowConfidenceThreshold: 0.30,
     },
     // Context Multipliers
     contextMultipliers: {
@@ -725,11 +721,11 @@ export default function AdminGoalProjections() {
                       </p>
                     </div>
                     
-                    <div className="p-3 border rounded-lg">
+                    <div className="p-3 border rounded-lg bg-gray-50 dark:bg-gray-900/20">
                       <h4 className="font-semibold text-sm mb-2">Phase 7: Team Confidence</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Low Confidence Threshold:</strong> <span className="font-mono text-teal-600">{((formData.lowConfidenceThreshold || 0.30) * 100).toFixed(0)}%</span><br/>
-                        <strong>Low Confidence Boost:</strong> × <span className="font-mono text-teal-600">{formData.lowConfidenceBoost || 1.15}</span>
+                        <strong>Status:</strong> <span className="font-mono text-gray-600">Removed from calculations</span><br/>
+                        <span className="text-gray-500">Confidence multipliers no longer affect projections</span>
                       </p>
                     </div>
                     
@@ -1839,13 +1835,13 @@ export default function AdminGoalProjections() {
           </Card>
         </TabsContent>
 
-        {/* Team Confidence Tab */}
+        {/* Team Confidence Tab - DEPRECATED */}
         <TabsContent value="confidence" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Team Confidence Analysis</CardTitle>
               <CardDescription>
-                Confidence levels and multipliers applied in goal projection calculations. Teams with confidence below {formData.lowConfidenceThreshold * 100}% receive a {formData.lowConfidenceBoost}x boost.
+                Team confidence parameters have been removed from projection calculations. This tab shows historical confidence data for reference only.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1978,7 +1974,7 @@ export default function AdminGoalProjections() {
                           <strong>Confidence Levels:</strong> High ≥85% | Medium 65-84% | Low ≤64%
                         </div>
                         <div>
-                          <strong>Impact:</strong> Teams with confidence below {formData.lowConfidenceThreshold * 100}% receive a {formData.lowConfidenceBoost}x boost to their expected goals. These boost values are configured in the team confidence calculation.
+                          <strong>Impact:</strong> <span className="text-red-600 font-medium">REMOVED</span> - Confidence multipliers are no longer applied to goal projections. All teams use the same calculation base without confidence adjustments.
                         </div>
                       </div>
                     </AlertDescription>
