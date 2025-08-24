@@ -971,7 +971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }> = {
         // Elite attacking units
         13: { expectedGoalsPerGame: 1.97, goalVariance: 0.35, goalConfidence: 0.88, baseCleanSheetRate: 0.33, homeBonus: 0.07, cleanSheetConfidence: 0.89, attackingTier: 'elite', defensiveTier: 'elite' }, // Man City
-        1: { expectedGoalsPerGame: 1.67, goalVariance: 0.32, goalConfidence: 0.86, baseCleanSheetRate: 0.39, homeBonus: 0.08, cleanSheetConfidence: 0.93, attackingTier: 'elite', defensiveTier: 'elite' }, // Arsenal
+        1: { expectedGoalsPerGame: 1.67, goalVariance: 0.32, goalConfidence: 0.86, baseCleanSheetRate: 0.39, homeBonus: 0.08, cleanSheetConfidence: 0.93, attackingTier: 'strong', defensiveTier: 'elite' }, // Arsenal
         12: { expectedGoalsPerGame: 2.14, goalVariance: 0.30, goalConfidence: 0.85, baseCleanSheetRate: 0.36, homeBonus: 0.09, cleanSheetConfidence: 0.91, attackingTier: 'elite', defensiveTier: 'elite' }, // Liverpool
         7: { expectedGoalsPerGame: 1.95, goalVariance: 0.36, goalConfidence: 0.86, baseCleanSheetRate: 0.14, homeBonus: 0.03, cleanSheetConfidence: 0.60, attackingTier: 'elite', defensiveTier: 'average' }, // Chelsea
         
@@ -1220,8 +1220,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weakDefenseMultiplier: "1.35",
         promotedDefenseMultiplier: "1.60",
         // Default team assignments (matching current Premier League 2025/26 season)
-        eliteAttackTeams: JSON.stringify([12, 13, 1, 7]), // Liverpool, Manchester City, Arsenal, Chelsea
-        strongAttackTeams: JSON.stringify([15, 18, 2, 4, 5, 6]), // Newcastle United, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
+        eliteAttackTeams: JSON.stringify([12, 13, 7]), // Liverpool, Manchester City, Chelsea
+        strongAttackTeams: JSON.stringify([15, 18, 2, 4, 5, 6, 1]), // Newcastle United, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton, Arsenal
         averageAttackTeams: JSON.stringify([14, 3, 10, 20]), // Manchester United, Crystal Palace, Fulham, West Ham
         weakAttackTeams: JSON.stringify([11, 16, 21]), // Everton, Nottingham Forest, Wolverhampton Wanderers
         promotedAttackTeams: JSON.stringify([8, 9, 17]), // Leeds, Burnley, Sunderland
@@ -1277,8 +1277,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       weakDefenseMultiplier: 1.35,
       promotedDefenseMultiplier: 1.60,
       // Team tier assignments (using same defaults as database)
-      eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Manchester City, Arsenal, Chelsea
-      strongAttackTeams: [15, 18, 2, 4, 5, 6], // Newcastle United, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
+      eliteAttackTeams: [12, 13, 7], // Liverpool, Manchester City, Chelsea
+      strongAttackTeams: [15, 18, 2, 4, 5, 6, 1], // Newcastle United, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton, Arsenal
       averageAttackTeams: [14, 3, 10, 20], // Manchester United, Crystal Palace, Fulham, West Ham
       weakAttackTeams: [11, 16, 21], // Everton, Nottingham Forest, Wolverhampton Wanderers
       promotedAttackTeams: [8, 9, 17], // Leeds, Burnley, Sunderland
@@ -1394,8 +1394,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     weakAttackMultiplier: 0.75,
     promotedAttackMultiplier: 0.5,
     // Attacking Team Assignments - Crystal Palace (3) and Everton (11) moved to average
-    eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Man City, Arsenal, Chelsea
-    strongAttackTeams: [15, 18, 2, 4, 5, 6], // Newcastle, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
+    eliteAttackTeams: [12, 13, 7], // Liverpool, Man City, Chelsea
+    strongAttackTeams: [15, 18, 2, 4, 5, 6, 1], // Newcastle, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton, Arsenal
     averageAttackTeams: [14, 3, 10, 20, 11], // Manchester United, Crystal Palace, Fulham, West Ham, Everton
     weakAttackTeams: [16, 21], // Nottingham Forest, Wolverhampton Wanderers
     promotedAttackTeams: [8, 9, 17], // Leeds, Burnley, Sunderland
@@ -1666,8 +1666,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weakAttackMultiplier: 0.90,
         promotedAttackMultiplier: 0.85,
         // Attacking Team Assignments
-        eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Man City, Arsenal, Chelsea
-        strongAttackTeams: [15, 18, 2], // Newcastle, Tottenham, Aston Villa
+        eliteAttackTeams: [12, 13, 7], // Liverpool, Man City, Chelsea
+        strongAttackTeams: [15, 18, 2, 1], // Newcastle, Tottenham, Aston Villa, Arsenal
         weakAttackTeams: [9, 20, 16], // Everton, Wolverhampton, Nottingham Forest
         promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
         // Defensive Tier Multipliers
