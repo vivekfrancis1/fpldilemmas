@@ -422,78 +422,78 @@ export default function AdminGoalProjections() {
 
   // Individual reset functions for each tab
   const resetAttackMultipliers = () => {
-    if (confirm('Reset attacking multipliers to default values?')) {
+    if (confirm('Reset only this tab\'s attacking multipliers to default values? Other settings will remain unchanged.')) {
       setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.attackMultipliers }));
       setHasChanges(true);
       toast({
         title: "Attack Multipliers Reset",
-        description: "Attacking tier multipliers have been reset to default values.",
+        description: "Only attacking tier multipliers have been reset to default values.",
       });
     }
   };
 
   const resetAttackTeams = () => {
-    if (confirm('Reset attacking team assignments to default values?')) {
+    if (confirm('Reset only this tab\'s attacking team assignments to default values? Other settings will remain unchanged.')) {
       setFormData(prev => ({ ...prev, ...DEFAULT_TEAM_TIERS }));
       setHasChanges(true);
       toast({
         title: "Attack Teams Reset",
-        description: "Attacking team assignments have been reset to default values.",
+        description: "Only attacking team assignments have been reset to default values.",
       });
     }
   };
 
   const resetDefenseMultipliers = () => {
-    if (confirm('Reset defensive multipliers to default values?')) {
+    if (confirm('Reset only this tab\'s defensive multipliers to default values? Other settings will remain unchanged.')) {
       setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.defenseMultipliers }));
       setHasChanges(true);
       toast({
         title: "Defense Multipliers Reset",
-        description: "Defensive tier multipliers have been reset to default values.",
+        description: "Only defensive tier multipliers have been reset to default values.",
       });
     }
   };
 
   const resetDefenseTeams = () => {
-    if (confirm('Reset defensive team assignments to default values?')) {
+    if (confirm('Reset only this tab\'s defensive team assignments to default values? Other settings will remain unchanged.')) {
       setFormData(prev => ({ ...prev, ...DEFAULT_DEFENSIVE_TIERS }));
       setHasChanges(true);
       toast({
         title: "Defense Teams Reset",
-        description: "Defensive team assignments have been reset to default values.",
+        description: "Only defensive team assignments have been reset to default values.",
       });
     }
   };
 
   const resetGlobalSettings = () => {
-    if (confirm('Reset global settings to default values?')) {
+    if (confirm('Reset only this tab\'s global settings to default values? Other settings will remain unchanged.')) {
       setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.globalSettings }));
       setHasChanges(true);
       toast({
         title: "Global Settings Reset",
-        description: "Global settings have been reset to default values.",
+        description: "Only global settings have been reset to default values.",
       });
     }
   };
 
   const resetContextMultipliers = () => {
-    if (confirm('Reset context multipliers to default values?')) {
+    if (confirm('Reset only this tab\'s context multipliers to default values? Other settings will remain unchanged.')) {
       setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.contextMultipliers }));
       setHasChanges(true);
       toast({
         title: "Context Multipliers Reset",
-        description: "Context multipliers have been reset to default values.",
+        description: "Only context multipliers have been reset to default values.",
       });
     }
   };
 
   const resetMarketBounds = () => {
-    if (confirm('Reset market bounds to default values?')) {
+    if (confirm('Reset only this tab\'s market bounds to default values? Other settings will remain unchanged.')) {
       setFormData(prev => ({ ...prev, ...DEFAULT_VALUES.marketBounds }));
       setHasChanges(true);
       toast({
         title: "Market Bounds Reset",
-        description: "Market bounds have been reset to default values.",
+        description: "Only market bounds have been reset to default values.",
       });
     }
   };
