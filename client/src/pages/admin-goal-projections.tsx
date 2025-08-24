@@ -286,7 +286,7 @@ export default function AdminGoalProjections() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
                 
                 {/* Elite Attack Teams */}
                 <div className="space-y-3">
@@ -297,13 +297,13 @@ export default function AdminGoalProjections() {
                   <p className="text-xs text-muted-foreground">
                     <strong>Default:</strong> Liverpool, Manchester City, Arsenal, Chelsea
                   </p>
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
                     {getTeamsByTier('elite').map(team => (
-                      <div key={team.id} className="flex items-center justify-between p-2 border rounded">
-                        <span className="text-sm font-medium">{team.name}</span>
-                        <Select value="elite" onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                          <SelectTrigger className="w-24 h-8">
-                            <SelectValue />
+                      <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
+                        <span className="text-sm font-medium truncate pr-2">{team.name}</span>
+                        <Select value={getTeamTier(team.id)} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
+                          <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectValue placeholder="Select tier" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="elite">Elite</SelectItem>
@@ -327,13 +327,13 @@ export default function AdminGoalProjections() {
                   <p className="text-xs text-muted-foreground">
                     <strong>Default:</strong> Newcastle, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
                   </p>
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
                     {getTeamsByTier('strong').map(team => (
-                      <div key={team.id} className="flex items-center justify-between p-2 border rounded">
-                        <span className="text-sm font-medium">{team.name}</span>
-                        <Select value="strong" onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                          <SelectTrigger className="w-24 h-8">
-                            <SelectValue />
+                      <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
+                        <span className="text-sm font-medium truncate pr-2">{team.name}</span>
+                        <Select value={getTeamTier(team.id)} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
+                          <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectValue placeholder="Select tier" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="elite">Elite</SelectItem>
@@ -357,13 +357,13 @@ export default function AdminGoalProjections() {
                   <p className="text-xs text-muted-foreground">
                     <strong>Default:</strong> Manchester United, Crystal Palace, Fulham, West Ham
                   </p>
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
                     {getTeamsByTier('average').map(team => (
-                      <div key={team.id} className="flex items-center justify-between p-2 border rounded">
-                        <span className="text-sm font-medium">{team.name}</span>
-                        <Select value="average" onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                          <SelectTrigger className="w-24 h-8">
-                            <SelectValue />
+                      <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
+                        <span className="text-sm font-medium truncate pr-2">{team.name}</span>
+                        <Select value={getTeamTier(team.id)} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
+                          <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectValue placeholder="Select tier" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="elite">Elite</SelectItem>
@@ -387,13 +387,13 @@ export default function AdminGoalProjections() {
                   <p className="text-xs text-muted-foreground">
                     <strong>Default:</strong> Everton, Nottingham Forest, Wolverhampton Wanderers
                   </p>
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
                     {getTeamsByTier('weak').map(team => (
-                      <div key={team.id} className="flex items-center justify-between p-2 border rounded">
-                        <span className="text-sm font-medium">{team.name}</span>
-                        <Select value="weak" onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                          <SelectTrigger className="w-24 h-8">
-                            <SelectValue />
+                      <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
+                        <span className="text-sm font-medium truncate pr-2">{team.name}</span>
+                        <Select value={getTeamTier(team.id)} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
+                          <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectValue placeholder="Select tier" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="elite">Elite</SelectItem>
@@ -417,13 +417,13 @@ export default function AdminGoalProjections() {
                   <p className="text-xs text-muted-foreground">
                     <strong>Default:</strong> Leeds, Burnley, Sunderland
                   </p>
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
                     {getTeamsByTier('promoted').map(team => (
-                      <div key={team.id} className="flex items-center justify-between p-2 border rounded">
-                        <span className="text-sm font-medium">{team.name}</span>
-                        <Select value="promoted" onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                          <SelectTrigger className="w-24 h-8">
-                            <SelectValue />
+                      <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
+                        <span className="text-sm font-medium truncate pr-2">{team.name}</span>
+                        <Select value={getTeamTier(team.id)} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
+                          <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectValue placeholder="Select tier" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="elite">Elite</SelectItem>
@@ -445,13 +445,13 @@ export default function AdminGoalProjections() {
                       <Badge variant="outline">Unassigned Teams</Badge>
                       <span className="text-sm text-muted-foreground">Default: Average</span>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
                       {teams.filter(team => getTeamTier(team.id) === 'average' && !formData.averageAttackTeams?.includes(team.id)).map(team => (
-                        <div key={team.id} className="flex items-center justify-between p-2 border rounded">
-                          <span className="text-sm font-medium">{team.name}</span>
-                          <Select value="average" onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                            <SelectTrigger className="w-24 h-8">
-                              <SelectValue />
+                        <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
+                          <span className="text-sm font-medium truncate pr-2">{team.name}</span>
+                          <Select value={getTeamTier(team.id)} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
+                            <SelectTrigger className="w-28 h-8 text-xs">
+                              <SelectValue placeholder="Select tier" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="elite">Elite</SelectItem>
