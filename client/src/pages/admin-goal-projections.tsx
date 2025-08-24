@@ -612,6 +612,103 @@ export default function AdminGoalProjections() {
         <h1 className="text-2xl font-bold">Configuration Portal - Team Goals Scored</h1>
       </div>
 
+      {/* Calculation Process Explanation */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            How Team Goal Projections Are Calculated
+          </CardTitle>
+          <CardDescription>
+            Understanding the 8-phase calculation process that transforms base xG into final goal projections
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <div className="p-3 border rounded-lg">
+                  <h4 className="font-semibold text-sm mb-2">Phase 1: Foundation</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Starts with team's base <strong>Expected Goals per Game</strong> (xG rate)<br/>
+                    Examples: Liverpool 2.14, Man City 1.97, Arsenal 1.67
+                  </p>
+                </div>
+                
+                <div className="p-3 border rounded-lg">
+                  <h4 className="font-semibold text-sm mb-2">Phase 2: Venue Adjustments</h4>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Home:</strong> xG × {formData.homeAdvantageGoalsMultiplier || 1.15} (configurable)<br/>
+                    <strong>Away:</strong> xG × {formData.awayFactorGoalsMultiplier || 0.88} (configurable)
+                  </p>
+                </div>
+                
+                <div className="p-3 border rounded-lg">
+                  <h4 className="font-semibold text-sm mb-2">Phase 3: Opponent Defense</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Opponent's clean sheet rate reduces goals by up to 20%<br/>
+                    Formula: xG × (1.0 - opponent_CS_rate × 0.4)
+                  </p>
+                </div>
+                
+                <div className="p-3 border rounded-lg">
+                  <h4 className="font-semibold text-sm mb-2">Phase 4: Context Analysis</h4>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Elite Clashes:</strong> +8% boost<br/>
+                    <strong>Top 6 Battles:</strong> +2% boost<br/>
+                    <strong>Derby Matches:</strong> +14% boost
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="p-3 border rounded-lg">
+                  <h4 className="font-semibold text-sm mb-2">Phase 5: Attacking Tiers</h4>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Elite:</strong> × {formData.eliteAttackMultiplier || 1.5} (configurable)<br/>
+                    <strong>Strong:</strong> × {formData.strongAttackMultiplier || 1.25}<br/>
+                    <strong>Average:</strong> × {formData.averageAttackMultiplier || 1.0}<br/>
+                    <strong>Weak:</strong> × {formData.weakAttackMultiplier || 0.75}
+                  </p>
+                </div>
+                
+                <div className="p-3 border rounded-lg">
+                  <h4 className="font-semibold text-sm mb-2">Phase 6-7: Market Factors</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Small adjustments for market momentum and variance<br/>
+                    Range: 99-101% (minimal seasonal fluctuations)
+                  </p>
+                </div>
+                
+                <div className="p-3 border rounded-lg">
+                  <h4 className="font-semibold text-sm mb-2">Phase 8: Final Bounds</h4>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Floor:</strong> Min {formData.absoluteMinGoals || 0.6} goals/match<br/>
+                    <strong>Ceiling:</strong> Max {formData.absoluteMaxGoals || 2.2} goals/match<br/>
+                    Ensures realistic Premier League ranges
+                  </p>
+                </div>
+                
+                <div className="p-3 border rounded-lg bg-fpl-purple/5">
+                  <h4 className="font-semibold text-sm mb-2">Final Step: Confidence Boost</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Teams with confidence below {formData.lowConfidenceThreshold * 100}%<br/>
+                    receive a <strong>{formData.lowConfidenceBoost}×</strong> multiplier boost
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Impact:</strong> Base xG is the foundation that flows through all 8 phases. Higher xG teams (Liverpool 2.14) naturally project higher goals than lower xG teams (Fulham 1.20) even after all adjustments. Each phase can be configured using the settings in the tabs below.
+              </AlertDescription>
+            </Alert>
+          </div>
+        </CardContent>
+      </Card>
+
       <Alert className="mb-6">
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
