@@ -1378,11 +1378,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     averageAttackMultiplier: 1.00,
     weakAttackMultiplier: 0.75,
     promotedAttackMultiplier: 0.5,
-    // Attacking Team Assignments
+    // Attacking Team Assignments - Crystal Palace (3) and Everton (11) moved to average
     eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Man City, Arsenal, Chelsea
     strongAttackTeams: [15, 18, 2, 4, 5, 6], // Newcastle, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
-    averageAttackTeams: [14, 3, 10, 20], // Manchester United, Crystal Palace, Fulham, West Ham
-    weakAttackTeams: [11, 16, 21], // Everton, Nottingham Forest, Wolverhampton Wanderers
+    averageAttackTeams: [14, 3, 10, 20, 11], // Manchester United, Crystal Palace, Fulham, West Ham, Everton
+    weakAttackTeams: [16, 21], // Nottingham Forest, Wolverhampton Wanderers
     promotedAttackTeams: [8, 9, 17], // Leeds, Burnley, Sunderland
     // Defensive Tier Multipliers
     eliteDefenseMultiplier: 0.5,
@@ -1390,12 +1390,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     averageDefenseMultiplier: 1.00,
     weakDefenseMultiplier: 1.25,
     promotedDefenseMultiplier: 1.5,
-    // Defensive Team Assignments
+    // Defensive Team Assignments - Crystal Palace (3) and Everton (11) moved to average
     eliteDefenseTeams: [1], // Arsenal
     strongDefenseTeams: [12, 13, 7, 16, 15, 9], // Liverpool, Man City, Chelsea, Nottm Forest, Newcastle, Crystal Palace
-    averageDefenseTeams: [8, 14, 18, 2, 10], // Leeds, Man Utd, Tottenham, Aston Villa, Fulham
+    averageDefenseTeams: [8, 14, 18, 2, 10, 3, 11], // Leeds, Man Utd, Tottenham, Aston Villa, Fulham, Crystal Palace, Everton
     weakDefenseTeams: [6, 19, 20, 4, 5], // Brighton, Southampton, West Ham, Brentford, Bournemouth
-    promotedDefenseTeams: [3, 11, 17], // Burnley, Everton, Ipswich
+    promotedDefenseTeams: [17], // Ipswich only - removed Crystal Palace and Everton
     // Context Multipliers
     derbyGoalsMultiplier: 0.87,
     topSixGoalsMultiplier: 1.12,
@@ -1528,7 +1528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST reset goals scored admin settings endpoint
   app.post("/api/admin/goal-scored-settings/reset", async (req, res) => {
     try {
-      // Reset to default values
+      // Reset to default values - Crystal Palace and Everton in average categories
       adminGoalSettings = {
         globalTierMultiplier: 1.25,
         lowConfidenceBoost: 1.15,
@@ -1542,8 +1542,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         promotedAttackMultiplier: 0.5,
         eliteAttackTeams: [12, 13, 1, 7],
         strongAttackTeams: [15, 18, 2, 4, 5, 6],
-        averageAttackTeams: [14, 3, 10, 20],
-        weakAttackTeams: [11, 16, 21],
+        averageAttackTeams: [14, 3, 10, 20, 11], // Crystal Palace and Everton moved here
+        weakAttackTeams: [16, 21],
         promotedAttackTeams: [8, 9, 17],
         eliteDefenseMultiplier: 0.5,
         strongDefenseMultiplier: 0.75,
@@ -1552,9 +1552,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         promotedDefenseMultiplier: 1.5,
         eliteDefenseTeams: [1],
         strongDefenseTeams: [12, 13, 7, 16, 15, 9],
-        averageDefenseTeams: [8, 14, 18, 2, 10],
+        averageDefenseTeams: [8, 14, 18, 2, 10, 3, 11], // Crystal Palace and Everton moved here
         weakDefenseTeams: [6, 19, 20, 4, 5],
-        promotedDefenseTeams: [3, 11, 17],
+        promotedDefenseTeams: [17], // Only Ipswich
         derbyGoalsMultiplier: 0.87,
         topSixGoalsMultiplier: 1.12,
         relegationBattleGoalsMultiplier: 0.83,
