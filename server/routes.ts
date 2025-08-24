@@ -2136,6 +2136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Phase 5: UNIFIED attacking tier performance modeling using configurable team assignments
+          console.log(`🚀 ATTACKING TIER LOGIC STARTING for team ${team.short_name} (${team.id})`);
           const getAttackingTier = (teamId: number) => {
             // Parse attacking team arrays if they come as strings from database
             const parseTeamArray = (teamData: any): number[] => {
@@ -2166,6 +2167,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
           
           const attackingTier = getAttackingTier(team.id);
+          console.log(`🎯 ATTACKING TIER DETERMINED: ${attackingTier} for ${team.short_name}`);
+          
           let attackingTierMultiplier = 1.0;
           switch (attackingTier) {
             case 'elite': attackingTierMultiplier = unifiedProjectionSettings.eliteAttackMultiplier; break;
@@ -2175,9 +2178,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             case 'promoted': attackingTierMultiplier = unifiedProjectionSettings.promotedAttackMultiplier; break;
           }
           
-          console.log(`DEBUG: ${team.short_name} attacking tier: ${attackingTier}, Multiplier: ${attackingTierMultiplier}, Goals before: ${baseExpectedGoals.toFixed(2)}`);
+          console.log(`🔥 ${team.short_name} attacking tier: ${attackingTier}, Multiplier: ${attackingTierMultiplier}, Goals before: ${baseExpectedGoals.toFixed(2)}`);
           baseExpectedGoals *= attackingTierMultiplier;
-          console.log(`DEBUG: Goals after attacking multiplier: ${baseExpectedGoals.toFixed(2)}`);
+          console.log(`✅ Goals after attacking multiplier: ${baseExpectedGoals.toFixed(2)}`);
           
           // Apply opponent's defensive tier multiplier
           const getDefensiveTier = (teamId: number): string => {
