@@ -77,8 +77,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Admin Tools",
       items: [
-        { path: "/admin-goal-projections", label: "Goals Scored", icon: Target, description: "Team goal projection settings", popular: false },
-        { path: "/team-confidence", label: "Team Confidence", icon: TrendingUp, description: "Team confidence analysis", popular: false }
+        { path: "/admin-goal-projections", label: "Goals Scored", icon: Target, description: "Team goal projection settings", popular: false }
       ]
     }
   ];
