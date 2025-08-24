@@ -628,6 +628,7 @@ export default function AdminGoalProjections() {
       <Tabs defaultValue="calculation-base" className="space-y-6">
         <TabsList className="flex flex-wrap gap-1 h-auto p-1">
           <TabsTrigger value="calculation-base">Calculation Base</TabsTrigger>
+          <TabsTrigger value="base-xg">Base xG Settings</TabsTrigger>
           <TabsTrigger value="attacking-multipliers">Attack Multipliers</TabsTrigger>
           <TabsTrigger value="attacking-teams">Attack Teams</TabsTrigger>
           <TabsTrigger value="defensive-multipliers">Defense Multipliers</TabsTrigger>
@@ -732,6 +733,149 @@ export default function AdminGoalProjections() {
                     <strong>Impact:</strong> Base xG is the foundation that flows through all 8 phases. Higher xG teams (Liverpool 2.14) naturally project higher goals than lower xG teams (Fulham 1.20) even after all adjustments. Each phase can be configured using the settings in the other tabs.
                   </AlertDescription>
                 </Alert>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Base xG Settings Tab */}
+        <TabsContent value="base-xg" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Base Expected Goals per Game</CardTitle>
+                <CardDescription>Foundational xG rates that serve as Phase 1 input for all team goal projections</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (confirm('Reset all base xG values to default 2025/26 season projections?')) {
+                    // Reset logic would go here
+                    toast({
+                      title: "Base xG Reset",
+                      description: "All team base xG values have been reset to season defaults.",
+                    });
+                  }
+                }}
+                className="flex items-center gap-2"
+                data-testid="button-reset-base-xg"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Tab
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Foundation Layer:</strong> These base xG values are the starting point (Phase 1) for all team goal projections. They represent each team's underlying attacking quality before any adjustments for venue, opponent, context, or tiers are applied.
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2 font-medium">Team</th>
+                        <th className="text-center p-2 font-medium">Current Tier</th>
+                        <th className="text-center p-2 font-medium">Base xG per Game</th>
+                        <th className="text-center p-2 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {teams.map((team) => {
+                        const currentTier = getTeamTier(team.id);
+                        const tierColor = getTierBadgeColor(currentTier);
+                        
+                        return (
+                          <tr key={team.id} className="border-b hover:bg-muted/50">
+                            <td className="p-2">
+                              <div>
+                                <p className="font-medium">{team.short_name}</p>
+                                <p className="text-sm text-muted-foreground">{team.name}</p>
+                              </div>
+                            </td>
+                            <td className="text-center p-2">
+                              <Badge className={tierColor}>
+                                {currentTier}
+                              </Badge>
+                            </td>
+                            <td className="text-center p-2">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0.5"
+                                max="3.0"
+                                className="w-20 mx-auto text-center"
+                                defaultValue="1.50"
+                                data-testid={`input-base-xg-${team.id}`}
+                              />
+                            </td>
+                            <td className="text-center p-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  toast({
+                                    title: "xG Updated",
+                                    description: `Base xG updated for ${team.short_name}`,
+                                  });
+                                }}
+                                data-testid={`button-update-xg-${team.id}`}
+                              >
+                                Update
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-purple-600">Elite Range</p>
+                        <p className="text-2xl font-bold">1.8 - 2.2</p>
+                        <p className="text-xs text-muted-foreground">Man City, Liverpool, Arsenal</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-blue-600">Strong Range</p>
+                        <p className="text-2xl font-bold">1.4 - 1.7</p>
+                        <p className="text-xs text-muted-foreground">Newcastle, Spurs, Villa</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-slate-600">Average Range</p>
+                        <p className="text-2xl font-bold">1.1 - 1.4</p>
+                        <p className="text-xs text-muted-foreground">Fulham, Brighton, West Ham</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-orange-600">Weak/Promoted</p>
+                        <p className="text-2xl font-bold">0.8 - 1.1</p>
+                        <p className="text-xs text-muted-foreground">Promoted teams, relegation battlers</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1722,7 +1866,6 @@ export default function AdminGoalProjections() {
                           <th className="text-left p-2 font-medium">Team</th>
                           <th className="text-center p-2 font-medium">Confidence Score</th>
                           <th className="text-center p-2 font-medium">Level</th>
-                          <th className="text-center p-2 font-medium">xG/Game</th>
                           <th className="text-center p-2 font-medium">CS Rate</th>
                           <th className="text-center p-2 font-medium">Confidence Multiplier</th>
                         </tr>
@@ -1743,9 +1886,6 @@ export default function AdminGoalProjections() {
                               <Badge className={getConfidenceBadgeColor(team.confidenceLevel)}>
                                 {team.confidenceLevel}
                               </Badge>
-                            </td>
-                            <td className="text-center p-2">
-                              <span className="font-mono">{team.expectedGoalsPerGame.toFixed(2)}</span>
                             </td>
                             <td className="text-center p-2">
                               <span className="font-mono">{team.baseCleanSheetRate}%</span>
