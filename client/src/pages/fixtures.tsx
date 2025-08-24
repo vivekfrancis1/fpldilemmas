@@ -453,27 +453,27 @@ export default function Fixtures() {
             <TabsContent value="attacking" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-purple-600 rounded"></div>
-                  <span>Elite Attack</span>
+                  <div className="w-3 h-3 bg-red-600 rounded"></div>
+                  <span>vs Elite Defense (Hardest)</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-blue-600 rounded"></div>
-                  <span>Strong Attack</span>
+                  <span>vs Strong Defense</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-gray-500 rounded"></div>
-                  <span>Average Attack</span>
+                  <span>vs Average Defense</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-orange-600 rounded"></div>
-                  <span>Weak Attack</span>
+                  <span>vs Weak Defense</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-600 rounded"></div>
-                  <span>Promoted Attack</span>
+                  <div className="w-3 h-3 bg-green-600 rounded"></div>
+                  <span>vs Promoted Defense (Easiest)</span>
                 </div>
                 <div className="text-xs text-gray-600">
-                  Attacking Tier vs Defensive Tier
+                  Attacking difficulty based on opponent's defensive strength
                 </div>
               </div>
 
@@ -488,7 +488,6 @@ export default function Fixtures() {
                       <thead>
                         <tr className="border-b bg-gray-50">
                           <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
-                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Attack Tier</th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
@@ -500,17 +499,11 @@ export default function Fixtures() {
                       </thead>
                       <tbody>
                         {sortedTeams.map(team => {
-                          const attackTier = getAttackingTier(team.id);
                           return (
                             <tr key={team.id} className="border-b hover:bg-gray-50">
                               <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">{team.short_name}</span>
-                                </div>
-                              </td>
-                              <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
-                                <div className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getTierColor(attackTier)}`}>
-                                  {attackTier.charAt(0).toUpperCase() + attackTier.slice(1)}
                                 </div>
                               </td>
                               {gameweeks.map(gw => {
@@ -528,15 +521,27 @@ export default function Fixtures() {
                                 const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
                                 const opponentDefenseTier = opponentId ? getDefensiveTier(opponentId) : 'average';
                                 
+                                // Color by opponent's defensive tier (inverse logic - easier to score against weak defenses)
+                                const getOpponentDefenseColor = (defenseTier: string) => {
+                                  switch (defenseTier) {
+                                    case 'elite': return 'bg-red-600 text-white'; // Hardest to score against
+                                    case 'strong': return 'bg-blue-600 text-white';
+                                    case 'average': return 'bg-gray-500 text-white';
+                                    case 'weak': return 'bg-orange-600 text-white';
+                                    case 'promoted': return 'bg-green-600 text-white'; // Easiest to score against
+                                    default: return 'bg-gray-300 text-gray-900';
+                                  }
+                                };
+                                
                                 return (
                                   <td key={gw} className={`px-1 py-1 text-center ${
                                     gw === currentGameweek ? 'bg-blue-50' : ''
                                   }`}>
                                     <div 
-                                      className={`px-1 py-1 rounded text-xs font-medium ${getTierColor(attackTier)} ${
+                                      className={`px-1 py-1 rounded text-xs font-medium ${getOpponentDefenseColor(opponentDefenseTier)} ${
                                         fixture.finished ? 'opacity-50' : ''
                                       }`}
-                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - ${attackTier} attack vs ${opponentDefenseTier} defense`}
+                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - ${opponentDefenseTier} defense`}
                                       data-testid={`attack-fixture-${team.id}-${gw}`}
                                     >
                                       <span className="truncate text-xs font-medium whitespace-nowrap">
@@ -560,27 +565,27 @@ export default function Fixtures() {
             <TabsContent value="defensive" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-purple-600 rounded"></div>
-                  <span>Elite Defense</span>
+                  <div className="w-3 h-3 bg-red-600 rounded"></div>
+                  <span>vs Elite Attack (Hardest)</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-blue-600 rounded"></div>
-                  <span>Strong Defense</span>
+                  <span>vs Strong Attack</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-gray-500 rounded"></div>
-                  <span>Average Defense</span>
+                  <span>vs Average Attack</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-orange-600 rounded"></div>
-                  <span>Weak Defense</span>
+                  <span>vs Weak Attack</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-600 rounded"></div>
-                  <span>Promoted Defense</span>
+                  <div className="w-3 h-3 bg-green-600 rounded"></div>
+                  <span>vs Promoted Attack (Easiest)</span>
                 </div>
                 <div className="text-xs text-gray-600">
-                  Defensive Tier vs Attacking Tier
+                  Defensive difficulty based on opponent's attacking strength
                 </div>
               </div>
 
@@ -595,7 +600,6 @@ export default function Fixtures() {
                       <thead>
                         <tr className="border-b bg-gray-50">
                           <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
-                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Defense Tier</th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
@@ -607,17 +611,11 @@ export default function Fixtures() {
                       </thead>
                       <tbody>
                         {sortedTeams.map(team => {
-                          const defenseTier = getDefensiveTier(team.id);
                           return (
                             <tr key={team.id} className="border-b hover:bg-gray-50">
                               <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">{team.short_name}</span>
-                                </div>
-                              </td>
-                              <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
-                                <div className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getTierColor(defenseTier)}`}>
-                                  {defenseTier.charAt(0).toUpperCase() + defenseTier.slice(1)}
                                 </div>
                               </td>
                               {gameweeks.map(gw => {
@@ -635,15 +633,27 @@ export default function Fixtures() {
                                 const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
                                 const opponentAttackTier = opponentId ? getAttackingTier(opponentId) : 'average';
                                 
+                                // Color by opponent's attacking tier (harder to defend against strong attacks)
+                                const getOpponentAttackColor = (attackTier: string) => {
+                                  switch (attackTier) {
+                                    case 'elite': return 'bg-red-600 text-white'; // Hardest to defend against
+                                    case 'strong': return 'bg-blue-600 text-white';
+                                    case 'average': return 'bg-gray-500 text-white';
+                                    case 'weak': return 'bg-orange-600 text-white';
+                                    case 'promoted': return 'bg-green-600 text-white'; // Easiest to defend against
+                                    default: return 'bg-gray-300 text-gray-900';
+                                  }
+                                };
+                                
                                 return (
                                   <td key={gw} className={`px-1 py-1 text-center ${
                                     gw === currentGameweek ? 'bg-blue-50' : ''
                                   }`}>
                                     <div 
-                                      className={`px-1 py-1 rounded text-xs font-medium ${getTierColor(defenseTier)} ${
+                                      className={`px-1 py-1 rounded text-xs font-medium ${getOpponentAttackColor(opponentAttackTier)} ${
                                         fixture.finished ? 'opacity-50' : ''
                                       }`}
-                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - ${defenseTier} defense vs ${opponentAttackTier} attack`}
+                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - ${opponentAttackTier} attack`}
                                       data-testid={`defense-fixture-${team.id}-${gw}`}
                                     >
                                       <span className="truncate text-xs font-medium whitespace-nowrap">
