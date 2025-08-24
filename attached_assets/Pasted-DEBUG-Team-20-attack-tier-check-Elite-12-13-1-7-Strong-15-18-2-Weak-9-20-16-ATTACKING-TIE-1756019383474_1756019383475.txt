@@ -1,0 +1,160 @@
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 0.92
+✅ Goals after attacking multiplier: 0.87
+DEBUG: Team 14 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs MUN - Opponent tier: average, Multiplier: 1, Goals before: 0.87
+DEBUG: Goals after defensive multiplier: 0.87
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 1.21
+✅ Goals after attacking multiplier: 1.15
+DEBUG: Team 19 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs WHU - Opponent tier: weak, Multiplier: 1.1, Goals before: 1.15
+DEBUG: Goals after defensive multiplier: 1.26
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 0.91
+✅ Goals after attacking multiplier: 0.86
+DEBUG: Team 9 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs EVE - Opponent tier: strong, Multiplier: 0.9, Goals before: 0.86
+DEBUG: Goals after defensive multiplier: 0.78
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 1.15
+✅ Goals after attacking multiplier: 1.09
+DEBUG: Team 15 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs NEW - Opponent tier: strong, Multiplier: 0.9, Goals before: 1.09
+DEBUG: Goals after defensive multiplier: 0.98
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 0.86
+✅ Goals after attacking multiplier: 0.81
+DEBUG: Team 13 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs MCI - Opponent tier: strong, Multiplier: 0.9, Goals before: 0.81
+DEBUG: Goals after defensive multiplier: 0.73
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 1.18
+✅ Goals after attacking multiplier: 1.12
+DEBUG: Team 4 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs BOU - Opponent tier: weak, Multiplier: 1.1, Goals before: 1.12
+DEBUG: Goals after defensive multiplier: 1.23
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 1.22
+✅ Goals after attacking multiplier: 1.16
+DEBUG: Team 7 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs CHE - Opponent tier: strong, Multiplier: 0.9, Goals before: 1.16
+DEBUG: Goals after defensive multiplier: 1.04
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 0.87
+✅ Goals after attacking multiplier: 0.83
+DEBUG: Team 16 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs NFO - Opponent tier: strong, Multiplier: 0.9, Goals before: 0.83
+DEBUG: Goals after defensive multiplier: 0.74
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 0.94
+✅ Goals after attacking multiplier: 0.89
+DEBUG: Team 8 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs CRY - Opponent tier: average, Multiplier: 1, Goals before: 0.89
+DEBUG: Goals after defensive multiplier: 0.89
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 1.16
+✅ Goals after attacking multiplier: 1.10
+DEBUG: Team 2 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs AVL - Opponent tier: average, Multiplier: 1, Goals before: 1.10
+DEBUG: Goals after defensive multiplier: 1.10
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 1.10
+✅ Goals after attacking multiplier: 1.05
+DEBUG: Team 12 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs LIV - Opponent tier: strong, Multiplier: 0.9, Goals before: 1.05
+DEBUG: Goals after defensive multiplier: 0.94
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 0.89
+✅ Goals after attacking multiplier: 0.85
+DEBUG: Team 5 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs BRE - Opponent tier: weak, Multiplier: 1.1, Goals before: 0.85
+DEBUG: Goals after defensive multiplier: 0.94
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 1.09
+✅ Goals after attacking multiplier: 1.03
+DEBUG: Team 1 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs ARS - Opponent tier: elite, Multiplier: 0.8, Goals before: 1.03
+DEBUG: Goals after defensive multiplier: 0.83
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 0.92
+✅ Goals after attacking multiplier: 0.88
+DEBUG: Team 19 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs WHU - Opponent tier: weak, Multiplier: 1.1, Goals before: 0.88
+DEBUG: Goals after defensive multiplier: 0.96
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 0.95
+✅ Goals after attacking multiplier: 0.90
+DEBUG: Team 11 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs LEE - Opponent tier: promoted, Multiplier: 1.2, Goals before: 0.90
+DEBUG: Goals after defensive multiplier: 1.08
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 1.23
+✅ Goals after attacking multiplier: 1.17
+DEBUG: Team 18 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs TOT - Opponent tier: average, Multiplier: 1, Goals before: 1.17
+DEBUG: Goals after defensive multiplier: 1.17
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 1.26
+✅ Goals after attacking multiplier: 1.19
+DEBUG: Team 17 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs SUN - Opponent tier: promoted, Multiplier: 1.2, Goals before: 1.19
+DEBUG: Goals after defensive multiplier: 1.43
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 0.87
+✅ Goals after attacking multiplier: 0.82
+DEBUG: Team 6 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs BHA - Opponent tier: weak, Multiplier: 1.1, Goals before: 0.82
+DEBUG: Goals after defensive multiplier: 0.91
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 1.21
+✅ Goals after attacking multiplier: 1.15
+DEBUG: Team 10 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs FUL - Opponent tier: average, Multiplier: 1, Goals before: 1.15
+DEBUG: Goals after defensive multiplier: 1.15
+🚀 ATTACKING TIER LOGIC STARTING for team WOL (20)
+DEBUG: Team 20 attack tier check - Elite: 12,13,1,7, Strong: 15,18,2, Weak: 9,20,16
+🎯 ATTACKING TIER DETERMINED: weak for WOL
+🔥 WOL attacking tier: weak, Multiplier: 0.95, Goals before: 0.95
+✅ Goals after attacking multiplier: 0.91
+DEBUG: Team 3 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: WOL vs BUR - Opponent tier: promoted, Multiplier: 1.2, Goals before: 0.91
+DEBUG: Goals after defensive multiplier: 1.09
+7:09:31 AM [express] GET /api/team-goal-projections 200 in 314ms :: [{"id":12,"team":"LIV","teamShor…

@@ -2040,7 +2040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.set('Last-Modified', new Date().toUTCString());
     res.set('ETag', `"${Date.now()}"`);
     try {
-      console.log(`🚀🚀🚀 FRESH REQUEST - Team Goal Projections API called - ${new Date().toISOString()}`);
+      console.log(`DEBUG: Team Goal Projections API called - generating all 38 gameweeks`);
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -2142,7 +2142,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Phase 5: UNIFIED attacking tier performance modeling using configurable team assignments
-          console.log(`🚀 ATTACKING TIER LOGIC STARTING for team ${team.short_name} (${team.id})`);
           const getAttackingTier = (teamId: number) => {
             // Parse attacking team arrays if they come as strings from database
             const parseTeamArray = (teamData: any): number[] => {
@@ -2173,8 +2172,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
           
           const attackingTier = getAttackingTier(team.id);
-          console.log(`🎯 ATTACKING TIER DETERMINED: ${attackingTier} for ${team.short_name}`);
-          
           let attackingTierMultiplier = 1.0;
           switch (attackingTier) {
             case 'elite': attackingTierMultiplier = unifiedProjectionSettings.eliteAttackMultiplier; break;
@@ -2184,9 +2181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             case 'promoted': attackingTierMultiplier = unifiedProjectionSettings.promotedAttackMultiplier; break;
           }
           
-          console.log(`🔥 ${team.short_name} attacking tier: ${attackingTier}, Multiplier: ${attackingTierMultiplier}, Goals before: ${baseExpectedGoals.toFixed(2)}`);
           baseExpectedGoals *= attackingTierMultiplier;
-          console.log(`✅ Goals after attacking multiplier: ${baseExpectedGoals.toFixed(2)}`);
           
           // Apply opponent's defensive tier multiplier
           const getDefensiveTier = (teamId: number): string => {
