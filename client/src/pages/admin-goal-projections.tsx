@@ -658,8 +658,8 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 1: Foundation</h4>
                       <p className="text-sm text-muted-foreground">
-                        Starts with team's base <strong>Expected Goals per Game</strong> (xG rate)<br/>
-                        Examples: Liverpool 2.14, Man City 1.97, Arsenal 1.67
+                        Starts with <strong>Average Base xG per Team per Game</strong> (1.35)<br/>
+                        Universal foundation - all teams begin with the same base value
                       </p>
                     </div>
                     
@@ -730,7 +730,7 @@ export default function AdminGoalProjections() {
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>Impact:</strong> Base xG is the foundation that flows through all 8 phases. Higher xG teams (Liverpool 2.14) naturally project higher goals than lower xG teams (Fulham 1.20) even after all adjustments. Each phase can be configured using the settings in the other tabs.
+                    <strong>Impact:</strong> All teams start from the same base xG foundation (1.35) in Phase 1. Team differences emerge through attacking/defensive tier multipliers, venue factors, and context adjustments applied in subsequent phases. This ensures a fair foundation while allowing team quality differences to be reflected through the layered multiplier system.
                   </AlertDescription>
                 </Alert>
               </div>
