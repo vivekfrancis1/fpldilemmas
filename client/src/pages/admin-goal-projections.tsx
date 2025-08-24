@@ -499,7 +499,7 @@ export default function AdminGoalProjections() {
   };
 
   const handleReset = () => {
-    if (confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
+    if (confirm('Reset ALL settings across ALL tabs to default values? This will reset attacking multipliers, team assignments, defensive settings, global settings, context multipliers, and market bounds. This action cannot be undone.')) {
       resetSettingsMutation.mutate();
     }
   };
