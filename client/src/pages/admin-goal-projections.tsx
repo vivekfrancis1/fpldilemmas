@@ -188,6 +188,8 @@ export default function AdminGoalProjections() {
         weakDefenseMultiplier: settings.weakDefenseMultiplier ?? DEFAULT_VALUES.defenseMultipliers.weakDefenseMultiplier,
         promotedDefenseMultiplier: settings.promotedDefenseMultiplier ?? DEFAULT_VALUES.defenseMultipliers.promotedDefenseMultiplier,
         
+        minGoalsPerMatch: settings.minGoalsPerMatch ?? DEFAULT_VALUES.marketBounds.minGoalsPerMatch,
+        maxGoalsPerMatch: settings.maxGoalsPerMatch ?? DEFAULT_VALUES.marketBounds.maxGoalsPerMatch,
         absoluteMinGoals: settings.absoluteMinGoals ?? DEFAULT_VALUES.marketBounds.absoluteMinGoals,
         absoluteMaxGoals: settings.absoluteMaxGoals ?? DEFAULT_VALUES.marketBounds.absoluteMaxGoals,
         marketFloorMultiplier: settings.marketFloorMultiplier ?? DEFAULT_VALUES.marketBounds.marketFloorMultiplier,
@@ -431,6 +433,8 @@ export default function AdminGoalProjections() {
     },
     // Market Bounds
     marketBounds: {
+      minGoalsPerMatch: 0.0,
+      maxGoalsPerMatch: 5.0,
       absoluteMinGoals: 0.0,
       absoluteMaxGoals: 7.0,
       marketFloorMultiplier: 0.40,
@@ -1404,16 +1408,16 @@ export default function AdminGoalProjections() {
                     id="minGoalsPerMatch"
                     type="number"
                     step="0.01"
-                    min="1.0"
+                    min="0.0"
                     max="2.0"
                     value={formData.minGoalsPerMatch || 0}
                     onChange={(e) => handleInputChange('minGoalsPerMatch', e.target.value)}
                     data-testid="input-min-goals-per-match"
                   />
                   <p className="text-xs text-muted-foreground">
-                    <strong>Default: 1.20</strong><br/>
+                    <strong>Default: 0.0</strong><br/>
                     Minimum goals per match across all projections.<br/>
-                    <em>Range: 1.0-2.0</em>
+                    <em>Range: 0.0-2.0</em>
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -1423,15 +1427,15 @@ export default function AdminGoalProjections() {
                     type="number"
                     step="0.01"
                     min="2.5"
-                    max="4.0"
+                    max="7.0"
                     value={formData.maxGoalsPerMatch || 0}
                     onChange={(e) => handleInputChange('maxGoalsPerMatch', e.target.value)}
                     data-testid="input-max-goals-per-match"
                   />
                   <p className="text-xs text-muted-foreground">
-                    <strong>Default: 3.20</strong><br/>
+                    <strong>Default: 5.0</strong><br/>
                     Maximum goals per match across all projections.<br/>
-                    <em>Range: 2.5-4.0</em>
+                    <em>Range: 2.5-7.0</em>
                   </p>
                 </div>
                 <div className="space-y-2">
