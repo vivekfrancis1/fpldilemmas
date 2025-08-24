@@ -1,0 +1,40 @@
+DEBUG: Goals after defensive multiplier: 1.82
+DEBUG: Team 19 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs WHU - Opponent tier: weak, Multiplier: 1.1, Goals before: 1.19
+DEBUG: Goals after defensive multiplier: 1.31
+DEBUG: Team 9 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs EVE - Opponent tier: strong, Multiplier: 0.9, Goals before: 1.17
+DEBUG: Goals after defensive multiplier: 1.06
+DEBUG: Team 8 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs CRY - Opponent tier: average, Multiplier: 1, Goals before: 1.59
+DEBUG: Goals after defensive multiplier: 1.59
+DEBUG: Team 15 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs NEW - Opponent tier: strong, Multiplier: 0.9, Goals before: 1.14
+DEBUG: Goals after defensive multiplier: 1.02
+DEBUG: Team 2 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs AVL - Opponent tier: average, Multiplier: 1, Goals before: 1.50
+DEBUG: Goals after defensive multiplier: 1.50
+DEBUG: Team 4 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs BOU - Opponent tier: weak, Multiplier: 1.1, Goals before: 1.17
+DEBUG: Goals after defensive multiplier: 1.29
+DEBUG: Team 11 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs LEE - Opponent tier: promoted, Multiplier: 1.2, Goals before: 1.61
+DEBUG: Goals after defensive multiplier: 1.93
+DEBUG: Team 7 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs CHE - Opponent tier: strong, Multiplier: 0.9, Goals before: 1.20
+DEBUG: Goals after defensive multiplier: 1.08
+DEBUG: Team 5 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs BRE - Opponent tier: weak, Multiplier: 1.1, Goals before: 1.51
+DEBUG: Goals after defensive multiplier: 1.67
+DEBUG: Team 12 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs LIV - Opponent tier: strong, Multiplier: 0.9, Goals before: 1.63
+DEBUG: Goals after defensive multiplier: 1.47
+DEBUG: Team 17 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs SUN - Opponent tier: promoted, Multiplier: 1.2, Goals before: 1.25
+DEBUG: Goals after defensive multiplier: 1.49
+DEBUG: Team 16 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs NFO - Opponent tier: strong, Multiplier: 0.9, Goals before: 1.47
+DEBUG: Goals after defensive multiplier: 1.33
+DEBUG: Team 6 defense tier check - Elite: 1, Strong: 12,13,7,16,15,9, Weak: 6,19,20,4,5
+DEBUG: MUN vs BHA - Opponent tier: weak, Multiplier: 1.1, Goals before: 1.28
+DEBUG: Goals after defensive multiplier: 1.41

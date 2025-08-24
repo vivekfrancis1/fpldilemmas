@@ -2033,6 +2033,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Team Goal Projections endpoint  
   app.get("/api/team-goal-projections", async (req, res) => {
+    // Disable caching to ensure admin changes reflect immediately
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     try {
       console.log(`DEBUG: Team Goal Projections API called - generating all 38 gameweeks`);
       
