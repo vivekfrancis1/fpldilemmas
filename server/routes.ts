@@ -2156,11 +2156,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return [];
             };
 
-            const eliteAttackTeams = parseTeamArray(unifiedProjectionSettings.eliteAttackTeams) || [12, 13, 1, 7];
-            const strongAttackTeams = parseTeamArray(unifiedProjectionSettings.strongAttackTeams) || [15, 18, 2];
-            const averageAttackTeams = parseTeamArray(unifiedProjectionSettings.averageAttackTeams) || [4,5,6,8,14,19,10];
-            const weakAttackTeams = parseTeamArray(unifiedProjectionSettings.weakAttackTeams) || [9, 20, 16];
-            const promotedAttackTeams = parseTeamArray(unifiedProjectionSettings.promotedAttackTeams) || [3, 11, 17];
+            // Use standard team assignments since Goals Scored admin doesn't have configurable team assignments
+            const eliteAttackTeams = [12, 13, 1, 7]; // Liverpool, Man City, Arsenal, Chelsea
+            const strongAttackTeams = [15, 18, 2]; // Newcastle, Tottenham, Aston Villa
+            const averageAttackTeams = [4,5,6,8,14,19,10]; // Mid-table teams
+            const weakAttackTeams = [9, 20, 16]; // Everton, Wolverhampton, Nottingham Forest
+            const promotedAttackTeams = [3, 11, 17]; // Burnley, Leeds, Sunderland
 
             console.log(`DEBUG: Team ${teamId} attack tier check - Elite: ${eliteAttackTeams}, Strong: ${strongAttackTeams}, Weak: ${weakAttackTeams}`);
             
@@ -2174,11 +2175,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const attackingTier = getAttackingTier(team.id);
           let attackingTierMultiplier = 1.0;
           switch (attackingTier) {
-            case 'elite': attackingTierMultiplier = unifiedProjectionSettings.eliteAttackMultiplier; break;
-            case 'strong': attackingTierMultiplier = unifiedProjectionSettings.strongAttackMultiplier; break;
-            case 'average': attackingTierMultiplier = unifiedProjectionSettings.averageAttackMultiplier; break;
-            case 'weak': attackingTierMultiplier = unifiedProjectionSettings.weakAttackMultiplier; break;
-            case 'promoted': attackingTierMultiplier = unifiedProjectionSettings.promotedAttackMultiplier; break;
+            case 'elite': attackingTierMultiplier = adminGoalSettings.eliteAttackMultiplier; break;
+            case 'strong': attackingTierMultiplier = adminGoalSettings.strongAttackMultiplier; break;
+            case 'average': attackingTierMultiplier = adminGoalSettings.averageAttackMultiplier; break;
+            case 'weak': attackingTierMultiplier = adminGoalSettings.weakAttackMultiplier; break;
+            case 'promoted': attackingTierMultiplier = adminGoalSettings.promotedAttackMultiplier; break;
           }
           
           baseExpectedGoals *= attackingTierMultiplier;
