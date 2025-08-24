@@ -83,15 +83,15 @@ export default function AdminGoalProjections() {
 
   const teams: Team[] = (bootstrapData as any)?.teams || [];
 
-  // Fetch current admin settings
+  // Fetch current admin settings from unified projection settings
   const { data: settings, isLoading } = useQuery<AdminSettings>({
-    queryKey: ['/api/admin/goal-projection-settings'],
+    queryKey: ['/api/admin/unified-projection-settings'],
   });
 
-  // Update settings mutation
+  // Update settings mutation using unified projection settings endpoint
   const updateSettingsMutation = useMutation({
     mutationFn: async (updatedSettings: Partial<AdminSettings>) => {
-      const response = await fetch('/api/admin/goal-projection-settings', {
+      const response = await fetch('/api/admin/unified-projection-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedSettings),
@@ -102,10 +102,10 @@ export default function AdminGoalProjections() {
     onSuccess: () => {
       toast({
         title: "Settings Updated",
-        description: "Goal projection model parameters have been updated successfully.",
+        description: "Team tier assignments and projection parameters have been updated successfully.",
       });
       setHasChanges(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/goal-projection-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/unified-projection-settings'] });
     },
     onError: () => {
       toast({
@@ -116,10 +116,10 @@ export default function AdminGoalProjections() {
     },
   });
 
-  // Reset settings mutation
+  // Reset settings mutation using unified projection settings
   const resetSettingsMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/admin/goal-projection-settings/reset', {
+      const response = await fetch('/api/admin/unified-projection-settings/reset', {
         method: 'POST',
       });
       if (!response.ok) throw new Error('Failed to reset settings');
@@ -128,10 +128,10 @@ export default function AdminGoalProjections() {
     onSuccess: () => {
       toast({
         title: "Settings Reset",
-        description: "All settings have been reset to default values.",
+        description: "All settings and team assignments have been reset to default values.",
       });
       setHasChanges(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/goal-projection-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/unified-projection-settings'] });
     },
     onError: () => {
       toast({
@@ -141,6 +141,15 @@ export default function AdminGoalProjections() {
       });
     },
   });
+
+  // Default team tier assignments
+  const DEFAULT_TEAM_TIERS = {
+    eliteAttackTeams: [1, 13], // Arsenal, Man City
+    strongAttackTeams: [12, 15, 7, 18], // Liverpool, Newcastle, Chelsea, Tottenham
+    averageAttackTeams: [6, 2, 21, 8, 5, 11, 20, 10], // Brighton, Aston Villa, West Ham, Crystal Palace, Bournemouth, Fulham, Wolves, Everton
+    weakAttackTeams: [4, 16, 14], // Brentford, Nottm Forest, Man Utd
+    promotedAttackTeams: [9, 17, 19], // Leicester, Ipswich, Southampton
+  };
 
   // Initialize form data when settings are loaded
   useEffect(() => {
@@ -165,74 +174,53 @@ export default function AdminGoalProjections() {
     setHasChanges(true);
   };
 
-  // Team assignment handlers
-  const handleTeamTierChange = (teamId: number, newTier: string) => {
-    const teamIdNumber = Number(teamId);
-    
-    // Remove team from all tiers first
-    const updatedFormData = {
-      ...formData,
-      eliteAttackTeams: formData.eliteAttackTeams?.filter(id => id !== teamIdNumber) || [],
-      strongAttackTeams: formData.strongAttackTeams?.filter(id => id !== teamIdNumber) || [],
-      averageAttackTeams: formData.averageAttackTeams?.filter(id => id !== teamIdNumber) || [],
-      weakAttackTeams: formData.weakAttackTeams?.filter(id => id !== teamIdNumber) || [],
-      promotedAttackTeams: formData.promotedAttackTeams?.filter(id => id !== teamIdNumber) || [],
-    };
-
-    // Add team to new tier
-    switch (newTier) {
-      case 'elite':
-        updatedFormData.eliteAttackTeams.push(teamIdNumber);
-        break;
-      case 'strong':
-        updatedFormData.strongAttackTeams.push(teamIdNumber);
-        break;
-      case 'average':
-        updatedFormData.averageAttackTeams.push(teamIdNumber);
-        break;
-      case 'weak':
-        updatedFormData.weakAttackTeams.push(teamIdNumber);
-        break;
-      case 'promoted':
-        updatedFormData.promotedAttackTeams.push(teamIdNumber);
-        break;
-    }
-
-    setFormData(updatedFormData);
-    setHasChanges(true);
-  };
-
-  // Helper function to get team's current tier
+  // Team tier assignment helper functions
   const getTeamTier = (teamId: number): string => {
     if (formData.eliteAttackTeams?.includes(teamId)) return 'elite';
     if (formData.strongAttackTeams?.includes(teamId)) return 'strong';
-    if (formData.averageAttackTeams?.includes(teamId)) return 'average';
     if (formData.weakAttackTeams?.includes(teamId)) return 'weak';
     if (formData.promotedAttackTeams?.includes(teamId)) return 'promoted';
-    return 'average'; // default
+    return 'average';
   };
 
-  // Helper function to get teams by tier
-  const getTeamsByTier = (tier: string): Team[] => {
-    let teamIds: number[] = [];
-    switch (tier) {
-      case 'elite':
-        teamIds = formData.eliteAttackTeams || [];
-        break;
-      case 'strong':
-        teamIds = formData.strongAttackTeams || [];
-        break;
-      case 'average':
-        teamIds = formData.averageAttackTeams || [];
-        break;
-      case 'weak':
-        teamIds = formData.weakAttackTeams || [];
-        break;
-      case 'promoted':
-        teamIds = formData.promotedAttackTeams || [];
-        break;
-    }
-    return teams.filter(team => teamIds.includes(team.id));
+  const getTeamsByTier = (tier: string) => {
+    return teams.filter(team => getTeamTier(team.id) === tier);
+  };
+
+  const handleTeamTierChange = (teamId: number, newTier: string) => {
+    setFormData(prev => {
+      // Remove team from all tier arrays
+      const updated = {
+        ...prev,
+        eliteAttackTeams: (prev.eliteAttackTeams || []).filter(id => id !== teamId),
+        strongAttackTeams: (prev.strongAttackTeams || []).filter(id => id !== teamId),
+        averageAttackTeams: (prev.averageAttackTeams || []).filter(id => id !== teamId),
+        weakAttackTeams: (prev.weakAttackTeams || []).filter(id => id !== teamId),
+        promotedAttackTeams: (prev.promotedAttackTeams || []).filter(id => id !== teamId),
+      };
+
+      // Add team to new tier
+      switch (newTier) {
+        case 'elite':
+          updated.eliteAttackTeams = [...(updated.eliteAttackTeams || []), teamId];
+          break;
+        case 'strong':
+          updated.strongAttackTeams = [...(updated.strongAttackTeams || []), teamId];
+          break;
+        case 'average':
+          updated.averageAttackTeams = [...(updated.averageAttackTeams || []), teamId];
+          break;
+        case 'weak':
+          updated.weakAttackTeams = [...(updated.weakAttackTeams || []), teamId];
+          break;
+        case 'promoted':
+          updated.promotedAttackTeams = [...(updated.promotedAttackTeams || []), teamId];
+          break;
+      }
+
+      return updated;
+    });
+    setHasChanges(true);
   };
 
   const handleSave = () => {

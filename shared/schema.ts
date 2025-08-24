@@ -174,6 +174,7 @@ import {
   decimal,
   date,
   boolean,
+  text,
 } from "drizzle-orm/pg-core";
 
 // Session storage table
@@ -459,6 +460,18 @@ export const unifiedProjectionSettings = pgTable("unified_projection_settings", 
   averageDefenseMultiplier: decimal("average_defense_multiplier", { precision: 4, scale: 2 }).default("1.00"),
   weakDefenseMultiplier: decimal("weak_defense_multiplier", { precision: 4, scale: 2 }).default("1.35"),
   promotedDefenseMultiplier: decimal("promoted_defense_multiplier", { precision: 4, scale: 2 }).default("1.60"),
+
+  // Team tier assignments (JSON arrays of team IDs)
+  eliteAttackTeams: text("elite_attack_teams").default("[]"),
+  strongAttackTeams: text("strong_attack_teams").default("[]"),
+  averageAttackTeams: text("average_attack_teams").default("[]"),
+  weakAttackTeams: text("weak_attack_teams").default("[]"),
+  promotedAttackTeams: text("promoted_attack_teams").default("[]"),
+  eliteDefenseTeams: text("elite_defense_teams").default("[]"),
+  strongDefenseTeams: text("strong_defense_teams").default("[]"),
+  averageDefenseTeams: text("average_defense_teams").default("[]"),
+  weakDefenseTeams: text("weak_defense_teams").default("[]"),
+  promotedDefenseTeams: text("promoted_defense_teams").default("[]"),
   
   // Bounds and limits
   absoluteMinGoals: decimal("absolute_min_goals", { precision: 4, scale: 2 }).default("0.30"),

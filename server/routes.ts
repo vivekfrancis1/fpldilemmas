@@ -1139,6 +1139,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           averageDefenseMultiplier: parseFloat(dbSettings.averageDefenseMultiplier || "1.00"),
           weakDefenseMultiplier: parseFloat(dbSettings.weakDefenseMultiplier || "1.35"),
           promotedDefenseMultiplier: parseFloat(dbSettings.promotedDefenseMultiplier || "1.60"),
+          // Team tier assignments
+          eliteAttackTeams: JSON.parse(dbSettings.eliteAttackTeams || "[]"),
+          strongAttackTeams: JSON.parse(dbSettings.strongAttackTeams || "[]"),
+          averageAttackTeams: JSON.parse(dbSettings.averageAttackTeams || "[]"),
+          weakAttackTeams: JSON.parse(dbSettings.weakAttackTeams || "[]"),
+          promotedAttackTeams: JSON.parse(dbSettings.promotedAttackTeams || "[]"),
+          eliteDefenseTeams: JSON.parse(dbSettings.eliteDefenseTeams || "[]"),
+          strongDefenseTeams: JSON.parse(dbSettings.strongDefenseTeams || "[]"),
+          averageDefenseTeams: JSON.parse(dbSettings.averageDefenseTeams || "[]"),
+          weakDefenseTeams: JSON.parse(dbSettings.weakDefenseTeams || "[]"),
+          promotedDefenseTeams: JSON.parse(dbSettings.promotedDefenseTeams || "[]"),
           absoluteMinGoals: parseFloat(dbSettings.absoluteMinGoals || "0.3"),
           absoluteMaxGoals: parseFloat(dbSettings.absoluteMaxGoals || "4.2"),
           marketFloorMultiplier: parseFloat(dbSettings.marketFloorMultiplier || "0.4"),
@@ -1192,6 +1203,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         averageDefenseMultiplier: "1.00",
         weakDefenseMultiplier: "1.35",
         promotedDefenseMultiplier: "1.60",
+        // Default team assignments (matching current Premier League 2025/26 season)
+        eliteAttackTeams: JSON.stringify([1, 13]), // Arsenal, Man City
+        strongAttackTeams: JSON.stringify([12, 15, 7, 18]), // Liverpool, Newcastle, Chelsea, Tottenham
+        averageAttackTeams: JSON.stringify([6, 2, 21, 8, 5, 11, 20, 10]), // Brighton, Aston Villa, West Ham, Crystal Palace, Bournemouth, Fulham, Wolves, Everton
+        weakAttackTeams: JSON.stringify([4, 16, 14]), // Brentford, Nottm Forest, Man Utd
+        promotedAttackTeams: JSON.stringify([9, 17, 19]), // Leicester, Ipswich, Southampton
+        eliteDefenseTeams: JSON.stringify([1, 13]), // Arsenal, Man City
+        strongDefenseTeams: JSON.stringify([12, 15, 6, 2]), // Liverpool, Newcastle, Brighton, Aston Villa
+        averageDefenseTeams: JSON.stringify([7, 18, 21, 8, 5, 11]), // Chelsea, Tottenham, West Ham, Crystal Palace, Bournemouth, Fulham
+        weakDefenseTeams: JSON.stringify([20, 10, 4, 16, 14]), // Wolves, Everton, Brentford, Nottm Forest, Man Utd
+        promotedDefenseTeams: JSON.stringify([9, 17, 19]), // Leicester, Ipswich, Southampton
         absoluteMinGoals: "0.30",
         absoluteMaxGoals: "4.20",
         marketFloorMultiplier: "0.40",
@@ -1284,6 +1306,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         averageDefenseMultiplier: newSettings.averageDefenseMultiplier?.toString(),
         weakDefenseMultiplier: newSettings.weakDefenseMultiplier?.toString(),
         promotedDefenseMultiplier: newSettings.promotedDefenseMultiplier?.toString(),
+        // Team tier assignments
+        eliteAttackTeams: JSON.stringify(newSettings.eliteAttackTeams || []),
+        strongAttackTeams: JSON.stringify(newSettings.strongAttackTeams || []),
+        averageAttackTeams: JSON.stringify(newSettings.averageAttackTeams || []),
+        weakAttackTeams: JSON.stringify(newSettings.weakAttackTeams || []),
+        promotedAttackTeams: JSON.stringify(newSettings.promotedAttackTeams || []),
+        eliteDefenseTeams: JSON.stringify(newSettings.eliteDefenseTeams || []),
+        strongDefenseTeams: JSON.stringify(newSettings.strongDefenseTeams || []),
+        averageDefenseTeams: JSON.stringify(newSettings.averageDefenseTeams || []),
+        weakDefenseTeams: JSON.stringify(newSettings.weakDefenseTeams || []),
+        promotedDefenseTeams: JSON.stringify(newSettings.promotedDefenseTeams || []),
         absoluteMinGoals: newSettings.absoluteMinGoals?.toString(),
         absoluteMaxGoals: newSettings.absoluteMaxGoals?.toString(),
         marketFloorMultiplier: newSettings.marketFloorMultiplier?.toString(),
@@ -2087,17 +2120,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             baseExpectedGoals *= 1.14; // Rivalry games typically more open and emotional
           }
           
-          // Phase 5: UNIFIED attacking tier performance modeling for perfect consistency
+          // Phase 5: UNIFIED attacking tier performance modeling using configurable team assignments
           const getAttackingTier = (teamId: number) => {
-            // Use the same tier mapping as Goals Against for perfect consistency
-            const tierMapping: { [key: number]: string } = {
-              13: 'elite', 1: 'elite', 12: 'elite', 7: 'elite',  // Man City, Arsenal, Liverpool, Chelsea
-              11: 'strong', 18: 'strong', 6: 'strong', 15: 'strong', 2: 'strong', 14: 'strong', // Everton, Tottenham, Brighton, Newcastle, Aston Villa, Man United  
-              16: 'average', 5: 'average', 4: 'average', 10: 'average', 20: 'average', // Forest, Brentford, Bournemouth, Fulham, West Ham
-              3: 'weak', 8: 'weak', 9: 'weak', // Crystal Palace, Leicester, etc
-              17: 'promoted', 19: 'promoted' // Sheffield United, Luton Town
-            };
-            return tierMapping[teamId] || 'average';
+            // Use configurable team assignments from unified projection settings
+            if (unifiedProjectionSettings.eliteAttackTeams?.includes(teamId)) return 'elite';
+            if (unifiedProjectionSettings.strongAttackTeams?.includes(teamId)) return 'strong';
+            if (unifiedProjectionSettings.weakAttackTeams?.includes(teamId)) return 'weak';
+            if (unifiedProjectionSettings.promotedAttackTeams?.includes(teamId)) return 'promoted';
+            return 'average'; // Default tier for teams not explicitly assigned
           };
           
           const attackingTier = getAttackingTier(team.id);
@@ -2178,13 +2208,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (unifiedProjectionSettings.autoBalance && unifiedProjectionSettings.offensiveVarianceEnabled) {
         console.log(`DEBUG: Applying offensive variance control`);
         
-        // Define attacking tiers (similar to defensive tiers)
+        // Define attacking tiers using configurable team assignments
         const getAttackingTier = (teamId: number): string => {
-          if ([13, 1, 12].includes(teamId)) return 'elite';        // Man City, Arsenal, Liverpool
-          if ([6, 18, 5, 14].includes(teamId)) return 'strong';     // Chelsea, Tottenham, Brighton, Newcastle
-          if ([9, 19, 17].includes(teamId)) return 'weak';         // Burnley, Crystal Palace, Everton
-          if ([20, 16].includes(teamId)) return 'promoted';        // Sheffield, Southampton (promoted teams)
-          return 'average';
+          // Use configurable team assignments from unified projection settings
+          if (unifiedProjectionSettings.eliteAttackTeams?.includes(teamId)) return 'elite';
+          if (unifiedProjectionSettings.strongAttackTeams?.includes(teamId)) return 'strong';
+          if (unifiedProjectionSettings.weakAttackTeams?.includes(teamId)) return 'weak';
+          if (unifiedProjectionSettings.promotedAttackTeams?.includes(teamId)) return 'promoted';
+          return 'average'; // Default tier for teams not explicitly assigned
         };
         
         // Calculate target goals for each tier based on user settings
