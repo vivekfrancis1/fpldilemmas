@@ -453,24 +453,20 @@ export default function Fixtures() {
             <TabsContent value="attacking" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-600 rounded"></div>
-                  <span>vs Elite Defense (Hardest)</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-blue-600 rounded"></div>
-                  <span>vs Strong Defense</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-gray-500 rounded"></div>
-                  <span>vs Average Defense</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-orange-600 rounded"></div>
-                  <span>vs Weak Defense</span>
-                </div>
-                <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-green-600 rounded"></div>
-                  <span>vs Promoted Defense (Easiest)</span>
+                  <span>Easy (vs Weak/Promoted Defense)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-yellow-400 rounded"></div>
+                  <span>Medium (vs Average Defense)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-orange-500 rounded"></div>
+                  <span>Hard (vs Strong Defense)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-600 rounded"></div>
+                  <span>Very Hard (vs Elite Defense)</span>
                 </div>
                 <div className="text-xs text-gray-600">
                   Attacking difficulty based on opponent's defensive strength
@@ -521,14 +517,14 @@ export default function Fixtures() {
                                 const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
                                 const opponentDefenseTier = opponentId ? getDefensiveTier(opponentId) : 'average';
                                 
-                                // Color by opponent's defensive tier (inverse logic - easier to score against weak defenses)
+                                // Color by opponent's defensive tier (FDR color scheme)
                                 const getOpponentDefenseColor = (defenseTier: string) => {
                                   switch (defenseTier) {
-                                    case 'elite': return 'bg-red-600 text-white'; // Hardest to score against
-                                    case 'strong': return 'bg-blue-600 text-white';
-                                    case 'average': return 'bg-gray-500 text-white';
-                                    case 'weak': return 'bg-orange-600 text-white';
-                                    case 'promoted': return 'bg-green-600 text-white'; // Easiest to score against
+                                    case 'elite': return 'bg-red-600 text-white'; // Very Hard
+                                    case 'strong': return 'bg-orange-500 text-white'; // Hard
+                                    case 'average': return 'bg-yellow-400 text-gray-900'; // Medium
+                                    case 'weak': return 'bg-green-600 text-white'; // Easy
+                                    case 'promoted': return 'bg-green-600 text-white'; // Easy
                                     default: return 'bg-gray-300 text-gray-900';
                                   }
                                 };
@@ -565,24 +561,20 @@ export default function Fixtures() {
             <TabsContent value="defensive" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-600 rounded"></div>
-                  <span>vs Elite Attack (Hardest)</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-blue-600 rounded"></div>
-                  <span>vs Strong Attack</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-gray-500 rounded"></div>
-                  <span>vs Average Attack</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-orange-600 rounded"></div>
-                  <span>vs Weak Attack</span>
-                </div>
-                <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-green-600 rounded"></div>
-                  <span>vs Promoted Attack (Easiest)</span>
+                  <span>Easy (vs Weak/Promoted Attack)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-yellow-400 rounded"></div>
+                  <span>Medium (vs Average Attack)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-orange-500 rounded"></div>
+                  <span>Hard (vs Strong Attack)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-600 rounded"></div>
+                  <span>Very Hard (vs Elite Attack)</span>
                 </div>
                 <div className="text-xs text-gray-600">
                   Defensive difficulty based on opponent's attacking strength
@@ -633,14 +625,14 @@ export default function Fixtures() {
                                 const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
                                 const opponentAttackTier = opponentId ? getAttackingTier(opponentId) : 'average';
                                 
-                                // Color by opponent's attacking tier (harder to defend against strong attacks)
+                                // Color by opponent's attacking tier (FDR color scheme)
                                 const getOpponentAttackColor = (attackTier: string) => {
                                   switch (attackTier) {
-                                    case 'elite': return 'bg-red-600 text-white'; // Hardest to defend against
-                                    case 'strong': return 'bg-blue-600 text-white';
-                                    case 'average': return 'bg-gray-500 text-white';
-                                    case 'weak': return 'bg-orange-600 text-white';
-                                    case 'promoted': return 'bg-green-600 text-white'; // Easiest to defend against
+                                    case 'elite': return 'bg-red-600 text-white'; // Very Hard
+                                    case 'strong': return 'bg-orange-500 text-white'; // Hard
+                                    case 'average': return 'bg-yellow-400 text-gray-900'; // Medium
+                                    case 'weak': return 'bg-green-600 text-white'; // Easy
+                                    case 'promoted': return 'bg-green-600 text-white'; // Easy
                                     default: return 'bg-gray-300 text-gray-900';
                                   }
                                 };
