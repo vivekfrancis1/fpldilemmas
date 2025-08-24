@@ -414,10 +414,10 @@ export default function AdminGoalProjections() {
 
       <Tabs defaultValue="attacking-multipliers" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="attacking-multipliers">Attacking Tier Multiplier</TabsTrigger>
-          <TabsTrigger value="attacking-teams">Attacking Tier Team Assignment</TabsTrigger>
-          <TabsTrigger value="defensive-multipliers">Defensive Tier Multiplier</TabsTrigger>
-          <TabsTrigger value="defensive-teams">Defensive Tier Team Assignment</TabsTrigger>
+          <TabsTrigger value="attacking-multipliers">Attack Multipliers</TabsTrigger>
+          <TabsTrigger value="attacking-teams">Attack Teams</TabsTrigger>
+          <TabsTrigger value="defensive-multipliers">Defense Multipliers</TabsTrigger>
+          <TabsTrigger value="defensive-teams">Defense Teams</TabsTrigger>
         </TabsList>
 
         <TabsContent value="attacking-multipliers" className="space-y-6">
