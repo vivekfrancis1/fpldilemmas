@@ -123,19 +123,19 @@ export default function AdminGoalProjections() {
 
   const teams: Team[] = (bootstrapData as any)?.teams || [];
 
-  // Fetch current admin settings from unified projection settings
+  // Fetch current admin settings from goals scored settings
   const { data: settings, isLoading } = useQuery<AdminSettings>({
-    queryKey: ['/api/admin/unified-projection-settings'],
+    queryKey: ['/api/admin/goal-scored-settings'],
   });
 
   const { data: confidenceData, isLoading: confidenceLoading } = useQuery<TeamConfidenceData[]>({
     queryKey: ["/api/team-confidence-analysis"],
   });
 
-  // Update settings mutation using unified projection settings endpoint
+  // Update settings mutation using goals scored settings endpoint
   const updateSettingsMutation = useMutation({
     mutationFn: async (updatedSettings: Partial<AdminSettings>) => {
-      const response = await fetch('/api/admin/unified-projection-settings', {
+      const response = await fetch('/api/admin/goal-scored-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedSettings),
@@ -146,10 +146,10 @@ export default function AdminGoalProjections() {
     onSuccess: () => {
       toast({
         title: "Settings Updated",
-        description: "Team tier assignments and projection parameters have been updated successfully.",
+        description: "Goals scored settings and projection parameters have been updated successfully.",
       });
       setHasChanges(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/unified-projection-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/goal-scored-settings'] });
     },
     onError: () => {
       toast({
@@ -160,10 +160,10 @@ export default function AdminGoalProjections() {
     },
   });
 
-  // Reset settings mutation using unified projection settings
+  // Reset settings mutation using goals scored settings
   const resetSettingsMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/admin/unified-projection-settings/reset', {
+      const response = await fetch('/api/admin/goal-scored-settings/reset', {
         method: 'POST',
       });
       if (!response.ok) throw new Error('Failed to reset settings');
@@ -175,7 +175,7 @@ export default function AdminGoalProjections() {
         description: "All settings and team assignments have been reset to default values.",
       });
       setHasChanges(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/unified-projection-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/goal-scored-settings'] });
     },
     onError: () => {
       toast({

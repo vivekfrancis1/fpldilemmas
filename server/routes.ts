@@ -1364,31 +1364,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
 
-  // LEGACY admin settings for Goal Projections (DEPRECATED - use unified settings)
+  // Goals Scored Admin Settings - Used by Team Goal Projections
   let adminGoalSettings = {
     globalTierMultiplier: 1.25,
-    lowConfidenceBoost: 1.25,
-    lowConfidenceThreshold: 0.65,
+    lowConfidenceBoost: 1.15,
+    lowConfidenceThreshold: 0.30,
     // Venue Multipliers
     homeAdvantageGoalsMultiplier: 1.15,
     awayFactorGoalsMultiplier: 0.88,
     // Attacking Tier Multipliers
-    eliteAttackMultiplier: 1.15,
-    strongAttackMultiplier: 1.10,
+    eliteAttackMultiplier: 1.5,
+    strongAttackMultiplier: 1.25,
     averageAttackMultiplier: 1.00,
-    weakAttackMultiplier: 0.90,
-    promotedAttackMultiplier: 0.85,
+    weakAttackMultiplier: 0.75,
+    promotedAttackMultiplier: 0.5,
     // Attacking Team Assignments
     eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Man City, Arsenal, Chelsea
-    strongAttackTeams: [15, 18, 2], // Newcastle, Tottenham, Aston Villa
-    weakAttackTeams: [9, 20, 16], // Everton, Wolverhampton, Nottingham Forest
-    promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
+    strongAttackTeams: [15, 18, 2, 4, 5, 6], // Newcastle, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
+    averageAttackTeams: [14, 3, 10, 20], // Manchester United, Crystal Palace, Fulham, West Ham
+    weakAttackTeams: [11, 16, 21], // Everton, Nottingham Forest, Wolverhampton Wanderers
+    promotedAttackTeams: [8, 9, 17], // Leeds, Burnley, Sunderland
     // Defensive Tier Multipliers
-    eliteDefenseMultiplier: 0.60,
+    eliteDefenseMultiplier: 0.5,
     strongDefenseMultiplier: 0.75,
     averageDefenseMultiplier: 1.00,
-    weakDefenseMultiplier: 1.35,
-    promotedDefenseMultiplier: 1.60,
+    weakDefenseMultiplier: 1.25,
+    promotedDefenseMultiplier: 1.5,
+    // Defensive Team Assignments
+    eliteDefenseTeams: [1], // Arsenal
+    strongDefenseTeams: [12, 13, 7, 16, 15, 9], // Liverpool, Man City, Chelsea, Nottm Forest, Newcastle, Crystal Palace
+    averageDefenseTeams: [8, 14, 18, 2, 10], // Leeds, Man Utd, Tottenham, Aston Villa, Fulham
+    weakDefenseTeams: [6, 19, 20, 4, 5], // Brighton, Southampton, West Ham, Brentford, Bournemouth
+    promotedDefenseTeams: [3, 11, 17], // Burnley, Everton, Ipswich
+    // Context Multipliers
     derbyGoalsMultiplier: 0.87,
     topSixGoalsMultiplier: 1.12,
     relegationBattleGoalsMultiplier: 0.83,
@@ -1399,10 +1407,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     seasonFinaleGoalsMultiplier: 1.05,
     newManagerBounceGoalsMultiplier: 1.08,
     weatherConditionsGoalsMultiplier: 0.96,
-    marketFloorMultiplier: 0.4,
+    // Market Bounds
+    marketFloorMultiplier: 0.40,
     marketCeilingMultiplier: 2.0,
-    absoluteMinGoals: 0.3,
-    absoluteMaxGoals: 4.2,
+    absoluteMinGoals: 0.0,
+    absoluteMaxGoals: 7.0,
     lastUpdated: new Date().toISOString(),
     updatedBy: "admin"
   };
@@ -1466,10 +1475,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
 
-  // ==================== UNIFIED PROJECTION SETTINGS ENDPOINTS ====================
+  // ==================== GOALS SCORED ADMIN ENDPOINTS ====================
 
-  // GET unified projection settings endpoint
-  app.get("/api/admin/unified-projection-settings", async (req, res) => {
+  // GET goals scored admin settings endpoint
+  app.get("/api/admin/goal-scored-settings", async (req, res) => {
     try {
       // Add cache-busting headers to ensure immediate reflection of changes
       res.set({
@@ -1477,40 +1486,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Pragma': 'no-cache',
         'Expires': '0'
       });
-      const settings = await loadUnifiedProjectionSettings();
-      res.json(settings);
+      res.json(adminGoalSettings);
     } catch (error) {
-      console.error("Error fetching unified projection settings:", error);
+      console.error("Error fetching goal scored settings:", error);
       res.status(500).json({
-        error: "Failed to fetch unified projection settings",
+        error: "Failed to fetch goal scored settings",
         message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });
 
-  // PUT unified projection settings endpoint
-  app.put("/api/admin/unified-projection-settings", async (req, res) => {
+  // PUT goals scored admin settings endpoint
+  app.put("/api/admin/goal-scored-settings", async (req, res) => {
     try {
       const updatedSettings = {
+        ...adminGoalSettings,
         ...req.body,
         lastUpdated: new Date().toISOString(),
         updatedBy: "admin"
       };
       
-      await saveUnifiedProjectionSettings(updatedSettings);
+      adminGoalSettings = updatedSettings;
       
-      // Reload settings to get the updated values
-      const refreshedSettings = await loadUnifiedProjectionSettings();
+      // Clear cached data to force recalculation with new settings
+      console.log("Goals Scored admin settings updated, projection model will use new parameters");
       
       res.json({
         success: true,
-        message: "Settings updated successfully",
-        settings: refreshedSettings
+        message: "Goal scored settings updated successfully",
+        settings: adminGoalSettings
       });
     } catch (error) {
-      console.error("Error updating unified projection settings:", error);
+      console.error("Error updating goal scored settings:", error);
       res.status(500).json({
-        error: "Failed to update unified projection settings",
+        error: "Failed to update goal scored settings",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // POST reset goals scored admin settings endpoint
+  app.post("/api/admin/goal-scored-settings/reset", async (req, res) => {
+    try {
+      // Reset to default values
+      adminGoalSettings = {
+        globalTierMultiplier: 1.25,
+        lowConfidenceBoost: 1.15,
+        lowConfidenceThreshold: 0.30,
+        homeAdvantageGoalsMultiplier: 1.15,
+        awayFactorGoalsMultiplier: 0.88,
+        eliteAttackMultiplier: 1.5,
+        strongAttackMultiplier: 1.25,
+        averageAttackMultiplier: 1.00,
+        weakAttackMultiplier: 0.75,
+        promotedAttackMultiplier: 0.5,
+        eliteAttackTeams: [12, 13, 1, 7],
+        strongAttackTeams: [15, 18, 2, 4, 5, 6],
+        averageAttackTeams: [14, 3, 10, 20],
+        weakAttackTeams: [11, 16, 21],
+        promotedAttackTeams: [8, 9, 17],
+        eliteDefenseMultiplier: 0.5,
+        strongDefenseMultiplier: 0.75,
+        averageDefenseMultiplier: 1.00,
+        weakDefenseMultiplier: 1.25,
+        promotedDefenseMultiplier: 1.5,
+        eliteDefenseTeams: [1],
+        strongDefenseTeams: [12, 13, 7, 16, 15, 9],
+        averageDefenseTeams: [8, 14, 18, 2, 10],
+        weakDefenseTeams: [6, 19, 20, 4, 5],
+        promotedDefenseTeams: [3, 11, 17],
+        derbyGoalsMultiplier: 0.87,
+        topSixGoalsMultiplier: 1.12,
+        relegationBattleGoalsMultiplier: 0.83,
+        earlyKickoffGoalsMultiplier: 0.94,
+        lateKickoffGoalsMultiplier: 1.07,
+        postEuropeanGoalsMultiplier: 0.88,
+        midweekFixtureGoalsMultiplier: 0.91,
+        seasonFinaleGoalsMultiplier: 1.05,
+        newManagerBounceGoalsMultiplier: 1.08,
+        weatherConditionsGoalsMultiplier: 0.96,
+        marketFloorMultiplier: 0.40,
+        marketCeilingMultiplier: 2.0,
+        absoluteMinGoals: 0.0,
+        absoluteMaxGoals: 7.0,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      console.log("Goals Scored admin settings reset to defaults");
+      
+      res.json({
+        success: true,
+        message: "Goal scored settings reset to defaults successfully",
+        settings: adminGoalSettings
+      });
+    } catch (error) {
+      console.error("Error resetting goal scored settings:", error);
+      res.status(500).json({
+        error: "Failed to reset goal scored settings",
         message: error instanceof Error ? error.message : "Unknown error",
       });
     }
