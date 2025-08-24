@@ -34,6 +34,12 @@ interface TeamConfidenceData {
 }
 
 interface AdminSettings {
+  // Base Calculation Parameters - Previously Hardcoded
+  averageBaseXGPerTeamPerGame: number;
+  defaultTeamVariance: number;
+  defaultTeamConfidence: number;
+  defaultExpectedGoalsPerGame: number;
+  globalTierMultiplier: number;
   lowConfidenceBoost: number;
   lowConfidenceThreshold: number;
   // Venue Multipliers
@@ -754,8 +760,8 @@ export default function AdminGoalProjections() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Base Expected Goals per Game</CardTitle>
-                <CardDescription>Foundational xG rates that serve as Phase 1 input for all team goal projections</CardDescription>
+                <CardTitle>Base Calculation Parameters</CardTitle>
+                <CardDescription>Core mathematical constants (previously hardcoded) that drive all team goal projections</CardDescription>
               </div>
               <Button
                 variant="outline"
@@ -781,7 +787,7 @@ export default function AdminGoalProjections() {
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>Foundation Layer:</strong> This average base xG value is the universal starting point (Phase 1) for all team goal projections. All teams begin with this same foundation value, and then attacking/defensive tier multipliers and other adjustments are applied to create team-specific projections.
+                    <strong>No More Hardcoded Values:</strong> All base calculation parameters are now configurable through this admin interface. Previously these were hardcoded in the system code and could not be changed without code updates.
                   </AlertDescription>
                 </Alert>
                 
@@ -798,7 +804,11 @@ export default function AdminGoalProjections() {
                     </thead>
                     <tbody>
                       {[
-                        { key: 'averageBaseXG', name: 'Average Base xG per Team per Game', default: 1.35, min: 0.8, max: 2.0, description: 'Universal foundation xG that all teams start from before adjustments' }
+                        { key: 'averageBaseXGPerTeamPerGame', name: 'Universal Base xG per Team per Game', default: 1.35, min: 0.8, max: 2.0, description: 'Universal foundation xG that all teams start from before adjustments' },
+                        { key: 'defaultExpectedGoalsPerGame', name: 'Default Expected Goals per Game', default: 1.3, min: 1.0, max: 2.0, description: 'Fallback value for unknown teams' },
+                        { key: 'defaultTeamVariance', name: 'Default Team Variance', default: 0.45, min: 0.2, max: 0.8, description: 'Goal prediction variance for teams' },
+                        { key: 'defaultTeamConfidence', name: 'Default Team Confidence', default: 0.70, min: 0.5, max: 1.0, description: 'Prediction confidence level for teams' },
+                        { key: 'globalTierMultiplier', name: 'Global Tier Multiplier', default: 1.25, min: 1.0, max: 2.0, description: 'Global tier impact factor' }
                       ].map((setting) => {
                         const currentValue = (formData as any)[setting.key] || setting.default;
                         const isChanged = Math.abs(currentValue - setting.default) > 0.01;

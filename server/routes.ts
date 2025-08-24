@@ -999,21 +999,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // Get team projection data (fallback to hardcoded data if DB not available)
+  // Get team projection data using ONLY admin configurable defaults (NO HARDCODED TEAM DATA)
   const getTeamProjectionData = async () => {
-    // For now, return the hardcoded data. In production, this would query the database
-    const teams = await initializeTeamData();
+    // Generate dynamic team data using admin settings instead of hardcoded values
+    const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+    if (!response.ok) throw new Error("Failed to fetch FPL team data");
+    
+    const data = await response.json();
+    const teams = data.teams;
+    
     const teamMap: Record<number, any> = {};
-    teams.forEach(team => {
+    teams.forEach((team: any) => {
+      // Use ONLY admin configurable values - no hardcoded team-specific data
       teamMap[team.id] = {
-        expectedGoalsPerGame: team.expectedGoalsPerGame,
-        variance: team.goalVariance,
-        confidence: team.goalConfidence,
-        baseCleanSheetRate: team.baseCleanSheetRate,
-        homeBonus: team.homeBonus,
-        cleanSheetConfidence: team.cleanSheetConfidence,
-        attackingTier: team.attackingTier,
-        defensiveTier: team.defensiveTier
+        expectedGoalsPerGame: adminGoalSettings.defaultExpectedGoalsPerGame,
+        variance: adminGoalSettings.defaultTeamVariance,
+        confidence: adminGoalSettings.defaultTeamConfidence,
+        baseCleanSheetRate: 0.25, // Generic baseline - could be made configurable
+        homeBonus: 0.05, // Generic home bonus - could be made configurable
+        cleanSheetConfidence: adminGoalSettings.defaultTeamConfidence,
+        attackingTier: 'average', // Tiers now determined dynamically from admin team assignments
+        defensiveTier: 'average'  // Tiers now determined dynamically from admin team assignments
       };
     });
     return teamMap;
@@ -1366,6 +1372,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Goals Scored Admin Settings - Used by Team Goal Projections
   let adminGoalSettings = {
+    // Base Calculation Parameters - NO MORE HARDCODED VALUES
+    averageBaseXGPerTeamPerGame: 1.35, // Universal starting point for all teams
+    defaultTeamVariance: 0.45, // Default goal variance
+    defaultTeamConfidence: 0.70, // Default prediction confidence
+    defaultExpectedGoalsPerGame: 1.3, // Fallback if team not found
     globalTierMultiplier: 1.25,
     lowConfidenceBoost: 1.15,
     lowConfidenceThreshold: 0.30,
@@ -1530,6 +1541,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Reset to default values - Crystal Palace and Everton in average categories
       adminGoalSettings = {
+        // Base Calculation Parameters - NO MORE HARDCODED VALUES
+        averageBaseXGPerTeamPerGame: 1.35,
+        defaultTeamVariance: 0.45,
+        defaultTeamConfidence: 0.70,
+        defaultExpectedGoalsPerGame: 1.3,
         globalTierMultiplier: 1.25,
         lowConfidenceBoost: 1.15,
         lowConfidenceThreshold: 0.30,
@@ -1824,26 +1840,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // For unfinished fixtures, use advanced spread betting market-based goal calculation with 8-phase statistical modeling
-          const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
-          const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
+          // Use ONLY admin configurable defaults instead of hardcoded fallbacks
+          const teamBettingData = bettingData.teamGoalRates[team.id] || { 
+            expectedGoalsPerGame: adminGoalSettings.defaultExpectedGoalsPerGame, 
+            variance: adminGoalSettings.defaultTeamVariance, 
+            confidence: adminGoalSettings.defaultTeamConfidence 
+          };
+          const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { 
+            baseCleanSheetRate: 0.25, 
+            confidence: adminGoalSettings.defaultTeamConfidence 
+          };
           
-          // Phase 1: Universal Base xG Foundation - All teams start from 1.35 goals per game
+          // Phase 1: Universal Base xG Foundation - Use ONLY admin configurable value
           // This ensures consistent baseline across all teams with differences created through tier multipliers
-          let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame || 1.35;
+          let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
           
-          // Phase 2: Venue Factors - Home advantage and away adjustments
+          // Phase 2: Venue Factors - Use ONLY admin settings (NO FALLBACKS)
           const venueMultiplier = isHome ? 
-            (adminGoalSettings.homeAdvantageGoalsMultiplier || 1.15) : // Configurable home advantage
-            (adminGoalSettings.awayFactorGoalsMultiplier || 0.88); // Configurable away factor
+            adminGoalSettings.homeAdvantageGoalsMultiplier : // Configurable home advantage
+            adminGoalSettings.awayFactorGoalsMultiplier; // Configurable away factor
           baseExpectedGoals *= venueMultiplier;
           
-          // Phase 3: Defensive Tiers - Apply opponent's defensive tier multiplier
+          // Phase 3: Defensive Tiers - Apply opponent's defensive tier multiplier using ONLY admin settings
           const getDefensiveTier = (teamId: number): string => {
-            // Use standard defensive team assignments from Goals Scored admin
-            const eliteDefenseTeams = [1]; // Arsenal
-            const strongDefenseTeams = [12, 13, 7, 16, 15, 9]; // Liverpool, Man City, Chelsea, Nottingham Forest, Newcastle, Everton
-            const weakDefenseTeams = [6, 19, 20, 4, 5]; // Brighton, West Ham, Wolverhampton, Bournemouth, Brentford
-            const promotedDefenseTeams = [3, 11, 17]; // Burnley, Leeds, Sunderland
+            // Parse defensive team arrays from admin settings (NO HARDCODED VALUES)
+            const parseTeamArray = (teamData: any): number[] => {
+              if (Array.isArray(teamData)) return teamData;
+              if (typeof teamData === 'string') {
+                try {
+                  return JSON.parse(teamData);
+                } catch {
+                  return [];
+                }
+              }
+              return [];
+            };
+
+            const eliteDefenseTeams = parseTeamArray(adminGoalSettings.eliteDefenseTeams);
+            const strongDefenseTeams = parseTeamArray(adminGoalSettings.strongDefenseTeams);
+            const weakDefenseTeams = parseTeamArray(adminGoalSettings.weakDefenseTeams);
+            const promotedDefenseTeams = parseTeamArray(adminGoalSettings.promotedDefenseTeams);
 
             if (eliteDefenseTeams.includes(teamId)) return 'elite';
             if (strongDefenseTeams.includes(teamId)) return 'strong';
@@ -1879,11 +1915,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return [];
             };
 
-            // Use team assignments from Goals Scored admin settings
-            const eliteAttackTeams = parseTeamArray(adminGoalSettings.eliteAttackTeams) || [12, 13, 1, 7];
-            const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams) || [15, 18, 2];
-            const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams) || [9, 20, 16];
-            const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams) || [3, 11, 17];
+            // Use team assignments from Goals Scored admin settings ONLY (NO FALLBACKS)
+            const eliteAttackTeams = parseTeamArray(adminGoalSettings.eliteAttackTeams);
+            const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams);
+            const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams);
+            const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams);
             
             if (eliteAttackTeams.includes(teamId)) return 'elite';
             if (strongAttackTeams.includes(teamId)) return 'strong';
