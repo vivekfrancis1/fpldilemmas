@@ -1349,9 +1349,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.insert(unifiedProjectionSettingsTable).values(updateData);
       }
       
-      // Update in-memory copy
-      unifiedProjectionSettings = { ...newSettings, ...updateData };
+      // IMMEDIATELY refresh in-memory cache from database so changes reflect without restart
+      await loadUnifiedProjectionSettings();
       console.log("✓ Unified projection settings saved to database");
+      console.log("✓ In-memory settings cache refreshed - changes now active");
       
     } catch (error) {
       console.error("Failed to save unified projection settings to database:", error);
