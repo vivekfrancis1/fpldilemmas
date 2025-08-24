@@ -175,6 +175,24 @@ export default function AdminGoalProjections() {
 
       const settingsWithDefaults = {
         ...settings,
+        // Apply new default values for any missing settings
+        eliteAttackMultiplier: settings.eliteAttackMultiplier ?? DEFAULT_VALUES.attackMultipliers.eliteAttackMultiplier,
+        strongAttackMultiplier: settings.strongAttackMultiplier ?? DEFAULT_VALUES.attackMultipliers.strongAttackMultiplier,
+        averageAttackMultiplier: settings.averageAttackMultiplier ?? DEFAULT_VALUES.attackMultipliers.averageAttackMultiplier,
+        weakAttackMultiplier: settings.weakAttackMultiplier ?? DEFAULT_VALUES.attackMultipliers.weakAttackMultiplier,
+        promotedAttackMultiplier: settings.promotedAttackMultiplier ?? DEFAULT_VALUES.attackMultipliers.promotedAttackMultiplier,
+        
+        eliteDefenseMultiplier: settings.eliteDefenseMultiplier ?? DEFAULT_VALUES.defenseMultipliers.eliteDefenseMultiplier,
+        strongDefenseMultiplier: settings.strongDefenseMultiplier ?? DEFAULT_VALUES.defenseMultipliers.strongDefenseMultiplier,
+        averageDefenseMultiplier: settings.averageDefenseMultiplier ?? DEFAULT_VALUES.defenseMultipliers.averageDefenseMultiplier,
+        weakDefenseMultiplier: settings.weakDefenseMultiplier ?? DEFAULT_VALUES.defenseMultipliers.weakDefenseMultiplier,
+        promotedDefenseMultiplier: settings.promotedDefenseMultiplier ?? DEFAULT_VALUES.defenseMultipliers.promotedDefenseMultiplier,
+        
+        absoluteMinGoals: settings.absoluteMinGoals ?? DEFAULT_VALUES.marketBounds.absoluteMinGoals,
+        absoluteMaxGoals: settings.absoluteMaxGoals ?? DEFAULT_VALUES.marketBounds.absoluteMaxGoals,
+        marketFloorMultiplier: settings.marketFloorMultiplier ?? DEFAULT_VALUES.marketBounds.marketFloorMultiplier,
+        marketCeilingMultiplier: settings.marketCeilingMultiplier ?? DEFAULT_VALUES.marketBounds.marketCeilingMultiplier,
+        
         eliteAttackTeams: parseTeamArray(settings.eliteAttackTeams) || DEFAULT_TEAM_TIERS.eliteAttackTeams,
         strongAttackTeams: parseTeamArray(settings.strongAttackTeams) || DEFAULT_TEAM_TIERS.strongAttackTeams,
         averageAttackTeams: parseTeamArray(settings.averageAttackTeams) || DEFAULT_TEAM_TIERS.averageAttackTeams,
