@@ -74,11 +74,18 @@ interface AdminSettings {
 
 // Default team tier assignments based on user specifications
 const DEFAULT_TEAM_TIERS = {
-  eliteAttackTeams: [1, 12, 13], // Arsenal, Liverpool, Man City
-  strongAttackTeams: [7, 14, 15, 18, 2, 6], // Chelsea, Man Utd, Newcastle, Spurs, Aston Villa, Brighton
-  averageAttackTeams: [4, 5, 8, 9, 10, 19], // Bournemouth, Brentford, Crystal Palace, Everton, Fulham, West Ham
-  weakAttackTeams: [16, 20, 11, 3], // Nott'm Forest, Wolves, Leeds, Burnley
-  promotedAttackTeams: [17], // Sunderland
+  // ATTACK TEAMS
+  eliteAttackTeams: [12, 13], // Liverpool, Man City
+  strongAttackTeams: [1, 7, 15, 18, 2], // Arsenal, Chelsea, Newcastle, Spurs, Aston Villa
+  averageAttackTeams: [6, 14, 4, 5, 8, 10, 19], // Brighton, Man Utd, Bournemouth, Brentford, Crystal Palace, Fulham, West Ham
+  weakAttackTeams: [9, 16, 20], // Everton, Nott'm Forest, Wolves
+  promotedAttackTeams: [17, 11, 3], // Sunderland, Leeds, Burnley
+  // DEFENSE TEAMS  
+  eliteDefenseTeams: [1, 12], // Arsenal, Liverpool
+  strongDefenseTeams: [13, 7, 15, 16, 9], // Man City, Chelsea, Newcastle, Nott'm Forest, Everton
+  averageDefenseTeams: [2, 14, 8, 18, 10], // Aston Villa, Man Utd, Crystal Palace, Spurs, Fulham
+  weakDefenseTeams: [6, 4, 5, 19, 20], // Brighton, Bournemouth, Brentford, West Ham, Wolves
+  promotedDefenseTeams: [17, 11, 3], // Sunderland, Leeds, Burnley
 };
 
 
@@ -155,11 +162,11 @@ export default function AdminGoalProjections() {
 
   // Default team tier assignments - Updated per user specifications
   const DEFAULT_TEAM_TIERS = {
-    eliteAttackTeams: [1, 12, 13], // Arsenal, Liverpool, Man City
-    strongAttackTeams: [7, 14, 15, 18, 2, 6], // Chelsea, Man Utd, Newcastle, Spurs, Aston Villa, Brighton
-    averageAttackTeams: [4, 5, 8, 9, 10, 19], // Bournemouth, Brentford, Crystal Palace, Everton, Fulham, West Ham
-    weakAttackTeams: [16, 20, 11, 3], // Nott'm Forest, Wolves, Leeds, Burnley
-    promotedAttackTeams: [17], // Sunderland
+    eliteAttackTeams: [12, 13], // Liverpool, Man City
+    strongAttackTeams: [1, 7, 15, 18, 2], // Arsenal, Chelsea, Newcastle, Spurs, Aston Villa
+    averageAttackTeams: [6, 14, 4, 5, 8, 10, 19], // Brighton, Man Utd, Bournemouth, Brentford, Crystal Palace, Fulham, West Ham
+    weakAttackTeams: [9, 16, 20], // Everton, Nott'm Forest, Wolves
+    promotedAttackTeams: [17, 11, 3], // Sunderland, Leeds, Burnley
   };
 
   // Initialize form data when settings are loaded
@@ -238,11 +245,11 @@ export default function AdminGoalProjections() {
 
   // Default defensive tier assignments - Updated per user specifications
   const DEFAULT_DEFENSIVE_TIERS = {
-    eliteDefenseTeams: [1, 12, 13], // Arsenal, Liverpool, Man City
-    strongDefenseTeams: [7, 15, 16, 9, 2], // Chelsea, Newcastle, Nott'm Forest, Everton, Aston Villa
-    averageDefenseTeams: [14, 8, 18, 6, 10], // Man Utd, Crystal Palace, Spurs, Brighton, Fulham
-    weakDefenseTeams: [4, 5, 19, 20, 11, 3], // Bournemouth, Brentford, West Ham, Wolves, Leeds, Burnley
-    promotedDefenseTeams: [17], // Sunderland
+    eliteDefenseTeams: [1, 12], // Arsenal, Liverpool
+    strongDefenseTeams: [13, 7, 15, 16, 9], // Man City, Chelsea, Newcastle, Nott'm Forest, Everton
+    averageDefenseTeams: [2, 14, 8, 18, 10], // Aston Villa, Man Utd, Crystal Palace, Spurs, Fulham
+    weakDefenseTeams: [6, 4, 5, 19, 20], // Brighton, Bournemouth, Brentford, West Ham, Wolves
+    promotedDefenseTeams: [17, 11, 3], // Sunderland, Leeds, Burnley
   };
 
   // Defensive tier assignment helper functions
