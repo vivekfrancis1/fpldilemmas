@@ -36,8 +36,11 @@ async function fetchSeasonData(season: string) {
     
     console.log(`Processing ${players.length} players for ${season}...`);
     
+    // Use hardcoded teams for consistency with application
+    const { PREMIER_LEAGUE_TEAMS } = await import("../shared/schema");
+    
     // Create lookup maps
-    const teamMap = new Map(teams.map((t: any) => [t.id, t]));
+    const teamMap = new Map(PREMIER_LEAGUE_TEAMS.map((t: any) => [t.id, t]));
     const positionMap = new Map(elementTypes.map((et: any) => [et.id, et]));
     
     const dbInsertData = [];
