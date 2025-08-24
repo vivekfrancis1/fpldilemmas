@@ -34,6 +34,7 @@ import AdminCSProjections from "./pages/admin-cs-projections";
 import AdminAssistProjections from "./pages/admin-assist-projections";
 import AdminMatchProjections from "./pages/admin-match-projections";
 import AdminGoalProjections from "./pages/admin-goal-projections";
+import AdminDefenseProjections from "./pages/admin-defense-projections";
 import AdminGoalsAgainst from "./pages/admin-goals-against";
 
 function Router() {
@@ -67,6 +68,7 @@ function Router() {
       <Route path="/season-projections" component={SeasonProjections} />
       <Route path="/admin-unified-projections" component={AdminUnifiedProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
+      <Route path="/admin-defense-projections" component={AdminDefenseProjections} />
       <Route path="/admin-goals-against" component={AdminGoalsAgainst} />
       <Route path="/admin-cs-projections" component={AdminCSProjections} />
       <Route path="/admin-assist-projections" component={AdminAssistProjections} />

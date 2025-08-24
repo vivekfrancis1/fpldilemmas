@@ -79,6 +79,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/admin-unified-projections", label: "Unified Projections", icon: Settings, description: "Master projection control center", popular: false },
         { path: "/admin-goal-projections", label: "Goals Scored", icon: Target, description: "Team goal projection settings", popular: false },
+        { path: "/admin-defense-projections", label: "Defense Tiers", icon: Shield, description: "Defensive tier assignments", popular: false },
         { path: "/admin-goals-against", label: "Goals Against", icon: Shield, description: "Defensive projection settings", popular: false },
         { path: "/admin-cs-projections", label: "Clean Sheet Settings", icon: Shield, description: "Clean sheet projection parameters", popular: false },
         { path: "/admin-assist-projections", label: "Assist Settings", icon: Users, description: "Assist projection parameters", popular: false },
