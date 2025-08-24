@@ -59,13 +59,13 @@ interface AdminSettings {
   updatedBy: string;
 }
 
-// Default team tier assignments - Updated per user specifications
+// Default team tier assignments based on current Premier League standings and performance
 const DEFAULT_TEAM_TIERS = {
-  eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Manchester City, Arsenal, Chelsea
-  strongAttackTeams: [15, 18, 2, 4, 5, 6], // Newcastle United, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
-  averageAttackTeams: [14, 3, 10, 20], // Manchester United, Crystal Palace, Fulham, West Ham
-  weakAttackTeams: [11, 16, 21], // Everton, Nottingham Forest, Wolverhampton Wanderers
-  promotedAttackTeams: [8, 9, 17], // Leeds, Burnley, Sunderland (using available IDs)
+  eliteAttackTeams: [1, 2], // Arsenal, Man City
+  strongAttackTeams: [3, 4, 5, 6], // Liverpool, Newcastle, Chelsea, Tottenham
+  averageAttackTeams: [7, 8, 9, 10, 11, 12, 13, 14], // Brighton, Aston Villa, West Ham, Crystal Palace, Bournemouth, Fulham, Wolves, Everton
+  weakAttackTeams: [15, 16, 17], // Brentford, Nottm Forest, Man Utd
+  promotedAttackTeams: [18, 19, 20], // Leicester, Ipswich, Southampton
 };
 
 export default function AdminGoalProjections() {
@@ -142,6 +142,15 @@ export default function AdminGoalProjections() {
     },
   });
 
+  // Default team tier assignments - Updated per user specifications
+  const DEFAULT_TEAM_TIERS = {
+    eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Manchester City, Arsenal, Chelsea
+    strongAttackTeams: [15, 18, 2, 4, 5, 6], // Newcastle United, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
+    averageAttackTeams: [14, 3, 10, 20], // Manchester United, Crystal Palace, Fulham, West Ham
+    weakAttackTeams: [11, 16, 21], // Everton, Nottingham Forest, Wolverhampton Wanderers
+    promotedAttackTeams: [8, 9, 17], // Leeds, Burnley, Sunderland (using available IDs)
+  };
+
   // Initialize form data when settings are loaded
   useEffect(() => {
     if (settings) {
@@ -171,14 +180,6 @@ export default function AdminGoalProjections() {
     if (formData.strongAttackTeams?.includes(teamId)) return 'strong';
     if (formData.weakAttackTeams?.includes(teamId)) return 'weak';
     if (formData.promotedAttackTeams?.includes(teamId)) return 'promoted';
-    return 'average';
-  };
-
-  const getDefaultTier = (teamId: number): string => {
-    if (DEFAULT_TEAM_TIERS.eliteAttackTeams.includes(teamId)) return 'elite';
-    if (DEFAULT_TEAM_TIERS.strongAttackTeams.includes(teamId)) return 'strong';
-    if (DEFAULT_TEAM_TIERS.weakAttackTeams.includes(teamId)) return 'weak';
-    if (DEFAULT_TEAM_TIERS.promotedAttackTeams.includes(teamId)) return 'promoted';
     return 'average';
   };
 
@@ -326,12 +327,9 @@ export default function AdminGoalProjections() {
                   Use the dropdown next to each team to assign them to the appropriate attacking tier.
                 </p>
                 
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {teams.map(team => {
                     const currentTier = getTeamTier(team.id);
-                    const defaultTier = getDefaultTier(team.id);
-                    const hasChanged = currentTier !== defaultTier;
-                    
                     const tierColor = {
                       'elite': 'bg-purple-50 border-purple-200 dark:bg-purple-950 dark:border-purple-800',
                       'strong': 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800', 
@@ -340,105 +338,57 @@ export default function AdminGoalProjections() {
                       'promoted': 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
                     }[currentTier] || 'bg-gray-50 border-gray-200 dark:bg-gray-950 dark:border-gray-800';
                     
-                    const getTierBadge = (tier: string, variant: 'current' | 'default') => {
-                      const isDefault = variant === 'default';
-                      const badgeClass = isDefault ? "text-xs border" : "text-xs";
-                      const badgeVariant = isDefault ? "outline" : "default";
-                      
-                      const colors = {
-                        'elite': isDefault ? 'border-purple-300 text-purple-700 bg-purple-50' : 'bg-purple-600 hover:bg-purple-700',
-                        'strong': isDefault ? 'border-blue-300 text-blue-700 bg-blue-50' : 'bg-blue-600 hover:bg-blue-700',
-                        'average': isDefault ? 'border-gray-300 text-gray-700 bg-gray-50' : 'bg-gray-600 hover:bg-gray-700',
-                        'weak': isDefault ? 'border-orange-300 text-orange-700 bg-orange-50' : 'bg-orange-600 hover:bg-orange-700',
-                        'promoted': isDefault ? 'border-red-300 text-red-700 bg-red-50' : 'bg-red-600 hover:bg-red-700'
-                      }[tier] || (isDefault ? 'border-gray-300 text-gray-700 bg-gray-50' : 'bg-gray-600 hover:bg-gray-700');
-                      
-                      const tierNames = {
-                        'elite': 'Elite',
-                        'strong': 'Strong', 
-                        'average': 'Average',
-                        'weak': 'Weak',
-                        'promoted': 'Promoted'
-                      };
-                      
-                      return (
-                        <Badge 
-                          variant={badgeVariant as "default" | "outline"} 
-                          className={`${badgeClass} ${colors}`}
-                        >
-                          {tierNames[tier as keyof typeof tierNames] || 'Average'}
-                        </Badge>
-                      );
-                    };
+                    const tierBadge = {
+                      'elite': <Badge className="bg-purple-600 hover:bg-purple-700 text-xs">Elite</Badge>,
+                      'strong': <Badge className="bg-blue-600 hover:bg-blue-700 text-xs">Strong</Badge>,
+                      'average': <Badge className="bg-gray-600 hover:bg-gray-700 text-xs">Average</Badge>,
+                      'weak': <Badge className="bg-orange-600 hover:bg-orange-700 text-xs">Weak</Badge>,
+                      'promoted': <Badge className="bg-red-600 hover:bg-red-700 text-xs">Promoted</Badge>
+                    }[currentTier] || <Badge variant="outline" className="text-xs">Average</Badge>;
 
                     return (
-                      <div key={team.id} className={`p-4 border rounded-lg ${tierColor} ${hasChanged ? 'ring-2 ring-blue-300 dark:ring-blue-600' : ''}`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-medium text-sm truncate">{team.name}</span>
-                              {hasChanged && (
-                                <Badge variant="outline" className="text-xs bg-blue-50 border-blue-300 text-blue-700">
-                                  Modified
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center gap-4 text-xs">
-                              <div className="flex items-center gap-1">
-                                <span className="text-muted-foreground">Default:</span>
-                                {getTierBadge(defaultTier, 'default')}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="text-muted-foreground">Current:</span>
-                                {getTierBadge(currentTier, 'current')}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="ml-4">
-                            <Label htmlFor={`team-${team.id}`} className="text-xs text-muted-foreground mb-1 block">
-                              Change Tier
-                            </Label>
-                            <Select value={currentTier} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
-                              <SelectTrigger id={`team-${team.id}`} className="w-28 h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="elite">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                                    Elite
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="strong">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                    Strong
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="average">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
-                                    Average
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="weak">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
-                                    Weak
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="promoted">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-red-600 rounded-full"></div>
-                                    Promoted
-                                  </div>
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                      <div key={team.id} className={`flex items-center justify-between p-3 border rounded-lg ${tierColor}`}>
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="font-medium text-sm truncate">{team.name}</span>
+                          {tierBadge}
                         </div>
+                        <Select value={currentTier} onValueChange={(value) => handleTeamTierChange(team.id, value)}>
+                          <SelectTrigger className="w-24 h-8 text-xs ml-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="elite">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                                Elite
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="strong">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                Strong
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="average">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                                Average
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="weak">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
+                                Weak
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="promoted">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                                Promoted
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     );
                   })}
