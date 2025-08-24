@@ -442,12 +442,14 @@ export const unifiedProjectionSettings = pgTable("unified_projection_settings", 
   newManagerBounceMultiplier: decimal("new_manager_bounce_multiplier", { precision: 4, scale: 2 }).default("1.08"),
   weatherConditionsMultiplier: decimal("weather_conditions_multiplier", { precision: 4, scale: 2 }).default("0.96"),
   
-  // Offensive tier multipliers
-  eliteAttackMultiplier: decimal("elite_attack_multiplier", { precision: 4, scale: 2 }).default("1.30"),
-  strongAttackMultiplier: decimal("strong_attack_multiplier", { precision: 4, scale: 2 }).default("1.15"),
-  averageAttackMultiplier: decimal("average_attack_multiplier", { precision: 4, scale: 2 }).default("1.00"),
-  weakAttackMultiplier: decimal("weak_attack_multiplier", { precision: 4, scale: 2 }).default("0.85"),
-  promotedAttackMultiplier: decimal("promoted_attack_multiplier", { precision: 4, scale: 2 }).default("0.70"),
+  // Offensive tier multipliers (7 tiers)
+  eliteAttackMultiplier: decimal("elite_attack_multiplier", { precision: 4, scale: 2 }).default("1.20"),
+  strongAttackMultiplier: decimal("strong_attack_multiplier", { precision: 4, scale: 2 }).default("1.12"),
+  goodAttackMultiplier: decimal("good_attack_multiplier", { precision: 4, scale: 2 }).default("1.06"),
+  normalAttackMultiplier: decimal("normal_attack_multiplier", { precision: 4, scale: 2 }).default("1.00"),
+  weakAttackMultiplier: decimal("weak_attack_multiplier", { precision: 4, scale: 2 }).default("0.94"),
+  veryWeakAttackMultiplier: decimal("very_weak_attack_multiplier", { precision: 4, scale: 2 }).default("0.88"),
+  promotedAttackMultiplier: decimal("promoted_attack_multiplier", { precision: 4, scale: 2 }).default("0.82"),
   
   // Offensive variance controls
   offensiveVarianceEnabled: boolean("offensive_variance_enabled").default(false),
@@ -461,11 +463,13 @@ export const unifiedProjectionSettings = pgTable("unified_projection_settings", 
   weakDefenseMultiplier: decimal("weak_defense_multiplier", { precision: 4, scale: 2 }).default("1.35"),
   promotedDefenseMultiplier: decimal("promoted_defense_multiplier", { precision: 4, scale: 2 }).default("1.60"),
 
-  // Team tier assignments (JSON arrays of team IDs)
+  // Team tier assignments (JSON arrays of team IDs) - 7 tiers
   eliteAttackTeams: text("elite_attack_teams").default("[]"),
   strongAttackTeams: text("strong_attack_teams").default("[]"),
-  averageAttackTeams: text("average_attack_teams").default("[]"),
+  goodAttackTeams: text("good_attack_teams").default("[]"),
+  normalAttackTeams: text("normal_attack_teams").default("[]"),
   weakAttackTeams: text("weak_attack_teams").default("[]"),
+  veryWeakAttackTeams: text("very_weak_attack_teams").default("[]"),
   promotedAttackTeams: text("promoted_attack_teams").default("[]"),
   eliteDefenseTeams: text("elite_defense_teams").default("[]"),
   strongDefenseTeams: text("strong_defense_teams").default("[]"),
