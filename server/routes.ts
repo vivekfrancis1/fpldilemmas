@@ -1368,24 +1368,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     averageAttackMultiplier: 1.00,
     weakAttackMultiplier: 0.75,
     promotedAttackMultiplier: 0.5,
-    // Attacking Team Assignments - Updated for 2024-25 season
+    // Attacking Team Assignments - Crystal Palace (3) and Everton (11) moved to average
     eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Man City, Arsenal, Chelsea
-    strongAttackTeams: [15, 18, 2], // Newcastle, Tottenham, Aston Villa
-    averageAttackTeams: [4, 5, 6, 3, 14, 10, 20], // Bournemouth, Brentford, Brighton, Crystal Palace, Man Utd, Fulham, West Ham
-    weakAttackTeams: [16, 11, 21], // Nottingham Forest, Everton, Wolverhampton Wanderers
-    promotedAttackTeams: [8, 9, 19], // Leicester, Ipswich, Southampton
+    strongAttackTeams: [15, 18, 2, 4, 5, 6], // Newcastle, Tottenham, Aston Villa, Bournemouth, Brentford, Brighton
+    averageAttackTeams: [14, 3, 10, 20, 11], // Manchester United, Crystal Palace, Fulham, West Ham, Everton
+    weakAttackTeams: [16, 21], // Nottingham Forest, Wolverhampton Wanderers
+    promotedAttackTeams: [8, 9, 17], // Leeds, Burnley, Sunderland
     // Defensive Tier Multipliers
     eliteDefenseMultiplier: 0.5,
     strongDefenseMultiplier: 0.75,
     averageDefenseMultiplier: 1.00,
     weakDefenseMultiplier: 1.25,
     promotedDefenseMultiplier: 1.5,
-    // Defensive Team Assignments - Updated for 2024-25 season
+    // Defensive Team Assignments - Crystal Palace (3) and Everton (11) moved to average
     eliteDefenseTeams: [1], // Arsenal
-    strongDefenseTeams: [12, 13, 7, 16, 15], // Liverpool, Man City, Chelsea, Nottm Forest, Newcastle
-    averageDefenseTeams: [3, 14, 18, 2, 10, 11], // Crystal Palace, Man Utd, Tottenham, Aston Villa, Fulham, Everton
-    weakDefenseTeams: [6, 20, 4, 5, 21], // Brighton, West Ham, Bournemouth, Brentford, Wolves
-    promotedDefenseTeams: [8, 9, 19], // Leicester, Ipswich, Southampton
+    strongDefenseTeams: [12, 13, 7, 16, 15, 9], // Liverpool, Man City, Chelsea, Nottm Forest, Newcastle, Crystal Palace
+    averageDefenseTeams: [8, 14, 18, 2, 10, 3, 11], // Leeds, Man Utd, Tottenham, Aston Villa, Fulham, Crystal Palace, Everton
+    weakDefenseTeams: [6, 19, 20, 4, 5], // Brighton, Southampton, West Ham, Brentford, Bournemouth
+    promotedDefenseTeams: [17], // Ipswich only - removed Crystal Palace and Everton
     // Context Multipliers
     derbyGoalsMultiplier: 0.87,
     topSixGoalsMultiplier: 1.12,
