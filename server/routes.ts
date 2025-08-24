@@ -1381,6 +1381,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     averageAttackMultiplier: 1.00,
     weakAttackMultiplier: 0.90,
     promotedAttackMultiplier: 0.85,
+    // Attacking Team Assignments
+    eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Man City, Arsenal, Chelsea
+    strongAttackTeams: [15, 18, 2], // Newcastle, Tottenham, Aston Villa
+    weakAttackTeams: [9, 20, 16], // Everton, Wolverhampton, Nottingham Forest
+    promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
     // Defensive Tier Multipliers
     eliteDefenseMultiplier: 0.60,
     strongDefenseMultiplier: 0.75,
@@ -1623,6 +1628,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get admin settings
   app.get("/api/admin/goal-projection-settings", async (req, res) => {
     try {
+      // Add cache-busting headers to ensure immediate reflection of changes
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
       res.json(adminGoalSettings);
     } catch (error) {
       console.error("Error fetching admin settings:", error);
@@ -1664,12 +1675,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         globalTierMultiplier: 1.25,
         lowConfidenceBoost: 1.25,
         lowConfidenceThreshold: 0.65,
+        // Venue Multipliers
+        homeAdvantageGoalsMultiplier: 1.15,
+        awayFactorGoalsMultiplier: 0.88,
         // Attacking Tier Multipliers
         eliteAttackMultiplier: 1.15,
         strongAttackMultiplier: 1.10,
         averageAttackMultiplier: 1.00,
         weakAttackMultiplier: 0.90,
         promotedAttackMultiplier: 0.85,
+        // Attacking Team Assignments
+        eliteAttackTeams: [12, 13, 1, 7], // Liverpool, Man City, Arsenal, Chelsea
+        strongAttackTeams: [15, 18, 2], // Newcastle, Tottenham, Aston Villa
+        weakAttackTeams: [9, 20, 16], // Everton, Wolverhampton, Nottingham Forest
+        promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
         // Defensive Tier Multipliers
         eliteDefenseMultiplier: 0.60,
         strongDefenseMultiplier: 0.75,
@@ -2159,12 +2178,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return [];
             };
 
-            // Use standard team assignments since Goals Scored admin doesn't have configurable team assignments
-            const eliteAttackTeams = [12, 13, 1, 7]; // Liverpool, Man City, Arsenal, Chelsea
-            const strongAttackTeams = [15, 18, 2]; // Newcastle, Tottenham, Aston Villa
-            const averageAttackTeams = [4,5,6,8,14,19,10]; // Mid-table teams
-            const weakAttackTeams = [9, 20, 16]; // Everton, Wolverhampton, Nottingham Forest
-            const promotedAttackTeams = [3, 11, 17]; // Burnley, Leeds, Sunderland
+            // Use team assignments from Goals Scored admin settings
+            const eliteAttackTeams = parseTeamArray(adminGoalSettings.eliteAttackTeams) || [12, 13, 1, 7];
+            const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams) || [15, 18, 2];
+            const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams) || [9, 20, 16];
+            const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams) || [3, 11, 17];
 
             console.log(`DEBUG: Team ${teamId} attack tier check - Elite: ${eliteAttackTeams}, Strong: ${strongAttackTeams}, Weak: ${weakAttackTeams}`);
             
