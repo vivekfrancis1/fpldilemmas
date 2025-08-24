@@ -154,14 +154,26 @@ export default function AdminGoalProjections() {
   // Initialize form data when settings are loaded
   useEffect(() => {
     if (settings) {
-      // Initialize team tier assignments if they don't exist
+      // Parse team tier assignments from JSON strings to arrays
+      const parseTeamArray = (teamString: string | number[]): number[] => {
+        if (Array.isArray(teamString)) return teamString;
+        if (typeof teamString === 'string') {
+          try {
+            return JSON.parse(teamString);
+          } catch {
+            return [];
+          }
+        }
+        return [];
+      };
+
       const settingsWithDefaults = {
         ...settings,
-        eliteAttackTeams: settings.eliteAttackTeams || DEFAULT_TEAM_TIERS.eliteAttackTeams,
-        strongAttackTeams: settings.strongAttackTeams || DEFAULT_TEAM_TIERS.strongAttackTeams,
-        averageAttackTeams: settings.averageAttackTeams || DEFAULT_TEAM_TIERS.averageAttackTeams,
-        weakAttackTeams: settings.weakAttackTeams || DEFAULT_TEAM_TIERS.weakAttackTeams,
-        promotedAttackTeams: settings.promotedAttackTeams || DEFAULT_TEAM_TIERS.promotedAttackTeams,
+        eliteAttackTeams: parseTeamArray(settings.eliteAttackTeams) || DEFAULT_TEAM_TIERS.eliteAttackTeams,
+        strongAttackTeams: parseTeamArray(settings.strongAttackTeams) || DEFAULT_TEAM_TIERS.strongAttackTeams,
+        averageAttackTeams: parseTeamArray(settings.averageAttackTeams) || DEFAULT_TEAM_TIERS.averageAttackTeams,
+        weakAttackTeams: parseTeamArray(settings.weakAttackTeams) || DEFAULT_TEAM_TIERS.weakAttackTeams,
+        promotedAttackTeams: parseTeamArray(settings.promotedAttackTeams) || DEFAULT_TEAM_TIERS.promotedAttackTeams,
       };
       setFormData(settingsWithDefaults);
       setHasChanges(false);
