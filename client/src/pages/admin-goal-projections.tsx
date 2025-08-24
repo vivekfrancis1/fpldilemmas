@@ -75,10 +75,10 @@ interface AdminSettings {
 // Default team tier assignments based on user specifications
 const DEFAULT_TEAM_TIERS = {
   eliteAttackTeams: [12, 13, 7], // Liverpool, Man City, Chelsea
-  strongAttackTeams: [15, 18, 2, 4, 5, 6, 1], // Newcastle, Spurs, Aston Villa, Bournemouth, Brentford, Brighton, Arsenal
-  averageAttackTeams: [14, 3, 10, 20, 11], // Man Utd, Crystal Palace, Fulham, West Ham, Everton
-  weakAttackTeams: [16, 21], // Nott'm Forest, Wolves
-  promotedAttackTeams: [8, 9, 17], // Leeds, Burnley, Sunderland
+  strongAttackTeams: [1, 15, 18, 2, 4, 5, 6], // Arsenal, Newcastle, Spurs, Aston Villa, Bournemouth, Brentford, Brighton
+  averageAttackTeams: [14, 8, 9, 10, 19], // Man Utd, Crystal Palace, Everton, Fulham, West Ham
+  weakAttackTeams: [16, 20], // Nott'm Forest, Wolves
+  promotedAttackTeams: [17], // Ipswich
 };
 
 
@@ -156,10 +156,10 @@ export default function AdminGoalProjections() {
   // Default team tier assignments - Updated per user specifications
   const DEFAULT_TEAM_TIERS = {
     eliteAttackTeams: [12, 13, 7], // Liverpool, Man City, Chelsea
-    strongAttackTeams: [15, 18, 2, 4, 5, 6, 1], // Newcastle, Spurs, Aston Villa, Bournemouth, Brentford, Brighton, Arsenal
-    averageAttackTeams: [14, 3, 10, 20, 11], // Man Utd, Crystal Palace, Fulham, West Ham, Everton
-    weakAttackTeams: [16, 21], // Nott'm Forest, Wolves
-    promotedAttackTeams: [8, 9, 17], // Leeds, Burnley, Sunderland
+    strongAttackTeams: [1, 15, 18, 2, 4, 5, 6], // Arsenal, Newcastle, Spurs, Aston Villa, Bournemouth, Brentford, Brighton
+    averageAttackTeams: [14, 8, 9, 10, 19], // Man Utd, Crystal Palace, Everton, Fulham, West Ham
+    weakAttackTeams: [16, 20], // Nott'm Forest, Wolves
+    promotedAttackTeams: [17], // Ipswich
   };
 
   // Initialize form data when settings are loaded
@@ -239,10 +239,10 @@ export default function AdminGoalProjections() {
   // Default defensive tier assignments - Updated per user specifications
   const DEFAULT_DEFENSIVE_TIERS = {
     eliteDefenseTeams: [1], // Arsenal
-    strongDefenseTeams: [12, 13, 7, 16, 15, 9], // Liverpool, Man City, Chelsea, Nottm Forest, Newcastle, Everton
+    strongDefenseTeams: [12, 13, 7, 15, 16, 9], // Liverpool, Man City, Chelsea, Newcastle, Nott'm Forest, Everton
     averageDefenseTeams: [8, 14, 18, 2, 10], // Crystal Palace, Man Utd, Spurs, Aston Villa, Fulham
     weakDefenseTeams: [6, 19, 20, 4, 5], // Brighton, West Ham, Wolves, Bournemouth, Brentford
-    promotedDefenseTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
+    promotedDefenseTeams: [17], // Ipswich
   };
 
   // Defensive tier assignment helper functions
