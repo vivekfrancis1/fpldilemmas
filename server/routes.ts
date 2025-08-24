@@ -3837,7 +3837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const homeExpectedAssists = Math.min(homeExpectedGoals * 0.8, homeMaxAssists);
           
           const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
-          const homePlayerShares = distributeAssistShares(homePlayersInSquad, bootstrapData.element_types);
+          const homePlayerShares = distributeCurrentSeasonAssistShares(homePlayersInSquad, bootstrapData.element_types);
           const homeExpectedAssistsRounded = Math.round(homeExpectedAssists * 100) / 100;
           
           // Calculate projected assists for each player
@@ -3859,7 +3859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const awayExpectedAssists = Math.min(awayExpectedGoals * 0.8, awayMaxAssists);
           
           const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
-          const awayPlayerShares = distributeAssistShares(awayPlayersInSquad, bootstrapData.element_types);
+          const awayPlayerShares = distributeCurrentSeasonAssistShares(awayPlayersInSquad, bootstrapData.element_types);
           const awayExpectedAssistsRounded = Math.round(awayExpectedAssists * 100) / 100;
           
           // Calculate projected assists for each player
@@ -3882,8 +3882,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return data;
   }
 
-  // Helper function to distribute assist shares among players using historical data analysis
-  function distributeAssistShares(players: any[], positions: any[]) {
+  // Helper function to distribute assist shares among players using historical data analysis (current season)
+  function distributeCurrentSeasonAssistShares(players: any[], positions: any[]) {
     const playerShares = [];
     let totalShare = 0;
 

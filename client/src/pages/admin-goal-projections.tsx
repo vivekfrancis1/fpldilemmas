@@ -1413,42 +1413,7 @@ export default function AdminGoalProjections() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="minGoalsPerMatch">Min Goals Per Match</Label>
-                  <Input
-                    id="minGoalsPerMatch"
-                    type="number"
-                    step="0.01"
-                    min="0.0"
-                    max="2.0"
-                    value={formData.minGoalsPerMatch || 0}
-                    onChange={(e) => handleInputChange('minGoalsPerMatch', e.target.value)}
-                    data-testid="input-min-goals-per-match"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 0.0</strong><br/>
-                    Minimum goals per match across all projections.<br/>
-                    <em>Range: 0.0-2.0</em>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxGoalsPerMatch">Max Goals Per Match</Label>
-                  <Input
-                    id="maxGoalsPerMatch"
-                    type="number"
-                    step="0.01"
-                    min="2.5"
-                    max="7.0"
-                    value={formData.maxGoalsPerMatch || 0}
-                    onChange={(e) => handleInputChange('maxGoalsPerMatch', e.target.value)}
-                    data-testid="input-max-goals-per-match"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Default: 5.0</strong><br/>
-                    Maximum goals per match across all projections.<br/>
-                    <em>Range: 2.5-7.0</em>
-                  </p>
-                </div>
+                {/* Goals Scored admin doesn't have per-match bounds */}
                 <div className="space-y-2">
                   <Label htmlFor="absoluteMinGoals">Absolute Min Goals</Label>
                   <Input
