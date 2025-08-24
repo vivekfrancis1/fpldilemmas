@@ -1664,7 +1664,27 @@ export default function AdminGoalProjections() {
                   <Alert>
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>
-                      <strong>How Confidence Works:</strong> Teams with confidence below {formData.lowConfidenceThreshold * 100}% receive a {formData.lowConfidenceBoost}x boost to their expected goals. This helps balance teams that might be undervalued by betting markets. You can adjust these settings in the Global Settings tab.
+                      <div className="space-y-3">
+                        <div>
+                          <strong>How Confidence Score is Calculated:</strong>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p><strong>Market Data (40%):</strong> Betting market assessment of team reliability</p>
+                            <p><strong>Performance Consistency (25%):</strong> Player minutes and reliability metrics</p>
+                          </div>
+                          <div>
+                            <p><strong>Volume Confidence (20%):</strong> Amount of available projection data</p>
+                            <p><strong>Quality Bonus (15%):</strong> CS Rate ≥35% earns defensive quality bonus</p>
+                          </div>
+                        </div>
+                        <div>
+                          <strong>Confidence Levels:</strong> High ≥85% | Medium 65-84% | Low ≤64%
+                        </div>
+                        <div>
+                          <strong>Impact:</strong> Teams with confidence below {formData.lowConfidenceThreshold * 100}% receive a {formData.lowConfidenceBoost}x boost to their expected goals. You can adjust these settings in the Global Settings tab.
+                        </div>
+                      </div>
                     </AlertDescription>
                   </Alert>
                 </div>
