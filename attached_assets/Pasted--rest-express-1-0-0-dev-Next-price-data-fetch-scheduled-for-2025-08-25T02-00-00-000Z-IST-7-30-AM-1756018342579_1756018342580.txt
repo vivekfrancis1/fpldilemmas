@@ -1,0 +1,209 @@
+
+> rest-express@1.0.0 dev
+Next price data fetch scheduled for: 2025-08-25T02:00:00.000Z (IST 7:30 AM)
+✓ Unified projection settings loaded from database
+✓ OpenFPL Projection routes registered successfully
+6:40:33 AM [express] serving on port 5000
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+6:40:41 AM [express] GET /api/admin/unified-projection-settings 200 in 2ms :: {"autoBalance":true,"l…
+6:40:45 AM [express] GET /api/bootstrap-static 304 in 165ms :: {"chips":[{"id":1,"name":"wildcard","…
+6:40:45 AM [express] GET /api/seasons 304 in 303ms :: ["2016/17","2017/18","2018/19","2019/20","2020…
+6:40:45 AM [express] GET /api/bootstrap-static 304 in 52ms :: {"chips":[{"id":1,"name":"wildcard","n…
+6:40:45 AM [express] GET /api/seasons 304 in 74ms :: ["2016/17","2017/18","2018/19","2019/20","2020/…
+DEBUG: Team Goal Projections API called - generating all 38 gameweeks
+Initialized projection data for 20 teams
+DEBUG: Processing all 38 gameweeks, current GW: 2
+DEBUG: Goals Scored - GW1 COMPLETE - All 10 fixtures finished, using ACTUAL data
+DEBUG: Goals Scored - GW2 INCOMPLETE - 6/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW3 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW4 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW5 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW6 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW7 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW8 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW9 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW10 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW11 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW12 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW13 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW14 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW15 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW16 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW17 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW18 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW19 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW20 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW21 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW22 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW23 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW24 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW25 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW26 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW27 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW28 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW29 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW30 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW31 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW32 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW33 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW34 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW35 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW36 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW37 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW38 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW1 ACTUAL - ARS scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - AVL scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - BUR scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - BOU scored: 2 goals
+DEBUG: Goals Scored - GW1 ACTUAL - BRE scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - BHA scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - CHE scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - CRY scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - EVE scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - FUL scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - LEE scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - LIV scored: 4 goals
+DEBUG: Goals Scored - GW1 ACTUAL - MCI scored: 4 goals
+DEBUG: Goals Scored - GW1 ACTUAL - MUN scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - NEW scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - NFO scored: 3 goals
+DEBUG: Goals Scored - GW1 ACTUAL - SUN scored: 3 goals
+DEBUG: Goals Scored - GW1 ACTUAL - TOT scored: 3 goals
+DEBUG: Goals Scored - GW1 ACTUAL - WHU scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - WOL scored: 0 goals
+6:40:52 AM [express] GET /api/team-goal-projections 200 in 140ms :: [{"id":12,"team":"LIV","teamShor…
+6:41:24 AM [express] GET /api/admin/unified-projection-settings 200 in 1ms :: {"autoBalance":true,"l…
+DEBUG: Team Goal Projections API called - generating all 38 gameweeks
+Initialized projection data for 20 teams
+DEBUG: Processing all 38 gameweeks, current GW: 2
+DEBUG: Goals Scored - GW1 COMPLETE - All 10 fixtures finished, using ACTUAL data
+DEBUG: Goals Scored - GW2 INCOMPLETE - 6/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW3 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW4 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW5 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW6 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW7 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW8 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW9 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW10 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW11 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW12 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW13 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW14 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW15 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW16 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW17 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW18 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW19 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW20 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW21 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW22 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW23 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW24 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW25 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW26 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW27 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW28 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW29 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW30 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW31 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW32 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW33 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW34 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW35 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW36 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW37 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW38 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW1 ACTUAL - ARS scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - AVL scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - BUR scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - BOU scored: 2 goals
+DEBUG: Goals Scored - GW1 ACTUAL - BRE scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - BHA scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - CHE scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - CRY scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - EVE scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - FUL scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - LEE scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - LIV scored: 4 goals
+DEBUG: Goals Scored - GW1 ACTUAL - MCI scored: 4 goals
+DEBUG: Goals Scored - GW1 ACTUAL - MUN scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - NEW scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - NFO scored: 3 goals
+DEBUG: Goals Scored - GW1 ACTUAL - SUN scored: 3 goals
+DEBUG: Goals Scored - GW1 ACTUAL - TOT scored: 3 goals
+DEBUG: Goals Scored - GW1 ACTUAL - WHU scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - WOL scored: 0 goals
+6:41:33 AM [express] GET /api/team-goal-projections 200 in 178ms :: [{"id":12,"team":"LIV","teamShor…
+✓ Unified projection settings saved to database
+Unified projection settings updated - both goals scored and goals against now synchronized
+6:43:28 AM [express] PUT /api/admin/unified-projection-settings 200 in 736ms :: {"success":true,"mes…
+6:43:29 AM [express] GET /api/admin/unified-projection-settings 200 in 1ms :: {"autoBalance":true,"l…
+6:44:28 AM [express] GET /api/admin/unified-projection-settings 200 in 1ms :: {"autoBalance":true,"l…
+6:44:48 AM [express] GET /api/admin/unified-projection-settings 200 in 1ms :: {"autoBalance":true,"l…
+DEBUG: Team Goal Projections API called - generating all 38 gameweeks
+Initialized projection data for 20 teams
+DEBUG: Processing all 38 gameweeks, current GW: 2
+DEBUG: Goals Scored - GW1 COMPLETE - All 10 fixtures finished, using ACTUAL data
+DEBUG: Goals Scored - GW2 INCOMPLETE - 6/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW3 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW4 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW5 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW6 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW7 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW8 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW9 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW10 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW11 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW12 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW13 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW14 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW15 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW16 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW17 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW18 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW19 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW20 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW21 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW22 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW23 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW24 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW25 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW26 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW27 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW28 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW29 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW30 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW31 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW32 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW33 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW34 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW35 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW36 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW37 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW38 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+DEBUG: Goals Scored - GW1 ACTUAL - ARS scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - AVL scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - BUR scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - BOU scored: 2 goals
+DEBUG: Goals Scored - GW1 ACTUAL - BRE scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - BHA scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - CHE scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - CRY scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - EVE scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - FUL scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - LEE scored: 1 goals
+DEBUG: Goals Scored - GW1 ACTUAL - LIV scored: 4 goals
+DEBUG: Goals Scored - GW1 ACTUAL - MCI scored: 4 goals
+DEBUG: Goals Scored - GW1 ACTUAL - MUN scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - NEW scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - NFO scored: 3 goals
+DEBUG: Goals Scored - GW1 ACTUAL - SUN scored: 3 goals
+DEBUG: Goals Scored - GW1 ACTUAL - TOT scored: 3 goals
+DEBUG: Goals Scored - GW1 ACTUAL - WHU scored: 0 goals
+DEBUG: Goals Scored - GW1 ACTUAL - WOL scored: 0 goals
+6:45:03 AM [express] GET /api/team-goal-projections 200 in 253ms :: [{"id":12,"team":"LIV","teamShor…
+6:50:32 AM [express] GET /api/admin/unified-projection-settings 304 in 0ms :: {"autoBalance":true,"l…
+6:50:32 AM [express] GET /api/bootstrap-static 200 in 118ms :: {"chips":[{"id":1,"name":"wildcard","…
