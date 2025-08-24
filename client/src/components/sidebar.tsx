@@ -70,6 +70,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
       ]
     },
+    {
+      section: "Admin Tools",
+      items: [
+        { path: "/admin-goal-projections", label: "Goals Scored", icon: Settings, description: "Team goal projection settings", popular: false }
+      ]
+    }
   ];
 
   return (
