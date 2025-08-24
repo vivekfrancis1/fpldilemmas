@@ -454,19 +454,23 @@ export default function Fixtures() {
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-green-600 rounded"></div>
-                  <span>Easy (vs Weak/Promoted Defense)</span>
+                  <span>1 Very Easy</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-400 rounded"></div>
+                  <span>2 Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-yellow-400 rounded"></div>
-                  <span>Medium (vs Average Defense)</span>
+                  <span>3 Medium</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-orange-500 rounded"></div>
-                  <span>Hard (vs Strong Defense)</span>
+                  <span>4 Hard</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-red-600 rounded"></div>
-                  <span>Very Hard (vs Elite Defense)</span>
+                  <span>5 Very Hard</span>
                 </div>
                 <div className="text-xs text-gray-600">
                   Attacking difficulty based on opponent's defensive strength
@@ -517,14 +521,14 @@ export default function Fixtures() {
                                 const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
                                 const opponentDefenseTier = opponentId ? getDefensiveTier(opponentId) : 'average';
                                 
-                                // Color by opponent's defensive tier (FDR color scheme)
+                                // Color by opponent's defensive tier (exact same colors as Balanced FDR)
                                 const getOpponentDefenseColor = (defenseTier: string) => {
                                   switch (defenseTier) {
-                                    case 'elite': return 'bg-red-600 text-white'; // Very Hard
-                                    case 'strong': return 'bg-orange-500 text-white'; // Hard
-                                    case 'average': return 'bg-yellow-400 text-gray-900'; // Medium
-                                    case 'weak': return 'bg-green-600 text-white'; // Easy
-                                    case 'promoted': return 'bg-green-600 text-white'; // Easy
+                                    case 'elite': return 'bg-red-600 text-white'; // Very Hard (FDR 5)
+                                    case 'strong': return 'bg-orange-500 text-white'; // Hard (FDR 4)
+                                    case 'average': return 'bg-yellow-400 text-gray-900'; // Medium (FDR 3)
+                                    case 'weak': return 'bg-green-400 text-white'; // Easy (FDR 2)
+                                    case 'promoted': return 'bg-green-600 text-white'; // Very Easy (FDR 1)
                                     default: return 'bg-gray-300 text-gray-900';
                                   }
                                 };
@@ -562,19 +566,23 @@ export default function Fixtures() {
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-green-600 rounded"></div>
-                  <span>Easy (vs Weak/Promoted Attack)</span>
+                  <span>1 Very Easy</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-400 rounded"></div>
+                  <span>2 Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-yellow-400 rounded"></div>
-                  <span>Medium (vs Average Attack)</span>
+                  <span>3 Medium</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-orange-500 rounded"></div>
-                  <span>Hard (vs Strong Attack)</span>
+                  <span>4 Hard</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-red-600 rounded"></div>
-                  <span>Very Hard (vs Elite Attack)</span>
+                  <span>5 Very Hard</span>
                 </div>
                 <div className="text-xs text-gray-600">
                   Defensive difficulty based on opponent's attacking strength
@@ -625,14 +633,14 @@ export default function Fixtures() {
                                 const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
                                 const opponentAttackTier = opponentId ? getAttackingTier(opponentId) : 'average';
                                 
-                                // Color by opponent's attacking tier (FDR color scheme)
+                                // Color by opponent's attacking tier (exact same colors as Balanced FDR)
                                 const getOpponentAttackColor = (attackTier: string) => {
                                   switch (attackTier) {
-                                    case 'elite': return 'bg-red-600 text-white'; // Very Hard
-                                    case 'strong': return 'bg-orange-500 text-white'; // Hard
-                                    case 'average': return 'bg-yellow-400 text-gray-900'; // Medium
-                                    case 'weak': return 'bg-green-600 text-white'; // Easy
-                                    case 'promoted': return 'bg-green-600 text-white'; // Easy
+                                    case 'elite': return 'bg-red-600 text-white'; // Very Hard (FDR 5)
+                                    case 'strong': return 'bg-orange-500 text-white'; // Hard (FDR 4)
+                                    case 'average': return 'bg-yellow-400 text-gray-900'; // Medium (FDR 3)
+                                    case 'weak': return 'bg-green-400 text-white'; // Easy (FDR 2)
+                                    case 'promoted': return 'bg-green-600 text-white'; // Very Easy (FDR 1)
                                     default: return 'bg-gray-300 text-gray-900';
                                   }
                                 };
