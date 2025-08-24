@@ -1634,39 +1634,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
           const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
           
-          // Phase 1: Core market probability foundation
-          let baseExpectedGoals = teamBettingData.expectedGoalsPerGame;
+          // Phase 1: Universal Base xG Foundation - All teams start from 1.35 goals per game
+          // This ensures consistent baseline across all teams with differences created through tier multipliers
+          let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame || 1.35;
           
-          // Phase 2: Advanced venue-specific market adjustments using Goals Scored admin settings
+          // Phase 2: Venue Factors - Home advantage and away adjustments
           const venueMultiplier = isHome ? 
             (adminGoalSettings.homeAdvantageGoalsMultiplier || 1.15) : // Configurable home advantage
             (adminGoalSettings.awayFactorGoalsMultiplier || 0.88); // Configurable away factor
           baseExpectedGoals *= venueMultiplier;
           
-          // Phase 3: Balanced opponent defensive resistance matrix
-          const opponentDefenseStrength = opponentDefenseData.baseCleanSheetRate;
-          // More realistic defensive impact - good defenses reduce goals by 10-25%, not 50%+
-          const defensiveReduction = opponentDefenseStrength * 0.4; // Max 20% reduction for best defenses
-          const attackingPenetration = 1.0 - defensiveReduction;
-          baseExpectedGoals *= Math.max(0.75, Math.min(1.15, attackingPenetration));
+          // Phase 3: Defensive Tiers - Apply opponent's defensive tier multiplier
+          const getDefensiveTier = (teamId: number): string => {
+            // Use standard defensive team assignments from Goals Scored admin
+            const eliteDefenseTeams = [1]; // Arsenal
+            const strongDefenseTeams = [12, 13, 7, 16, 15, 9]; // Liverpool, Man City, Chelsea, Nottingham Forest, Newcastle, Everton
+            const weakDefenseTeams = [6, 19, 20, 4, 5]; // Brighton, West Ham, Wolverhampton, Bournemouth, Brentford
+            const promotedDefenseTeams = [3, 11, 17]; // Burnley, Leeds, Sunderland
+
+            if (eliteDefenseTeams.includes(teamId)) return 'elite';
+            if (strongDefenseTeams.includes(teamId)) return 'strong';
+            if (weakDefenseTeams.includes(teamId)) return 'weak';
+            if (promotedDefenseTeams.includes(teamId)) return 'promoted';
+            return 'average';
+          };
           
-          // Phase 4: Market-informed tactical context analysis
-          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
-          const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
-          const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
-                               (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
-                               (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13); // Manchester
-          
-          if (isEliteClash) {
-            baseExpectedGoals *= 1.08; // Elite clashes feature quality attacking play
-          } else if (isTopSixBattle) {
-            baseExpectedGoals *= bettingData.contextMultipliers.topSix.goals * 1.02;
+          const opponentDefensiveTier = getDefensiveTier(opponent.id);
+          let opponentDefensiveMultiplier = 1.0;
+          switch (opponentDefensiveTier) {
+            case 'elite': opponentDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier; break;
+            case 'strong': opponentDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier; break;
+            case 'average': opponentDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier; break;
+            case 'weak': opponentDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier; break;
+            case 'promoted': opponentDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier; break;
           }
-          if (isRivalryMatch) {
-            baseExpectedGoals *= 1.14; // Rivalry games typically more open and emotional
-          }
           
-          // Phase 5: UNIFIED attacking tier performance modeling using configurable team assignments
+          baseExpectedGoals *= opponentDefensiveMultiplier;
+          
+          // Phase 4: Attacking Tiers - Apply team's attacking tier multiplier
           const getAttackingTier = (teamId: number) => {
             // Parse attacking team arrays if they come as strings from database
             const parseTeamArray = (teamData: any): number[] => {
@@ -1686,14 +1691,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams) || [15, 18, 2];
             const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams) || [9, 20, 16];
             const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams) || [3, 11, 17];
-
-            console.log(`DEBUG: Team ${teamId} attack tier check - Elite: ${eliteAttackTeams}, Strong: ${strongAttackTeams}, Weak: ${weakAttackTeams}`);
             
             if (eliteAttackTeams.includes(teamId)) return 'elite';
             if (strongAttackTeams.includes(teamId)) return 'strong';
             if (weakAttackTeams.includes(teamId)) return 'weak';
             if (promotedAttackTeams.includes(teamId)) return 'promoted';
-            return 'average'; // Default tier for teams not explicitly assigned
+            return 'average';
           };
           
           const attackingTier = getAttackingTier(team.id);
@@ -1708,80 +1711,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           baseExpectedGoals *= attackingTierMultiplier;
           
-          // Apply opponent's defensive tier multiplier
-          const getDefensiveTier = (teamId: number): string => {
-            // Parse defensive team arrays from JSON strings if needed
-            const parseTeamArray = (teamString: string | number[]): number[] => {
-              if (Array.isArray(teamString)) return teamString;
-              if (typeof teamString === 'string') {
-                try {
-                  // Handle double-escaped JSON strings from database
-                  let cleanString = teamString;
-                  if (cleanString.startsWith('"') && cleanString.endsWith('"')) {
-                    cleanString = cleanString.slice(1, -1); // Remove outer quotes
-                  }
-                  if (cleanString.startsWith('\\"') && cleanString.endsWith('\\"')) {
-                    cleanString = cleanString.slice(2, -2); // Remove escaped quotes
-                  }
-                  return JSON.parse(cleanString);
-                } catch (e) {
-                  console.error(`Failed to parse defensive team array: ${teamString}`, e);
-                  return [];
-                }
-              }
-              return [];
-            };
-
-            // Use standard defensive team assignments from Goals Scored admin
-            const eliteDefenseTeams = [1]; // Arsenal
-            const strongDefenseTeams = [12, 13, 7, 16, 15, 9]; // Liverpool, Man City, Chelsea, Nottingham Forest, Newcastle, Everton
-            const weakDefenseTeams = [6, 19, 20, 4, 5]; // Brighton, West Ham, Wolverhampton, Bournemouth, Brentford
-            const promotedDefenseTeams = [3, 11, 17]; // Burnley, Leeds, Sunderland
-
-            console.log(`DEBUG: Team ${teamId} defense tier check - Elite: ${eliteDefenseTeams}, Strong: ${strongDefenseTeams}, Weak: ${weakDefenseTeams}`);
-
-            if (eliteDefenseTeams.includes(teamId)) return 'elite';
-            if (strongDefenseTeams.includes(teamId)) return 'strong';
-            if (weakDefenseTeams.includes(teamId)) return 'weak';
-            if (promotedDefenseTeams.includes(teamId)) return 'promoted';
-            return 'average'; // Default tier for teams not explicitly assigned
-          };
+          // Phase 5: Context Multipliers - Situational adjustments based on match circumstances
+          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
+          const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
+          const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
+                               (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
+                               (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13); // Manchester
+          const isRelegationBattle = [17, 20, 19, 4, 5].includes(team.id) && [17, 20, 19, 4, 5].includes(opponent.id); // Bottom teams battle
           
-          const opponentDefensiveTier = getDefensiveTier(opponent.id);
-          let opponentDefensiveMultiplier = 1.0;
-          switch (opponentDefensiveTier) {
-            case 'elite': opponentDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier; break;
-            case 'strong': opponentDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier; break;
-            case 'average': opponentDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier; break;
-            case 'weak': opponentDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier; break;
-            case 'promoted': opponentDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier; break;
+          // Apply context multipliers from admin settings
+          if (isRivalryMatch) {
+            baseExpectedGoals *= adminGoalSettings.derbyGoalsMultiplier || 0.87; // Derby matches are more defensive
+          } else if (isTopSixBattle) {
+            baseExpectedGoals *= adminGoalSettings.topSixGoalsMultiplier || 1.12; // Top teams create more chances
+          } else if (isRelegationBattle) {
+            baseExpectedGoals *= adminGoalSettings.relegationBattleGoalsMultiplier || 0.83; // Bottom teams play defensively
           }
           
-          console.log(`DEBUG: ${team.short_name} vs ${opponent.short_name} - Opponent tier: ${opponentDefensiveTier}, Multiplier: ${opponentDefensiveMultiplier}, Goals before: ${baseExpectedGoals.toFixed(2)}`);
-          baseExpectedGoals *= opponentDefensiveMultiplier;
-          console.log(`DEBUG: Goals after defensive multiplier: ${baseExpectedGoals.toFixed(2)}`);
+          // Additional contextual factors (these would be applied based on fixture data in real implementation)
+          // For now using gameweek as proxy for timing factors
+          const isEarlyKickoff = (fixture.event + team.id) % 7 === 0; // Simulated early kickoff
+          const isLateKickoff = (fixture.event + team.id) % 7 === 3; // Simulated late kickoff
+          const isMidweekFixture = fixture.event % 4 === 0; // Simulated midweek games
+          const isSeasonFinale = fixture.event >= 37; // Final gameweeks
+          const hasNewManager = (team.id + fixture.event) % 20 === 0; // Simulated new manager bounce
           
-          // Phase 6: Minimal market momentum and fixture complexity factors (COMPRESSED)
-          const marketMomentum = 0.99 + ((team.id * fixture.event * 17) % 100) / 5000; // 99-101% market sentiment (compressed)
-          const fixtureComplexity = fixture.event <= 10 ? 1.005 : fixture.event <= 20 ? 1.0 : 0.995; // Minimal season stage impact
-          baseExpectedGoals *= marketMomentum * fixtureComplexity;
+          if (isEarlyKickoff) {
+            baseExpectedGoals *= adminGoalSettings.earlyKickoffGoalsMultiplier || 0.94;
+          } else if (isLateKickoff) {
+            baseExpectedGoals *= adminGoalSettings.lateKickoffGoalsMultiplier || 1.07;
+          }
           
-          // Phase 7: Minimal variance modeling for tight range (COMPRESSED)
-          const marketVolatility = 0.99 + ((team.id * fixture.event * 19) % 100) / 5000; // 99-101% minimal variation
-          const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.95); // Reduced confidence impact
-          const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamBettingData.variance * 0.2; // Reduced variance impact
-          baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
+          if (isMidweekFixture) {
+            baseExpectedGoals *= adminGoalSettings.midweekFixtureGoalsMultiplier || 0.91;
+          }
           
-          // Phase 8: Realistic Premier League goal bounds with Goals Scored admin market precision for perfect consistency
-          const marketFloor = Math.max(adminGoalSettings.absoluteMinGoals, teamBettingData.expectedGoalsPerGame * adminGoalSettings.marketFloorMultiplier); // Dynamic minimum
-          const marketCeiling = Math.min(adminGoalSettings.absoluteMaxGoals, teamBettingData.expectedGoalsPerGame * adminGoalSettings.marketCeilingMultiplier); // Dynamic maximum
+          if (isSeasonFinale) {
+            baseExpectedGoals *= adminGoalSettings.seasonFinaleGoalsMultiplier || 1.05;
+          }
+          
+          if (hasNewManager) {
+            baseExpectedGoals *= adminGoalSettings.newManagerBounceGoalsMultiplier || 1.08;
+          }
+          
+          // Phase 6: Market Bounds - Apply market constraints using admin settings
+          const marketFloor = Math.max(adminGoalSettings.absoluteMinGoals || 0.0, adminGoalSettings.minGoalsPerMatch || 0.0);
+          const marketCeiling = Math.min(adminGoalSettings.absoluteMaxGoals || 5.0, adminGoalSettings.maxGoalsPerMatch || 5.0);
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
-          // Apply confidence multiplier from centralized team service
+          // Phase 7: Confidence Bounds - Apply team confidence adjustments
           const confidenceMultiplier = teamService.getConfidenceMultiplier(team.id);
+          baseExpectedGoals *= confidenceMultiplier;
           
-          // Final expected goals with confidence adjustment
-          const expectedGoals = baseExpectedGoals * confidenceMultiplier;
+          // Phase 8: Final Bounds - Absolute min/max limits to ensure realistic ranges
+          const absoluteMin = adminGoalSettings.absoluteMinGoals || 0.0;
+          const absoluteMax = adminGoalSettings.absoluteMaxGoals || 5.0;
+          const expectedGoals = Math.max(absoluteMin, Math.min(absoluteMax, baseExpectedGoals));
           
           return {
             gameweek: fixture.event,
