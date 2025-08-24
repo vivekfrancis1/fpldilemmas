@@ -657,7 +657,7 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 1: Foundation</h4>
                       <p className="text-sm text-muted-foreground">
-                        Starts with <strong>Average Base xG per Team per Game:</strong> <span className="font-mono text-blue-600">{formData.averageBaseXGPerTeamPerGame || 1.35}</span><br/>
+                        Starts with <strong>Average Base xG per Team per Game:</strong> <span className="font-mono text-blue-600">{formData.averageBaseXG || 1.35}</span><br/>
                         Universal foundation - all teams begin with the same base value
                       </p>
                     </div>
@@ -673,11 +673,11 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 3: Defensive Tiers</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Elite Defense:</strong> × <span className="font-mono text-blue-600">{formData.eliteDefenseMultiplier || 0.65}</span><br/>
-                        <strong>Strong Defense:</strong> × <span className="font-mono text-blue-600">{formData.strongDefenseMultiplier || 0.80}</span><br/>
+                        <strong>Elite Defense:</strong> × <span className="font-mono text-blue-600">{formData.eliteDefenseMultiplier || 0.5}</span><br/>
+                        <strong>Strong Defense:</strong> × <span className="font-mono text-blue-600">{formData.strongDefenseMultiplier || 0.75}</span><br/>
                         <strong>Average Defense:</strong> × <span className="font-mono text-blue-600">{formData.averageDefenseMultiplier || 1.0}</span><br/>
                         <strong>Weak Defense:</strong> × <span className="font-mono text-blue-600">{formData.weakDefenseMultiplier || 1.25}</span><br/>
-                        <strong>Promoted Defense:</strong> × <span className="font-mono text-blue-600">{formData.promotedDefenseMultiplier || 1.40}</span>
+                        <strong>Promoted Defense:</strong> × <span className="font-mono text-blue-600">{formData.promotedDefenseMultiplier || 1.5}</span>
                       </p>
                     </div>
                     
@@ -688,7 +688,7 @@ export default function AdminGoalProjections() {
                         <strong>Strong:</strong> × <span className="font-mono text-orange-600">{formData.strongAttackMultiplier || 1.25}</span><br/>
                         <strong>Average:</strong> × <span className="font-mono text-orange-600">{formData.averageAttackMultiplier || 1.0}</span><br/>
                         <strong>Weak:</strong> × <span className="font-mono text-orange-600">{formData.weakAttackMultiplier || 0.75}</span><br/>
-                        <strong>Promoted:</strong> × <span className="font-mono text-orange-600">{formData.promotedAttackMultiplier || 0.60}</span>
+                        <strong>Promoted:</strong> × <span className="font-mono text-orange-600">{formData.promotedAttackMultiplier || 0.5}</span>
                       </p>
                     </div>
                   </div>
@@ -708,8 +708,8 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 6: Market Bounds</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Min Goals/Match:</strong> <span className="font-mono text-indigo-600">{formData.minGoalsPerMatch || 0.0}</span><br/>
-                        <strong>Max Goals/Match:</strong> <span className="font-mono text-indigo-600">{formData.maxGoalsPerMatch || 5.0}</span><br/>
+                        <strong>Absolute Min Goals:</strong> <span className="font-mono text-indigo-600">{formData.absoluteMinGoals || 0.0}</span><br/>
+                        <strong>Absolute Max Goals:</strong> <span className="font-mono text-indigo-600">{formData.absoluteMaxGoals || 5.0}</span><br/>
                         <strong>Market Floor Multiplier:</strong> <span className="font-mono text-indigo-600">{formData.marketFloorMultiplier || 0.5}</span><br/>
                         <strong>Market Ceiling Multiplier:</strong> <span className="font-mono text-indigo-600">{formData.marketCeilingMultiplier || 2.0}</span>
                       </p>
