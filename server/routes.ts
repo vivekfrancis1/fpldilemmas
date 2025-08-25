@@ -4015,9 +4015,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const homeVariance = 0.8 + (Math.random() * 0.4); // Range: 0.8 to 1.2
         const awayVariance = 0.8 + (Math.random() * 0.4); // Range: 0.8 to 1.2
         
-        // Apply variance and round to nearest whole number
-        const homeScore = Math.max(0, Math.round(match.homeTeam.expectedGoals * homeVariance));
-        const awayScore = Math.max(0, Math.round(match.awayTeam.expectedGoals * awayVariance));
+        // Apply variance to expected goals
+        const homeExpectedWithVariance = match.homeTeam.expectedGoals * homeVariance;
+        const awayExpectedWithVariance = match.awayTeam.expectedGoals * awayVariance;
+        
+        // Smart rounding with upset bias (15% chance of floor rounding for upsets)
+        const isUpsetScenario = Math.random() < 0.15;
+        const homeScore = Math.max(0, isUpsetScenario ? Math.floor(homeExpectedWithVariance) : Math.round(homeExpectedWithVariance));
+        const awayScore = Math.max(0, isUpsetScenario ? Math.floor(awayExpectedWithVariance) : Math.round(awayExpectedWithVariance));
         
         // Determine match outcome
         let predictedResult;
