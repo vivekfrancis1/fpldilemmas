@@ -105,13 +105,13 @@ export default function PlayerStats() {
                   <SelectContent>
                     <SelectItem value="current">
                       <div className="flex items-center space-x-2">
-                        <span>Current Season</span>
+                        <span>2025-26 (Current)</span>
                         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
                           Live
                         </Badge>
                       </div>
                     </SelectItem>
-                    {seasons?.map((season) => (
+                    {seasons?.sort((a, b) => b.localeCompare(a)).map((season) => (
                       <SelectItem key={season} value={season}>
                         {season}
                       </SelectItem>

@@ -117,8 +117,8 @@ export default function GoalShare() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="current">2025-26 Projections</SelectItem>
-                      {seasonsData?.map(season => (
+                      <SelectItem value="current">2025-26 (Projected)</SelectItem>
+                      {seasonsData?.sort((a, b) => b.localeCompare(a)).map(season => (
                         <SelectItem key={season} value={season}>{season}</SelectItem>
                       ))}
                     </SelectContent>
