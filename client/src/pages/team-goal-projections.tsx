@@ -14,7 +14,7 @@ interface TeamGoalProjection {
   gameweekProjections: {
     [gameweek: number]: number;
   };
-  totalGoals: number;
+  totalProjectedGoals: number;
   averageGoalsPerGame: number;
   confidence: 'High' | 'Medium' | 'Low';
   position: number;
@@ -68,10 +68,10 @@ export default function TeamGoalProjections() {
               .reduce((sum, gw) => sum + (b.gameweekProjections[parseInt(gw)] || 0), 0);
             return bPeriodTotal - aPeriodTotal;
           }
-          case "season": return b.totalGoals - a.totalGoals;
+          case "season": return b.totalProjectedGoals - a.totalProjectedGoals;
           case "average": return b.averageGoalsPerGame - a.averageGoalsPerGame;
           case "position": return a.position - b.position;
-          default: return b.totalGoals - a.totalGoals;
+          default: return b.totalProjectedGoals - a.totalProjectedGoals;
         }
       });
   }, [projectionsData, selectedTeam, sortBy]);
@@ -334,7 +334,7 @@ export default function TeamGoalProjections() {
                         
                         <td className="px-4 py-4 text-center bg-blue-50">
                           <span className="text-lg font-bold text-blue-900">
-                            {team.totalGoals.toFixed(2)}
+                            {team.totalProjectedGoals.toFixed(2)}
                           </span>
                         </td>
                         

@@ -14,7 +14,7 @@ interface TeamGoalsAgainstProjection {
   gameweekProjections: {
     [gameweek: number]: number;
   };
-  totalGoalsAgainst: number;
+  totalProjectedGoalsAgainst: number;
   averageGoalsAgainstPerGame: number;
   confidence: 'High' | 'Medium' | 'Low';
   position: number;
@@ -68,10 +68,10 @@ export default function TeamGoalsAgainstProjections() {
               .reduce((sum, gw) => sum + (b.gameweekProjections[parseInt(gw)] || 0), 0);
             return aPeriodTotal - bPeriodTotal;
           }
-          case "season": return a.totalGoalsAgainst - b.totalGoalsAgainst; // Lower is better
+          case "season": return a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst; // Lower is better
           case "average": return a.averageGoalsAgainstPerGame - b.averageGoalsAgainstPerGame; // Lower is better
           case "position": return a.position - b.position;
-          default: return a.totalGoalsAgainst - b.totalGoalsAgainst;
+          default: return a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst;
         }
       });
   }, [projectionsData, selectedTeam, sortBy]);
@@ -335,7 +335,7 @@ export default function TeamGoalsAgainstProjections() {
                         
                         <td className="px-4 py-4 text-center bg-orange-50">
                           <span className="text-lg font-bold text-orange-900">
-                            {team.totalGoalsAgainst.toFixed(2)}
+                            {team.totalProjectedGoalsAgainst.toFixed(2)}
                           </span>
                         </td>
                         
