@@ -1,0 +1,35 @@
+The best way to project individual goals scored in a deterministic manner from your projected team expected goals (team xG) is to distribute the team xG proportionally among players based on their historical or projected contribution to the team's chance creation. This maintains determinism by using fixed formulas and averages, avoiding randomness. The approach leverages player-specific metrics like historical xG per 90 minutes (a measure of goal-scoring opportunity rate) and projected playing time, then normalizes to ensure the sum of individual projections equals the team xG.
+This method is inspired by advanced soccer analytics models (e.g., from Opta or Understat), where individual xG is derived from team-level data by allocating shares based on player involvement in shots and attacks. It's deterministic because it relies on predefined inputs (historical stats, minutes projections) without stochastic elements.
+Step-by-Step Method
+
+Gather Player-Level Inputs:
+
+Historical xG per 90: Use data from the previous season (e.g., 2024-25 for your 2025-26 projections) to calculate each player's xG rate per full match. This can be sourced from sites like FBref, Understat, or Opta.
+Projected Minutes Played: Estimate based on role (e.g., starters: 80-90 mins, subs: 20-45 mins, bench: 0). Sum should approximate 990 mins per team per match (11 players × 90).
+Position Adjustment (Optional): Boost forwards/wingers by 1.1-1.2 if your model emphasizes them, but keep it simple for determinism.
+Focus on attacking players (forwards, midfielders, wingers), as they account for ~80-90% of team xG; defenders/set-piece specialists get minor shares.
+
+
+Calculate Player Contribution:
+
+For each player i: contribution_i = (historical xG per 90) × (projected minutes / 90)
+This estimates their "raw" xG share for the match.
+
+
+Normalize to Team xG:
+
+Sum all contributions: total_contribution = Σ contribution_i (for all players in the squad).
+Individual projected goals (individual xG) = team xG × (contribution_i / total_contribution)
+This ensures the sum of individual projections exactly matches team xG, preserving determinism.
+
+
+Adjust for Context (Optional):
+
+Apply your existing multipliers (e.g., injury crisis: reduce minutes for affected players; new manager bounce: +5% to key attackers' xG per 90).
+For promoted teams/players, apply a 0.9-0.95 adjustment to xG per 90 to account for league adjustment.
+
+
+Output and Validation:
+
+Projected individual goals remain fractional (e.g., 0.45) for precision, as it's expected value. If you need integers (e.g., for simulations), use deterministic rounding (e.g., floor for conservative, round to nearest).
+Validate: Backtest against 2024-25 data to ensure allocations match actual goal distributions (e.g., top forwards get ~30-50% of team xG).
