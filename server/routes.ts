@@ -9,15 +9,15 @@ import { eq } from "drizzle-orm";
 // Master Default Team Configuration - Single Source of Truth
 const MASTER_TEAM_DEFAULTS = {
   // Attack Team Assignments
-  eliteAttackTeams: [1, 12, 13], // Arsenal, Liverpool, Manchester City
-  strongAttackTeams: [7, 15, 18, 2], // Chelsea, Newcastle, Tottenham, Aston Villa
+  eliteAttackTeams: [12, 13], // Liverpool, Manchester City
+  strongAttackTeams: [1, 7, 15, 18, 2], // Arsenal, Chelsea, Newcastle, Tottenham, Aston Villa
   averageAttackTeams: [6, 14, 4, 5, 10], // Brighton, Manchester United, Bournemouth, Brentford, Fulham
   weakAttackTeams: [8, 9, 16, 19, 20], // Crystal Palace, Everton, Nottingham Forest, West Ham, Wolves
   promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
   
   // Defense Team Assignments
-  eliteDefenseTeams: [1, 12], // Arsenal, Liverpool
-  strongDefenseTeams: [13, 7, 15, 16], // Man City, Chelsea, Newcastle, Nottingham Forest
+  eliteDefenseTeams: [1], // Arsenal
+  strongDefenseTeams: [12, 13, 7, 15, 16], // Liverpool, Man City, Chelsea, Newcastle, Nottingham Forest
   averageDefenseTeams: [2, 9, 14, 18], // Aston Villa, Everton, Manchester United, Tottenham
   weakDefenseTeams: [4, 5, 6, 8, 10, 19, 20], // Bournemouth, Brentford, Brighton, Crystal Palace, Fulham, West Ham, Wolves
   promotedDefenseTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
