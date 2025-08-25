@@ -339,56 +339,15 @@ export default function AdminUpsetConfig() {
 
   return (
     <div className="container mx-auto py-8 space-y-6" data-testid="admin-upset-config">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Settings className="h-8 w-8 text-blue-600" />
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
-              Predicted Scores Upset Configuration
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300">
-              Control the 5 upset systems that make predicted scores more realistic
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={handleResetTab}
-            variant="outline"
-            size="sm"
-            disabled={activeTab === "overview"}
-            data-testid="button-reset-tab"
-          >
-            <RotateCcw className="w-4 h-4 mr-1" />
-            Reset Tab
-          </Button>
-          <Button
-            onClick={handleResetPage}
-            variant="outline"
-            size="sm"
-            data-testid="button-reset-page"
-          >
-            <RotateCcw className="w-4 h-4 mr-1" />
-            Reset Page
-          </Button>
-          <Button
-            onClick={handleGlobalReset}
-            variant="outline"
-            disabled={resetConfigMutation.isPending}
-            data-testid="button-global-reset"
-          >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Global Reset
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!unsavedChanges || saveConfigMutation.isPending}
-            data-testid="button-save-config"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            Save Changes
-          </Button>
+      <div className="flex items-center gap-3">
+        <Settings className="h-8 w-8 text-blue-600" />
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+            Predicted Scores Upset Configuration
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300">
+            Control the 5 upset systems that make predicted scores more realistic
+          </p>
         </div>
       </div>
 
@@ -845,6 +804,47 @@ export default function AdminUpsetConfig() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Action Buttons at Bottom */}
+      <div className="border-t pt-6 mt-8">
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button
+            onClick={handleResetTab}
+            variant="outline"
+            disabled={activeTab === "overview"}
+            data-testid="button-reset-tab"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Reset Tab
+          </Button>
+          <Button
+            onClick={handleResetPage}
+            variant="outline"
+            data-testid="button-reset-page"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Reset Page
+          </Button>
+          <Button
+            onClick={handleGlobalReset}
+            variant="outline"
+            disabled={resetConfigMutation.isPending}
+            data-testid="button-global-reset"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Global Reset
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={!unsavedChanges || saveConfigMutation.isPending}
+            className="bg-blue-600 hover:bg-blue-700"
+            data-testid="button-save-config"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            Save Changes
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
