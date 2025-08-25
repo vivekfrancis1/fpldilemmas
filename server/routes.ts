@@ -2652,6 +2652,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // In-memory storage for 2025/26 assist share data
   let savedAssistShareData: any = null;
   
+  // Helper functions for enhanced Goal Share calculation
+  function calculateExpectedMinutes(player: any, allPlayers: any[]): number {
+    const position = player.element_type;
+    const currentMinutes = player.minutes || 0;
+    
+    // Position-specific expected minutes patterns (realistic)
+    const positionExpectedMinutes = {
+      1: { starter: 2700, backup: 450 },      // GK: 30 vs 5 games
+      2: { regular: 2520, rotation: 1260 },   // DEF: 28 vs 14 games  
+      3: { key: 2250, squad: 810 },          // MID: 25 vs 9 games
+      4: { starting: 1980, backup: 540 }     // FWD: 22 vs 6 games
+    };
+    
+    // Determine player tier based on current minutes
+    let expectedMinutes: number;
+    const currentGamesWorth = Math.ceil(currentMinutes / 90); // Estimate games played
+    
+    switch (position) {
+      case 1: // Goalkeeper
+        expectedMinutes = currentGamesWorth >= 15 ? 
+          positionExpectedMinutes[1].starter : positionExpectedMinutes[1].backup;
+        break;
+      case 2: // Defender
+        expectedMinutes = currentMinutes > 1800 ? 
+          positionExpectedMinutes[2].regular : positionExpectedMinutes[2].rotation;
+        break;
+      case 3: // Midfielder
+        expectedMinutes = currentMinutes > 1200 ? 
+          positionExpectedMinutes[3].key : positionExpectedMinutes[3].squad;
+        break;
+      case 4: // Forward
+        expectedMinutes = currentMinutes > 900 ? 
+          positionExpectedMinutes[4].starting : positionExpectedMinutes[4].backup;
+        break;
+      default:
+        expectedMinutes = 1000;
+    }
+    
+    // Apply injury/availability factor from FPL API
+    const availabilityFactor = Math.max(0.4, (player.chance_of_playing_next_round || 75) / 100);
+    
+    // Apply form factor (more conservative)
+    const formFactor = player.form ? Math.max(0.7, Math.min(1.1, player.form / 5)) : 0.9;
+    
+    // Apply injury buffer (15% reduction for realistic expectations)
+    const injuryBuffer = 0.85;
+    
+    // Calculate final expected minutes
+    const finalExpectedMinutes = expectedMinutes * availabilityFactor * formFactor * injuryBuffer;
+    
+    return Math.round(Math.max(300, finalExpectedMinutes)); // Minimum 300 minutes
+  }
+  
+  // Sample size regression function
+  function adjustForSampleSize(player: any, positionAverage: number): number {
+    const minReliableMinutes = 500; // Minimum for reliable xG per 90
+    
+    if (player.totalMinutes < minReliableMinutes) {
+      // Regress toward position average based on sample size
+      const weight = Math.max(0.2, player.totalMinutes / minReliableMinutes);
+      const adjustedXGPer90 = (player.xgPer90 * weight) + (positionAverage * (1 - weight));
+      
+      console.log(`DEBUG: Sample size adjustment for ${player.name}: ${player.xgPer90.toFixed(3)} → ${adjustedXGPer90.toFixed(3)} (${player.totalMinutes} mins)`);
+      return adjustedXGPer90;
+    }
+    
+    return player.xgPer90;
+  }
+
   // Enhanced Goal Share endpoint using xG per 90 methodology
   app.get("/api/goal-share-season", async (req, res) => {
     try {
@@ -2749,43 +2818,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Calculated xG per 90 for ${playersWithXG.length} players`);
       
-      // Step 3: Deterministic minutes projection function
-      function calculateProjectedMinutes(player: any): number {
-        const position = player.element_type;
-        const currentMinutes = player.minutes || 0;
-        
-        // Base minutes per game by position (deterministic)
-        let baseMinutesPerGame: number;
-        switch (position) {
-          case 1: // Goalkeeper
-            baseMinutesPerGame = player.goals_scored > 0 ? 85 : 70; // First choice vs backup
-            break;
-          case 2: // Defender  
-            baseMinutesPerGame = currentMinutes > 1000 ? 80 : 45; // Regular vs rotation
-            break;
-          case 3: // Midfielder
-            baseMinutesPerGame = currentMinutes > 800 ? 75 : 35; // Key vs squad player
-            break;
-          case 4: // Forward
-            baseMinutesPerGame = currentMinutes > 600 ? 70 : 30; // Starting vs backup
-            break;
-          default:
-            baseMinutesPerGame = 45;
-        }
-        
-        // Adjust for current form (deterministic based on player ID)
-        const formSeed = (player.id * 7) % 100;
-        const formMultiplier = 0.9 + (formSeed / 100) * 0.2; // 0.9 to 1.1 range
-        
-        // Project for remaining 37 gameweeks (38 total - 1 completed)
-        const remainingGameweeks = 37;
-        const projectedSeasonMinutes = baseMinutesPerGame * formMultiplier * remainingGameweeks;
-        
-        return Math.round(projectedSeasonMinutes);
-      }
+      // Step 3: Expected minutes and sample size adjustments handled by helper functions
       
-      // ENHANCED xG per 90 DISTRIBUTION - REPLACES HISTORICAL WEIGHTING
-      console.log("DEBUG: Implementing xG per 90 player distribution (deterministic)");
+      // ENHANCED xG per 90 DISTRIBUTION WITH EXPECTED MINUTES
+      console.log("DEBUG: Implementing xG per 90 player distribution with expected minutes");
+      
+      // Calculate position averages for sample size regression
+      const positionAverages = {
+        1: 0.02, // Goalkeeper
+        2: 0.08, // Defender
+        3: 0.15, // Midfielder
+        4: 0.35  // Forward
+      };
       
       Object.keys(teamSeasonTotals).forEach(teamIdStr => {
         const teamId = parseInt(teamIdStr);
@@ -2795,46 +2839,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get all players for this team with xG data
           const teamPlayersWithXG = playersWithXG.filter((p: any) => p.team === teamId);
           
-          // Calculate raw contributions using xG per 90 methodology
-          const playerContributions: { [playerId: number]: { name: string, position: string, contribution: number, xgPer90: number, projectedMinutes: number } } = {};
+          // Filter out players with insufficient data (minimum 200 minutes)
+          const qualifiedPlayers = teamPlayersWithXG.filter(p => p.totalMinutes >= 200);
+          
+          console.log(`DEBUG: Team ${team.name} - ${qualifiedPlayers.length}/${teamPlayersWithXG.length} players qualify (≥200 mins)`);
+          
+          // Calculate raw contributions using enhanced methodology
+          const playerContributions: { [playerId: number]: { name: string, position: string, contribution: number, xgPer90: number, expectedMinutes: number } } = {};
           let totalContribution = 0;
           
-          teamPlayersWithXG.forEach(player => {
-            // Calculate projected minutes for this player
-            const projectedMinutes = calculateProjectedMinutes(player);
+          qualifiedPlayers.forEach(player => {
+            // Apply sample size regression with type-safe position lookup
+            const positionAvg = player.element_type === 1 ? 0.02 : 
+                              player.element_type === 2 ? 0.08 : 
+                              player.element_type === 3 ? 0.15 : 0.35;
+            const adjustedXGPer90 = adjustForSampleSize(player, positionAvg);
             
-            // Position adjustment multipliers (as suggested in methodology)
+            // Calculate expected minutes with realistic projections
+            const expectedMinutes = calculateExpectedMinutes(player, playersWithXG);
+            
+            // More conservative position multipliers
             let positionMultiplier = 1.0;
             switch (player.element_type) {
               case 4: // Forward
-                positionMultiplier = 1.2;
+                positionMultiplier = 1.1; // Reduced from 1.2
                 break;
-              case 3: // Midfielder (attacking)
-                positionMultiplier = 1.1;
+              case 3: // Midfielder
+                positionMultiplier = 1.05; // Reduced from 1.1
                 break;
               case 2: // Defender
-                positionMultiplier = 0.3;
+                positionMultiplier = 0.4; // Increased from 0.3
                 break;
               case 1: // Goalkeeper
-                positionMultiplier = 0.1;
+                positionMultiplier = 0.15; // Increased from 0.1
                 break;
             }
             
-            // Core calculation: (xG per 90) × (projected minutes / 90) × position adjustment
-            const contribution = (player.xgPer90 * (projectedMinutes / 90) * positionMultiplier);
+            // Core calculation: (adjusted xG per 90) × (expected minutes / 90) × conservative position adjustment
+            const contribution = (adjustedXGPer90 * (expectedMinutes / 90) * positionMultiplier);
             
             playerContributions[player.id] = {
               name: player.name,
               position: player.position,
               contribution,
-              xgPer90: player.xgPer90,
-              projectedMinutes
+              xgPer90: adjustedXGPer90,
+              expectedMinutes
             };
             
             totalContribution += contribution;
           });
           
-          // DETERMINISTIC NORMALIZATION - Ensure sum equals team xG
+          // ENHANCED NORMALIZATION - Ensure sum equals team xG
           console.log(`DEBUG: Team ${team.name} - Total contribution: ${totalContribution.toFixed(3)}, Team xG: ${teamSeasonTotals[teamId].expectedGoals.toFixed(3)}`);
           
           // Calculate normalized shares that sum exactly to team xG
@@ -2842,7 +2897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const playerId = parseInt(playerIdStr);
             const playerData = playerContributions[playerId];
             
-            // Normalize contribution to team xG (maintains determinism)
+            // Normalize contribution to team xG (maintains perfect balance)
             const normalizedShare = totalContribution > 0 ? 
               (playerData.contribution / totalContribution) * teamSeasonTotals[teamId].expectedGoals : 0;
             
@@ -2856,7 +2911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Debug: Verify perfect normalization
           const totalNormalizedGoals = Object.values(teamSeasonTotals[teamId].players)
             .reduce((sum: number, player: any) => sum + player.projectedGoals, 0);
-          console.log(`DEBUG: Team ${team.name} xG methodology total: ${totalNormalizedGoals.toFixed(3)} (should equal ${teamSeasonTotals[teamId].expectedGoals.toFixed(3)})`);
+          console.log(`DEBUG: Team ${team.name} enhanced xG total: ${totalNormalizedGoals.toFixed(3)} (should equal ${teamSeasonTotals[teamId].expectedGoals.toFixed(3)})`);
           
           return; // Skip the old historical weighting approach
         }
