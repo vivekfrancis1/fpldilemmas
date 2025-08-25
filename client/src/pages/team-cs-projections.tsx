@@ -47,7 +47,19 @@ export default function TeamCSProjections() {
         }
         
         switch (sortBy) {
-          case "average": return b.averageCSProbability - a.averageCSProbability;
+          case "average": {
+            // Calculate period average for sorting
+            const startGW = parseInt(startGameweek);
+            const endGW = parseInt(endGameweek);
+            const aPeriodAvg = Object.keys(a.gameweekProjections)
+              .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
+              .reduce((sum, gw, _, arr) => sum + (a.gameweekProjections[parseInt(gw)] || 0) / arr.length, 0);
+            const bPeriodAvg = Object.keys(b.gameweekProjections)
+              .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
+              .reduce((sum, gw, _, arr) => sum + (b.gameweekProjections[parseInt(gw)] || 0) / arr.length, 0);
+            return bPeriodAvg - aPeriodAvg;
+          }
+          case "season": return b.averageCSProbability - a.averageCSProbability;
           case "position": return a.position - b.position;
           default: return b.averageCSProbability - a.averageCSProbability;
         }
@@ -163,7 +175,8 @@ export default function TeamCSProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="average">CS/Game</SelectItem>
+                      <SelectItem value="average">Period CS/Game</SelectItem>
+                      <SelectItem value="season">Season CS/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
                       {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
                         const gwNumber = parseInt(startGameweek) + i;
@@ -217,12 +230,21 @@ export default function TeamCSProjections() {
                       })}
 
                       <th 
-                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors"
                         onClick={() => setSortBy('average')}
                       >
                         <div className="flex items-center justify-center gap-1">
-                          CS/Game
+                          Period CS/Game
                           {sortBy === 'average' && <TrendingUp className="h-3 w-3" />}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50 font-semibold cursor-pointer hover:bg-green-100 transition-colors"
+                        onClick={() => setSortBy('season')}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          Season CS/Game
+                          {sortBy === 'season' && <TrendingUp className="h-3 w-3" />}
                         </div>
                       </th>
                     </tr>
@@ -255,8 +277,24 @@ export default function TeamCSProjections() {
                         
 
                         
-                        <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
-                          {team.averageCSProbability}%
+                        <td className="px-4 py-4 text-center bg-blue-50">
+                          <span className="text-lg font-bold text-blue-900">
+                            {(() => {
+                              const startGW = parseInt(startGameweek);
+                              const endGW = parseInt(endGameweek);
+                              const periodValues = Object.keys(team.gameweekProjections)
+                                .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
+                                .map(gw => team.gameweekProjections[parseInt(gw)] || 0);
+                              const periodAvg = periodValues.length > 0 ? periodValues.reduce((sum, val) => sum + val, 0) / periodValues.length : 0;
+                              return `${periodAvg.toFixed(1)}%`;
+                            })()}
+                          </span>
+                        </td>
+                        
+                        <td className="px-4 py-4 text-center bg-green-50">
+                          <span className="text-lg font-bold text-green-900">
+                            {team.averageCSProbability}%
+                          </span>
                         </td>
                         
                       </tr>
