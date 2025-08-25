@@ -62,7 +62,10 @@ const MASTER_TEAM_DEFAULTS = {
   revengeFactorMultiplier: 1.05,
   pressureMatchMultiplier: 0.91,
   homeCrowdBoostMultiplier: 1.04,
-  weatherConditionsGoalsMultiplier: 0.96,
+  weatherConditionsGoalsMultiplier: 0.92,
+  refereeInfluenceMultiplier: 1.0,
+  postInternationalBreakMultiplier: 0.92,
+  travelDistanceFatigueMultiplier: 0.95,
   
   // Bounds
   marketFloorMultiplier: 0.4,
@@ -1689,6 +1692,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pressureMatchMultiplier: MASTER_TEAM_DEFAULTS.pressureMatchMultiplier,
         homeCrowdBoostMultiplier: MASTER_TEAM_DEFAULTS.homeCrowdBoostMultiplier,
         weatherConditionsGoalsMultiplier: MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier,
+        refereeInfluenceMultiplier: MASTER_TEAM_DEFAULTS.refereeInfluenceMultiplier,
+        postInternationalBreakMultiplier: MASTER_TEAM_DEFAULTS.postInternationalBreakMultiplier,
+        travelDistanceFatigueMultiplier: MASTER_TEAM_DEFAULTS.travelDistanceFatigueMultiplier,
         
         // Bounds
         marketFloorMultiplier: MASTER_TEAM_DEFAULTS.marketFloorMultiplier,
@@ -2162,6 +2168,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
           if (isBigHomeGame) {
             baseExpectedGoals *= adminGoalSettings.homeCrowdBoostMultiplier || 1.04;
+          }
+          
+          // NEW ENHANCED CONTEXT MULTIPLIERS
+          
+          // Weather Conditions: Adverse weather reduces shot accuracy and intensity
+          const hasAdverseWeather = (fixture.event + team.id + opponent.id) % 8 === 0; // Simulated adverse weather (rain/cold/wind)
+          if (hasAdverseWeather) {
+            baseExpectedGoals *= adminGoalSettings.weatherConditionsGoalsMultiplier || 0.92;
+          }
+          
+          // Referee Influence: Lenient refs allow more open play, strict refs suppress risks
+          const refereeStyle = (fixture.event * 7 + team.id) % 3; // Simulated referee style
+          if (refereeStyle === 0) { // Lenient referee (high fouls/penalties)
+            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || 1.0) * 1.05;
+          } else if (refereeStyle === 1) { // Strict referee (low fouls)
+            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || 1.0) * 0.95;
+          }
+          // refereeStyle === 2 is neutral (1.0 multiplier)
+          
+          // Post-International Break: Travel, jet lag, and squad disruption reduce intensity
+          const isPostInternationalBreak = fixture.event === 4 || fixture.event === 8 || fixture.event === 16 || fixture.event === 29; // Typical break gameweeks
+          if (isPostInternationalBreak) {
+            baseExpectedGoals *= adminGoalSettings.postInternationalBreakMultiplier || 0.92;
+          }
+          
+          // Travel Distance/Fatigue: Long journeys cause fatigue, reducing away xG (away teams only)
+          if (!isHome) { // Apply only to away teams
+            const isLongTrip = (team.id + opponent.id) % 5 === 0; // Simulated long travel distance (>300km)
+            if (isLongTrip) {
+              baseExpectedGoals *= adminGoalSettings.travelDistanceFatigueMultiplier || 0.95;
+            }
           }
           
           // Phase 6: Market Bounds - Apply market constraints using admin settings

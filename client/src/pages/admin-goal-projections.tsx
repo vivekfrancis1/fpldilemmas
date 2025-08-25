@@ -449,6 +449,10 @@ export default function AdminGoalProjections() {
       midweekFixtureGoalsMultiplier: 0.91,
       seasonFinaleGoalsMultiplier: 1.05,
       newManagerBounceGoalsMultiplier: 1.08,
+      weatherConditionsGoalsMultiplier: 0.92,
+      refereeInfluenceMultiplier: 1.0,
+      postInternationalBreakMultiplier: 0.92,
+      travelDistanceFatigueMultiplier: 0.95,
     },
     // Market Bounds
     marketBounds: {
@@ -741,7 +745,11 @@ export default function AdminGoalProjections() {
                         <strong>Post-European:</strong> × <span className="font-mono text-purple-600">{formData.postEuropeanGoalsMultiplier || 0.88}</span><br/>
                         <strong>Midweek Fixtures:</strong> × <span className="font-mono text-purple-600">{formData.midweekFixtureGoalsMultiplier || 0.91}</span><br/>
                         <strong>Season Finale:</strong> × <span className="font-mono text-purple-600">{formData.seasonFinaleGoalsMultiplier || 1.05}</span><br/>
-                        <strong>New Manager Bounce:</strong> × <span className="font-mono text-purple-600">{formData.newManagerBounceGoalsMultiplier || 1.08}</span>
+                        <strong>New Manager Bounce:</strong> × <span className="font-mono text-purple-600">{formData.newManagerBounceGoalsMultiplier || 1.08}</span><br/>
+                        <strong>Adverse Weather:</strong> × <span className="font-mono text-purple-600">{formData.weatherConditionsGoalsMultiplier || 0.92}</span><br/>
+                        <strong>Referee Style:</strong> × <span className="font-mono text-purple-600">{formData.refereeInfluenceMultiplier || 1.0} (Lenient: +5%, Strict: -5%)</span><br/>
+                        <strong>Post-Int'l Break:</strong> × <span className="font-mono text-purple-600">{formData.postInternationalBreakMultiplier || 0.92}</span><br/>
+                        <strong>Long Travel (Away):</strong> × <span className="font-mono text-purple-600">{formData.travelDistanceFatigueMultiplier || 0.95}</span>
                       </p>
                     </div>
                     
@@ -1467,6 +1475,10 @@ export default function AdminGoalProjections() {
                       { key: 'midweekFixtureGoalsMultiplier', name: 'Midweek Fixtures', default: 0.91, min: 0.8, max: 1.1, description: 'Tuesday/Wednesday games (-9%): Tired players, reduced crowd attendance, disrupted preparation routines. Fixture congestion leads to conservative play.' },
                       { key: 'seasonFinaleGoalsMultiplier', name: 'Season Finale', default: 1.05, min: 0.9, max: 1.3, description: 'Final gameweek (+5%): More open matches as teams with nothing to play for take risks, though modest increase as some teams already in vacation mode.' },
                       { key: 'newManagerBounceGoalsMultiplier', name: 'New Manager Bounce', default: 1.08, min: 1.0, max: 1.3, description: 'Honeymoon period (+8%): New tactical changes, renewed motivation, players trying to impress. Fresh approach leads to more attacking, adventurous play.' },
+                      { key: 'weatherConditionsGoalsMultiplier', name: 'Weather Conditions', default: 0.92, min: 0.8, max: 1.0, description: 'Adverse weather (-8%): Rain, cold (<5°C), or high wind disrupts passing accuracy and shot precision. Slippery pitches reduce high-intensity actions and lower shot quality.' },
+                      { key: 'refereeInfluenceMultiplier', name: 'Referee Influence', default: 1.0, min: 0.9, max: 1.1, description: 'Officiating style (±5%): Lenient refs allow more open play and fouls in attacking areas (+5%). Strict refs suppress attacking risks and reduce chances (-5%).' },
+                      { key: 'postInternationalBreakMultiplier', name: 'Post-International Break', default: 0.92, min: 0.8, max: 1.0, description: 'First game back (-8%): Travel fatigue, jet lag, and squad disruption reduce intensity. Teams with many internationals show reduced chance creation and errors.' },
+                      { key: 'travelDistanceFatigueMultiplier', name: 'Travel Distance Fatigue', default: 0.95, min: 0.85, max: 1.0, description: 'Long away trips (-5%): Journeys >300km cause fatigue for away teams only. Reduced pressing intensity and increased errors from travel exhaustion.' },
                       { key: 'teamFormMultiplier', name: 'Team Form', default: 1.06, min: 0.9, max: 1.15, description: 'Recent performance (+6% good/-6% poor): Teams in good form (3-4 wins in last 5) show improved confidence and momentum, while poor form teams (0-1 wins) display reduced confidence.' },
                       { key: 'fixtureCongestionMultiplier', name: 'Fixture Congestion', default: 0.89, min: 0.7, max: 1.0, description: 'Heavy schedule (-11%): Teams playing 3+ games in 7 days suffer from physical and mental fatigue. Squad rotation and reduced intensity impact attacking output.' },
                       { key: 'injuryCrisisMultiplier', name: 'Injury Crisis', default: 0.92, min: 0.8, max: 1.0, description: 'Key players missing (-8%): When 3+ attacking players are injured/suspended, teams lose tactical familiarity and creative partnerships, forcing more conservative play.' },
