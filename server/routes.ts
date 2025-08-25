@@ -5174,6 +5174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: 2024-25 baseline methodology completed for ${adjustedResults.length} teams`);
       res.json(adjustedResults);
+      return;
       
       // Step 5: Calculate contributions and normalize
       const teamResults: any[] = [];
