@@ -204,7 +204,7 @@ export default function TeamGoalProjections() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Team Goal Projections: All 38 Gameweeks
+                {`Team Goal Projections: GW${startGameweek}-GW${endGameweek}`}
                 <Badge variant="outline" className="ml-2">
                   {filteredProjections.length} teams
                 </Badge>
@@ -221,8 +221,8 @@ export default function TeamGoalProjections() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
                         Team
                       </th>
-                      {Array.from({ length: 38 }, (_, i) => {
-                        const gwNumber = i + 1;
+                      {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
+                        const gwNumber = parseInt(startGameweek) + i;
                         return (
                           <th 
                             key={gwNumber} 
