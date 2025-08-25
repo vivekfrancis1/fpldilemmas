@@ -5512,6 +5512,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ OpenFPL Projection routes registered successfully");
 
+  // API endpoint to fetch and store current 2025-26 season player data
+  app.post("/api/players/fetch-current", async (req, res) => {
+    try {
+      console.log("🔄 Fetching current 2025-26 season player data from FPL API...");
+      
+      // Fetch bootstrap data from FPL API
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error(`FPL API responded with status: ${bootstrapResponse.status}`);
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const players = bootstrapData.elements;
+      const teams = bootstrapData.teams;
+      const positions = bootstrapData.element_types;
+      
+      console.log(`📊 Processing ${players.length} players from FPL API...`);
+      
+      // Transform players data to match our database schema
+      const currentPlayers: any[] = [];
+      
+      for (const player of players) {
+        const team = teams.find((t: any) => t.id === player.team);
+        const position = positions.find((p: any) => p.id === player.element_type);
+        
+        const currentPlayer = {
+          id: player.id,
+          firstName: player.first_name,
+          secondName: player.second_name,
+          webName: player.web_name,
+          teamId: player.team,
+          teamName: team?.name || 'Unknown',
+          elementType: player.element_type,
+          positionName: position?.singular_name || 'Unknown',
+          nowCost: player.now_cost,
+          totalPoints: player.total_points || 0,
+          form: player.form,
+          pointsPerGame: player.points_per_game,
+          selectedByPercent: player.selected_by_percent,
+          minutes: player.minutes || 0,
+          goalsScored: player.goals_scored || 0,
+          assists: player.assists || 0,
+          cleanSheets: player.clean_sheets || 0,
+          goalsConceded: player.goals_conceded || 0,
+          ownGoals: player.own_goals || 0,
+          penaltiesSaved: player.penalties_saved || 0,
+          penaltiesMissed: player.penalties_missed || 0,
+          yellowCards: player.yellow_cards || 0,
+          redCards: player.red_cards || 0,
+          saves: player.saves || 0,
+          bonus: player.bonus || 0,
+          bps: player.bps || 0,
+          influence: player.influence,
+          creativity: player.creativity,
+          threat: player.threat,
+          ictIndex: player.ict_index,
+          transfersIn: player.transfers_in || 0,
+          transfersOut: player.transfers_out || 0,
+          transfersInEvent: player.transfers_in_event || 0,
+          transfersOutEvent: player.transfers_out_event || 0,
+          status: player.status,
+          news: player.news,
+          chanceOfPlayingThisRound: player.chance_of_playing_this_round,
+          chanceOfPlayingNextRound: player.chance_of_playing_next_round
+        };
+        
+        currentPlayers.push(currentPlayer);
+      }
+      
+      // Store in database
+      await storage.insertCurrentPlayers(currentPlayers);
+      
+      console.log(`✅ Successfully fetched and stored ${currentPlayers.length} current season players`);
+      
+      res.json({
+        success: true,
+        message: `Successfully fetched and stored ${currentPlayers.length} current season players`,
+        playersCount: currentPlayers.length,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error("Error fetching current players:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch current season players",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // API endpoint to get current players from database
+  app.get("/api/players/current", async (req, res) => {
+    try {
+      console.log("📊 Retrieving current players from database...");
+      const players = await storage.getCurrentPlayers();
+      
+      res.json({
+        success: true,
+        players: players,
+        count: players.length,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error("Error retrieving current players:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to retrieve current players",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  console.log("✓ Current Players API routes registered successfully");
+
   const httpServer = createServer(app);
   return httpServer;
 }

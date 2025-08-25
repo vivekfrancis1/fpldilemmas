@@ -419,6 +419,65 @@ export const adminAssistProjectionSettings = pgTable("admin_assist_projection_se
 export type AdminAssistProjectionSettings = typeof adminAssistProjectionSettings.$inferSelect;
 export type InsertAdminAssistProjectionSettings = typeof adminAssistProjectionSettings.$inferInsert;
 
+// Current season players table (2025-26)
+export const currentPlayers = pgTable("current_players", {
+  id: integer("id").primaryKey(), // FPL player ID
+  firstName: varchar("first_name", { length: 100 }),
+  secondName: varchar("second_name", { length: 100 }),
+  webName: varchar("web_name", { length: 50 }),
+  teamId: integer("team_id").notNull(),
+  teamName: varchar("team_name", { length: 100 }),
+  elementType: integer("element_type").notNull(), // Position (1=GK, 2=DEF, 3=MID, 4=FWD)
+  positionName: varchar("position_name", { length: 50 }),
+  
+  // Current season stats
+  nowCost: integer("now_cost").notNull(), // Price in 0.1m
+  totalPoints: integer("total_points").default(0),
+  form: varchar("form", { length: 10 }),
+  pointsPerGame: varchar("points_per_game", { length: 10 }),
+  selectedByPercent: varchar("selected_by_percent", { length: 10 }),
+  minutes: integer("minutes").default(0),
+  goalsScored: integer("goals_scored").default(0),
+  assists: integer("assists").default(0),
+  cleanSheets: integer("clean_sheets").default(0),
+  goalsConceded: integer("goals_conceded").default(0),
+  ownGoals: integer("own_goals").default(0),
+  penaltiesSaved: integer("penalties_saved").default(0),
+  penaltiesMissed: integer("penalties_missed").default(0),
+  yellowCards: integer("yellow_cards").default(0),
+  redCards: integer("red_cards").default(0),
+  saves: integer("saves").default(0),
+  bonus: integer("bonus").default(0),
+  bps: integer("bps").default(0),
+  influence: varchar("influence", { length: 20 }),
+  creativity: varchar("creativity", { length: 20 }),
+  threat: varchar("threat", { length: 20 }),
+  ictIndex: varchar("ict_index", { length: 20 }),
+  
+  // Transfer data
+  transfersIn: integer("transfers_in").default(0),
+  transfersOut: integer("transfers_out").default(0),
+  transfersInEvent: integer("transfers_in_event").default(0),
+  transfersOutEvent: integer("transfers_out_event").default(0),
+  
+  // Status and availability
+  status: varchar("status", { length: 10 }),
+  news: text("news"),
+  chanceOfPlayingThisRound: integer("chance_of_playing_this_round"),
+  chanceOfPlayingNextRound: integer("chance_of_playing_next_round"),
+  
+  // Metadata
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_current_players_team").on(table.teamId),
+  index("idx_current_players_position").on(table.elementType),
+  index("idx_current_players_points").on(table.totalPoints),
+]);
+
+export type CurrentPlayer = typeof currentPlayers.$inferSelect;
+export type InsertCurrentPlayer = typeof currentPlayers.$inferInsert;
+
 // Admin settings for Match Projections model
 export const adminMatchProjectionSettings = pgTable("admin_match_projection_settings", {
   id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
