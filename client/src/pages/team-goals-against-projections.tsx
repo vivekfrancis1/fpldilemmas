@@ -205,7 +205,7 @@ export default function TeamGoalsAgainstProjections() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Team Goals Against Projections: All 38 Gameweeks
+                {`Team Goals Against Projections: GW${startGameweek}-GW${endGameweek}`}
                 <Badge variant="outline" className="ml-2">
                   {filteredProjections.length} teams
                 </Badge>
@@ -276,8 +276,8 @@ export default function TeamGoalsAgainstProjections() {
                           </div>
                         </td>
                         
-                        {Array.from({ length: 38 }, (_, weekIndex) => {
-                          const gwNumber = weekIndex + 1;
+                        {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, weekIndex) => {
+                          const gwNumber = parseInt(startGameweek) + weekIndex;
                           const goalsAgainst = team.gameweekProjections[gwNumber] || 0;
                           return (
                             <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsAgainstColor(goalsAgainst)}`}>
@@ -319,8 +319,8 @@ export default function TeamGoalsAgainstProjections() {
                         </div>
                       </td>
                       
-                      {Array.from({ length: 38 }, (_, weekIndex) => {
-                        const gwNumber = weekIndex + 1;
+                      {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, weekIndex) => {
+                        const gwNumber = parseInt(startGameweek) + weekIndex;
                         const gwTotal = totalGoalsAgainst.gameweekTotals[gwNumber] || 0;
                         return (
                           <td key={weekIndex} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
