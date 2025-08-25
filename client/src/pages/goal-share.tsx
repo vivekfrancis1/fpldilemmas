@@ -37,9 +37,9 @@ export default function GoalShare() {
     staleTime: 15 * 60 * 1000,
   });
 
-  // Fetch goal share data based on selected season
+  // Fetch goal share data based on selected season - use Team Goal Projections for current season
   const { data: goalShareData, isLoading: goalShareLoading } = useQuery<SeasonGoalShareData[]>({
-    queryKey: selectedSeason === "current" ? ["/api/goal-share-enhanced"] : ["/api/goal-share-historical", selectedSeason],
+    queryKey: selectedSeason === "current" ? ["/api/goal-share-season"] : ["/api/goal-share-historical", selectedSeason],
     enabled: selectedSeason === "current" || (selectedSeason !== "current" && !!selectedSeason),
     staleTime: 10 * 60 * 1000,
   });

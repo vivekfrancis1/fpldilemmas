@@ -168,6 +168,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch historical player data for the specified season
       const historicalPlayers = await storage.getHistoricalPlayers(season);
       
+      // DEPARTED_PLAYER_NAMES is already imported at the top of the file
+      
       if (!historicalPlayers || historicalPlayers.length === 0) {
         return res.status(404).json({ 
           error: "No historical data found", 
@@ -188,6 +190,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Process each player and group by team
       historicalPlayers.forEach(player => {
+        // Skip departed players only when analyzing historical data that affects current projections
+        const playerFullName = `${player.firstName} ${player.secondName}`;
+        const playerWebName = player.webName || '';
+        
+        // Check if player name contains any departed player names (flexible matching)
+        const shouldExclude = Array.from(DEPARTED_PLAYER_NAMES).some(departedName => 
+          playerFullName.includes(departedName) || 
+          playerWebName.includes(departedName) || 
+          player.secondName?.includes(departedName) ||
+          departedName.includes(player.secondName || '') ||
+          departedName.includes(player.firstName || '')
+        );
+        
+        if (shouldExclude) {
+          console.log(`DEBUG: Excluding departed player ${playerFullName} from ${season} goal share data`);
+          return; // Skip this player
+        }
+        
         const teamName = player.teamName || 'Unknown Team';
         const teamShort = player.teamShortName || 'UNK';
         const goals = player.goalsScored || 0;
@@ -2731,14 +2751,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fetch("http://localhost:5000/api/team-goal-projections")
       ]);
       
-      if (!bootstrapResponse.ok || !historical2024Response.ok) {
-        throw new Error("Failed to fetch data from FPL API or 2024-25 historical data");
+      if (!bootstrapResponse.ok || !teamProjectionsResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API or Team Goal Projections");
       }
       
       const bootstrapData = await bootstrapResponse.json();
-      const historical2024Data = await historical2024Response.json();
+      const teamProjectionsData = await teamProjectionsResponse.json();
       
-      console.log("DEBUG: Enhanced Goal Share API using xG per 90 methodology");
+      console.log("DEBUG: Goal Share Season API - using Team Goal Projections totals");
       
       // Step 1: Calculate team season totals from Team Goal Projections
       const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
