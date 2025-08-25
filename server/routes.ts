@@ -5101,8 +5101,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Step 3: Transform 2024-25 data with realistic 2025-26 adjustments
       historical2024Data.forEach((team2024: any) => {
-        // Find current team info from bootstrap
-        const currentTeam = bootstrapData.teams.find((t: any) => t.id === team2024.teamId);
+        // Find current team info from bootstrap using team name (not ID) for proper mapping
+        const currentTeam = bootstrapData.teams.find((t: any) => t.name === team2024.teamName);
         if (!currentTeam) return;
         
         // Apply realistic adjustments for 2025-26 season
@@ -5162,7 +5162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         adjustedResults.push({
           gameweek: 0,
-          teamId: team2024.teamId,
+          teamId: currentTeam.id,
           teamName: currentTeam.name,
           teamShort: currentTeam.short_name,
           expectedGoals: Math.round(targetTeamGoals * 10) / 10,
