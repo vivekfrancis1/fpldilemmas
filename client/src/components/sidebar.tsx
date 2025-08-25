@@ -57,7 +57,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/team-goals-against-projections", label: "Team Goals Against", icon: Shield, description: "Expected goals conceded", popular: false },
         { path: "/team-assist-projections", label: "Team Assist Projections", icon: Users, description: "Expected team assists", popular: false },
         { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
-        { path: "/projected-standings", label: "Projected Standings", icon: Trophy, description: "Final league table projection", popular: false }
+        { path: "/projected-standings", label: "Predicted Standings", icon: Trophy, description: "Final league table projection", popular: false }
       ]
     },
     {
