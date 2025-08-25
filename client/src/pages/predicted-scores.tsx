@@ -138,15 +138,32 @@ export default function PredictedScores() {
             <CardContent className="p-6">
               <div className="flex flex-wrap gap-4 items-end">
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Gameweek:</label>
-                  <Select value={selectedGameweek} onValueChange={setSelectedGameweek}>
-                    <SelectTrigger className="w-24">
+                  <label className="text-sm font-medium text-gray-700">Start GW:</label>
+                  <Select value={startGameweek} onValueChange={setStartGameweek}>
+                    <SelectTrigger className="w-20">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
                       {Array.from({ length: 38 }, (_, i) => (
-                        <SelectItem key={i + 1} value={`${i + 1}`}>GW{i + 1}</SelectItem>
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                          {i + 1}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">End GW:</label>
+                  <Select value={endGameweek} onValueChange={setEndGameweek}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 38 }, (_, i) => (
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                          {i + 1}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
