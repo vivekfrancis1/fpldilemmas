@@ -26,6 +26,7 @@ export interface IStorage {
   // Daily price tracking methods
   saveDailyPriceData(data: any[]): Promise<void>;
   getLatestPriceData(playerId: number): Promise<any | null>;
+  getBatchLatestPriceData(playerIds: number[]): Promise<Map<number, any>>;
   getDailyPriceHistory(playerId: number, days?: number): Promise<any[]>;
   
   // Historical player operations
@@ -192,6 +193,11 @@ export class MemStorage implements IStorage {
     return null;
   }
 
+  async getBatchLatestPriceData(playerIds: number[]): Promise<Map<number, any>> {
+    // Memory implementation - return empty map
+    return new Map();
+  }
+
   async getDailyPriceHistory(playerId: number, days: number = 30): Promise<any[]> {
     // Memory implementation - return empty array
     return [];
@@ -275,8 +281,9 @@ export class DatabaseStorage implements IStorage {
         // Convert database format to API format for compatibility
         return dbPlayers.map(player => ({
           ...player,
-          // Add fields expected by frontend
-          id: player.playerId || 0,
+          // Keep the string ID as required by the schema
+          id: player.id, // This is already a string from the schema
+          playerId: player.playerId,
           first_name: player.firstName,
           second_name: player.secondName,
           web_name: player.webName,
@@ -414,6 +421,45 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error getting latest price data:", error);
       return this.memFallback.getLatestPriceData(playerId);
+    }
+  }
+
+  async getBatchLatestPriceData(playerIds: number[]): Promise<Map<number, any>> {
+    try {
+      if (playerIds.length === 0) return new Map();
+      
+      const { dailyPlayerPrices } = await import("@shared/schema");
+      
+      // Use a more efficient query to get the latest record for each player
+      const latestRecords = await db
+        .select()
+        .from(dailyPlayerPrices)
+        .where(sql`${dailyPlayerPrices.playerId} IN (${playerIds.join(',')})`);
+      
+      // Group by playerId and get the latest for each
+      const resultMap = new Map<number, any>();
+      const playerRecords = new Map<number, any[]>();
+      
+      // Group records by player
+      latestRecords.forEach(record => {
+        if (!playerRecords.has(record.playerId)) {
+          playerRecords.set(record.playerId, []);
+        }
+        playerRecords.get(record.playerId)!.push(record);
+      });
+      
+      // Get the latest record for each player
+      playerRecords.forEach((records, playerId) => {
+        const latest = records.sort((a, b) => 
+          new Date(b.recordDate).getTime() - new Date(a.recordDate).getTime()
+        )[0];
+        resultMap.set(playerId, latest);
+      });
+      
+      return resultMap;
+    } catch (error) {
+      console.error("Error getting batch latest price data:", error);
+      return this.memFallback.getBatchLatestPriceData(playerIds);
     }
   }
 

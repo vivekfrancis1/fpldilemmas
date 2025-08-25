@@ -20,6 +20,7 @@ import PriceTracker from "./pages/price-tracker";
 import OpenFPLProjections from "./pages/openfpl-projections";
 import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
+import ResultsProjections from "./pages/results-projections";
 
 import ProjectedGoalsCS from "./pages/projected-goals-cs";
 import ProjectedStandings from "./pages/projected-standings";
@@ -48,7 +49,7 @@ function Router() {
       <Route path="/projected-goals-cs" component={ProjectedGoalsCS} />
       <Route path="/projected-standings" component={ProjectedStandings} />
       <Route path="/predicted-scores" component={PredictedScores} />
-      <Route path="/results-projections" component={ProjectedGoalsCS} />
+      <Route path="/results-projections" component={ResultsProjections} />
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
       <Route path="/team-goals-against-projections" component={TeamGoalsAgainstProjections} />
       <Route path="/team-assist-projections" component={TeamAssistProjections} />

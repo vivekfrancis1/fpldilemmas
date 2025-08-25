@@ -117,9 +117,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Process each player and group by team
       historicalPlayers.forEach(player => {
-        const teamName = player.team_name || player.teamName || 'Unknown Team';
-        const teamShort = player.team_short_name || player.teamShortName || 'UNK';
-        const goals = player.goals_scored || player.goalsScored || 0;
+        const teamName = player.teamName || 'Unknown Team';
+        const teamShort = player.teamShortName || 'UNK';
+        const goals = player.goalsScored || 0;
         
         if (!teamGoalShares[teamName]) {
           teamGoalShares[teamName] = {
@@ -133,11 +133,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamGoalShares[teamName].totalGoals += goals;
         teamGoalShares[teamName].players.push({
           id: player.id || player.playerId,
-          name: `${player.first_name || player.firstName} ${player.second_name || player.secondName}`,
-          position: player.position || player.positionName,
+          name: `${player.firstName || ''} ${player.secondName || ''}`.trim(),
+          position: player.position || 'Unknown',
           goals: goals,
           minutes: player.minutes || 0,
-          totalPoints: player.total_points || player.totalPoints || 0
+          totalPoints: player.totalPoints || 0
         });
       });
       
@@ -558,8 +558,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get price changes using historical daily tracking data when available
       const recentChanges = [];
       
-      // Show ALL price changes from this season using authentic FPL data and historical tracking
-      for (const player of elements) {
+      // Filter players with relevant changes first to reduce data to process
+      const relevantPlayers = elements.filter((player: any) => {
+        const totalSeasonChange = player.cost_change_start || 0;
+        const currentGameweekChange = player.cost_change_event || 0;
+        const hasSignificantActivity = (player.transfers_in_event || 0) > 10000 || (player.transfers_out_event || 0) > 10000;
+        
+        return totalSeasonChange !== 0 || currentGameweekChange !== 0 || hasSignificantActivity;
+      });
+
+      // Get latest price data for all relevant players in one batch call
+      const playerIds = relevantPlayers.map((player: any) => player.id);
+      let latestPriceDataMap: Map<number, any> = new Map();
+      
+      try {
+        latestPriceDataMap = await storage.getBatchLatestPriceData(playerIds);
+      } catch (error) {
+        console.warn("Failed to get batch price data, continuing without historical data:", error);
+      }
+      
+      // Process each relevant player with the pre-fetched data
+      for (const player of relevantPlayers) {
         const team = teams.find((t: any) => t.id === player.team);
         const position = positions.find((p: any) => p.id === player.element_type);
         
@@ -567,46 +586,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const totalSeasonChange = player.cost_change_start || 0;
         const currentGameweekChange = player.cost_change_event || 0;
         
-        // Check if player has any price changes this season OR has price change event data
-        const hasSeasonChange = totalSeasonChange !== 0;
-        const hasGameweekChange = currentGameweekChange !== 0;
-        const hasSignificantActivity = (player.transfers_in_event || 0) > 10000 || (player.transfers_out_event || 0) > 10000;
+        // Get transfer data from pre-fetched daily tracking data
+        let dailyTransfersIn = player.transfers_in_event || 0;
+        let dailyTransfersOut = player.transfers_out_event || 0;
         
-        if (hasSeasonChange || hasGameweekChange || hasSignificantActivity) {
-          // Get transfer data from daily tracking if available
-          let dailyTransfersIn = player.transfers_in_event || 0;
-          let dailyTransfersOut = player.transfers_out_event || 0;
-          
-          try {
-            const latestData = await storage.getLatestPriceData(player.id);
-            if (latestData) {
-              dailyTransfersIn = latestData.dailyTransfersIn || dailyTransfersIn;
-              dailyTransfersOut = latestData.dailyTransfersOut || dailyTransfersOut;
-            }
-          } catch (error) {
-            // Use event data as fallback
-          }
-          
-          // Calculate start-of-season price
-          const startPrice = player.now_cost - totalSeasonChange;
-          
-          recentChanges.push({
-            player_id: player.id,
-            player_name: player.web_name,
-            team_name: team?.short_name || "Unknown",
-            position: position?.singular_name_short || "Unknown",
-            start_price: startPrice,
-            current_price: player.now_cost,
-            total_change: totalSeasonChange,
-            gameweek_change: currentGameweekChange,
-            ownership_change: ((dailyTransfersIn - dailyTransfersOut) / 10000000) * 100,
-            transfers_in: dailyTransfersIn,
-            transfers_out: dailyTransfersOut,
-            ownership: parseFloat(player.selected_by_percent || "0"),
-            // Sort by most recent activity - current gameweek changes first, then by transfer activity
-            recency_score: Math.abs(currentGameweekChange) * 100000 + Math.abs(dailyTransfersIn - dailyTransfersOut) + Math.abs(totalSeasonChange) * 10000
-          });
+        const latestData = latestPriceDataMap.get(player.id);
+        if (latestData) {
+          dailyTransfersIn = latestData.dailyTransfersIn || dailyTransfersIn;
+          dailyTransfersOut = latestData.dailyTransfersOut || dailyTransfersOut;
         }
+        
+        // Calculate start-of-season price
+        const startPrice = player.now_cost - totalSeasonChange;
+        
+        recentChanges.push({
+          player_id: player.id,
+          player_name: player.web_name,
+          team_name: team?.short_name || "Unknown",
+          position: position?.singular_name_short || "Unknown",
+          start_price: startPrice,
+          current_price: player.now_cost,
+          total_change: totalSeasonChange,
+          gameweek_change: currentGameweekChange,
+          ownership_change: ((dailyTransfersIn - dailyTransfersOut) / 10000000) * 100,
+          transfers_in: dailyTransfersIn,
+          transfers_out: dailyTransfersOut,
+          ownership: parseFloat(player.selected_by_percent || "0"),
+          // Sort by most recent activity - current gameweek changes first, then by transfer activity
+          recency_score: Math.abs(currentGameweekChange) * 100000 + Math.abs(dailyTransfersIn - dailyTransfersOut) + Math.abs(totalSeasonChange) * 10000
+        });
       }
       
       // Sort by recency - most recent gameweek changes first, then by total season change magnitude
