@@ -18,6 +18,7 @@ interface SeasonGoalShareData {
     position: string;
     goalShare: number; // Percentage of team's season goals
     projectedGoals: number; // Season total projected goals
+    xgPer90?: number; // xG per 90 minutes (enhanced methodology)
   }[];
 }
 
@@ -38,7 +39,7 @@ export default function GoalShare() {
 
   // Fetch goal share data based on selected season
   const { data: goalShareData, isLoading: goalShareLoading } = useQuery<SeasonGoalShareData[]>({
-    queryKey: selectedSeason === "current" ? ["/api/goal-share-season"] : ["/api/goal-share-historical", selectedSeason],
+    queryKey: selectedSeason === "current" ? ["/api/goal-share-enhanced"] : ["/api/goal-share-historical", selectedSeason],
     enabled: selectedSeason === "current" || (selectedSeason !== "current" && !!selectedSeason),
     staleTime: 10 * 60 * 1000,
   });
@@ -98,7 +99,7 @@ export default function GoalShare() {
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
               {selectedSeason === "current" 
-                ? "Each player's percentage share of their team's expected goals for the entire remaining season, optimized using historical patterns"
+                ? "Each player's percentage share of their team's expected goals using deterministic xG per 90 methodology with real-time FPL data and position-specific projections"
                 : `Each player's percentage share of their team's actual goals scored in the ${selectedSeason} season`
               }
             </p>
@@ -208,9 +209,16 @@ export default function GoalShare() {
                               >
                                 {player.goalShare.toFixed(1)}%
                               </Badge>
-                              <span className="text-xs text-gray-500 font-medium">
-                                {selectedSeason === "current" ? player.projectedGoals.toFixed(1) : player.projectedGoals} goals
-                              </span>
+                              <div className="flex flex-col items-end">
+                                <span className="text-xs text-gray-500 font-medium">
+                                  {selectedSeason === "current" ? player.projectedGoals.toFixed(1) : player.projectedGoals} goals
+                                </span>
+                                {selectedSeason === "current" && player.xgPer90 && (
+                                  <span className="text-xs text-green-600 font-medium">
+                                    {player.xgPer90.toFixed(2)} xG/90
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -243,11 +251,11 @@ export default function GoalShare() {
                   <ul className="text-sm text-gray-600 space-y-1">
                     {selectedSeason === "current" ? (
                       <>
-                        <li>• Aggregates expected goals across entire remaining season</li>
-                        <li>• Position-weighted goal distribution</li>
-                        <li>• Adjusted by historical performance and form</li>
-                        <li>• All players in a team total 100%</li>
-                        <li>• Shows season-long goal involvement patterns</li>
+                        <li>• Uses deterministic xG per 90 methodology from real FPL data</li>
+                        <li>• Position-specific multipliers (Forward: 1.2x, Mid: 1.1x, Def: 0.3x)</li>
+                        <li>• Projected minutes based on player role and current form</li>
+                        <li>• Perfect mathematical normalization - all players sum to team total</li>
+                        <li>• More predictive than historical goals (removes luck/penalties)</li>
                       </>
                     ) : (
                       <>
