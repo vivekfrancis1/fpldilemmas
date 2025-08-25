@@ -5512,10 +5512,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ OpenFPL Projection routes registered successfully");
 
-  // API endpoint to fetch and store current 2025-26 season player data
-  app.post("/api/players/fetch-current", async (req, res) => {
+  // API endpoint to fetch and update player mappings (stable data only)
+  app.post("/api/players/update-mappings", async (req, res) => {
     try {
-      console.log("🔄 Fetching current 2025-26 season player data from FPL API...");
+      console.log("🔄 Updating player mappings from FPL API...");
       
       // Fetch bootstrap data from FPL API
       const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
@@ -5528,99 +5528,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
       
-      console.log(`📊 Processing ${players.length} players from FPL API...`);
+      console.log(`📊 Processing ${players.length} player mappings from FPL API...`);
       
-      // Transform players data to match our database schema
-      const currentPlayers: any[] = [];
+      // Transform to player mappings (stable data only)
+      const playerMappings: any[] = [];
       
       for (const player of players) {
         const team = teams.find((t: any) => t.id === player.team);
         const position = positions.find((p: any) => p.id === player.element_type);
         
-        const currentPlayer = {
+        const mapping = {
           id: player.id,
           firstName: player.first_name,
           secondName: player.second_name,
           webName: player.web_name,
-          teamId: player.team,
-          teamName: team?.name || 'Unknown',
-          elementType: player.element_type,
-          positionName: position?.singular_name || 'Unknown',
-          nowCost: player.now_cost,
-          totalPoints: player.total_points || 0,
-          form: player.form,
-          pointsPerGame: player.points_per_game,
-          selectedByPercent: player.selected_by_percent,
-          minutes: player.minutes || 0,
-          goalsScored: player.goals_scored || 0,
-          assists: player.assists || 0,
-          cleanSheets: player.clean_sheets || 0,
-          goalsConceded: player.goals_conceded || 0,
-          ownGoals: player.own_goals || 0,
-          penaltiesSaved: player.penalties_saved || 0,
-          penaltiesMissed: player.penalties_missed || 0,
-          yellowCards: player.yellow_cards || 0,
-          redCards: player.red_cards || 0,
-          saves: player.saves || 0,
-          bonus: player.bonus || 0,
-          bps: player.bps || 0,
-          influence: player.influence,
-          creativity: player.creativity,
-          threat: player.threat,
-          ictIndex: player.ict_index,
-          transfersIn: player.transfers_in || 0,
-          transfersOut: player.transfers_out || 0,
-          transfersInEvent: player.transfers_in_event || 0,
-          transfersOutEvent: player.transfers_out_event || 0,
-          status: player.status,
-          news: player.news,
-          chanceOfPlayingThisRound: player.chance_of_playing_this_round,
-          chanceOfPlayingNextRound: player.chance_of_playing_next_round
+          currentTeamId: player.team,
+          currentTeamName: team?.name || 'Unknown',
+          position: position?.singular_name || 'Unknown'
         };
         
-        currentPlayers.push(currentPlayer);
+        playerMappings.push(mapping);
       }
       
-      // Store in database
-      await storage.insertCurrentPlayers(currentPlayers);
+      // Store mappings in database
+      await storage.upsertPlayerMappings(playerMappings);
       
-      console.log(`✅ Successfully fetched and stored ${currentPlayers.length} current season players`);
+      console.log(`✅ Successfully updated ${playerMappings.length} player mappings`);
       
       res.json({
         success: true,
-        message: `Successfully fetched and stored ${currentPlayers.length} current season players`,
-        playersCount: currentPlayers.length,
+        message: `Successfully updated ${playerMappings.length} player mappings`,
+        mappingsCount: playerMappings.length,
         timestamp: new Date().toISOString()
       });
       
     } catch (error) {
-      console.error("Error fetching current players:", error);
+      console.error("Error updating player mappings:", error);
       res.status(500).json({
         success: false,
-        error: "Failed to fetch current season players",
+        error: "Failed to update player mappings",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
 
-  // API endpoint to get current players from database
-  app.get("/api/players/current", async (req, res) => {
+  // API endpoint to get player mappings
+  app.get("/api/players/mappings", async (req, res) => {
     try {
-      console.log("📊 Retrieving current players from database...");
-      const players = await storage.getCurrentPlayers();
+      console.log("📊 Retrieving player mappings from database...");
+      const mappings = await storage.getPlayerMappings();
       
       res.json({
         success: true,
-        players: players,
-        count: players.length,
+        mappings: mappings,
+        count: mappings.length,
         timestamp: new Date().toISOString()
       });
       
     } catch (error) {
-      console.error("Error retrieving current players:", error);
+      console.error("Error retrieving player mappings:", error);
       res.status(500).json({
         success: false,
-        error: "Failed to retrieve current players",
+        error: "Failed to retrieve player mappings",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // API endpoint to add historical data for current players
+  app.post("/api/players/add-historical", async (req, res) => {
+    try {
+      console.log("🔄 Adding historical data for current players...");
+      
+      // Get current player mappings first
+      const mappings = await storage.getPlayerMappings();
+      console.log(`Found ${mappings.length} current players to get historical data for`);
+      
+      const historicalPlayers: any[] = [];
+      let processedCount = 0;
+      
+      // Fetch historical data for each player
+      for (const mapping of mappings.slice(0, 10)) { // Limit to 10 players for testing
+        try {
+          console.log(`Fetching historical data for ${mapping.webName}...`);
+          
+          const playerResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${mapping.id}/`);
+          if (!playerResponse.ok) {
+            console.log(`⚠️ Skipping player ${mapping.id} - API returned ${playerResponse.status}`);
+            continue;
+          }
+          
+          const playerData = await playerResponse.json();
+          
+          if (playerData.history_past && playerData.history_past.length > 0) {
+            for (const historyEntry of playerData.history_past) {
+              const historicalPlayer = {
+                id: `${mapping.id}_${historyEntry.season_name}`,
+                playerId: mapping.id,
+                season: historyEntry.season_name,
+                firstName: mapping.firstName,
+                secondName: mapping.secondName,
+                webName: mapping.webName,
+                teamName: mapping.currentTeamName, // Current team (historical team changes not available in FPL API)
+                positionName: mapping.position,
+                seasonName: historyEntry.season_name,
+                elementCode: historyEntry.element_code,
+                startCost: historyEntry.start_cost,
+                endCost: historyEntry.end_cost,
+                totalPoints: historyEntry.total_points,
+                minutes: historyEntry.minutes,
+                goalsScored: historyEntry.goals_scored,
+                assists: historyEntry.assists,
+                cleanSheets: historyEntry.clean_sheets,
+                goalsConceded: historyEntry.goals_conceded,
+                ownGoals: historyEntry.own_goals,
+                penaltiesSaved: historyEntry.penalties_saved,
+                penaltiesMissed: historyEntry.penalties_missed,
+                yellowCards: historyEntry.yellow_cards,
+                redCards: historyEntry.red_cards,
+                saves: historyEntry.saves,
+                bonus: historyEntry.bonus,
+                bps: historyEntry.bps,
+                influence: historyEntry.influence,
+                creativity: historyEntry.creativity,
+                threat: historyEntry.threat,
+                ictIndex: historyEntry.ict_index
+              };
+              
+              historicalPlayers.push(historicalPlayer);
+            }
+          }
+          
+          processedCount++;
+          
+          // Rate limit to avoid overwhelming the API
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+        } catch (playerError) {
+          console.log(`⚠️ Error processing player ${mapping.id}:`, playerError);
+          continue;
+        }
+      }
+      
+      if (historicalPlayers.length > 0) {
+        await storage.insertHistoricalPlayers(historicalPlayers);
+        console.log(`✅ Successfully added ${historicalPlayers.length} historical records for ${processedCount} players`);
+      }
+      
+      res.json({
+        success: true,
+        message: `Successfully processed ${processedCount} players and added ${historicalPlayers.length} historical records`,
+        playersProcessed: processedCount,
+        historicalRecordsAdded: historicalPlayers.length,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error("Error adding historical data:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to add historical data",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }

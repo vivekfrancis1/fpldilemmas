@@ -1,4 +1,4 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type CurrentPlayer, type InsertCurrentPlayer } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
@@ -43,10 +43,10 @@ export interface IStorage {
   getUpsetConfig(): Promise<UpsetConfig | undefined>;
   setUpsetConfig(config: UpsetConfig): Promise<void>;
   
-  // Current players operations
-  getCurrentPlayers(): Promise<CurrentPlayer[]>;
-  insertCurrentPlayers(players: InsertCurrentPlayer[]): Promise<void>;
-  updateCurrentPlayer(playerId: number, player: Partial<InsertCurrentPlayer>): Promise<void>;
+  // Player mappings operations (stable data only)
+  getPlayerMappings(): Promise<PlayerMapping[]>;
+  upsertPlayerMappings(players: InsertPlayerMapping[]): Promise<void>;
+  getPlayerMappingById(playerId: number): Promise<PlayerMapping | undefined>;
 }
 
 export interface UpsetConfig {
@@ -253,20 +253,17 @@ export class MemStorage implements IStorage {
     return [];
   }
 
-  // Current players operations (in-memory fallback)
-  async getCurrentPlayers(): Promise<CurrentPlayer[]> {
-    // For MemStorage, return empty array or use bootstrap data
+  // Player mappings operations (in-memory fallback)
+  async getPlayerMappings(): Promise<PlayerMapping[]> {
     return [];
   }
 
-  async insertCurrentPlayers(players: InsertCurrentPlayer[]): Promise<void> {
-    // In-memory storage doesn't persist current players
-    console.log(`MemStorage: Would store ${players.length} current players`);
+  async upsertPlayerMappings(players: InsertPlayerMapping[]): Promise<void> {
+    console.log(`MemStorage: Would store ${players.length} player mappings`);
   }
 
-  async updateCurrentPlayer(playerId: number, player: Partial<InsertCurrentPlayer>): Promise<void> {
-    // In-memory storage doesn't persist current players
-    console.log(`MemStorage: Would update player ${playerId}`);
+  async getPlayerMappingById(playerId: number): Promise<PlayerMapping | undefined> {
+    return undefined;
   }
 }
 
@@ -557,78 +554,59 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Current players operations (use database for persistence)
-  async getCurrentPlayers(): Promise<CurrentPlayer[]> {
+  // Player mappings operations (use database for persistence)
+  async getPlayerMappings(): Promise<PlayerMapping[]> {
     try {
-      console.log(`📊 Fetching current players from database...`);
-      const players = await db.execute(sql`SELECT * FROM current_players ORDER BY total_points DESC`);
-      console.log(`✅ Found ${players.rows.length} current players in database`);
-      return players.rows as CurrentPlayer[];
+      console.log(`📊 Fetching player mappings from database...`);
+      const mappings = await db.execute(sql`SELECT * FROM player_mappings ORDER BY id`);
+      console.log(`✅ Found ${mappings.rows.length} player mappings in database`);
+      return mappings.rows as PlayerMapping[];
     } catch (error) {
-      console.error("Error fetching current players from database:", error);
+      console.error("Error fetching player mappings from database:", error);
       return [];
     }
   }
 
-  async insertCurrentPlayers(players: InsertCurrentPlayer[]): Promise<void> {
+  async upsertPlayerMappings(players: InsertPlayerMapping[]): Promise<void> {
     try {
-      console.log(`💾 Inserting ${players.length} current players into database...`);
+      console.log(`💾 Upserting ${players.length} player mappings...`);
       
-      // Clear existing data first (since it's current season data)
-      await db.execute(sql`TRUNCATE current_players`);
-      
-      // Insert new players in batches to avoid query limits
-      const batchSize = 50;
-      for (let i = 0; i < players.length; i += batchSize) {
-        const batch = players.slice(i, i + batchSize);
-        for (const player of batch) {
-          await db.execute(sql`
-            INSERT INTO current_players (
-              id, first_name, second_name, web_name, team_id, team_name, 
-              element_type, position_name, now_cost, total_points, form, 
-              points_per_game, selected_by_percent, minutes, goals_scored, 
-              assists, clean_sheets, goals_conceded, own_goals, penalties_saved, 
-              penalties_missed, yellow_cards, red_cards, saves, bonus, bps, 
-              influence, creativity, threat, ict_index, transfers_in, transfers_out, 
-              transfers_in_event, transfers_out_event, status, news, 
-              chance_of_playing_this_round, chance_of_playing_next_round
-            ) VALUES (
-              ${player.id}, ${player.firstName}, ${player.secondName}, ${player.webName}, 
-              ${player.teamId}, ${player.teamName}, ${player.elementType}, ${player.positionName}, 
-              ${player.nowCost}, ${player.totalPoints}, ${player.form}, ${player.pointsPerGame}, 
-              ${player.selectedByPercent}, ${player.minutes}, ${player.goalsScored}, ${player.assists}, 
-              ${player.cleanSheets}, ${player.goalsConceded}, ${player.ownGoals}, ${player.penaltiesSaved}, 
-              ${player.penaltiesMissed}, ${player.yellowCards}, ${player.redCards}, ${player.saves}, 
-              ${player.bonus}, ${player.bps}, ${player.influence}, ${player.creativity}, ${player.threat}, 
-              ${player.ictIndex}, ${player.transfersIn}, ${player.transfersOut}, ${player.transfersInEvent}, 
-              ${player.transfersOutEvent}, ${player.status}, ${player.news}, 
-              ${player.chanceOfPlayingThisRound}, ${player.chanceOfPlayingNextRound}
-            )`);
-        }
+      for (const player of players) {
+        await db.execute(sql`
+          INSERT INTO player_mappings (
+            id, first_name, second_name, web_name, current_team_id, 
+            current_team_name, position, last_updated
+          ) VALUES (
+            ${player.id}, ${player.firstName}, ${player.secondName}, ${player.webName}, 
+            ${player.currentTeamId}, ${player.currentTeamName}, ${player.position}, NOW()
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            first_name = EXCLUDED.first_name,
+            second_name = EXCLUDED.second_name,
+            web_name = EXCLUDED.web_name,
+            current_team_id = EXCLUDED.current_team_id,
+            current_team_name = EXCLUDED.current_team_name,
+            position = EXCLUDED.position,
+            last_updated = NOW()
+        `);
       }
       
-      console.log(`✅ Successfully inserted ${players.length} current players into database`);
+      console.log(`✅ Successfully upserted ${players.length} player mappings`);
     } catch (error) {
-      console.error("Error inserting current players:", error);
+      console.error("Error upserting player mappings:", error);
       throw error;
     }
   }
 
-  async updateCurrentPlayer(playerId: number, player: Partial<InsertCurrentPlayer>): Promise<void> {
+  async getPlayerMappingById(playerId: number): Promise<PlayerMapping | undefined> {
     try {
-      console.log(`🔄 Updating player ${playerId} in database...`);
-      
-      // For simplicity, just update the last_updated field for now
-      await db.execute(sql`
-        UPDATE current_players 
-        SET last_updated = NOW()
-        WHERE id = ${playerId}
+      const result = await db.execute(sql`
+        SELECT * FROM player_mappings WHERE id = ${playerId}
       `);
-      
-      console.log(`✅ Successfully updated player ${playerId}`);
+      return result.rows[0] as PlayerMapping | undefined;
     } catch (error) {
-      console.error(`Error updating player ${playerId}:`, error);
-      throw error;
+      console.error(`Error fetching player mapping for ${playerId}:`, error);
+      return undefined;
     }
   }
 }
