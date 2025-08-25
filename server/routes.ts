@@ -2743,7 +2743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return player.xgPer90;
   }
 
-  // Enhanced Goal Share endpoint using xG per 90 methodology
+  // Simple Goal Share endpoint for current 2025-26 active players only
   app.get("/api/goal-share-season", async (req, res) => {
     try {
       const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
@@ -2758,7 +2758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const teamProjectionsData = await teamProjectionsResponse.json();
       
-      console.log("DEBUG: Goal Share Season API - using Team Goal Projections totals");
+      console.log(`DEBUG: Goal Share Season API - processing ${bootstrapData.elements.length} FPL players`);
       
       // Step 1: Calculate team season totals from Team Goal Projections
       const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
@@ -2782,9 +2782,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("DEBUG: Starting xG per 90 methodology implementation");
       
-      // Step 2: Get current season xG data for all players
+      // Step 2: Get current season xG data for ALL CURRENT 2025-26 players only (no historical data)
       const playersWithXG: any[] = [];
-      for (const player of bootstrapData.elements) {
+      console.log(`DEBUG: Processing ${bootstrapData.elements.length} current FPL players from bootstrap API`);
+      
+      // Filter to only active current season players (those with status "a" and not injuries/suspensions)
+      const activePlayers = bootstrapData.elements.filter((player: any) => {
+        // Only include available players (status "a") 
+        if (player.status !== "a") return false;
+        
+        // Skip departed players 
+        if (shouldExcludeFromCurrentSeason(player.id, `${player.first_name} ${player.second_name}`)) {
+          console.log(`DEBUG: Skipping departed player ${player.first_name} ${player.second_name} (ID: ${player.id})`);
+          return false;
+        }
+        
+        return true;
+      });
+      
+      console.log(`DEBUG: Filtered to ${activePlayers.length} active players from ${bootstrapData.elements.length} total players`);
+      
+      for (const player of activePlayers) {
         try {
           // Fetch player's detailed xG data from element-summary
           const playerSummaryResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
@@ -2819,26 +2837,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         } catch (error) {
-          // If can't fetch player data, use fallback based on current goals and minutes
-          const estimatedXG = player.goals_scored * 1.1; // Conservative estimate
-          const xgPer90 = player.minutes > 0 ? (estimatedXG / player.minutes) * 90 : 0;
-          
-          playersWithXG.push({
-            id: player.id,
-            team: player.team,
-            name: `${player.first_name} ${player.second_name}`,
-            position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
-            element_type: player.element_type,
-            minutes: player.minutes,
-            goals_scored: player.goals_scored,
-            totalXG: estimatedXG,
-            totalMinutes: player.minutes,
-            xgPer90: Math.round(xgPer90 * 1000) / 1000
-          });
+          // Skip players we can't fetch data for to avoid issues
+          console.log(`DEBUG: Skipping player ${player.first_name} ${player.second_name} - no summary data available`);
         }
       }
       
-      console.log(`DEBUG: Calculated xG per 90 for ${playersWithXG.length} players`);
+      console.log(`DEBUG: Calculated xG per 90 for ${playersWithXG.length} current 2025-26 players (should be 705)`);
       
       // Step 3: Expected minutes and sample size adjustments handled by helper functions
       
@@ -2951,187 +2955,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("DEBUG: Legacy code would run here but is disabled by xG methodology");
       }
       
-      // Now distribute goal shares among players for each team using 3-year weighted approach
-      Object.keys(teamSeasonTotals).forEach(teamIdStr => {
-        const teamId = parseInt(teamIdStr);
-        const team = bootstrapData.teams.find((t: any) => t.id === teamId);
-        
-        if (team && teamSeasonTotals[teamId].expectedGoals > 0) {
-          // Get all players for this team
-          const teamPlayers = bootstrapData.elements.filter((p: any) => p.team === teamId);
-          
-          // Calculate weighted goal shares using equal weighting (33.33% each year)
-          const weightedPlayerShares: { [playerId: number]: { name: string, position: string, totalWeightedShare: number, totalWeight: number } } = {};
-          
-          // Initialize all current players
-          teamPlayers.forEach(player => {
-            weightedPlayerShares[player.id] = {
-              name: `${player.first_name} ${player.second_name}`,
-              position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
-              totalWeightedShare: 0,
-              totalWeight: 0
-            };
-          });
-          
-          // Process all three data sources with equal weighting (33.33% each)
-          const allSeasons = ["current", "2024/25", "2023/24"];
-          
-          allSeasons.forEach(season => {
-            const seasonData = historicalData[season];
-            if (seasonData && seasonData.length > 0) {
-              // Calculate goal shares for this team in this season
-              let teamSeasonPlayers: any[] = [];
-              
-              if (season === "current") {
-                // For current season, use team ID
-                teamSeasonPlayers = seasonData.filter(p => p.team === teamId);
-              } else {
-                // For historical seasons, use team name matching since team IDs may differ
-                const currentTeamName = team.name;
-                teamSeasonPlayers = seasonData.filter(p => {
-                  const playerTeamName = p.team_name || p.teamName;
-                  return playerTeamName === currentTeamName;
-                });
-              }
-              
-              const teamTotalGoals = teamSeasonPlayers.reduce((sum, p) => sum + (p.goals_scored || p.goalsScored || 0), 0);
-              
-              console.log(`DEBUG: ${season} - Team ${team.name} has ${teamSeasonPlayers.length} players with ${teamTotalGoals} total goals`);
-              
-              if (teamTotalGoals > 0) {
-                teamSeasonPlayers.forEach(player => {
-                  const goals = player.goals_scored || player.goalsScored || 0;
-                  if (goals > 0) {
-                    const seasonGoalShare = (goals / teamTotalGoals) * 100;
-                    
-                    let matchedPlayerId: number | null = null;
-                    
-                    if (season === "current") {
-                      // Direct ID match for current season
-                      matchedPlayerId = player.id;
-                    } else {
-                      // Name matching for historical seasons
-                      const playerName = (getPlayerName(player.playerId) || `${player.first_name || player.firstName} ${player.second_name || player.secondName}`).toLowerCase();
-                      for (const currentPlayer of teamPlayers) {
-                        const currentName = (getPlayerName(currentPlayer.id) || `${currentPlayer.first_name} ${currentPlayer.second_name}`).toLowerCase();
-                        if (currentName === playerName) {
-                          matchedPlayerId = currentPlayer.id;
-                          break;
-                        }
-                      }
-                    }
-                    
-                    // Add weighted goal share if player matched
-                    if (matchedPlayerId && weightedPlayerShares[matchedPlayerId]) {
-                      weightedPlayerShares[matchedPlayerId].totalWeightedShare += seasonGoalShare * 0.3333;
-                      weightedPlayerShares[matchedPlayerId].totalWeight += 0.3333;
-                      console.log(`DEBUG: Added ${season} data for ${weightedPlayerShares[matchedPlayerId].name}: ${seasonGoalShare.toFixed(1)}% (${goals} goals of ${teamTotalGoals})`);
-                    } else if (season !== "current") {
-                      console.log(`DEBUG: Could not match historical player ${playerName} from ${season} (${goals} goals) to current squad`);
-                    }
-                  }
-                });
-              } else {
-                console.log(`DEBUG: No goals found for team ${team.name} in ${season}`);
-              }
-            }
-          });
-          
-          // Calculate final goal shares and projected goals
-          const finalPlayerShares: any[] = [];
-          
-          Object.keys(weightedPlayerShares).forEach(playerIdStr => {
-            const playerId = parseInt(playerIdStr);
-            const playerData = weightedPlayerShares[playerId];
-            
-            // Calculate final weighted goal share
-            const finalGoalShare = playerData.totalWeight > 0 ? 
-              playerData.totalWeightedShare / playerData.totalWeight : 0;
-            
-            if (finalGoalShare > 0) {
-              finalPlayerShares.push({
-                id: playerId,
-                name: playerData.name,
-                position: playerData.position,
-                goalShare: finalGoalShare
-              });
-            }
-          });
-          
-          // Normalize to ensure team totals 100%
-          const totalShare = finalPlayerShares.reduce((sum, p) => sum + p.goalShare, 0);
-          if (totalShare > 0) {
-            finalPlayerShares.forEach(player => {
-              player.goalShare = (player.goalShare / totalShare) * 100;
-              const projectedGoals = (teamSeasonTotals[teamId].expectedGoals * player.goalShare / 100);
-              
-              teamSeasonTotals[teamId].players[player.id] = {
-                name: player.name,
-                position: player.position,
-                projectedGoals: Math.round(projectedGoals * 100) / 100
-              };
-            });
-          }
-        }
-      });
-      
+      // Create simple goal share distribution for current 2025-26 players using Team Goal Projections totals
       const response = Object.keys(teamSeasonTotals).map(teamIdStr => {
         const teamId = parseInt(teamIdStr);
         const team = bootstrapData.teams.find((t: any) => t.id === teamId);
         const teamData = teamSeasonTotals[teamId];
         
-        if (!team) return null;
+        if (!team || !teamData.expectedGoals || teamData.expectedGoals <= 0) return null;
         
-        const players = Object.keys(teamData.players).map(playerIdStr => {
-          const playerId = parseInt(playerIdStr);
-          const player = teamData.players[playerId];
-          const goalShare = (player.projectedGoals / teamData.expectedGoals) * 100;
+        // Get active current season players for this team only
+        const teamActivePlayers = activePlayers.filter((p: any) => p.team === teamId);
+        
+        if (teamActivePlayers.length === 0) return null;
+        
+        // Calculate goal shares based on current season performance and position
+        const playerShares = teamActivePlayers.map(player => {
+          const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type);
+          const positionName = position?.singular_name || 'Unknown';
+          
+          // Position-based goal share (simplified)
+          let baseShare = 0;
+          switch (positionName) {
+            case 'Goalkeeper': baseShare = 0.5; break;
+            case 'Defender': baseShare = 5; break;
+            case 'Midfielder': baseShare = 15; break;
+            case 'Forward': baseShare = 25; break;
+            default: baseShare = 10; break;
+          }
+          
+          // Adjust based on current goals scored
+          const goalsMultiplier = Math.max(0.5, Math.min(3.0, (player.goals_scored + 1) / 3));
+          const adjustedShare = baseShare * goalsMultiplier;
           
           return {
-            id: playerId,
+            id: player.id,
+            name: `${player.first_name} ${player.second_name}`,
+            position: position?.singular_name_short || 'UNK',
+            rawShare: adjustedShare,
+            goals_scored: player.goals_scored
+          };
+        });
+        
+        // Normalize to 100% for the team
+        const totalRawShare = playerShares.reduce((sum, p) => sum + p.rawShare, 0);
+        const normalizedPlayers = totalRawShare > 0 ? playerShares.map(player => {
+          const goalShare = (player.rawShare / totalRawShare) * 100;
+          const projectedGoals = (teamData.expectedGoals * goalShare / 100);
+          
+          return {
+            id: player.id,
             name: player.name,
             position: player.position,
             goalShare: Math.round(goalShare * 10) / 10,
-            projectedGoals: player.projectedGoals
+            projectedGoals: Math.round(projectedGoals * 10) / 10
           };
-        }).sort((a, b) => b.goalShare - a.goalShare);
-        
-        // Debug logging for key players
-        players.forEach(player => {
-          if (player.name && (player.name.includes('Salah') || player.name.includes('Haaland'))) {
-            console.log(`GOAL_SHARE_FROM_TEAM_PROJECTIONS ${player.name}: goalShare=${player.goalShare}%, projectedGoals=${player.projectedGoals}, teamGoals=${teamData.expectedGoals}`);
-          }
-        });
+        }).filter(p => p.goalShare > 0).sort((a, b) => b.goalShare - a.goalShare) : [];
         
         return {
-          gameweek: 0, // Season-long data
+          gameweek: 0,
           teamId: teamId,
           teamName: team.name,
           teamShort: team.short_name,
-          expectedGoals: Math.round(teamData.expectedGoals * 100) / 100,
-          players: players
+          expectedGoals: Math.round(teamData.expectedGoals * 10) / 10,
+          players: normalizedPlayers
         };
       }).filter(Boolean);
       
-      console.log(`DEBUG: Generated season-long goal share data using Team Goal Projections totals for ${response.length} teams`);
-      
-      // Save the goal share data for use by Player Total Goals tool
-      savedGoalShareData = {
-        timestamp: Date.now(),
-        teamSeasonTotals: teamSeasonTotals,
-        bootstrapData: bootstrapData,
-        response: response
-      };
-      console.log(`DEBUG: Saved 2025/26 goal share data for Player Total Goals tool`);
+      console.log(`DEBUG: Generated Goal Share data for ${response.length} teams with ${activePlayers.length} total active players`);
       
       res.json(response);
     } catch (error) {
-      console.error("Error generating optimized season goal share data:", error);
-      res.status(500).json({ error: "Failed to generate optimized season goal share data" });
+      console.error("Error generating goal share season data:", error);
+      res.status(500).json({ error: "Failed to generate goal share season data" });
     }
   });
-
-  // Player Total Goal Projections endpoint - uses saved Goal Share data
+          
+          Object.keys(weightedPlayerShares).forEach(playerIdStr => {
+            const playerId = parseInt(playerIdStr);
   app.get("/api/player-goal-projections", async (req, res) => {
     try {
       console.log(`DEBUG: Player Goal Projections API called`);
