@@ -2124,7 +2124,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }).length;
           
           if (recentWins <= 1) { // Deterministic injury crisis for poor form teams (no random chance)
-            baseExpectedGoals *= (adminGoalSettings.injuryCrisisMultiplier || 0.92) * 0.3; // Apply 30% of the multiplier effect deterministically
+            // Convert from 30% chance of 8% reduction to deterministic 2.4% reduction
+            const injuryMultiplier = adminGoalSettings.injuryCrisisMultiplier || 0.92;
+            const deterministicMultiplier = 1 - ((1 - injuryMultiplier) * 0.3); // 1 - (0.08 * 0.3) = 0.976
+            baseExpectedGoals *= deterministicMultiplier;
           }
           
           // European Qualification Push: Teams in positions 4-7 fighting for Europe
