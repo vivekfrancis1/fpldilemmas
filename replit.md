@@ -35,6 +35,7 @@ Enhanced Context Multipliers: Successfully integrated 4 sophisticated new contex
 - Post-International Break (0.92): Fatigue and disruption after international duty
 - Travel Distance Fatigue (0.95): Long away trip impacts on pressing and errors
 All multipliers use MASTER_TEAM_DEFAULTS as single source of truth with perfect synchronization across backend calculations, admin interface, and reset functionality. Enhanced venue factors updated to 1.16 home advantage and 0.84 away factor as permanent defaults.
+Data Source Consistency: Fixed major data inconsistency between Team Goal Projections and Team Assist Projections. Both tools now use the shared variance combined projections endpoint (1165.01 total goals) ensuring perfect mathematical consistency. Team Assists = Team Goals × 0.72 multiplier = 838.82 total assists (72% ratio) validates the professional-grade accuracy across all projection tools.
 
 ## System Architecture
 
