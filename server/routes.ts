@@ -2729,12 +2729,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fetch("http://localhost:5000/api/team-goal-projections")
       ]);
       
-      if (!bootstrapResponse.ok || !teamProjectionsResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API or Team Goal Projections");
+      if (!bootstrapResponse.ok || !historical2024Response.ok) {
+        throw new Error("Failed to fetch data from FPL API or 2024-25 historical data");
       }
       
       const bootstrapData = await bootstrapResponse.json();
-      const teamProjectionsData = await teamProjectionsResponse.json();
+      const historical2024Data = await historical2024Response.json();
       
       console.log("DEBUG: Enhanced Goal Share API using xG per 90 methodology");
       
@@ -5076,97 +5076,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Enhanced Goal Share endpoint using PURE xG per 90 methodology (deterministic)
+  // Enhanced Goal Share endpoint using 2024-25 baseline data (realistic)
   app.get("/api/goal-share-enhanced", async (req, res) => {
     try {
-      console.log("DEBUG: Enhanced Goal Share using pure xG per 90 methodology");
+      console.log("DEBUG: Enhanced Goal Share using 2024-25 baseline data with 2025-26 adjustments");
       
-      // Step 1: Get bootstrap data and team projections
-      const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
+      // Step 1: Get 2024-25 historical data and current bootstrap data
+      const [bootstrapResponse, historical2024Response] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("http://localhost:5000/api/team-goal-projections")
+        fetch("http://localhost:5000/api/goal-share-historical/2024%2F25")
       ]);
       
-      if (!bootstrapResponse.ok || !teamProjectionsResponse.ok) {
-        throw new Error("Failed to fetch required data");
+      if (!bootstrapResponse.ok || !historical2024Response.ok) {
+        throw new Error("Failed to fetch data from FPL API or 2024-25 historical data");
       }
       
       const bootstrapData = await bootstrapResponse.json();
-      const teamProjectionsData = await teamProjectionsResponse.json();
+      const historical2024Data = await historical2024Response.json();
       
-      // Step 2: Calculate team season totals
-      const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
+      console.log(`DEBUG: Using 2024-25 historical data for ${historical2024Data.length} teams as baseline`);
       
-      teamProjectionsData.forEach((team: any) => {
-        if (!teamSeasonTotals[team.id]) {
-          teamSeasonTotals[team.id] = { expectedGoals: 0, players: {} };
-        }
-        Object.values(team.gameweekProjections).forEach((goals: any) => {
-          if (typeof goals === 'number') {
-            teamSeasonTotals[team.id].expectedGoals += goals;
+      // Step 2: Apply realistic 2025-26 adjustments to 2024-25 baseline data
+      const adjustedResults: any[] = [];
+      
+      // Step 3: Transform 2024-25 data with realistic 2025-26 adjustments
+      historical2024Data.forEach((team2024: any) => {
+        // Find current team info from bootstrap
+        const currentTeam = bootstrapData.teams.find((t: any) => t.id === team2024.teamId);
+        if (!currentTeam) return;
+        
+        // Apply realistic adjustments for 2025-26 season
+        const adjustedPlayers = team2024.players.map((player2024: any) => {
+          // Find current player info
+          const currentPlayer = bootstrapData.elements.find((p: any) => 
+            `${p.first_name} ${p.second_name}` === player2024.name
+          );
+          
+          if (!currentPlayer) {
+            // Player not in current season (transferred/retired)
+            return null;
           }
+          
+          // Calculate realistic adjustments based on current form and availability
+          const availabilityFactor = Math.max(0.5, (currentPlayer.chance_of_playing_next_round || 75) / 100);
+          const formFactor = currentPlayer.form ? Math.max(0.7, Math.min(1.3, currentPlayer.form / 5)) : 1.0;
+          
+          // Conservative age/experience factor
+          const ageFactor = currentPlayer.element_type === 1 ? 1.0 : // GK - stable
+                           currentPlayer.element_type === 2 ? 0.98 : // DEF - slight decline
+                           currentPlayer.element_type === 3 ? 0.95 : // MID - moderate decline  
+                           0.92; // FWD - most variable
+          
+          // Calculate adjusted goal share (conservative)
+          const adjustmentFactor = availabilityFactor * formFactor * ageFactor;
+          const adjustedGoalShare = player2024.goalShare * adjustmentFactor;
+          const adjustedProjectedGoals = player2024.projectedGoals * adjustmentFactor;
+          
+          return {
+            id: currentPlayer.id,
+            name: player2024.name,
+            position: player2024.position,
+            goalShare: Math.round(adjustedGoalShare * 10) / 10,
+            projectedGoals: Math.round(adjustedProjectedGoals * 10) / 10,
+            xgPer90: adjustedProjectedGoals > 0 ? 
+              Math.round((adjustedProjectedGoals / 30) * 100) / 100 : 0 // Estimate based on ~30 games
+          };
+        }).filter(p => p !== null); // Remove transferred players
+        
+        // Normalize to ensure team total is realistic
+        const totalAdjustedGoals = adjustedPlayers.reduce((sum, p) => sum + p.projectedGoals, 0);
+        const targetTeamGoals = team2024.expectedGoals * 0.95; // Slight conservative adjustment
+        
+        const normalizedPlayers = adjustedPlayers.map(player => {
+          const normalizedGoals = totalAdjustedGoals > 0 ? 
+            (player.projectedGoals / totalAdjustedGoals) * targetTeamGoals : 0;
+          const normalizedShare = targetTeamGoals > 0 ? 
+            (normalizedGoals / targetTeamGoals) * 100 : 0;
+          
+          return {
+            ...player,
+            goalShare: Math.round(normalizedShare * 10) / 10,
+            projectedGoals: Math.round(normalizedGoals * 10) / 10
+          };
+        }).sort((a, b) => b.goalShare - a.goalShare);
+        
+        adjustedResults.push({
+          gameweek: 0,
+          teamId: team2024.teamId,
+          teamName: currentTeam.name,
+          teamShort: currentTeam.short_name,
+          expectedGoals: Math.round(targetTeamGoals * 10) / 10,
+          players: normalizedPlayers
         });
+        
+        console.log(`DEBUG: Team ${currentTeam.name} - Adjusted from ${team2024.expectedGoals} to ${targetTeamGoals.toFixed(1)} goals`);
       });
       
-      // Step 3: Calculate xG per 90 for all players
-      const playersWithXG: any[] = [];
-      for (const player of bootstrapData.elements) {
-        try {
-          let totalXG = 0;
-          let totalMinutes = 0;
-          
-          // Fetch player xG data from FPL API
-          const playerSummaryResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-          if (playerSummaryResponse.ok) {
-            const playerSummary = await playerSummaryResponse.json();
-            if (playerSummary.history && playerSummary.history.length > 0) {
-              playerSummary.history.forEach((gameweek: any) => {
-                totalXG += parseFloat(gameweek.expected_goals || 0);
-                totalMinutes += parseInt(gameweek.minutes || 0);
-              });
-            }
-          }
-          
-          // Calculate xG per 90 (fallback if no data)
-          const xgPer90 = totalMinutes > 0 ? (totalXG / totalMinutes) * 90 : 
-                          player.minutes > 0 ? (player.goals_scored * 1.1 / player.minutes) * 90 : 0;
-          
-          playersWithXG.push({
-            id: player.id,
-            team: player.team,
-            name: `${player.first_name} ${player.second_name}`,
-            position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
-            element_type: player.element_type,
-            minutes: player.minutes,
-            xgPer90: Math.round(xgPer90 * 1000) / 1000
-          });
-        } catch (error) {
-          console.warn(`Could not process player ${player.id}:`, error.message);
-        }
-      }
-      
-      console.log(`DEBUG: Calculated xG per 90 for ${playersWithXG.length} players`);
-      
-      // Step 4: Deterministic minutes projection
-      function calculateProjectedMinutes(player: any): number {
-        const position = player.element_type;
-        const currentMinutes = player.minutes || 0;
-        
-        let baseMinutesPerGame: number;
-        switch (position) {
-          case 1: baseMinutesPerGame = currentMinutes > 500 ? 85 : 70; break; // GK
-          case 2: baseMinutesPerGame = currentMinutes > 1000 ? 80 : 45; break; // DEF  
-          case 3: baseMinutesPerGame = currentMinutes > 800 ? 75 : 35; break; // MID
-          case 4: baseMinutesPerGame = currentMinutes > 600 ? 70 : 30; break; // FWD
-          default: baseMinutesPerGame = 45;
-        }
-        
-        // Deterministic form adjustment
-        const formSeed = (player.id * 7) % 100;
-        const formMultiplier = 0.9 + (formSeed / 100) * 0.2;
-        
-        return Math.round(baseMinutesPerGame * formMultiplier * 37); // 37 remaining gameweeks
-      }
+      console.log(`DEBUG: 2024-25 baseline methodology completed for ${adjustedResults.length} teams`);
+      res.json(adjustedResults);
       
       // Step 5: Calculate contributions and normalize
       const teamResults: any[] = [];
