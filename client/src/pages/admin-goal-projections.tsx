@@ -461,8 +461,8 @@ export default function AdminGoalProjections() {
     },
     // Venue Factors
     venueFactors: {
-      homeAdvantageMultiplier: 1.15,
-      awayFactorMultiplier: 0.88,
+      homeAdvantageMultiplier: 1.16,
+      awayFactorMultiplier: 0.84,
     },
   };
 
@@ -701,8 +701,8 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 2: Venue Adjustments</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Home:</strong> xG × <span className="font-mono text-green-600">{formData.homeAdvantageGoalsMultiplier || 1.15}</span><br/>
-                        <strong>Away:</strong> xG × <span className="font-mono text-red-600">{formData.awayFactorGoalsMultiplier || 0.88}</span>
+                        <strong>Home:</strong> xG × <span className="font-mono text-green-600">{formData.homeAdvantageGoalsMultiplier || 1.16}</span><br/>
+                        <strong>Away:</strong> xG × <span className="font-mono text-red-600">{formData.awayFactorGoalsMultiplier || 0.84}</span>
                       </p>
                     </div>
                     
@@ -1584,8 +1584,8 @@ export default function AdminGoalProjections() {
                   </thead>
                   <tbody>
                     {[
-                      { key: 'homeAdvantageGoalsMultiplier', name: 'Home Advantage', default: 1.15, min: 1.0, max: 1.3, description: 'Multiplier for teams playing at home (15% advantage)' },
-                      { key: 'awayFactorGoalsMultiplier', name: 'Away Factor', default: 0.88, min: 0.7, max: 1.0, description: 'Multiplier for teams playing away (12% disadvantage)' }
+                      { key: 'homeAdvantageGoalsMultiplier', name: 'Home Advantage', default: 1.16, min: 1.0, max: 1.3, description: 'Multiplier for teams playing at home (16% advantage)' },
+                      { key: 'awayFactorGoalsMultiplier', name: 'Away Factor', default: 0.84, min: 0.7, max: 1.0, description: 'Multiplier for teams playing away (16% disadvantage)' }
                     ].map((setting) => {
                       const currentValue = (formData as any)[setting.key] || setting.default;
                       const isChanged = Math.abs(currentValue - setting.default) > 0.01;
