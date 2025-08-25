@@ -539,105 +539,99 @@ export default function AdminUpsetConfig() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-center justify-between p-4 border rounded-lg mb-6">
                 <div>
-                  <Label htmlFor="giant-killing">Giant-Killing Boost</Label>
-                  <Input
-                    id="giant-killing"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="0.5"
-                    value={formData.giantKillingBoost}
-                    onChange={(e) => updateField('giantKillingBoost', parseFloat(e.target.value))}
-                    data-testid="input-giant-killing"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 0.15 (+15% boost for underdogs vs top teams)
-                  </p>
+                  <h3 className="font-semibold">Enable Context-Based Upsets</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Giant-killing, pressure, derby effects</p>
                 </div>
+                <Switch
+                  checked={formData.enableContextUpsets}
+                  onCheckedChange={(value) => updateField('enableContextUpsets', value)}
+                  data-testid="switch-context"
+                />
+              </div>
+              
+              <div className="space-y-6">
+                <ConfigField
+                  label="Giant-Killing Boost"
+                  field="giantKillingBoost"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="0.5"
+                  description="+15% boost for underdogs vs top teams"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
+                />
                 
-                <div>
-                  <Label htmlFor="pressure-penalty">Pressure Penalty</Label>
-                  <Input
-                    id="pressure-penalty"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="0.3"
-                    value={formData.pressurePenalty}
-                    onChange={(e) => updateField('pressurePenalty', parseFloat(e.target.value))}
-                    data-testid="input-pressure-penalty"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 0.1 (-10% penalty for top teams in pressure situations)
-                  </p>
-                </div>
+                <ConfigField
+                  label="Pressure Penalty"
+                  field="pressurePenalty"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="0.3"
+                  description="-10% penalty for top teams in pressure situations"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
+                />
 
-                <div>
-                  <Label htmlFor="pressure-chance">Pressure Chance</Label>
-                  <Input
-                    id="pressure-chance"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="1"
-                    value={formData.pressureChance}
-                    onChange={(e) => updateField('pressureChance', parseFloat(e.target.value))}
-                    data-testid="input-pressure-chance"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 0.2 (20% chance of pressure situations)
-                  </p>
-                </div>
+                <ConfigField
+                  label="Pressure Chance"
+                  field="pressureChance"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  description="20% chance of pressure situations"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
+                />
 
-                <div>
-                  <Label htmlFor="derby-variance">Derby Variance Boost</Label>
-                  <Input
-                    id="derby-variance"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="1"
-                    value={formData.derbyVarianceBoost}
-                    onChange={(e) => updateField('derbyVarianceBoost', parseFloat(e.target.value))}
-                    data-testid="input-derby-variance"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 0.3 (+30% extra variance for derby matches)
-                  </p>
-                </div>
+                <ConfigField
+                  label="Derby Variance Boost"
+                  field="derbyVarianceBoost"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  description="+30% extra variance for derby matches"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
+                />
 
-                <div>
-                  <Label htmlFor="derby-chance">Derby Chance</Label>
-                  <Input
-                    id="derby-chance"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="1"
-                    value={formData.derbyChance}
-                    onChange={(e) => updateField('derbyChance', parseFloat(e.target.value))}
-                    data-testid="input-derby-chance"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 0.15 (15% chance of derby effects)
-                  </p>
-                </div>
+                <ConfigField
+                  label="Derby Chance"
+                  field="derbyChance"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  description="15% chance of derby effects"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
+                />
 
-                <div>
-                  <Label htmlFor="top-teams">Top Team IDs</Label>
-                  <Input
-                    id="top-teams"
-                    type="text"
-                    value={formData.topTeamIds.join(', ')}
-                    onChange={(e) => updateTopTeamIds(e.target.value)}
-                    data-testid="input-top-teams"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 1,7,12,13,15,18 (ARS,CHE,LIV,MCI,NEW,TOT)
-                  </p>
-                </div>
+                <ConfigField
+                  label="Top Team IDs"
+                  field="topTeamIds"
+                  type="text"
+                  description="Team IDs considered 'top teams' (1,2,3,4,5,6)"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
+                />
               </div>
             </CardContent>
           </Card>
@@ -655,23 +649,32 @@ export default function AdminUpsetConfig() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-center justify-between p-4 border rounded-lg mb-6">
                 <div>
-                  <Label htmlFor="upset-rounding">Upset Rounding Chance</Label>
-                  <Input
-                    id="upset-rounding"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="1"
-                    value={formData.upsetRoundingChance}
-                    onChange={(e) => updateField('upsetRoundingChance', parseFloat(e.target.value))}
-                    data-testid="input-upset-rounding"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 0.15 (15% chance of floor rounding instead of normal rounding)
-                  </p>
+                  <h3 className="font-semibold">Enable Smart Rounding</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Upset-biased floor rounding</p>
                 </div>
+                <Switch
+                  checked={formData.enableSmartRounding}
+                  onCheckedChange={(value) => updateField('enableSmartRounding', value)}
+                  data-testid="switch-rounding"
+                />
+              </div>
+              
+              <div className="space-y-6">
+                <ConfigField
+                  label="Upset Rounding Chance"
+                  field="upsetRoundingChance"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  description="15% chance of floor rounding instead of normal rounding"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
+                />
               </div>
 
               <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
@@ -697,57 +700,60 @@ export default function AdminUpsetConfig() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-center justify-between p-4 border rounded-lg mb-6">
                 <div>
-                  <Label htmlFor="budget-chance">Upset Budget Chance</Label>
-                  <Input
-                    id="budget-chance"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="0.2"
-                    value={formData.upsetBudgetChance}
-                    onChange={(e) => updateField('upsetBudgetChance', parseFloat(e.target.value))}
-                    data-testid="input-budget-chance"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 0.05 (5% chance of major swings)
-                  </p>
+                  <h3 className="font-semibold">Enable Season Upset Budget</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Major performance swings</p>
                 </div>
+                <Switch
+                  checked={formData.enableSeasonUpsetBudget}
+                  onCheckedChange={(value) => updateField('enableSeasonUpsetBudget', value)}
+                  data-testid="switch-budget"
+                />
+              </div>
+              
+              <div className="space-y-6">
+                <ConfigField
+                  label="Upset Budget Chance"
+                  field="upsetBudgetChance"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="0.2"
+                  description="5% chance of major swings"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
+                />
                 
-                <div>
-                  <Label htmlFor="budget-min">Budget Minimum</Label>
-                  <Input
-                    id="budget-min"
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    max="1.0"
-                    value={formData.upsetBudgetMin}
-                    onChange={(e) => updateField('upsetBudgetMin', parseFloat(e.target.value))}
-                    data-testid="input-budget-min"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 0.5 (50% performance minimum)
-                  </p>
-                </div>
+                <ConfigField
+                  label="Budget Minimum"
+                  field="upsetBudgetMin"
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  max="1.0"
+                  description="50% performance minimum"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
+                />
 
-                <div>
-                  <Label htmlFor="budget-max">Budget Maximum</Label>
-                  <Input
-                    id="budget-max"
-                    type="number"
-                    step="0.1"
-                    min="1.0"
-                    max="3.0"
-                    value={formData.upsetBudgetMax}
-                    onChange={(e) => updateField('upsetBudgetMax', parseFloat(e.target.value))}
-                    data-testid="input-budget-max"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 1.5 (150% performance maximum)
-                  </p>
-                </div>
+                <ConfigField
+                  label="Budget Maximum"
+                  field="upsetBudgetMax"
+                  type="number"
+                  step="0.1"
+                  min="1.0"
+                  max="3.0"
+                  description="150% performance maximum"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
+                />
               </div>
 
               <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
@@ -773,23 +779,32 @@ export default function AdminUpsetConfig() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-center justify-between p-4 border rounded-lg mb-6">
                 <div>
-                  <Label htmlFor="poisson-chance">Poisson Usage Rate</Label>
-                  <Input
-                    id="poisson-chance"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="1"
-                    value={formData.poissonChance}
-                    onChange={(e) => updateField('poissonChance', parseFloat(e.target.value))}
-                    data-testid="input-poisson-chance"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 0.7 (70% Poisson, 30% smart rounding)
-                  </p>
+                  <h3 className="font-semibold">Enable Poisson Distribution</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Mathematically realistic goal scoring</p>
                 </div>
+                <Switch
+                  checked={formData.enablePoissonDistribution}
+                  onCheckedChange={(value) => updateField('enablePoissonDistribution', value)}
+                  data-testid="switch-poisson"
+                />
+              </div>
+              
+              <div className="space-y-6">
+                <ConfigField
+                  label="Poisson Usage Rate"
+                  field="poissonChance"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  description="70% Poisson, 30% smart rounding"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
+                />
               </div>
 
               <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
