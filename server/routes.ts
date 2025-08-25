@@ -6,6 +6,7 @@ import { insertPriceAlertSchema, unifiedProjectionSettings as unifiedProjectionS
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
+import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 
 // Master Default Team Configuration - Single Source of Truth
 const MASTER_TEAM_DEFAULTS = {
@@ -5115,6 +5116,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (!currentPlayer) {
             // Player not in current season (transferred/retired)
+            return null;
+          }
+
+          // Check if player has left the Premier League for 2025-26
+          if (shouldExcludeFromCurrentSeason(currentPlayer.id, player2024.name)) {
+            console.log(`DEBUG: Excluding departed player ${player2024.name} from 2025-26 projections`);
             return null;
           }
           

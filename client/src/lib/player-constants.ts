@@ -26,19 +26,18 @@ export const PLAYER_NAMES: Record<number, string> = {
   30: "Havertz",
   31: "Jesus",
 
-  // Manchester United
+  // Manchester United (2025-26 Updated)
   24: "Onana",
   30: "Lisandro",
   31: "Maguire",
   32: "de Ligt", 
   37: "Fernandes",
   39: "Mainoo",
-  41: "Rashford",
   42: "Garnacho",
   43: "Zirkzee",
   44: "Højlund",
 
-  // Liverpool
+  // Liverpool (2025-26 Updated)
   45: "Alisson",
   51: "van Dijk",
   52: "Konaté",
@@ -48,7 +47,6 @@ export const PLAYER_NAMES: Record<number, string> = {
   58: "Gravenberch",
   60: "Szoboszlai",
   62: "Salah",
-  63: "Luis Díaz",
   64: "Gakpo",
   65: "Núñez",
   66: "Jota",

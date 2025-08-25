@@ -32,7 +32,7 @@ export const FPL_PLAYERS: Record<number, FPLPlayer> = {
   22: { id: 22, firstName: "Bukayo", secondName: "Saka", webName: "Saka", currentTeam: "Arsenal", position: "Midfielder" },
   23: { id: 23, firstName: "Gabriel", secondName: "Jesus", webName: "Gabriel Jesus", currentTeam: "Arsenal", position: "Forward" },
 
-  // Manchester United
+  // Manchester United (2025-26 Updated Squad)
   24: { id: 24, firstName: "André", secondName: "Onana", webName: "Onana", currentTeam: "Man Utd", position: "Goalkeeper" },
   30: { id: 30, firstName: "Lisandro", secondName: "Martínez", webName: "Lisandro Martínez", currentTeam: "Man Utd", position: "Defender" },
   31: { id: 31, firstName: "Harry", secondName: "Maguire", webName: "Maguire", currentTeam: "Man Utd", position: "Defender" },
@@ -45,12 +45,11 @@ export const FPL_PLAYERS: Record<number, FPLPlayer> = {
   38: { id: 38, firstName: "Mason", secondName: "Mount", webName: "Mount", currentTeam: "Man Utd", position: "Midfielder" },
   39: { id: 39, firstName: "Kobbie", secondName: "Mainoo", webName: "Mainoo", currentTeam: "Man Utd", position: "Midfielder" },
   40: { id: 40, firstName: "Manuel", secondName: "Ugarte", webName: "Ugarte", currentTeam: "Man Utd", position: "Midfielder" },
-  41: { id: 41, firstName: "Marcus", secondName: "Rashford", webName: "Rashford", currentTeam: "Man Utd", position: "Midfielder" },
   42: { id: 42, firstName: "Alejandro", secondName: "Garnacho", webName: "Garnacho", currentTeam: "Man Utd", position: "Midfielder" },
   43: { id: 43, firstName: "Joshua", secondName: "Zirkzee", webName: "Zirkzee", currentTeam: "Man Utd", position: "Forward" },
   44: { id: 44, firstName: "Rasmus", secondName: "Højlund", webName: "Højlund", currentTeam: "Man Utd", position: "Forward" },
 
-  // Liverpool
+  // Liverpool (2025-26 Updated Squad)
   45: { id: 45, firstName: "Alisson", secondName: "Ramses Becker", webName: "Alisson", currentTeam: "Liverpool", position: "Goalkeeper" },
   51: { id: 51, firstName: "Virgil", secondName: "van Dijk", webName: "van Dijk", currentTeam: "Liverpool", position: "Defender" },
   52: { id: 52, firstName: "Ibrahima", secondName: "Konaté", webName: "Konaté", currentTeam: "Liverpool", position: "Defender" },
@@ -64,7 +63,6 @@ export const FPL_PLAYERS: Record<number, FPLPlayer> = {
   60: { id: 60, firstName: "Dominik", secondName: "Szoboszlai", webName: "Szoboszlai", currentTeam: "Liverpool", position: "Midfielder" },
   61: { id: 61, firstName: "Harvey", secondName: "Elliott", webName: "Elliott", currentTeam: "Liverpool", position: "Midfielder" },
   62: { id: 62, firstName: "Mohamed", secondName: "Salah", webName: "Salah", currentTeam: "Liverpool", position: "Midfielder" },
-  63: { id: 63, firstName: "Luis Fernando", secondName: "Díaz Marulanda", webName: "Luis Díaz", currentTeam: "Liverpool", position: "Midfielder" },
   64: { id: 64, firstName: "Cody", secondName: "Gakpo", webName: "Gakpo", currentTeam: "Liverpool", position: "Midfielder" },
   65: { id: 65, firstName: "Darwin", secondName: "Núñez", webName: "Núñez", currentTeam: "Liverpool", position: "Forward" },
   66: { id: 66, firstName: "Diogo", secondName: "Jota", webName: "Jota", currentTeam: "Liverpool", position: "Forward" },
