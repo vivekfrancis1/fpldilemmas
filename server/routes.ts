@@ -5,6 +5,7 @@ import { priceScheduler } from "./price-scheduler";
 import { insertPriceAlertSchema, unifiedProjectionSettings as unifiedProjectionSettingsTable } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 
 // Master Default Team Configuration - Single Source of Truth
 const MASTER_TEAM_DEFAULTS = {
@@ -2989,9 +2990,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       matchedPlayerId = player.id;
                     } else {
                       // Name matching for historical seasons
-                      const playerName = `${player.first_name || player.firstName} ${player.second_name || player.secondName}`.toLowerCase();
+                      const playerName = (getPlayerName(player.playerId) || `${player.first_name || player.firstName} ${player.second_name || player.secondName}`).toLowerCase();
                       for (const currentPlayer of teamPlayers) {
-                        const currentName = `${currentPlayer.first_name} ${currentPlayer.second_name}`.toLowerCase();
+                        const currentName = (getPlayerName(currentPlayer.id) || `${currentPlayer.first_name} ${currentPlayer.second_name}`).toLowerCase();
                         if (currentName === playerName) {
                           matchedPlayerId = currentPlayer.id;
                           break;
@@ -3312,9 +3313,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       matchedPlayerId = player.id;
                     } else {
                       // Name matching for historical seasons
-                      const playerName = `${player.first_name || player.firstName} ${player.second_name || player.secondName}`.toLowerCase();
+                      const playerName = (getPlayerName(player.playerId) || `${player.first_name || player.firstName} ${player.second_name || player.secondName}`).toLowerCase();
                       for (const currentPlayer of teamPlayers) {
-                        const currentName = `${currentPlayer.first_name} ${currentPlayer.second_name}`.toLowerCase();
+                        const currentName = (getPlayerName(currentPlayer.id) || `${currentPlayer.first_name} ${currentPlayer.second_name}`).toLowerCase();
                         if (currentName === playerName) {
                           matchedPlayerId = currentPlayer.id;
                           break;
@@ -3857,7 +3858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     players.forEach(player => {
       const position = positions.find(p => p.id === player.element_type);
       const positionName = position?.singular_name;
-      const playerName = `${player.first_name} ${player.second_name}`;
+      const playerName = getPlayerName(player.id) || `${player.first_name} ${player.second_name}`;
       
       // Get position rates
       const positionRate = positionAssistRates[positionName as keyof typeof positionAssistRates] || { base: 15.0, variance: 5.0 };
@@ -4079,7 +4080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     players.forEach(player => {
       const position = positions.find(p => p.id === player.element_type);
       const positionName = position?.singular_name;
-      const playerName = `${player.first_name} ${player.second_name}`;
+      const playerName = getPlayerName(player.id) || `${player.first_name} ${player.second_name}`;
       
       // Get position rates
       const positionRate = positionAssistRates[positionName as keyof typeof positionAssistRates] || { base: 15.0, variance: 5.0 };
