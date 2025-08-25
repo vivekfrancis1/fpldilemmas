@@ -52,7 +52,13 @@ export default function AdminUpsetConfig() {
 
   const { data: config, isLoading } = useQuery<UpsetConfig>({
     queryKey: ["/api/admin/upset-config"],
-    queryFn: () => apiRequest("/api/admin/upset-config"),
+    queryFn: async () => {
+      const response = await fetch("/api/admin/upset-config");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch config: ${response.statusText}`);
+      }
+      return response.json();
+    },
   });
 
   const [formData, setFormData] = useState<UpsetConfig | null>(null);
@@ -64,11 +70,17 @@ export default function AdminUpsetConfig() {
   }, [config, formData]);
 
   const saveConfigMutation = useMutation({
-    mutationFn: (data: UpsetConfig) => apiRequest("/api/admin/upset-config", {
-      method: "POST",
-      body: JSON.stringify(data),
-      headers: { "Content-Type": "application/json" },
-    }),
+    mutationFn: async (data: UpsetConfig) => {
+      const response = await fetch("/api/admin/upset-config", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to save config: ${response.statusText}`);
+      }
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/upset-config"] });
       toast({
@@ -87,9 +99,15 @@ export default function AdminUpsetConfig() {
   });
 
   const resetConfigMutation = useMutation({
-    mutationFn: () => apiRequest("/api/admin/upset-config/reset", {
-      method: "POST",
-    }),
+    mutationFn: async () => {
+      const response = await fetch("/api/admin/upset-config/reset", {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to reset config: ${response.statusText}`);
+      }
+      return response.json();
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/upset-config"] });
       setFormData(data.config);
