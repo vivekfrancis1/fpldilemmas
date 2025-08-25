@@ -140,11 +140,28 @@ export default function PlayerStatsTable({
     setCurrentPage(1);
   };
 
-  const getTeamName = (teamId: number): string => {
+  const getTeamName = (player: any): string => {
+    // For historical data, use the team name directly if available
+    if (isHistoricalSeason && (player.team_short_name || player.teamShortName)) {
+      return player.team_short_name || player.teamShortName;
+    }
+    // For current season, use team ID lookup
+    const teamId = player.team || player.team_id;
     return data?.teams.find(team => team.id === teamId)?.short_name || "";
   };
 
-  const getPositionName = (elementType: number): string => {
+  const getPositionName = (player: any): string => {
+    // For historical data, use position name directly and convert to short form
+    if (isHistoricalSeason && (player.position_name || player.positionName)) {
+      const posName = player.position_name || player.positionName;
+      if (posName === 'Goalkeeper') return 'GKP';
+      if (posName === 'Defender') return 'DEF';
+      if (posName === 'Midfielder') return 'MID';
+      if (posName === 'Forward') return 'FWD';
+      return posName.slice(0, 3).toUpperCase();
+    }
+    // For current season, use element_type lookup
+    const elementType = player.element_type;
     return data?.element_types.find(type => type.id === elementType)?.singular_name_short || "";
   };
 
@@ -413,8 +430,8 @@ export default function PlayerStatsTable({
           </thead>
           <tbody>
             {paginatedPlayers.map((player, index) => {
-              const position = getPositionName(player.element_type);
-              const teamName = getTeamName(player.team || player.team_id);
+              const position = getPositionName(player);
+              const teamName = getTeamName(player);
               const netTransfers = (player.transfers_in_event || 0) - (player.transfers_out_event || 0);
               
               return (
