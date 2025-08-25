@@ -417,23 +417,23 @@ export default function AdminGoalProjections() {
     updateSettingsMutation.mutate(formData);
   };
 
-  // Define default values for each category
+  // Define default values for each category - Updated to match MASTER_TEAM_DEFAULTS
   const DEFAULT_VALUES = {
     // Attack Multipliers
     attackMultipliers: {
-      eliteAttackMultiplier: 1.5,
-      strongAttackMultiplier: 1.25,
+      eliteAttackMultiplier: 1.4,
+      strongAttackMultiplier: 1.1,
       averageAttackMultiplier: 1.00,
-      weakAttackMultiplier: 0.75,
-      promotedAttackMultiplier: 0.5,
+      weakAttackMultiplier: 0.85,
+      promotedAttackMultiplier: 0.7,
     },
     // Defense Multipliers
     defenseMultipliers: {
-      eliteDefenseMultiplier: 0.5,
-      strongDefenseMultiplier: 0.75,
+      eliteDefenseMultiplier: 0.7,
+      strongDefenseMultiplier: 0.85,
       averageDefenseMultiplier: 1.00,
-      weakDefenseMultiplier: 1.25,
-      promotedDefenseMultiplier: 1.5,
+      weakDefenseMultiplier: 1.15,
+      promotedDefenseMultiplier: 1.3,
     },
     // Confidence Settings
     confidenceSettings: {
@@ -709,22 +709,22 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 3: Defensive Tiers</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Elite Defense:</strong> × <span className="font-mono text-blue-600">{formData.eliteDefenseMultiplier || 0.5}</span><br/>
-                        <strong>Strong Defense:</strong> × <span className="font-mono text-blue-600">{formData.strongDefenseMultiplier || 0.75}</span><br/>
+                        <strong>Elite Defense:</strong> × <span className="font-mono text-blue-600">{formData.eliteDefenseMultiplier || 0.7}</span><br/>
+                        <strong>Strong Defense:</strong> × <span className="font-mono text-blue-600">{formData.strongDefenseMultiplier || 0.85}</span><br/>
                         <strong>Average Defense:</strong> × <span className="font-mono text-blue-600">{formData.averageDefenseMultiplier || 1.0}</span><br/>
-                        <strong>Weak Defense:</strong> × <span className="font-mono text-blue-600">{formData.weakDefenseMultiplier || 1.25}</span><br/>
-                        <strong>Promoted Defense:</strong> × <span className="font-mono text-blue-600">{formData.promotedDefenseMultiplier || 1.5}</span>
+                        <strong>Weak Defense:</strong> × <span className="font-mono text-blue-600">{formData.weakDefenseMultiplier || 1.15}</span><br/>
+                        <strong>Promoted Defense:</strong> × <span className="font-mono text-blue-600">{formData.promotedDefenseMultiplier || 1.3}</span>
                       </p>
                     </div>
                     
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 4: Attacking Tiers</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Elite:</strong> × <span className="font-mono text-orange-600">{formData.eliteAttackMultiplier || 1.5}</span><br/>
-                        <strong>Strong:</strong> × <span className="font-mono text-orange-600">{formData.strongAttackMultiplier || 1.25}</span><br/>
+                        <strong>Elite:</strong> × <span className="font-mono text-orange-600">{formData.eliteAttackMultiplier || 1.4}</span><br/>
+                        <strong>Strong:</strong> × <span className="font-mono text-orange-600">{formData.strongAttackMultiplier || 1.1}</span><br/>
                         <strong>Average:</strong> × <span className="font-mono text-orange-600">{formData.averageAttackMultiplier || 1.0}</span><br/>
-                        <strong>Weak:</strong> × <span className="font-mono text-orange-600">{formData.weakAttackMultiplier || 0.75}</span><br/>
-                        <strong>Promoted:</strong> × <span className="font-mono text-orange-600">{formData.promotedAttackMultiplier || 0.5}</span>
+                        <strong>Weak:</strong> × <span className="font-mono text-orange-600">{formData.weakAttackMultiplier || 0.85}</span><br/>
+                        <strong>Promoted:</strong> × <span className="font-mono text-orange-600">{formData.promotedAttackMultiplier || 0.7}</span>
                       </p>
                     </div>
                   </div>
@@ -953,11 +953,11 @@ export default function AdminGoalProjections() {
                   </thead>
                   <tbody>
                     {[
-                      { key: 'eliteAttackMultiplier', name: 'Elite Attack', default: 1.5, min: 1.0, max: 2.0, description: 'Premier League elite attacking teams' },
-                      { key: 'strongAttackMultiplier', name: 'Strong Attack', default: 1.25, min: 1.0, max: 1.5, description: 'Teams with strong attacking potential' },
+                      { key: 'eliteAttackMultiplier', name: 'Elite Attack', default: 1.4, min: 1.0, max: 2.0, description: 'Premier League elite attacking teams' },
+                      { key: 'strongAttackMultiplier', name: 'Strong Attack', default: 1.1, min: 1.0, max: 1.5, description: 'Teams with strong attacking potential' },
                       { key: 'averageAttackMultiplier', name: 'Average Attack', default: 1.0, min: 0.8, max: 1.2, description: 'Mid-table teams (baseline)' },
-                      { key: 'weakAttackMultiplier', name: 'Weak Attack', default: 0.75, min: 0.5, max: 1.0, description: 'Teams with attacking struggles' },
-                      { key: 'promotedAttackMultiplier', name: 'Promoted Attack', default: 0.5, min: 0.3, max: 1.0, description: 'Newly promoted teams' }
+                      { key: 'weakAttackMultiplier', name: 'Weak Attack', default: 0.85, min: 0.5, max: 1.0, description: 'Teams with attacking struggles' },
+                      { key: 'promotedAttackMultiplier', name: 'Promoted Attack', default: 0.7, min: 0.3, max: 1.0, description: 'Newly promoted teams' }
                     ].map((setting) => {
                       const currentValue = (formData as any)[setting.key] || setting.default;
                       const isChanged = Math.abs(currentValue - setting.default) > 0.01;
@@ -1205,11 +1205,11 @@ export default function AdminGoalProjections() {
                   </thead>
                   <tbody>
                     {[
-                      { key: 'eliteDefenseMultiplier', name: 'Elite Defense', default: 0.5, min: 0.3, max: 0.8, description: 'Premier League elite defensive teams' },
-                      { key: 'strongDefenseMultiplier', name: 'Strong Defense', default: 0.75, min: 0.5, max: 1.0, description: 'Teams with strong defensive records' },
+                      { key: 'eliteDefenseMultiplier', name: 'Elite Defense', default: 0.7, min: 0.3, max: 0.8, description: 'Premier League elite defensive teams' },
+                      { key: 'strongDefenseMultiplier', name: 'Strong Defense', default: 0.85, min: 0.5, max: 1.0, description: 'Teams with strong defensive records' },
                       { key: 'averageDefenseMultiplier', name: 'Average Defense', default: 1.0, min: 0.8, max: 1.2, description: 'Mid-table teams (baseline)' },
-                      { key: 'weakDefenseMultiplier', name: 'Weak Defense', default: 1.25, min: 1.0, max: 1.8, description: 'Teams with defensive vulnerabilities' },
-                      { key: 'promotedDefenseMultiplier', name: 'Promoted Defense', default: 1.5, min: 1.2, max: 2.0, description: 'Newly promoted teams' }
+                      { key: 'weakDefenseMultiplier', name: 'Weak Defense', default: 1.15, min: 1.0, max: 1.8, description: 'Teams with defensive vulnerabilities' },
+                      { key: 'promotedDefenseMultiplier', name: 'Promoted Defense', default: 1.3, min: 1.2, max: 2.0, description: 'Newly promoted teams' }
                     ].map((setting) => {
                       const currentValue = (formData as any)[setting.key] || setting.default;
                       const isChanged = Math.abs(currentValue - setting.default) > 0.01;
