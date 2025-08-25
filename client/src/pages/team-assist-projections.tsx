@@ -21,7 +21,8 @@ interface TeamAssistProjection {
 }
 
 export default function TeamAssistProjections() {
-  const [weeks, setWeeks] = useState<number>(38);
+  const [startGameweek, setStartGameweek] = useState<string>("3");
+  const [endGameweek, setEndGameweek] = useState<string>("8");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
 
@@ -61,17 +62,21 @@ export default function TeamAssistProjections() {
     const gameweekTotals: { [gameweek: number]: number } = {};
     let overallTotal = 0;
     
-    // Calculate totals for all 38 gameweeks
-    for (let gwNumber = 1; gwNumber <= 38; gwNumber++) {
+    const startGW = parseInt(startGameweek);
+    const endGW = parseInt(endGameweek);
+    const totalWeeks = endGW - startGW + 1;
+    
+    // Calculate totals for selected gameweek range
+    for (let gwNumber = startGW; gwNumber <= endGW; gwNumber++) {
       const gwTotal = filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
       gameweekTotals[gwNumber] = gwTotal;
       overallTotal += gwTotal;
     }
     
-    const averagePerGame = overallTotal / 38;
+    const averagePerGame = overallTotal / totalWeeks;
     
     return { gameweekTotals, overallTotal, averagePerGame };
-  }, [filteredProjections, bootstrapData]);
+  }, [filteredProjections, bootstrapData, startGameweek, endGameweek]);
 
   // Helper functions for styling
   const getAssistsColor = (assists: number) => {

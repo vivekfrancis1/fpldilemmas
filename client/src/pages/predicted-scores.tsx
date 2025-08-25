@@ -37,7 +37,8 @@ interface PredictedScore {
 }
 
 export default function PredictedScores() {
-  const [selectedGameweek, setSelectedGameweek] = useState<string>("all");
+  const [startGameweek, setStartGameweek] = useState<string>("3");
+  const [endGameweek, setEndGameweek] = useState<string>("8");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [showFinished, setShowFinished] = useState<string>("all");
 
@@ -52,8 +53,11 @@ export default function PredictedScores() {
   const filteredScores = useMemo(() => {
     if (!predictedScoresData) return [];
     
+    const startGW = parseInt(startGameweek);
+    const endGW = parseInt(endGameweek);
+    
     return predictedScoresData.filter(match => {
-      const gameweekMatch = selectedGameweek === "all" || match.gameweek.toString() === selectedGameweek;
+      const gameweekMatch = match.gameweek >= startGW && match.gameweek <= endGW;
       const teamMatch = selectedTeam === "all" || 
         match.homeTeam.shortName === selectedTeam || 
         match.awayTeam.shortName === selectedTeam;
@@ -66,7 +70,7 @@ export default function PredictedScores() {
       if (a.gameweek !== b.gameweek) return a.gameweek - b.gameweek;
       return new Date(a.kickoffTime).getTime() - new Date(b.kickoffTime).getTime();
     });
-  }, [predictedScoresData, selectedGameweek, selectedTeam, showFinished]);
+  }, [predictedScoresData, startGameweek, endGameweek, selectedTeam, showFinished]);
 
   const getResultColor = (teamResult: string) => {
     switch (teamResult) {

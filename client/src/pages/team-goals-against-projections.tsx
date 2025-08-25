@@ -21,7 +21,8 @@ interface TeamGoalsAgainstProjection {
 }
 
 export default function TeamGoalsAgainstProjections() {
-  const [weeks, setWeeks] = useState<number>(38);
+  const [startGameweek, setStartGameweek] = useState<string>("3");
+  const [endGameweek, setEndGameweek] = useState<string>("8");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
 
@@ -61,17 +62,21 @@ export default function TeamGoalsAgainstProjections() {
     const gameweekTotals: { [gameweek: number]: number } = {};
     let overallTotal = 0;
     
-    // Calculate totals for all 38 gameweeks
-    for (let gwNumber = 1; gwNumber <= 38; gwNumber++) {
+    const startGW = parseInt(startGameweek);
+    const endGW = parseInt(endGameweek);
+    const totalWeeks = endGW - startGW + 1;
+    
+    // Calculate totals for selected gameweek range
+    for (let gwNumber = startGW; gwNumber <= endGW; gwNumber++) {
       const gwTotal = filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
       gameweekTotals[gwNumber] = gwTotal;
       overallTotal += gwTotal;
     }
     
-    const averagePerGame = overallTotal / 38;
+    const averagePerGame = overallTotal / totalWeeks;
     
     return { gameweekTotals, overallTotal, averagePerGame };
-  }, [filteredProjections, bootstrapData]);
+  }, [filteredProjections, bootstrapData, startGameweek, endGameweek]);
 
   const getConfidenceColor = (confidence: string) => {
     switch (confidence) {
@@ -124,6 +129,38 @@ export default function TeamGoalsAgainstProjections() {
               <div className="flex flex-wrap gap-4 items-end">
 
                 <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Start GW:</label>
+                  <Select value={startGameweek} onValueChange={setStartGameweek}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 38 }, (_, i) => (
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                          {i + 1}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">End GW:</label>
+                  <Select value={endGameweek} onValueChange={setEndGameweek}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 38 }, (_, i) => (
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                          {i + 1}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-gray-700">Team:</label>
                   <Select value={selectedTeam} onValueChange={setSelectedTeam}>
                     <SelectTrigger className="w-32">
@@ -150,9 +187,12 @@ export default function TeamGoalsAgainstProjections() {
                       <SelectItem value="total">Total Goals Against</SelectItem>
                       <SelectItem value="average">Goals Against/Game</SelectItem>
                       <SelectItem value="position">Defensive Ranking</SelectItem>
-                      {Array.from({ length: 38 }, (_, i) => (
-                        <SelectItem key={`gw${i + 1}`} value={`gw${i + 1}`}>GW{i + 1}</SelectItem>
-                      ))}
+                      {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
+                        const gwNumber = parseInt(startGameweek) + i;
+                        return (
+                          <SelectItem key={`gw${gwNumber}`} value={`gw${gwNumber}`}>GW{gwNumber}</SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -182,8 +222,8 @@ export default function TeamGoalsAgainstProjections() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
                         Team
                       </th>
-                      {Array.from({ length: 38 }, (_, i) => {
-                        const gwNumber = i + 1;
+                      {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
+                        const gwNumber = parseInt(startGameweek) + i;
                         return (
                           <th 
                             key={gwNumber} 
