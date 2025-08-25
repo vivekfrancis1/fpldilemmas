@@ -67,6 +67,87 @@ const DEFAULT_CONFIG: UpsetConfig = {
   poissonChance: 0.8
 };
 
+// Helper component for displaying default, current, and input values
+const ConfigField = ({ 
+  label, 
+  field, 
+  type = "number", 
+  step = "0.01", 
+  min, 
+  max, 
+  description,
+  config,
+  formData,
+  updateField,
+  updateTopTeamIds
+}: {
+  label: string;
+  field: keyof UpsetConfig;
+  type?: string;
+  step?: string;
+  min?: string;
+  max?: string;
+  description?: string;
+  config?: UpsetConfig;
+  formData?: UpsetConfig;
+  updateField: (field: keyof UpsetConfig, value: any) => void;
+  updateTopTeamIds: (value: string) => void;
+}) => {
+  const defaultValue = DEFAULT_CONFIG[field];
+  const currentValue = config?.[field];
+  const formValue = formData?.[field];
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={field as string}>{label}</Label>
+      <div className="grid grid-cols-3 gap-4 p-4 border rounded-lg">
+        <div className="text-center">
+          <div className="text-xs text-gray-500 mb-1">Default</div>
+          <div className="font-mono text-sm bg-gray-100 dark:bg-gray-800 p-2 rounded">
+            {Array.isArray(defaultValue) ? defaultValue.join(", ") : String(defaultValue)}
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="text-xs text-gray-500 mb-1">Current</div>
+          <div className="font-mono text-sm bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+            {Array.isArray(currentValue) ? currentValue?.join(", ") : String(currentValue)}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-500 mb-1">New Value</div>
+          {field === 'topTeamIds' ? (
+            <Input
+              id={field as string}
+              type="text"
+              value={Array.isArray(formValue) ? formValue.join(", ") : ""}
+              onChange={(e) => updateTopTeamIds(e.target.value)}
+              placeholder="1, 2, 3, 4, 5, 6"
+              data-testid={`input-${field}`}
+            />
+          ) : (
+            <Input
+              id={field as string}
+              type={type}
+              step={step}
+              min={min}
+              max={max}
+              value={formValue as string | number}
+              onChange={(e) => {
+                const value = type === "number" ? parseFloat(e.target.value) : e.target.value;
+                updateField(field, value);
+              }}
+              data-testid={`input-${field}`}
+            />
+          )}
+        </div>
+      </div>
+      {description && (
+        <p className="text-sm text-gray-600 dark:text-gray-300">{description}</p>
+      )}
+    </div>
+  );
+};
+
 export default function AdminUpsetConfig() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -245,78 +326,6 @@ export default function AdminUpsetConfig() {
     }
   };
 
-  // Helper component for displaying default, current, and input values
-  const ConfigField = ({ 
-    label, 
-    field, 
-    type = "number", 
-    step = "0.01", 
-    min, 
-    max, 
-    description 
-  }: {
-    label: string;
-    field: keyof UpsetConfig;
-    type?: string;
-    step?: string;
-    min?: string;
-    max?: string;
-    description?: string;
-  }) => {
-    const defaultValue = DEFAULT_CONFIG[field];
-    const currentValue = config?.[field];
-    const formValue = formData?.[field];
-    
-    return (
-      <div className="space-y-2">
-        <Label htmlFor={field as string}>{label}</Label>
-        <div className="grid grid-cols-3 gap-4 p-4 border rounded-lg">
-          <div className="text-center">
-            <div className="text-xs text-gray-500 mb-1">Default</div>
-            <div className="font-mono text-sm bg-gray-100 dark:bg-gray-800 p-2 rounded">
-              {Array.isArray(defaultValue) ? defaultValue.join(", ") : String(defaultValue)}
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-xs text-gray-500 mb-1">Current</div>
-            <div className="font-mono text-sm bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
-              {Array.isArray(currentValue) ? currentValue?.join(", ") : String(currentValue)}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-gray-500 mb-1">New Value</div>
-            {field === 'topTeamIds' ? (
-              <Input
-                id={field as string}
-                type="text"
-                value={Array.isArray(formValue) ? formValue.join(", ") : ""}
-                onChange={(e) => updateTopTeamIds(e.target.value)}
-                placeholder="1, 2, 3, 4, 5, 6"
-                data-testid={`input-${field}`}
-              />
-            ) : (
-              <Input
-                id={field as string}
-                type={type}
-                step={step}
-                min={min}
-                max={max}
-                value={formValue as string | number}
-                onChange={(e) => {
-                  const value = type === "number" ? parseFloat(e.target.value) : e.target.value;
-                  updateField(field, value);
-                }}
-                data-testid={`input-${field}`}
-              />
-            )}
-          </div>
-        </div>
-        {description && (
-          <p className="text-sm text-gray-600 dark:text-gray-300">{description}</p>
-        )}
-      </div>
-    );
-  };
 
   if (isLoading || !formData) {
     return (
@@ -527,6 +536,10 @@ export default function AdminUpsetConfig() {
                   min="0.1"
                   max="1.0"
                   description="Minimum performance multiplier (0.8 = 20% reduction)"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
                 />
                 
                 <ConfigField
@@ -537,6 +550,10 @@ export default function AdminUpsetConfig() {
                   min="1.0"
                   max="2.0"
                   description="Maximum performance multiplier (1.2 = 20% boost)"
+                  config={config}
+                  formData={formData}
+                  updateField={updateField}
+                  updateTopTeamIds={updateTopTeamIds}
                 />
               </div>
 
