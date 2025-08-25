@@ -22,7 +22,7 @@ interface TeamGoalProjection {
 
 export default function TeamGoalProjections() {
   const [startGameweek, setStartGameweek] = useState<string>("3");
-  const [endGameweek, setEndGameweek] = useState<string>("8");
+  const [endGameweek, setEndGameweek] = useState<string>("8"); 
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
 
