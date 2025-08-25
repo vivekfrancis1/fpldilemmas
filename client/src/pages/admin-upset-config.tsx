@@ -48,10 +48,10 @@ interface UpsetConfig {
 // Default configuration values
 const DEFAULT_CONFIG: UpsetConfig = {
   enableControlledVariance: true,
-  enableContextUpsets: true,
+  enableContextUpsets: false,
   enableSmartRounding: true,
-  enableSeasonUpsetBudget: true,
-  enablePoissonDistribution: true,
+  enableSeasonUpsetBudget: false,
+  enablePoissonDistribution: false,
   varianceMin: 0.8,
   varianceMax: 1.2,
   giantKillingBoost: 0.15,

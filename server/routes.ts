@@ -4880,7 +4880,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     enableContextUpsets: false,
     enableSmartRounding: true,
     enableSeasonUpsetBudget: false,
-    enablePoissonDistribution: true,
+    enablePoissonDistribution: false,
     
     // Option 2: Controlled Variance settings
     varianceMin: 0.8,
