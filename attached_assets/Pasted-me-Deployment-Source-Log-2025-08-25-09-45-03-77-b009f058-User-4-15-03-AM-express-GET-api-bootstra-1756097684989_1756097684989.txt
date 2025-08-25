@@ -1,0 +1,160 @@
+me
+Deployment
+Source
+Log
+2025-08-25 09:45:03.77
+b009f058
+User
+4:15:03 AM [express] GET /api/bootstrap-static 200 in 213ms :: {"chips":[{"id":1,"name":"wildcard","…
+2025-08-25 09:48:00.03
+b009f058
+User
+4:18:00 AM [express] GET /api/price-changes/recent 200 in 9828ms :: [{"player_id":82,"player_name":"…
+2025-08-25 09:48:28.64
+b009f058
+User
+DEBUG: Match Projections API called - generating all 38 gameweeks
+2025-08-25 09:48:28.64
+b009f058
+User
+DEBUG: Team Goal Projections API called - generating all 38 gameweeks
+2025-08-25 09:48:28.65
+b009f058
+User
+DEBUG: Team CS Projections API called - generating all 38 gameweeks
+2025-08-25 09:48:28.71
+b009f058
+User
+DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping
+2025-08-25 09:48:28.71
+b009f058
+User
+DEBUG: Team Goal Projections API called - generating all 38 gameweeks
+2025-08-25 09:48:29.76
+b009f058
+User
+DEBUG: Goals Scored - GW1 ACTUAL - EVE scored: 0 goals
+2025-08-25 09:48:29.76
+b009f058
+User
+DEBUG: Goals Scored - GW1 ACTUAL - FUL scored: 1 goals
+2025-08-25 09:48:29.76
+b009f058
+User
+DEBUG: Goals Scored - GW1 ACTUAL - LEE scored: 1 goals
+2025-08-25 09:48:29.76
+b009f058
+User
+DEBUG: Goals Scored - GW1 ACTUAL - LIV scored: 4 goals
+2025-08-25 09:48:29.76
+b009f058
+User
+DEBUG: Goals Scored - GW1 ACTUAL - MCI scored: 4 goals
+2025-08-25 09:48:29.76
+b009f058
+User
+DEBUG: Goals Scored - GW1 ACTUAL - MUN scored: 0 goals
+2025-08-25 09:48:29.76
+b009f058
+User
+DEBUG: Goals Scored - GW1 ACTUAL - NEW scored: 0 goals
+2025-08-25 09:48:29.76
+b009f058
+User
+DEBUG: Goals Scored - GW1 ACTUAL - NFO scored: 3 goals
+2025-08-25 09:48:29.76
+b009f058
+User
+DEBUG: Goals Scored - GW1 ACTUAL - SUN scored: 3 goals
+2025-08-25 09:48:29.76
+b009f058
+User
+DEBUG: Goals Scored - GW1 ACTUAL - TOT scored: 3 goals
+2025-08-25 09:48:29.76
+b009f058
+User
+DEBUG: Goals Scored - GW1 ACTUAL - WHU scored: 0 goals
+2025-08-25 09:48:29.76
+b009f058
+User
+DEBUG: Goals Scored - GW1 ACTUAL - WOL scored: 0 goals
+2025-08-25 09:48:29.76
+b009f058
+User
+4:18:29 AM [express] GET /api/team-goal-projections 200 in 94ms :: [{"id":13,"team":"MCI","teamShort…
+2025-08-25 09:48:29.81
+b009f058
+User
+DEBUG: PERFECT MIRROR SUCCESS - Goals Scored: 1059.15, Goals Against: 1059.15
+2025-08-25 09:48:29.81
+b009f058
+User
+4:18:29 AM [express] GET /api/team-goals-against-projections 200 in 149ms :: [{"id":1,"team":"ARS","…
+2025-08-25 09:48:29.86
+b009f058
+User
+DEBUG: Processing all 38 gameweeks for clean sheets, current GW: 2
+2025-08-25 09:48:29.86
+b009f058
+User
+4:18:29 AM [express] GET /api/team-cs-projections 200 in 202ms :: [{"id":1,"team":"ARS","teamShort":…
+2025-08-25 09:48:29.91
+b009f058
+User
+DEBUG: Processing all 38 gameweeks for match projections, current GW: 2
+2025-08-25 09:48:29.91
+b009f058
+User
+4:18:29 AM [express] GET /api/projected-goals-cs 200 in 256ms :: [{"id":1,"gameweek":1,"kickoffTime"…
+2025-08-25 09:48:29.92
+b009f058
+User
+4:18:29 AM [express] GET /api/predicted-scores 200 in 266ms :: [{"id":1,"gameweek":1,"kickoffTime":"…
+2025-08-25 09:48:29.93
+b009f058
+User
+4:18:29 AM [express] GET /api/projected-standings 200 in 335ms :: [{"id":12,"name":"Liverpool","shor…
+2025-08-25 09:48:30.82
+b009f058
+User
+DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping
+2025-08-25 09:48:30.83
+b009f058
+User
+DEBUG: Team Goal Projections API called - generating all 38 gameweeks
+2025-08-25 09:48:30.87
+b009f058
+User
+DEBUG: Processing all 38 gameweeks, current GW: 2
+2025-08-25 09:48:30.87
+b009f058
+User
+DEBUG: Goals Scored - GW1 COMPLETE - All 10 fixtures finished, using ACTUAL data
+2025-08-25 09:48:30.87
+b009f058
+User
+DEBUG: Goals Scored - GW2 INCOMPLETE - 9/10 fixtures finished, using PROJECTIONS
+2025-08-25 09:48:30.87
+b009f058
+User
+DEBUG: Goals Scored - GW3 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+2025-08-25 09:48:30.87
+b009f058
+User
+DEBUG: Goals Scored - GW4 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+2025-08-25 09:48:30.87
+b009f058
+User
+DEBUG: Goals Scored - GW5 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+2025-08-25 09:48:30.87
+b009f058
+User
+DEBUG: Goals Scored - GW6 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+2025-08-25 09:48:30.88
+b009f058
+User
+DEBUG: Goals Scored - GW7 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
+2025-08-25 09:48:30.88
+b009f058
+User
+DEBUG: Goals Scored - GW8 INCOMPLETE - 0/10 fixtures finished, using PROJECTIONS
