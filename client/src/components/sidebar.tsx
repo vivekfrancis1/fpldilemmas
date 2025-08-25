@@ -44,7 +44,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Most Popular",
       items: [
         { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: true },
-        { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar, description: "Fixture difficulty analysis", popular: true }
+        { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar, description: "Fixture difficulty analysis", popular: true },
+        { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: false }
       ]
     },
     {
@@ -65,8 +66,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Analysis Tools", 
       items: [
         // { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
-        { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: false },
-
         // { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
       ]
     },
