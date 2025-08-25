@@ -108,6 +108,38 @@ export default function TeamCSProjections() {
               <div className="flex flex-wrap gap-4 items-end">
 
                 <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Start GW:</label>
+                  <Select value={startGameweek} onValueChange={setStartGameweek}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 38 }, (_, i) => (
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                          {i + 1}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">End GW:</label>
+                  <Select value={endGameweek} onValueChange={setEndGameweek}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 38 }, (_, i) => (
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                          {i + 1}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-gray-700">Team:</label>
                   <Select value={selectedTeam} onValueChange={setSelectedTeam}>
                     <SelectTrigger className="w-32">
@@ -133,9 +165,12 @@ export default function TeamCSProjections() {
                     <SelectContent>
                       <SelectItem value="average">CS/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
-                      {Array.from({ length: 38 }, (_, i) => (
-                        <SelectItem key={`gw${i + 1}`} value={`gw${i + 1}`}>GW{i + 1}</SelectItem>
-                      ))}
+                      {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
+                        const gwNumber = parseInt(startGameweek) + i;
+                        return (
+                          <SelectItem key={`gw${gwNumber}`} value={`gw${gwNumber}`}>GW{gwNumber}</SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -148,7 +183,7 @@ export default function TeamCSProjections() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Team CS Projections: All 38 Gameweeks
+                Team CS Projections: Gameweeks {startGameweek}-{endGameweek}
                 <Badge variant="outline" className="ml-2">
                   {filteredProjections.length} teams
                 </Badge>
@@ -165,8 +200,8 @@ export default function TeamCSProjections() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
                         Team
                       </th>
-                      {Array.from({ length: 38 }, (_, i) => {
-                        const gwNumber = i + 1;
+                      {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
+                        const gwNumber = parseInt(startGameweek) + i;
                         return (
                           <th 
                             key={gwNumber} 
@@ -211,8 +246,8 @@ export default function TeamCSProjections() {
                           </div>
                         </td>
                         
-                        {Array.from({ length: 38 }, (_, weekIndex) => {
-                          const gwNumber = weekIndex + 1;
+                        {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, weekIndex) => {
+                          const gwNumber = parseInt(startGameweek) + weekIndex;
                           const csPercentage = team.gameweekProjections[gwNumber] || 0;
                           return (
                             <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getCSColor(csPercentage)}`}>

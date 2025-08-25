@@ -130,7 +130,43 @@ export default function TeamAssistProjections() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Start GW
+                </label>
+                <Select value={startGameweek} onValueChange={setStartGameweek}>
+                  <SelectTrigger data-testid="select-start-gameweek">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 38 }, (_, i) => (
+                      <SelectItem key={i + 1} value={(i + 1).toString()}>
+                        {i + 1}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  End GW
+                </label>
+                <Select value={endGameweek} onValueChange={setEndGameweek}>
+                  <SelectTrigger data-testid="select-end-gameweek">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 38 }, (_, i) => (
+                      <SelectItem key={i + 1} value={(i + 1).toString()}>
+                        {i + 1}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -165,9 +201,12 @@ export default function TeamAssistProjections() {
                     <SelectItem value="total">Total Assists</SelectItem>
                     <SelectItem value="average">Avg/Game</SelectItem>
                     <SelectItem value="position">League Position</SelectItem>
-                    {Array.from({ length: 38 }, (_, i) => (
-                      <SelectItem key={`gw${i + 1}`} value={`gw${i + 1}`}>GW{i + 1}</SelectItem>
-                    ))}
+                    {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
+                      const gwNumber = parseInt(startGameweek) + i;
+                      return (
+                        <SelectItem key={`gw${gwNumber}`} value={`gw${gwNumber}`}>GW{gwNumber}</SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -180,7 +219,7 @@ export default function TeamAssistProjections() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Team Assist Projections: All 38 Gameweeks
+              Team Assist Projections: Gameweeks {startGameweek}-{endGameweek}
               <Badge variant="outline" className="ml-2">
                 {filteredProjections.length} teams
               </Badge>
@@ -197,8 +236,8 @@ export default function TeamAssistProjections() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
                       Team
                     </th>
-                    {Array.from({ length: 38 }, (_, i) => {
-                      const gwNumber = i + 1;
+                    {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
+                      const gwNumber = parseInt(startGameweek) + i;
                       return (
                         <th 
                           key={gwNumber} 
@@ -251,8 +290,8 @@ export default function TeamAssistProjections() {
                         </div>
                       </td>
                       
-                      {Array.from({ length: 38 }, (_, weekIndex) => {
-                        const gwNumber = weekIndex + 1;
+                      {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, weekIndex) => {
+                        const gwNumber = parseInt(startGameweek) + weekIndex;
                         const assists = team.gameweekProjections[gwNumber] || 0;
                         return (
                           <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getAssistsColor(assists)}`}>
@@ -294,8 +333,8 @@ export default function TeamAssistProjections() {
                       </div>
                     </td>
                     
-                    {Array.from({ length: 38 }, (_, weekIndex) => {
-                      const gwNumber = weekIndex + 1;
+                    {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, weekIndex) => {
+                      const gwNumber = parseInt(startGameweek) + weekIndex;
                       const gwTotal = totalAssists.gameweekTotals[gwNumber] || 0;
                       return (
                         <td key={weekIndex} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
