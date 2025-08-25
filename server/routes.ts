@@ -1434,6 +1434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     midweekFixtureGoalsMultiplier: 0.91,
     seasonFinaleGoalsMultiplier: 1.05,
     newManagerBounceGoalsMultiplier: 1.08,
+    teamFormMultiplier: 1.06,
     weatherConditionsGoalsMultiplier: 0.96,
     // Market Bounds
     marketFloorMultiplier: 0.40,
@@ -1698,6 +1699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         midweekFixtureGoalsMultiplier: 0.91,
         seasonFinaleGoalsMultiplier: 1.05,
         newManagerBounceGoalsMultiplier: 1.08,
+        teamFormMultiplier: 1.06,
         weatherConditionsGoalsMultiplier: 0.96,
         marketFloorMultiplier: 0.4,
         marketCeilingMultiplier: 2.0,
@@ -1903,6 +1905,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           baseExpectedGoals *= attackingTierMultiplier;
           
           // Phase 5: Context Multipliers - Situational adjustments based on match circumstances
+          
+          // Calculate team form based on recent FPL results (last 5 games)
+          const calculateTeamForm = (teamId: number, currentGameweek: number, fixturesData: any[]) => {
+            // Get last 5 completed games for this team
+            const recentGames = fixturesData
+              .filter((f: any) => 
+                f.finished && 
+                f.event < currentGameweek && 
+                (f.team_h === teamId || f.team_a === teamId)
+              )
+              .sort((a: any, b: any) => b.event - a.event) // Most recent first
+              .slice(0, 5); // Last 5 games
+              
+            if (recentGames.length === 0) return 1.00; // Neutral form if no recent games
+            
+            let wins = 0;
+            recentGames.forEach((game: any) => {
+              const isHome = game.team_h === teamId;
+              const teamScore = isHome ? game.team_h_score : game.team_a_score;
+              const opponentScore = isHome ? game.team_a_score : game.team_h_score;
+              
+              if (teamScore > opponentScore) wins++;
+            });
+            
+            // Apply form multiplier based on wins in last 5 games
+            if (wins >= 3) {
+              return adminGoalSettings.teamFormMultiplier || 1.06; // Good form: 3-5 wins
+            } else if (wins <= 1) {
+              return (2 - (adminGoalSettings.teamFormMultiplier || 1.06)); // Poor form: 0-1 wins (inverts multiplier)
+            } else {
+              return 1.00; // Average form: 2 wins
+            }
+          };
+          
+          // Apply team form multiplier
+          const teamFormMultiplier = calculateTeamForm(team.id, fixture.event, fixturesData);
+          baseExpectedGoals *= teamFormMultiplier;
+          
           const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
           const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
           const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London

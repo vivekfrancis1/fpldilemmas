@@ -63,6 +63,7 @@ interface AdminSettings {
   midweekFixtureGoalsMultiplier: number;
   seasonFinaleGoalsMultiplier: number;
   newManagerBounceGoalsMultiplier: number;
+  teamFormMultiplier: number;
   weatherConditionsGoalsMultiplier: number;
   marketFloorMultiplier: number;
   marketCeilingMultiplier: number;
@@ -1458,7 +1459,8 @@ export default function AdminGoalProjections() {
                       { key: 'postEuropeanGoalsMultiplier', name: 'Post-European Fixtures', default: 0.88, min: 0.7, max: 1.0, description: 'After European games (-12%): Player fatigue from Champions/Europa League matches leads to reduced intensity and squad rotation affecting performance.' },
                       { key: 'midweekFixtureGoalsMultiplier', name: 'Midweek Fixtures', default: 0.91, min: 0.8, max: 1.1, description: 'Tuesday/Wednesday games (-9%): Tired players, reduced crowd attendance, disrupted preparation routines. Fixture congestion leads to conservative play.' },
                       { key: 'seasonFinaleGoalsMultiplier', name: 'Season Finale', default: 1.05, min: 0.9, max: 1.3, description: 'Final gameweek (+5%): More open matches as teams with nothing to play for take risks, though modest increase as some teams already in vacation mode.' },
-                      { key: 'newManagerBounceGoalsMultiplier', name: 'New Manager Bounce', default: 1.08, min: 1.0, max: 1.3, description: 'Honeymoon period (+8%): New tactical changes, renewed motivation, players trying to impress. Fresh approach leads to more attacking, adventurous play.' }
+                      { key: 'newManagerBounceGoalsMultiplier', name: 'New Manager Bounce', default: 1.08, min: 1.0, max: 1.3, description: 'Honeymoon period (+8%): New tactical changes, renewed motivation, players trying to impress. Fresh approach leads to more attacking, adventurous play.' },
+                      { key: 'teamFormMultiplier', name: 'Team Form', default: 1.06, min: 0.9, max: 1.15, description: 'Recent performance (+6% good/-6% poor): Teams in good form (3-4 wins in last 5) show improved confidence and momentum, while poor form teams (0-1 wins) display reduced confidence.' }
                     ].map((setting) => {
                       const currentValue = (formData as any)[setting.key] || setting.default;
                       const isChanged = Math.abs(currentValue - setting.default) > 0.01;
