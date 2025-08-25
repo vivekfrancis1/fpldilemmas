@@ -30,9 +30,17 @@ export default function TeamGoalsAgainstProjections() {
     queryKey: ["/api/bootstrap-static"],
   });
 
-  const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamGoalsAgainstProjection[]>({
-    queryKey: ["/api/team-goals-against-projections"],
+  const { data: combinedData, isLoading: projectionsLoading } = useQuery<{
+    goalsScored: any[];
+    goalsAgainst: TeamGoalsAgainstProjection[];
+    totalGoalsScored: number;
+    totalGoalsAgainst: number;
+    perfectBalance: boolean;
+  }>({
+    queryKey: ["/api/team-projections-combined"],
   });
+
+  const projectionsData = combinedData?.goalsAgainst;
 
   const filteredProjections = useMemo(() => {
     if (!projectionsData) return [];
@@ -385,6 +393,25 @@ export default function TeamGoalsAgainstProjections() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Balance Status */}
+          {combinedData && (
+            <Card className="mt-6 border-green-200 bg-green-50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                  <div>
+                    <span className="font-semibold text-green-900">Perfect Mathematical Balance</span>
+                    <p className="text-sm text-green-700">
+                      Goals Scored: {combinedData.totalGoalsScored?.toFixed(1)} | 
+                      Goals Against: {combinedData.totalGoalsAgainst?.toFixed(1)} | 
+                      Balance: {combinedData.perfectBalance ? '✓ Perfect' : '⚠ Variance'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Info Panel */}
           <Card className="mt-6">

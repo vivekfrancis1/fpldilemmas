@@ -4284,6 +4284,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Combined Team Projections endpoint - Perfect Balance with Shared Variance
+  app.get("/api/team-projections-combined", async (req, res) => {
+    // FORCE disable all caching to ensure admin changes reflect immediately
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.set('Last-Modified', new Date().toUTCString());
+    res.set('ETag', `"${Date.now()}"`);
+    
+    try {
+      console.log(`DEBUG: Combined Team Projections API called - generating Goals Scored & Goals Against with shared variance`);
+      
+      // Use hardcoded teams for better performance
+      const { PREMIER_LEAGUE_TEAMS } = await import("@shared/schema");
+      
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      
+      const teams = PREMIER_LEAGUE_TEAMS;
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      
+      // Use centralized team service
+      const teamService = await createTeamService();
+      const bettingData = teamService.getBettingData();
+      
+      // Use the same local adminGoalSettings variable as other endpoints
+      // adminGoalSettings is defined globally in this file
+      
+      console.log(`DEBUG: Processing all 38 gameweeks with shared variance, current GW: ${currentGameweek}`);
+      
+      // Check which gameweeks are COMPLETELY finished
+      const completeGameweeks = new Set();
+      for (let gw = 1; gw <= 38; gw++) {
+        const gameweekFixtures = fixturesData.filter((f: any) => f.event === gw);
+        const finishedFixtures = gameweekFixtures.filter((f: any) => f.finished);
+        
+        if (gameweekFixtures.length > 0 && finishedFixtures.length === gameweekFixtures.length) {
+          completeGameweeks.add(gw);
+        }
+      }
+      
+      // Initialize both goals scored and goals against structures
+      const goalsScored = new Map();
+      const goalsAgainst = new Map();
+      
+      teams.forEach((team: any) => {
+        const gameweekProjections: any = {};
+        for (let gw = 1; gw <= 38; gw++) {
+          gameweekProjections[gw] = 0;
+        }
+        
+        // Goals Scored structure
+        goalsScored.set(team.id, {
+          id: team.id,
+          team: team.short_name,
+          teamShort: team.short_name,
+          teamName: team.name,
+          gameweekProjections: { ...gameweekProjections },
+          totalProjectedGoals: 0,
+          averageGoalsPerGame: 0,
+          confidence: 'Medium',
+          position: 0
+        });
+        
+        // Goals Against structure
+        goalsAgainst.set(team.id, {
+          id: team.id,
+          team: team.short_name,
+          teamShort: team.short_name,
+          teamName: team.name,
+          gameweekProjections: { ...gameweekProjections },
+          totalProjectedGoalsAgainst: 0,
+          averageGoalsAgainstPerGame: 0,
+          confidence: 'Medium',
+          position: 0
+        });
+      });
+      
+      // Process fixtures with SHARED variance values
+      fixturesData.forEach((fixture: any) => {
+        if (fixture.event >= 1 && fixture.event <= 38) {
+          const homeTeam = goalsScored.get(fixture.team_h);
+          const awayTeam = goalsScored.get(fixture.team_a);
+          const homeTeamAgainst = goalsAgainst.get(fixture.team_h);
+          const awayTeamAgainst = goalsAgainst.get(fixture.team_a);
+          
+          if (homeTeam && awayTeam && homeTeamAgainst && awayTeamAgainst) {
+            if (completeGameweeks.has(fixture.event)) {
+              // Use actual data for complete gameweeks
+              const homeGoals = fixture.team_h_score || 0;
+              const awayGoals = fixture.team_a_score || 0;
+              
+              homeTeam.gameweekProjections[fixture.event] = homeGoals;
+              awayTeam.gameweekProjections[fixture.event] = awayGoals;
+              homeTeamAgainst.gameweekProjections[fixture.event] = awayGoals;
+              awayTeamAgainst.gameweekProjections[fixture.event] = homeGoals;
+              
+              console.log(`DEBUG: Goals Scored - GW${fixture.event} ACTUAL - ${homeTeam.teamShort} scored: ${homeGoals} goals`);
+            } else {
+              // Use projections for incomplete gameweeks - basic calculation for now
+              const homeTeamData = teams.find((t: any) => t.id === fixture.team_h);
+              const awayTeamData = teams.find((t: any) => t.id === fixture.team_a);
+              
+              if (homeTeamData && awayTeamData) {
+                // Basic goal calculation - can be enhanced later
+                let homeGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
+                let awayGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
+                
+                // Apply home advantage
+                homeGoals *= adminGoalSettings.homeAdvantageGoalsMultiplier;
+                awayGoals *= adminGoalSettings.awayFactorGoalsMultiplier;
+                
+                // Apply attacking tier multipliers
+                const getAttackTier = (teamId: number) => {
+                  const parseArray = (arr: any) => Array.isArray(arr) ? arr : JSON.parse(arr || '[]');
+                  if (parseArray(adminGoalSettings.eliteAttackTeams).includes(teamId)) return adminGoalSettings.eliteAttackMultiplier;
+                  if (parseArray(adminGoalSettings.strongAttackTeams).includes(teamId)) return adminGoalSettings.strongAttackMultiplier;
+                  if (parseArray(adminGoalSettings.weakAttackTeams).includes(teamId)) return adminGoalSettings.weakAttackMultiplier;
+                  if (parseArray(adminGoalSettings.promotedAttackTeams).includes(teamId)) return adminGoalSettings.promotedAttackMultiplier;
+                  return adminGoalSettings.averageAttackMultiplier;
+                };
+                
+                const getDefenseTier = (teamId: number) => {
+                  const parseArray = (arr: any) => Array.isArray(arr) ? arr : JSON.parse(arr || '[]');
+                  if (parseArray(adminGoalSettings.eliteDefenseTeams).includes(teamId)) return adminGoalSettings.eliteDefenseMultiplier;
+                  if (parseArray(adminGoalSettings.strongDefenseTeams).includes(teamId)) return adminGoalSettings.strongDefenseMultiplier;
+                  if (parseArray(adminGoalSettings.weakDefenseTeams).includes(teamId)) return adminGoalSettings.weakDefenseMultiplier;
+                  if (parseArray(adminGoalSettings.promotedDefenseTeams).includes(teamId)) return adminGoalSettings.promotedDefenseMultiplier;
+                  return adminGoalSettings.averageDefenseMultiplier;
+                };
+                
+                homeGoals *= getAttackTier(homeTeamData.id);
+                homeGoals *= getDefenseTier(awayTeamData.id);
+                
+                awayGoals *= getAttackTier(awayTeamData.id);
+                awayGoals *= getDefenseTier(homeTeamData.id);
+                
+                // Apply bounds
+                homeGoals = Math.max(adminGoalSettings.absoluteMinGoals || 0, Math.min(homeGoals, adminGoalSettings.absoluteMaxGoals || 7));
+                awayGoals = Math.max(adminGoalSettings.absoluteMinGoals || 0, Math.min(awayGoals, adminGoalSettings.absoluteMaxGoals || 7));
+                
+                homeTeam.gameweekProjections[fixture.event] = homeGoals;
+                awayTeam.gameweekProjections[fixture.event] = awayGoals;
+                homeTeamAgainst.gameweekProjections[fixture.event] = awayGoals;
+                awayTeamAgainst.gameweekProjections[fixture.event] = homeGoals;
+              }
+            }
+          }
+        }
+      });
+      
+      // Calculate totals and averages for both structures
+      let totalGoalsScored = 0;
+      let totalGoalsAgainst = 0;
+      
+      goalsScored.forEach((team, teamId) => {
+        team.totalProjectedGoals = Object.values(team.gameweekProjections).reduce((sum: number, goals: any) => sum + goals, 0);
+        team.averageGoalsPerGame = team.totalProjectedGoals / 38;
+        totalGoalsScored += team.totalProjectedGoals;
+        
+        const teamAgainst = goalsAgainst.get(teamId);
+        if (teamAgainst) {
+          teamAgainst.totalProjectedGoalsAgainst = Object.values(teamAgainst.gameweekProjections).reduce((sum: number, goals: any) => sum + goals, 0);
+          teamAgainst.averageGoalsAgainstPerGame = teamAgainst.totalProjectedGoalsAgainst / 38;
+          totalGoalsAgainst += teamAgainst.totalProjectedGoalsAgainst;
+        }
+      });
+      
+      console.log(`DEBUG: SHARED VARIANCE SUCCESS - Goals Scored: ${totalGoalsScored.toFixed(2)}, Goals Against: ${totalGoalsAgainst.toFixed(2)}`);
+      
+      // Convert to arrays and sort
+      const goalsScoredArray = Array.from(goalsScored.values()).sort((a, b) => b.totalProjectedGoals - a.totalProjectedGoals);
+      const goalsAgainstArray = Array.from(goalsAgainst.values()).sort((a, b) => a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst);
+      
+      // Add positions
+      goalsScoredArray.forEach((team, index) => {
+        team.position = index + 1;
+      });
+      goalsAgainstArray.forEach((team, index) => {
+        team.position = index + 1;
+      });
+      
+      res.json({
+        goalsScored: goalsScoredArray,
+        goalsAgainst: goalsAgainstArray,
+        totalGoalsScored: totalGoalsScored,
+        totalGoalsAgainst: totalGoalsAgainst,
+        perfectBalance: Math.abs(totalGoalsScored - totalGoalsAgainst) < 0.01
+      });
+    } catch (error) {
+      console.error('Error generating combined team projections:', error);
+      res.status(500).json({ error: 'Failed to generate combined team projections' });
+    }
+  });
+
   // Team Goals Against Projections endpoint - PERFECT MIRROR IMAGE
   app.get("/api/team-goals-against-projections", async (req, res) => {
     try {
