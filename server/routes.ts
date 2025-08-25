@@ -4011,18 +4011,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Process each match to create predicted scores
       const predictedScores = matchProjections.map((match: any) => {
-        // Add controlled variance to create realistic upsets (±20% variance)
+        // Option 2: Controlled variance (±20% variance)
         const homeVariance = 0.8 + (Math.random() * 0.4); // Range: 0.8 to 1.2
         const awayVariance = 0.8 + (Math.random() * 0.4); // Range: 0.8 to 1.2
         
-        // Apply variance to expected goals
-        const homeExpectedWithVariance = match.homeTeam.expectedGoals * homeVariance;
-        const awayExpectedWithVariance = match.awayTeam.expectedGoals * awayVariance;
+        // Option 3: Context-based upsets
+        let homeContextBoost = 1.0;
+        let awayContextBoost = 1.0;
         
-        // Smart rounding with upset bias (15% chance of floor rounding for upsets)
-        const isUpsetScenario = Math.random() < 0.15;
-        const homeScore = Math.max(0, isUpsetScenario ? Math.floor(homeExpectedWithVariance) : Math.round(homeExpectedWithVariance));
-        const awayScore = Math.max(0, isUpsetScenario ? Math.floor(awayExpectedWithVariance) : Math.round(awayExpectedWithVariance));
+        // Giant-killing: Lower teams get boost vs top 6 (teams 1-6 by ID roughly)
+        const topTeamIds = [1, 7, 12, 13, 15, 18]; // ARS, CHE, LIV, MCI, NEW, TOT
+        const isHomeTopTeam = topTeamIds.includes(match.homeTeam.id);
+        const isAwayTopTeam = topTeamIds.includes(match.awayTeam.id);
+        
+        if (!isHomeTopTeam && isAwayTopTeam) {
+          homeContextBoost += 0.15; // +15% giant-killing boost for home underdog
+        }
+        if (!isAwayTopTeam && isHomeTopTeam) {
+          awayContextBoost += 0.15; // +15% giant-killing boost for away underdog
+        }
+        
+        // Pressure situations: Top teams get penalty in "must-win" scenarios (random 20% chance)
+        if (Math.random() < 0.2) {
+          if (isHomeTopTeam) homeContextBoost -= 0.1; // -10% pressure penalty
+          if (isAwayTopTeam) awayContextBoost -= 0.1; // -10% pressure penalty
+        }
+        
+        // Derby effects: Increase variance for local rivalries (random 15% chance)
+        const isDerby = Math.random() < 0.15;
+        const derbyVarianceBoost = isDerby ? 0.3 : 0.0; // +30% extra variance
+        
+        // Option 5: Season-long upset budget (random major swings 5% of the time)
+        const isUpsetBudgetScenario = Math.random() < 0.05;
+        const upsetBudgetMultiplier = isUpsetBudgetScenario ? (0.5 + Math.random() * 1.0) : 1.0; // Range: 0.5 to 1.5
+        
+        // Apply all context modifiers
+        let homeExpected = match.homeTeam.expectedGoals * homeVariance * homeContextBoost * upsetBudgetMultiplier;
+        let awayExpected = match.awayTeam.expectedGoals * awayVariance * awayContextBoost * upsetBudgetMultiplier;
+        
+        // Add derby variance if applicable
+        if (isDerby) {
+          const homeExtraVariance = 0.8 + (Math.random() * (0.4 + derbyVarianceBoost));
+          const awayExtraVariance = 0.8 + (Math.random() * (0.4 + derbyVarianceBoost));
+          homeExpected *= homeExtraVariance;
+          awayExpected *= awayExtraVariance;
+        }
+        
+        // Option 1: Poisson distribution for final scores (more realistic than rounding)
+        function poissonSample(lambda: number): number {
+          if (lambda <= 0) return 0;
+          let L = Math.exp(-lambda);
+          let k = 0;
+          let p = 1;
+          
+          do {
+            k++;
+            p *= Math.random();
+          } while (p > L);
+          
+          return Math.max(0, k - 1);
+        }
+        
+        // Option 4: Smart rounding with upset bias (15% chance of floor rounding)
+        const isRoundingUpsetScenario = Math.random() < 0.15;
+        
+        // Use Poisson 70% of the time, smart rounding 30% of the time for variety
+        let homeScore, awayScore;
+        if (Math.random() < 0.7) {
+          // Option 1: Poisson distribution
+          homeScore = poissonSample(homeExpected);
+          awayScore = poissonSample(awayExpected);
+        } else {
+          // Option 4: Smart rounding with bias
+          homeScore = Math.max(0, isRoundingUpsetScenario ? Math.floor(homeExpected) : Math.round(homeExpected));
+          awayScore = Math.max(0, isRoundingUpsetScenario ? Math.floor(awayExpected) : Math.round(awayExpected));
+        }
         
         // Determine match outcome
         let predictedResult;
