@@ -4011,9 +4011,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Process each match to create predicted scores
       const predictedScores = matchProjections.map((match: any) => {
-        // Round expected goals to nearest whole number
-        const homeScore = Math.round(match.homeTeam.expectedGoals);
-        const awayScore = Math.round(match.awayTeam.expectedGoals);
+        // Add controlled variance to create realistic upsets (±20% variance)
+        const homeVariance = 0.8 + (Math.random() * 0.4); // Range: 0.8 to 1.2
+        const awayVariance = 0.8 + (Math.random() * 0.4); // Range: 0.8 to 1.2
+        
+        // Apply variance and round to nearest whole number
+        const homeScore = Math.max(0, Math.round(match.homeTeam.expectedGoals * homeVariance));
+        const awayScore = Math.max(0, Math.round(match.awayTeam.expectedGoals * awayVariance));
         
         // Determine match outcome
         let predictedResult;
