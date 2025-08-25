@@ -254,9 +254,6 @@ export default function TeamGoalProjections() {
                           {sortBy === 'average' && <TrendingUp className="h-3 w-3" />}
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Confidence
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -295,11 +292,6 @@ export default function TeamGoalProjections() {
                           {team.averageGoalsPerGame.toFixed(2)}
                         </td>
                         
-                        <td className="px-4 py-4 text-center">
-                          <Badge className={getConfidenceColor(team.confidence)}>
-                            {team.confidence}
-                          </Badge>
-                        </td>
                       </tr>
                     ))}
                     
@@ -338,11 +330,6 @@ export default function TeamGoalProjections() {
                         {totalGoals.averagePerGame.toFixed(2)}
                       </td>
                       
-                      <td className="px-4 py-4 text-center bg-gray-100">
-                        <Badge className="bg-blue-100 text-blue-800">
-                          Summary
-                        </Badge>
-                      </td>
                     </tr>
                   </tbody>
                 </table>
