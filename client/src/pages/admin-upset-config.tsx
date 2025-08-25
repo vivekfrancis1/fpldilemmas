@@ -45,10 +45,33 @@ interface UpsetConfig {
   poissonChance: number;
 }
 
+// Default configuration values
+const DEFAULT_CONFIG: UpsetConfig = {
+  enableControlledVariance: true,
+  enableContextUpsets: true,
+  enableSmartRounding: true,
+  enableSeasonUpsetBudget: true,
+  enablePoissonDistribution: true,
+  varianceMin: 0.8,
+  varianceMax: 1.2,
+  giantKillingBoost: 0.15,
+  pressurePenalty: 0.1,
+  pressureChance: 0.3,
+  derbyVarianceBoost: 0.1,
+  derbyChance: 0.25,
+  topTeamIds: [1, 2, 3, 4, 5, 6],
+  upsetRoundingChance: 0.4,
+  upsetBudgetChance: 0.25,
+  upsetBudgetMin: 0.7,
+  upsetBudgetMax: 1.3,
+  poissonChance: 0.8
+};
+
 export default function AdminUpsetConfig() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [unsavedChanges, setUnsavedChanges] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   const { data: config, isLoading } = useQuery<UpsetConfig>({
     queryKey: ["/api/admin/upset-config"],
@@ -132,8 +155,80 @@ export default function AdminUpsetConfig() {
     }
   };
 
-  const handleReset = () => {
+  const handleGlobalReset = () => {
     resetConfigMutation.mutate();
+  };
+
+  const handleResetTab = () => {
+    if (!formData) return;
+    
+    let resetFields: Partial<UpsetConfig> = {};
+    
+    switch (activeTab) {
+      case "variance":
+        resetFields = {
+          enableControlledVariance: DEFAULT_CONFIG.enableControlledVariance,
+          varianceMin: DEFAULT_CONFIG.varianceMin,
+          varianceMax: DEFAULT_CONFIG.varianceMax
+        };
+        break;
+      case "context":
+        resetFields = {
+          enableContextUpsets: DEFAULT_CONFIG.enableContextUpsets,
+          giantKillingBoost: DEFAULT_CONFIG.giantKillingBoost,
+          pressurePenalty: DEFAULT_CONFIG.pressurePenalty,
+          pressureChance: DEFAULT_CONFIG.pressureChance,
+          derbyVarianceBoost: DEFAULT_CONFIG.derbyVarianceBoost,
+          derbyChance: DEFAULT_CONFIG.derbyChance,
+          topTeamIds: DEFAULT_CONFIG.topTeamIds
+        };
+        break;
+      case "rounding":
+        resetFields = {
+          enableSmartRounding: DEFAULT_CONFIG.enableSmartRounding,
+          upsetRoundingChance: DEFAULT_CONFIG.upsetRoundingChance
+        };
+        break;
+      case "budget":
+        resetFields = {
+          enableSeasonUpsetBudget: DEFAULT_CONFIG.enableSeasonUpsetBudget,
+          upsetBudgetChance: DEFAULT_CONFIG.upsetBudgetChance,
+          upsetBudgetMin: DEFAULT_CONFIG.upsetBudgetMin,
+          upsetBudgetMax: DEFAULT_CONFIG.upsetBudgetMax
+        };
+        break;
+      case "poisson":
+        resetFields = {
+          enablePoissonDistribution: DEFAULT_CONFIG.enablePoissonDistribution,
+          poissonChance: DEFAULT_CONFIG.poissonChance
+        };
+        break;
+      case "overview":
+        resetFields = {
+          enableControlledVariance: DEFAULT_CONFIG.enableControlledVariance,
+          enableContextUpsets: DEFAULT_CONFIG.enableContextUpsets,
+          enableSmartRounding: DEFAULT_CONFIG.enableSmartRounding,
+          enableSeasonUpsetBudget: DEFAULT_CONFIG.enableSeasonUpsetBudget,
+          enablePoissonDistribution: DEFAULT_CONFIG.enablePoissonDistribution
+        };
+        break;
+    }
+    
+    setFormData(prev => prev ? { ...prev, ...resetFields } : null);
+    setUnsavedChanges(true);
+    toast({
+      title: "Tab Reset",
+      description: `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} tab reset to defaults`,
+    });
+  };
+
+  const handleResetPage = () => {
+    setFormData(DEFAULT_CONFIG);
+    setUnsavedChanges(true);
+    toast({
+      title: "Page Reset",
+      description: "All settings reset to defaults (not yet saved)",
+    });
   };
 
   const updateField = (field: keyof UpsetConfig, value: any) => {
@@ -148,6 +243,79 @@ export default function AdminUpsetConfig() {
     } catch (error) {
       // Invalid input, ignore
     }
+  };
+
+  // Helper component for displaying default, current, and input values
+  const ConfigField = ({ 
+    label, 
+    field, 
+    type = "number", 
+    step = "0.01", 
+    min, 
+    max, 
+    description 
+  }: {
+    label: string;
+    field: keyof UpsetConfig;
+    type?: string;
+    step?: string;
+    min?: string;
+    max?: string;
+    description?: string;
+  }) => {
+    const defaultValue = DEFAULT_CONFIG[field];
+    const currentValue = config?.[field];
+    const formValue = formData?.[field];
+    
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={field as string}>{label}</Label>
+        <div className="grid grid-cols-3 gap-4 p-4 border rounded-lg">
+          <div className="text-center">
+            <div className="text-xs text-gray-500 mb-1">Default</div>
+            <div className="font-mono text-sm bg-gray-100 dark:bg-gray-800 p-2 rounded">
+              {Array.isArray(defaultValue) ? defaultValue.join(", ") : String(defaultValue)}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-gray-500 mb-1">Current</div>
+            <div className="font-mono text-sm bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+              {Array.isArray(currentValue) ? currentValue?.join(", ") : String(currentValue)}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500 mb-1">New Value</div>
+            {field === 'topTeamIds' ? (
+              <Input
+                id={field as string}
+                type="text"
+                value={Array.isArray(formValue) ? formValue.join(", ") : ""}
+                onChange={(e) => updateTopTeamIds(e.target.value)}
+                placeholder="1, 2, 3, 4, 5, 6"
+                data-testid={`input-${field}`}
+              />
+            ) : (
+              <Input
+                id={field as string}
+                type={type}
+                step={step}
+                min={min}
+                max={max}
+                value={formValue as string | number}
+                onChange={(e) => {
+                  const value = type === "number" ? parseFloat(e.target.value) : e.target.value;
+                  updateField(field, value);
+                }}
+                data-testid={`input-${field}`}
+              />
+            )}
+          </div>
+        </div>
+        {description && (
+          <p className="text-sm text-gray-600 dark:text-gray-300">{description}</p>
+        )}
+      </div>
+    );
   };
 
   if (isLoading || !formData) {
@@ -175,15 +343,34 @@ export default function AdminUpsetConfig() {
           </div>
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <Button
-            onClick={handleReset}
+            onClick={handleResetTab}
+            variant="outline"
+            size="sm"
+            disabled={activeTab === "overview"}
+            data-testid="button-reset-tab"
+          >
+            <RotateCcw className="w-4 h-4 mr-1" />
+            Reset Tab
+          </Button>
+          <Button
+            onClick={handleResetPage}
+            variant="outline"
+            size="sm"
+            data-testid="button-reset-page"
+          >
+            <RotateCcw className="w-4 h-4 mr-1" />
+            Reset Page
+          </Button>
+          <Button
+            onClick={handleGlobalReset}
             variant="outline"
             disabled={resetConfigMutation.isPending}
-            data-testid="button-reset-config"
+            data-testid="button-global-reset"
           >
             <RotateCcw className="w-4 h-4 mr-2" />
-            Reset to Defaults
+            Global Reset
           </Button>
           <Button
             onClick={handleSave}
@@ -191,7 +378,7 @@ export default function AdminUpsetConfig() {
             data-testid="button-save-config"
           >
             <Save className="w-4 h-4 mr-2" />
-            Save Configuration
+            Save Changes
           </Button>
         </div>
       </div>
@@ -205,7 +392,7 @@ export default function AdminUpsetConfig() {
         </Alert>
       )}
 
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="variance">Variance</TabsTrigger>
@@ -319,40 +506,38 @@ export default function AdminUpsetConfig() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-center justify-between p-4 border rounded-lg mb-6">
                 <div>
-                  <Label htmlFor="variance-min">Variance Minimum</Label>
-                  <Input
-                    id="variance-min"
-                    type="number"
-                    step="0.01"
-                    min="0.1"
-                    max="1.0"
-                    value={formData.varianceMin}
-                    onChange={(e) => updateField('varianceMin', parseFloat(e.target.value))}
-                    data-testid="input-variance-min"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 0.8 (20% performance reduction)
-                  </p>
+                  <h3 className="font-semibold">Enable Controlled Variance</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Random performance fluctuations (±20%)</p>
                 </div>
+                <Switch
+                  checked={formData.enableControlledVariance}
+                  onCheckedChange={(value) => updateField('enableControlledVariance', value)}
+                  data-testid="switch-variance"
+                />
+              </div>
+              
+              <div className="space-y-6">
+                <ConfigField
+                  label="Variance Minimum"
+                  field="varianceMin"
+                  type="number"
+                  step="0.01"
+                  min="0.1"
+                  max="1.0"
+                  description="Minimum performance multiplier (0.8 = 20% reduction)"
+                />
                 
-                <div>
-                  <Label htmlFor="variance-max">Variance Maximum</Label>
-                  <Input
-                    id="variance-max"
-                    type="number"
-                    step="0.01"
-                    min="1.0"
-                    max="2.0"
-                    value={formData.varianceMax}
-                    onChange={(e) => updateField('varianceMax', parseFloat(e.target.value))}
-                    data-testid="input-variance-max"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Default: 1.2 (20% performance boost)
-                  </p>
-                </div>
+                <ConfigField
+                  label="Variance Maximum"
+                  field="varianceMax"
+                  type="number"
+                  step="0.01"
+                  min="1.0"
+                  max="2.0"
+                  description="Maximum performance multiplier (1.2 = 20% boost)"
+                />
               </div>
 
               <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
