@@ -375,13 +375,28 @@ export class DatabaseStorage implements IStorage {
           creativity: player.creativity,
           threat: player.threat,
           ict_index: player.ictIndex,
-          // Computed fields for frontend
-          now_cost: player.endCost || 0,
-          form: ((player.totalPoints || 0) / 38).toFixed(1),
-          points_per_game: ((player.totalPoints || 0) / Math.max((player.minutes || 0) / 90, 1)).toFixed(1),
-          selected_by_percent: "0.0",
-          value_season: ((player.totalPoints || 0) / ((player.endCost || 1) / 10)).toFixed(1),
-          value_form: ((player.totalPoints || 0) / ((player.endCost || 1) / 10)).toFixed(1),
+          // Add commonly needed fields with defaults for historical data
+          form: "0.0", // Not available for historical data
+          points_per_game: player.totalPoints && player.minutes ? 
+            ((player.totalPoints / (player.minutes / 90)) || 0).toFixed(1) : "0.0",
+          selected_by_percent: "0.0", // Not available for historical data
+          now_cost: player.endCost || player.startCost || 0,
+          value_form: "0.0", // Not available for historical data
+          value_season: player.totalPoints && player.endCost ? 
+            ((player.totalPoints / (player.endCost / 10)) || 0).toFixed(1) : "0.0",
+          transfers_in: 0, // Not available for historical data
+          transfers_out: 0, // Not available for historical data  
+          transfers_in_event: 0, // Not available for historical data
+          transfers_out_event: 0, // Not available for historical data
+          cost_change_event: 0, // Not available for historical data
+          cost_change_event_fall: 0, // Not available for historical data
+          cost_change_start: (player.endCost || 0) - (player.startCost || 0),
+          cost_change_start_fall: (player.startCost || 0) - (player.endCost || 0),
+          ep_next: "0.0", // Not available for historical data
+          ep_this: "0.0", // Not available for historical data
+          squad_number: 0, // Not available for historical data
+          event_points: 0, // Not available for historical data - this is last gameweek points
+          dreamteam_count: 0, // Not available for historical data
           element_type: player.positionName === 'Goalkeeper' ? 1 : 
                        player.positionName === 'Defender' ? 2 : 
                        player.positionName === 'Midfielder' ? 3 : 4,
