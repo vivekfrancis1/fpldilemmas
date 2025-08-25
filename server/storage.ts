@@ -439,6 +439,14 @@ export class DatabaseStorage implements IStorage {
   async setLastManagerId(managerId: string): Promise<void> {
     return this.memFallback.setLastManagerId(managerId);
   }
+  
+  async getUpsetConfig(): Promise<UpsetConfig | undefined> {
+    return this.memFallback.getUpsetConfig();
+  }
+  
+  async setUpsetConfig(config: UpsetConfig): Promise<void> {
+    return this.memFallback.setUpsetConfig(config);
+  }
 
   // Daily price tracking methods (use database for persistence)
   async saveDailyPriceData(data: any[]): Promise<void> {
