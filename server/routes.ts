@@ -8,6 +8,14 @@ import { eq } from "drizzle-orm";
 
 // Master Default Team Configuration - Single Source of Truth
 const MASTER_TEAM_DEFAULTS = {
+  // Base Settings
+  averageBaseXGPerTeamPerGame: 1.5,
+  defaultTeamVariance: 0.45,
+  defaultExpectedGoalsPerGame: 1.3,
+  globalTierMultiplier: 1.25,
+  homeAdvantageGoalsMultiplier: 1.15,
+  awayFactorGoalsMultiplier: 0.88,
+  
   // Attack Team Assignments
   eliteAttackTeams: [12, 13], // Liverpool, Manchester City
   strongAttackTeams: [1, 7, 15, 18, 2], // Arsenal, Chelsea, Newcastle, Tottenham, Aston Villa
@@ -15,12 +23,52 @@ const MASTER_TEAM_DEFAULTS = {
   weakAttackTeams: [8, 9, 16, 19, 20], // Crystal Palace, Everton, Nottingham Forest, West Ham, Wolves
   promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
   
+  // Attack Multipliers
+  eliteAttackMultiplier: 1.4,
+  strongAttackMultiplier: 1.1,
+  averageAttackMultiplier: 1,
+  weakAttackMultiplier: 0.85,
+  promotedAttackMultiplier: 0.7,
+  
   // Defense Team Assignments
   eliteDefenseTeams: [1], // Arsenal
   strongDefenseTeams: [12, 13, 7, 15, 16], // Liverpool, Man City, Chelsea, Newcastle, Nottingham Forest
   averageDefenseTeams: [2, 9, 14, 18], // Aston Villa, Everton, Manchester United, Tottenham
   weakDefenseTeams: [4, 5, 6, 8, 10, 19, 20], // Bournemouth, Brentford, Brighton, Crystal Palace, Fulham, West Ham, Wolves
   promotedDefenseTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
+  
+  // Defense Multipliers
+  eliteDefenseMultiplier: 0.7,
+  strongDefenseMultiplier: 0.85,
+  averageDefenseMultiplier: 1,
+  weakDefenseMultiplier: 1.15,
+  promotedDefenseMultiplier: 1.3,
+  
+  // Context Multipliers
+  derbyGoalsMultiplier: 0.87,
+  topSixGoalsMultiplier: 1.12,
+  relegationBattleGoalsMultiplier: 0.83,
+  earlyKickoffGoalsMultiplier: 0.94,
+  lateKickoffGoalsMultiplier: 1.07,
+  postEuropeanGoalsMultiplier: 0.88,
+  midweekFixtureGoalsMultiplier: 0.91,
+  seasonFinaleGoalsMultiplier: 1.05,
+  newManagerBounceGoalsMultiplier: 1.08,
+  teamFormMultiplier: 1.06,
+  fixtureCongestionMultiplier: 0.89,
+  injuryCrisisMultiplier: 0.92,
+  europeanQualificationPushMultiplier: 1.08,
+  nothingToPlayForMultiplier: 0.94,
+  revengeFactorMultiplier: 1.05,
+  pressureMatchMultiplier: 0.91,
+  homeCrowdBoostMultiplier: 1.04,
+  weatherConditionsGoalsMultiplier: 0.96,
+  
+  // Bounds
+  marketFloorMultiplier: 0.4,
+  marketCeilingMultiplier: 2,
+  absoluteMinGoals: 0,
+  absoluteMaxGoals: 7
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1409,32 +1457,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Goals Scored Admin Settings - Used by Team Goal Projections
   let adminGoalSettings = {
-    // Base Calculation Parameters - NO MORE HARDCODED VALUES
-    averageBaseXGPerTeamPerGame: 1.35, // Universal starting point for all teams
-    defaultTeamVariance: 0.45, // Default goal variance
-    defaultExpectedGoalsPerGame: 1.3, // Fallback if team not found
-    globalTierMultiplier: 1.25,
+    // Base Calculation Parameters - Using MASTER_TEAM_DEFAULTS as single source of truth
+    averageBaseXGPerTeamPerGame: MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame,
+    defaultTeamVariance: MASTER_TEAM_DEFAULTS.defaultTeamVariance,
+    defaultExpectedGoalsPerGame: MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame,
+    globalTierMultiplier: MASTER_TEAM_DEFAULTS.globalTierMultiplier,
+    
     // Venue Multipliers
-    homeAdvantageGoalsMultiplier: 1.15,
-    awayFactorGoalsMultiplier: 0.88,
-    // Attacking Tier Multipliers
-    eliteAttackMultiplier: 1.5,
-    strongAttackMultiplier: 1.25,
-    averageAttackMultiplier: 1.00,
-    weakAttackMultiplier: 0.75,
-    promotedAttackMultiplier: 0.5,
+    homeAdvantageGoalsMultiplier: MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier,
+    awayFactorGoalsMultiplier: MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier,
+    
+    // Attack Multipliers
+    eliteAttackMultiplier: MASTER_TEAM_DEFAULTS.eliteAttackMultiplier,
+    strongAttackMultiplier: MASTER_TEAM_DEFAULTS.strongAttackMultiplier,
+    averageAttackMultiplier: MASTER_TEAM_DEFAULTS.averageAttackMultiplier,
+    weakAttackMultiplier: MASTER_TEAM_DEFAULTS.weakAttackMultiplier,
+    promotedAttackMultiplier: MASTER_TEAM_DEFAULTS.promotedAttackMultiplier,
     // Attacking Team Assignments - Crystal Palace (3) and Everton (11) moved to average
     eliteAttackTeams: MASTER_TEAM_DEFAULTS.eliteAttackTeams,
     strongAttackTeams: MASTER_TEAM_DEFAULTS.strongAttackTeams,
     averageAttackTeams: MASTER_TEAM_DEFAULTS.averageAttackTeams,
     weakAttackTeams: MASTER_TEAM_DEFAULTS.weakAttackTeams,
     promotedAttackTeams: MASTER_TEAM_DEFAULTS.promotedAttackTeams,
-    // Defensive Tier Multipliers
-    eliteDefenseMultiplier: 0.5,
-    strongDefenseMultiplier: 0.75,
-    averageDefenseMultiplier: 1.00,
-    weakDefenseMultiplier: 1.25,
-    promotedDefenseMultiplier: 1.5,
+    // Defense Multipliers
+    eliteDefenseMultiplier: MASTER_TEAM_DEFAULTS.eliteDefenseMultiplier,
+    strongDefenseMultiplier: MASTER_TEAM_DEFAULTS.strongDefenseMultiplier,
+    averageDefenseMultiplier: MASTER_TEAM_DEFAULTS.averageDefenseMultiplier,
+    weakDefenseMultiplier: MASTER_TEAM_DEFAULTS.weakDefenseMultiplier,
+    promotedDefenseMultiplier: MASTER_TEAM_DEFAULTS.promotedDefenseMultiplier,
     // Defensive Team Assignments - Crystal Palace (3) and Everton (11) moved to average
     eliteDefenseTeams: MASTER_TEAM_DEFAULTS.eliteDefenseTeams,
     strongDefenseTeams: MASTER_TEAM_DEFAULTS.strongDefenseTeams,
@@ -1442,29 +1492,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     weakDefenseTeams: MASTER_TEAM_DEFAULTS.weakDefenseTeams,
     promotedDefenseTeams: MASTER_TEAM_DEFAULTS.promotedDefenseTeams,
     // Context Multipliers
-    derbyGoalsMultiplier: 0.87,
-    topSixGoalsMultiplier: 1.12,
-    relegationBattleGoalsMultiplier: 0.83,
-    earlyKickoffGoalsMultiplier: 0.94,
-    lateKickoffGoalsMultiplier: 1.07,
-    postEuropeanGoalsMultiplier: 0.88,
-    midweekFixtureGoalsMultiplier: 0.91,
-    seasonFinaleGoalsMultiplier: 1.05,
-    newManagerBounceGoalsMultiplier: 1.08,
-    teamFormMultiplier: 1.06,
-    fixtureCongestionMultiplier: 0.89,
-    injuryCrisisMultiplier: 0.92,
-    europeanQualificationPushMultiplier: 1.08,
-    nothingToPlayForMultiplier: 0.94,
-    revengeFactorMultiplier: 1.05,
-    pressureMatchMultiplier: 0.91,
-    homeCrowdBoostMultiplier: 1.04,
-    weatherConditionsGoalsMultiplier: 0.96,
+    derbyGoalsMultiplier: MASTER_TEAM_DEFAULTS.derbyGoalsMultiplier,
+    topSixGoalsMultiplier: MASTER_TEAM_DEFAULTS.topSixGoalsMultiplier,
+    relegationBattleGoalsMultiplier: MASTER_TEAM_DEFAULTS.relegationBattleGoalsMultiplier,
+    earlyKickoffGoalsMultiplier: MASTER_TEAM_DEFAULTS.earlyKickoffGoalsMultiplier,
+    lateKickoffGoalsMultiplier: MASTER_TEAM_DEFAULTS.lateKickoffGoalsMultiplier,
+    postEuropeanGoalsMultiplier: MASTER_TEAM_DEFAULTS.postEuropeanGoalsMultiplier,
+    midweekFixtureGoalsMultiplier: MASTER_TEAM_DEFAULTS.midweekFixtureGoalsMultiplier,
+    seasonFinaleGoalsMultiplier: MASTER_TEAM_DEFAULTS.seasonFinaleGoalsMultiplier,
+    newManagerBounceGoalsMultiplier: MASTER_TEAM_DEFAULTS.newManagerBounceGoalsMultiplier,
+    teamFormMultiplier: MASTER_TEAM_DEFAULTS.teamFormMultiplier,
+    fixtureCongestionMultiplier: MASTER_TEAM_DEFAULTS.fixtureCongestionMultiplier,
+    injuryCrisisMultiplier: MASTER_TEAM_DEFAULTS.injuryCrisisMultiplier,
+    europeanQualificationPushMultiplier: MASTER_TEAM_DEFAULTS.europeanQualificationPushMultiplier,
+    nothingToPlayForMultiplier: MASTER_TEAM_DEFAULTS.nothingToPlayForMultiplier,
+    revengeFactorMultiplier: MASTER_TEAM_DEFAULTS.revengeFactorMultiplier,
+    pressureMatchMultiplier: MASTER_TEAM_DEFAULTS.pressureMatchMultiplier,
+    homeCrowdBoostMultiplier: MASTER_TEAM_DEFAULTS.homeCrowdBoostMultiplier,
+    weatherConditionsGoalsMultiplier: MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier,
+    
     // Market Bounds
-    marketFloorMultiplier: 0.40,
-    marketCeilingMultiplier: 2.0,
-    absoluteMinGoals: 0.0,
-    absoluteMaxGoals: 7.0,
+    marketFloorMultiplier: MASTER_TEAM_DEFAULTS.marketFloorMultiplier,
+    marketCeilingMultiplier: MASTER_TEAM_DEFAULTS.marketCeilingMultiplier,
+    absoluteMinGoals: MASTER_TEAM_DEFAULTS.absoluteMinGoals,
+    absoluteMaxGoals: MASTER_TEAM_DEFAULTS.absoluteMaxGoals,
     lastUpdated: new Date().toISOString(),
     updatedBy: "admin"
   };
@@ -1581,49 +1632,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST reset goals scored admin settings endpoint
   app.post("/api/admin/goal-scored-settings/reset", async (req, res) => {
     try {
-      // Reset to default values - Crystal Palace and Everton in average categories
+      // Reset to default values using MASTER_TEAM_DEFAULTS as single source of truth
       adminGoalSettings = {
-        // Base Calculation Parameters - NO MORE HARDCODED VALUES
-        averageBaseXGPerTeamPerGame: 1.35,
-        defaultTeamVariance: 0.45,
-        defaultExpectedGoalsPerGame: 1.3,
-        globalTierMultiplier: 1.25,
-        homeAdvantageGoalsMultiplier: 1.15,
-        awayFactorGoalsMultiplier: 0.88,
-        eliteAttackMultiplier: 1.5,
-        strongAttackMultiplier: 1.25,
-        averageAttackMultiplier: 1.00,
-        weakAttackMultiplier: 0.75,
-        promotedAttackMultiplier: 0.5,
+        // Base Calculation Parameters
+        averageBaseXGPerTeamPerGame: MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame,
+        defaultTeamVariance: MASTER_TEAM_DEFAULTS.defaultTeamVariance,
+        defaultExpectedGoalsPerGame: MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame,
+        globalTierMultiplier: MASTER_TEAM_DEFAULTS.globalTierMultiplier,
+        homeAdvantageGoalsMultiplier: MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier,
+        awayFactorGoalsMultiplier: MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier,
+        
+        // Attack Multipliers
+        eliteAttackMultiplier: MASTER_TEAM_DEFAULTS.eliteAttackMultiplier,
+        strongAttackMultiplier: MASTER_TEAM_DEFAULTS.strongAttackMultiplier,
+        averageAttackMultiplier: MASTER_TEAM_DEFAULTS.averageAttackMultiplier,
+        weakAttackMultiplier: MASTER_TEAM_DEFAULTS.weakAttackMultiplier,
+        promotedAttackMultiplier: MASTER_TEAM_DEFAULTS.promotedAttackMultiplier,
+        
+        // Attack Team Assignments
         eliteAttackTeams: MASTER_TEAM_DEFAULTS.eliteAttackTeams,
         strongAttackTeams: MASTER_TEAM_DEFAULTS.strongAttackTeams,
         averageAttackTeams: MASTER_TEAM_DEFAULTS.averageAttackTeams,
         weakAttackTeams: MASTER_TEAM_DEFAULTS.weakAttackTeams,
         promotedAttackTeams: MASTER_TEAM_DEFAULTS.promotedAttackTeams,
-        eliteDefenseMultiplier: 0.5,
-        strongDefenseMultiplier: 0.75,
-        averageDefenseMultiplier: 1.00,
-        weakDefenseMultiplier: 1.25,
-        promotedDefenseMultiplier: 1.5,
+        
+        // Defense Multipliers
+        eliteDefenseMultiplier: MASTER_TEAM_DEFAULTS.eliteDefenseMultiplier,
+        strongDefenseMultiplier: MASTER_TEAM_DEFAULTS.strongDefenseMultiplier,
+        averageDefenseMultiplier: MASTER_TEAM_DEFAULTS.averageDefenseMultiplier,
+        weakDefenseMultiplier: MASTER_TEAM_DEFAULTS.weakDefenseMultiplier,
+        promotedDefenseMultiplier: MASTER_TEAM_DEFAULTS.promotedDefenseMultiplier,
+        
+        // Defense Team Assignments
         eliteDefenseTeams: MASTER_TEAM_DEFAULTS.eliteDefenseTeams,
         strongDefenseTeams: MASTER_TEAM_DEFAULTS.strongDefenseTeams,
         averageDefenseTeams: MASTER_TEAM_DEFAULTS.averageDefenseTeams,
         weakDefenseTeams: MASTER_TEAM_DEFAULTS.weakDefenseTeams,
         promotedDefenseTeams: MASTER_TEAM_DEFAULTS.promotedDefenseTeams,
-        derbyGoalsMultiplier: 0.87,
-        topSixGoalsMultiplier: 1.12,
-        relegationBattleGoalsMultiplier: 0.83,
-        earlyKickoffGoalsMultiplier: 0.94,
-        lateKickoffGoalsMultiplier: 1.07,
-        postEuropeanGoalsMultiplier: 0.88,
-        midweekFixtureGoalsMultiplier: 0.91,
-        seasonFinaleGoalsMultiplier: 1.05,
-        newManagerBounceGoalsMultiplier: 1.08,
-        weatherConditionsGoalsMultiplier: 0.96,
-        marketFloorMultiplier: 0.40,
-        marketCeilingMultiplier: 2.0,
-        absoluteMinGoals: 0.0,
-        absoluteMaxGoals: 7.0,
+        
+        // Context Multipliers
+        derbyGoalsMultiplier: MASTER_TEAM_DEFAULTS.derbyGoalsMultiplier,
+        topSixGoalsMultiplier: MASTER_TEAM_DEFAULTS.topSixGoalsMultiplier,
+        relegationBattleGoalsMultiplier: MASTER_TEAM_DEFAULTS.relegationBattleGoalsMultiplier,
+        earlyKickoffGoalsMultiplier: MASTER_TEAM_DEFAULTS.earlyKickoffGoalsMultiplier,
+        lateKickoffGoalsMultiplier: MASTER_TEAM_DEFAULTS.lateKickoffGoalsMultiplier,
+        postEuropeanGoalsMultiplier: MASTER_TEAM_DEFAULTS.postEuropeanGoalsMultiplier,
+        midweekFixtureGoalsMultiplier: MASTER_TEAM_DEFAULTS.midweekFixtureGoalsMultiplier,
+        seasonFinaleGoalsMultiplier: MASTER_TEAM_DEFAULTS.seasonFinaleGoalsMultiplier,
+        newManagerBounceGoalsMultiplier: MASTER_TEAM_DEFAULTS.newManagerBounceGoalsMultiplier,
+        teamFormMultiplier: MASTER_TEAM_DEFAULTS.teamFormMultiplier,
+        fixtureCongestionMultiplier: MASTER_TEAM_DEFAULTS.fixtureCongestionMultiplier,
+        injuryCrisisMultiplier: MASTER_TEAM_DEFAULTS.injuryCrisisMultiplier,
+        europeanQualificationPushMultiplier: MASTER_TEAM_DEFAULTS.europeanQualificationPushMultiplier,
+        nothingToPlayForMultiplier: MASTER_TEAM_DEFAULTS.nothingToPlayForMultiplier,
+        revengeFactorMultiplier: MASTER_TEAM_DEFAULTS.revengeFactorMultiplier,
+        pressureMatchMultiplier: MASTER_TEAM_DEFAULTS.pressureMatchMultiplier,
+        homeCrowdBoostMultiplier: MASTER_TEAM_DEFAULTS.homeCrowdBoostMultiplier,
+        weatherConditionsGoalsMultiplier: MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier,
+        
+        // Bounds
+        marketFloorMultiplier: MASTER_TEAM_DEFAULTS.marketFloorMultiplier,
+        marketCeilingMultiplier: MASTER_TEAM_DEFAULTS.marketCeilingMultiplier,
+        absoluteMinGoals: MASTER_TEAM_DEFAULTS.absoluteMinGoals,
+        absoluteMaxGoals: MASTER_TEAM_DEFAULTS.absoluteMaxGoals,
         lastUpdated: new Date().toISOString(),
         updatedBy: "admin"
       };
