@@ -52,12 +52,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Projection Tools", 
       items: [
         { path: "/projected-goals-cs", label: "Match Projections", icon: Target, description: "Projected goals & clean sheets", popular: false },
-        { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
-        { path: "/projected-standings", label: "Projected Standings", icon: Trophy, description: "Final league table projection", popular: false },
         { path: "/team-goal-projections", label: "Team Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
+        { path: "/team-cs-projections", label: "Team CS Projections", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/team-goals-against-projections", label: "Team Goals Against", icon: Shield, description: "Expected goals conceded", popular: false },
         { path: "/team-assist-projections", label: "Team Assist Projections", icon: Users, description: "Expected team assists", popular: false },
-        { path: "/team-cs-projections", label: "Team CS Projections", icon: Shield, description: "Clean sheet probabilities", popular: false }
+        { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
+        { path: "/projected-standings", label: "Projected Standings", icon: Trophy, description: "Final league table projection", popular: false }
       ]
     },
     {
