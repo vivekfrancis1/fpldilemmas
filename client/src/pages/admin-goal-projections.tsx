@@ -64,6 +64,13 @@ interface AdminSettings {
   seasonFinaleGoalsMultiplier: number;
   newManagerBounceGoalsMultiplier: number;
   teamFormMultiplier: number;
+  fixtureCongestionMultiplier: number;
+  injuryCrisisMultiplier: number;
+  europeanQualificationPushMultiplier: number;
+  nothingToPlayForMultiplier: number;
+  revengeFactorMultiplier: number;
+  pressureMatchMultiplier: number;
+  homeCrowdBoostMultiplier: number;
   weatherConditionsGoalsMultiplier: number;
   marketFloorMultiplier: number;
   marketCeilingMultiplier: number;
@@ -1460,7 +1467,14 @@ export default function AdminGoalProjections() {
                       { key: 'midweekFixtureGoalsMultiplier', name: 'Midweek Fixtures', default: 0.91, min: 0.8, max: 1.1, description: 'Tuesday/Wednesday games (-9%): Tired players, reduced crowd attendance, disrupted preparation routines. Fixture congestion leads to conservative play.' },
                       { key: 'seasonFinaleGoalsMultiplier', name: 'Season Finale', default: 1.05, min: 0.9, max: 1.3, description: 'Final gameweek (+5%): More open matches as teams with nothing to play for take risks, though modest increase as some teams already in vacation mode.' },
                       { key: 'newManagerBounceGoalsMultiplier', name: 'New Manager Bounce', default: 1.08, min: 1.0, max: 1.3, description: 'Honeymoon period (+8%): New tactical changes, renewed motivation, players trying to impress. Fresh approach leads to more attacking, adventurous play.' },
-                      { key: 'teamFormMultiplier', name: 'Team Form', default: 1.06, min: 0.9, max: 1.15, description: 'Recent performance (+6% good/-6% poor): Teams in good form (3-4 wins in last 5) show improved confidence and momentum, while poor form teams (0-1 wins) display reduced confidence.' }
+                      { key: 'teamFormMultiplier', name: 'Team Form', default: 1.06, min: 0.9, max: 1.15, description: 'Recent performance (+6% good/-6% poor): Teams in good form (3-4 wins in last 5) show improved confidence and momentum, while poor form teams (0-1 wins) display reduced confidence.' },
+                      { key: 'fixtureCongestionMultiplier', name: 'Fixture Congestion', default: 0.89, min: 0.7, max: 1.0, description: 'Heavy schedule (-11%): Teams playing 3+ games in 7 days suffer from physical and mental fatigue. Squad rotation and reduced intensity impact attacking output.' },
+                      { key: 'injuryCrisisMultiplier', name: 'Injury Crisis', default: 0.92, min: 0.8, max: 1.0, description: 'Key players missing (-8%): When 3+ attacking players are injured/suspended, teams lose tactical familiarity and creative partnerships, forcing more conservative play.' },
+                      { key: 'europeanQualificationPushMultiplier', name: 'European Push', default: 1.08, min: 1.0, max: 1.2, description: 'Fighting for Europe (+8%): Teams battling for Champions League/Europa spots (positions 4-7) show increased attacking urgency and willingness to take risks.' },
+                      { key: 'nothingToPlayForMultiplier', name: 'Nothing to Play For', default: 0.94, min: 0.8, max: 1.0, description: 'Mid-table security (-6%): Teams safe from relegation but unable to reach Europe often display reduced intensity and "beach mode" mentality in final months.' },
+                      { key: 'revengeFactorMultiplier', name: 'Revenge Factor', default: 1.05, min: 1.0, max: 1.15, description: 'Revenge motivation (+5%): Return fixtures where team lost heavily (3+ goals) in reverse fixture. Extra motivation to prove previous result was anomaly.' },
+                      { key: 'pressureMatchMultiplier', name: 'Pressure Match', default: 0.91, min: 0.8, max: 1.0, description: 'Must-win scenarios (-9%): High-stakes games where defeat has serious consequences often see teams become overly cautious and struggle with creative attacking play.' },
+                      { key: 'homeCrowdBoostMultiplier', name: 'Home Crowd Boost', default: 1.04, min: 1.0, max: 1.15, description: 'Exceptional atmosphere (+4%): Big home games with extraordinary crowd support lift attacking performance above normal levels through enhanced motivation.' }
                     ].map((setting) => {
                       const currentValue = (formData as any)[setting.key] || setting.default;
                       const isChanged = Math.abs(currentValue - setting.default) > 0.01;

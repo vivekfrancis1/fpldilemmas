@@ -1435,6 +1435,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     seasonFinaleGoalsMultiplier: 1.05,
     newManagerBounceGoalsMultiplier: 1.08,
     teamFormMultiplier: 1.06,
+    fixtureCongestionMultiplier: 0.89,
+    injuryCrisisMultiplier: 0.92,
+    europeanQualificationPushMultiplier: 1.08,
+    nothingToPlayForMultiplier: 0.94,
+    revengeFactorMultiplier: 1.05,
+    pressureMatchMultiplier: 0.91,
+    homeCrowdBoostMultiplier: 1.04,
     weatherConditionsGoalsMultiplier: 0.96,
     // Market Bounds
     marketFloorMultiplier: 0.40,
@@ -1700,6 +1707,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         seasonFinaleGoalsMultiplier: 1.05,
         newManagerBounceGoalsMultiplier: 1.08,
         teamFormMultiplier: 1.06,
+        fixtureCongestionMultiplier: 0.89,
+        injuryCrisisMultiplier: 0.92,
+        europeanQualificationPushMultiplier: 1.08,
+        nothingToPlayForMultiplier: 0.94,
+        revengeFactorMultiplier: 1.05,
+        pressureMatchMultiplier: 0.91,
+        homeCrowdBoostMultiplier: 1.04,
         weatherConditionsGoalsMultiplier: 0.96,
         marketFloorMultiplier: 0.4,
         marketCeilingMultiplier: 2.0,
@@ -1983,6 +1997,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (hasNewManager) {
             baseExpectedGoals *= adminGoalSettings.newManagerBounceGoalsMultiplier || 1.08;
+          }
+          
+          // NEW ENHANCED CONTEXT MULTIPLIERS
+          
+          // Fixture Congestion: 3+ games in 7 days
+          const recentFixtures = fixturesData.filter((f: any) => 
+            f.finished && 
+            f.event >= (fixture.event - 1) && 
+            f.event <= fixture.event &&
+            (f.team_h === team.id || f.team_a === team.id)
+          );
+          if (recentFixtures.length >= 3) {
+            baseExpectedGoals *= adminGoalSettings.fixtureCongestionMultiplier || 0.89;
+          }
+          
+          // Injury Crisis: Simulated as teams with poor recent form (0-1 wins in last 5)
+          const injuryCheckGames = fixturesData
+            .filter((f: any) => 
+              f.finished && 
+              f.event < fixture.event && 
+              (f.team_h === team.id || f.team_a === team.id)
+            )
+            .sort((a: any, b: any) => b.event - a.event)
+            .slice(0, 5);
+          
+          const recentWins = injuryCheckGames.filter((game: any) => {
+            const isHome = game.team_h === team.id;
+            const teamScore = isHome ? game.team_h_score : game.team_a_score;
+            const opponentScore = isHome ? game.team_a_score : game.team_h_score;
+            return teamScore > opponentScore;
+          }).length;
+          
+          if (recentWins <= 1 && Math.random() < 0.3) { // 30% chance of injury crisis for poor form teams
+            baseExpectedGoals *= adminGoalSettings.injuryCrisisMultiplier || 0.92;
+          }
+          
+          // European Qualification Push: Teams in positions 4-7 fighting for Europe
+          const isEuropeanPush = [2, 6, 14, 18, 8, 10].includes(team.id) && fixture.event >= 25; // Late season push
+          if (isEuropeanPush) {
+            baseExpectedGoals *= adminGoalSettings.europeanQualificationPushMultiplier || 1.08;
+          }
+          
+          // Nothing to Play For: Mid-table teams with security
+          const isMidTableSafe = [9, 5, 4, 19, 16].includes(team.id) && fixture.event >= 30; // Safe teams late season
+          if (isMidTableSafe) {
+            baseExpectedGoals *= adminGoalSettings.nothingToPlayForMultiplier || 0.94;
+          }
+          
+          // Revenge Factor: Return fixture after heavy defeat (3+ goal margin)
+          const reverseFixture = fixturesData.find((f: any) => 
+            f.finished && 
+            f.team_h === opponent.id && 
+            f.team_a === team.id &&
+            f.event < fixture.event
+          );
+          if (reverseFixture && Math.abs(reverseFixture.team_h_score - reverseFixture.team_a_score) >= 3) {
+            baseExpectedGoals *= adminGoalSettings.revengeFactorMultiplier || 1.05;
+          }
+          
+          // Pressure Match: Must-win scenarios for relegation battle or title race
+          const isPressureMatch = (
+            (isRelegationBattle && fixture.event >= 32) || // Late season relegation
+            ([1, 12, 13].includes(team.id) && fixture.event >= 30) // Title race pressure
+          );
+          if (isPressureMatch) {
+            baseExpectedGoals *= adminGoalSettings.pressureMatchMultiplier || 0.91;
+          }
+          
+          // Home Crowd Boost: Big home games with exceptional atmosphere
+          const isBigHomeGame = isHome && (
+            isTopSixBattle || 
+            isRivalryMatch || 
+            (fixture.event >= 35) || // Final games of season
+            ([1, 12, 13].includes(team.id) && [1, 12, 13].includes(opponent.id)) // Title deciders
+          );
+          if (isBigHomeGame) {
+            baseExpectedGoals *= adminGoalSettings.homeCrowdBoostMultiplier || 1.04;
           }
           
           // Phase 6: Market Bounds - Apply market constraints using admin settings
