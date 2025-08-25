@@ -363,11 +363,11 @@ export default function AdminUpsetConfig() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="poisson">Poisson</TabsTrigger>
           <TabsTrigger value="variance">Variance</TabsTrigger>
           <TabsTrigger value="context">Context</TabsTrigger>
           <TabsTrigger value="rounding">Rounding</TabsTrigger>
           <TabsTrigger value="budget">Budget</TabsTrigger>
-          <TabsTrigger value="poisson">Poisson</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
