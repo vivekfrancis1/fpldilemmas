@@ -60,7 +60,7 @@ const DEFAULT_CONFIG: UpsetConfig = {
   derbyVarianceBoost: 0.1,
   derbyChance: 0.25,
   topTeamIds: [1, 2, 3, 4, 5, 6],
-  upsetRoundingChance: 0.4,
+  upsetRoundingChance: 0.15,
   upsetBudgetChance: 0.25,
   upsetBudgetMin: 0.7,
   upsetBudgetMax: 1.3,
