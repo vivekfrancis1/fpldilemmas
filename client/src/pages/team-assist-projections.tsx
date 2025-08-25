@@ -48,7 +48,19 @@ export default function TeamAssistProjections() {
         }
         
         switch (sortBy) {
-          case "total": return b.totalAssists - a.totalAssists;
+          case "total": {
+            // Calculate period total for sorting
+            const startGW = parseInt(startGameweek);
+            const endGW = parseInt(endGameweek);
+            const aPeriodTotal = Object.keys(a.gameweekProjections)
+              .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
+              .reduce((sum, gw) => sum + (a.gameweekProjections[parseInt(gw)] || 0), 0);
+            const bPeriodTotal = Object.keys(b.gameweekProjections)
+              .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
+              .reduce((sum, gw) => sum + (b.gameweekProjections[parseInt(gw)] || 0), 0);
+            return bPeriodTotal - aPeriodTotal;
+          }
+          case "season": return b.totalAssists - a.totalAssists;
           case "average": return b.averageAssistsPerGame - a.averageAssistsPerGame;
           case "position": return a.position - b.position;
           default: return b.totalAssists - a.totalAssists;
@@ -57,10 +69,11 @@ export default function TeamAssistProjections() {
   }, [projectionsData, selectedTeam, sortBy]);
 
   const totalAssists = useMemo(() => {
-    if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, averagePerGame: 0 };
+    if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, seasonTotal: 0, averagePerGame: 0 };
     
     const gameweekTotals: { [gameweek: number]: number } = {};
     let overallTotal = 0;
+    let seasonTotal = 0;
     
     const startGW = parseInt(startGameweek);
     const endGW = parseInt(endGameweek);
@@ -73,9 +86,15 @@ export default function TeamAssistProjections() {
       overallTotal += gwTotal;
     }
     
+    // Calculate season total (all 38 gameweeks)
+    for (let gwNumber = 1; gwNumber <= 38; gwNumber++) {
+      const gwTotal = filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
+      seasonTotal += gwTotal;
+    }
+    
     const averagePerGame = overallTotal / totalWeeks;
     
-    return { gameweekTotals, overallTotal, averagePerGame };
+    return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
   }, [filteredProjections, bootstrapData, startGameweek, endGameweek]);
 
   // Helper functions for styling
@@ -198,7 +217,8 @@ export default function TeamAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="total">Total Assists</SelectItem>
+                    <SelectItem value="total">Period Total</SelectItem>
+                    <SelectItem value="season">Season Total</SelectItem>
                     <SelectItem value="average">Avg/Game</SelectItem>
                     <SelectItem value="position">League Position</SelectItem>
                     {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
@@ -256,8 +276,17 @@ export default function TeamAssistProjections() {
                       onClick={() => setSortBy('total')}
                     >
                       <div className="flex items-center justify-center gap-1">
-                        Total
+                        Period Total
                         {sortBy === 'total' && <TrendingUp className="h-3 w-3" />}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-teal-50 font-semibold cursor-pointer hover:bg-teal-100 transition-colors"
+                      onClick={() => setSortBy('season')}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        Season Total
+                        {sortBy === 'season' && <TrendingUp className="h-3 w-3" />}
                       </div>
                     </th>
                     <th 
@@ -299,6 +328,19 @@ export default function TeamAssistProjections() {
                       
                       <td className="px-4 py-4 text-center bg-blue-50">
                         <span className="text-lg font-bold text-blue-900">
+                          {(() => {
+                            const startGW = parseInt(startGameweek);
+                            const endGW = parseInt(endGameweek);
+                            const periodTotal = Object.keys(team.gameweekProjections)
+                              .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
+                              .reduce((sum, gw) => sum + (team.gameweekProjections[parseInt(gw)] || 0), 0);
+                            return periodTotal.toFixed(2);
+                          })()}
+                        </span>
+                      </td>
+                      
+                      <td className="px-4 py-4 text-center bg-teal-50">
+                        <span className="text-lg font-bold text-teal-900">
                           {team.totalAssists.toFixed(2)}
                         </span>
                       </td>
@@ -338,6 +380,12 @@ export default function TeamAssistProjections() {
                     <td className="px-4 py-4 text-center bg-blue-100">
                       <span className="text-lg font-bold text-blue-900">
                         {totalAssists.overallTotal.toFixed(2)}
+                      </span>
+                    </td>
+                    
+                    <td className="px-4 py-4 text-center bg-teal-100">
+                      <span className="text-lg font-bold text-teal-900">
+                        {totalAssists.seasonTotal.toFixed(2)}
                       </span>
                     </td>
                     

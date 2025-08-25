@@ -48,7 +48,19 @@ export default function TeamGoalsAgainstProjections() {
         }
         
         switch (sortBy) {
-          case "total": return a.totalGoalsAgainst - b.totalGoalsAgainst; // Lower is better
+          case "total": {
+            // Calculate period total for sorting (lower is better)
+            const startGW = parseInt(startGameweek);
+            const endGW = parseInt(endGameweek);
+            const aPeriodTotal = Object.keys(a.gameweekProjections)
+              .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
+              .reduce((sum, gw) => sum + (a.gameweekProjections[parseInt(gw)] || 0), 0);
+            const bPeriodTotal = Object.keys(b.gameweekProjections)
+              .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
+              .reduce((sum, gw) => sum + (b.gameweekProjections[parseInt(gw)] || 0), 0);
+            return aPeriodTotal - bPeriodTotal;
+          }
+          case "season": return a.totalGoalsAgainst - b.totalGoalsAgainst; // Lower is better
           case "average": return a.averageGoalsAgainstPerGame - b.averageGoalsAgainstPerGame; // Lower is better
           case "position": return a.position - b.position;
           default: return a.totalGoalsAgainst - b.totalGoalsAgainst;
@@ -57,10 +69,11 @@ export default function TeamGoalsAgainstProjections() {
   }, [projectionsData, selectedTeam, sortBy]);
 
   const totalGoalsAgainst = useMemo(() => {
-    if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, averagePerGame: 0 };
+    if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, seasonTotal: 0, averagePerGame: 0 };
     
     const gameweekTotals: { [gameweek: number]: number } = {};
     let overallTotal = 0;
+    let seasonTotal = 0;
     
     const startGW = parseInt(startGameweek);
     const endGW = parseInt(endGameweek);
@@ -73,9 +86,15 @@ export default function TeamGoalsAgainstProjections() {
       overallTotal += gwTotal;
     }
     
+    // Calculate season total (all 38 gameweeks)
+    for (let gwNumber = 1; gwNumber <= 38; gwNumber++) {
+      const gwTotal = filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
+      seasonTotal += gwTotal;
+    }
+    
     const averagePerGame = overallTotal / totalWeeks;
     
-    return { gameweekTotals, overallTotal, averagePerGame };
+    return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
   }, [filteredProjections, bootstrapData, startGameweek, endGameweek]);
 
   const getConfidenceColor = (confidence: string) => {
@@ -184,7 +203,8 @@ export default function TeamGoalsAgainstProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="total">Total Goals Against</SelectItem>
+                      <SelectItem value="total">Period Total</SelectItem>
+                      <SelectItem value="season">Season Total</SelectItem>
                       <SelectItem value="average">Goals Against/Game</SelectItem>
                       <SelectItem value="position">Defensive Ranking</SelectItem>
                       {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
@@ -242,8 +262,17 @@ export default function TeamGoalsAgainstProjections() {
                         onClick={() => setSortBy('total')}
                       >
                         <div className="flex items-center justify-center gap-1">
-                          Total Against
+                          Period Total
                           {sortBy === 'total' && <TrendingUp className="h-3 w-3" />}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors"
+                        onClick={() => setSortBy('season')}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          Season Total
+                          {sortBy === 'season' && <TrendingUp className="h-3 w-3" />}
                         </div>
                       </th>
                       <th 
@@ -285,6 +314,19 @@ export default function TeamGoalsAgainstProjections() {
                         
                         <td className="px-4 py-4 text-center bg-blue-50">
                           <span className="text-lg font-bold text-blue-900">
+                            {(() => {
+                              const startGW = parseInt(startGameweek);
+                              const endGW = parseInt(endGameweek);
+                              const periodTotal = Object.keys(team.gameweekProjections)
+                                .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
+                                .reduce((sum, gw) => sum + (team.gameweekProjections[parseInt(gw)] || 0), 0);
+                              return periodTotal.toFixed(2);
+                            })()}
+                          </span>
+                        </td>
+                        
+                        <td className="px-4 py-4 text-center bg-orange-50">
+                          <span className="text-lg font-bold text-orange-900">
                             {team.totalGoalsAgainst.toFixed(2)}
                           </span>
                         </td>
@@ -324,6 +366,12 @@ export default function TeamGoalsAgainstProjections() {
                       <td className="px-4 py-4 text-center bg-blue-100">
                         <span className="text-lg font-bold text-blue-900">
                           {totalGoalsAgainst.overallTotal.toFixed(2)}
+                        </span>
+                      </td>
+                      
+                      <td className="px-4 py-4 text-center bg-orange-100">
+                        <span className="text-lg font-bold text-orange-900">
+                          {totalGoalsAgainst.seasonTotal.toFixed(2)}
                         </span>
                       </td>
                       
