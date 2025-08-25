@@ -4522,11 +4522,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin Upset Configuration routes
   const defaultUpsetConfig: UpsetConfig = {
-    // Enable/disable options
+    // Enable/disable options - Optimal variance settings
     enableControlledVariance: true,
-    enableContextUpsets: true,
+    enableContextUpsets: false,
     enableSmartRounding: true,
-    enableSeasonUpsetBudget: true,
+    enableSeasonUpsetBudget: false,
     enablePoissonDistribution: true,
     
     // Option 2: Controlled Variance settings
