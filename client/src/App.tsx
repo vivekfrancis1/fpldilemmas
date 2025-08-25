@@ -36,7 +36,7 @@ import AdminUpsetConfig from "./pages/admin-upset-config";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={PlayerStats} />
+      <Route path="/" component={LiveRank} />
       <Route path="/live-rank" component={LiveRank} />
       <Route path="/fixtures" component={Fixtures} />
       <Route path="/transfers" component={Transfers} />

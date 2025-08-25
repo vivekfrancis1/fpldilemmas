@@ -6,7 +6,7 @@ FPL Dilemmas is an analytics application designed for Fantasy Premier League (FP
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 Site tagline: "Analytical tools to beat the deadline blues"
-Navigation priority: Player Statistics as default landing page, with side navigation for all tools.
+Navigation priority: My Live Rank as default landing page, with side navigation for all tools.
 Manager ID caching: All FPL manager tools (My Live Rank, My Team, My Leagues) now automatically save and pre-load the last searched Manager ID using localStorage for seamless cross-tool experience.
 My Team section: Added comprehensive team display under My FPL showing formation, squad value, transfers, and detailed player lineup with enhanced UI design.
 Player Projections: Added AI-powered projection model using advanced statistical analysis to predict minutes, goals, assists, clean sheets, bonus points, and CBIT% for upcoming weeks. Goals and assists now derived directly from Goal Share and Assist Share tools ensuring perfect consistency.
@@ -40,7 +40,7 @@ All multipliers use MASTER_TEAM_DEFAULTS as single source of truth with perfect 
 
 ### Frontend Architecture
 - **Framework**: React with TypeScript, using Vite for building.
-- **Routing**: Wouter for client-side routing; Player Statistics is the default route.
+- **Routing**: Wouter for client-side routing; My Live Rank is the default route.
 - **State Management**: TanStack Query for server state.
 - **UI Library**: shadcn/ui components built on Radix UI primitives.
 - **Styling**: Tailwind CSS with a custom FPL-themed design system.
