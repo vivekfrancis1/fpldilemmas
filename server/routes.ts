@@ -12,7 +12,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       if (!response.ok) {
-        throw new Error(`FPL API responded with status: ${response.status}`);
+        console.error(`FPL API responded with status: ${response.status}`);
+        return res.status(500).json({ error: "Failed to fetch bootstrap data" });
       }
       const data = await response.json();
       
@@ -547,7 +548,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate simulated price changes based on real player data
       const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       if (!bootstrapResponse.ok) {
-        throw new Error("Failed to fetch bootstrap data");
+        console.error("Failed to fetch bootstrap data for price changes");
+        return res.status(500).json({ error: "Failed to fetch bootstrap data" });
       }
       
       const bootstrapData = await bootstrapResponse.json();
@@ -961,7 +963,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const initializeTeamData = async () => {
     try {
       const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      if (!response.ok) throw new Error("Failed to fetch FPL team data");
+      if (!response.ok) {
+        console.error("Failed to fetch FPL team data");
+        return; // Skip initialization if API is down
+      }
       
       const data = await response.json();
       const teams = data.teams;
