@@ -339,11 +339,11 @@ export default function AdminUpsetConfig() {
 
   return (
     <div className="container mx-auto py-8 space-y-6" data-testid="admin-upset-config">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-3">
           <Settings className="h-8 w-8 text-blue-600" />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
               Predicted Scores Upset Configuration
             </h1>
             <p className="text-gray-600 dark:text-gray-300">
@@ -352,7 +352,7 @@ export default function AdminUpsetConfig() {
           </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             onClick={handleResetTab}
             variant="outline"
