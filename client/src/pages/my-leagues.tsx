@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Trophy, Users, TrendingUp, Target, Search, Crown, Medal, Award, AlertTriangle, Eye, ChevronDown, ChevronUp } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Trophy, Users, TrendingUp, Target, Search, Crown, Medal, Award, AlertTriangle, Eye, ChevronDown, ChevronUp, BarChart3, Star, Activity, ArrowLeft } from "lucide-react";
 
 interface LeagueEntry {
   id: number;
@@ -46,9 +47,36 @@ interface LeagueStandings {
   };
 }
 
+interface LeagueData {
+  id: number;
+  name: string;
+  standings: LeagueStanding[];
+  league_type: string;
+  admin_entry: number;
+  started: boolean;
+  code_privacy: string;
+  has_cup: boolean;
+  cup_league?: number;
+  rank?: number;
+}
+
+interface LeagueStanding {
+  id: number;
+  event_total: number;
+  player_name: string;
+  rank: number;
+  last_rank: number;
+  rank_sort: number;
+  total: number;
+  entry: number;
+  entry_name: string;
+}
+
 function MyLeagues() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
+  const [analyzedLeague, setAnalyzedLeague] = useState<LeagueData | null>(null);
+  const [viewMode, setViewMode] = useState<'leagues' | 'analysis'>('leagues');
 
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
@@ -214,8 +242,34 @@ function MyLeagues() {
         </Card>
       )}
 
+      {/* Analysis View */}
+      {viewMode === 'analysis' && (
+        <div className="mb-6">
+          <Button 
+            onClick={() => setViewMode('leagues')}
+            variant="outline"
+            size="sm"
+            className="mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Leagues
+          </Button>
+          
+          {analyzedLeague ? (
+            <LeagueAnalysisView league={analyzedLeague} />
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-600 mt-2">Loading league analysis...</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Private Leagues Only */}
-      {leaguesData && leaguesData.classic && (() => {
+      {viewMode === 'leagues' && leaguesData && leaguesData.classic && (() => {
         // Filter to only show private leagues (ID > 1000)
         const privateLeagues = leaguesData.classic.filter((league: any) => league.id > 1000);
         
@@ -236,6 +290,21 @@ function MyLeagues() {
                     managerName={managerData?.name}
                     formatDate={formatDate}
                     getLeagueTypeDisplay={getLeagueTypeDisplay}
+                    onAnalyzeLeague={(leagueId) => {
+                      setAnalyzedLeague(null);
+                      setViewMode('analysis');
+                      // Fetch league analysis data
+                      const fetchAnalysis = async () => {
+                        try {
+                          const response = await fetch(`/api/leagues/${leagueId}/analyze`);
+                          const data = await response.json();
+                          setAnalyzedLeague(data);
+                        } catch (error) {
+                          console.error('Failed to fetch league analysis:', error);
+                        }
+                      };
+                      fetchAnalysis();
+                    }}
                   />
                 ))}
               </div>
@@ -255,24 +324,230 @@ function MyLeagues() {
   );
 }
 
+// League Analysis View Component
+function LeagueAnalysisView({ league }: { league: LeagueData }) {
+  // Calculate metrics
+  const totalManagers = league.standings.length;
+  const topScore = Math.max(...league.standings.map(s => s.total));
+  const averagePoints = league.standings.reduce((sum, s) => sum + s.total, 0) / totalManagers;
+  const lastGwAverage = Math.round(league.standings.reduce((sum, s) => sum + s.event_total, 0) / totalManagers);
+  
+  // Calculate rank movements
+  const improvements = league.standings.filter(s => s.last_rank > 0 && s.rank < s.last_rank).length;
+  const declines = league.standings.filter(s => s.last_rank > 0 && s.rank > s.last_rank).length;
+  const rankChanges = improvements + declines;
+
+  const getBadgeVariant = (rank: number) => {
+    if (rank === 1) return "default";
+    if (rank <= 3) return "secondary"; 
+    return "outline";
+  };
+
+  const getRankChangeDisplay = (current: number, last: number) => {
+    if (last === 0) return null;
+    const change = last - current;
+    if (change > 0) return <span className="text-green-600 text-xs">↑{change}</span>;
+    if (change < 0) return <span className="text-red-600 text-xs">↓{Math.abs(change)}</span>;
+    return <span className="text-gray-500 text-xs">-</span>;
+  };
+
+  return (
+    <div className="space-y-6">
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">League Overview</TabsTrigger>
+          <TabsTrigger value="standings">Player Rankings</TabsTrigger>
+          <TabsTrigger value="performance">Performance Analysis</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {/* League Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="truncate">{league.name}</span>
+                <Badge variant="outline">
+                  {league.league_type === 'x' ? 'Classic League' : 'Head-to-Head League'}
+                </Badge>
+              </CardTitle>
+              <CardDescription>League ID: {league.id}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="text-center p-4 border rounded-lg">
+                  <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                  <p className="text-2xl font-bold">{totalManagers}</p>
+                  <p className="text-xs text-muted-foreground">Total Managers</p>
+                </div>
+                <div className="text-center p-4 border rounded-lg">
+                  <Trophy className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                  <p className="text-2xl font-bold">{topScore.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">Highest Score</p>
+                </div>
+                <div className="text-center p-4 border rounded-lg">
+                  <BarChart3 className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                  <p className="text-2xl font-bold">{averagePoints.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">Average Score</p>
+                </div>
+                <div className="text-center p-4 border rounded-lg">
+                  <Activity className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+                  <p className="text-2xl font-bold">{lastGwAverage}</p>
+                  <p className="text-xs text-muted-foreground">Last GW Average</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Rank Movement Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Rank Movement Summary
+              </CardTitle>
+              <CardDescription>Analysis of position changes from last gameweek</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 border rounded-lg bg-green-50">
+                  <p className="text-3xl font-bold text-green-600">{improvements}</p>
+                  <p className="text-sm text-muted-foreground">Managers Improved</p>
+                </div>
+                <div className="text-center p-4 border rounded-lg bg-red-50">
+                  <p className="text-3xl font-bold text-red-600">{declines}</p>
+                  <p className="text-sm text-muted-foreground">Managers Declined</p>
+                </div>
+                <div className="text-center p-4 border rounded-lg bg-gray-50">
+                  <p className="text-3xl font-bold text-gray-600">
+                    {totalManagers - rankChanges}
+                  </p>
+                  <p className="text-sm text-muted-foreground">No Change</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="standings" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5" />
+                Complete League Standings
+              </CardTitle>
+              <CardDescription>
+                All managers ranked by total points with gameweek performance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {league.standings.map((standing) => (
+                  <div 
+                    key={standing.entry}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <Badge variant={getBadgeVariant(standing.rank)} className="min-w-[40px] justify-center">
+                        #{standing.rank}
+                      </Badge>
+                      <div>
+                        <p className="font-medium">{standing.entry_name}</p>
+                        <p className="text-sm text-muted-foreground">{standing.player_name}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-right">
+                      <div>
+                        <p className="font-bold">{standing.total.toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground">Total Points</p>
+                      </div>
+                      <div>
+                        <p className="font-medium">{standing.event_total}</p>
+                        <p className="text-xs text-muted-foreground">Last GW</p>
+                      </div>
+                      <div className="w-12 text-center">
+                        {getRankChangeDisplay(standing.rank, standing.last_rank)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-5 w-5" />
+                Top Performers
+              </CardTitle>
+              <CardDescription>Highest scorers and recent gameweek standouts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <h4 className="font-semibold mb-3">Overall Leaders</h4>
+                  <div className="space-y-2">
+                    {league.standings.slice(0, 5).map((standing, index) => (
+                      <div key={standing.entry} className="flex items-center justify-between p-2 rounded bg-muted/30">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-800 text-xs font-medium flex items-center justify-center">
+                            {index + 1}
+                          </span>
+                          <span className="text-sm font-medium">{standing.entry_name}</span>
+                        </div>
+                        <span className="text-sm font-bold">{standing.total.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold mb-3">Last Gameweek Stars</h4>
+                  <div className="space-y-2">
+                    {league.standings
+                      .sort((a, b) => b.event_total - a.event_total)
+                      .slice(0, 5)
+                      .map((standing, index) => (
+                        <div key={standing.entry} className="flex items-center justify-between p-2 rounded bg-muted/30">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-green-100 text-green-800 text-xs font-medium flex items-center justify-center">
+                              {index + 1}
+                            </span>
+                            <span className="text-sm font-medium">{standing.entry_name}</span>
+                          </div>
+                          <span className="text-sm font-bold">{standing.event_total}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
 export default MyLeagues;
 
 
 
 // Private League Card Component (detailed analysis)
-function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeDisplay }: { 
+function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeDisplay, onAnalyzeLeague }: { 
   league: any; 
   managerId: string; 
   managerName: string;
   formatDate: (dateString: string) => string;
   getLeagueTypeDisplay: (leagueType: string) => string;
+  onAnalyzeLeague: (leagueId: number) => void;
 }) {
   const { data: standingsData, isLoading } = useQuery<LeagueStandings>({
     queryKey: ["/api/leagues-classic", league.id, "standings"],
     enabled: !!league.id,
   });
-
-  const [showLeagueTable, setShowLeagueTable] = useState(false);
 
   const getPositionIcon = (rank: number) => {
     if (rank === 1) return <Crown className="h-4 w-4 text-yellow-500" />;
@@ -435,22 +710,22 @@ function LeagueCard({ league, managerId, managerName, formatDate, getLeagueTypeD
               </div>
             )}
 
-            {/* League Table Action */}
+            {/* Analyze League Action */}
             <div className="pt-4 border-t border-gray-200">
               <Button 
-                onClick={() => setShowLeagueTable(!showLeagueTable)}
-                variant="outline" 
+                onClick={() => onAnalyzeLeague(league.id)}
+                variant="default" 
                 size="sm" 
-                className="w-full"
-                data-testid={`button-view-table-${league.id}`}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                data-testid={`button-analyze-league-${league.id}`}
               >
-                <Users className="h-4 w-4 mr-2" />
-                {showLeagueTable ? 'Hide League Table' : 'View League Table'}
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Analyze League
               </Button>
             </div>
 
-            {/* League Table */}
-            {showLeagueTable && standingsData?.standings?.results && (
+            {/* League Table - removed, replaced with Analyze button */}
+            {false && standingsData?.standings?.results && (
               <div className="mt-4 border-t border-gray-200 pt-4">
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {standingsData.standings.results.map((entry: LeagueEntry) => (
