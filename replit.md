@@ -29,6 +29,12 @@ Historical data: Added year selection functionality for player statistics from 2
 Goal Range Compression: Successfully implemented realistic Premier League goal distributions by compressing team season totals from unrealistic 23-95 goals to professional 30-85 goal range. Applied comprehensive variance compression, tightened market bounds, compressed attacking tier multipliers, and adjusted defensive multipliers. Achieved final ranges: Goals Scored 34-88 goals, Goals Against 29-70 goals, maintaining perfect mathematical consistency where every goal scored equals one goal conceded.
 Clean Sheet Formula: Updated to exponential decay calculation using CS = 100 × e^(-1.1 × xGA) for each gameweek. Formula creates mathematically accurate clean sheet percentages.
 Single Source of Truth: Implemented MASTER_TEAM_DEFAULTS as the central configuration source for all projection multipliers. Attack multipliers (Elite: 1.4, Strong: 1.1, Average: 1.0, Weak: 0.85, Promoted: 0.7) and defense multipliers (Elite: 0.7, Strong: 0.85, Average: 1.0, Weak: 1.15, Promoted: 1.3) now serve as defaults across all endpoints and reset functions, eliminating conflicting values and ensuring consistency.
+Enhanced Context Multipliers: Successfully integrated 4 sophisticated new context multipliers based on EPL research data:
+- Weather Conditions (0.92): Adverse weather impacts reducing shot accuracy and intensity
+- Referee Influence (1.0 ±5%): Officiating style effects on open play and fouls  
+- Post-International Break (0.92): Fatigue and disruption after international duty
+- Travel Distance Fatigue (0.95): Long away trip impacts on pressing and errors
+All multipliers use MASTER_TEAM_DEFAULTS as single source of truth with perfect synchronization across backend calculations, admin interface, and reset functionality. Enhanced venue factors updated to 1.16 home advantage and 0.84 away factor as permanent defaults.
 
 ## System Architecture
 

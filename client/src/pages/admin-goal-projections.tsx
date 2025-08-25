@@ -746,10 +746,10 @@ export default function AdminGoalProjections() {
                         <strong>Midweek Fixtures:</strong> × <span className="font-mono text-purple-600">{formData.midweekFixtureGoalsMultiplier || 0.91}</span><br/>
                         <strong>Season Finale:</strong> × <span className="font-mono text-purple-600">{formData.seasonFinaleGoalsMultiplier || 1.05}</span><br/>
                         <strong>New Manager Bounce:</strong> × <span className="font-mono text-purple-600">{formData.newManagerBounceGoalsMultiplier || 1.08}</span><br/>
-                        <strong>Adverse Weather:</strong> × <span className="font-mono text-purple-600">{formData.weatherConditionsGoalsMultiplier || 0.92}</span><br/>
-                        <strong>Referee Style:</strong> × <span className="font-mono text-purple-600">{formData.refereeInfluenceMultiplier || 1.0} (Lenient: +5%, Strict: -5%)</span><br/>
-                        <strong>Post-Int'l Break:</strong> × <span className="font-mono text-purple-600">{formData.postInternationalBreakMultiplier || 0.92}</span><br/>
-                        <strong>Long Travel (Away):</strong> × <span className="font-mono text-purple-600">{formData.travelDistanceFatigueMultiplier || 0.95}</span>
+                        <strong>Adverse Weather:</strong> × <span className="font-mono text-purple-600">{formData.weatherConditionsGoalsMultiplier || DEFAULT_VALUES.contextMultipliers.weatherConditionsGoalsMultiplier}</span><br/>
+                        <strong>Referee Style:</strong> × <span className="font-mono text-purple-600">{formData.refereeInfluenceMultiplier || DEFAULT_VALUES.contextMultipliers.refereeInfluenceMultiplier} (Lenient: +5%, Strict: -5%)</span><br/>
+                        <strong>Post-Int'l Break:</strong> × <span className="font-mono text-purple-600">{formData.postInternationalBreakMultiplier || DEFAULT_VALUES.contextMultipliers.postInternationalBreakMultiplier}</span><br/>
+                        <strong>Long Travel (Away):</strong> × <span className="font-mono text-purple-600">{formData.travelDistanceFatigueMultiplier || DEFAULT_VALUES.contextMultipliers.travelDistanceFatigueMultiplier}</span>
                       </p>
                     </div>
                     
