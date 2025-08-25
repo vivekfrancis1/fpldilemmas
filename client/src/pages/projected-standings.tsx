@@ -1,8 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { Trophy, TrendingUp, Target, Users } from "lucide-react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trophy, TrendingUp, Target, Users, RefreshCw } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface TeamStanding {
   id: number;
@@ -22,6 +24,9 @@ interface TeamStanding {
 }
 
 export default function ProjectedStandings() {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
@@ -29,6 +34,13 @@ export default function ProjectedStandings() {
   const { data: standingsData, isLoading: standingsLoading } = useQuery<TeamStanding[]>({
     queryKey: ["/api/projected-standings"],
   });
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ["/api/projected-standings"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/bootstrap-static"] });
+    setIsRefreshing(false);
+  };
 
   const getPositionColor = (position: number) => {
     if (position <= 4) return 'bg-green-500 text-white'; // Champions League
@@ -73,6 +85,17 @@ export default function ProjectedStandings() {
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
               Final Premier League table based on actual results and projected outcomes for remaining fixtures
             </p>
+            <div className="mt-6">
+              <Button 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                data-testid="button-refresh-standings"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh Standings'}
+              </Button>
+            </div>
           </div>
 
           {/* Current Status */}

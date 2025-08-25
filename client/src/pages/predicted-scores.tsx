@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Target, Calendar, Filter, Trophy, Clock } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Target, Calendar, Filter, Trophy, Clock, RefreshCw } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface PredictedScore {
   id: number;
@@ -41,6 +42,9 @@ export default function PredictedScores() {
   const [endGameweek, setEndGameweek] = useState<string>("3");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [showFinished, setShowFinished] = useState<string>("all");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const queryClient = useQueryClient();
 
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -49,6 +53,13 @@ export default function PredictedScores() {
   const { data: predictedScoresData, isLoading: scoresLoading } = useQuery<PredictedScore[]>({
     queryKey: ["/api/predicted-scores"],
   });
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ["/api/predicted-scores"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/bootstrap-static"] });
+    setIsRefreshing(false);
+  };
 
   const filteredScores = useMemo(() => {
     if (!predictedScoresData) return [];
@@ -131,6 +142,17 @@ export default function PredictedScores() {
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
               Match predictions with rounded scores and determined outcomes based on expected goals
             </p>
+            <div className="mt-6">
+              <Button 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                data-testid="button-refresh-predictions"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh Predictions'}
+              </Button>
+            </div>
           </div>
 
           {/* Controls */}
