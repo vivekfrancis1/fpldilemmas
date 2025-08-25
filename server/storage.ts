@@ -275,6 +275,43 @@ export class DatabaseStorage implements IStorage {
     this.memFallback = new MemStorage();
   }
 
+  // Helper method to map team names to team IDs (standard FPL team IDs)
+  private getTeamIdFromName(teamName: string): number {
+    const teamMap: Record<string, number> = {
+      'Arsenal': 1, 'ARS': 1,
+      'Aston Villa': 2, 'AVL': 2, 
+      'Bournemouth': 3, 'BOU': 3,
+      'Brentford': 4, 'BRE': 4,
+      'Brighton': 5, 'BHA': 5,
+      'Chelsea': 6, 'CHE': 6,
+      'Crystal Palace': 7, 'CRY': 7,
+      'Everton': 8, 'EVE': 8,
+      'Fulham': 9, 'FUL': 9,
+      'Leeds': 10, 'LEE': 10,
+      'Liverpool': 11, 'LIV': 11,
+      'Manchester City': 12, 'MCI': 12, 'Man City': 12,
+      'Manchester United': 13, 'MUN': 13, 'Man Utd': 13,
+      'Newcastle': 14, 'NEW': 14,
+      'Nottingham Forest': 15, 'NFO': 15, "Nott'm Forest": 15,
+      'Southampton': 16, 'SOU': 16,
+      'Tottenham': 17, 'TOT': 17, 'Spurs': 17,
+      'West Ham': 18, 'WHU': 18,
+      'Wolves': 19, 'WOL': 19,
+      'Watford': 20, 'WAT': 20
+    };
+    return teamMap[teamName] || 1; // Default to Arsenal if not found
+  }
+
+  // Helper method to calculate form from historical season performance
+  private calculateHistoricalForm(totalPoints: number, minutes: number): string {
+    if (!minutes || minutes < 90) return "0.0";
+    // Calculate average points per game, then convert to form scale (0-10)
+    const gamesPlayed = Math.round(minutes / 90);
+    const avgPointsPerGame = totalPoints / gamesPlayed;
+    const form = Math.min(10, Math.max(0, avgPointsPerGame)).toFixed(1);
+    return form;
+  }
+
   // Bootstrap data methods (keep using memory for fast access)
   async getBootstrapData(): Promise<BootstrapData | undefined> {
     return this.memFallback.getBootstrapData();
@@ -375,8 +412,8 @@ export class DatabaseStorage implements IStorage {
           creativity: player.creativity,
           threat: player.threat,
           ict_index: player.ictIndex,
-          // Add commonly needed fields with defaults for historical data
-          form: "0.0", // Not available for historical data
+          // Add commonly needed fields with calculated values for historical data
+          form: this.calculateHistoricalForm(player.totalPoints || 0, player.minutes || 0),
           points_per_game: player.totalPoints && player.minutes ? 
             ((player.totalPoints / (player.minutes / 90)) || 0).toFixed(1) : "0.0",
           selected_by_percent: "0.0", // Not available for historical data
@@ -400,7 +437,7 @@ export class DatabaseStorage implements IStorage {
           element_type: player.positionName === 'Goalkeeper' ? 1 : 
                        player.positionName === 'Defender' ? 2 : 
                        player.positionName === 'Midfielder' ? 3 : 4,
-          team_id: 1 // Default team ID
+          team: this.getTeamIdFromName(player.teamName || player.teamShortName || "")
         }));
       }
       
