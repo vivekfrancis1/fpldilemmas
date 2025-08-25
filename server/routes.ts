@@ -2123,8 +2123,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return teamScore > opponentScore;
           }).length;
           
-          if (recentWins <= 1 && Math.random() < 0.3) { // 30% chance of injury crisis for poor form teams
-            baseExpectedGoals *= adminGoalSettings.injuryCrisisMultiplier || 0.92;
+          if (recentWins <= 1) { // Deterministic injury crisis for poor form teams (no random chance)
+            baseExpectedGoals *= (adminGoalSettings.injuryCrisisMultiplier || 0.92) * 0.3; // Apply 30% of the multiplier effect deterministically
           }
           
           // European Qualification Push: Teams in positions 4-7 fighting for Europe
