@@ -118,7 +118,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="p-2 sm:p-3 md:p-6 space-y-3 sm:space-y-4 md:space-y-6 pb-16 sm:pb-20">
-          {navItems.map((section) => (
+          {navItems
+            .filter((section) => section.items.length > 0) // Only show sections with visible items
+            .map((section) => (
             <div key={section.section} className="space-y-2 sm:space-y-3">
               <h2 className="text-purple-200 text-xs sm:text-xs font-semibold uppercase tracking-wider px-1">
                 {section.section}
