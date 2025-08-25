@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, type UpsetConfig } from "./storage";
 import { priceScheduler } from "./price-scheduler";
 import { insertPriceAlertSchema, unifiedProjectionSettings as unifiedProjectionSettingsTable } from "@shared/schema";
 import { db } from "./db";
@@ -4009,55 +4009,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const matchProjections = await matchProjectionsResponse.json();
 
+      // Get upset configuration
+      const upsetConfig = await storage.getUpsetConfig() || defaultUpsetConfig;
+
       // Process each match to create predicted scores
       const predictedScores = matchProjections.map((match: any) => {
-        // Option 2: Controlled variance (±20% variance)
-        const homeVariance = 0.8 + (Math.random() * 0.4); // Range: 0.8 to 1.2
-        const awayVariance = 0.8 + (Math.random() * 0.4); // Range: 0.8 to 1.2
+        // Start with original expected goals
+        let homeExpected = match.homeTeam.expectedGoals;
+        let awayExpected = match.awayTeam.expectedGoals;
+        
+        // Option 2: Controlled variance (configurable range)
+        if (upsetConfig.enableControlledVariance) {
+          const homeVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin));
+          const awayVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin));
+          homeExpected *= homeVariance;
+          awayExpected *= awayVariance;
+        }
         
         // Option 3: Context-based upsets
-        let homeContextBoost = 1.0;
-        let awayContextBoost = 1.0;
-        
-        // Giant-killing: Lower teams get boost vs top 6 (teams 1-6 by ID roughly)
-        const topTeamIds = [1, 7, 12, 13, 15, 18]; // ARS, CHE, LIV, MCI, NEW, TOT
-        const isHomeTopTeam = topTeamIds.includes(match.homeTeam.id);
-        const isAwayTopTeam = topTeamIds.includes(match.awayTeam.id);
-        
-        if (!isHomeTopTeam && isAwayTopTeam) {
-          homeContextBoost += 0.15; // +15% giant-killing boost for home underdog
-        }
-        if (!isAwayTopTeam && isHomeTopTeam) {
-          awayContextBoost += 0.15; // +15% giant-killing boost for away underdog
-        }
-        
-        // Pressure situations: Top teams get penalty in "must-win" scenarios (random 20% chance)
-        if (Math.random() < 0.2) {
-          if (isHomeTopTeam) homeContextBoost -= 0.1; // -10% pressure penalty
-          if (isAwayTopTeam) awayContextBoost -= 0.1; // -10% pressure penalty
-        }
-        
-        // Derby effects: Increase variance for local rivalries (random 15% chance)
-        const isDerby = Math.random() < 0.15;
-        const derbyVarianceBoost = isDerby ? 0.3 : 0.0; // +30% extra variance
-        
-        // Option 5: Season-long upset budget (random major swings 5% of the time)
-        const isUpsetBudgetScenario = Math.random() < 0.05;
-        const upsetBudgetMultiplier = isUpsetBudgetScenario ? (0.5 + Math.random() * 1.0) : 1.0; // Range: 0.5 to 1.5
-        
-        // Apply all context modifiers
-        let homeExpected = match.homeTeam.expectedGoals * homeVariance * homeContextBoost * upsetBudgetMultiplier;
-        let awayExpected = match.awayTeam.expectedGoals * awayVariance * awayContextBoost * upsetBudgetMultiplier;
-        
-        // Add derby variance if applicable
-        if (isDerby) {
-          const homeExtraVariance = 0.8 + (Math.random() * (0.4 + derbyVarianceBoost));
-          const awayExtraVariance = 0.8 + (Math.random() * (0.4 + derbyVarianceBoost));
-          homeExpected *= homeExtraVariance;
-          awayExpected *= awayExtraVariance;
+        if (upsetConfig.enableContextUpsets) {
+          let homeContextBoost = 1.0;
+          let awayContextBoost = 1.0;
+          
+          // Giant-killing: Lower teams get boost vs top teams
+          const isHomeTopTeam = upsetConfig.topTeamIds.includes(match.homeTeam.id);
+          const isAwayTopTeam = upsetConfig.topTeamIds.includes(match.awayTeam.id);
+          
+          if (!isHomeTopTeam && isAwayTopTeam) {
+            homeContextBoost += upsetConfig.giantKillingBoost;
+          }
+          if (!isAwayTopTeam && isHomeTopTeam) {
+            awayContextBoost += upsetConfig.giantKillingBoost;
+          }
+          
+          // Pressure situations: Top teams get penalty
+          if (Math.random() < upsetConfig.pressureChance) {
+            if (isHomeTopTeam) homeContextBoost -= upsetConfig.pressurePenalty;
+            if (isAwayTopTeam) awayContextBoost -= upsetConfig.pressurePenalty;
+          }
+          
+          // Derby effects: Increase variance for local rivalries
+          const isDerby = Math.random() < upsetConfig.derbyChance;
+          if (isDerby) {
+            const homeExtraVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin + upsetConfig.derbyVarianceBoost));
+            const awayExtraVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin + upsetConfig.derbyVarianceBoost));
+            homeContextBoost *= homeExtraVariance;
+            awayContextBoost *= awayExtraVariance;
+          }
+          
+          homeExpected *= homeContextBoost;
+          awayExpected *= awayContextBoost;
         }
         
-        // Option 1: Poisson distribution for final scores (more realistic than rounding)
+        // Option 5: Season-long upset budget (configurable major swings)
+        if (upsetConfig.enableSeasonUpsetBudget) {
+          if (Math.random() < upsetConfig.upsetBudgetChance) {
+            const upsetBudgetMultiplier = upsetConfig.upsetBudgetMin + (Math.random() * (upsetConfig.upsetBudgetMax - upsetConfig.upsetBudgetMin));
+            homeExpected *= upsetBudgetMultiplier;
+            awayExpected *= upsetBudgetMultiplier;
+          }
+        }
+        
+        // Option 1: Poisson distribution for final scores
         function poissonSample(lambda: number): number {
           if (lambda <= 0) return 0;
           let L = Math.exp(-lambda);
@@ -4072,19 +4085,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return Math.max(0, k - 1);
         }
         
-        // Option 4: Smart rounding with upset bias (15% chance of floor rounding)
-        const isRoundingUpsetScenario = Math.random() < 0.15;
-        
-        // Use Poisson 70% of the time, smart rounding 30% of the time for variety
+        // Final score calculation using configuration
         let homeScore, awayScore;
-        if (Math.random() < 0.7) {
+        
+        if (upsetConfig.enablePoissonDistribution && Math.random() < upsetConfig.poissonChance) {
           // Option 1: Poisson distribution
           homeScore = poissonSample(homeExpected);
           awayScore = poissonSample(awayExpected);
+        } else if (upsetConfig.enableSmartRounding && Math.random() < upsetConfig.upsetRoundingChance) {
+          // Option 4: Smart rounding with upset bias (floor rounding)
+          homeScore = Math.max(0, Math.floor(homeExpected));
+          awayScore = Math.max(0, Math.floor(awayExpected));
         } else {
-          // Option 4: Smart rounding with bias
-          homeScore = Math.max(0, isRoundingUpsetScenario ? Math.floor(homeExpected) : Math.round(homeExpected));
-          awayScore = Math.max(0, isRoundingUpsetScenario ? Math.floor(awayExpected) : Math.round(awayExpected));
+          // Default: Normal rounding
+          homeScore = Math.max(0, Math.round(homeExpected));
+          awayScore = Math.max(0, Math.round(awayExpected));
         }
         
         // Determine match outcome
@@ -4502,6 +4517,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Failed to load league data",
         message: error instanceof Error ? error.message : "Please check the league ID and try again.",
       });
+    }
+  });
+
+  // Admin Upset Configuration routes
+  const defaultUpsetConfig: UpsetConfig = {
+    // Enable/disable options
+    enableControlledVariance: true,
+    enableContextUpsets: true,
+    enableSmartRounding: true,
+    enableSeasonUpsetBudget: true,
+    enablePoissonDistribution: true,
+    
+    // Option 2: Controlled Variance settings
+    varianceMin: 0.8,
+    varianceMax: 1.2,
+    
+    // Option 3: Context-based upsets settings
+    giantKillingBoost: 0.15,
+    pressurePenalty: 0.1,
+    pressureChance: 0.2,
+    derbyVarianceBoost: 0.3,
+    derbyChance: 0.15,
+    topTeamIds: [1, 7, 12, 13, 15, 18], // ARS, CHE, LIV, MCI, NEW, TOT
+    
+    // Option 4: Smart Rounding settings
+    upsetRoundingChance: 0.15,
+    
+    // Option 5: Season Upset Budget settings
+    upsetBudgetChance: 0.05,
+    upsetBudgetMin: 0.5,
+    upsetBudgetMax: 1.5,
+    
+    // Option 1: Poisson Distribution settings
+    poissonChance: 0.7
+  };
+
+  app.get("/api/admin/upset-config", async (req, res) => {
+    try {
+      const config = await storage.getUpsetConfig();
+      res.json(config || defaultUpsetConfig);
+    } catch (error) {
+      console.error("Error fetching upset config:", error);
+      res.status(500).json({ error: "Failed to fetch upset configuration" });
+    }
+  });
+
+  app.post("/api/admin/upset-config", async (req, res) => {
+    try {
+      const config = req.body;
+      await storage.setUpsetConfig(config);
+      res.json({ success: true, message: "Upset configuration saved successfully" });
+    } catch (error) {
+      console.error("Error saving upset config:", error);
+      res.status(500).json({ error: "Failed to save upset configuration" });
+    }
+  });
+
+  app.post("/api/admin/upset-config/reset", async (req, res) => {
+    try {
+      await storage.setUpsetConfig(defaultUpsetConfig);
+      res.json({ success: true, message: "Upset configuration reset to defaults", config: defaultUpsetConfig });
+    } catch (error) {
+      console.error("Error resetting upset config:", error);
+      res.status(500).json({ error: "Failed to reset upset configuration" });
     }
   });
 

@@ -31,6 +31,7 @@ import TeamAssistProjections from "./pages/team-assist-projections";
 import TeamCSProjections from "./pages/team-cs-projections";
 import SeasonProjections from "./pages/season-projections";
 import AdminGoalProjections from "./pages/admin-goal-projections";
+import AdminUpsetConfig from "./pages/admin-upset-config";
 
 function Router() {
   return (
@@ -61,6 +62,7 @@ function Router() {
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
       <Route path="/season-projections" component={SeasonProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
+      <Route path="/admin-upset-config" component={AdminUpsetConfig} />
       <Route component={NotFound} />
     </Switch>
   );

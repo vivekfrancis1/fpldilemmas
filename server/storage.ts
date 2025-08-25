@@ -38,6 +38,42 @@ export interface IStorage {
   // Manager ID caching operations
   getLastManagerId(): Promise<string | undefined>;
   setLastManagerId(managerId: string): Promise<void>;
+  
+  // Upset configuration operations
+  getUpsetConfig(): Promise<UpsetConfig | undefined>;
+  setUpsetConfig(config: UpsetConfig): Promise<void>;
+}
+
+export interface UpsetConfig {
+  // Enable/disable options
+  enableControlledVariance: boolean;        // Option 2
+  enableContextUpsets: boolean;             // Option 3
+  enableSmartRounding: boolean;             // Option 4
+  enableSeasonUpsetBudget: boolean;         // Option 5
+  enablePoissonDistribution: boolean;       // Option 1
+  
+  // Option 2: Controlled Variance settings
+  varianceMin: number;                      // Default: 0.8
+  varianceMax: number;                      // Default: 1.2
+  
+  // Option 3: Context-based upsets settings
+  giantKillingBoost: number;                // Default: 0.15 (+15%)
+  pressurePenalty: number;                  // Default: 0.1 (-10%)
+  pressureChance: number;                   // Default: 0.2 (20% chance)
+  derbyVarianceBoost: number;               // Default: 0.3 (+30% extra variance)
+  derbyChance: number;                      // Default: 0.15 (15% chance)
+  topTeamIds: number[];                     // Default: [1, 7, 12, 13, 15, 18]
+  
+  // Option 4: Smart Rounding settings
+  upsetRoundingChance: number;              // Default: 0.15 (15% chance)
+  
+  // Option 5: Season Upset Budget settings
+  upsetBudgetChance: number;                // Default: 0.05 (5% chance)
+  upsetBudgetMin: number;                   // Default: 0.5
+  upsetBudgetMax: number;                   // Default: 1.5
+  
+  // Option 1: Poisson Distribution settings
+  poissonChance: number;                    // Default: 0.7 (70% chance vs 30% smart rounding)
 }
 
 export class MemStorage implements IStorage {
@@ -48,6 +84,7 @@ export class MemStorage implements IStorage {
   private priceChangeHistory: Map<string, { playerId: number; changeAmount: number; date: string; }>;
   private historicalPlayerCache: Map<string, HistoricalPlayer[]>;
   private lastManagerId: string | undefined;
+  private upsetConfig: UpsetConfig | undefined;
   private nextWatchlistId: number;
   private nextAlertId: number;
 
@@ -180,6 +217,14 @@ export class MemStorage implements IStorage {
 
   async setLastManagerId(managerId: string): Promise<void> {
     this.lastManagerId = managerId;
+  }
+  
+  async getUpsetConfig(): Promise<UpsetConfig | undefined> {
+    return this.upsetConfig;
+  }
+  
+  async setUpsetConfig(config: UpsetConfig): Promise<void> {
+    this.upsetConfig = config;
   }
 
   // Daily price tracking methods
