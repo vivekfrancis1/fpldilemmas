@@ -5963,10 +5963,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // FPL Content Creators API routes
   app.get("/api/content-creators", async (req, res) => {
     try {
-      // For now, return empty array since we need to implement the database storage
-      // This will be populated after database setup
-      const creators: any[] = [];
-      res.json(creators);
+      const creators = await storage.getContentCreators();
+      
+      // Get latest tracking data for each creator to enrich the response
+      const creatorsWithLatestData = await Promise.all(
+        creators.map(async (creator) => {
+          const latestTracking = await storage.getLatestCreatorTracking(creator.id);
+          return {
+            ...creator,
+            latestTracking,
+            rankChange: undefined, // Will be calculated when we have historical data
+            pointsThisGw: latestTracking?.gameweekPoints
+          };
+        })
+      );
+      
+      res.json(creatorsWithLatestData);
     } catch (error) {
       console.error("Error fetching content creators:", error);
       res.status(500).json({ error: "Failed to fetch content creators" });
@@ -5976,13 +5988,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/content-creators", async (req, res) => {
     try {
       const creatorData = req.body;
+      
       // Validate required fields
       if (!creatorData.name || !creatorData.handle || !creatorData.teamId || !creatorData.teamName || !creatorData.platform) {
         return res.status(400).json({ error: "Missing required fields" });
       }
       
-      // For now, just return success - will implement database insertion after setup
-      res.json({ success: true, message: "Creator added successfully" });
+      // Add the creator to database
+      const newCreator = await storage.addContentCreator(creatorData);
+      res.json(newCreator);
     } catch (error) {
       console.error("Error adding content creator:", error);
       res.status(500).json({ error: "Failed to add content creator" });
@@ -5992,8 +6006,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/content-creators/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      // For now, return mock data - will implement database fetch after setup
-      res.json({ id: parseInt(id), name: "Sample Creator" });
+      const creator = await storage.getContentCreatorById(parseInt(id));
+      
+      if (!creator) {
+        return res.status(404).json({ error: "Content creator not found" });
+      }
+      
+      res.json(creator);
     } catch (error) {
       console.error("Error fetching content creator:", error);
       res.status(500).json({ error: "Failed to fetch content creator" });
@@ -6003,19 +6022,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/content-creators/:id/history", async (req, res) => {
     try {
       const { id } = req.params;
-      // For now, return empty array - will implement database fetch after setup
-      res.json([]);
+      const history = await storage.getCreatorTracking(parseInt(id), 20);
+      res.json(history);
     } catch (error) {
       console.error("Error fetching creator history:", error);
       res.status(500).json({ error: "Failed to fetch creator history" });
     }
   });
 
+  app.post("/api/content-creators/bulk", async (req, res) => {
+    try {
+      const { creators } = req.body;
+      
+      if (!Array.isArray(creators)) {
+        return res.status(400).json({ error: "Creators must be an array" });
+      }
+      
+      let addedCount = 0;
+      const errors: string[] = [];
+      
+      for (const creatorData of creators) {
+        try {
+          // Validate required fields
+          if (!creatorData.name || !creatorData.handle || !creatorData.teamId || !creatorData.teamName || !creatorData.platform) {
+            errors.push(`Missing required fields for ${creatorData.name || 'unknown creator'}`);
+            continue;
+          }
+          
+          await storage.addContentCreator(creatorData);
+          addedCount++;
+        } catch (error) {
+          errors.push(`Failed to add ${creatorData.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Added ${addedCount} out of ${creators.length} content creators`,
+        addedCount,
+        totalAttempted: creators.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Error bulk adding content creators:", error);
+      res.status(500).json({ error: "Failed to bulk add content creators" });
+    }
+  });
+
   app.post("/api/content-creators/refresh", async (req, res) => {
     try {
-      // This will fetch latest FPL data for all content creators
-      // For now, just return success
-      res.json({ success: true, message: "Data refreshed successfully" });
+      // This will fetch latest FPL data for all content creators from the FPL API
+      const creators = await storage.getContentCreators();
+      
+      if (creators.length === 0) {
+        return res.json({ success: true, message: "No content creators to refresh" });
+      }
+      
+      // Fetch current gameweek from bootstrap data
+      const bootstrap = await storage.getBootstrapData();
+      if (!bootstrap) {
+        return res.status(400).json({ error: "Bootstrap data not available" });
+      }
+      
+      const currentGameweek = bootstrap.events.find(event => event.is_current)?.id || 1;
+      let refreshedCount = 0;
+      
+      // Refresh each creator's FPL data
+      for (const creator of creators) {
+        try {
+          // Fetch manager data from FPL API
+          const managerResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/`);
+          if (!managerResponse.ok) continue;
+          
+          const managerData = await managerResponse.json();
+          
+          // Add new tracking record
+          await storage.addCreatorTracking({
+            creatorId: creator.id,
+            gameweek: currentGameweek,
+            overallRank: managerData.summary_overall_rank,
+            overallPoints: managerData.summary_overall_points,
+            gameweekPoints: managerData.summary_event_points,
+            gameweekRank: managerData.summary_event_rank,
+            teamValue: parseFloat((managerData.value / 10).toFixed(1)), // Convert from pence to pounds
+            bank: parseFloat((managerData.bank / 10).toFixed(1)),
+            totalTransfers: managerData.total_transfers,
+            freeTransfers: managerData.free_transfers || 1,
+            wildcardUsed: false, // Will need to check picks history for chips used
+            benchBoostUsed: false,
+            freeHitUsed: false,
+            tripleCaptainUsed: false,
+            hitsTaken: 0, // Will need to calculate from transfer history
+            recordedAt: new Date(),
+            isVerified: false
+          });
+          
+          refreshedCount++;
+        } catch (error) {
+          console.error(`Error refreshing creator ${creator.name}:`, error);
+          // Continue with other creators
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Successfully refreshed ${refreshedCount} out of ${creators.length} content creators`,
+        refreshedCount,
+        totalCreators: creators.length
+      });
     } catch (error) {
       console.error("Error refreshing content creator data:", error);
       res.status(500).json({ error: "Failed to refresh data" });

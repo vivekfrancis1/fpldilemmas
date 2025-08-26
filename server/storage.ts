@@ -1,7 +1,7 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, fplContentCreators, fplCreatorTracking } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
-import { eq, sql, inArray } from "drizzle-orm";
+import { eq, sql, inArray, desc } from "drizzle-orm";
 
 export interface IStorage {
   getBootstrapData(): Promise<BootstrapData | undefined>;
@@ -49,6 +49,18 @@ export interface IStorage {
   getPlayerMappings(): Promise<PlayerMapping[]>;
   upsertPlayerMappings(players: InsertPlayerMapping[]): Promise<void>;
   getPlayerMappingById(playerId: number): Promise<PlayerMapping | undefined>;
+  
+  // FPL Content Creators operations
+  getContentCreators(): Promise<FplContentCreator[]>;
+  getContentCreatorById(id: number): Promise<FplContentCreator | undefined>;
+  addContentCreator(creator: InsertFplContentCreator): Promise<FplContentCreator>;
+  updateContentCreator(id: number, updates: Partial<InsertFplContentCreator>): Promise<FplContentCreator>;
+  deleteContentCreator(id: number): Promise<void>;
+  
+  // FPL Creator Tracking operations
+  getCreatorTracking(creatorId: number, limit?: number): Promise<FplCreatorTracking[]>;
+  addCreatorTracking(tracking: InsertFplCreatorTracking): Promise<FplCreatorTracking>;
+  getLatestCreatorTracking(creatorId: number): Promise<FplCreatorTracking | undefined>;
   
 }
 
@@ -795,6 +807,109 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // FPL Content Creators operations
+  async getContentCreators(): Promise<FplContentCreator[]> {
+    try {
+      console.log(`📊 Fetching content creators from database...`);
+      const creators = await db.select().from(fplContentCreators).orderBy(fplContentCreators.name);
+      console.log(`✅ Found ${creators.length} content creators in database`);
+      return creators;
+    } catch (error) {
+      console.error("Error fetching content creators from database:", error);
+      return [];
+    }
+  }
+
+  async getContentCreatorById(id: number): Promise<FplContentCreator | undefined> {
+    try {
+      const [creator] = await db.select().from(fplContentCreators).where(eq(fplContentCreators.id, id));
+      return creator;
+    } catch (error) {
+      console.error(`Error fetching content creator ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async addContentCreator(creator: InsertFplContentCreator): Promise<FplContentCreator> {
+    try {
+      console.log(`💾 Adding content creator: ${creator.name}`);
+      const [newCreator] = await db.insert(fplContentCreators).values(creator).returning();
+      console.log(`✅ Successfully added content creator: ${newCreator.name}`);
+      return newCreator;
+    } catch (error) {
+      console.error("Error adding content creator:", error);
+      throw error;
+    }
+  }
+
+  async updateContentCreator(id: number, updates: Partial<InsertFplContentCreator>): Promise<FplContentCreator> {
+    try {
+      console.log(`💾 Updating content creator: ${id}`);
+      const [updatedCreator] = await db.update(fplContentCreators)
+        .set({ ...updates, lastUpdated: new Date() })
+        .where(eq(fplContentCreators.id, id))
+        .returning();
+      console.log(`✅ Successfully updated content creator: ${updatedCreator.name}`);
+      return updatedCreator;
+    } catch (error) {
+      console.error("Error updating content creator:", error);
+      throw error;
+    }
+  }
+
+  async deleteContentCreator(id: number): Promise<void> {
+    try {
+      console.log(`🗑️ Deleting content creator: ${id}`);
+      await db.delete(fplContentCreators).where(eq(fplContentCreators.id, id));
+      console.log(`✅ Successfully deleted content creator: ${id}`);
+    } catch (error) {
+      console.error("Error deleting content creator:", error);
+      throw error;
+    }
+  }
+
+  // FPL Creator Tracking operations
+  async getCreatorTracking(creatorId: number, limit: number = 20): Promise<FplCreatorTracking[]> {
+    try {
+      console.log(`📊 Fetching tracking data for creator ${creatorId}...`);
+      const tracking = await db.select()
+        .from(fplCreatorTracking)
+        .where(eq(fplCreatorTracking.creatorId, creatorId))
+        .orderBy(desc(fplCreatorTracking.gameweek))
+        .limit(limit);
+      console.log(`✅ Found ${tracking.length} tracking records for creator ${creatorId}`);
+      return tracking;
+    } catch (error) {
+      console.error(`Error fetching tracking data for creator ${creatorId}:`, error);
+      return [];
+    }
+  }
+
+  async addCreatorTracking(tracking: InsertFplCreatorTracking): Promise<FplCreatorTracking> {
+    try {
+      console.log(`💾 Adding tracking data for creator ${tracking.creatorId}, GW${tracking.gameweek}`);
+      const [newTracking] = await db.insert(fplCreatorTracking).values(tracking).returning();
+      console.log(`✅ Successfully added tracking data for creator ${tracking.creatorId}`);
+      return newTracking;
+    } catch (error) {
+      console.error("Error adding creator tracking:", error);
+      throw error;
+    }
+  }
+
+  async getLatestCreatorTracking(creatorId: number): Promise<FplCreatorTracking | undefined> {
+    try {
+      const [latest] = await db.select()
+        .from(fplCreatorTracking)
+        .where(eq(fplCreatorTracking.creatorId, creatorId))
+        .orderBy(desc(fplCreatorTracking.gameweek))
+        .limit(1);
+      return latest;
+    } catch (error) {
+      console.error(`Error fetching latest tracking for creator ${creatorId}:`, error);
+      return undefined;
+    }
+  }
 
 }
 
