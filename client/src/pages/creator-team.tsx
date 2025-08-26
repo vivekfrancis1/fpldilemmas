@@ -598,7 +598,7 @@ export default function CreatorTeam() {
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell>#{(entry.rank || entry.event_rank || 0).toLocaleString()}</TableCell>
+                                <TableCell>#{entry.rank.toLocaleString()}</TableCell>
                                 <TableCell>£{(entry.value / 10).toFixed(1)}m</TableCell>
                                 <TableCell>
                                   {entry.event_transfers > 0 && (
