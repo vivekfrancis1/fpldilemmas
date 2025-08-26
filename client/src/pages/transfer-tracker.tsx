@@ -27,11 +27,12 @@ interface TransferData {
   // Calculated fields
   absolute_ownership?: number;
   initial_ownership?: number;
+  initial_ownership_gameweek?: number;
   net_transfers_percentage?: number;
   net_transfers_event_percentage?: number;
 }
 
-type SortField = 'net_transfers' | 'transfers_in' | 'transfers_out' | 'transfers_in_event' | 'transfers_out_event' | 'net_transfers_event' | 'ownership_percentage' | 'absolute_ownership' | 'initial_ownership' | 'net_transfers_percentage' | 'net_transfers_event_percentage' | 'current_price';
+type SortField = 'net_transfers' | 'transfers_in' | 'transfers_out' | 'transfers_in_event' | 'transfers_out_event' | 'net_transfers_event' | 'ownership_percentage' | 'absolute_ownership' | 'initial_ownership' | 'initial_ownership_gameweek' | 'net_transfers_percentage' | 'net_transfers_event_percentage' | 'current_price';
 type SortDirection = 'asc' | 'desc';
 
 export default function TransferTracker() {
@@ -109,6 +110,7 @@ export default function TransferTracker() {
         net_transfers_event: netTransfersEvent,
         absolute_ownership: absoluteOwnership,
         initial_ownership: initialOwnershipSeason,
+        initial_ownership_gameweek: initialOwnershipGameweek,
         net_transfers_percentage: netTransfersPercentage,
         net_transfers_event_percentage: netTransfersEventPercentage
       };
@@ -127,6 +129,10 @@ export default function TransferTracker() {
         case 'initial_ownership':
           aValue = a.initial_ownership || 0;
           bValue = b.initial_ownership || 0;
+          break;
+        case 'initial_ownership_gameweek':
+          aValue = a.initial_ownership_gameweek || 0;
+          bValue = b.initial_ownership_gameweek || 0;
           break;
         case 'net_transfers_percentage':
           aValue = a.net_transfers_percentage || 0;
@@ -388,7 +394,12 @@ export default function TransferTracker() {
                       </th>
                       <th className="text-right p-2">
                         <SortableHeader field="initial_ownership" className="text-right">
-                          Initial Own.
+                          Initial Own. (Season)
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="initial_ownership_gameweek" className="text-right">
+                          Initial Own. (GW)
                         </SortableHeader>
                       </th>
                       <th className="text-center p-2 border-l border-gray-200">
@@ -475,6 +486,9 @@ export default function TransferTracker() {
                         </td>
                         <td className="p-3 text-right">
                           <span className="font-medium">{transfer.initial_ownership?.toLocaleString() || "0"}</span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium">{transfer.initial_ownership_gameweek?.toLocaleString() || "0"}</span>
                         </td>
                         
                         {/* Season totals section */}
