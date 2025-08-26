@@ -379,7 +379,7 @@ export default function TransferTracker() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/20">
-                      <th className="text-left p-2">Player</th>
+                      <th className="text-left p-2 sticky left-0 bg-muted/20 z-10 border-r border-gray-200">Player</th>
                       <th className="text-left p-2">Team/Pos</th>
                       <th className="text-right p-2">Price</th>
                       <th className="text-right p-2">
@@ -453,7 +453,7 @@ export default function TransferTracker() {
                         className="border-b hover:bg-muted/50 transition-colors"
                         data-testid={`transfer-${transfer.player_id}`}
                       >
-                        <td className="p-3">
+                        <td className="p-3 sticky left-0 bg-white dark:bg-gray-950 z-10 border-r border-gray-200">
                           <div className="flex items-center gap-2">
                             {transfer.net_transfers > 0 ? (
                               <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
