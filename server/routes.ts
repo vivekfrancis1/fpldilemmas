@@ -6189,7 +6189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const creatorData of creators) {
         try {
           // Validate required fields
-          if (!creatorData.name || !creatorData.handle || !creatorData.teamId || !creatorData.teamName || !creatorData.platform) {
+          if (!creatorData.name || !creatorData.handle || !creatorData.managerId || !creatorData.managerName || !creatorData.platform) {
             errors.push(`Missing required fields for ${creatorData.name || 'unknown creator'}`);
             continue;
           }
@@ -6228,15 +6228,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let refreshedCount = 0;
       const errors: string[] = [];
       
-      // Refresh each creator's FPL data using their team ID as manager ID
+      // Refresh each creator's FPL data using their manager ID
       for (const creator of creators) {
         try {
-          console.log(`Fetching data for ${creator.name} (Manager ID: ${creator.teamId})...`);
+          console.log(`Fetching data for ${creator.name} (Manager ID: ${creator.managerId})...`);
           
-          // Fetch manager data from FPL API using team ID as manager ID
-          const managerResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/`);
+          // Fetch manager data from FPL API using manager ID
+          const managerResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/`);
           if (!managerResponse.ok) {
-            errors.push(`Failed to fetch data for ${creator.name} (ID: ${creator.teamId})`);
+            errors.push(`Failed to fetch data for ${creator.name} (ID: ${creator.managerId})`);
             continue;
           }
           

@@ -58,8 +58,8 @@ type FPLCreator = {
   id: number;
   name: string;
   handle: string;
-  teamId: number;
-  teamName: string;
+  managerId: number;
+  managerName: string;
   platform: string;
   description?: string;
   website?: string;
@@ -68,6 +68,7 @@ type FPLCreator = {
   addedDate: string;
   lastUpdated: string;
   rankChange?: number;
+  latestTracking?: FPLCreatorTracking;
 };
 
 type FPLCreatorTracking = {
@@ -236,7 +237,7 @@ export default function ContentCreators() {
   });
 
   // Sort creators
-  const sortedCreators = [...creators].sort((a, b) => {
+  const sortedCreators = [...(creators as FPLCreator[])].sort((a, b) => {
     let valueA, valueB;
     
     switch (sortBy) {

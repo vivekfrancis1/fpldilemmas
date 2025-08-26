@@ -298,6 +298,39 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
+  // FPL Content Creators operations (in-memory stubs)
+  async getContentCreators(): Promise<FplContentCreator[]> {
+    return [];
+  }
+
+  async getContentCreatorById(id: number): Promise<FplContentCreator | undefined> {
+    return undefined;
+  }
+
+  async addContentCreator(creator: InsertFplContentCreator): Promise<FplContentCreator> {
+    throw new Error("MemStorage: Content creator operations not supported. Use DatabaseStorage.");
+  }
+
+  async updateContentCreator(id: number, updates: Partial<InsertFplContentCreator>): Promise<FplContentCreator> {
+    throw new Error("MemStorage: Content creator operations not supported. Use DatabaseStorage.");
+  }
+
+  async deleteContentCreator(id: number): Promise<void> {
+    throw new Error("MemStorage: Content creator operations not supported. Use DatabaseStorage.");
+  }
+
+  // FPL Creator Tracking operations (in-memory stubs)
+  async getCreatorTracking(creatorId: number, limit?: number): Promise<FplCreatorTracking[]> {
+    return [];
+  }
+
+  async addCreatorTracking(tracking: InsertFplCreatorTracking): Promise<FplCreatorTracking> {
+    throw new Error("MemStorage: Creator tracking operations not supported. Use DatabaseStorage.");
+  }
+
+  async getLatestCreatorTracking(creatorId: number): Promise<FplCreatorTracking | undefined> {
+    return undefined;
+  }
 
 }
 

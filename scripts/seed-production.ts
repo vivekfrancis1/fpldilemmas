@@ -55,7 +55,7 @@ async function seedProductionDatabase() {
     for (const creator of CONTENT_CREATORS) {
       try {
         // Check if this creator already exists
-        const existingCreator = existing.find(c => c.teamId === creator.teamId);
+        const existingCreator = existing.find(c => c.managerId === creator.teamId);
         if (existingCreator) {
           console.log(`⏭️  Skipping ${creator.name} (already exists)`);
           continue;
@@ -65,8 +65,8 @@ async function seedProductionDatabase() {
           name: creator.name,
           handle: creator.handle,
           platform: creator.platform,
-          teamId: creator.teamId,
-          teamName: creator.name,
+          managerId: creator.teamId,
+          managerName: creator.name,
           description: creator.description
         });
         
