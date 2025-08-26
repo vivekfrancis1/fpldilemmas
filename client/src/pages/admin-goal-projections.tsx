@@ -702,10 +702,13 @@ export default function AdminGoalProjections() {
                     </div>
                     
                     <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 2: Venue Adjustments</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 2: Attacking Tiers</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Home:</strong> xG × <span className="font-mono text-green-600">{formData.homeAdvantageGoalsMultiplier || 1.16}</span><br/>
-                        <strong>Away:</strong> xG × <span className="font-mono text-red-600">{formData.awayFactorGoalsMultiplier || 0.84}</span>
+                        <strong>Elite:</strong> × <span className="font-mono text-orange-600">{formData.eliteAttackMultiplier || 1.4}</span><br/>
+                        <strong>Strong:</strong> × <span className="font-mono text-orange-600">{formData.strongAttackMultiplier || 1.1}</span><br/>
+                        <strong>Average:</strong> × <span className="font-mono text-orange-600">{formData.averageAttackMultiplier || 1.0}</span><br/>
+                        <strong>Weak:</strong> × <span className="font-mono text-orange-600">{formData.weakAttackMultiplier || 0.85}</span><br/>
+                        <strong>Promoted:</strong> × <span className="font-mono text-orange-600">{formData.promotedAttackMultiplier || 0.7}</span>
                       </p>
                     </div>
                     
@@ -721,13 +724,10 @@ export default function AdminGoalProjections() {
                     </div>
                     
                     <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 4: Attacking Tiers</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 4: Venue adjustments</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Elite:</strong> × <span className="font-mono text-orange-600">{formData.eliteAttackMultiplier || 1.4}</span><br/>
-                        <strong>Strong:</strong> × <span className="font-mono text-orange-600">{formData.strongAttackMultiplier || 1.1}</span><br/>
-                        <strong>Average:</strong> × <span className="font-mono text-orange-600">{formData.averageAttackMultiplier || 1.0}</span><br/>
-                        <strong>Weak:</strong> × <span className="font-mono text-orange-600">{formData.weakAttackMultiplier || 0.85}</span><br/>
-                        <strong>Promoted:</strong> × <span className="font-mono text-orange-600">{formData.promotedAttackMultiplier || 0.7}</span>
+                        <strong>Home:</strong> xG × <span className="font-mono text-green-600">{formData.homeAdvantageGoalsMultiplier || 1.16}</span><br/>
+                        <strong>Away:</strong> xG × <span className="font-mono text-red-600">{formData.awayFactorGoalsMultiplier || 0.84}</span>
                       </p>
                     </div>
                   </div>
