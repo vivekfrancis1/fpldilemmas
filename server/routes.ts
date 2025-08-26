@@ -903,14 +903,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process all players to show comprehensive price tracking data
       for (const player of elements) {
         try {
-          // Get authentic transfer data from daily tracking
-          let transfersIn = player.transfers_in_event || 0;
-          let transfersOut = player.transfers_out_event || 0;
+          // Get authentic transfer data - use gameweek data for price predictions but include both
+          let transfersInEvent = player.transfers_in_event || 0;
+          let transfersOutEvent = player.transfers_out_event || 0;
           
-          // Skip database lookup for speed - use FPL API data directly
-          // This can be enhanced later with cached daily data
+          // Calculate gameweek net transfers for price prediction algorithm
+          const netTransfers = transfersInEvent - transfersOutEvent;
           
-          const netTransfers = transfersIn - transfersOut;
+          // Calculate season net transfers for display
+          const seasonNetTransfers = (player.transfers_in || 0) - (player.transfers_out || 0);
           const ownership = parseFloat(player.selected_by_percent || "0");
           const currentPrice = player.now_cost;
           
@@ -1118,7 +1119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             predicted_change: predictedChange,
             confidence: Math.round(confidence),
             ownership_percentage: ownership,
-            net_transfers: netTransfers,
+            net_transfers: seasonNetTransfers,  // Season net transfers for display
             transfers_in: player.transfers_in || 0,  // Season total transfers in
             transfers_out: player.transfers_out || 0,  // Season total transfers out
             transfers_in_event: player.transfers_in_event || 0,  // Gameweek transfers in

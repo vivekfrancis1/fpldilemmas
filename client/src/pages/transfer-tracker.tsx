@@ -96,7 +96,7 @@ export default function TransferTracker() {
       
       // Debug logging for first few players to verify calculation
       if (data.player_name === "Palmer" || data.player_name === "Salah" || data.player_name === "Haaland") {
-        console.log(`${data.player_name}: Season Net=${data.net_transfers}, GW Net=${netTransfersEvent}, GW In=${data.transfers_in_event}, GW Out=${data.transfers_out_event}`);
+        console.log(`${data.player_name}: Season Net=${data.net_transfers}, GW Net=${netTransfersEvent}, Season In=${data.transfers_in}, Season Out=${data.transfers_out}`);
       }
       
       return {
