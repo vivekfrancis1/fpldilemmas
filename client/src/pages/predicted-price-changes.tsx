@@ -35,9 +35,18 @@ interface PricePrediction {
   net_transfers_percentage?: number;
   transfers_per_hour?: number;
   transfers_per_day?: number;
+  transfers_per_gameweek?: number;
+  transfers_total_season?: number;
+  transfers_in_hourly?: number;
+  transfers_out_hourly?: number;
+  transfers_in_daily?: number;
+  transfers_out_daily?: number;
+  transfers_in_gameweek?: number;
+  transfers_out_gameweek?: number;
+  transfer_rate_trend?: string;
 }
 
-type SortField = 'current_progress' | 'tonight_progress' | 'transfers_in' | 'transfers_out' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage' | 'transfers_per_hour' | 'transfers_per_day';
+type SortField = 'current_progress' | 'tonight_progress' | 'transfers_in' | 'transfers_out' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage' | 'transfers_per_hour' | 'transfers_per_day' | 'transfers_per_gameweek' | 'transfers_in_hourly' | 'transfers_out_hourly' | 'transfers_in_daily' | 'transfers_out_daily';
 type SortDirection = 'asc' | 'desc';
 
 export default function PredictedPriceChanges() {
@@ -94,17 +103,42 @@ export default function PredictedPriceChanges() {
       const netTransfersPercentage = absoluteOwnership > 0 ? 
         Math.round((pred.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
       
-      // Calculate transfer rates
+      // Calculate comprehensive transfer rates across time periods
       const transfersPerHour = pred.hourly_change_rate > 0 ? 
         Math.round((Math.abs(pred.net_transfers) / 24) * (pred.hourly_change_rate / 100)) : 0;
       const transfersPerDay = Math.abs(pred.net_transfers);
+      const transfersPerGameweek = Math.round(transfersPerDay * 7); // Assume 7 days per gameweek
+      const transfersTotalSeason = Math.round(transfersPerGameweek * 38); // 38 gameweeks
+      
+      // Calculate individual transfer direction rates
+      const transfersInHourly = Math.round((pred.transfers_in || 0) / 24);
+      const transfersOutHourly = Math.round((pred.transfers_out || 0) / 24);
+      const transfersInDaily = pred.transfers_in || 0;
+      const transfersOutDaily = pred.transfers_out || 0;
+      const transfersInGameweek = Math.round(transfersInDaily * 7);
+      const transfersOutGameweek = Math.round(transfersOutDaily * 7);
+      
+      // Determine transfer trend
+      const transferRateTrend = pred.net_transfers > 0 ? 
+        (pred.hourly_change_rate > 5 ? "Rising Fast" : "Rising") :
+        pred.net_transfers < 0 ? 
+        (pred.hourly_change_rate > 5 ? "Falling Fast" : "Falling") : "Stable";
       
       return {
         ...pred,
         absolute_ownership: absoluteOwnership,
         net_transfers_percentage: netTransfersPercentage,
         transfers_per_hour: transfersPerHour,
-        transfers_per_day: transfersPerDay
+        transfers_per_day: transfersPerDay,
+        transfers_per_gameweek: transfersPerGameweek,
+        transfers_total_season: transfersTotalSeason,
+        transfers_in_hourly: transfersInHourly,
+        transfers_out_hourly: transfersOutHourly,
+        transfers_in_daily: transfersInDaily,
+        transfers_out_daily: transfersOutDaily,
+        transfers_in_gameweek: transfersInGameweek,
+        transfers_out_gameweek: transfersOutGameweek,
+        transfer_rate_trend: transferRateTrend
       };
     });
 
@@ -133,6 +167,26 @@ export default function PredictedPriceChanges() {
         case 'transfers_per_day':
           aValue = a.transfers_per_day || 0;
           bValue = b.transfers_per_day || 0;
+          break;
+        case 'transfers_per_gameweek':
+          aValue = a.transfers_per_gameweek || 0;
+          bValue = b.transfers_per_gameweek || 0;
+          break;
+        case 'transfers_in_hourly':
+          aValue = a.transfers_in_hourly || 0;
+          bValue = b.transfers_in_hourly || 0;
+          break;
+        case 'transfers_out_hourly':
+          aValue = a.transfers_out_hourly || 0;
+          bValue = b.transfers_out_hourly || 0;
+          break;
+        case 'transfers_in_daily':
+          aValue = a.transfers_in_daily || 0;
+          bValue = b.transfers_in_daily || 0;
+          break;
+        case 'transfers_out_daily':
+          aValue = a.transfers_out_daily || 0;
+          bValue = b.transfers_out_daily || 0;
           break;
         default:
           aValue = a[sortField];
@@ -434,6 +488,34 @@ export default function PredictedPriceChanges() {
                           Trans/Day
                         </SortableHeader>
                       </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="transfers_per_gameweek" className="text-right">
+                          Trans/GW
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="transfers_in_hourly" className="text-right">
+                          In/Hour
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="transfers_out_hourly" className="text-right">
+                          Out/Hour
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="transfers_in_daily" className="text-right">
+                          In/Day
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="transfers_out_daily" className="text-right">
+                          Out/Day
+                        </SortableHeader>
+                      </th>
+                      <th className="text-center p-2">
+                        Transfer Trend
+                      </th>
                       <th className="text-center p-2">
                         <SortableHeader field="confidence" className="text-center">
                           Probability
@@ -565,6 +647,33 @@ export default function PredictedPriceChanges() {
                         </td>
                         <td className="p-3 text-right">
                           <span className="font-medium">{prediction.transfers_per_day?.toLocaleString() || "0"}</span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium">{prediction.transfers_per_gameweek?.toLocaleString() || "0"}</span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium text-green-600">{prediction.transfers_in_hourly?.toLocaleString() || "0"}</span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium text-red-600">{prediction.transfers_out_hourly?.toLocaleString() || "0"}</span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium text-green-600">{prediction.transfers_in_daily?.toLocaleString() || "0"}</span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium text-red-600">{prediction.transfers_out_daily?.toLocaleString() || "0"}</span>
+                        </td>
+                        <td className="p-3 text-center">
+                          <Badge 
+                            variant={
+                              prediction.transfer_rate_trend?.includes("Fast") ? "destructive" :
+                              prediction.transfer_rate_trend?.includes("Rising") ? "success" :
+                              prediction.transfer_rate_trend?.includes("Falling") ? "destructive" : "outline"
+                            }
+                            className="text-xs"
+                          >
+                            {prediction.transfer_rate_trend || "Stable"}
+                          </Badge>
                         </td>
                         <td className="p-3 text-center">
                           <div className="space-y-1">
