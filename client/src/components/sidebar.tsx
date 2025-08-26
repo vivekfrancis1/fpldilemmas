@@ -164,7 +164,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                           </Badge>
                         )}
                         {(item as any).new && (
-                          <Badge variant="secondary" className="bg-yellow-500 text-black text-xs px-1.5 py-0.5 font-bold flex-shrink-0">
+                          <Badge variant="secondary" className="bg-green-500 text-white text-xs px-1.5 py-0.5 font-bold flex-shrink-0">
                             NEW
                           </Badge>
                         )}
