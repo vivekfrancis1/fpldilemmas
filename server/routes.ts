@@ -1023,6 +1023,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
+          // Calculate progress percentage for progress bar (0-100%)
+          let progressPercentage = 0;
+          let progressDirection = "neutral";
+          let estimatedTime = "Stable";
+          
+          if (netTransfers > 0) {
+            // Rising progress
+            progressPercentage = Math.min(100, (netTransfers / adjustedRiseThreshold) * 100);
+            progressDirection = "rise";
+            
+            // Estimate time to price change based on current transfer velocity
+            if (progressPercentage >= 100) {
+              estimatedTime = "Next update (7AM IST)";
+            } else if (transferVelocity > 0) {
+              const remainingTransfers = adjustedRiseThreshold - netTransfers;
+              const hoursRemaining = remainingTransfers / transferVelocity;
+              if (hoursRemaining <= 24) {
+                estimatedTime = `${Math.ceil(hoursRemaining)}h remaining`;
+              } else if (hoursRemaining <= 168) { // 7 days
+                estimatedTime = `${Math.ceil(hoursRemaining / 24)} days remaining`;
+              } else {
+                estimatedTime = "Low probability";
+              }
+            } else {
+              estimatedTime = "No current momentum";
+            }
+          } else if (netTransfers < 0) {
+            // Falling progress  
+            progressPercentage = Math.min(100, (Math.abs(netTransfers) / adjustedFallThreshold) * 100);
+            progressDirection = "fall";
+            
+            // Estimate time to price change based on current transfer velocity
+            if (progressPercentage >= 100) {
+              estimatedTime = "Next update (7AM IST)";
+            } else if (transferVelocity > 0) {
+              const remainingTransfers = adjustedFallThreshold - Math.abs(netTransfers);
+              const hoursRemaining = remainingTransfers / transferVelocity;
+              if (hoursRemaining <= 24) {
+                estimatedTime = `${Math.ceil(hoursRemaining)}h remaining`;
+              } else if (hoursRemaining <= 168) { // 7 days
+                estimatedTime = `${Math.ceil(hoursRemaining / 24)} days remaining`;
+              } else {
+                estimatedTime = "Low probability";
+              }
+            } else {
+              estimatedTime = "No current momentum";
+            }
+          }
+          
           const prediction = {
             player_id: player.id,
             player_name: player.web_name,
@@ -1039,7 +1088,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             probability: probability,
             rise_threshold: Math.round(adjustedRiseThreshold),
             fall_threshold: Math.round(adjustedFallThreshold),
-            transfer_velocity: Math.round(transferVelocity)
+            transfer_velocity: Math.round(transferVelocity),
+            progress_percentage: Math.round(progressPercentage * 100) / 100,
+            progress_direction: progressDirection,
+            estimated_time: estimatedTime,
+            expected_date: estimatedTime
           };
           
           validPredictions.push(prediction);
@@ -1049,23 +1102,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const finalPredictions = validPredictions.filter((prediction: any) => {
-          // Only show players with predicted changes or high transfer activity
-          const hasSignificantActivity = Math.abs(prediction.net_transfers) > 3000;
-          const hasPredictedChange = prediction.predicted_change !== 0;
-          const hasHighConfidence = prediction.confidence > 25;
-          
-          return hasPredictedChange || hasSignificantActivity || hasHighConfidence;
-        })
+      // Return all 705 players with progress bars and comprehensive data
+      const finalPredictions = validPredictions
         .sort((a: any, b: any) => {
-          // Sort by predicted change first (rises/falls), then confidence, then transfer volume
+          // Sort by progress percentage (closest to price change), then confidence, then transfer volume
+          const aProgress = Math.abs(a.progress_percentage || 0);
+          const bProgress = Math.abs(b.progress_percentage || 0);
+          
+          if (bProgress !== aProgress) return bProgress - aProgress;
           if (Math.abs(b.predicted_change) !== Math.abs(a.predicted_change)) {
             return Math.abs(b.predicted_change) - Math.abs(a.predicted_change);
           }
           if (b.confidence !== a.confidence) return b.confidence - a.confidence;
           return Math.abs(b.net_transfers) - Math.abs(a.net_transfers);
-        })
-        .slice(0, 25); // Show top 25 predictions
+        });
       
       res.json(finalPredictions);
     } catch (error) {

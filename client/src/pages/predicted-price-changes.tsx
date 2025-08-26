@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { TrendingUp, TrendingDown, AlertTriangle, Search, Target, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertTriangle, Search, Target, BarChart3, Clock } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { BootstrapData } from "@shared/schema";
 
 interface PricePrediction {
@@ -24,6 +25,9 @@ interface PricePrediction {
   reason: string;
   probability: string;
   expected_date?: string;
+  progress_percentage: number;
+  progress_direction: string;
+  estimated_time: string;
 }
 
 export default function PredictedPriceChanges() {
@@ -245,6 +249,7 @@ export default function PredictedPriceChanges() {
                       <th className="text-left p-3 font-medium">Player</th>
                       <th className="text-left p-3 font-medium">Team/Pos</th>
                       <th className="text-right p-3 font-medium">Current Price</th>
+                      <th className="text-center p-3 font-medium">Progress</th>
                       <th className="text-center p-3 font-medium">Change</th>
                       <th className="text-right p-3 font-medium">Ownership</th>
                       <th className="text-right p-3 font-medium">Net Transfers</th>
@@ -279,6 +284,21 @@ export default function PredictedPriceChanges() {
                         </td>
                         <td className="p-3 text-right font-medium">
                           {formatPrice(prediction.current_price)}
+                        </td>
+                        <td className="p-3 min-w-[120px]">
+                          <div className="space-y-1">
+                            <Progress 
+                              value={Math.min(100, prediction.progress_percentage || 0)} 
+                              className={`h-2 ${
+                                prediction.progress_direction === "rise" ? "[&>div]:bg-green-500" :
+                                prediction.progress_direction === "fall" ? "[&>div]:bg-red-500" : 
+                                "[&>div]:bg-gray-400"
+                              }`}
+                            />
+                            <div className="text-xs text-center">
+                              {prediction.progress_percentage?.toFixed(0) || 0}%
+                            </div>
+                          </div>
                         </td>
                         <td className="p-3 text-center">
                           {prediction.predicted_change !== 0 ? (
@@ -322,12 +342,10 @@ export default function PredictedPriceChanges() {
                           </div>
                         </td>
                         <td className="p-3 text-xs text-muted-foreground max-w-[200px]">
-                          {prediction.expected_date || 
-                            (prediction.predicted_change !== 0 ? 
-                              (prediction.probability === "Very High" ? "Next 24hrs" :
-                               prediction.probability === "High" ? "Within 2 days" :
-                               prediction.probability === "Medium" ? "This week" : "Unlikely") 
-                              : "Stable")}
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {prediction.estimated_time || prediction.expected_date || "Stable"}
+                          </div>
                         </td>
                       </tr>
                     ))}
