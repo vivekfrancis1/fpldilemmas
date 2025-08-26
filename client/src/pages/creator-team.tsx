@@ -33,7 +33,8 @@ import {
   TrendingUp,
   TrendingDown,
   Calendar,
-  BarChart3
+  BarChart3,
+  Youtube
 } from "lucide-react";
 
 type TeamPick = {
@@ -120,28 +121,28 @@ function getPositionColor(position: string) {
 
 function PlayerCard({ pick, isSubstitute = false }: { pick: TeamPick; isSubstitute?: boolean }) {
   return (
-    <Card className={`relative ${isSubstitute ? 'opacity-60' : ''}`}>
-      <CardContent className="p-4">
+    <Card className={`relative transition-all hover:shadow-md ${isSubstitute ? 'opacity-60 bg-gray-50' : 'bg-white'} ${pick.is_captain ? 'ring-2 ring-yellow-400' : pick.is_vice_captain ? 'ring-2 ring-gray-400' : ''}`}>
+      <CardContent className="p-3">
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-sm truncate">{pick.player_name}</h3>
+            <h3 className="font-semibold text-sm truncate text-gray-900">{pick.player_name}</h3>
             <p className="text-xs text-muted-foreground truncate">{pick.team_name}</p>
           </div>
           <div className="flex flex-col items-end gap-1 ml-2">
             {pick.is_captain && (
-              <Badge variant="default" className="text-xs px-1 py-0">
+              <Badge className="text-xs px-2 py-0.5 bg-yellow-500 hover:bg-yellow-600 text-white">
                 <Crown className="h-3 w-3 mr-1" />
                 C
               </Badge>
             )}
             {pick.is_vice_captain && (
-              <Badge variant="secondary" className="text-xs px-1 py-0">
+              <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-gray-500 text-white">
                 <Crown className="h-3 w-3 mr-1" />
                 VC
               </Badge>
             )}
             {pick.multiplier > 1 && !pick.is_captain && (
-              <Badge variant="outline" className="text-xs px-1 py-0">
+              <Badge variant="outline" className="text-xs px-2 py-0.5">
                 {pick.multiplier}x
               </Badge>
             )}
@@ -149,12 +150,12 @@ function PlayerCard({ pick, isSubstitute = false }: { pick: TeamPick; isSubstitu
         </div>
         
         <div className="flex items-center justify-between">
-          <Badge className={`text-xs ${getPositionColor(pick.position)}`}>
+          <Badge className={`text-xs font-medium ${getPositionColor(pick.position)}`}>
             {getPositionIcon(pick.position)}
             <span className="ml-1">{pick.position}</span>
           </Badge>
           {isSubstitute && (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs bg-gray-100">
               SUB
             </Badge>
           )}
@@ -242,91 +243,152 @@ export default function CreatorTeam() {
   const viceCaptain = teamData.picks?.find(p => p.is_vice_captain);
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-4 py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col space-y-4">
         <div className="flex items-center gap-4">
           <Link href="/content-creators">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="hover:bg-blue-50">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Creators
             </Button>
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {teamData?.creator || creatorInfo?.name || 'Creator'}'s Team
-            </h1>
-            <p className="text-muted-foreground">
-              {teamData.gameweek ? `Gameweek ${teamData.gameweek}` : 'Team Overview'}
-              {teamData.message && ` • ${teamData.message}`}
-            </p>
+        </div>
+        
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+              {(teamData?.creator || creatorInfo?.name || 'Creator').charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+                {teamData?.creator || creatorInfo?.name || 'Creator'}'s Team
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                {teamData?.gameweek ? `Gameweek ${teamData.gameweek}` : 'Team Overview'}
+                {teamData?.message && ` • ${teamData.message}`}
+              </p>
+            </div>
           </div>
+          
+          {creatorInfo?.platform && (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="flex items-center gap-1">
+                {creatorInfo.platform === 'youtube' && <Youtube className="h-3 w-3" />}
+                {creatorInfo.platform === 'twitter' && <Users className="h-3 w-3" />}
+                {creatorInfo.platform}
+              </Badge>
+              {creatorInfo.handle && (
+                <span className="text-sm text-muted-foreground">@{creatorInfo.handle}</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Team Statistics */}
-      {teamData.entry_history && (
+      {teamData?.entry_history && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{teamData.entry_history.points}</div>
-              <div className="text-xs text-muted-foreground">GW Points</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{teamData.entry_history.total_points}</div>
-              <div className="text-xs text-muted-foreground">Total Points</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">
-                #{teamData.entry_history.overall_rank?.toLocaleString()}
+          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-blue-700">{teamData.entry_history.points}</div>
+                  <div className="text-sm text-muted-foreground">GW Points</div>
+                </div>
+                <Trophy className="h-8 w-8 text-blue-500" />
               </div>
-              <div className="text-xs text-muted-foreground">Overall Rank</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">
-                £{((teamData.entry_history.value || 0) / 10).toFixed(1)}m
+          <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-green-700">{teamData.entry_history.total_points}</div>
+                  <div className="text-sm text-muted-foreground">Total Points</div>
+                </div>
+                <Star className="h-8 w-8 text-green-500" />
               </div>
-              <div className="text-xs text-muted-foreground">Team Value</div>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-purple-700">
+                    #{teamData.entry_history.overall_rank?.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Overall Rank</div>
+                </div>
+                <Crown className="h-8 w-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-orange-700">
+                    £{((teamData.entry_history.value || 0) / 10).toFixed(1)}m
+                  </div>
+                  <div className="text-sm text-muted-foreground">Team Value</div>
+                </div>
+                <DollarSign className="h-8 w-8 text-orange-500" />
+              </div>
             </CardContent>
           </Card>
         </div>
       )}
 
       {/* General Info Fallback */}
-      {teamData.general_info && !teamData.entry_history && (
+      {teamData?.general_info && !teamData.entry_history && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{teamData.general_info.summary_overall_points}</div>
-              <div className="text-xs text-muted-foreground">Total Points</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">
-                #{teamData.general_info.summary_overall_rank?.toLocaleString()}
+          <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-green-700">{teamData.general_info.summary_overall_points}</div>
+                  <div className="text-sm text-muted-foreground">Total Points</div>
+                </div>
+                <Star className="h-8 w-8 text-green-500" />
               </div>
-              <div className="text-xs text-muted-foreground">Overall Rank</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{teamData.general_info.name}</div>
-              <div className="text-xs text-muted-foreground">Team Name</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">
-                {teamData.general_info.player_first_name} {teamData.general_info.player_last_name}
+          <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-purple-700">
+                    #{teamData.general_info.summary_overall_rank?.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Overall Rank</div>
+                </div>
+                <Crown className="h-8 w-8 text-purple-500" />
               </div>
-              <div className="text-xs text-muted-foreground">Manager</div>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xl font-bold text-blue-700">{teamData.general_info.name}</div>
+                  <div className="text-sm text-muted-foreground">Team Name</div>
+                </div>
+                <Trophy className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-gray-500 bg-gradient-to-r from-gray-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-lg font-bold text-gray-700">
+                    {teamData.general_info.player_first_name} {teamData.general_info.player_last_name}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Manager</div>
+                </div>
+                <Users className="h-8 w-8 text-gray-500" />
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -334,10 +396,19 @@ export default function CreatorTeam() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="team" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 bg-gray-100 rounded-lg p-1">
+          <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <Users className="h-4 w-4" />
+            Team
+          </TabsTrigger>
+          <TabsTrigger value="performance" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <BarChart3 className="h-4 w-4" />
+            Performance
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <Calendar className="h-4 w-4" />
+            History
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="team" className="space-y-6">
@@ -562,39 +633,59 @@ export default function CreatorTeam() {
 
               {/* Performance Summary */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold">
-                      {Math.round(
-                        managerHistory.current.reduce((sum, entry) => sum + entry.points, 0) / 
-                        managerHistory.current.length
-                      )}
+                <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-2xl font-bold text-blue-700">
+                          {Math.round(
+                            managerHistory.current.reduce((sum, entry) => sum + entry.points, 0) / 
+                            managerHistory.current.length
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Avg Points/GW</div>
+                      </div>
+                      <BarChart3 className="h-8 w-8 text-blue-500" />
                     </div>
-                    <div className="text-xs text-muted-foreground">Avg Points/GW</div>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold">
-                      {Math.max(...managerHistory.current.map(e => e.points))}
+                <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-2xl font-bold text-green-700">
+                          {Math.max(...managerHistory.current.map(e => e.points))}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Best GW</div>
+                      </div>
+                      <Trophy className="h-8 w-8 text-green-500" />
                     </div>
-                    <div className="text-xs text-muted-foreground">Best GW</div>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold">
-                      #{Math.min(...managerHistory.current.map(e => e.overall_rank)).toLocaleString()}
+                <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-2xl font-bold text-purple-700">
+                          #{Math.min(...managerHistory.current.map(e => e.overall_rank)).toLocaleString()}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Best Rank</div>
+                      </div>
+                      <Crown className="h-8 w-8 text-purple-500" />
                     </div>
-                    <div className="text-xs text-muted-foreground">Best Rank</div>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold">
-                      {managerHistory.current.filter(e => e.event_transfers > 0).length}
+                <Card className="border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-2xl font-bold text-orange-700">
+                          {managerHistory.current.filter(e => e.event_transfers > 0).length}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Transfer GWs</div>
+                      </div>
+                      <RefreshCw className="h-8 w-8 text-orange-500" />
                     </div>
-                    <div className="text-xs text-muted-foreground">Transfer GWs</div>
                   </CardContent>
                 </Card>
               </div>
