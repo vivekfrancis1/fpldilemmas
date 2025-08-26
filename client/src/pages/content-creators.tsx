@@ -488,7 +488,7 @@ function CreatorDataCard({ creator }: { creator: CreatorWithLatestData }) {
                     <DollarSign className="h-3 w-3" />
                     Team Value
                   </span>
-                  <span className="font-mono">£{latest.teamValue}m</span>
+                  <span className="font-mono">£{latest.teamValue || 'N/A'}m</span>
                 </div>
               )}
               {latest?.totalTransfers !== undefined && (
