@@ -6051,16 +6051,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Content creator not found" });
       }
       
-      const currentGameweek = 21; // Current gameweek
+      // Get current gameweek from bootstrap
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const bootstrapData = await bootstrapResponse.json();
       
-      // Fetch current team picks
-      const teamResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/event/${currentGameweek}/picks/`);
-      if (!teamResponse.ok) {
-        return res.status(400).json({ error: "Failed to fetch team data" });
+      // Find current or most recent finished gameweek
+      const currentEvent = bootstrapData.events.find((event: any) => event.is_current) || 
+                          bootstrapData.events.find((event: any) => event.finished);
+      
+      const gameweek = currentEvent ? currentEvent.id : 20;
+      
+      console.log(`Fetching team data for creator ${creator.name} (Team ID: ${creator.teamId}) for GW${gameweek}`);
+      
+      // Try current gameweek first, then fallback to previous gameweeks
+      let teamData = null;
+      let attempts = 0;
+      let currentGw = gameweek;
+      
+      while (!teamData && attempts < 5 && currentGw > 0) {
+        try {
+          const teamResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/event/${currentGw}/picks/`);
+          if (teamResponse.ok) {
+            teamData = await teamResponse.json();
+            console.log(`✅ Successfully fetched team data for GW${currentGw}`);
+            break;
+          } else {
+            console.log(`❌ Failed to fetch team data for GW${currentGw}, trying GW${currentGw - 1}`);
+          }
+        } catch (err) {
+          console.log(`❌ Error fetching team data for GW${currentGw}:`, err);
+        }
+        
+        currentGw--;
+        attempts++;
       }
       
-      const teamData = await teamResponse.json();
-      res.json(teamData);
+      if (!teamData) {
+        console.log(`No gameweek-specific data found, trying general team info for creator ${creator.name}`);
+        
+        // Try general team info if gameweek-specific fails
+        const generalResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/`);
+        if (generalResponse.ok) {
+          const generalData = await generalResponse.json();
+          console.log(`✅ Successfully fetched general team info for ${creator.name}`);
+          return res.json({
+            general_info: generalData,
+            message: "Gameweek-specific team data not available, showing general team info",
+            creator: creator.name,
+            teamId: creator.teamId
+          });
+        } else {
+          console.log(`❌ Failed to fetch general team info for ${creator.name}`);
+        }
+        
+        return res.status(400).json({ 
+          error: "Team data not available",
+          teamId: creator.teamId,
+          attemptedGameweeks: `${currentGw + 1} to ${gameweek}`,
+          creator: creator.name
+        });
+      }
+      
+      // Enhance team data with player names
+      const elements = bootstrapData.elements;
+      const enhancedPicks = teamData.picks?.map((pick: any) => {
+        const player = elements.find((el: any) => el.id === pick.element);
+        return {
+          ...pick,
+          player_name: player ? `${player.first_name} ${player.second_name}` : 'Unknown',
+          team_name: player ? bootstrapData.teams.find((t: any) => t.id === player.team)?.name || 'Unknown' : 'Unknown',
+          position: player ? bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown' : 'Unknown'
+        };
+      });
+      
+      res.json({
+        ...teamData,
+        picks: enhancedPicks,
+        gameweek: currentGw,
+        creator: creator.name
+      });
     } catch (error) {
       console.error("Error fetching creator team:", error);
       res.status(500).json({ error: "Failed to fetch creator team" });

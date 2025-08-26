@@ -144,7 +144,26 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
       const teamData = await response.json();
       
       console.log("Team data:", teamData);
-      alert(`Fetched team data with ${teamData.picks?.length || 0} players`);
+      
+      if (teamData.error) {
+        alert(`Error: ${teamData.error}`);
+        return;
+      }
+      
+      if (teamData.picks && teamData.picks.length > 0) {
+        const formation = `${teamData.picks.filter((p: any) => p.position === 'Goalkeeper').length}-${teamData.picks.filter((p: any) => p.position === 'Defender').length}-${teamData.picks.filter((p: any) => p.position === 'Midfielder').length}-${teamData.picks.filter((p: any) => p.position === 'Forward').length}`;
+        const captain = teamData.picks.find((p: any) => p.is_captain);
+        const message = `${teamData.creator}'s Team (GW${teamData.gameweek})
+Formation: ${formation}
+Captain: ${captain?.player_name || 'Unknown'}
+Players: ${teamData.picks.length}
+${teamData.message ? '\n' + teamData.message : ''}`;
+        alert(message);
+      } else if (teamData.general_info) {
+        alert(`${teamData.creator}'s General Team Info:\nTeam Name: ${teamData.general_info.name}\nOverall Points: ${teamData.general_info.summary_overall_points}\nOverall Rank: ${teamData.general_info.summary_overall_rank?.toLocaleString()}\n\n${teamData.message}`);
+      } else {
+        alert("No team data available");
+      }
     } catch (error) {
       alert("Failed to fetch team data");
     }
