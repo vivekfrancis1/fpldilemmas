@@ -76,9 +76,9 @@ export default function TransferTracker() {
                                  (transferTypeFilter === "stable" && data.net_transfers === 0);
       return matchesSearch && matchesPosition && matchesTransferType;
     }).map((data: TransferData) => {
-      // Calculate additional transfer analysis fields
-      const totalPlayers = 10000000; // Approximate total FPL players
-      const absoluteOwnership = Math.round((data.ownership_percentage / 100) * totalPlayers);
+      // Calculate additional transfer analysis fields using actual FPL total players
+      const totalPlayers = bootstrapData?.total_players || 0;
+      const absoluteOwnership = totalPlayers > 0 ? Math.round((data.ownership_percentage / 100) * totalPlayers) : 0;
       const netTransfersPercentage = absoluteOwnership > 0 ? 
         Math.round((data.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
       

@@ -176,6 +176,7 @@ export const bootstrapDataSchema = z.object({
   teams: z.array(teamSchema),
   element_types: z.array(elementTypeSchema),
   events: z.array(z.any()),
+  total_players: z.number(),
 });
 
 export const playerSummarySchema = z.object({
