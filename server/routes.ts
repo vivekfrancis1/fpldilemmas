@@ -900,19 +900,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Advanced price prediction algorithm based on authentic FPL mechanics and data
       const validPredictions = [];
       
-      // Pre-filter players to only process those with significant activity for faster response
-      const activeElements = elements.filter((player: any) => {
-        const transfersIn = player.transfers_in_event || 0;
-        const transfersOut = player.transfers_out_event || 0;
-        const netTransfers = transfersIn - transfersOut;
-        const ownership = parseFloat(player.selected_by_percent || "0");
-        
-        // Only process players with some transfer activity or decent ownership
-        return Math.abs(netTransfers) > 500 || ownership > 1.0 || 
-               transfersIn > 1000 || transfersOut > 1000;
-      });
-      
-      for (const player of activeElements) {
+      // Process all players to show comprehensive price tracking data
+      for (const player of elements) {
         try {
           // Get authentic transfer data from daily tracking
           let transfersIn = player.transfers_in_event || 0;

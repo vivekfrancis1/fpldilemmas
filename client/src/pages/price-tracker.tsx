@@ -87,7 +87,11 @@ export default function PriceTracker() {
     const matchesSearch = pred.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          pred.team_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPosition = positionFilter === "all" || pred.position === positionFilter;
-    return matchesSearch && matchesPosition;
+    const matchesChangeType = changeTypeFilter === "all" || 
+                             (changeTypeFilter === "rises" && pred.predicted_change > 0) ||
+                             (changeTypeFilter === "falls" && pred.predicted_change < 0) ||
+                             (changeTypeFilter === "stable" && pred.predicted_change === 0);
+    return matchesSearch && matchesPosition && matchesChangeType;
   }) : [];
 
   const formatPrice = (price: number | string | undefined | null) => {
@@ -268,12 +272,13 @@ export default function PriceTracker() {
               </Select>
               <Select value={changeTypeFilter} onValueChange={setChangeTypeFilter}>
                 <SelectTrigger className="w-full sm:w-48" data-testid="select-change-filter">
-                  <SelectValue placeholder="All Changes" />
+                  <SelectValue placeholder="All Players" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Changes</SelectItem>
-                  <SelectItem value="rise">Price Rises</SelectItem>
-                  <SelectItem value="fall">Price Falls</SelectItem>
+                  <SelectItem value="all">All Players</SelectItem>
+                  <SelectItem value="rises">Likely to Rise</SelectItem>
+                  <SelectItem value="falls">Likely to Fall</SelectItem>
+                  <SelectItem value="stable">Stable</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -291,10 +296,10 @@ export default function PriceTracker() {
         )}
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="recent" className="space-y-6">
+        <Tabs defaultValue="predictions" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="recent" data-testid="tab-recent-changes">Recent Price Changes</TabsTrigger>
-            <TabsTrigger value="predictions" data-testid="tab-predictions">Price Predictions</TabsTrigger>
+            <TabsTrigger value="predictions" data-testid="tab-predictions">All Players (705)</TabsTrigger>
+            <TabsTrigger value="recent" data-testid="tab-recent-changes">Recent Changes</TabsTrigger>
           </TabsList>
 
           {/* Recent Price Changes */}
@@ -427,101 +432,131 @@ export default function PriceTracker() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5" />
-                  Price Change Predictions
+                  All Players Price Tracker ({Array.isArray(predictions) ? predictions.length : 0} players)
                 </CardTitle>
                 <CardDescription>
-                  AI-powered predictions based on ownership trends and transfer activity
+                  Comprehensive price tracking for all FPL players with predicted rises/falls
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoadingPredictions ? (
                   <div className="space-y-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                            <div className="space-y-1">
-                              <div className="h-4 w-32 bg-gray-200 rounded"></div>
-                              <div className="h-3 w-48 bg-gray-200 rounded"></div>
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="h-4 w-20 bg-gray-200 rounded"></div>
-                            <div className="h-3 w-16 bg-gray-200 rounded"></div>
-                          </div>
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <div key={i} className="animate-pulse flex items-center p-3 border rounded">
+                        <div className="h-4 w-4 bg-gray-200 rounded mr-3"></div>
+                        <div className="flex-1 space-y-1">
+                          <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                          <div className="h-3 w-20 bg-gray-200 rounded"></div>
+                        </div>
+                        <div className="text-right space-y-1">
+                          <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                          <div className="h-3 w-12 bg-gray-200 rounded"></div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : filteredPredictions.length > 0 ? (
-                  <div className="space-y-3">
-                    {filteredPredictions.map((prediction: PricePrediction, index: number) => (
-                      <div 
-                        key={`${prediction.player_id}-${index}`}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                        data-testid={`prediction-${prediction.player_id}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {prediction.predicted_change > 0 ? (
-                            <TrendingUp className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <TrendingDown className="h-4 w-4 text-red-600" />
-                          )}
-                          <div className="flex-1">
-                            <p className="font-medium">{prediction.player_name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {prediction.team_name} • {prediction.position}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {prediction.reason}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/20">
+                          <th className="text-left p-3 font-medium">Player</th>
+                          <th className="text-left p-3 font-medium">Team/Pos</th>
+                          <th className="text-right p-3 font-medium">Current Price</th>
+                          <th className="text-center p-3 font-medium">Change</th>
+                          <th className="text-right p-3 font-medium">Ownership</th>
+                          <th className="text-right p-3 font-medium">Net Transfers</th>
+                          <th className="text-center p-3 font-medium">Probability</th>
+                          <th className="text-left p-3 font-medium">Expected When</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredPredictions.map((prediction: PricePrediction, index: number) => (
+                          <tr 
+                            key={`${prediction.player_id}-${index}`}
+                            className="border-b hover:bg-muted/50 transition-colors"
+                            data-testid={`prediction-${prediction.player_id}`}
+                          >
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                {prediction.predicted_change > 0 ? (
+                                  <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
+                                ) : prediction.predicted_change < 0 ? (
+                                  <TrendingDown className="h-3 w-3 text-red-600 flex-shrink-0" />
+                                ) : (
+                                  <BarChart3 className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                )}
+                                <span className="font-medium">{prediction.player_name}</span>
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <div>
+                                <div className="font-medium text-xs">{prediction.team_name}</div>
+                                <div className="text-xs text-muted-foreground">{prediction.position}</div>
+                              </div>
+                            </td>
+                            <td className="p-3 text-right font-medium">
                               {formatPrice(prediction.current_price)}
-                            </span>
-                            <span className="text-muted-foreground">→</span>
-                            {prediction.predicted_change !== 0 ? (
-                              <>
-                                <span className="font-medium">
-                                  {formatPrice(prediction.current_price + prediction.predicted_change)}
-                                </span>
-                                <Badge variant={prediction.predicted_change > 0 ? "success" : "destructive"}>
+                            </td>
+                            <td className="p-3 text-center">
+                              {prediction.predicted_change !== 0 ? (
+                                <Badge 
+                                  variant={prediction.predicted_change > 0 ? "success" : "destructive"}
+                                  className="text-xs"
+                                >
                                   {prediction.predicted_change > 0 ? "+" : ""}{formatPrice(Math.abs(prediction.predicted_change))}
                                 </Badge>
-                              </>
-                            ) : (
-                              <Badge variant="secondary">
-                                Stable
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge 
-                              className={`text-xs ${getProbabilityColor(prediction.probability)} text-white`}
-                            >
-                              {prediction.probability}
-                            </Badge>
-                            <span className={`text-xs font-medium ${getConfidenceColor(prediction.confidence)}`}>
-                              {prediction.confidence}% confidence
-                            </span>
-                          </div>
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <p>{prediction.ownership_percentage}% owned</p>
-                            <p>In: {(prediction.transfers_in/1000).toFixed(0)}k | Out: {(prediction.transfers_out/1000).toFixed(0)}k</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                              ) : (
+                                <Badge variant="outline" className="text-xs">
+                                  No Change
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="p-3 text-right text-sm">
+                              {prediction.ownership_percentage}%
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="text-xs">
+                                {prediction.net_transfers >= 0 ? (
+                                  <span className="text-green-600">+{(prediction.net_transfers/1000).toFixed(0)}k</span>
+                                ) : (
+                                  <span className="text-red-600">{(prediction.net_transfers/1000).toFixed(0)}k</span>
+                                )}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {((prediction.transfers_in || 0)/1000).toFixed(0)}k in | {((prediction.transfers_out || 0)/1000).toFixed(0)}k out
+                              </div>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="space-y-1">
+                                <Badge 
+                                  className={`text-xs ${getProbabilityColor(prediction.probability)} text-white`}
+                                >
+                                  {prediction.probability}
+                                </Badge>
+                                <div className={`text-xs font-medium ${getConfidenceColor(prediction.confidence)}`}>
+                                  {prediction.confidence}%
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 text-xs text-muted-foreground max-w-[200px]">
+                              {prediction.expected_date || 
+                                (prediction.predicted_change !== 0 ? 
+                                  (prediction.probability === "Very High" ? "Next 24hrs" :
+                                   prediction.probability === "High" ? "Within 2 days" :
+                                   prediction.probability === "Medium" ? "This week" : "Unlikely") 
+                                  : "Stable")}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No price predictions available</p>
-                    <p className="text-sm">Predictions are updated regularly</p>
+                    <p>No players found matching your filters</p>
+                    <p className="text-sm">Try adjusting your search criteria</p>
                   </div>
                 )}
               </CardContent>
