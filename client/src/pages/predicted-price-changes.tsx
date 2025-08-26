@@ -33,11 +33,11 @@ interface PricePrediction {
   estimated_time: string;
   absolute_ownership?: number;
   net_transfers_percentage?: number;
-  nti_today?: number;
+  nti_season?: number;
   transfer_rate_trend?: string;
 }
 
-type SortField = 'current_progress' | 'tonight_progress' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage' | 'nti_today';
+type SortField = 'current_progress' | 'tonight_progress' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage' | 'nti_season';
 type SortDirection = 'asc' | 'desc';
 
 export default function PredictedPriceChanges() {
@@ -94,8 +94,8 @@ export default function PredictedPriceChanges() {
       const netTransfersPercentage = absoluteOwnership > 0 ? 
         Math.round((pred.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
       
-      // Use only actual NTI data available 
-      const ntiToday = pred.net_transfers; // Net transfers since 7AM IST today (actual data)
+      // Use actual net transfer data from FPL API
+      const ntiSeason = pred.net_transfers; // Season-to-date net transfers (cumulative)
       
       // Determine transfer trend based on net transfers
       const transferRateTrend = pred.net_transfers > 0 ? 
@@ -107,7 +107,7 @@ export default function PredictedPriceChanges() {
         ...pred,
         absolute_ownership: absoluteOwnership,
         net_transfers_percentage: netTransfersPercentage,
-        nti_today: ntiToday,
+        nti_season: ntiSeason,
         transfer_rate_trend: transferRateTrend
       };
     });
@@ -130,9 +130,9 @@ export default function PredictedPriceChanges() {
           aValue = a.net_transfers_percentage || 0;
           bValue = b.net_transfers_percentage || 0;
           break;
-        case 'nti_today':
-          aValue = a.nti_today || 0;
-          bValue = b.nti_today || 0;
+        case 'nti_season':
+          aValue = a.nti_season || 0;
+          bValue = b.nti_season || 0;
           break;
         default:
           aValue = a[sortField];
@@ -415,8 +415,8 @@ export default function PredictedPriceChanges() {
                         </SortableHeader>
                       </th>
                       <th className="text-right p-2">
-                        <SortableHeader field="nti_today" className="text-right">
-                          NTI (Today)
+                        <SortableHeader field="nti_season" className="text-right">
+                          NTI (Season)
                         </SortableHeader>
                       </th>
                       <th className="text-center p-2">
@@ -544,10 +544,10 @@ export default function PredictedPriceChanges() {
                         </td>
                         <td className="p-3 text-right">
                           <span className={`font-medium ${
-                            (prediction.nti_today || 0) > 0 ? "text-green-600" : 
-                            (prediction.nti_today || 0) < 0 ? "text-red-600" : "text-gray-600"
+                            (prediction.nti_season || 0) > 0 ? "text-green-600" : 
+                            (prediction.nti_season || 0) < 0 ? "text-red-600" : "text-gray-600"
                           }`}>
-                            {(prediction.nti_today || 0) > 0 ? "+" : ""}{prediction.nti_today?.toLocaleString() || "0"}
+                            {(prediction.nti_season || 0) > 0 ? "+" : ""}{prediction.nti_season?.toLocaleString() || "0"}
                           </span>
                         </td>
                         <td className="p-3 text-center">
