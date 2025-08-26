@@ -80,14 +80,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         // { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
       ]
     },
-    {
-      section: "Admin Tools",
-      items: [
 
-        { path: "/admin-goal-projections", label: "Goal Projection Config", icon: Settings, description: "Adjust team multipliers", popular: false },
-        { path: "/admin-upset-config", label: "Upset Configuration", icon: Settings, description: "Variance settings", popular: false }
-      ]
-    }
   ];
 
   return (
