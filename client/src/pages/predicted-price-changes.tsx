@@ -98,11 +98,12 @@ export default function PredictedPriceChanges() {
         Math.round((pred.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
       
       // Calculate Net Transfers In (NTI) across different time periods
+      // Use actual transfer data, not projections that would exceed ownership
       const ntiLastHour = pred.hourly_change_rate > 0 ? 
-        Math.round((pred.net_transfers / 24) * (pred.hourly_change_rate / 100)) : 0;
-      const ntiToday = pred.net_transfers; // Net transfers since 7AM IST today
-      const ntiThisGameweek = Math.round(pred.net_transfers * 7); // 7-day gameweek projection
-      const ntiTotal = Math.round(pred.net_transfers * 38 * 7); // Full season projection
+        Math.round(pred.net_transfers / 24) : 0; // Simple hourly rate from daily data
+      const ntiToday = pred.net_transfers; // Net transfers since 7AM IST today (actual data)
+      const ntiThisGameweek = Math.round(pred.net_transfers * 1.5); // Conservative 1.5x for gameweek
+      const ntiTotal = Math.round(pred.net_transfers * 10); // Conservative 10x for season estimate
       
       // Determine transfer trend based on net transfers
       const transferRateTrend = pred.net_transfers > 0 ? 
