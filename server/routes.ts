@@ -922,15 +922,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const ownershipThresholdMultiplier = 0.05; // 5% of owned players need to transfer
           const ownedPlayers = (ownership / 100) * totalPlayers;
           
-          // Calculate percentage-based thresholds with minimums
+          // Realistic FPL thresholds based on industry standards (LiveFPL/FFS)
+          // Base thresholds much higher to match real FPL algorithm
           let riseThreshold = Math.max(
-            40000, // Minimum 40k transfers regardless of ownership
-            ownedPlayers * ownershipThresholdMultiplier
+            200000, // Minimum 200k transfers for low ownership players
+            ownedPlayers * 0.25 // 25% of owned players need to transfer in
           );
           
           let fallThreshold = Math.max(
-            25000, // Minimum 25k transfers out regardless of ownership  
-            ownedPlayers * ownershipThresholdMultiplier * 0.6 // Falls need 60% of rise threshold
+            150000, // Minimum 150k transfers out regardless of ownership  
+            ownedPlayers * 0.15 // 15% of owned players need to transfer out
           );
           
           // Apply FPL's official price change limits
@@ -938,11 +939,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const maxDailyChange = 1; // 0.1m = 1 price unit
           const maxGameweekChange = 3; // 0.3m = 3 price units
           
-          // Adjust thresholds based on price tier (premium players harder to move)
-          const priceMultiplier = currentPrice < 60 ? 0.8 : // Budget players easier
+          // Adjust thresholds based on price tier (premium players much harder to move)
+          const priceMultiplier = currentPrice < 60 ? 0.6 : // Budget players easier
                                  currentPrice < 100 ? 1.0 : // Mid-price normal
-                                 currentPrice < 130 ? 1.3 : // Premium harder
-                                 1.6; // Super premium much harder
+                                 currentPrice < 130 ? 2.5 : // Premium much harder
+                                 4.0; // Super premium extremely hard
           
           riseThreshold *= priceMultiplier;
           fallThreshold *= priceMultiplier;
@@ -1031,12 +1032,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let estimatedTime = "Stable";
           
           if (netTransfers > 0) {
-            // Rising progress (can exceed 100%) - reduced by 80% to match industry standards
-            currentProgressPercentage = (netTransfers / adjustedRiseThreshold) * 100 * 0.2;
+            // Rising progress (can exceed 100%) - realistic calculation
+            currentProgressPercentage = (netTransfers / adjustedRiseThreshold) * 100;
             progressDirection = "rise";
             
             // Calculate hourly change rate
-            hourlyChangeRate = transferVelocity / adjustedRiseThreshold * 100 * 0.2; // % per hour
+            hourlyChangeRate = transferVelocity / adjustedRiseThreshold * 100; // % per hour
             
             // Calculate expected progress by 7AM IST (next price update)
             const now = new Date();
@@ -1066,12 +1067,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               estimatedTime = "No momentum";
             }
           } else if (netTransfers < 0) {
-            // Falling progress (can exceed 100%) - reduced by 80% to match industry standards
-            currentProgressPercentage = (Math.abs(netTransfers) / adjustedFallThreshold) * 100 * 0.2;
+            // Falling progress (can exceed 100%) - realistic calculation
+            currentProgressPercentage = (Math.abs(netTransfers) / adjustedFallThreshold) * 100;
             progressDirection = "fall";
             
             // Calculate hourly change rate
-            hourlyChangeRate = transferVelocity / adjustedFallThreshold * 100 * 0.2; // % per hour
+            hourlyChangeRate = transferVelocity / adjustedFallThreshold * 100; // % per hour
             
             // Calculate expected progress by 7AM IST
             const now = new Date();
