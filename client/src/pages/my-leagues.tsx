@@ -453,6 +453,7 @@ function LeagueAnalysisView({ league }: { league: LeagueData }) {
                       <div>
                         <p className="font-medium">{standing.entry_name}</p>
                         <p className="text-sm text-muted-foreground">{standing.player_name}</p>
+                        <p className="text-xs text-blue-600 font-mono">Team ID: {standing.entry}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4 text-right">
@@ -495,7 +496,10 @@ function LeagueAnalysisView({ league }: { league: LeagueData }) {
                           <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-800 text-xs font-medium flex items-center justify-center">
                             {index + 1}
                           </span>
-                          <span className="text-sm font-medium">{standing.entry_name}</span>
+                          <div>
+                            <span className="text-sm font-medium">{standing.entry_name}</span>
+                            <div className="text-xs text-blue-600 font-mono">Team ID: {standing.entry}</div>
+                          </div>
                         </div>
                         <span className="text-sm font-bold">{standing.total.toLocaleString()}</span>
                       </div>
@@ -515,7 +519,10 @@ function LeagueAnalysisView({ league }: { league: LeagueData }) {
                             <span className="w-6 h-6 rounded-full bg-green-100 text-green-800 text-xs font-medium flex items-center justify-center">
                               {index + 1}
                             </span>
-                            <span className="text-sm font-medium">{standing.entry_name}</span>
+                            <div>
+                              <span className="text-sm font-medium">{standing.entry_name}</span>
+                              <div className="text-xs text-blue-600 font-mono">Team ID: {standing.entry}</div>
+                            </div>
                           </div>
                           <span className="text-sm font-bold">{standing.event_total}</span>
                         </div>
