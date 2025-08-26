@@ -39,7 +39,7 @@ interface PredictedScore {
 
 export default function PredictedScores() {
   const [startGameweek, setStartGameweek] = useState<string>("3");
-  const [endGameweek, setEndGameweek] = useState<string>("3");
+  const [endGameweek, setEndGameweek] = useState<string>("4");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [showFinished, setShowFinished] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
