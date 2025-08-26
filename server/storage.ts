@@ -28,6 +28,8 @@ export interface IStorage {
   getLatestPriceData(playerId: number): Promise<any | null>;
   getBatchLatestPriceData(playerIds: number[]): Promise<Map<number, any>>;
   getDailyPriceHistory(playerId: number, days?: number): Promise<any[]>;
+  getLastPriceChangeDate(playerId: number, currentPrice: number): Promise<string | null>;
+  getBatchPriceChangeDates(playerPrices: Array<{playerId: number, currentPrice: number}>): Promise<Map<number, string>>;
   
   // Historical player operations
   getHistoricalPlayers(season: string): Promise<HistoricalPlayer[]>;
@@ -251,6 +253,21 @@ export class MemStorage implements IStorage {
   async getDailyPriceHistory(playerId: number, days: number = 30): Promise<any[]> {
     // Memory implementation - return empty array
     return [];
+  }
+
+  async getLastPriceChangeDate(playerId: number, currentPrice: number): Promise<string | null> {
+    // Memory implementation - return null
+    return null;
+  }
+
+  async getBatchPriceChangeDates(playerPrices: Array<{playerId: number, currentPrice: number}>): Promise<Map<number, string>> {
+    // Memory implementation - return empty map with default dates
+    const result = new Map<number, string>();
+    const today = new Date().toISOString().split('T')[0];
+    playerPrices.forEach(({playerId}) => {
+      result.set(playerId, today);
+    });
+    return result;
   }
 
   // Player mappings operations (in-memory fallback)
@@ -608,6 +625,112 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error getting daily price history:", error);
       return this.memFallback.getDailyPriceHistory(playerId, days);
+    }
+  }
+
+  // Find the actual date when each player's price last changed
+  async getLastPriceChangeDate(playerId: number, currentPrice: number): Promise<string | null> {
+    try {
+      const { dailyPlayerPrices } = await import("@shared/schema");
+      
+      // Get the player's price history ordered by date descending
+      const priceHistory = await db
+        .select()
+        .from(dailyPlayerPrices)
+        .where(eq(dailyPlayerPrices.playerId, playerId))
+        .orderBy(sql`${dailyPlayerPrices.recordDate} DESC`)
+        .limit(100); // Last 100 days should be enough
+      
+      if (priceHistory.length === 0) {
+        return null;
+      }
+      
+      // Find the most recent date where the price was different from current price
+      let changeDate = null;
+      let previousPrice = currentPrice;
+      
+      for (const record of priceHistory) {
+        if (record.currentPrice !== currentPrice) {
+          // This is when the price was different - the change happened after this date
+          // Look for the next record (chronologically) where price equals current price
+          const indexOfChange = priceHistory.indexOf(record);
+          if (indexOfChange > 0) {
+            // The price change happened on the date of the previous record (next chronologically)
+            changeDate = priceHistory[indexOfChange - 1].recordDate;
+          } else {
+            // Price changed since our earliest record
+            changeDate = record.recordDate;
+          }
+          break;
+        }
+      }
+      
+      return changeDate;
+    } catch (error) {
+      console.error("Error getting last price change date:", error);
+      return null;
+    }
+  }
+
+  // Get price change dates for multiple players efficiently
+  async getBatchPriceChangeDates(playerPrices: Array<{playerId: number, currentPrice: number}>): Promise<Map<number, string>> {
+    try {
+      const { dailyPlayerPrices } = await import("@shared/schema");
+      const result = new Map<number, string>();
+      
+      if (playerPrices.length === 0) return result;
+      
+      // Get all relevant players' price history
+      const playerIds = playerPrices.map(p => p.playerId);
+      const priceHistories = await db
+        .select()
+        .from(dailyPlayerPrices)
+        .where(sql`${dailyPlayerPrices.playerId} = ANY(${JSON.stringify(playerIds)})`)
+        .orderBy(sql`${dailyPlayerPrices.playerId}, ${dailyPlayerPrices.recordDate} DESC`);
+      
+      // Group by player
+      const historiesByPlayer = new Map<number, any[]>();
+      priceHistories.forEach(record => {
+        if (!historiesByPlayer.has(record.playerId)) {
+          historiesByPlayer.set(record.playerId, []);
+        }
+        historiesByPlayer.get(record.playerId)!.push(record);
+      });
+      
+      // Find change date for each player
+      for (const {playerId, currentPrice} of playerPrices) {
+        const history = historiesByPlayer.get(playerId) || [];
+        
+        if (history.length === 0) {
+          result.set(playerId, new Date().toISOString().split('T')[0]); // Default to today
+          continue;
+        }
+        
+        // Find the most recent price change
+        let changeDate = history[0].recordDate; // Default to most recent record
+        
+        for (let i = 0; i < history.length; i++) {
+          const record = history[i];
+          if (record.currentPrice !== currentPrice) {
+            // Found where price was different
+            if (i > 0) {
+              // Price changed on the date of the previous record
+              changeDate = history[i - 1].recordDate;
+            } else {
+              // Price changed since our earliest record
+              changeDate = record.recordDate;
+            }
+            break;
+          }
+        }
+        
+        result.set(playerId, changeDate);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Error getting batch price change dates:", error);
+      return new Map();
     }
   }
 
