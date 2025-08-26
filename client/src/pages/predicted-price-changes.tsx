@@ -31,9 +31,11 @@ interface PricePrediction {
   progress_direction: string;
   hourly_change_rate: number;
   estimated_time: string;
+  absolute_ownership?: number;
+  net_transfers_percentage?: number;
 }
 
-type SortField = 'current_progress' | 'tonight_progress' | 'transfers_in' | 'transfers_out' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate';
+type SortField = 'current_progress' | 'tonight_progress' | 'transfers_in' | 'transfers_out' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage';
 type SortDirection = 'asc' | 'desc';
 
 export default function PredictedPriceChanges() {
@@ -73,7 +75,7 @@ export default function PredictedPriceChanges() {
   const sortedAndFilteredPredictions = useMemo(() => {
     if (!Array.isArray(predictions)) return [];
     
-    // First filter the predictions
+    // First filter and enhance the predictions with calculated fields
     const filtered = predictions.filter((pred: PricePrediction) => {
       const matchesSearch = pred.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            pred.team_name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -83,6 +85,18 @@ export default function PredictedPriceChanges() {
                                (changeTypeFilter === "falls" && pred.predicted_change < 0) ||
                                (changeTypeFilter === "stable" && pred.predicted_change === 0);
       return matchesSearch && matchesPosition && matchesChangeType;
+    }).map((pred: PricePrediction) => {
+      // Calculate additional fields
+      const totalPlayers = 10000000; // Approximate total FPL players
+      const absoluteOwnership = Math.round((pred.ownership_percentage / 100) * totalPlayers);
+      const netTransfersPercentage = absoluteOwnership > 0 ? 
+        Math.round((pred.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
+      
+      return {
+        ...pred,
+        absolute_ownership: absoluteOwnership,
+        net_transfers_percentage: netTransfersPercentage
+      };
     });
 
     // Then sort the filtered results
@@ -341,48 +355,58 @@ export default function PredictedPriceChanges() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/20">
-                      <th className="text-left">Player</th>
-                      <th className="text-left">Team/Pos</th>
-                      <th className="text-right">Current Price</th>
-                      <th className="text-center min-w-[180px]">
-                        <div className="flex flex-col gap-1">
-                          <SortableHeader field="current_progress" className="text-center">
-                            Current Progress
-                          </SortableHeader>
-                          <SortableHeader field="tonight_progress" className="text-center">
-                            Progress at EOD (7AM IST)
-                          </SortableHeader>
-                        </div>
-                      </th>
-                      <th className="text-center">Change</th>
-                      <th className="text-right">
-                        <SortableHeader field="ownership_percentage" className="text-right">
-                          Ownership
+                      <th className="text-left p-2">Player</th>
+                      <th className="text-left p-2">Team/Pos</th>
+                      <th className="text-right p-2">Price</th>
+                      <th className="text-center p-2 min-w-[120px]">
+                        <SortableHeader field="current_progress" className="text-center">
+                          Current Progress
                         </SortableHeader>
                       </th>
-                      <th className="text-right">
-                        <div className="flex flex-col gap-1">
-                          <SortableHeader field="net_transfers" className="text-right">
-                            Net Transfers
-                          </SortableHeader>
-                          <div className="flex gap-1">
-                            <SortableHeader field="transfers_in" className="text-right text-xs">
-                              In
-                            </SortableHeader>
-                            <SortableHeader field="transfers_out" className="text-right text-xs">
-                              Out
-                            </SortableHeader>
-                          </div>
-                        </div>
+                      <th className="text-center p-2 min-w-[120px]">
+                        <SortableHeader field="tonight_progress" className="text-center">
+                          Progress EOD
+                        </SortableHeader>
                       </th>
-                      <th className="text-center">
+                      <th className="text-center p-2">Change</th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="transfers_in" className="text-right">
+                          Transfers In
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="transfers_out" className="text-right">
+                          Transfers Out
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="net_transfers" className="text-right">
+                          Net Transfers
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="ownership_percentage" className="text-right">
+                          Ownership %
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="absolute_ownership" className="text-right">
+                          Absolute Own.
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="net_transfers_percentage" className="text-right">
+                          Net Trans %
+                        </SortableHeader>
+                      </th>
+                      <th className="text-center p-2">
                         <SortableHeader field="confidence" className="text-center">
                           Probability
                         </SortableHeader>
                       </th>
-                      <th className="text-left">
+                      <th className="text-left p-2">
                         <SortableHeader field="expected_date" className="text-left">
-                          Expected When
+                          Expected
                         </SortableHeader>
                       </th>
                     </tr>
@@ -415,79 +439,54 @@ export default function PredictedPriceChanges() {
                         <td className="p-3 text-right font-medium">
                           {formatPrice(prediction.current_price)}
                         </td>
-                        <td className="p-3 min-w-[180px]">
-                          <div className="space-y-2">
-                            {/* Current Progress */}
-                            <div>
-                              <div className="flex justify-between items-center text-xs mb-1">
-                                <span className="text-muted-foreground">Current</span>
-                                <div className="flex items-center gap-1">
-                                  <span className={`font-medium ${
-                                    prediction.progress_direction === "rise" ? "text-green-600" :
-                                    prediction.progress_direction === "fall" ? "text-red-600" : 
-                                    "text-gray-600"
-                                  }`}>
-                                    {Math.abs(prediction.current_progress || 0)?.toFixed(1)}%
-                                  </span>
-                                  {prediction.progress_direction === "rise" ? 
-                                    <TrendingUp className="h-3 w-3 text-green-600" /> :
-                                    prediction.progress_direction === "fall" ? 
-                                    <TrendingDown className="h-3 w-3 text-red-600" /> : null
-                                  }
-                                </div>
-                              </div>
-                              <Progress 
-                                value={Math.min(100, Math.abs(prediction.current_progress || 0))} 
-                                className={`h-2 ${
-                                  prediction.progress_direction === "rise" ? "[&>div]:bg-green-500" :
-                                  prediction.progress_direction === "fall" ? "[&>div]:bg-red-500" : 
-                                  "[&>div]:bg-gray-400"
-                                }`}
-                              />
-                              {Math.abs(prediction.current_progress || 0) > 100 && (
-                                <div className="text-xs text-center text-amber-600 font-medium mt-0.5">
-                                  VERY LIKELY
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Tonight Progress */}
-                            <div>
-                              <div className="flex justify-between items-center text-xs mb-1">
-                                <span className="text-muted-foreground">7AM IST</span>
-                                <div className="flex items-center gap-1">
-                                  <span className={`font-medium ${
-                                    prediction.progress_direction === "rise" ? "text-green-600" :
-                                    prediction.progress_direction === "fall" ? "text-red-600" : 
-                                    "text-gray-600"
-                                  }`}>
-                                    {Math.abs(prediction.tonight_progress || 0)?.toFixed(1)}%
-                                  </span>
-                                  {prediction.progress_direction === "rise" ? 
-                                    <TrendingUp className="h-3 w-3 text-green-600" /> :
-                                    prediction.progress_direction === "fall" ? 
-                                    <TrendingDown className="h-3 w-3 text-red-600" /> : null
-                                  }
-                                </div>
-                              </div>
-                              <Progress 
-                                value={Math.min(100, Math.abs(prediction.tonight_progress || 0))} 
-                                className={`h-2 ${
-                                  prediction.progress_direction === "rise" ? "[&>div]:bg-green-600" :
-                                  prediction.progress_direction === "fall" ? "[&>div]:bg-red-600" : 
-                                  "[&>div]:bg-gray-400"
-                                }`}
-                              />
-                              {Math.abs(prediction.tonight_progress || 0) > 100 && (
-                                <div className="text-xs text-center text-amber-600 font-medium mt-0.5">
-                                  TONIGHT
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Hourly Rate */}
+                        <td className="p-3 text-center min-w-[120px]">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`font-medium ${
+                              prediction.progress_direction === "rise" ? "text-green-600" :
+                              prediction.progress_direction === "fall" ? "text-red-600" : 
+                              "text-gray-600"
+                            }`}>
+                              {Math.abs(prediction.current_progress || 0)?.toFixed(1)}%
+                            </span>
+                            <Progress 
+                              value={Math.min(100, Math.abs(prediction.current_progress || 0))} 
+                              className={`h-2 w-full ${
+                                prediction.progress_direction === "rise" ? "[&>div]:bg-green-500" :
+                                prediction.progress_direction === "fall" ? "[&>div]:bg-red-500" : 
+                                "[&>div]:bg-gray-400"
+                              }`}
+                            />
+                            {Math.abs(prediction.current_progress || 0) > 100 && (
+                              <Badge variant="destructive" className="text-xs">
+                                VERY LIKELY
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3 text-center min-w-[120px]">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`font-medium ${
+                              prediction.progress_direction === "rise" ? "text-green-600" :
+                              prediction.progress_direction === "fall" ? "text-red-600" : 
+                              "text-gray-600"
+                            }`}>
+                              {Math.abs(prediction.tonight_progress || 0)?.toFixed(1)}%
+                            </span>
+                            <Progress 
+                              value={Math.min(100, Math.abs(prediction.tonight_progress || 0))} 
+                              className={`h-2 w-full ${
+                                prediction.progress_direction === "rise" ? "[&>div]:bg-green-600" :
+                                prediction.progress_direction === "fall" ? "[&>div]:bg-red-600" : 
+                                "[&>div]:bg-gray-400"
+                              }`}
+                            />
+                            {Math.abs(prediction.tonight_progress || 0) > 100 && (
+                              <Badge variant="destructive" className="text-xs">
+                                TONIGHT
+                              </Badge>
+                            )}
                             {prediction.hourly_change_rate > 0 && (
-                              <div className="text-xs text-center text-muted-foreground">
+                              <div className="text-xs text-muted-foreground">
                                 {prediction.hourly_change_rate?.toFixed(2)}%/hr
                               </div>
                             )}
@@ -499,45 +498,63 @@ export default function PredictedPriceChanges() {
                               variant={prediction.predicted_change > 0 ? "success" : "destructive"}
                               className="text-xs"
                             >
-                              {prediction.predicted_change > 0 ? "+" : ""}{formatPrice(Math.abs(prediction.predicted_change))}
+                              {prediction.predicted_change > 0 ? "↑" : "↓"}£0.1m
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-xs">
-                              No Change
+                              Stable
                             </Badge>
                           )}
                         </td>
-                        <td className="p-3 text-right text-sm">
-                          {prediction.ownership_percentage}%
+                        <td className="p-3 text-right">
+                          <span className="font-medium">{prediction.transfers_in?.toLocaleString() || "0"}</span>
                         </td>
                         <td className="p-3 text-right">
-                          <div className="text-xs">
-                            {prediction.net_transfers >= 0 ? (
-                              <span className="text-green-600">+{(prediction.net_transfers/1000).toFixed(0)}k</span>
-                            ) : (
-                              <span className="text-red-600">{(prediction.net_transfers/1000).toFixed(0)}k</span>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {((prediction.transfers_in || 0)/1000).toFixed(0)}k in | {((prediction.transfers_out || 0)/1000).toFixed(0)}k out
-                          </div>
+                          <span className="font-medium">{prediction.transfers_out?.toLocaleString() || "0"}</span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className={`font-medium ${
+                            prediction.net_transfers > 0 ? "text-green-600" : 
+                            prediction.net_transfers < 0 ? "text-red-600" : "text-gray-600"
+                          }`}>
+                            {prediction.net_transfers > 0 ? "+" : ""}{prediction.net_transfers?.toLocaleString() || "0"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium">{prediction.ownership_percentage?.toFixed(1) || "0.0"}%</span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium">{prediction.absolute_ownership?.toLocaleString() || "0"}</span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className={`font-medium ${
+                            prediction.net_transfers_percentage! > 0 ? "text-green-600" : 
+                            prediction.net_transfers_percentage! < 0 ? "text-red-600" : "text-gray-600"
+                          }`}>
+                            {prediction.net_transfers_percentage! > 0 ? "+" : ""}{prediction.net_transfers_percentage?.toFixed(2) || "0.00"}%
+                          </span>
                         </td>
                         <td className="p-3 text-center">
-                          <div className="space-y-1">
-                            <Badge 
-                              className={`text-xs ${getProbabilityColor(prediction.probability)} text-white`}
-                            >
-                              {prediction.probability}
-                            </Badge>
-                            <div className={`text-xs font-medium ${getConfidenceColor(prediction.confidence)}`}>
-                              {prediction.confidence}%
-                            </div>
-                          </div>
+                          <Badge 
+                            className={`text-xs ${getProbabilityColor(prediction.probability)}`}
+                          >
+                            {prediction.probability}
+                          </Badge>
                         </td>
-                        <td className="p-3 text-xs text-muted-foreground max-w-[200px]">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {prediction.estimated_time || prediction.expected_date || "Stable"}
+                        <td className="p-3 text-left">
+                          <div className="space-y-1">
+                            {prediction.expected_date ? (
+                              <div className="text-sm font-medium">
+                                {new Date(prediction.expected_date).toLocaleDateString()}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-muted-foreground">N/A</div>
+                            )}
+                            {prediction.estimated_time && (
+                              <div className="text-xs text-muted-foreground">
+                                {prediction.estimated_time}
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -547,32 +564,9 @@ export default function PredictedPriceChanges() {
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No players found matching your filters</p>
-                <p className="text-sm">Try adjusting your search criteria</p>
+                No predictions found matching your filters.
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* How Predictions Work */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Prediction System</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>
-              <strong>Machine Learning:</strong> Predictions improve continuously by analyzing transfer patterns and actual price changes
-            </p>
-            <p>
-              <strong>Multiple Factors:</strong> Considers ownership levels, transfer velocity, historical patterns, and market momentum
-            </p>
-            <p>
-              <strong>Confidence Scoring:</strong> Higher confidence indicates stronger prediction based on similar historical patterns
-            </p>
-            <p>
-              <strong>Live Data:</strong> Real-time analysis of official FPL transfer activity and ownership changes
-            </p>
           </CardContent>
         </Card>
       </div>
