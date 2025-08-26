@@ -369,75 +369,24 @@ export default function CreatorTeam() {
                 <h2 className="text-xl font-semibold mb-4">Team Squad</h2>
                 
                 {/* Team Formation Display */}
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   {/* Starting XI */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">Starting XI</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {startingEleven.map((player, idx) => (
-                        <div
-                          key={`starting-${idx}`}
-                          className={`flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-sm ${
-                            player.is_captain 
-                              ? 'bg-yellow-50 border-yellow-200' 
-                              : player.is_vice_captain 
-                              ? 'bg-gray-50 border-gray-200' 
-                              : 'bg-white border-gray-100'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="flex-shrink-0">
-                              <Badge className={`${getPositionColor(player.position)}`}>
-                                {getPositionIcon(player.position)}
-                                <span className="ml-1 text-xs">{player.position.slice(0, 3).toUpperCase()}</span>
-                              </Badge>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium text-gray-900 truncate">
-                                  {player.player_name}
-                                </p>
-                                {player.is_captain && (
-                                  <Badge className="text-xs px-2 py-0.5 bg-yellow-500 text-white">
-                                    <Crown className="h-3 w-3 mr-1" />
-                                    Captain
-                                  </Badge>
-                                )}
-                                {player.is_vice_captain && (
-                                  <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                                    <Crown className="h-3 w-3 mr-1" />
-                                    Vice
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-xs text-gray-500 truncate">{player.team_name}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            {player.multiplier > 1 && (
-                              <Badge variant="outline" className="text-xs">
-                                {player.multiplier}x
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-
-                  {/* Substitutes */}
-                  {substitutes.length > 0 && (
+                  <div className="lg:col-span-2">
                     <Card>
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-lg">Substitutes</CardTitle>
+                        <CardTitle className="text-lg">Starting XI</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                        {substitutes.map((player, idx) => (
+                        {startingEleven.map((player, idx) => (
                           <div
-                            key={`sub-${idx}`}
-                            className="flex items-center justify-between p-3 rounded-lg border bg-gray-50 border-gray-200 opacity-75"
+                            key={`starting-${idx}`}
+                            className={`flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-sm ${
+                              player.is_captain 
+                                ? 'bg-yellow-50 border-yellow-200' 
+                                : player.is_vice_captain 
+                                ? 'bg-gray-50 border-gray-200' 
+                                : 'bg-white border-gray-100'
+                            }`}
                           >
                             <div className="flex items-center space-x-3">
                               <div className="flex-shrink-0">
@@ -448,20 +397,75 @@ export default function CreatorTeam() {
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
-                                  <p className="text-sm font-medium text-gray-700 truncate">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
                                     {player.player_name}
                                   </p>
-                                  <Badge variant="outline" className="text-xs bg-gray-100">
-                                    SUB
-                                  </Badge>
+                                  {player.is_captain && (
+                                    <Badge className="text-xs px-2 py-0.5 bg-yellow-500 text-white">
+                                      <Crown className="h-3 w-3 mr-1" />
+                                      Captain
+                                    </Badge>
+                                  )}
+                                  {player.is_vice_captain && (
+                                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                                      <Crown className="h-3 w-3 mr-1" />
+                                      Vice
+                                    </Badge>
+                                  )}
                                 </div>
                                 <p className="text-xs text-gray-500 truncate">{player.team_name}</p>
                               </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {player.multiplier > 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  {player.multiplier}x
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         ))}
                       </CardContent>
                     </Card>
+                  </div>
+
+                  {/* Substitutes */}
+                  {substitutes.length > 0 && (
+                    <div className="lg:col-span-1">
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg">Substitutes</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {substitutes.map((player, idx) => (
+                            <div
+                              key={`sub-${idx}`}
+                              className="flex items-center justify-between p-3 rounded-lg border bg-gray-50 border-gray-200 opacity-75"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="flex-shrink-0">
+                                  <Badge className={`${getPositionColor(player.position)}`}>
+                                    {getPositionIcon(player.position)}
+                                    <span className="ml-1 text-xs">{player.position.slice(0, 3).toUpperCase()}</span>
+                                  </Badge>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-medium text-gray-700 truncate">
+                                      {player.player_name}
+                                    </p>
+                                    <Badge variant="outline" className="text-xs bg-gray-100">
+                                      SUB
+                                    </Badge>
+                                  </div>
+                                  <p className="text-xs text-gray-500 truncate">{player.team_name}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    </div>
                   )}
                 </div>
               </div>
