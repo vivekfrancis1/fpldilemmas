@@ -42,6 +42,69 @@ interface CreatorWithLatestData extends FplContentCreator {
   pointsThisGw?: number;
 }
 
+// Helper functions
+function getPlatformIcon(platform: string) {
+  switch (platform.toLowerCase()) {
+    case 'youtube':
+      return <Youtube className="h-4 w-4 text-red-600" />;
+    case 'twitter':
+      return <Twitter className="h-4 w-4 text-blue-500" />;
+    case 'podcast':
+      return <Star className="h-4 w-4 text-purple-600" />;
+    case 'blog':
+      return <Trophy className="h-4 w-4 text-green-600" />;
+    case 'tiktok':
+      return <Activity className="h-4 w-4 text-black" />;
+    case 'instagram':
+      return <BarChart3 className="h-4 w-4 text-pink-500" />;
+    default:
+      return <Trophy className="h-4 w-4 text-gray-500" />;
+  }
+}
+
+function getRankBadgeVariant(rank?: number): "default" | "secondary" | "destructive" | "outline" {
+  if (!rank) return "outline";
+  if (rank <= 10000) return "default";
+  if (rank <= 100000) return "secondary";
+  return "outline";
+}
+
+function formatRank(rank?: number): string {
+  if (!rank) return "N/A";
+  if (rank >= 1000000) return `${(rank / 1000000).toFixed(1)}M`;
+  if (rank >= 1000) return `${(rank / 1000).toFixed(0)}K`;
+  return rank.toLocaleString();
+}
+
+function formatPoints(points?: number): string {
+  if (!points) return "N/A";
+  return points.toLocaleString();
+}
+
+function getRankChangeDisplay(change: number) {
+  if (change > 0) {
+    return (
+      <div className="flex items-center text-green-600 text-xs">
+        <TrendingUp className="h-3 w-3 mr-1" />
+        +{change.toLocaleString()}
+      </div>
+    );
+  } else if (change < 0) {
+    return (
+      <div className="flex items-center text-red-600 text-xs">
+        <TrendingDown className="h-3 w-3 mr-1" />
+        {change.toLocaleString()}
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center text-gray-500 text-xs">
+      <Star className="h-3 w-3 mr-1" />
+      No change
+    </div>
+  );
+}
+
 function ContentCreators() {
   const { toast } = useToast();
   const [selectedCreator, setSelectedCreator] = useState<number | null>(null);
