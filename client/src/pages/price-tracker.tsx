@@ -132,6 +132,31 @@ export default function PriceTracker() {
     return "text-red-600";
   };
 
+  // Calculate comprehensive season statistics
+  const getSeasonStats = () => {
+    if (!Array.isArray(priceChanges)) {
+      return { totalRises: 0, totalFalls: 0, totalChanges: 0, avgRiseAmount: 0, avgFallAmount: 0 };
+    }
+
+    const rises = priceChanges.filter((c: PriceChange) => c.price_change > 0);
+    const falls = priceChanges.filter((c: PriceChange) => c.price_change < 0);
+    
+    const avgRiseAmount = rises.length > 0 ? 
+      rises.reduce((sum, c) => sum + c.price_change, 0) / rises.length : 0;
+    const avgFallAmount = falls.length > 0 ? 
+      Math.abs(falls.reduce((sum, c) => sum + c.price_change, 0) / falls.length) : 0;
+
+    return {
+      totalRises: rises.length,
+      totalFalls: falls.length,
+      totalChanges: priceChanges.length,
+      avgRiseAmount: avgRiseAmount,
+      avgFallAmount: avgFallAmount
+    };
+  };
+
+  const seasonStats = getSeasonStats();
+
   return (
     
       <div className="fpl-page-container">
@@ -158,9 +183,14 @@ export default function PriceTracker() {
                   </div>
                   <div>
                     <p className="text-xl sm:text-2xl font-bold text-green-600" data-testid="text-total-rises">
-                      {Array.isArray(priceChanges) ? priceChanges.filter((c: PriceChange) => c.total_change > 0).length : 0}
+                      {seasonStats.totalRises}
                     </p>
-                    <p className="text-xs sm:text-sm text-gray-600">Price Rises This Season</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Total Price Rises This Season</p>
+                    {seasonStats.avgRiseAmount > 0 && (
+                      <p className="text-xs text-green-500 mt-1">
+                        Avg: +£{(seasonStats.avgRiseAmount / 10).toFixed(1)}m
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -174,9 +204,14 @@ export default function PriceTracker() {
                   </div>
                   <div>
                     <p className="text-xl sm:text-2xl font-bold text-red-600" data-testid="text-total-falls">
-                      {Array.isArray(priceChanges) ? priceChanges.filter((c: PriceChange) => c.total_change < 0).length : 0}
+                      {seasonStats.totalFalls}
                     </p>
-                    <p className="text-xs sm:text-sm text-gray-600">Price Falls This Season</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Total Price Falls This Season</p>
+                    {seasonStats.avgFallAmount > 0 && (
+                      <p className="text-xs text-red-500 mt-1">
+                        Avg: -£{(seasonStats.avgFallAmount / 10).toFixed(1)}m
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -185,14 +220,17 @@ export default function PriceTracker() {
             <Card className="bg-white shadow-sm border border-gray-100">
               <CardContent className="pt-6">
                 <div className="flex items-center">
-                  <div className="p-3 bg-purple-100 rounded-full mr-3">
-                    <Target className="h-6 w-6 text-purple-600" />
+                  <div className="p-3 bg-blue-100 rounded-full mr-3">
+                    <BarChart3 className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-xl sm:text-2xl font-bold text-purple-600" data-testid="text-predictions">
-                      {Array.isArray(predictions) ? predictions.filter((p: PricePrediction) => p.probability !== "Low").length : 0}
+                    <p className="text-xl sm:text-2xl font-bold text-blue-600" data-testid="text-total-changes">
+                      {seasonStats.totalChanges}
                     </p>
-                    <p className="text-xs sm:text-sm text-gray-600">Likely Changes</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Total Price Changes</p>
+                    <p className="text-xs text-blue-500 mt-1">
+                      {seasonStats.totalRises}↗ {seasonStats.totalFalls}↘
+                    </p>
                   </div>
                 </div>
               </CardContent>
