@@ -632,10 +632,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Price tracking endpoints
   
-  // Get recent price changes (simulated data for demo)
+  // Get recent actual price changes (real FPL data)
   app.get("/api/price-changes/recent", async (req, res) => {
     try {
-      // Generate simulated price changes based on real player data
+      // Fetch real price change data from FPL API
       const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       if (!bootstrapResponse.ok) {
         console.error("Failed to fetch bootstrap data for price changes");
@@ -647,100 +647,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
       
-      // Get price changes using historical daily tracking data when available
-      const recentChanges = [];
+      // Get actual price changes from our database tracking
+      const priceChanges = [];
       
-      // Filter players with relevant changes first to reduce data to process
-      const relevantPlayers = elements.filter((player: any) => {
-        const totalSeasonChange = player.cost_change_start || 0;
-        const currentGameweekChange = player.cost_change_event || 0;
-        const hasSignificantActivity = (player.transfers_in_event || 0) > 10000 || (player.transfers_out_event || 0) > 10000;
-        
-        return totalSeasonChange !== 0 || currentGameweekChange !== 0 || hasSignificantActivity;
-      });
-
-      // Get latest price data for all relevant players in one batch call
-      const playerIds = relevantPlayers.map((player: any) => player.id);
-      let latestPriceDataMap: Map<number, any> = new Map();
+      // Look for players with actual cost changes from the FPL API
+      // cost_change_event shows recent gameweek changes (daily changes)
+      // cost_change_start shows total season change
       
-      try {
-        latestPriceDataMap = await storage.getBatchLatestPriceData(playerIds);
-      } catch (error) {
-        console.warn("Failed to get batch price data, continuing without historical data:", error);
-      }
-      
-      // Process each relevant player with the pre-fetched data
-      for (const player of relevantPlayers) {
+      for (const player of elements) {
         const team = teams.find((t: any) => t.id === player.team);
         const position = positions.find((p: any) => p.id === player.element_type);
         
-        // Get all season price changes using cost_change_start (total change from season start)
-        const totalSeasonChange = player.cost_change_start || 0;
-        const currentGameweekChange = player.cost_change_event || 0;
+        // Check for any actual price changes
+        const hasRecentChange = player.cost_change_event !== 0;
+        const hasSeasonChange = player.cost_change_start !== 0;
         
-        // Get transfer data from pre-fetched daily tracking data
-        let dailyTransfersIn = player.transfers_in_event || 0;
-        let dailyTransfersOut = player.transfers_out_event || 0;
-        
-        const latestData = latestPriceDataMap.get(player.id);
-        if (latestData) {
-          dailyTransfersIn = latestData.dailyTransfersIn || dailyTransfersIn;
-          dailyTransfersOut = latestData.dailyTransfersOut || dailyTransfersOut;
+        if (hasRecentChange || hasSeasonChange) {
+          // Calculate the old price based on the change
+          const currentPrice = player.now_cost;
+          let oldPrice = currentPrice;
+          let actualChange = 0;
+          let changeDate = new Date().toISOString().split('T')[0]; // Default to today
+          
+          if (hasRecentChange) {
+            // Recent gameweek change - this is the most current
+            actualChange = player.cost_change_event;
+            oldPrice = currentPrice - actualChange;
+            // Price changes typically happen around 1:30 AM GMT daily
+          } else if (hasSeasonChange) {
+            // Season total change 
+            actualChange = player.cost_change_start;
+            oldPrice = currentPrice - actualChange;
+          }
+          
+          // Try to get historical price data for more accurate dates
+          try {
+            const historicalData = await storage.getLatestPriceData(player.id);
+            if (historicalData && historicalData.recordDate) {
+              changeDate = new Date(historicalData.recordDate).toISOString().split('T')[0];
+            }
+          } catch (error) {
+            // Continue with default date if historical data fails
+          }
+          
+          priceChanges.push({
+            player_id: player.id,
+            player_name: player.web_name,
+            team_name: team?.short_name || "Unknown",
+            position: position?.singular_name_short || "Unknown",
+            old_price: oldPrice,
+            current_price: currentPrice,
+            price_change: actualChange,
+            change_date: changeDate,
+            ownership: parseFloat(player.selected_by_percent || "0"),
+            transfers_in: player.transfers_in_event || 0,
+            transfers_out: player.transfers_out_event || 0,
+            is_recent_change: hasRecentChange,
+            total_season_change: player.cost_change_start || 0
+          });
         }
-        
-        // Calculate start-of-season price
-        const startPrice = player.now_cost - totalSeasonChange;
-        
-        // Get the date from latest price data or use current date as fallback
-        let changeDate = new Date().toISOString().split('T')[0]; // Default to today
-        if (latestData && latestData.recordDate) {
-          changeDate = new Date(latestData.recordDate).toISOString().split('T')[0];
-        }
-        
-        recentChanges.push({
-          player_id: player.id,
-          player_name: player.web_name,
-          team_name: team?.short_name || "Unknown",
-          position: position?.singular_name_short || "Unknown",
-          start_price: startPrice,
-          current_price: player.now_cost,
-          total_change: totalSeasonChange,
-          gameweek_change: currentGameweekChange,
-          ownership_change: ((dailyTransfersIn - dailyTransfersOut) / 10000000) * 100,
-          transfers_in: dailyTransfersIn,
-          transfers_out: dailyTransfersOut,
-          ownership: parseFloat(player.selected_by_percent || "0"),
-          change_date: changeDate,
-          // Sort by most recent activity - current gameweek changes first, then by transfer activity
-          recency_score: Math.abs(currentGameweekChange) * 100000 + Math.abs(dailyTransfersIn - dailyTransfersOut) + Math.abs(totalSeasonChange) * 10000
-        });
       }
       
-      // Sort by date first (most recent first), then by significance of changes
-      recentChanges.sort((a: any, b: any) => {
-        // First priority: most recent date
+      // Sort by most recent changes first, then by magnitude of change
+      priceChanges.sort((a: any, b: any) => {
+        // Prioritize recent gameweek changes over season totals
+        if (a.is_recent_change && !b.is_recent_change) return -1;
+        if (!a.is_recent_change && b.is_recent_change) return 1;
+        
+        // Then by date (most recent first)
         const dateComparison = new Date(b.change_date).getTime() - new Date(a.change_date).getTime();
-        if (dateComparison !== 0) {
-          return dateComparison;
-        }
-        // Second priority: current gameweek changes (most recent activity)
-        if (Math.abs(b.gameweek_change) !== Math.abs(a.gameweek_change)) {
-          return Math.abs(b.gameweek_change) - Math.abs(a.gameweek_change);
-        }
-        // Third priority: largest total season changes
-        if (Math.abs(b.total_change) !== Math.abs(a.total_change)) {
-          return Math.abs(b.total_change) - Math.abs(a.total_change);
-        }
-        // Fourth priority: transfer activity (most active)
-        return b.recency_score - a.recency_score;
+        if (dateComparison !== 0) return dateComparison;
+        
+        // Then by magnitude of change
+        return Math.abs(b.price_change) - Math.abs(a.price_change);
       });
       
-      // Show top 30 most significant price movements and transfer activities this season
-      const limitedChanges = recentChanges.slice(0, 30);
+      // Limit to 50 most relevant price changes
+      const limitedChanges = priceChanges.slice(0, 50);
       
       res.json(limitedChanges);
     } catch (error) {
-      console.error("Error generating price changes:", error);
+      console.error("Error fetching price changes:", error);
       res.status(500).json({
         error: "Failed to fetch price changes",
         message: error instanceof Error ? error.message : "Unknown error",

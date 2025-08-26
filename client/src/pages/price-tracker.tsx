@@ -15,16 +15,15 @@ interface PriceChange {
   player_name: string;
   team_name: string;
   position: string;
-  start_price: number;
+  old_price: number;
   current_price: number;
-  total_change: number;
-  gameweek_change: number;
-  ownership_change: number;
+  price_change: number;
+  change_date: string;
   ownership: number;
   transfers_in: number;
   transfers_out: number;
-  recency_score?: number;
-  change_date?: string;
+  is_recent_change: boolean;
+  total_season_change: number;
 }
 
 interface PricePrediction {
@@ -78,8 +77,9 @@ export default function PriceTracker() {
                          change.team_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPosition = positionFilter === "all" || change.position === positionFilter;
     const matchesChangeType = changeTypeFilter === "all" || 
-                             (changeTypeFilter === "rise" && change.total_change > 0) ||
-                             (changeTypeFilter === "fall" && change.total_change < 0);
+                             (changeTypeFilter === "rises" && change.price_change > 0) ||
+                             (changeTypeFilter === "falls" && change.price_change < 0) ||
+                             (changeTypeFilter === "active" && change.price_change === 0);
     return matchesSearch && matchesPosition && matchesChangeType;
   }) : [];
 
@@ -312,16 +312,10 @@ export default function PriceTracker() {
                           >
                             <td className="p-3">
                               <div className="flex items-center gap-2">
-                                {change.total_change > 0 ? (
+                                {change.price_change > 0 ? (
                                   <TrendingUp className="h-4 w-4 text-green-600" />
-                                ) : change.total_change < 0 ? (
+                                ) : change.price_change < 0 ? (
                                   <TrendingDown className="h-4 w-4 text-red-600" />
-                                ) : change.gameweek_change !== 0 ? (
-                                  change.gameweek_change > 0 ? (
-                                    <TrendingUp className="h-4 w-4 text-green-600" />
-                                  ) : (
-                                    <TrendingDown className="h-4 w-4 text-red-600" />
-                                  )
                                 ) : (
                                   <BarChart3 className="h-4 w-4 text-blue-600" />
                                 )}
@@ -340,20 +334,16 @@ export default function PriceTracker() {
                               {change.position}
                             </td>
                             <td className="p-3 text-right">
-                              {change.total_change !== 0 ? (
+                              {change.price_change !== 0 ? (
                                 <div className="flex items-center justify-end gap-2">
                                   <span className="text-sm text-muted-foreground">
-                                    {formatPrice(change.start_price)}
+                                    {formatPrice(change.old_price)}
                                   </span>
                                   <span>→</span>
-                                  <Badge variant={change.total_change > 0 ? "success" : "destructive"}>
-                                    {change.total_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.total_change))}
+                                  <Badge variant={change.price_change > 0 ? "success" : "destructive"}>
+                                    {change.price_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.price_change))}
                                   </Badge>
                                 </div>
-                              ) : change.gameweek_change !== 0 ? (
-                                <Badge variant={change.gameweek_change > 0 ? "success" : "destructive"}>
-                                  GW: {change.gameweek_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.gameweek_change))}
-                                </Badge>
                               ) : (
                                 <Badge variant="secondary">
                                   No Change
@@ -371,14 +361,11 @@ export default function PriceTracker() {
                               </div>
                             </td>
                             <td className="p-3 text-right text-sm text-muted-foreground">
-                              {change.change_date ? 
-                                new Date(change.change_date).toLocaleDateString('en-GB', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: '2-digit'
-                                }) : 
-                                'Today'
-                              }
+                              {new Date(change.change_date).toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: '2-digit'
+                              })}
                             </td>
                           </tr>
                         ))}
