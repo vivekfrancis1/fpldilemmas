@@ -1,7 +1,7 @@
 import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, inArray } from "drizzle-orm";
 
 export interface IStorage {
   getBootstrapData(): Promise<BootstrapData | undefined>;
@@ -553,22 +553,27 @@ export class DatabaseStorage implements IStorage {
       
       const { dailyPlayerPrices } = await import("@shared/schema");
       
-      // Use a more efficient query to get the latest record for each player
-      const latestRecords = await db
+      // Fetch all records for these players and process in memory to avoid SQL issues
+      const allRecords = await db
         .select()
         .from(dailyPlayerPrices)
-        .where(sql`${dailyPlayerPrices.playerId} IN (${playerIds.join(',')})`);
+        .orderBy(sql`${dailyPlayerPrices.recordDate} DESC`);
+      
+      // Filter to only the players we need and get the latest for each
+      const resultMap = new Map<number, any>();
+      const playerIdsSet = new Set(playerIds);
       
       // Group by playerId and get the latest for each
-      const resultMap = new Map<number, any>();
       const playerRecords = new Map<number, any[]>();
       
-      // Group records by player
-      latestRecords.forEach(record => {
-        if (!playerRecords.has(record.playerId)) {
-          playerRecords.set(record.playerId, []);
+      // Group records by player (only for the players we need)
+      allRecords.forEach(record => {
+        if (playerIdsSet.has(record.playerId)) {
+          if (!playerRecords.has(record.playerId)) {
+            playerRecords.set(record.playerId, []);
+          }
+          playerRecords.get(record.playerId)!.push(record);
         }
-        playerRecords.get(record.playerId)!.push(record);
       });
       
       // Get the latest record for each player

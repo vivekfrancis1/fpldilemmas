@@ -24,6 +24,7 @@ interface PriceChange {
   transfers_in: number;
   transfers_out: number;
   recency_score?: number;
+  change_date?: string;
 }
 
 interface PricePrediction {
@@ -289,75 +290,100 @@ export default function PriceTracker() {
                     ))}
                   </div>
                 ) : filteredChanges.length > 0 ? (
-                  <div className="space-y-3">
-                    {filteredChanges.map((change: PriceChange, index: number) => (
-                      <div 
-                        key={`${change.player_id}-${index}`}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                        data-testid={`price-change-${change.player_id}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {change.total_change > 0 ? (
-                            <TrendingUp className="h-4 w-4 text-green-600" />
-                          ) : change.total_change < 0 ? (
-                            <TrendingDown className="h-4 w-4 text-red-600" />
-                          ) : change.gameweek_change !== 0 ? (
-                            change.gameweek_change > 0 ? (
-                              <TrendingUp className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <TrendingDown className="h-4 w-4 text-red-600" />
-                            )
-                          ) : (
-                            <BarChart3 className="h-4 w-4 text-blue-600" />
-                          )}
-                          <div>
-                            <p className="font-medium">{change.player_name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {change.team_name} • {change.position} • {change.ownership}% owned
-                            </p>
-                            {change.gameweek_change !== 0 && (
-                              <p className="text-xs text-orange-600 font-medium">
-                                Recent GW change: {change.gameweek_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.gameweek_change))}
-                              </p>
-                            )}
-                            {change.total_change === 0 && change.gameweek_change === 0 && (
-                              <p className="text-xs text-blue-600 font-medium">
-                                High transfer activity ({((change.transfers_in - change.transfers_out)/1000).toFixed(0)}k net)
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          {change.total_change !== 0 ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-muted-foreground">
-                                {formatPrice(change.start_price)}
-                              </span>
-                              <span>→</span>
-                              <span className="font-medium">
-                                {formatPrice(change.current_price)}
-                              </span>
-                              <Badge variant={change.total_change > 0 ? "success" : "destructive"}>
-                                {change.total_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.total_change))}
-                              </Badge>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">
-                                {formatPrice(change.current_price)}
-                              </span>
-                              <Badge variant="secondary">
-                                Active
-                              </Badge>
-                            </div>
-                          )}
-                          <div className="text-xs text-muted-foreground mt-1">
-                            <p>In: {(change.transfers_in/1000).toFixed(0)}k | Out: {(change.transfers_out/1000).toFixed(0)}k</p>
-                            <p>Net: {((change.transfers_in - change.transfers_out)/1000).toFixed(0)}k transfers</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th className="text-left p-3 font-medium">Player</th>
+                          <th className="text-left p-3 font-medium">Team</th>
+                          <th className="text-left p-3 font-medium">Position</th>
+                          <th className="text-right p-3 font-medium">Price Change</th>
+                          <th className="text-right p-3 font-medium">Current Price</th>
+                          <th className="text-right p-3 font-medium">Transfer Activity</th>
+                          <th className="text-right p-3 font-medium">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredChanges.map((change: PriceChange, index: number) => (
+                          <tr 
+                            key={`${change.player_id}-${index}`}
+                            className="border-b hover:bg-muted/50 transition-colors"
+                            data-testid={`price-change-${change.player_id}`}
+                          >
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                {change.total_change > 0 ? (
+                                  <TrendingUp className="h-4 w-4 text-green-600" />
+                                ) : change.total_change < 0 ? (
+                                  <TrendingDown className="h-4 w-4 text-red-600" />
+                                ) : change.gameweek_change !== 0 ? (
+                                  change.gameweek_change > 0 ? (
+                                    <TrendingUp className="h-4 w-4 text-green-600" />
+                                  ) : (
+                                    <TrendingDown className="h-4 w-4 text-red-600" />
+                                  )
+                                ) : (
+                                  <BarChart3 className="h-4 w-4 text-blue-600" />
+                                )}
+                                <div>
+                                  <p className="font-medium">{change.player_name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {change.ownership}% owned
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 text-sm">
+                              {change.team_name}
+                            </td>
+                            <td className="p-3 text-sm">
+                              {change.position}
+                            </td>
+                            <td className="p-3 text-right">
+                              {change.total_change !== 0 ? (
+                                <div className="flex items-center justify-end gap-2">
+                                  <span className="text-sm text-muted-foreground">
+                                    {formatPrice(change.start_price)}
+                                  </span>
+                                  <span>→</span>
+                                  <Badge variant={change.total_change > 0 ? "success" : "destructive"}>
+                                    {change.total_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.total_change))}
+                                  </Badge>
+                                </div>
+                              ) : change.gameweek_change !== 0 ? (
+                                <Badge variant={change.gameweek_change > 0 ? "success" : "destructive"}>
+                                  GW: {change.gameweek_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.gameweek_change))}
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">
+                                  No Change
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="p-3 text-right font-medium">
+                              {formatPrice(change.current_price)}
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="text-xs">
+                                <p className="text-green-600">In: {(change.transfers_in/1000).toFixed(0)}k</p>
+                                <p className="text-red-600">Out: {(change.transfers_out/1000).toFixed(0)}k</p>
+                                <p className="font-medium">Net: {((change.transfers_in - change.transfers_out)/1000).toFixed(0)}k</p>
+                              </div>
+                            </td>
+                            <td className="p-3 text-right text-sm text-muted-foreground">
+                              {change.change_date ? 
+                                new Date(change.change_date).toLocaleDateString('en-GB', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: '2-digit'
+                                }) : 
+                                'Today'
+                              }
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">

@@ -691,6 +691,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate start-of-season price
         const startPrice = player.now_cost - totalSeasonChange;
         
+        // Get the date from latest price data or use current date as fallback
+        let changeDate = new Date().toISOString().split('T')[0]; // Default to today
+        if (latestData && latestData.recordDate) {
+          changeDate = new Date(latestData.recordDate).toISOString().split('T')[0];
+        }
+        
         recentChanges.push({
           player_id: player.id,
           player_name: player.web_name,
@@ -704,22 +710,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transfers_in: dailyTransfersIn,
           transfers_out: dailyTransfersOut,
           ownership: parseFloat(player.selected_by_percent || "0"),
+          change_date: changeDate,
           // Sort by most recent activity - current gameweek changes first, then by transfer activity
           recency_score: Math.abs(currentGameweekChange) * 100000 + Math.abs(dailyTransfersIn - dailyTransfersOut) + Math.abs(totalSeasonChange) * 10000
         });
       }
       
-      // Sort by recency - most recent gameweek changes first, then by total season change magnitude
+      // Sort by date first (most recent first), then by significance of changes
       recentChanges.sort((a: any, b: any) => {
-        // First priority: current gameweek changes (most recent)
+        // First priority: most recent date
+        const dateComparison = new Date(b.change_date).getTime() - new Date(a.change_date).getTime();
+        if (dateComparison !== 0) {
+          return dateComparison;
+        }
+        // Second priority: current gameweek changes (most recent activity)
         if (Math.abs(b.gameweek_change) !== Math.abs(a.gameweek_change)) {
           return Math.abs(b.gameweek_change) - Math.abs(a.gameweek_change);
         }
-        // Second priority: largest total season changes
+        // Third priority: largest total season changes
         if (Math.abs(b.total_change) !== Math.abs(a.total_change)) {
           return Math.abs(b.total_change) - Math.abs(a.total_change);
         }
-        // Third priority: transfer activity (most active)
+        // Fourth priority: transfer activity (most active)
         return b.recency_score - a.recency_score;
       });
       
