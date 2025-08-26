@@ -1119,8 +1119,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             confidence: Math.round(confidence),
             ownership_percentage: ownership,
             net_transfers: netTransfers,
-            transfers_in: transfersIn,
-            transfers_out: transfersOut,
+            transfers_in: player.transfers_in || 0,  // Season total transfers in
+            transfers_out: player.transfers_out || 0,  // Season total transfers out
+            transfers_in_event: player.transfers_in_event || 0,  // Gameweek transfers in
+            transfers_out_event: player.transfers_out_event || 0,  // Gameweek transfers out
             reason: reason,
             probability: probability,
             rise_threshold: Math.round(adjustedRiseThreshold),
