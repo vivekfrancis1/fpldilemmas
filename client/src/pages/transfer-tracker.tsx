@@ -90,7 +90,7 @@ export default function TransferTracker() {
         Math.round((data.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
       
       // Calculate gameweek net transfers and percentage
-      const netTransfersEvent = data.transfers_in_event - data.transfers_out_event;
+      const netTransfersEvent = (data.transfers_in_event || 0) - (data.transfers_out_event || 0);
       const netTransfersEventPercentage = absoluteOwnership > 0 ? 
         Math.round((netTransfersEvent / absoluteOwnership) * 10000) / 100 : 0;
       
