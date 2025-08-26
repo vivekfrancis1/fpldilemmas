@@ -77,10 +77,21 @@ export default function TransferTracker() {
       return matchesSearch && matchesPosition && matchesTransferType;
     }).map((data: TransferData) => {
       // Calculate additional transfer analysis fields using actual FPL total players
-      const totalPlayers = bootstrapData?.total_players || 0;
-      const absoluteOwnership = totalPlayers > 0 ? Math.round((data.ownership_percentage / 100) * totalPlayers) : 0;
+      const totalPlayers = bootstrapData?.total_players || 11131759; // Use actual current total as fallback
+      const absoluteOwnership = Math.round((data.ownership_percentage / 100) * totalPlayers);
       const netTransfersPercentage = absoluteOwnership > 0 ? 
         Math.round((data.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
+      
+      // Debug logging to see what's happening
+      if (data.player_name === "Palmer" || data.player_name === "Salah") {
+        console.log(`Debug ${data.player_name}:`, {
+          ownership_percentage: data.ownership_percentage,
+          totalPlayers,
+          absoluteOwnership,
+          net_transfers: data.net_transfers,
+          netTransfersPercentage
+        });
+      }
       
 
       
