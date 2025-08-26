@@ -33,9 +33,11 @@ interface PricePrediction {
   estimated_time: string;
   absolute_ownership?: number;
   net_transfers_percentage?: number;
+  transfers_per_hour?: number;
+  transfers_per_day?: number;
 }
 
-type SortField = 'current_progress' | 'tonight_progress' | 'transfers_in' | 'transfers_out' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage';
+type SortField = 'current_progress' | 'tonight_progress' | 'transfers_in' | 'transfers_out' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage' | 'transfers_per_hour' | 'transfers_per_day';
 type SortDirection = 'asc' | 'desc';
 
 export default function PredictedPriceChanges() {
@@ -92,10 +94,17 @@ export default function PredictedPriceChanges() {
       const netTransfersPercentage = absoluteOwnership > 0 ? 
         Math.round((pred.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
       
+      // Calculate transfer rates
+      const transfersPerHour = pred.hourly_change_rate > 0 ? 
+        Math.round((Math.abs(pred.net_transfers) / 24) * (pred.hourly_change_rate / 100)) : 0;
+      const transfersPerDay = Math.abs(pred.net_transfers);
+      
       return {
         ...pred,
         absolute_ownership: absoluteOwnership,
-        net_transfers_percentage: netTransfersPercentage
+        net_transfers_percentage: netTransfersPercentage,
+        transfers_per_hour: transfersPerHour,
+        transfers_per_day: transfersPerDay
       };
     });
 
@@ -108,6 +117,22 @@ export default function PredictedPriceChanges() {
         case 'expected_date':
           aValue = new Date(a.expected_date || '9999-12-31').getTime();
           bValue = new Date(b.expected_date || '9999-12-31').getTime();
+          break;
+        case 'absolute_ownership':
+          aValue = a.absolute_ownership || 0;
+          bValue = b.absolute_ownership || 0;
+          break;
+        case 'net_transfers_percentage':
+          aValue = a.net_transfers_percentage || 0;
+          bValue = b.net_transfers_percentage || 0;
+          break;
+        case 'transfers_per_hour':
+          aValue = a.transfers_per_hour || 0;
+          bValue = b.transfers_per_hour || 0;
+          break;
+        case 'transfers_per_day':
+          aValue = a.transfers_per_day || 0;
+          bValue = b.transfers_per_day || 0;
           break;
         default:
           aValue = a[sortField];
@@ -399,6 +424,16 @@ export default function PredictedPriceChanges() {
                           Net Trans %
                         </SortableHeader>
                       </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="transfers_per_hour" className="text-right">
+                          Trans/Hour
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="transfers_per_day" className="text-right">
+                          Trans/Day
+                        </SortableHeader>
+                      </th>
                       <th className="text-center p-2">
                         <SortableHeader field="confidence" className="text-center">
                           Probability
@@ -456,11 +491,7 @@ export default function PredictedPriceChanges() {
                                 "[&>div]:bg-gray-400"
                               }`}
                             />
-                            {Math.abs(prediction.current_progress || 0) > 100 && (
-                              <Badge variant="destructive" className="text-xs">
-                                VERY LIKELY
-                              </Badge>
-                            )}
+
                           </div>
                         </td>
                         <td className="p-3 text-center min-w-[120px]">
@@ -480,11 +511,6 @@ export default function PredictedPriceChanges() {
                                 "[&>div]:bg-gray-400"
                               }`}
                             />
-                            {Math.abs(prediction.tonight_progress || 0) > 100 && (
-                              <Badge variant="destructive" className="text-xs">
-                                TONIGHT
-                              </Badge>
-                            )}
                             {prediction.hourly_change_rate > 0 && (
                               <div className="text-xs text-muted-foreground">
                                 {prediction.hourly_change_rate?.toFixed(2)}%/hr
@@ -534,12 +560,25 @@ export default function PredictedPriceChanges() {
                             {prediction.net_transfers_percentage! > 0 ? "+" : ""}{prediction.net_transfers_percentage?.toFixed(2) || "0.00"}%
                           </span>
                         </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium">{prediction.transfers_per_hour?.toLocaleString() || "0"}</span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium">{prediction.transfers_per_day?.toLocaleString() || "0"}</span>
+                        </td>
                         <td className="p-3 text-center">
-                          <Badge 
-                            className={`text-xs ${getProbabilityColor(prediction.probability)}`}
-                          >
-                            {prediction.probability}
-                          </Badge>
+                          <div className="space-y-1">
+                            <Badge 
+                              className={`text-xs ${getProbabilityColor(prediction.probability)}`}
+                            >
+                              {prediction.probability}
+                            </Badge>
+                            {Math.abs(prediction.current_progress || 0) > 100 && (
+                              <Badge variant="destructive" className="text-xs">
+                                VERY LIKELY
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="p-3 text-left">
                           <div className="space-y-1">
@@ -549,6 +588,11 @@ export default function PredictedPriceChanges() {
                               </div>
                             ) : (
                               <div className="text-sm text-muted-foreground">N/A</div>
+                            )}
+                            {Math.abs(prediction.tonight_progress || 0) > 100 && (
+                              <Badge variant="destructive" className="text-xs">
+                                TONIGHT
+                              </Badge>
                             )}
                             {prediction.estimated_time && (
                               <div className="text-xs text-muted-foreground">
