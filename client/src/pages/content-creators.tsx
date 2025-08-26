@@ -167,20 +167,14 @@ function ContentCreators() {
       <div className="fpl-section-spacing">
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <AddCreatorDialog 
-            isOpen={isAddDialogOpen} 
-            onOpenChange={setIsAddDialogOpen}
-            onSuccess={() => refetch()}
-          />
-          
           <Button
             onClick={handleRefresh}
             disabled={refreshDataMutation.isPending}
-            variant="outline"
+            variant="default"
             data-testid="button-refresh-data"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshDataMutation.isPending ? 'animate-spin' : ''}`} />
-            {refreshDataMutation.isPending ? 'Refreshing...' : 'Refresh Data'}
+            {refreshDataMutation.isPending ? 'Refreshing...' : 'Refresh FPL Data'}
           </Button>
 
           <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
@@ -200,10 +194,9 @@ function ContentCreators() {
         {sortedCreators.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {sortedCreators.map((creator) => (
-              <CreatorCard
+              <CreatorDataCard
                 key={creator.id}
                 creator={creator}
-                onViewDetails={() => setSelectedCreator(creator.id)}
               />
             ))}
           </div>
@@ -211,10 +204,10 @@ function ContentCreators() {
           <Card className="bg-gray-50">
             <CardContent className="text-center py-8">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 mb-4">No content creators added yet.</p>
-              <Button onClick={() => setIsAddDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Creator
+              <p className="text-gray-600 mb-4">Loading FPL content creators...</p>
+              <Button onClick={handleRefresh} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh Data
               </Button>
             </CardContent>
           </Card>
@@ -322,210 +315,104 @@ function CreatorCard({ creator, onViewDetails }: {
   );
 }
 
-// Add Creator Dialog Component
-function AddCreatorDialog({ 
-  isOpen, 
-  onOpenChange, 
-  onSuccess 
-}: { 
-  isOpen: boolean; 
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-}) {
-  const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: "",
-    handle: "",
-    teamId: "",
-    teamName: "",
-    platform: "",
-    description: "",
-    website: "",
-    followers: ""
-  });
-
-  const addCreatorMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await fetch("/api/content-creators", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          teamId: parseInt(data.teamId),
-          followers: data.followers ? parseInt(data.followers) : null
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to add creator");
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Creator Added",
-        description: "Content creator has been added successfully.",
-      });
-      onSuccess();
-      onOpenChange(false);
-      setFormData({
-        name: "",
-        handle: "",
-        teamId: "",
-        teamName: "",
-        platform: "",
-        description: "",
-        website: "",
-        followers: ""
-      });
-    },
-    onError: () => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to add content creator.",
-      });
-    }
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.handle || !formData.teamId || !formData.teamName || !formData.platform) {
-      toast({
-        variant: "destructive",
-        title: "Missing Fields",
-        description: "Please fill in all required fields.",
-      });
-      return;
-    }
-    addCreatorMutation.mutate(formData);
-  };
+// Enhanced Creator Card with authentic FPL data
+function CreatorDataCard({ creator }: { creator: CreatorWithLatestData }) {
+  const latest = creator.latestTracking;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button data-testid="button-add-creator">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Creator
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add Content Creator</DialogTitle>
-          <DialogDescription>
-            Add a new FPL content creator to track their performance.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Creator name"
-                data-testid="input-creator-name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="handle">Handle *</Label>
-              <Input
-                id="handle"
-                value={formData.handle}
-                onChange={(e) => setFormData(prev => ({ ...prev, handle: e.target.value }))}
-                placeholder="@handle"
-                data-testid="input-creator-handle"
-              />
-            </div>
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              {getPlatformIcon(creator.platform)}
+              <span className="truncate">{creator.name}</span>
+              {!creator.isActive && <Badge variant="secondary">Inactive</Badge>}
+            </CardTitle>
+            <CardDescription className="mt-1">
+              {creator.handle} • Team ID: {creator.teamId}
+            </CardDescription>
+            {creator.description && (
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{creator.description}</p>
+            )}
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="teamId">FPL Team ID *</Label>
-              <Input
-                id="teamId"
-                type="number"
-                value={formData.teamId}
-                onChange={(e) => setFormData(prev => ({ ...prev, teamId: e.target.value }))}
-                placeholder="123456"
-                data-testid="input-team-id"
-              />
+        </div>
+      </CardHeader>
+      
+      <CardContent className="pt-0">
+        <div className="space-y-3">
+          {/* Performance Metrics */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="text-center p-3 bg-blue-50 rounded-lg">
+              <Badge variant={getRankBadgeVariant(latest?.overallRank)} className="mb-1">
+                <Trophy className="h-3 w-3 mr-1" />
+                {formatRank(latest?.overallRank)}
+              </Badge>
+              <p className="text-xs text-muted-foreground">Overall Rank</p>
+              {creator.rankChange && (
+                <div className="mt-1">{getRankChangeDisplay(creator.rankChange)}</div>
+              )}
             </div>
-            <div>
-              <Label htmlFor="teamName">Team Name *</Label>
-              <Input
-                id="teamName"
-                value={formData.teamName}
-                onChange={(e) => setFormData(prev => ({ ...prev, teamName: e.target.value }))}
-                placeholder="Team name"
-                data-testid="input-team-name"
-              />
+            
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <p className="font-bold text-lg">{formatPoints(latest?.overallPoints)}</p>
+              <p className="text-xs text-muted-foreground">Total Points</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="platform">Platform *</Label>
-              <Select value={formData.platform} onValueChange={(value) => setFormData(prev => ({ ...prev, platform: value }))}>
-                <SelectTrigger data-testid="select-platform">
-                  <SelectValue placeholder="Select platform" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="YouTube">YouTube</SelectItem>
-                  <SelectItem value="Twitter">Twitter</SelectItem>
-                  <SelectItem value="Podcast">Podcast</SelectItem>
-                  <SelectItem value="Blog">Blog</SelectItem>
-                  <SelectItem value="TikTok">TikTok</SelectItem>
-                  <SelectItem value="Instagram">Instagram</SelectItem>
-                </SelectContent>
-              </Select>
+          {/* Latest Gameweek */}
+          {latest && (
+            <div className="flex items-center justify-between p-2 bg-purple-50 rounded">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-purple-600" />
+                <span className="text-sm font-medium">GW{latest.gameweek}</span>
+              </div>
+              <div className="text-right">
+                <p className="font-bold">{latest.gameweekPoints} pts</p>
+                <p className="text-xs text-muted-foreground">
+                  {latest.gameweekRank ? `#${latest.gameweekRank.toLocaleString()}` : 'N/A'}
+                </p>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="followers">Followers</Label>
-              <Input
-                id="followers"
-                type="number"
-                value={formData.followers}
-                onChange={(e) => setFormData(prev => ({ ...prev, followers: e.target.value }))}
-                placeholder="100000"
-                data-testid="input-followers"
-              />
-            </div>
+          )}
+
+          {/* Team & Transfer Info */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {latest?.teamValue && (
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <DollarSign className="h-3 w-3" />
+                  Team Value
+                </span>
+                <span className="font-mono">£{latest.teamValue}m</span>
+              </div>
+            )}
+            {latest?.totalTransfers !== undefined && (
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <RefreshCw className="h-3 w-3" />
+                  Transfers
+                </span>
+                <span className="font-mono">{latest.totalTransfers}</span>
+              </div>
+            )}
           </div>
 
-          <div>
-            <Label htmlFor="website">Website</Label>
-            <Input
-              id="website"
-              value={formData.website}
-              onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
-              placeholder="https://..."
-              data-testid="input-website"
-            />
+          {/* Platform & Followers */}
+          <div className="flex items-center justify-between text-xs border-t pt-2">
+            <span className="text-muted-foreground">{creator.platform}</span>
+            {creator.followers && (
+              <span className="text-muted-foreground">
+                {creator.followers >= 1000000 
+                  ? `${(creator.followers / 1000000).toFixed(1)}M followers`
+                  : `${(creator.followers / 1000).toFixed(0)}K followers`
+                }
+              </span>
+            )}
           </div>
-
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Brief description of the creator..."
-              rows={2}
-              data-testid="textarea-description"
-            />
-          </div>
-
-          <div className="flex gap-2 pt-4">
-            <Button type="submit" disabled={addCreatorMutation.isPending} className="flex-1">
-              {addCreatorMutation.isPending ? 'Adding...' : 'Add Creator'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
