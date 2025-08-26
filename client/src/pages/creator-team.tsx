@@ -136,8 +136,15 @@ export default function CreatorTeam() {
   });
 
   const { data: managerHistory, isLoading: historyLoading } = useQuery<ManagerHistory>({
-    queryKey: [`/api/manager/${creatorInfo?.teamId}/history`],
-    enabled: !!creatorInfo?.teamId,
+    queryKey: [`/api/manager/${creatorInfo?.managerId}/history`],
+    enabled: !!creatorInfo?.managerId,
+    retry: 2,
+  });
+
+  // Fallback to our own tracking data if manager history is not available
+  const { data: creatorHistory } = useQuery<any[]>({
+    queryKey: [`/api/content-creators/${id}/history`],
+    enabled: !!id,
     retry: 2,
   });
 
@@ -538,7 +545,7 @@ export default function CreatorTeam() {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : managerHistory?.current ? (
+          ) : managerHistory?.current || (creatorHistory && creatorHistory.length > 0) ? (
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-semibold mb-4 flex items-center">
@@ -560,7 +567,17 @@ export default function CreatorTeam() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {managerHistory.current
+                        {(managerHistory?.current || 
+                          creatorHistory?.map(track => ({
+                            event: track.gameweek,
+                            points: track.gameweekPoints,
+                            total_points: track.overallPoints,
+                            overall_rank: track.overallRank,
+                            rank: track.gameweekRank,
+                            value: parseFloat(track.teamValue) * 10,
+                            event_transfers: track.totalTransfers,
+                            event_transfers_cost: track.hitsTaken * 4
+                          })) || [])
                           .sort((a, b) => b.event - a.event)
                           .slice(0, 10)
                           .map((entry, index) => {
@@ -617,63 +634,88 @@ export default function CreatorTeam() {
               </div>
 
               {/* Performance Summary */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-2xl font-bold text-blue-700">
-                          {Math.round(
-                            managerHistory.current.reduce((sum, entry) => sum + entry.points, 0) / 
-                            managerHistory.current.length
-                          )}
+              {(managerHistory?.current || creatorHistory) && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-2xl font-bold text-blue-700">
+                            {managerHistory?.current 
+                              ? Math.round(
+                                  managerHistory.current.reduce((sum, entry) => sum + entry.points, 0) / 
+                                  managerHistory.current.length
+                                )
+                              : creatorHistory 
+                                ? Math.round(
+                                    creatorHistory.reduce((sum, track) => sum + track.gameweekPoints, 0) / 
+                                    creatorHistory.length
+                                  )
+                                : 0
+                            }
+                          </div>
+                          <div className="text-sm text-muted-foreground">Avg Points/GW</div>
                         </div>
-                        <div className="text-sm text-muted-foreground">Avg Points/GW</div>
+                        <BarChart3 className="h-8 w-8 text-blue-500" />
                       </div>
-                      <BarChart3 className="h-8 w-8 text-blue-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-2xl font-bold text-green-700">
-                          {Math.max(...managerHistory.current.map(e => e.points))}
+                    </CardContent>
+                  </Card>
+                  <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-2xl font-bold text-green-700">
+                            {managerHistory?.current 
+                              ? Math.max(...managerHistory.current.map(e => e.points))
+                              : creatorHistory 
+                                ? Math.max(...creatorHistory.map(track => track.gameweekPoints))
+                                : 0
+                            }
+                          </div>
+                          <div className="text-sm text-muted-foreground">Best GW</div>
                         </div>
-                        <div className="text-sm text-muted-foreground">Best GW</div>
+                        <Trophy className="h-8 w-8 text-green-500" />
                       </div>
-                      <Trophy className="h-8 w-8 text-green-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-2xl font-bold text-purple-700">
-                          #{Math.min(...managerHistory.current.map(e => e.overall_rank)).toLocaleString()}
+                    </CardContent>
+                  </Card>
+                  <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-2xl font-bold text-purple-700">
+                            #{managerHistory?.current 
+                              ? Math.min(...managerHistory.current.map(e => e.overall_rank)).toLocaleString()
+                              : creatorHistory 
+                                ? Math.min(...creatorHistory.map(track => track.overallRank)).toLocaleString()
+                                : 'N/A'
+                            }
+                          </div>
+                          <div className="text-sm text-muted-foreground">Best Rank</div>
                         </div>
-                        <div className="text-sm text-muted-foreground">Best Rank</div>
+                        <Crown className="h-8 w-8 text-purple-500" />
                       </div>
-                      <Crown className="h-8 w-8 text-purple-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-2xl font-bold text-orange-700">
-                          {managerHistory.current.filter(e => e.event_transfers > 0).length}
+                    </CardContent>
+                  </Card>
+                  <Card className="border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-2xl font-bold text-orange-700">
+                            {managerHistory?.current 
+                              ? managerHistory.current.filter(e => e.event_transfers > 0).length
+                              : creatorHistory 
+                                ? creatorHistory.filter(track => track.totalTransfers > 0).length
+                                : 0
+                            }
+                          </div>
+                          <div className="text-sm text-muted-foreground">Transfer GWs</div>
                         </div>
-                        <div className="text-sm text-muted-foreground">Transfer GWs</div>
+                        <RefreshCw className="h-8 w-8 text-orange-500" />
                       </div>
-                      <RefreshCw className="h-8 w-8 text-orange-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
           ) : (
             <Card>
