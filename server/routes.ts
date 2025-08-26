@@ -1023,53 +1023,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          // Calculate progress percentage for progress bar (0-100%)
-          let progressPercentage = 0;
+          // Calculate current progress percentage (can exceed 100%)
+          let currentProgressPercentage = 0;
+          let tonightProgressPercentage = 0;
           let progressDirection = "neutral";
+          let hourlyChangeRate = 0;
           let estimatedTime = "Stable";
           
           if (netTransfers > 0) {
-            // Rising progress
-            progressPercentage = Math.min(100, (netTransfers / adjustedRiseThreshold) * 100);
+            // Rising progress (can exceed 100%)
+            currentProgressPercentage = (netTransfers / adjustedRiseThreshold) * 100;
             progressDirection = "rise";
             
-            // Estimate time to price change based on current transfer velocity
-            if (progressPercentage >= 100) {
-              estimatedTime = "Next update (7AM IST)";
-            } else if (transferVelocity > 0) {
-              const remainingTransfers = adjustedRiseThreshold - netTransfers;
-              const hoursRemaining = remainingTransfers / transferVelocity;
-              if (hoursRemaining <= 24) {
-                estimatedTime = `${Math.ceil(hoursRemaining)}h remaining`;
-              } else if (hoursRemaining <= 168) { // 7 days
-                estimatedTime = `${Math.ceil(hoursRemaining / 24)} days remaining`;
+            // Calculate hourly change rate
+            hourlyChangeRate = transferVelocity / adjustedRiseThreshold * 100; // % per hour
+            
+            // Calculate expected progress by 7AM IST (next price update)
+            const now = new Date();
+            const nextUpdate = new Date();
+            nextUpdate.setUTCHours(1, 30, 0, 0); // 7AM IST = 1:30 AM UTC
+            if (nextUpdate <= now) {
+              nextUpdate.setDate(nextUpdate.getDate() + 1); // Next day if already passed
+            }
+            const hoursUntilUpdate = (nextUpdate.getTime() - now.getTime()) / (1000 * 60 * 60);
+            tonightProgressPercentage = currentProgressPercentage + (hourlyChangeRate * hoursUntilUpdate);
+            
+            // Estimate time to price change
+            if (currentProgressPercentage >= 100) {
+              estimatedTime = "Tonight (7AM IST)";
+            } else if (tonightProgressPercentage >= 100) {
+              estimatedTime = "Tonight (7AM IST)";
+            } else if (hourlyChangeRate > 0) {
+              const hoursToReach100 = (100 - currentProgressPercentage) / hourlyChangeRate;
+              if (hoursToReach100 <= 24) {
+                estimatedTime = `${Math.ceil(hoursToReach100)}h remaining`;
+              } else if (hoursToReach100 <= 168) {
+                estimatedTime = `${Math.ceil(hoursToReach100 / 24)} days`;
               } else {
                 estimatedTime = "Low probability";
               }
             } else {
-              estimatedTime = "No current momentum";
+              estimatedTime = "No momentum";
             }
           } else if (netTransfers < 0) {
-            // Falling progress  
-            progressPercentage = Math.min(100, (Math.abs(netTransfers) / adjustedFallThreshold) * 100);
+            // Falling progress (can exceed 100%)
+            currentProgressPercentage = (Math.abs(netTransfers) / adjustedFallThreshold) * 100;
             progressDirection = "fall";
             
-            // Estimate time to price change based on current transfer velocity
-            if (progressPercentage >= 100) {
-              estimatedTime = "Next update (7AM IST)";
-            } else if (transferVelocity > 0) {
-              const remainingTransfers = adjustedFallThreshold - Math.abs(netTransfers);
-              const hoursRemaining = remainingTransfers / transferVelocity;
-              if (hoursRemaining <= 24) {
-                estimatedTime = `${Math.ceil(hoursRemaining)}h remaining`;
-              } else if (hoursRemaining <= 168) { // 7 days
-                estimatedTime = `${Math.ceil(hoursRemaining / 24)} days remaining`;
+            // Calculate hourly change rate
+            hourlyChangeRate = transferVelocity / adjustedFallThreshold * 100; // % per hour
+            
+            // Calculate expected progress by 7AM IST
+            const now = new Date();
+            const nextUpdate = new Date();
+            nextUpdate.setUTCHours(1, 30, 0, 0); // 7AM IST = 1:30 AM UTC
+            if (nextUpdate <= now) {
+              nextUpdate.setDate(nextUpdate.getDate() + 1);
+            }
+            const hoursUntilUpdate = (nextUpdate.getTime() - now.getTime()) / (1000 * 60 * 60);
+            tonightProgressPercentage = currentProgressPercentage + (hourlyChangeRate * hoursUntilUpdate);
+            
+            // Estimate time to price change
+            if (currentProgressPercentage >= 100) {
+              estimatedTime = "Tonight (7AM IST)";
+            } else if (tonightProgressPercentage >= 100) {
+              estimatedTime = "Tonight (7AM IST)";
+            } else if (hourlyChangeRate > 0) {
+              const hoursToReach100 = (100 - currentProgressPercentage) / hourlyChangeRate;
+              if (hoursToReach100 <= 24) {
+                estimatedTime = `${Math.ceil(hoursToReach100)}h remaining`;
+              } else if (hoursToReach100 <= 168) {
+                estimatedTime = `${Math.ceil(hoursToReach100 / 24)} days`;
               } else {
                 estimatedTime = "Low probability";
               }
             } else {
-              estimatedTime = "No current momentum";
+              estimatedTime = "No momentum";
             }
+          } else {
+            // No significant activity
+            currentProgressPercentage = 0;
+            tonightProgressPercentage = 0;
+            hourlyChangeRate = 0;
+            estimatedTime = "Stable";
           }
           
           const prediction = {
@@ -1089,8 +1125,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             rise_threshold: Math.round(adjustedRiseThreshold),
             fall_threshold: Math.round(adjustedFallThreshold),
             transfer_velocity: Math.round(transferVelocity),
-            progress_percentage: Math.round(progressPercentage * 100) / 100,
+            current_progress: Math.round(currentProgressPercentage * 100) / 100,
+            tonight_progress: Math.round(tonightProgressPercentage * 100) / 100,
             progress_direction: progressDirection,
+            hourly_change_rate: Math.round(hourlyChangeRate * 100) / 100,
             estimated_time: estimatedTime,
             expected_date: estimatedTime
           };
