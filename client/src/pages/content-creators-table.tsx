@@ -152,6 +152,9 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
           <div>
             <div className="font-medium">{creator.name}</div>
             <div className="text-sm text-muted-foreground">{creator.handle}</div>
+            {creator.description && (
+              <div className="text-xs text-muted-foreground mt-1 max-w-xs">{creator.description}</div>
+            )}
           </div>
         </div>
       </TableCell>
