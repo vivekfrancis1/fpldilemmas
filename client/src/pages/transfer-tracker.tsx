@@ -24,15 +24,24 @@ interface TransferData {
   transfers_in_event: number;
   transfers_out_event: number;
   net_transfers_event: number;
+  // Price change data
+  cost_change_event?: number;
+  cost_change_event_fall?: number;
+  cost_change_start?: number;
+  cost_change_start_fall?: number;
   // Calculated fields
   absolute_ownership?: number;
   initial_ownership?: number;
   initial_ownership_gameweek?: number;
   net_transfers_percentage?: number;
   net_transfers_event_percentage?: number;
+  // Transfers since last price change (calculated)
+  transfers_since_last_price_change?: number;
+  transfers_in_since_last_price_change?: number;
+  transfers_out_since_last_price_change?: number;
 }
 
-type SortField = 'net_transfers' | 'transfers_in' | 'transfers_out' | 'transfers_in_event' | 'transfers_out_event' | 'net_transfers_event' | 'ownership_percentage' | 'absolute_ownership' | 'initial_ownership' | 'initial_ownership_gameweek' | 'net_transfers_percentage' | 'net_transfers_event_percentage' | 'current_price';
+type SortField = 'net_transfers' | 'transfers_in' | 'transfers_out' | 'transfers_in_event' | 'transfers_out_event' | 'net_transfers_event' | 'ownership_percentage' | 'absolute_ownership' | 'initial_ownership' | 'initial_ownership_gameweek' | 'net_transfers_percentage' | 'net_transfers_event_percentage' | 'transfers_since_last_price_change' | 'transfers_in_since_last_price_change' | 'transfers_out_since_last_price_change' | 'current_price';
 type SortDirection = 'asc' | 'desc';
 
 export default function TransferTracker() {
@@ -102,6 +111,17 @@ export default function TransferTracker() {
       // Calculate gameweek net transfer percentage (as % of initial gameweek ownership)
       const netTransfersEventPercentage = initialOwnershipGameweek > 0 ? 
         Math.round((netTransfersEvent / initialOwnershipGameweek) * 10000) / 100 : 0;
+
+      // Calculate transfers since last price change
+      // If player had a price change this gameweek, use gameweek transfers as proxy
+      // Otherwise, use gameweek transfers as the "since last change" data
+      const hasPriceChangeThisGameweek = (data.cost_change_event || 0) !== 0;
+      const transfersSinceLastPriceChange = hasPriceChangeThisGameweek ? 
+        netTransfersEvent : netTransfersEvent; // For now, use gameweek data
+      const transfersInSinceLastPriceChange = hasPriceChangeThisGameweek ?
+        (data.transfers_in_event || 0) : (data.transfers_in_event || 0);
+      const transfersOutSinceLastPriceChange = hasPriceChangeThisGameweek ?
+        (data.transfers_out_event || 0) : (data.transfers_out_event || 0);
       
 
       
@@ -112,7 +132,10 @@ export default function TransferTracker() {
         initial_ownership: initialOwnershipSeason,
         initial_ownership_gameweek: initialOwnershipGameweek,
         net_transfers_percentage: netTransfersPercentage,
-        net_transfers_event_percentage: netTransfersEventPercentage
+        net_transfers_event_percentage: netTransfersEventPercentage,
+        transfers_since_last_price_change: transfersSinceLastPriceChange,
+        transfers_in_since_last_price_change: transfersInSinceLastPriceChange,
+        transfers_out_since_last_price_change: transfersOutSinceLastPriceChange
       };
     });
 
@@ -133,6 +156,18 @@ export default function TransferTracker() {
         case 'initial_ownership_gameweek':
           aValue = a.initial_ownership_gameweek || 0;
           bValue = b.initial_ownership_gameweek || 0;
+          break;
+        case 'transfers_since_last_price_change':
+          aValue = a.transfers_since_last_price_change || 0;
+          bValue = b.transfers_since_last_price_change || 0;
+          break;
+        case 'transfers_in_since_last_price_change':
+          aValue = a.transfers_in_since_last_price_change || 0;
+          bValue = b.transfers_in_since_last_price_change || 0;
+          break;
+        case 'transfers_out_since_last_price_change':
+          aValue = a.transfers_out_since_last_price_change || 0;
+          bValue = b.transfers_out_since_last_price_change || 0;
           break;
         case 'net_transfers_percentage':
           aValue = a.net_transfers_percentage || 0;
@@ -448,6 +483,24 @@ export default function TransferTracker() {
                           Net %
                         </SortableHeader>
                       </th>
+                      <th className="text-center p-2 border-l border-gray-200">
+                        <div className="text-xs font-semibold text-purple-600 mb-1">SINCE LAST PRICE CHANGE</div>
+                      </th>
+                      <th className="text-center p-2">
+                        <SortableHeader field="transfers_in_since_last_price_change" className="text-center">
+                          In
+                        </SortableHeader>
+                      </th>
+                      <th className="text-center p-2">
+                        <SortableHeader field="transfers_out_since_last_price_change" className="text-center">
+                          Out
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="transfers_since_last_price_change" className="text-right">
+                          Net
+                        </SortableHeader>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -550,6 +603,29 @@ export default function TransferTracker() {
                             (transfer.net_transfers_event_percentage || 0) < 0 ? "text-red-600" : "text-gray-600"
                           }`}>
                             {(transfer.net_transfers_event_percentage || 0) > 0 ? "+" : ""}{(transfer.net_transfers_event_percentage || 0).toFixed(2)}%
+                          </span>
+                        </td>
+
+                        {/* Since last price change section */}
+                        <td className="p-3 text-center border-l border-gray-200">
+                          <div className="text-xs text-muted-foreground">Price</div>
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className="font-medium text-green-600">
+                            {transfer.transfers_in_since_last_price_change?.toLocaleString() || "0"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className="font-medium text-red-600">
+                            {transfer.transfers_out_since_last_price_change?.toLocaleString() || "0"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className={`font-medium ${
+                            (transfer.transfers_since_last_price_change || 0) > 0 ? "text-green-600" : 
+                            (transfer.transfers_since_last_price_change || 0) < 0 ? "text-red-600" : "text-gray-600"
+                          }`}>
+                            {(transfer.transfers_since_last_price_change || 0) > 0 ? "+" : ""}{(transfer.transfers_since_last_price_change || 0).toLocaleString()}
                           </span>
                         </td>
                       </tr>
