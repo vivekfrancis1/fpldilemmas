@@ -6062,7 +6062,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const gameweek = currentEvent ? currentEvent.id : 20;
       
-      console.log(`Fetching team data for creator ${creator.name} (Team ID: ${creator.teamId}) for GW${gameweek}`);
+      console.log(`Fetching team data for creator ${creator.name} (Manager ID: ${creator.managerId}) for GW${gameweek}`);
       
       // Try current gameweek first, then fallback to previous gameweeks
       let teamData = null;
@@ -6071,7 +6071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       while (!teamData && attempts < 5 && currentGw > 0) {
         try {
-          const teamResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/event/${currentGw}/picks/`);
+          const teamResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/event/${currentGw}/picks/`);
           if (teamResponse.ok) {
             teamData = await teamResponse.json();
             console.log(`✅ Successfully fetched team data for GW${currentGw}`);
@@ -6091,7 +6091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`No gameweek-specific data found, trying general team info for creator ${creator.name}`);
         
         // Try general team info if gameweek-specific fails
-        const generalResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/`);
+        const generalResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/`);
         if (generalResponse.ok) {
           const generalData = await generalResponse.json();
           console.log(`✅ Successfully fetched general team info for ${creator.name}`);
@@ -6099,7 +6099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             general_info: generalData,
             message: "Gameweek-specific team data not available, showing general team info",
             creator: creator.name,
-            teamId: creator.teamId
+            managerId: creator.managerId
           });
         } else {
           console.log(`❌ Failed to fetch general team info for ${creator.name}`);
@@ -6107,7 +6107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return res.status(400).json({ 
           error: "Team data not available",
-          teamId: creator.teamId,
+          managerId: creator.managerId,
           attemptedGameweeks: `${currentGw + 1} to ${gameweek}`,
           creator: creator.name
         });
