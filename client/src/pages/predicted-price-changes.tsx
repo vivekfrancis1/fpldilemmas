@@ -33,14 +33,11 @@ interface PricePrediction {
   estimated_time: string;
   absolute_ownership?: number;
   net_transfers_percentage?: number;
-  nti_last_hour?: number;
   nti_today?: number;
-  nti_this_gameweek?: number;
-  nti_total?: number;
   transfer_rate_trend?: string;
 }
 
-type SortField = 'current_progress' | 'tonight_progress' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage' | 'nti_last_hour' | 'nti_today' | 'nti_this_gameweek' | 'nti_total';
+type SortField = 'current_progress' | 'tonight_progress' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage' | 'nti_today';
 type SortDirection = 'asc' | 'desc';
 
 export default function PredictedPriceChanges() {
@@ -97,13 +94,8 @@ export default function PredictedPriceChanges() {
       const netTransfersPercentage = absoluteOwnership > 0 ? 
         Math.round((pred.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
       
-      // Calculate Net Transfers In (NTI) across different time periods
-      // Use actual transfer data, not projections that would exceed ownership
-      const ntiLastHour = pred.hourly_change_rate > 0 ? 
-        Math.round(pred.net_transfers / 24) : 0; // Simple hourly rate from daily data
+      // Use only actual NTI data available 
       const ntiToday = pred.net_transfers; // Net transfers since 7AM IST today (actual data)
-      const ntiThisGameweek = Math.round(pred.net_transfers * 1.5); // Conservative 1.5x for gameweek
-      const ntiTotal = Math.round(pred.net_transfers * 10); // Conservative 10x for season estimate
       
       // Determine transfer trend based on net transfers
       const transferRateTrend = pred.net_transfers > 0 ? 
@@ -115,10 +107,7 @@ export default function PredictedPriceChanges() {
         ...pred,
         absolute_ownership: absoluteOwnership,
         net_transfers_percentage: netTransfersPercentage,
-        nti_last_hour: ntiLastHour,
         nti_today: ntiToday,
-        nti_this_gameweek: ntiThisGameweek,
-        nti_total: ntiTotal,
         transfer_rate_trend: transferRateTrend
       };
     });
@@ -141,21 +130,9 @@ export default function PredictedPriceChanges() {
           aValue = a.net_transfers_percentage || 0;
           bValue = b.net_transfers_percentage || 0;
           break;
-        case 'nti_last_hour':
-          aValue = a.nti_last_hour || 0;
-          bValue = b.nti_last_hour || 0;
-          break;
         case 'nti_today':
           aValue = a.nti_today || 0;
           bValue = b.nti_today || 0;
-          break;
-        case 'nti_this_gameweek':
-          aValue = a.nti_this_gameweek || 0;
-          bValue = b.nti_this_gameweek || 0;
-          break;
-        case 'nti_total':
-          aValue = a.nti_total || 0;
-          bValue = b.nti_total || 0;
           break;
         default:
           aValue = a[sortField];
@@ -438,23 +415,8 @@ export default function PredictedPriceChanges() {
                         </SortableHeader>
                       </th>
                       <th className="text-right p-2">
-                        <SortableHeader field="nti_last_hour" className="text-right">
-                          NTI (1hr)
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right p-2">
                         <SortableHeader field="nti_today" className="text-right">
                           NTI (Today)
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="nti_this_gameweek" className="text-right">
-                          NTI (GW)
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="nti_total" className="text-right">
-                          NTI (Total)
                         </SortableHeader>
                       </th>
                       <th className="text-center p-2">
@@ -582,34 +544,10 @@ export default function PredictedPriceChanges() {
                         </td>
                         <td className="p-3 text-right">
                           <span className={`font-medium ${
-                            (prediction.nti_last_hour || 0) > 0 ? "text-green-600" : 
-                            (prediction.nti_last_hour || 0) < 0 ? "text-red-600" : "text-gray-600"
-                          }`}>
-                            {(prediction.nti_last_hour || 0) > 0 ? "+" : ""}{prediction.nti_last_hour?.toLocaleString() || "0"}
-                          </span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <span className={`font-medium ${
                             (prediction.nti_today || 0) > 0 ? "text-green-600" : 
                             (prediction.nti_today || 0) < 0 ? "text-red-600" : "text-gray-600"
                           }`}>
                             {(prediction.nti_today || 0) > 0 ? "+" : ""}{prediction.nti_today?.toLocaleString() || "0"}
-                          </span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <span className={`font-medium ${
-                            (prediction.nti_this_gameweek || 0) > 0 ? "text-green-600" : 
-                            (prediction.nti_this_gameweek || 0) < 0 ? "text-red-600" : "text-gray-600"
-                          }`}>
-                            {(prediction.nti_this_gameweek || 0) > 0 ? "+" : ""}{prediction.nti_this_gameweek?.toLocaleString() || "0"}
-                          </span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <span className={`font-medium ${
-                            (prediction.nti_total || 0) > 0 ? "text-green-600" : 
-                            (prediction.nti_total || 0) < 0 ? "text-red-600" : "text-gray-600"
-                          }`}>
-                            {(prediction.nti_total || 0) > 0 ? "+" : ""}{prediction.nti_total?.toLocaleString() || "0"}
                           </span>
                         </td>
                         <td className="p-3 text-center">
