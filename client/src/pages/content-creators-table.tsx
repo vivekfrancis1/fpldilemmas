@@ -164,11 +164,11 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
         </div>
       </TableCell>
       <TableCell className="text-right font-mono">
-        {latest?.overallPoints || "N/A"}
+        {latest?.overallPoints !== undefined && latest?.overallPoints !== null ? latest.overallPoints : "N/A"}
       </TableCell>
       <TableCell className="text-right">
         <div className="flex flex-col items-end">
-          <span className="font-mono font-bold">{latest?.gameweekPoints || "N/A"}</span>
+          <span className="font-mono font-bold">{latest?.gameweekPoints !== undefined && latest?.gameweekPoints !== null ? latest.gameweekPoints : "N/A"}</span>
           {latest?.gameweekRank && (
             <span className="text-xs text-muted-foreground">#{latest.gameweekRank.toLocaleString()}</span>
           )}
@@ -178,7 +178,7 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
         £{latest?.teamValue || 'N/A'}m
       </TableCell>
       <TableCell className="text-right font-mono">
-        {latest?.totalTransfers || "N/A"}
+        {latest?.totalTransfers !== undefined && latest?.totalTransfers !== null ? latest.totalTransfers : "N/A"}
       </TableCell>
       <TableCell className="text-center">
         <Button
