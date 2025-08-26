@@ -667,7 +667,7 @@ export default function AdminGoalProjections() {
 
       <Tabs defaultValue="calculation-base" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="flex flex-wrap gap-1 h-auto p-1">
-          <TabsTrigger value="calculation-base">Calculation Base</TabsTrigger>
+          <TabsTrigger value="calculation-base">Projection Model</TabsTrigger>
           <TabsTrigger value="base-xg">Base xG Settings</TabsTrigger>
           <TabsTrigger value="attacking-multipliers">Attack Multipliers</TabsTrigger>
           <TabsTrigger value="attacking-teams">Attack Teams</TabsTrigger>
