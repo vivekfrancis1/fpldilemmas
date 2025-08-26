@@ -119,51 +119,7 @@ function getPositionColor(position: string) {
   }
 }
 
-function PlayerCard({ pick, isSubstitute = false }: { pick: TeamPick; isSubstitute?: boolean }) {
-  return (
-    <Card className={`relative transition-all hover:shadow-md ${isSubstitute ? 'opacity-60 bg-gray-50' : 'bg-white'} ${pick.is_captain ? 'ring-2 ring-yellow-400' : pick.is_vice_captain ? 'ring-2 ring-gray-400' : ''}`}>
-      <CardContent className="p-3">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm truncate text-gray-900">{pick.player_name}</h3>
-            <p className="text-xs text-muted-foreground truncate">{pick.team_name}</p>
-          </div>
-          <div className="flex flex-col items-end gap-1 ml-2">
-            {pick.is_captain && (
-              <Badge className="text-xs px-2 py-0.5 bg-yellow-500 hover:bg-yellow-600 text-white">
-                <Crown className="h-3 w-3 mr-1" />
-                C
-              </Badge>
-            )}
-            {pick.is_vice_captain && (
-              <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-gray-500 text-white">
-                <Crown className="h-3 w-3 mr-1" />
-                VC
-              </Badge>
-            )}
-            {pick.multiplier > 1 && !pick.is_captain && (
-              <Badge variant="outline" className="text-xs px-2 py-0.5">
-                {pick.multiplier}x
-              </Badge>
-            )}
-          </div>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <Badge className={`text-xs font-medium ${getPositionColor(pick.position)}`}>
-            {getPositionIcon(pick.position)}
-            <span className="ml-1">{pick.position}</span>
-          </Badge>
-          {isSubstitute && (
-            <Badge variant="outline" className="text-xs bg-gray-100">
-              SUB
-            </Badge>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+
 
 export default function CreatorTeam() {
   const { id } = useParams<{ id: string }>();
@@ -230,14 +186,8 @@ export default function CreatorTeam() {
     );
   }
 
-  const startingEleven = teamData.picks?.slice(0, 11) || [];
-  const substitutes = teamData.picks?.slice(11) || [];
-  
-  // Group starting eleven by position
-  const goalkeepers = startingEleven.filter(p => p.position.toLowerCase() === 'goalkeeper');
-  const defenders = startingEleven.filter(p => p.position.toLowerCase() === 'defender');
-  const midfielders = startingEleven.filter(p => p.position.toLowerCase() === 'midfielder');
-  const forwards = startingEleven.filter(p => p.position.toLowerCase() === 'forward');
+  const startingEleven = teamData?.picks?.slice(0, 11) || [];
+  const substitutes = teamData?.picks?.slice(11) || [];
 
   const captain = teamData.picks?.find(p => p.is_captain);
   const viceCaptain = teamData.picks?.find(p => p.is_vice_captain);
@@ -416,83 +366,105 @@ export default function CreatorTeam() {
           {teamData.picks && teamData.picks.length > 0 && (
             <>
               <div>
-                <h2 className="text-xl font-semibold mb-4">Starting XI</h2>
-            
-            {/* Formation Display */}
-            <div className="space-y-4">
-              {/* Goalkeepers */}
-              {goalkeepers.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
-                    <Shield className="h-4 w-4 mr-1" />
-                    Goalkeepers
-                  </h3>
-                  <div className="grid grid-cols-1 gap-2">
-                    {goalkeepers.map((player, idx) => (
-                      <PlayerCard key={`gk-${idx}`} pick={player} />
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Defenders */}
-              {defenders.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
-                    <Shield className="h-4 w-4 mr-1" />
-                    Defenders
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                    {defenders.map((player, idx) => (
-                      <PlayerCard key={`def-${idx}`} pick={player} />
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Midfielders */}
-              {midfielders.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
-                    <Target className="h-4 w-4 mr-1" />
-                    Midfielders
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                    {midfielders.map((player, idx) => (
-                      <PlayerCard key={`mid-${idx}`} pick={player} />
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Forwards */}
-              {forwards.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
-                    <Star className="h-4 w-4 mr-1" />
-                    Forwards
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {forwards.map((player, idx) => (
-                      <PlayerCard key={`fwd-${idx}`} pick={player} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+                <h2 className="text-xl font-semibold mb-4">Team Squad</h2>
+                
+                {/* Team Formation Display */}
+                <div className="grid grid-cols-1 gap-4">
+                  {/* Starting XI */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg">Starting XI</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {startingEleven.map((player, idx) => (
+                        <div
+                          key={`starting-${idx}`}
+                          className={`flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-sm ${
+                            player.is_captain 
+                              ? 'bg-yellow-50 border-yellow-200' 
+                              : player.is_vice_captain 
+                              ? 'bg-gray-50 border-gray-200' 
+                              : 'bg-white border-gray-100'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              <Badge className={`${getPositionColor(player.position)}`}>
+                                {getPositionIcon(player.position)}
+                                <span className="ml-1 text-xs">{player.position.slice(0, 3).toUpperCase()}</span>
+                              </Badge>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {player.player_name}
+                                </p>
+                                {player.is_captain && (
+                                  <Badge className="text-xs px-2 py-0.5 bg-yellow-500 text-white">
+                                    <Crown className="h-3 w-3 mr-1" />
+                                    Captain
+                                  </Badge>
+                                )}
+                                {player.is_vice_captain && (
+                                  <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                                    <Crown className="h-3 w-3 mr-1" />
+                                    Vice
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 truncate">{player.team_name}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {player.multiplier > 1 && (
+                              <Badge variant="outline" className="text-xs">
+                                {player.multiplier}x
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
 
-          {/* Substitutes */}
-          {substitutes.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Substitutes</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {substitutes.map((player, idx) => (
-                  <PlayerCard key={`sub-${idx}`} pick={player} isSubstitute />
-                ))}
+                  {/* Substitutes */}
+                  {substitutes.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Substitutes</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {substitutes.map((player, idx) => (
+                          <div
+                            key={`sub-${idx}`}
+                            className="flex items-center justify-between p-3 rounded-lg border bg-gray-50 border-gray-200 opacity-75"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="flex-shrink-0">
+                                <Badge className={`${getPositionColor(player.position)}`}>
+                                  {getPositionIcon(player.position)}
+                                  <span className="ml-1 text-xs">{player.position.slice(0, 3).toUpperCase()}</span>
+                                </Badge>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium text-gray-700 truncate">
+                                    {player.player_name}
+                                  </p>
+                                  <Badge variant="outline" className="text-xs bg-gray-100">
+                                    SUB
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-500 truncate">{player.team_name}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
 
           {/* Captain & Vice Captain Info */}
           {(captain || viceCaptain) && (
