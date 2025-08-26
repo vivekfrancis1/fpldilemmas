@@ -24,6 +24,8 @@ export default function Layout({ children }: LayoutProps) {
         <main className="flex-1 container-responsive pt-2 sm:pt-4 lg:pt-6 min-w-0 overflow-x-hidden pb-4 sm:pb-6 lg:pb-8">
           {children}
         </main>
+        
+        <Footer />
       </div>
     </div>
   );
