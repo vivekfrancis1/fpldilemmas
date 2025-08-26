@@ -34,6 +34,7 @@ import TeamCSProjections from "./pages/team-cs-projections";
 import SeasonProjections from "./pages/season-projections";
 import AdminGoalProjections from "./pages/admin-goal-projections";
 import AdminUpsetConfig from "./pages/admin-upset-config";
+import AdminPricePredictions from "./pages/admin-price-predictions";
 
 function Router() {
   return (
@@ -68,6 +69,7 @@ function Router() {
       <Route path="/season-projections" component={SeasonProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
       <Route path="/admin-upset-config" component={AdminUpsetConfig} />
+      <Route path="/admin-price-predictions" component={AdminPricePredictions} />
       <Route component={NotFound} />
     </Switch>
   );

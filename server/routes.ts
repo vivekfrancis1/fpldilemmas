@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage, type UpsetConfig } from "./storage";
+import { storage, type UpsetConfig, type PricePredictionConfig } from "./storage";
 import { priceScheduler } from "./price-scheduler";
 import { insertPriceAlertSchema, unifiedProjectionSettings as unifiedProjectionSettingsTable } from "@shared/schema";
 import { db } from "./db";
@@ -922,28 +922,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const ownershipThresholdMultiplier = 0.05; // 5% of owned players need to transfer
           const ownedPlayers = (ownership / 100) * totalPlayers;
           
-          // Accurate FPL thresholds based on community research (LiveFPL/FFS/r/FantasyPL)
-          // T_rise: 4.5-6% of absolute ownership, T_fall: 3.5-5% of absolute ownership
-          const riseCoefficient = 0.05; // 5% average for rises
-          const fallCoefficient = 0.04; // 4% average for falls
+          // Get configurable thresholds (with defaults matching community research)
+          const config = storage.getPricePredictionConfig();
+          const riseCoefficient = config.riseCoefficient; // 5% average for rises
+          const fallCoefficient = config.fallCoefficient; // 4% average for falls
           
           let riseThreshold = ownedPlayers * riseCoefficient;
           let fallThreshold = ownedPlayers * fallCoefficient;
           
           // Minimum thresholds for very low ownership players
-          riseThreshold = Math.max(riseThreshold, 10000); // Minimum 10k transfers
-          fallThreshold = Math.max(fallThreshold, 8000); // Minimum 8k transfers
+          riseThreshold = Math.max(riseThreshold, config.minRiseThreshold);
+          fallThreshold = Math.max(fallThreshold, config.minFallThreshold);
           
           // Apply FPL's official price change limits
           // Price changes are capped at 0.1m (1 unit) per day, 0.3m (3 units) per gameweek
           const maxDailyChange = 1; // 0.1m = 1 price unit
           const maxGameweekChange = 3; // 0.3m = 3 price units
           
-          // Adjust thresholds based on price tier (community research shows modest price effects)
-          const priceMultiplier = currentPrice < 60 ? 0.85 : // Budget players slightly easier  
-                                 currentPrice < 100 ? 1.0 : // Mid-price normal
-                                 currentPrice < 130 ? 1.2 : // Premium slightly harder
-                                 1.4; // Super premium harder
+          // Adjust thresholds based on price tier (configurable multipliers)
+          const priceMultiplier = currentPrice < 60 ? config.budgetPriceMultiplier : // Budget players
+                                 currentPrice < 100 ? config.midPriceMultiplier : // Mid-price 
+                                 currentPrice < 130 ? config.premiumPriceMultiplier : // Premium
+                                 config.superPremiumPriceMultiplier; // Super premium
           
           riseThreshold *= priceMultiplier;
           fallThreshold *= priceMultiplier;
@@ -5957,6 +5957,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   console.log("✓ Current Players API routes registered successfully");
+
+  // Admin routes for price prediction configuration
+  app.get("/api/admin/price-prediction-config", (req, res) => {
+    try {
+      const config = storage.getPricePredictionConfig();
+      res.json(config);
+    } catch (error) {
+      console.error("Error getting price prediction config:", error);
+      res.status(500).json({ error: "Failed to get configuration" });
+    }
+  });
+
+  app.post("/api/admin/price-prediction-config", (req, res) => {
+    try {
+      const config = req.body;
+      storage.setPricePredictionConfig(config);
+      res.json({ success: true, message: "Configuration updated successfully" });
+    } catch (error) {
+      console.error("Error setting price prediction config:", error);
+      res.status(500).json({ error: "Failed to update configuration" });
+    }
+  });
+
+  app.post("/api/admin/price-prediction-config/reset", (req, res) => {
+    try {
+      // Reset to default configuration
+      const defaultConfig: PricePredictionConfig = {
+        riseCoefficient: 0.05,
+        fallCoefficient: 0.04,
+        minRiseThreshold: 10000,
+        minFallThreshold: 8000,
+        budgetPriceMultiplier: 0.85,
+        midPriceMultiplier: 1.0,
+        premiumPriceMultiplier: 1.2,
+        superPremiumPriceMultiplier: 1.4,
+        highVelocityThreshold: 5000,
+        mediumVelocityThreshold: 2000,
+        highVelocityBonus: 1.2,
+        mediumVelocityBonus: 1.1,
+        normalVelocityBonus: 1.0,
+        veryHighProbabilityThreshold: 0.8,
+        highProbabilityThreshold: 0.5,
+        mediumProbabilityThreshold: 0.2
+      };
+      
+      storage.setPricePredictionConfig(defaultConfig);
+      res.json({ success: true, message: "Configuration reset to defaults", config: defaultConfig });
+    } catch (error) {
+      console.error("Error resetting price prediction config:", error);
+      res.status(500).json({ error: "Failed to reset configuration" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

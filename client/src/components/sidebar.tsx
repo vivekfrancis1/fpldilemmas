@@ -78,6 +78,14 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         // { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
         // { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
       ]
+    },
+    {
+      section: "Admin Tools",
+      items: [
+        { path: "/admin-price-predictions", label: "Price Prediction Config", icon: Settings, description: "Configure algorithm variables", popular: false },
+        { path: "/admin-goal-projections", label: "Goal Projection Config", icon: Settings, description: "Adjust team multipliers", popular: false },
+        { path: "/admin-upset-config", label: "Upset Configuration", icon: Settings, description: "Variance settings", popular: false }
+      ]
     }
   ];
 

@@ -49,6 +49,38 @@ export interface IStorage {
   getPlayerMappings(): Promise<PlayerMapping[]>;
   upsertPlayerMappings(players: InsertPlayerMapping[]): Promise<void>;
   getPlayerMappingById(playerId: number): Promise<PlayerMapping | undefined>;
+  
+  // Price prediction configuration operations
+  getPricePredictionConfig(): PricePredictionConfig;
+  setPricePredictionConfig(config: PricePredictionConfig): void;
+}
+
+export interface PricePredictionConfig {
+  // Threshold coefficients
+  riseCoefficient: number;
+  fallCoefficient: number;
+  
+  // Minimum thresholds
+  minRiseThreshold: number;
+  minFallThreshold: number;
+  
+  // Price multipliers
+  budgetPriceMultiplier: number;    // < £6.0m
+  midPriceMultiplier: number;       // £6.0m - £10.0m
+  premiumPriceMultiplier: number;   // £10.0m - £13.0m
+  superPremiumPriceMultiplier: number; // > £13.0m
+  
+  // Velocity bonuses
+  highVelocityThreshold: number;
+  mediumVelocityThreshold: number;
+  highVelocityBonus: number;
+  mediumVelocityBonus: number;
+  normalVelocityBonus: number;
+  
+  // Probability thresholds
+  veryHighProbabilityThreshold: number;
+  highProbabilityThreshold: number;
+  mediumProbabilityThreshold: number;
 }
 
 export interface UpsetConfig {
@@ -281,6 +313,34 @@ export class MemStorage implements IStorage {
 
   async getPlayerMappingById(playerId: number): Promise<PlayerMapping | undefined> {
     return undefined;
+  }
+
+  // Price prediction configuration methods (in-memory)
+  private pricePredictionConfig: PricePredictionConfig = {
+    riseCoefficient: 0.05,
+    fallCoefficient: 0.04,
+    minRiseThreshold: 10000,
+    minFallThreshold: 8000,
+    budgetPriceMultiplier: 0.85,
+    midPriceMultiplier: 1.0,
+    premiumPriceMultiplier: 1.2,
+    superPremiumPriceMultiplier: 1.4,
+    highVelocityThreshold: 5000,
+    mediumVelocityThreshold: 2000,
+    highVelocityBonus: 1.2,
+    mediumVelocityBonus: 1.1,
+    normalVelocityBonus: 1.0,
+    veryHighProbabilityThreshold: 0.8,
+    highProbabilityThreshold: 0.5,
+    mediumProbabilityThreshold: 0.2
+  };
+
+  getPricePredictionConfig(): PricePredictionConfig {
+    return { ...this.pricePredictionConfig };
+  }
+
+  setPricePredictionConfig(config: PricePredictionConfig): void {
+    this.pricePredictionConfig = { ...config };
   }
 }
 
@@ -788,6 +848,15 @@ export class DatabaseStorage implements IStorage {
       console.error(`Error fetching player mapping for ${playerId}:`, error);
       return undefined;
     }
+  }
+
+  // Price prediction configuration methods (delegate to memory storage)
+  getPricePredictionConfig(): PricePredictionConfig {
+    return this.memFallback.getPricePredictionConfig();
+  }
+
+  setPricePredictionConfig(config: PricePredictionConfig): void {
+    this.memFallback.setPricePredictionConfig(config);
   }
 }
 
