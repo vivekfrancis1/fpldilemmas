@@ -279,9 +279,9 @@ export default function ContentCreators() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Content Creators</h1>
+            <h1 className="text-3xl font-bold tracking-tight">FPL Content Creators</h1>
             <p className="text-muted-foreground">
-              Track FPL performance of popular content creators
+              Track top FPL content creators
             </p>
           </div>
         </div>
@@ -300,9 +300,9 @@ export default function ContentCreators() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Content Creators</h1>
+          <h1 className="text-3xl font-bold tracking-tight">FPL Content Creators</h1>
           <p className="text-muted-foreground">
-            Track FPL performance of popular content creators
+            Track top FPL content creators
           </p>
         </div>
         <div className="flex items-center gap-2">
