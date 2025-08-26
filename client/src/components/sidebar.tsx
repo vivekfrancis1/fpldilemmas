@@ -43,7 +43,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Most Popular",
       items: [
-        { path: "/content-creators", label: "FPL Content Creators", icon: Users, description: "Track top FPL content creators", popular: true },
+        { path: "/content-creators", label: "FPL Content Creators", icon: Users, description: "Track top FPL content creators", popular: false, new: true },
         { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
         { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
         { path: "/recent-price-changes", label: "Recent Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
@@ -163,9 +163,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                             Popular
                           </Badge>
                         )}
-                        {(item as any).isNew && (
+                        {(item as any).new && (
                           <Badge variant="secondary" className="bg-yellow-500 text-black text-xs px-1.5 py-0.5 font-bold flex-shrink-0">
-                            New
+                            NEW
                           </Badge>
                         )}
                       </div>
