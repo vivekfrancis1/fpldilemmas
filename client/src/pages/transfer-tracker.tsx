@@ -87,8 +87,9 @@ export default function TransferTracker() {
       const absoluteOwnership = Math.round((data.ownership_percentage / 100) * totalPlayers);
       
       // Calculate initial ownership (before any season transfers)
-      // Initial Ownership = Current Absolute Ownership - Net Transfers In (season)
-      const initialOwnership = absoluteOwnership - (data.transfers_in || 0);
+      // Initial Ownership = Current Absolute Ownership - Season Net Transfers
+      // If net transfers are negative (more out than in), initial ownership was higher
+      const initialOwnership = absoluteOwnership - (data.net_transfers || 0);
       
       // Calculate season net transfer percentage
       const netTransfersPercentage = absoluteOwnership > 0 ? 
