@@ -105,6 +105,99 @@ function getRankChangeDisplay(change: number) {
   );
 }
 
+// Creator Table Row Component
+function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
+  const latest = creator.latestTracking;
+
+  const handleViewTeam = async (creatorId: number) => {
+    try {
+      const response = await fetch(`/api/content-creators/${creatorId}/team`);
+      const teamData = await response.json();
+      
+      console.log("Team data:", teamData);
+      alert(`Fetched team data with ${teamData.picks?.length || 0} players`);
+    } catch (error) {
+      alert("Failed to fetch team data");
+    }
+  };
+
+  const handleViewTransfers = async (creatorId: number) => {
+    try {
+      const response = await fetch(`/api/content-creators/${creatorId}/transfers`);
+      const transferData = await response.json();
+      
+      console.log("Transfer data:", transferData);
+      alert(`Found ${transferData.length || 0} transfers`);
+    } catch (error) {
+      alert("Failed to fetch transfer data");
+    }
+  };
+
+  return (
+    <TableRow className="hover:bg-muted/50">
+      <TableCell>
+        <div className="flex items-center gap-3">
+          {getPlatformIcon(creator.platform)}
+          <div>
+            <div className="font-medium">{creator.name}</div>
+            <div className="text-sm text-muted-foreground">{creator.handle}</div>
+            <div className="text-xs text-muted-foreground">ID: {creator.teamId}</div>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex flex-col items-end">
+          <Badge variant={getRankBadgeVariant(latest?.overallRank)} className="mb-1">
+            {latest?.overallRank ? `#${latest.overallRank.toLocaleString()}` : "N/A"}
+          </Badge>
+          {creator.rankChange && (
+            <div className="text-xs">{getRankChangeDisplay(creator.rankChange)}</div>
+          )}
+        </div>
+      </TableCell>
+      <TableCell className="text-right font-mono">
+        {latest?.overallPoints || "0"}
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex flex-col items-end">
+          <span className="font-mono font-bold">{latest?.gameweekPoints || "0"}</span>
+          {latest?.gameweekRank && (
+            <span className="text-xs text-muted-foreground">#{latest.gameweekRank.toLocaleString()}</span>
+          )}
+        </div>
+      </TableCell>
+      <TableCell className="text-right font-mono">
+        £{latest?.teamValue || 'N/A'}m
+      </TableCell>
+      <TableCell className="text-right font-mono">
+        {latest?.totalTransfers || "0"}
+      </TableCell>
+      <TableCell className="text-center">
+        <div className="flex gap-1 justify-center">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleViewTeam(creator.id)}
+            className="h-8 px-2"
+            title="View Team"
+          >
+            <Eye className="h-3 w-3" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleViewTransfers(creator.id)}
+            className="h-8 px-2"
+            title="View Transfers"
+          >
+            <RefreshCw className="h-3 w-3" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 function ContentCreators() {
   const { toast } = useToast();
   const [selectedCreator, setSelectedCreator] = useState<number | null>(null);
@@ -179,45 +272,7 @@ function ContentCreators() {
     return points.toString();
   };
 
-  const handleViewTeam = async (creatorId: number) => {
-    try {
-      const response = await fetch(`/api/content-creators/${creatorId}/team`);
-      const teamData = await response.json();
-      
-      toast({
-        title: "Team Data",
-        description: `Fetched team data with ${teamData.picks?.length || 0} players`,
-      });
-      
-      console.log("Team data:", teamData);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch team data",
-        variant: "destructive",
-      });
-    }
-  };
 
-  const handleViewTransfers = async (creatorId: number) => {
-    try {
-      const response = await fetch(`/api/content-creators/${creatorId}/transfers`);
-      const transferData = await response.json();
-      
-      toast({
-        title: "Transfer Data",
-        description: `Found ${transferData.length || 0} transfers`,
-      });
-      
-      console.log("Transfer data:", transferData);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch transfer data",
-        variant: "destructive",
-      });
-    }
-  };
 
   const getRankChangeDisplay = (change: number | undefined) => {
     if (!change || change === 0) return null;
@@ -280,28 +335,38 @@ function ContentCreators() {
             {refreshDataMutation.isPending ? 'Refreshing...' : 'Refresh FPL Data'}
           </Button>
 
-          <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Sort by..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="rank">Overall Rank</SelectItem>
-              <SelectItem value="points">Total Points</SelectItem>
-              <SelectItem value="gw_points">GW Points</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="text-sm text-muted-foreground">
+            Click column headers to sort • Showing {sortedCreators.length} creators
+          </div>
         </div>
 
-        {/* Content Creators Grid */}
+        {/* Content Creators Table */}
         {sortedCreators.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {sortedCreators.map((creator) => (
-              <CreatorDataCard
-                key={creator.id}
-                creator={creator}
-              />
-            ))}
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[300px]">Creator</TableHead>
+                  <TableHead className="text-right cursor-pointer hover:bg-muted/50" onClick={() => setSortBy('rank')}>
+                    Overall Rank {sortBy === 'rank' && <ArrowUpDown className="h-4 w-4 inline ml-1" />}
+                  </TableHead>
+                  <TableHead className="text-right cursor-pointer hover:bg-muted/50" onClick={() => setSortBy('points')}>
+                    Total Points {sortBy === 'points' && <ArrowUpDown className="h-4 w-4 inline ml-1" />}
+                  </TableHead>
+                  <TableHead className="text-right cursor-pointer hover:bg-muted/50" onClick={() => setSortBy('gw_points')}>
+                    GW Points {sortBy === 'gw_points' && <ArrowUpDown className="h-4 w-4 inline ml-1" />}
+                  </TableHead>
+                  <TableHead className="text-right">Team Value</TableHead>
+                  <TableHead className="text-right">Transfers</TableHead>
+                  <TableHead className="text-center">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedCreators.map((creator) => (
+                  <CreatorTableRow key={creator.id} creator={creator} />
+                ))}
+              </TableBody>
+            </Table>
           </div>
         ) : (
           <Card className="bg-gray-50">
@@ -418,7 +483,9 @@ function CreatorCard({ creator, onViewDetails }: {
   );
 }
 
-// Enhanced Creator Card with authentic FPL data
+
+
+// Enhanced Creator Card with authentic FPL data (kept for potential future use)
 function CreatorDataCard({ creator }: { creator: CreatorWithLatestData }) {
   const latest = creator.latestTracking;
 
