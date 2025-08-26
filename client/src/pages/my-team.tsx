@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Target, Trophy, Star, DollarSign } from "lucide-react";
+import { Users, Target, Trophy, Star, DollarSign, LayoutGrid, List, Shield, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import PitchView from "@/components/PitchView";
 
 interface TeamPick {
   element: number;
@@ -68,6 +69,7 @@ interface BootstrapData {
 export default function MyTeam() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
+  const [viewMode, setViewMode] = useState<'list' | 'pitch'>('pitch');
 
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
@@ -446,15 +448,46 @@ export default function MyTeam() {
               <div className="grid gap-6 lg:grid-cols-2">
                 <Card className="bg-white shadow-lg border border-gray-200">
                   <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-t-lg">
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Starting XI
-                    </CardTitle>
-                    <CardDescription className="text-emerald-50">
-                      Your team for Gameweek {getCurrentGameweek()}
-                    </CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="h-5 w-5" />
+                          Starting XI
+                        </CardTitle>
+                        <CardDescription className="text-emerald-50">
+                          Your team for Gameweek {getCurrentGameweek()}
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2 bg-white/20 rounded-lg p-1">
+                        <Button
+                          size="sm"
+                          variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                          onClick={() => setViewMode('list')}
+                          className={`h-8 px-3 ${
+                            viewMode === 'list' 
+                              ? 'bg-white text-emerald-600 shadow-sm' 
+                              : 'text-white hover:bg-white/20'
+                          }`}
+                        >
+                          <List className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={viewMode === 'pitch' ? 'secondary' : 'ghost'}
+                          onClick={() => setViewMode('pitch')}
+                          className={`h-8 px-3 ${
+                            viewMode === 'pitch' 
+                              ? 'bg-white text-emerald-600 shadow-sm' 
+                              : 'text-white hover:bg-white/20'
+                          }`}
+                        >
+                          <LayoutGrid className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="p-0">
+                    {viewMode === 'list' ? (
                     <div className="space-y-0">
                       {/* Group by position */}
                       {[1, 2, 3, 4].map(positionType => {
@@ -549,6 +582,16 @@ export default function MyTeam() {
                         );
                       })}
                     </div>
+                    ) : (
+                      /* Pitch View */
+                      <PitchView 
+                        teamData={teamData} 
+                        bootstrapData={bootstrapData}
+                        getPlayerById={getPlayerById}
+                        getTeamName={getTeamName}
+                        formatPrice={formatPrice}
+                      />
+                    )}
                   </CardContent>
                 </Card>
 
