@@ -34,7 +34,7 @@ interface MatchProjection {
 
 export default function ProjectedGoalsCS() {
   const [startGameweek, setStartGameweek] = useState<string>("3");
-  const [endGameweek, setEndGameweek] = useState<string>("3");
+  const [endGameweek, setEndGameweek] = useState<string>("4");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
 
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
