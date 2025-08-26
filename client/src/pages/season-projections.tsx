@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BarChart3, Target, Users, Search, ArrowUp, ArrowDown, ArrowUpDown, Trophy, Zap } from "lucide-react";
+import { BarChart3, Target, Users, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
@@ -181,38 +181,15 @@ export default function SeasonProjections() {
             </div>
           </div>
           <div className="fpl-card-content">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="relative sm:col-span-2 lg:col-span-1">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search players, teams, positions..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-10 md:h-12 border-2"
-                  data-testid="input-search"
-                />
-              </div>
-              
-              {/* Popular Tools */}
-              <div className="sm:col-span-2 lg:col-span-2">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-600">Most Popular Tools</label>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="text-xs">
-                      <Trophy className="h-3 w-3 mr-1" />
-                      Player Statistics
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      <Zap className="h-3 w-3 mr-1" />
-                      OpenFPL Projections
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      <Target className="h-3 w-3 mr-1" />
-                      Fixture Analyzer
-                    </Badge>
-                  </div>
-                </div>
-              </div>
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search players, teams, positions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-10 md:h-12 border-2"
+                data-testid="input-search"
+              />
             </div>
           </div>
         </div>
