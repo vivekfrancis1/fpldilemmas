@@ -11,6 +11,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   ArrowLeft,
   Crown,
@@ -20,7 +29,11 @@ import {
   Trophy,
   Users,
   Star,
-  RefreshCw
+  RefreshCw,
+  TrendingUp,
+  TrendingDown,
+  Calendar,
+  BarChart3
 } from "lucide-react";
 
 type TeamPick = {
@@ -53,6 +66,26 @@ type TeamData = {
   creator?: string;
   general_info?: any;
   message?: string;
+};
+
+type HistoryEntry = {
+  event: number;
+  points: number;
+  total_points: number;
+  rank: number;
+  rank_sort: number;
+  overall_rank: number;
+  bank: number;
+  value: number;
+  event_transfers: number;
+  event_transfers_cost: number;
+  points_on_bench: number;
+};
+
+type ManagerHistory = {
+  current: HistoryEntry[];
+  past: any[];
+  chips: any[];
 };
 
 function getPositionIcon(position: string) {
@@ -140,9 +173,15 @@ export default function CreatorTeam() {
     retry: 2,
   });
 
-  const { data: creatorInfo } = useQuery({
+  const { data: creatorInfo } = useQuery<any>({
     queryKey: [`/api/content-creators/${id}`],
     enabled: !!id,
+  });
+
+  const { data: managerHistory, isLoading: historyLoading } = useQuery<ManagerHistory>({
+    queryKey: [`/api/manager/${creatorInfo?.teamId}/history`],
+    enabled: !!creatorInfo?.teamId,
+    retry: 2,
   });
 
   if (isLoading) {
@@ -215,7 +254,7 @@ export default function CreatorTeam() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              {teamData.creator || creatorInfo?.name || 'Creator'}'s Team
+              {teamData?.creator || creatorInfo?.name || 'Creator'}'s Team
             </h1>
             <p className="text-muted-foreground">
               {teamData.gameweek ? `Gameweek ${teamData.gameweek}` : 'Team Overview'}
@@ -293,11 +332,20 @@ export default function CreatorTeam() {
         </div>
       )}
 
-      {/* Team Formation */}
-      {teamData.picks && teamData.picks.length > 0 && (
-        <>
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Starting XI</h2>
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="team" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="team" className="space-y-6">
+          {/* Team Formation */}
+          {teamData.picks && teamData.picks.length > 0 && (
+            <>
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Starting XI</h2>
             
             {/* Formation Display */}
             <div className="space-y-4">
@@ -421,10 +469,257 @@ export default function CreatorTeam() {
                   </CardContent>
                 </Card>
               )}
-            </div>
+                </div>
+              )}
+            </>
           )}
-        </>
-      )}
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-6">
+          {historyLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : managerHistory?.current ? (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold mb-4 flex items-center">
+                  <BarChart3 className="h-5 w-5 mr-2" />
+                  Gameweek Performance
+                </h2>
+                <Card>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>GW</TableHead>
+                          <TableHead>Points</TableHead>
+                          <TableHead>Total</TableHead>
+                          <TableHead>Overall Rank</TableHead>
+                          <TableHead>GW Rank</TableHead>
+                          <TableHead>Team Value</TableHead>
+                          <TableHead>Transfers</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {managerHistory.current
+                          .sort((a, b) => b.event - a.event)
+                          .slice(0, 10)
+                          .map((entry, index) => {
+                            const prevEntry = managerHistory.current.find(e => e.event === entry.event - 1);
+                            const rankChange = prevEntry ? prevEntry.overall_rank - entry.overall_rank : null;
+                            
+                            return (
+                              <TableRow key={entry.event}>
+                                <TableCell className="font-medium">{entry.event}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    {entry.points}
+                                    {entry.event_transfers_cost > 0 && (
+                                      <span className="text-red-500 text-xs ml-1">
+                                        (-{entry.event_transfers_cost})
+                                      </span>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>{entry.total_points.toLocaleString()}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    #{entry.overall_rank.toLocaleString()}
+                                    {rankChange !== null && (
+                                      <span className={`ml-2 flex items-center text-xs ${
+                                        rankChange > 0 ? 'text-green-600' : rankChange < 0 ? 'text-red-600' : 'text-gray-500'
+                                      }`}>
+                                        {rankChange > 0 ? (
+                                          <TrendingUp className="h-3 w-3 mr-1" />
+                                        ) : rankChange < 0 ? (
+                                          <TrendingDown className="h-3 w-3 mr-1" />
+                                        ) : null}
+                                        {rankChange !== 0 && Math.abs(rankChange).toLocaleString()}
+                                      </span>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>#{entry.rank.toLocaleString()}</TableCell>
+                                <TableCell>£{(entry.value / 10).toFixed(1)}m</TableCell>
+                                <TableCell>
+                                  {entry.event_transfers > 0 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {entry.event_transfers}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Performance Summary */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold">
+                      {Math.round(
+                        managerHistory.current.reduce((sum, entry) => sum + entry.points, 0) / 
+                        managerHistory.current.length
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Avg Points/GW</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold">
+                      {Math.max(...managerHistory.current.map(e => e.points))}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Best GW</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold">
+                      #{Math.min(...managerHistory.current.map(e => e.overall_rank)).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Best Rank</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold">
+                      {managerHistory.current.filter(e => e.event_transfers > 0).length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Transfer GWs</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-8">
+                <Calendar className="h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Performance Data</h3>
+                <p className="text-gray-500 text-center max-w-md">
+                  Performance history is not available for this creator.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-6">
+          {historyLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full" />
+              ))}
+            </div>
+          ) : managerHistory ? (
+            <div className="space-y-6">
+              {/* Season History */}
+              {managerHistory.past && managerHistory.past.length > 0 && (
+                <div>
+                  <h2 className="text-xl font-semibold mb-4 flex items-center">
+                    <Trophy className="h-5 w-5 mr-2" />
+                    Season History
+                  </h2>
+                  <Card>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Season</TableHead>
+                            <TableHead>Total Points</TableHead>
+                            <TableHead>Overall Rank</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {managerHistory.past
+                            .sort((a, b) => parseInt(b.season_name.split('/')[0]) - parseInt(a.season_name.split('/')[0]))
+                            .map((season) => (
+                              <TableRow key={season.season_name}>
+                                <TableCell className="font-medium">{season.season_name}</TableCell>
+                                <TableCell>{season.total_points.toLocaleString()}</TableCell>
+                                <TableCell>#{season.rank.toLocaleString()}</TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Chips Used */}
+              {managerHistory.chips && managerHistory.chips.length > 0 && (
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">Chips Used This Season</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {managerHistory.chips.map((chip) => (
+                      <Card key={chip.name}>
+                        <CardContent className="p-4 text-center">
+                          <div className="text-lg font-bold capitalize">{chip.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {chip.time ? `GW${chip.event}` : 'Not Used'}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Current Season Summary */}
+              {managerHistory.current && managerHistory.current.length > 0 && (
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">Current Season Summary</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold">
+                          {managerHistory.current.length}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Gameweeks Played</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold">
+                          {managerHistory.current.reduce((sum, entry) => sum + entry.event_transfers, 0)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Total Transfers</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold">
+                          {managerHistory.current.reduce((sum, entry) => sum + entry.event_transfers_cost, 0)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Transfer Cost</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-8">
+                <Calendar className="h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Historical Data</h3>
+                <p className="text-gray-500 text-center max-w-md">
+                  Historical data is not available for this creator.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
