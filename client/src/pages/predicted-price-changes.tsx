@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { TrendingUp, TrendingDown, AlertTriangle, Search, Target, BarChart3, Clock } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertTriangle, Search, Target, BarChart3, Clock, ChevronUp, ChevronDown } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { BootstrapData } from "@shared/schema";
 
 interface PricePrediction {
@@ -32,10 +33,15 @@ interface PricePrediction {
   estimated_time: string;
 }
 
+type SortField = 'current_progress' | 'tonight_progress' | 'transfers_in' | 'transfers_out' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate';
+type SortDirection = 'asc' | 'desc';
+
 export default function PredictedPriceChanges() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [changeTypeFilter, setChangeTypeFilter] = useState("all");
+  const [sortField, setSortField] = useState<SortField>('current_progress');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -55,16 +61,71 @@ export default function PredictedPriceChanges() {
     }));
   };
 
-  const filteredPredictions = Array.isArray(predictions) ? predictions.filter((pred: PricePrediction) => {
-    const matchesSearch = pred.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         pred.team_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPosition = positionFilter === "all" || pred.position === positionFilter;
-    const matchesChangeType = changeTypeFilter === "all" || 
-                             (changeTypeFilter === "rises" && pred.predicted_change > 0) ||
-                             (changeTypeFilter === "falls" && pred.predicted_change < 0) ||
-                             (changeTypeFilter === "stable" && pred.predicted_change === 0);
-    return matchesSearch && matchesPosition && matchesChangeType;
-  }) : [];
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const sortedAndFilteredPredictions = useMemo(() => {
+    if (!Array.isArray(predictions)) return [];
+    
+    // First filter the predictions
+    const filtered = predictions.filter((pred: PricePrediction) => {
+      const matchesSearch = pred.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           pred.team_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesPosition = positionFilter === "all" || pred.position === positionFilter;
+      const matchesChangeType = changeTypeFilter === "all" || 
+                               (changeTypeFilter === "rises" && pred.predicted_change > 0) ||
+                               (changeTypeFilter === "falls" && pred.predicted_change < 0) ||
+                               (changeTypeFilter === "stable" && pred.predicted_change === 0);
+      return matchesSearch && matchesPosition && matchesChangeType;
+    });
+
+    // Then sort the filtered results
+    return filtered.sort((a: PricePrediction, b: PricePrediction) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'expected_date':
+          aValue = new Date(a.expected_date || '9999-12-31').getTime();
+          bValue = new Date(b.expected_date || '9999-12-31').getTime();
+          break;
+        default:
+          aValue = a[sortField];
+          bValue = b[sortField];
+          break;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [predictions, searchTerm, positionFilter, changeTypeFilter, sortField, sortDirection]);
+
+  const SortableHeader = ({ field, children, className = "" }: { 
+    field: SortField; 
+    children: React.ReactNode; 
+    className?: string; 
+  }) => (
+    <Button
+      variant="ghost"
+      className={`h-auto p-3 justify-start font-medium text-xs hover:bg-muted/50 ${className}`}
+      onClick={() => handleSort(field)}
+      data-testid={`header-${field}`}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field && (
+          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+        )}
+      </div>
+    </Button>
+  );
 
   const formatPrice = (price: number | string | undefined | null) => {
     if (price === null || price === undefined) {
@@ -275,24 +336,59 @@ export default function PredictedPriceChanges() {
                   </div>
                 ))}
               </div>
-            ) : filteredPredictions.length > 0 ? (
+            ) : sortedAndFilteredPredictions.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/20">
-                      <th className="text-left p-3 font-medium">Player</th>
-                      <th className="text-left p-3 font-medium">Team/Pos</th>
-                      <th className="text-right p-3 font-medium">Current Price</th>
-                      <th className="text-center p-3 font-medium min-w-[180px]">Progress</th>
-                      <th className="text-center p-3 font-medium">Change</th>
-                      <th className="text-right p-3 font-medium">Ownership</th>
-                      <th className="text-right p-3 font-medium">Net Transfers</th>
-                      <th className="text-center p-3 font-medium">Probability</th>
-                      <th className="text-left p-3 font-medium">Expected When</th>
+                      <th className="text-left">Player</th>
+                      <th className="text-left">Team/Pos</th>
+                      <th className="text-right">Current Price</th>
+                      <th className="text-center min-w-[180px]">
+                        <div className="flex flex-col gap-1">
+                          <SortableHeader field="current_progress" className="text-center">
+                            Current Progress
+                          </SortableHeader>
+                          <SortableHeader field="tonight_progress" className="text-center">
+                            Progress at EOD (7AM IST)
+                          </SortableHeader>
+                        </div>
+                      </th>
+                      <th className="text-center">Change</th>
+                      <th className="text-right">
+                        <SortableHeader field="ownership_percentage" className="text-right">
+                          Ownership
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right">
+                        <div className="flex flex-col gap-1">
+                          <SortableHeader field="net_transfers" className="text-right">
+                            Net Transfers
+                          </SortableHeader>
+                          <div className="flex gap-1">
+                            <SortableHeader field="transfers_in" className="text-right text-xs">
+                              In
+                            </SortableHeader>
+                            <SortableHeader field="transfers_out" className="text-right text-xs">
+                              Out
+                            </SortableHeader>
+                          </div>
+                        </div>
+                      </th>
+                      <th className="text-center">
+                        <SortableHeader field="confidence" className="text-center">
+                          Probability
+                        </SortableHeader>
+                      </th>
+                      <th className="text-left">
+                        <SortableHeader field="expected_date" className="text-left">
+                          Expected When
+                        </SortableHeader>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredPredictions.map((prediction: PricePrediction, index: number) => (
+                    {sortedAndFilteredPredictions.map((prediction: PricePrediction, index: number) => (
                       <tr 
                         key={`${prediction.player_id}-${index}`}
                         className="border-b hover:bg-muted/50 transition-colors"
