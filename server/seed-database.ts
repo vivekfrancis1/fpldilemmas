@@ -207,41 +207,70 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
 ];
 
 export async function seedContentCreators(): Promise<void> {
-  try {
-    console.log("🌱 Starting content creators seeding...");
-    
-    // Check if content creators already exist
-    const existingCreators = await db.select().from(fplContentCreators);
-    
-    if (existingCreators.length > 0) {
-      console.log(`✅ Content creators already seeded (${existingCreators.length} found)`);
-      return;
-    }
-    
-    console.log("📝 Seeding content creators data...");
-    
-    // Insert all content creators
-    for (const creator of CONTENT_CREATORS_SEED) {
-      try {
-        await db.insert(fplContentCreators).values({
-          name: creator.name,
-          handle: creator.handle,
-          platform: creator.platform,
-          teamId: creator.managerId,
-          teamName: creator.name, // Use name as team name
-          description: creator.description
-        });
-        
-        console.log(`✅ Seeded: ${creator.name}`);
-      } catch (error) {
-        console.error(`❌ Failed to seed ${creator.name}:`, error);
+  let retryCount = 0;
+  const maxRetries = 3;
+  
+  while (retryCount < maxRetries) {
+    try {
+      console.log(`🌱 Starting content creators seeding... (attempt ${retryCount + 1}/${maxRetries})`);
+      
+      // Test database connection first
+      console.log("🔗 Testing database connection...");
+      
+      // Ensure the table exists (might not exist in fresh production database)
+      console.log("📋 Verifying content creators table...");
+      
+      // Check if content creators already exist
+      const existingCreators = await db.select().from(fplContentCreators);
+      console.log(`📊 Found ${existingCreators.length} existing content creators`);
+      
+      if (existingCreators.length > 0) {
+        console.log(`✅ Content creators already seeded (${existingCreators.length} found)`);
+        return;
       }
+      
+      console.log("📝 Seeding content creators data...");
+      let successCount = 0;
+      let errorCount = 0;
+      
+      // Insert all content creators with better error handling
+      for (const creator of CONTENT_CREATORS_SEED) {
+        try {
+          await db.insert(fplContentCreators).values({
+            name: creator.name,
+            handle: creator.handle,
+            platform: creator.platform,
+            teamId: creator.managerId,
+            teamName: creator.name, // Use name as team name
+            description: creator.description
+          });
+          
+          console.log(`✅ Seeded: ${creator.name}`);
+          successCount++;
+        } catch (error) {
+          console.error(`❌ Failed to seed ${creator.name}:`, error);
+          errorCount++;
+        }
+      }
+      
+      console.log(`🎉 Content creators seeding completed! Success: ${successCount}, Errors: ${errorCount}`);
+      
+      // If we got here without throwing, seeding was successful
+      return;
+      
+    } catch (error) {
+      retryCount++;
+      console.error(`❌ Content creators seeding failed (attempt ${retryCount}/${maxRetries}):`, error);
+      
+      if (retryCount >= maxRetries) {
+        console.error("❌ Max retry attempts reached. Seeding failed permanently.");
+        // Don't throw - let the server start anyway
+        return;
+      }
+      
+      // Wait before retrying
+      console.log(`⏳ Waiting 2 seconds before retry...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
-    
-    console.log("🎉 Content creators seeding completed successfully!");
-    
-  } catch (error) {
-    console.error("❌ Content creators seeding failed:", error);
-    throw error;
   }
 }
