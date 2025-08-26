@@ -41,7 +41,6 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Crown,
   DollarSign,
-  Eye,
   Home,
   Plus,
   RefreshCw,
@@ -187,12 +186,10 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
       <TableCell className="text-center">
         <Button
           size="default"
-          variant="outline"
           onClick={() => handleViewTeam(creator.id)}
-          className="h-9 px-4"
+          className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white"
           title="View Team"
         >
-          <Eye className="h-4 w-4 mr-2" />
           View Team
         </Button>
       </TableCell>
