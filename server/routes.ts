@@ -6229,26 +6229,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error(`Error fetching transfer data for ${creator.name}:`, error);
           }
           
-          // Add new tracking record
+          // Log the raw data for debugging
+          console.log(`Raw manager data for ${creator.name}:`, {
+            rank: managerData.summary_overall_rank,
+            points: managerData.summary_overall_points,
+            last_deadline_value: managerData.last_deadline_value,
+            last_deadline_bank: managerData.last_deadline_bank
+          });
+
+          // Add new tracking record with proper data handling
           await storage.addCreatorTracking({
             creatorId: creator.id,
             gameweek: currentGameweek,
-            overallRank: managerData.summary_overall_rank,
-            overallPoints: managerData.summary_overall_points,
+            overallRank: managerData.summary_overall_rank || null,
+            overallPoints: managerData.summary_overall_points || null,
             gameweekPoints: managerData.summary_event_points || 0,
-            gameweekRank: managerData.summary_event_rank,
-            teamValue: parseFloat((managerData.value / 10).toFixed(1)), // Convert from pence to pounds
-            bank: parseFloat((managerData.bank / 10).toFixed(1)),
-            totalTransfers: managerData.total_transfers,
+            gameweekRank: managerData.summary_event_rank || null,
+            teamValue: managerData.last_deadline_value ? parseFloat((managerData.last_deadline_value / 10).toFixed(1)) : null, // Convert from pence to pounds
+            bank: managerData.last_deadline_bank ? parseFloat((managerData.last_deadline_bank / 10).toFixed(1)) : null,
+            totalTransfers: managerData.total_transfers || 0,
             freeTransfers: managerData.free_transfers || 1,
             wildcardUsed: false, // Will need to check picks history for chips used
             benchBoostUsed: false,
             freeHitUsed: false,
             tripleCaptainUsed: false,
-            captainPlayerId: currentTeam?.find((pick: any) => pick.is_captain)?.element,
-            captainPlayerName,
-            viceCaptainPlayerId: currentTeam?.find((pick: any) => pick.is_vice_captain)?.element,
-            viceCaptainPlayerName,
+            captainPlayerId: currentTeam?.find((pick: any) => pick.is_captain)?.element || null,
+            captainPlayerName: captainPlayerName || null,
+            viceCaptainPlayerId: currentTeam?.find((pick: any) => pick.is_vice_captain)?.element || null,
+            viceCaptainPlayerName: viceCaptainPlayerName || null,
             transfersIn: transfersIn.length > 0 ? transfersIn : null,
             transfersOut: transfersOut.length > 0 ? transfersOut : null,
             hitsTaken: 0, // Will need to calculate from transfer history

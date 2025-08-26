@@ -170,13 +170,53 @@ function ContentCreators() {
   };
 
   const formatRank = (rank: number | null) => {
-    if (!rank) return "N/A";
+    if (!rank || rank === 0) return "N/A";
     return `#${rank.toLocaleString()}`;
   };
 
-  const formatPoints = (points: number | null) => {
-    if (!points) return "0";
-    return points.toLocaleString();
+  const formatPoints = (points: number | null | undefined): string => {
+    if (!points || points === 0) return "0";
+    return points.toString();
+  };
+
+  const handleViewTeam = async (creatorId: number) => {
+    try {
+      const response = await fetch(`/api/content-creators/${creatorId}/team`);
+      const teamData = await response.json();
+      
+      toast({
+        title: "Team Data",
+        description: `Fetched team data with ${teamData.picks?.length || 0} players`,
+      });
+      
+      console.log("Team data:", teamData);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch team data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewTransfers = async (creatorId: number) => {
+    try {
+      const response = await fetch(`/api/content-creators/${creatorId}/transfers`);
+      const transferData = await response.json();
+      
+      toast({
+        title: "Transfer Data",
+        description: `Found ${transferData.length || 0} transfers`,
+      });
+      
+      console.log("Transfer data:", transferData);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch transfer data",
+        variant: "destructive",
+      });
+    }
   };
 
   const getRankChangeDisplay = (change: number | undefined) => {
@@ -492,6 +532,24 @@ function CreatorDataCard({ creator }: { creator: CreatorWithLatestData }) {
                 )}
               </div>
             )}
+            
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <button
+                onClick={() => handleViewTeam(creator.id)}
+                className="flex items-center justify-center gap-1 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 rounded"
+              >
+                <Eye className="h-3 w-3" />
+                View Team
+              </button>
+              <button
+                onClick={() => handleViewTransfers(creator.id)}
+                className="flex items-center justify-center gap-1 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 rounded"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Transfers
+              </button>
+            </div>
           </div>
 
           {/* Platform & Followers */}
