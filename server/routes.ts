@@ -6355,6 +6355,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual database seeding endpoint (for production deployment if needed)
+  app.post("/api/content-creators/seed", async (req, res) => {
+    try {
+      const { seedContentCreators } = await import("./seed-database");
+      await seedContentCreators();
+      
+      res.json({ 
+        success: true, 
+        message: "Content creators seeded successfully" 
+      });
+    } catch (error) {
+      console.error("Manual seeding failed:", error);
+      res.status(500).json({ 
+        error: "Failed to seed content creators",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   console.log("✓ Content Creators API routes registered successfully");
 
   const httpServer = createServer(app);
