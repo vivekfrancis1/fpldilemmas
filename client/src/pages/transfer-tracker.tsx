@@ -22,11 +22,10 @@ interface TransferData {
   hourly_change_rate: number;
   absolute_ownership?: number;
   net_transfers_percentage?: number;
-  nti_season?: number;
   transfer_rate_trend?: string;
 }
 
-type SortField = 'net_transfers' | 'transfers_in' | 'transfers_out' | 'ownership_percentage' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage' | 'nti_season' | 'current_price';
+type SortField = 'net_transfers' | 'transfers_in' | 'transfers_out' | 'ownership_percentage' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage' | 'current_price';
 type SortDirection = 'asc' | 'desc';
 
 export default function TransferTracker() {
@@ -83,8 +82,7 @@ export default function TransferTracker() {
       const netTransfersPercentage = absoluteOwnership > 0 ? 
         Math.round((data.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
       
-      // Use actual net transfer data from FPL API
-      const ntiSeason = data.net_transfers; // Season-to-date net transfers (cumulative)
+
       
       // Determine transfer trend based on net transfers
       const transferRateTrend = data.net_transfers > 0 ? 
@@ -96,7 +94,6 @@ export default function TransferTracker() {
         ...data,
         absolute_ownership: absoluteOwnership,
         net_transfers_percentage: netTransfersPercentage,
-        nti_season: ntiSeason,
         transfer_rate_trend: transferRateTrend
       };
     });
@@ -115,10 +112,7 @@ export default function TransferTracker() {
           aValue = a.net_transfers_percentage || 0;
           bValue = b.net_transfers_percentage || 0;
           break;
-        case 'nti_season':
-          aValue = a.nti_season || 0;
-          bValue = b.nti_season || 0;
-          break;
+
         default:
           aValue = a[sortField];
           bValue = b[sortField];
@@ -376,11 +370,7 @@ export default function TransferTracker() {
                           Net Trans %
                         </SortableHeader>
                       </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="nti_season" className="text-right">
-                          NTI (Season)
-                        </SortableHeader>
-                      </th>
+
                       <th className="text-center p-2">
                         Transfer Trend
                       </th>
@@ -451,14 +441,7 @@ export default function TransferTracker() {
                             {transfer.net_transfers_percentage! > 0 ? "+" : ""}{transfer.net_transfers_percentage?.toFixed(2) || "0.00"}%
                           </span>
                         </td>
-                        <td className="p-3 text-right">
-                          <span className={`font-medium ${
-                            (transfer.nti_season || 0) > 0 ? "text-green-600" : 
-                            (transfer.nti_season || 0) < 0 ? "text-red-600" : "text-gray-600"
-                          }`}>
-                            {(transfer.nti_season || 0) > 0 ? "+" : ""}{transfer.nti_season?.toLocaleString() || "0"}
-                          </span>
-                        </td>
+
                         <td className="p-3 text-center">
                           <Badge 
                             variant={
