@@ -82,16 +82,7 @@ export default function TransferTracker() {
       const netTransfersPercentage = absoluteOwnership > 0 ? 
         Math.round((data.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
       
-      // Debug logging to see what's happening
-      if (data.player_name === "Palmer" || data.player_name === "Salah") {
-        console.log(`Debug ${data.player_name}:`, {
-          ownership_percentage: data.ownership_percentage,
-          totalPlayers,
-          absoluteOwnership,
-          net_transfers: data.net_transfers,
-          netTransfersPercentage
-        });
-      }
+
       
 
       
