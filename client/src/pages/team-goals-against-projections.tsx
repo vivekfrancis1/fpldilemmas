@@ -394,24 +394,7 @@ export default function TeamGoalsAgainstProjections() {
             </CardContent>
           </Card>
 
-          {/* Balance Status */}
-          {combinedData && (
-            <Card className="mt-6 border-green-200 bg-green-50">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                  <div>
-                    <span className="font-semibold text-green-900">Perfect Mathematical Balance</span>
-                    <p className="text-sm text-green-700">
-                      Goals Scored: {combinedData.totalGoalsScored?.toFixed(1)} | 
-                      Goals Against: {combinedData.totalGoalsAgainst?.toFixed(1)} | 
-                      Balance: {combinedData.perfectBalance ? '✓ Perfect' : '⚠ Variance'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+
 
           {/* Info Panel */}
           <Card className="mt-6">

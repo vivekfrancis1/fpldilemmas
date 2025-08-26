@@ -675,10 +675,10 @@ export default function AdminGoalProjections() {
         <AlertDescription>
           <strong>Configuration Portal - Team Goals Scored</strong><br/>
           This interface controls 27 advanced parameters that determine how teams score goals across all gameweeks. 
-          Changes apply immediately and maintain perfect mathematical consistency with Goals Against projections.
+          Changes apply immediately to update team goal projections.
           <br/><br/>
-          <strong>Mathematical Integration:</strong> These parameters work with the Goals Against system to ensure total league goals scored = total league goals conceded, 
-          maintaining realistic Premier League ranges (30-85 goals per season per team) and gameweek-level balance.
+          <strong>Parameter Integration:</strong> These settings work together to create realistic Premier League goal projections 
+          maintaining appropriate ranges (30-85 goals per season per team) across all gameweeks.
         </AlertDescription>
       </Alert>
 
