@@ -392,18 +392,13 @@ export default function TransferTracker() {
                           Current Own.
                         </SortableHeader>
                       </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="initial_ownership" className="text-right">
-                          Initial Own. (Season)
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="initial_ownership_gameweek" className="text-right">
-                          Initial Own. (GW)
-                        </SortableHeader>
-                      </th>
                       <th className="text-center p-2 border-l border-gray-200">
                         <div className="text-xs font-semibold text-blue-600 mb-1">SEASON TOTALS</div>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="initial_ownership" className="text-right">
+                          Initial Own.
+                        </SortableHeader>
                       </th>
                       <th className="text-center p-2">
                         <SortableHeader field="transfers_in" className="text-center">
@@ -427,6 +422,11 @@ export default function TransferTracker() {
                       </th>
                       <th className="text-center p-2 border-l border-gray-200">
                         <div className="text-xs font-semibold text-green-600 mb-1">THIS GAMEWEEK</div>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="initial_ownership_gameweek" className="text-right">
+                          Initial Own.
+                        </SortableHeader>
                       </th>
                       <th className="text-center p-2">
                         <SortableHeader field="transfers_in_event" className="text-center">
@@ -484,16 +484,13 @@ export default function TransferTracker() {
                         <td className="p-3 text-right">
                           <span className="font-medium">{transfer.absolute_ownership?.toLocaleString() || "0"}</span>
                         </td>
-                        <td className="p-3 text-right">
-                          <span className="font-medium">{transfer.initial_ownership?.toLocaleString() || "0"}</span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <span className="font-medium">{transfer.initial_ownership_gameweek?.toLocaleString() || "0"}</span>
-                        </td>
                         
                         {/* Season totals section */}
                         <td className="p-3 text-center border-l border-gray-200">
                           <div className="text-xs text-muted-foreground">Season</div>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium">{transfer.initial_ownership?.toLocaleString() || "0"}</span>
                         </td>
                         <td className="p-3 text-center">
                           <span className="font-medium text-green-600">
@@ -525,6 +522,9 @@ export default function TransferTracker() {
                         {/* Gameweek section */}
                         <td className="p-3 text-center border-l border-gray-200">
                           <div className="text-xs text-muted-foreground">GW</div>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium">{transfer.initial_ownership_gameweek?.toLocaleString() || "0"}</span>
                         </td>
                         <td className="p-3 text-center">
                           <span className="font-medium text-green-600">
