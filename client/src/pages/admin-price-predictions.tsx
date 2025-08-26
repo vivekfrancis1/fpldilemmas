@@ -85,7 +85,17 @@ export default function AdminPricePredictions() {
   // Save configuration mutation
   const saveConfigMutation = useMutation({
     mutationFn: async (newConfig: PricePredictionConfig) => {
-      return await apiRequest("/api/admin/price-prediction-config", "POST", newConfig);
+      const response = await fetch("/api/admin/price-prediction-config", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newConfig),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -93,7 +103,7 @@ export default function AdminPricePredictions() {
         description: "Price prediction algorithm settings have been updated successfully.",
       });
       setHasChanges(false);
-      queryClient.invalidateQueries({ queryKey: ["/api/price-predictions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/price-prediction-config"] });
     },
     onError: (error) => {
       toast({
@@ -108,15 +118,33 @@ export default function AdminPricePredictions() {
   // Reset to defaults mutation  
   const resetConfigMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/admin/price-prediction-config/reset", "POST");
+      const response = await fetch("/api/admin/price-prediction-config/reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
     },
-    onSuccess: () => {
-      setConfig(defaultConfig);
-      setHasChanges(true);
+    onSuccess: (data) => {
+      setConfig(data.config);
+      setHasChanges(false);
       toast({
         title: "Reset to Defaults",
         description: "Configuration has been reset to default values.",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/price-prediction-config"] });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Reset Failed", 
+        description: "Failed to reset configuration. Please try again.",
+      });
+      console.error("Failed to reset config:", error);
     }
   });
 
