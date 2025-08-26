@@ -211,6 +211,14 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     platform: "twitter",
     managerId: 5149,
     description: "Co-host of The FPL Wire podcast; 8x top 10k finishes, best rank 17th overall."
+  },
+  {
+    id: 26,
+    name: "Andy Martin",
+    handle: "@fpl_tactician",
+    platform: "twitter",
+    managerId: 335,
+    description: "Strategic FPL guru from Leeds, blending sharp analysis with spicy, witty humor to roast picks and predict game trends."
   }
 ];
 

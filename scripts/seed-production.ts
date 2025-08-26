@@ -34,7 +34,8 @@ const CONTENT_CREATORS = [
   { name: "Lateriser12", handle: "@Lateriser", platform: "twitter", teamId: 1122, description: "Co-host of The FPL Wire podcast; multiple top 200 finishes and elite FPL veteran." },
   { name: "FPL General (Mark McGettigan)", handle: "@FPLGeneral", platform: "twitter", teamId: 6969, description: "Popular podcaster and FPL expert with consistent advice on transfers and strategies." },
   { name: "Abdul Rehman (FPL Salah)", handle: "@FPL_Salah", platform: "twitter", teamId: 1301, description: "Top FPL manager with multiple top 1k finishes; contributor to The Athletic and FPL shows." },
-  { name: "Zophar", handle: "@ZopharFPL", platform: "twitter", teamId: 5149, description: "Co-host of The FPL Wire podcast; 8x top 10k finishes, best rank 17th overall." }
+  { name: "Zophar", handle: "@ZopharFPL", platform: "twitter", teamId: 5149, description: "Co-host of The FPL Wire podcast; 8x top 10k finishes, best rank 17th overall." },
+  { name: "Andy Martin", handle: "@fpl_tactician", platform: "twitter", teamId: 335, description: "Strategic FPL guru from Leeds, blending sharp analysis with spicy, witty humor to roast picks and predict game trends." }
 ];
 
 async function seedProductionDatabase() {
