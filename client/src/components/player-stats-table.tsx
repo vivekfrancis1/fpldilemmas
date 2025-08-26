@@ -282,7 +282,7 @@ export default function PlayerStatsTable({
         <table className="fpl-table text-xs min-w-[800px] w-full lg:min-w-full xl:min-w-full">
           <thead className="fpl-table-header">
             <tr>
-              <th className="px-2 sm:px-3 py-2 sm:py-3 text-left min-w-[120px] sm:min-w-[160px] font-semibold text-gray-900 text-xs sm:text-sm">
+              <th className="px-2 sm:px-3 py-2 sm:py-3 text-left min-w-[120px] sm:min-w-[160px] font-semibold text-gray-900 text-xs sm:text-sm sticky left-0 bg-gray-50 z-10 border-r border-gray-200">
                 Player
               </th>
               <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[40px] sm:min-w-[50px] font-semibold text-gray-900 text-xs sm:text-sm">Team</th>
@@ -438,7 +438,7 @@ export default function PlayerStatsTable({
                 <tr key={player.id} className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${
                   index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
                 }`} data-testid={`row-player-${player.id}`}>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 text-left">
+                  <td className="px-2 sm:px-3 py-2 sm:py-3 text-left sticky left-0 bg-white dark:bg-gray-950 z-10 border-r border-gray-200">
                     <div className="flex flex-col">
                       <span className="font-medium text-gray-900 text-xs sm:text-sm">
                         {player.web_name}
