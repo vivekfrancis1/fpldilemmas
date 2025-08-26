@@ -180,7 +180,7 @@ export default function SeasonProjections() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs sm:text-sm text-gray-600">Top Assists</p>
-                    <p className="text-sm sm:text-lg font-bold text-gray-900 truncate">Salah & Palmer (10.3)</p>
+                    <p className="text-sm sm:text-lg font-bold text-gray-900 truncate">Salah, Palmer & Saka (10.3)</p>
                   </div>
                 </div>
               </div>
@@ -194,7 +194,7 @@ export default function SeasonProjections() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs sm:text-sm text-gray-600">Top Goal Involvements</p>
-                    <p className="text-sm sm:text-lg font-bold text-gray-900 truncate">Haaland (28.6)</p>
+                    <p className="text-sm sm:text-lg font-bold text-gray-900 truncate">Haaland & Salah (28.6)</p>
                   </div>
                 </div>
               </div>
