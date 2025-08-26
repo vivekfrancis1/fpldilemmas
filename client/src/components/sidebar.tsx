@@ -53,8 +53,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/projected-goals-cs", label: "Match - Goals and CS", icon: Target, description: "Projected goals & clean sheets", popular: false },
         { path: "/team-goal-projections", label: "Team Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
-        { path: "/team-cs-projections", label: "Team Clean sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
-        { path: "/team-goals-against-projections", label: "Team Goals conceded", icon: Shield, description: "Expected goals conceded", popular: false }
+        { path: "/team-cs-projections", label: "Team Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
+        { path: "/team-goals-against-projections", label: "Team Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false }
       ]
     },
     {
@@ -67,8 +67,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Third Party Projection Tools",
       items: [
-        { path: "/season-projections", label: "Season Projections", icon: TrendingUp, description: "Season-long goal involvements", popular: false },
-        { path: "/openfpl-projections", label: "Open FPL Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false }
+        { path: "/season-projections", label: "Season Goal Involvements", icon: TrendingUp, description: "Season-long goal involvements", popular: false },
+        { path: "/openfpl-projections", label: "OpenFPL Player Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false }
       ]
     },
     {
