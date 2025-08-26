@@ -20,6 +20,7 @@ import PriceTracker from "./pages/price-tracker";
 import RecentPriceChanges from "./pages/recent-price-changes";
 import TransferTracker from "./pages/transfer-tracker";
 import OpenFPLProjections from "./pages/openfpl-projections";
+import ContentCreators from "./pages/content-creators";
 import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
 import ResultsProjections from "./pages/results-projections";
@@ -69,6 +70,7 @@ function Router() {
       <Route path="/season-projections" component={SeasonProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
       <Route path="/admin-upset-config" component={AdminUpsetConfig} />
+      <Route path="/content-creators" component={ContentCreators} />
 
       <Route component={NotFound} />
     </Switch>

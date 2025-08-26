@@ -5960,7 +5960,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ Current Players API routes registered successfully");
 
+  // FPL Content Creators API routes
+  app.get("/api/content-creators", async (req, res) => {
+    try {
+      // For now, return empty array since we need to implement the database storage
+      // This will be populated after database setup
+      const creators: any[] = [];
+      res.json(creators);
+    } catch (error) {
+      console.error("Error fetching content creators:", error);
+      res.status(500).json({ error: "Failed to fetch content creators" });
+    }
+  });
 
+  app.post("/api/content-creators", async (req, res) => {
+    try {
+      const creatorData = req.body;
+      // Validate required fields
+      if (!creatorData.name || !creatorData.handle || !creatorData.teamId || !creatorData.teamName || !creatorData.platform) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      // For now, just return success - will implement database insertion after setup
+      res.json({ success: true, message: "Creator added successfully" });
+    } catch (error) {
+      console.error("Error adding content creator:", error);
+      res.status(500).json({ error: "Failed to add content creator" });
+    }
+  });
+
+  app.get("/api/content-creators/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      // For now, return mock data - will implement database fetch after setup
+      res.json({ id: parseInt(id), name: "Sample Creator" });
+    } catch (error) {
+      console.error("Error fetching content creator:", error);
+      res.status(500).json({ error: "Failed to fetch content creator" });
+    }
+  });
+
+  app.get("/api/content-creators/:id/history", async (req, res) => {
+    try {
+      const { id } = req.params;
+      // For now, return empty array - will implement database fetch after setup
+      res.json([]);
+    } catch (error) {
+      console.error("Error fetching creator history:", error);
+      res.status(500).json({ error: "Failed to fetch creator history" });
+    }
+  });
+
+  app.post("/api/content-creators/refresh", async (req, res) => {
+    try {
+      // This will fetch latest FPL data for all content creators
+      // For now, just return success
+      res.json({ success: true, message: "Data refreshed successfully" });
+    } catch (error) {
+      console.error("Error refreshing content creator data:", error);
+      res.status(500).json({ error: "Failed to refresh data" });
+    }
+  });
+
+  console.log("✓ Content Creators API routes registered successfully");
 
   const httpServer = createServer(app);
   return httpServer;

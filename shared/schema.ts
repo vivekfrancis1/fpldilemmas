@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { pgTable, serial, text, integer, timestamp, boolean, decimal, json, varchar, index } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 
 // Hardcoded Premier League Teams Data
 export const PREMIER_LEAGUE_TEAMS = [
@@ -540,4 +542,66 @@ export const unifiedProjectionSettings = pgTable("unified_projection_settings", 
 });
 
 export type UnifiedProjectionSettings = typeof unifiedProjectionSettings.$inferSelect;
+
+// FPL Content Creators table
+export const fplContentCreators = pgTable("fpl_content_creators", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  name: varchar("name", { length: 100 }).notNull(),
+  handle: varchar("handle", { length: 50 }).notNull(), // YouTube/Twitter handle
+  teamId: integer("team_id").notNull(), // FPL manager ID
+  teamName: varchar("team_name", { length: 100 }).notNull(),
+  platform: varchar("platform", { length: 50 }).notNull(), // YouTube, Twitter, etc.
+  description: text("description"),
+  website: varchar("website", { length: 255 }),
+  followers: integer("followers"),
+  isActive: boolean("is_active").default(true),
+  addedDate: timestamp("added_date").defaultNow(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+export type FplContentCreator = typeof fplContentCreators.$inferSelect;
+export type InsertFplContentCreator = typeof fplContentCreators.$inferInsert;
+
+export const insertFplContentCreatorSchema = createInsertSchema(fplContentCreators);
+
+// FPL Content Creator tracking data (historical snapshots)
+export const fplCreatorTracking = pgTable("fpl_creator_tracking", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  creatorId: integer("creator_id").notNull().references(() => fplContentCreators.id),
+  gameweek: integer("gameweek").notNull(),
+  
+  // FPL Performance Data
+  overallRank: integer("overall_rank"),
+  overallPoints: integer("overall_points"),
+  gameweekPoints: integer("gameweek_points"),
+  gameweekRank: integer("gameweek_rank"),
+  teamValue: decimal("team_value", { precision: 4, scale: 1 }), // e.g., 100.5
+  bank: decimal("bank", { precision: 4, scale: 1 }), // money in bank
+  totalTransfers: integer("total_transfers"),
+  freeTransfers: integer("free_transfers"),
+  wildcardUsed: boolean("wildcard_used").default(false),
+  benchBoostUsed: boolean("bench_boost_used").default(false),
+  freeHitUsed: boolean("free_hit_used").default(false),
+  tripleCaptainUsed: boolean("triple_captain_used").default(false),
+  
+  // Team Analysis
+  captainPlayerId: integer("captain_player_id"),
+  captainPlayerName: varchar("captain_player_name", { length: 100 }),
+  viceCaptainPlayerId: integer("vice_captain_player_id"),
+  viceCaptainPlayerName: varchar("vice_captain_player_name", { length: 100 }),
+  
+  // Transfer Activity
+  transfersIn: json("transfers_in"), // Array of {playerId, playerName, cost}
+  transfersOut: json("transfers_out"), // Array of {playerId, playerName, cost}
+  hitsTaken: integer("hits_taken").default(0),
+  
+  // Metadata
+  recordedAt: timestamp("recorded_at").defaultNow(),
+  isVerified: boolean("is_verified").default(false), // Whether data has been manually verified
+});
+
+export type FplCreatorTracking = typeof fplCreatorTracking.$inferSelect;
+export type InsertFplCreatorTracking = typeof fplCreatorTracking.$inferInsert;
+
+export const insertFplCreatorTrackingSchema = createInsertSchema(fplCreatorTracking);
 export type InsertUnifiedProjectionSettings = typeof unifiedProjectionSettings.$inferInsert;
