@@ -5969,10 +5969,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const creatorsWithLatestData = await Promise.all(
         creators.map(async (creator) => {
           const latestTracking = await storage.getLatestCreatorTracking(creator.id);
+          const history = await storage.getCreatorTracking(creator.id, 2);
+          
+          // Calculate rank change if we have historical data
+          let rankChange = undefined;
+          if (history.length >= 2) {
+            const current = history[0]?.overallRank;
+            const previous = history[1]?.overallRank;
+            if (current && previous) {
+              rankChange = previous - current; // Positive means rank improved (went down in number)
+            }
+          }
+          
           return {
             ...creator,
             latestTracking,
-            rankChange: undefined, // Will be calculated when we have historical data
+            rankChange,
             pointsThisGw: latestTracking?.gameweekPoints
           };
         })
@@ -6027,6 +6039,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching creator history:", error);
       res.status(500).json({ error: "Failed to fetch creator history" });
+    }
+  });
+
+  app.get("/api/content-creators/:id/team", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const creator = await storage.getContentCreatorById(parseInt(id));
+      
+      if (!creator) {
+        return res.status(404).json({ error: "Content creator not found" });
+      }
+      
+      const currentGameweek = 21; // Current gameweek
+      
+      // Fetch current team picks
+      const teamResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/event/${currentGameweek}/picks/`);
+      if (!teamResponse.ok) {
+        return res.status(400).json({ error: "Failed to fetch team data" });
+      }
+      
+      const teamData = await teamResponse.json();
+      res.json(teamData);
+    } catch (error) {
+      console.error("Error fetching creator team:", error);
+      res.status(500).json({ error: "Failed to fetch creator team" });
+    }
+  });
+
+  app.get("/api/content-creators/:id/transfers", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const creator = await storage.getContentCreatorById(parseInt(id));
+      
+      if (!creator) {
+        return res.status(404).json({ error: "Content creator not found" });
+      }
+      
+      // Fetch transfer history
+      const transferResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/transfers/`);
+      if (!transferResponse.ok) {
+        return res.status(400).json({ error: "Failed to fetch transfer data" });
+      }
+      
+      const transferData = await transferResponse.json();
+      
+      // Format transfers with gameweek information
+      const formattedTransfers = transferData.map((transfer: any) => ({
+        gameweek: transfer.event,
+        playerIn: {
+          id: transfer.element_in,
+          cost: transfer.element_in_cost
+        },
+        playerOut: {
+          id: transfer.element_out,
+          cost: transfer.element_out_cost
+        },
+        time: transfer.time
+      }));
+      
+      res.json(formattedTransfers);
+    } catch (error) {
+      console.error("Error fetching creator transfers:", error);
+      res.status(500).json({ error: "Failed to fetch creator transfers" });
     }
   });
 
@@ -6098,6 +6173,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const managerData = await managerResponse.json();
           console.log(`✅ Fetched data for ${creator.name}: Rank ${managerData.summary_overall_rank}, Points ${managerData.summary_overall_points}`);
           
+          // Fetch current team data
+          let currentTeam = null;
+          let captainPlayerName = null;
+          let viceCaptainPlayerName = null;
+          
+          try {
+            const teamResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/event/${currentGameweek}/picks/`);
+            if (teamResponse.ok) {
+              const teamData = await teamResponse.json();
+              currentTeam = teamData.picks;
+              
+              // Get captain and vice-captain names
+              const captainPick = teamData.picks.find((pick: any) => pick.is_captain);
+              const viceCaptainPick = teamData.picks.find((pick: any) => pick.is_vice_captain);
+              
+              if (captainPick) {
+                captainPlayerName = `Player ${captainPick.element}`;
+              }
+              if (viceCaptainPick) {
+                viceCaptainPlayerName = `Player ${viceCaptainPick.element}`;
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching team data for ${creator.name}:`, error);
+          }
+          
+          // Fetch transfer history
+          let transfersIn = [];
+          let transfersOut = [];
+          
+          try {
+            const transferResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/transfers/`);
+            if (transferResponse.ok) {
+              const transferData = await transferResponse.json();
+              
+              // Get transfers for current gameweek
+              const currentGwTransfers = transferData.filter((transfer: any) => transfer.event === currentGameweek);
+              
+              transfersIn = currentGwTransfers.map((transfer: any) => ({
+                playerId: transfer.element_in,
+                playerName: `Player ${transfer.element_in}`,
+                gameweek: transfer.event,
+                cost: transfer.element_in_cost
+              }));
+              
+              transfersOut = currentGwTransfers.map((transfer: any) => ({
+                playerId: transfer.element_out,
+                playerName: `Player ${transfer.element_out}`,
+                gameweek: transfer.event,
+                cost: transfer.element_out_cost
+              }));
+            }
+          } catch (error) {
+            console.error(`Error fetching transfer data for ${creator.name}:`, error);
+          }
+          
           // Add new tracking record
           await storage.addCreatorTracking({
             creatorId: creator.id,
@@ -6114,6 +6245,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             benchBoostUsed: false,
             freeHitUsed: false,
             tripleCaptainUsed: false,
+            captainPlayerId: currentTeam?.find((pick: any) => pick.is_captain)?.element,
+            captainPlayerName,
+            viceCaptainPlayerId: currentTeam?.find((pick: any) => pick.is_vice_captain)?.element,
+            viceCaptainPlayerName,
+            transfersIn: transfersIn.length > 0 ? transfersIn : null,
+            transfersOut: transfersOut.length > 0 ? transfersOut : null,
             hitsTaken: 0, // Will need to calculate from transfer history
             recordedAt: new Date(),
             isVerified: true // Data directly from FPL API

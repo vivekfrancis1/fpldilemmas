@@ -19,7 +19,6 @@ import {
   Twitter, 
   Plus, 
   RefreshCw, 
-  Crown, 
   Activity, 
   BarChart3, 
   Calendar,
@@ -30,7 +29,8 @@ import {
   Star,
   Zap,
   DollarSign,
-  TrendingDown
+  TrendingDown,
+  Crown
 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -440,23 +440,56 @@ function CreatorDataCard({ creator }: { creator: CreatorWithLatestData }) {
           )}
 
           {/* Team & Transfer Info */}
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            {latest?.teamValue && (
-              <div className="flex items-center justify-between">
+          <div className="space-y-2 text-xs">
+            <div className="grid grid-cols-2 gap-2">
+              {latest?.teamValue && (
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <DollarSign className="h-3 w-3" />
+                    Team Value
+                  </span>
+                  <span className="font-mono">£{latest.teamValue}m</span>
+                </div>
+              )}
+              {latest?.totalTransfers !== undefined && (
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <RefreshCw className="h-3 w-3" />
+                    Transfers
+                  </span>
+                  <span className="font-mono">{latest.totalTransfers}</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Captain Info */}
+            {latest?.captainPlayerName && (
+              <div className="flex items-center justify-between p-1 bg-yellow-50 rounded">
                 <span className="flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />
-                  Team Value
+                  <Crown className="h-3 w-3 text-yellow-600" />
+                  Captain
                 </span>
-                <span className="font-mono">£{latest.teamValue}m</span>
+                <span className="font-medium">{latest.captainPlayerName}</span>
               </div>
             )}
-            {latest?.totalTransfers !== undefined && (
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <RefreshCw className="h-3 w-3" />
-                  Transfers
-                </span>
-                <span className="font-mono">{latest.totalTransfers}</span>
+            
+            {/* Recent Transfers */}
+            {(latest?.transfersIn || latest?.transfersOut) && (
+              <div className="p-1 bg-blue-50 rounded">
+                <div className="flex items-center gap-1 mb-1">
+                  <RefreshCw className="h-3 w-3 text-blue-600" />
+                  <span className="font-medium">GW{latest.gameweek} Transfers</span>
+                </div>
+                {latest.transfersIn && latest.transfersIn.length > 0 && (
+                  <div className="text-green-600">
+                    ↗ In: {latest.transfersIn.map((t: any) => t.playerName).join(', ')}
+                  </div>
+                )}
+                {latest.transfersOut && latest.transfersOut.length > 0 && (
+                  <div className="text-red-600">
+                    ↙ Out: {latest.transfersOut.map((t: any) => t.playerName).join(', ')}
+                  </div>
+                )}
               </div>
             )}
           </div>
