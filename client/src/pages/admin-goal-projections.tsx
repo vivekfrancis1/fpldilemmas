@@ -103,7 +103,7 @@ export default function AdminGoalProjections() {
   
   const [formData, setFormData] = useState<AdminSettings>({} as AdminSettings);
   const [hasChanges, setHasChanges] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('calculation-base');
 
   // Use hardcoded team data for consistency and performance
   const teams: Team[] = [...PREMIER_LEAGUE_TEAMS];
