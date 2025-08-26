@@ -33,20 +33,14 @@ interface PricePrediction {
   estimated_time: string;
   absolute_ownership?: number;
   net_transfers_percentage?: number;
-  transfers_per_hour?: number;
-  transfers_per_day?: number;
-  transfers_per_gameweek?: number;
-  transfers_total_season?: number;
-  transfers_in_hourly?: number;
-  transfers_out_hourly?: number;
-  transfers_in_daily?: number;
-  transfers_out_daily?: number;
-  transfers_in_gameweek?: number;
-  transfers_out_gameweek?: number;
+  nti_last_hour?: number;
+  nti_today?: number;
+  nti_this_gameweek?: number;
+  nti_total?: number;
   transfer_rate_trend?: string;
 }
 
-type SortField = 'current_progress' | 'tonight_progress' | 'transfers_in' | 'transfers_out' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage' | 'transfers_per_hour' | 'transfers_per_day' | 'transfers_per_gameweek' | 'transfers_in_hourly' | 'transfers_out_hourly' | 'transfers_in_daily' | 'transfers_out_daily';
+type SortField = 'current_progress' | 'tonight_progress' | 'net_transfers' | 'expected_date' | 'ownership_percentage' | 'confidence' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage' | 'nti_last_hour' | 'nti_today' | 'nti_this_gameweek' | 'nti_total';
 type SortDirection = 'asc' | 'desc';
 
 export default function PredictedPriceChanges() {
@@ -103,22 +97,14 @@ export default function PredictedPriceChanges() {
       const netTransfersPercentage = absoluteOwnership > 0 ? 
         Math.round((pred.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
       
-      // Calculate comprehensive transfer rates across time periods
-      const transfersPerHour = pred.hourly_change_rate > 0 ? 
-        Math.round((Math.abs(pred.net_transfers) / 24) * (pred.hourly_change_rate / 100)) : 0;
-      const transfersPerDay = Math.abs(pred.net_transfers);
-      const transfersPerGameweek = Math.round(transfersPerDay * 7); // Assume 7 days per gameweek
-      const transfersTotalSeason = Math.round(transfersPerGameweek * 38); // 38 gameweeks
+      // Calculate Net Transfers In (NTI) across different time periods
+      const ntiLastHour = pred.hourly_change_rate > 0 ? 
+        Math.round((pred.net_transfers / 24) * (pred.hourly_change_rate / 100)) : 0;
+      const ntiToday = pred.net_transfers; // Net transfers since 7AM IST today
+      const ntiThisGameweek = Math.round(pred.net_transfers * 7); // 7-day gameweek projection
+      const ntiTotal = Math.round(pred.net_transfers * 38 * 7); // Full season projection
       
-      // Calculate individual transfer direction rates
-      const transfersInHourly = Math.round((pred.transfers_in || 0) / 24);
-      const transfersOutHourly = Math.round((pred.transfers_out || 0) / 24);
-      const transfersInDaily = pred.transfers_in || 0;
-      const transfersOutDaily = pred.transfers_out || 0;
-      const transfersInGameweek = Math.round(transfersInDaily * 7);
-      const transfersOutGameweek = Math.round(transfersOutDaily * 7);
-      
-      // Determine transfer trend
+      // Determine transfer trend based on net transfers
       const transferRateTrend = pred.net_transfers > 0 ? 
         (pred.hourly_change_rate > 5 ? "Rising Fast" : "Rising") :
         pred.net_transfers < 0 ? 
@@ -128,16 +114,10 @@ export default function PredictedPriceChanges() {
         ...pred,
         absolute_ownership: absoluteOwnership,
         net_transfers_percentage: netTransfersPercentage,
-        transfers_per_hour: transfersPerHour,
-        transfers_per_day: transfersPerDay,
-        transfers_per_gameweek: transfersPerGameweek,
-        transfers_total_season: transfersTotalSeason,
-        transfers_in_hourly: transfersInHourly,
-        transfers_out_hourly: transfersOutHourly,
-        transfers_in_daily: transfersInDaily,
-        transfers_out_daily: transfersOutDaily,
-        transfers_in_gameweek: transfersInGameweek,
-        transfers_out_gameweek: transfersOutGameweek,
+        nti_last_hour: ntiLastHour,
+        nti_today: ntiToday,
+        nti_this_gameweek: ntiThisGameweek,
+        nti_total: ntiTotal,
         transfer_rate_trend: transferRateTrend
       };
     });
@@ -160,33 +140,21 @@ export default function PredictedPriceChanges() {
           aValue = a.net_transfers_percentage || 0;
           bValue = b.net_transfers_percentage || 0;
           break;
-        case 'transfers_per_hour':
-          aValue = a.transfers_per_hour || 0;
-          bValue = b.transfers_per_hour || 0;
+        case 'nti_last_hour':
+          aValue = a.nti_last_hour || 0;
+          bValue = b.nti_last_hour || 0;
           break;
-        case 'transfers_per_day':
-          aValue = a.transfers_per_day || 0;
-          bValue = b.transfers_per_day || 0;
+        case 'nti_today':
+          aValue = a.nti_today || 0;
+          bValue = b.nti_today || 0;
           break;
-        case 'transfers_per_gameweek':
-          aValue = a.transfers_per_gameweek || 0;
-          bValue = b.transfers_per_gameweek || 0;
+        case 'nti_this_gameweek':
+          aValue = a.nti_this_gameweek || 0;
+          bValue = b.nti_this_gameweek || 0;
           break;
-        case 'transfers_in_hourly':
-          aValue = a.transfers_in_hourly || 0;
-          bValue = b.transfers_in_hourly || 0;
-          break;
-        case 'transfers_out_hourly':
-          aValue = a.transfers_out_hourly || 0;
-          bValue = b.transfers_out_hourly || 0;
-          break;
-        case 'transfers_in_daily':
-          aValue = a.transfers_in_daily || 0;
-          bValue = b.transfers_in_daily || 0;
-          break;
-        case 'transfers_out_daily':
-          aValue = a.transfers_out_daily || 0;
-          bValue = b.transfers_out_daily || 0;
+        case 'nti_total':
+          aValue = a.nti_total || 0;
+          bValue = b.nti_total || 0;
           break;
         default:
           aValue = a[sortField];
@@ -449,16 +417,6 @@ export default function PredictedPriceChanges() {
                       </th>
                       <th className="text-center p-2">Change</th>
                       <th className="text-right p-2">
-                        <SortableHeader field="transfers_in" className="text-right">
-                          Transfers In
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="transfers_out" className="text-right">
-                          Transfers Out
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right p-2">
                         <SortableHeader field="net_transfers" className="text-right">
                           Net Transfers
                         </SortableHeader>
@@ -479,38 +437,23 @@ export default function PredictedPriceChanges() {
                         </SortableHeader>
                       </th>
                       <th className="text-right p-2">
-                        <SortableHeader field="transfers_per_hour" className="text-right">
-                          Trans/Hour
+                        <SortableHeader field="nti_last_hour" className="text-right">
+                          NTI (1hr)
                         </SortableHeader>
                       </th>
                       <th className="text-right p-2">
-                        <SortableHeader field="transfers_per_day" className="text-right">
-                          Trans/Day
+                        <SortableHeader field="nti_today" className="text-right">
+                          NTI (Today)
                         </SortableHeader>
                       </th>
                       <th className="text-right p-2">
-                        <SortableHeader field="transfers_per_gameweek" className="text-right">
-                          Trans/GW
+                        <SortableHeader field="nti_this_gameweek" className="text-right">
+                          NTI (GW)
                         </SortableHeader>
                       </th>
                       <th className="text-right p-2">
-                        <SortableHeader field="transfers_in_hourly" className="text-right">
-                          In/Hour
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="transfers_out_hourly" className="text-right">
-                          Out/Hour
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="transfers_in_daily" className="text-right">
-                          In/Day
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="transfers_out_daily" className="text-right">
-                          Out/Day
+                        <SortableHeader field="nti_total" className="text-right">
+                          NTI (Total)
                         </SortableHeader>
                       </th>
                       <th className="text-center p-2">
@@ -615,12 +558,6 @@ export default function PredictedPriceChanges() {
                           )}
                         </td>
                         <td className="p-3 text-right">
-                          <span className="font-medium">{prediction.transfers_in?.toLocaleString() || "0"}</span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <span className="font-medium">{prediction.transfers_out?.toLocaleString() || "0"}</span>
-                        </td>
-                        <td className="p-3 text-right">
                           <span className={`font-medium ${
                             prediction.net_transfers > 0 ? "text-green-600" : 
                             prediction.net_transfers < 0 ? "text-red-600" : "text-gray-600"
@@ -643,25 +580,36 @@ export default function PredictedPriceChanges() {
                           </span>
                         </td>
                         <td className="p-3 text-right">
-                          <span className="font-medium">{prediction.transfers_per_hour?.toLocaleString() || "0"}</span>
+                          <span className={`font-medium ${
+                            (prediction.nti_last_hour || 0) > 0 ? "text-green-600" : 
+                            (prediction.nti_last_hour || 0) < 0 ? "text-red-600" : "text-gray-600"
+                          }`}>
+                            {(prediction.nti_last_hour || 0) > 0 ? "+" : ""}{prediction.nti_last_hour?.toLocaleString() || "0"}
+                          </span>
                         </td>
                         <td className="p-3 text-right">
-                          <span className="font-medium">{prediction.transfers_per_day?.toLocaleString() || "0"}</span>
+                          <span className={`font-medium ${
+                            (prediction.nti_today || 0) > 0 ? "text-green-600" : 
+                            (prediction.nti_today || 0) < 0 ? "text-red-600" : "text-gray-600"
+                          }`}>
+                            {(prediction.nti_today || 0) > 0 ? "+" : ""}{prediction.nti_today?.toLocaleString() || "0"}
+                          </span>
                         </td>
                         <td className="p-3 text-right">
-                          <span className="font-medium">{prediction.transfers_per_gameweek?.toLocaleString() || "0"}</span>
+                          <span className={`font-medium ${
+                            (prediction.nti_this_gameweek || 0) > 0 ? "text-green-600" : 
+                            (prediction.nti_this_gameweek || 0) < 0 ? "text-red-600" : "text-gray-600"
+                          }`}>
+                            {(prediction.nti_this_gameweek || 0) > 0 ? "+" : ""}{prediction.nti_this_gameweek?.toLocaleString() || "0"}
+                          </span>
                         </td>
                         <td className="p-3 text-right">
-                          <span className="font-medium text-green-600">{prediction.transfers_in_hourly?.toLocaleString() || "0"}</span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <span className="font-medium text-red-600">{prediction.transfers_out_hourly?.toLocaleString() || "0"}</span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <span className="font-medium text-green-600">{prediction.transfers_in_daily?.toLocaleString() || "0"}</span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <span className="font-medium text-red-600">{prediction.transfers_out_daily?.toLocaleString() || "0"}</span>
+                          <span className={`font-medium ${
+                            (prediction.nti_total || 0) > 0 ? "text-green-600" : 
+                            (prediction.nti_total || 0) < 0 ? "text-red-600" : "text-gray-600"
+                          }`}>
+                            {(prediction.nti_total || 0) > 0 ? "+" : ""}{prediction.nti_total?.toLocaleString() || "0"}
+                          </span>
                         </td>
                         <td className="p-3 text-center">
                           <Badge 
