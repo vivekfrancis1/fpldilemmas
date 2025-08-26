@@ -94,6 +94,11 @@ export default function TransferTracker() {
       const netTransfersEventPercentage = absoluteOwnership > 0 ? 
         Math.round((netTransfersEvent / absoluteOwnership) * 10000) / 100 : 0;
       
+      // Debug logging for first few players to verify calculation
+      if (data.player_name === "Palmer" || data.player_name === "Salah" || data.player_name === "Haaland") {
+        console.log(`${data.player_name}: Season Net=${data.net_transfers}, GW Net=${netTransfersEvent}, GW In=${data.transfers_in_event}, GW Out=${data.transfers_out_event}`);
+      }
+      
       return {
         ...data,
         net_transfers_event: netTransfersEvent,
@@ -504,7 +509,7 @@ export default function TransferTracker() {
                             (transfer.net_transfers_event || 0) > 0 ? "text-green-600" : 
                             (transfer.net_transfers_event || 0) < 0 ? "text-red-600" : "text-gray-600"
                           }`}>
-                            {(transfer.net_transfers_event || 0) > 0 ? "+" : ""}{transfer.net_transfers_event?.toLocaleString() || "0"}
+                            {(transfer.net_transfers_event || 0) > 0 ? "+" : ""}{(transfer.net_transfers_event || 0).toLocaleString()}
                           </span>
                         </td>
                         <td className="p-3 text-right">
@@ -512,7 +517,7 @@ export default function TransferTracker() {
                             (transfer.net_transfers_event_percentage || 0) > 0 ? "text-green-600" : 
                             (transfer.net_transfers_event_percentage || 0) < 0 ? "text-red-600" : "text-gray-600"
                           }`}>
-                            {(transfer.net_transfers_event_percentage || 0) > 0 ? "+" : ""}{transfer.net_transfers_event_percentage?.toFixed(2) || "0.00"}%
+                            {(transfer.net_transfers_event_percentage || 0) > 0 ? "+" : ""}{(transfer.net_transfers_event_percentage || 0).toFixed(2)}%
                           </span>
                         </td>
                       </tr>
