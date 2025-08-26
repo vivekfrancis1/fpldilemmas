@@ -25,7 +25,7 @@ interface TransferData {
   transfer_rate_trend?: string;
 }
 
-type SortField = 'net_transfers' | 'transfers_in' | 'transfers_out' | 'ownership_percentage' | 'hourly_change_rate' | 'absolute_ownership' | 'net_transfers_percentage' | 'current_price';
+type SortField = 'net_transfers' | 'transfers_in' | 'transfers_out' | 'ownership_percentage' | 'absolute_ownership' | 'net_transfers_percentage' | 'current_price';
 type SortDirection = 'asc' | 'desc';
 
 export default function TransferTracker() {
@@ -86,11 +86,11 @@ export default function TransferTracker() {
       
 
       
-      // Determine transfer trend based on net transfers
-      const transferRateTrend = data.net_transfers > 0 ? 
-        (data.hourly_change_rate > 5 ? "Rising Fast" : "Rising") :
-        data.net_transfers < 0 ? 
-        (data.hourly_change_rate > 5 ? "Falling Fast" : "Falling") : "Stable";
+      // Determine transfer trend based on net transfers magnitude
+      const transferRateTrend = data.net_transfers > 50000 ? "Rising Fast" :
+        data.net_transfers > 10000 ? "Rising" :
+        data.net_transfers < -50000 ? "Falling Fast" :
+        data.net_transfers < -10000 ? "Falling" : "Stable";
       
       return {
         ...data,
@@ -376,11 +376,6 @@ export default function TransferTracker() {
                       <th className="text-center p-2">
                         Transfer Trend
                       </th>
-                      <th className="text-center p-2">
-                        <SortableHeader field="hourly_change_rate" className="text-center">
-                          Hourly Rate
-                        </SortableHeader>
-                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -455,9 +450,6 @@ export default function TransferTracker() {
                           >
                             {transfer.transfer_rate_trend || "Stable"}
                           </Badge>
-                        </td>
-                        <td className="p-3 text-center">
-                          <span className="font-medium">{transfer.hourly_change_rate?.toFixed(1) || "0.0"}/hr</span>
                         </td>
                       </tr>
                     ))}
