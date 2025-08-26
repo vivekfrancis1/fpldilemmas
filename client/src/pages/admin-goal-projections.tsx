@@ -773,8 +773,6 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 6: Market Bounds</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Absolute Min Goals:</strong> <span className="font-mono text-indigo-600">{formData.absoluteMinGoals || 0.0}</span><br/>
-                        <strong>Absolute Max Goals:</strong> <span className="font-mono text-indigo-600">{formData.absoluteMaxGoals || 7.0}</span><br/>
                         <strong>Market Floor Multiplier:</strong> <span className="font-mono text-indigo-600">{formData.marketFloorMultiplier || 0.40}</span><br/>
                         <strong>Market Ceiling Multiplier:</strong> <span className="font-mono text-indigo-600">{formData.marketCeilingMultiplier || 2.0}</span>
                       </p>
@@ -1706,19 +1704,19 @@ export default function AdminGoalProjections() {
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Phase 8 Settings:</strong> Market bounds applied in the final phases of goal projection calculations to ensure realistic ranges and prevent unrealistic goal totals.
+                  <strong>Phase 6 Settings:</strong> Market multiplier bounds control the variance range for goal projections. Floor multiplier prevents extremely low projections while ceiling multiplier caps unrealistic high values.
                 </AlertDescription>
               </Alert>
               
               <div className="space-y-6">
                 {/* Market Bounds */}
                 <div>
-                  <h3 className="font-semibold mb-3">Goal Limits</h3>
+                  <h3 className="font-semibold mb-3">Market Multiplier Bounds</h3>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left p-2 font-medium">Bound</th>
+                          <th className="text-left p-2 font-medium">Market Bound</th>
                           <th className="text-center p-2 font-medium">Default</th>
                           <th className="text-center p-2 font-medium">Current</th>
                           <th className="text-center p-2 font-medium">New Value</th>
@@ -1727,8 +1725,8 @@ export default function AdminGoalProjections() {
                       </thead>
                       <tbody>
                         {[
-                          { key: 'absoluteMinGoals', name: 'Absolute Min Goals', default: 0.0, min: 0.0, max: 0.8, description: 'Hard minimum goals per match floor' },
-                          { key: 'absoluteMaxGoals', name: 'Absolute Max Goals', default: 7.0, min: 3.0, max: 10.0, description: 'Hard maximum goals per match ceiling' }
+                          { key: 'marketFloorMultiplier', name: 'Market Floor Multiplier', default: 0.40, min: 0.20, max: 0.80, description: 'Lower bound multiplier for market-driven adjustments' },
+                          { key: 'marketCeilingMultiplier', name: 'Market Ceiling Multiplier', default: 2.0, min: 1.5, max: 3.0, description: 'Upper bound multiplier for market-driven adjustments' }
                         ].map((setting) => {
                           const currentValue = (formData as any)[setting.key] || setting.default;
                           const isChanged = Math.abs(currentValue - setting.default) > 0.01;
@@ -1773,7 +1771,7 @@ export default function AdminGoalProjections() {
                                     size="sm"
                                     onClick={() => {
                                       toast({
-                                        title: "Bound Updated",
+                                        title: "Market Multiplier Updated",
                                         description: `${setting.name} updated to ${currentValue.toFixed(2)}`,
                                       });
                                     }}
