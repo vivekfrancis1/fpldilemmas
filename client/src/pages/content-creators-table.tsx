@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   Card,
   CardContent,
@@ -137,36 +137,10 @@ function getRankChangeDisplay(change: number | undefined) {
 // Creator Table Row Component
 function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
   const latest = creator.latestTracking;
+  const [, setLocation] = useLocation();
 
-  const handleViewTeam = async (creatorId: number) => {
-    try {
-      const response = await fetch(`/api/content-creators/${creatorId}/team`);
-      const teamData = await response.json();
-      
-      console.log("Team data:", teamData);
-      
-      if (teamData.error) {
-        alert(`Error: ${teamData.error}`);
-        return;
-      }
-      
-      if (teamData.picks && teamData.picks.length > 0) {
-        const formation = `${teamData.picks.filter((p: any) => p.position === 'Goalkeeper').length}-${teamData.picks.filter((p: any) => p.position === 'Defender').length}-${teamData.picks.filter((p: any) => p.position === 'Midfielder').length}-${teamData.picks.filter((p: any) => p.position === 'Forward').length}`;
-        const captain = teamData.picks.find((p: any) => p.is_captain);
-        const message = `${teamData.creator}'s Team (GW${teamData.gameweek})
-Formation: ${formation}
-Captain: ${captain?.player_name || 'Unknown'}
-Players: ${teamData.picks.length}
-${teamData.message ? '\n' + teamData.message : ''}`;
-        alert(message);
-      } else if (teamData.general_info) {
-        alert(`${teamData.creator}'s General Team Info:\nTeam Name: ${teamData.general_info.name}\nOverall Points: ${teamData.general_info.summary_overall_points}\nOverall Rank: ${teamData.general_info.summary_overall_rank?.toLocaleString()}\n\n${teamData.message}`);
-      } else {
-        alert("No team data available");
-      }
-    } catch (error) {
-      alert("Failed to fetch team data");
-    }
+  const handleViewTeam = (creatorId: number) => {
+    setLocation(`/content-creators/${creatorId}/team`);
   };
 
   const handleViewTransfers = async (creatorId: number) => {
