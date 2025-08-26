@@ -602,6 +602,21 @@ export default function AdminGoalProjections() {
         return resetVenueFactors;
       case 'market':
         return resetMarketBounds;
+      case 'final-bounds':
+        return () => {
+          if (confirm('Reset only final bounds settings to default values? Other settings will remain unchanged.')) {
+            setFormData(prev => ({ 
+              ...prev, 
+              absoluteMinGoals: 0.0,
+              absoluteMaxGoals: 7.0
+            }));
+            setHasChanges(true);
+            toast({
+              title: "Final Bounds Reset",
+              description: "Final bounds have been reset to default values.",
+            });
+          }
+        };
       default:
         return null;
     }
@@ -628,6 +643,8 @@ export default function AdminGoalProjections() {
         return 'Reset Venue Factors';
       case 'market':
         return 'Reset Market Bounds';
+      case 'final-bounds':
+        return 'Reset Final Bounds';
       default:
         return 'Reset Tab';
     }
@@ -669,13 +686,14 @@ export default function AdminGoalProjections() {
         <TabsList className="flex flex-wrap gap-1 h-auto p-1">
           <TabsTrigger value="calculation-base">Projection Model</TabsTrigger>
           <TabsTrigger value="base-xg">Base xG Settings</TabsTrigger>
-          <TabsTrigger value="attacking-multipliers">Attack Multipliers</TabsTrigger>
           <TabsTrigger value="attacking-teams">Attack Teams</TabsTrigger>
-          <TabsTrigger value="defensive-multipliers">Defense Multipliers</TabsTrigger>
-          <TabsTrigger value="defensive-teams">Defense Teams</TabsTrigger>
-          <TabsTrigger value="context">Context Multipliers</TabsTrigger>
+          <TabsTrigger value="attacking-multipliers">Attack Multipliers</TabsTrigger>
+          <TabsTrigger value="defensive-teams">Defence Teams</TabsTrigger>
+          <TabsTrigger value="defensive-multipliers">Defence Multipliers</TabsTrigger>
           <TabsTrigger value="venue">Venue Factors</TabsTrigger>
+          <TabsTrigger value="context">Context Multipliers</TabsTrigger>
           <TabsTrigger value="market">Market Bounds</TabsTrigger>
+          <TabsTrigger value="final-bounds">Final Bounds</TabsTrigger>
         </TabsList>
 
         {/* Calculation Base Tab */}
@@ -1786,6 +1804,130 @@ export default function AdminGoalProjections() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Final Bounds Tab */}
+        <TabsContent value="final-bounds" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Final Safety Bounds</CardTitle>
+                  <CardDescription>Absolute minimum and maximum goal limits applied as final safety checks</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (confirm('Reset only final bounds settings to default values? Other settings will remain unchanged.')) {
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        absoluteMinGoals: 0.0,
+                        absoluteMaxGoals: 7.0
+                      }));
+                      setHasChanges(true);
+                      toast({
+                        title: "Final Bounds Reset",
+                        description: "Final bounds have been reset to default values.",
+                      });
+                    }
+                  }}
+                  className="flex items-center gap-2"
+                  data-testid="button-reset-final-bounds"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reset Final Bounds
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Final Safety Net:</strong> These bounds are applied as the very last step in goal projection calculations to ensure no unrealistic values escape the system, regardless of how multipliers compound.
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2 font-medium">Final Bound</th>
+                        <th className="text-center p-2 font-medium">Default</th>
+                        <th className="text-center p-2 font-medium">Current</th>
+                        <th className="text-center p-2 font-medium">New Value</th>
+                        <th className="text-center p-2 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { key: 'absoluteMinGoals', name: 'Absolute Min Goals', default: 0.0, min: 0.0, max: 0.8, description: 'Hard minimum goals per match - no game can project below this' },
+                        { key: 'absoluteMaxGoals', name: 'Absolute Max Goals', default: 7.0, min: 3.0, max: 10.0, description: 'Hard maximum goals per match - no game can project above this' }
+                      ].map((setting) => {
+                        const currentValue = (formData as any)[setting.key] || setting.default;
+                        const isChanged = Math.abs(currentValue - setting.default) > 0.01;
+                        
+                        return (
+                          <tr key={setting.key} className="border-b hover:bg-muted/50">
+                            <td className="p-2">
+                              <div>
+                                <p className="font-medium">{setting.name}</p>
+                                <p className="text-sm text-muted-foreground">{setting.description}</p>
+                              </div>
+                            </td>
+                            <td className="text-center p-2">
+                              <span className="font-mono text-sm text-muted-foreground">
+                                {setting.default.toFixed(2)}
+                              </span>
+                            </td>
+                            <td className="text-center p-2">
+                              <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
+                                {currentValue.toFixed(2)}
+                              </span>
+                              {isChanged && (
+                                <div className="text-xs text-blue-600 mt-1">Modified</div>
+                              )}
+                            </td>
+                            <td className="text-center p-2">
+                              <Input
+                                type="number"
+                                step="0.1"
+                                min={setting.min}
+                                max={setting.max}
+                                value={currentValue.toFixed(2)}
+                                onChange={(e) => handleInputChange(setting.key as keyof AdminSettings, e.target.value)}
+                                className="w-20 text-center"
+                                data-testid={`input-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                              />
+                            </td>
+                            <td className="text-center p-2">
+                              <div className="flex gap-1 justify-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    handleInputChange(setting.key as keyof AdminSettings, setting.default.toString());
+                                    toast({
+                                      title: "Reset to Default",
+                                      description: `${setting.name} reset to ${setting.default.toFixed(2)}`,
+                                    });
+                                  }}
+                                  data-testid={`button-reset-${setting.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
+                                  title="Reset to default"
+                                >
+                                  ↺
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </CardContent>
