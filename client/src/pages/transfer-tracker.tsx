@@ -16,16 +16,21 @@ interface TransferData {
   position: string;
   current_price: number;
   ownership_percentage: number;
+  // Season totals
   net_transfers: number;
   transfers_in: number;
   transfers_out: number;
-  hourly_change_rate: number;
+  // Gameweek data
+  transfers_in_event: number;
+  transfers_out_event: number;
+  net_transfers_event: number;
+  // Calculated fields
   absolute_ownership?: number;
   net_transfers_percentage?: number;
-  transfer_rate_trend?: string;
+  net_transfers_event_percentage?: number;
 }
 
-type SortField = 'net_transfers' | 'transfers_in' | 'transfers_out' | 'ownership_percentage' | 'absolute_ownership' | 'net_transfers_percentage' | 'current_price';
+type SortField = 'net_transfers' | 'transfers_in' | 'transfers_out' | 'transfers_in_event' | 'transfers_out_event' | 'net_transfers_event' | 'ownership_percentage' | 'absolute_ownership' | 'net_transfers_percentage' | 'net_transfers_event_percentage' | 'current_price';
 type SortDirection = 'asc' | 'desc';
 
 export default function TransferTracker() {
@@ -79,24 +84,22 @@ export default function TransferTracker() {
       // Calculate additional transfer analysis fields using actual FPL total players
       const totalPlayers = bootstrapData?.total_players || 11131759; // Use actual current total as fallback
       const absoluteOwnership = Math.round((data.ownership_percentage / 100) * totalPlayers);
+      
+      // Calculate season net transfer percentage
       const netTransfersPercentage = absoluteOwnership > 0 ? 
         Math.round((data.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
       
-
-      
-
-      
-      // Determine transfer trend based on net transfers magnitude
-      const transferRateTrend = data.net_transfers > 50000 ? "Rising Fast" :
-        data.net_transfers > 10000 ? "Rising" :
-        data.net_transfers < -50000 ? "Falling Fast" :
-        data.net_transfers < -10000 ? "Falling" : "Stable";
+      // Calculate gameweek net transfers and percentage
+      const netTransfersEvent = data.transfers_in_event - data.transfers_out_event;
+      const netTransfersEventPercentage = absoluteOwnership > 0 ? 
+        Math.round((netTransfersEvent / absoluteOwnership) * 10000) / 100 : 0;
       
       return {
         ...data,
+        net_transfers_event: netTransfersEvent,
         absolute_ownership: absoluteOwnership,
         net_transfers_percentage: netTransfersPercentage,
-        transfer_rate_trend: transferRateTrend
+        net_transfers_event_percentage: netTransfersEventPercentage
       };
     });
 
@@ -113,6 +116,22 @@ export default function TransferTracker() {
         case 'net_transfers_percentage':
           aValue = a.net_transfers_percentage || 0;
           bValue = b.net_transfers_percentage || 0;
+          break;
+        case 'transfers_in_event':
+          aValue = a.transfers_in_event || 0;
+          bValue = b.transfers_in_event || 0;
+          break;
+        case 'transfers_out_event':
+          aValue = a.transfers_out_event || 0;
+          bValue = b.transfers_out_event || 0;
+          break;
+        case 'net_transfers_event':
+          aValue = a.net_transfers_event || 0;
+          bValue = b.net_transfers_event || 0;
+          break;
+        case 'net_transfers_event_percentage':
+          aValue = a.net_transfers_event_percentage || 0;
+          bValue = b.net_transfers_event_percentage || 0;
           break;
 
         default:
@@ -342,21 +361,6 @@ export default function TransferTracker() {
                       <th className="text-left p-2">Player</th>
                       <th className="text-left p-2">Team/Pos</th>
                       <th className="text-right p-2">Price</th>
-                      <th className="text-center p-2">
-                        <SortableHeader field="transfers_in" className="text-center">
-                          Transfers In
-                        </SortableHeader>
-                      </th>
-                      <th className="text-center p-2">
-                        <SortableHeader field="transfers_out" className="text-center">
-                          Transfers Out
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="net_transfers" className="text-right">
-                          Net Transfers
-                        </SortableHeader>
-                      </th>
                       <th className="text-right p-2">
                         <SortableHeader field="ownership_percentage" className="text-right">
                           Ownership %
@@ -367,14 +371,51 @@ export default function TransferTracker() {
                           Absolute Own.
                         </SortableHeader>
                       </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="net_transfers_percentage" className="text-right">
-                          Net Trans %
+                      <th className="text-center p-2 border-l border-gray-200">
+                        <div className="text-xs font-semibold text-blue-600 mb-1">SEASON TOTALS</div>
+                      </th>
+                      <th className="text-center p-2">
+                        <SortableHeader field="transfers_in" className="text-center">
+                          In
                         </SortableHeader>
                       </th>
-
                       <th className="text-center p-2">
-                        Transfer Trend
+                        <SortableHeader field="transfers_out" className="text-center">
+                          Out
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="net_transfers" className="text-right">
+                          Net
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="net_transfers_percentage" className="text-right">
+                          Net %
+                        </SortableHeader>
+                      </th>
+                      <th className="text-center p-2 border-l border-gray-200">
+                        <div className="text-xs font-semibold text-green-600 mb-1">THIS GAMEWEEK</div>
+                      </th>
+                      <th className="text-center p-2">
+                        <SortableHeader field="transfers_in_event" className="text-center">
+                          In
+                        </SortableHeader>
+                      </th>
+                      <th className="text-center p-2">
+                        <SortableHeader field="transfers_out_event" className="text-center">
+                          Out
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="net_transfers_event" className="text-right">
+                          Net
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="net_transfers_event_percentage" className="text-right">
+                          Net %
+                        </SortableHeader>
                       </th>
                     </tr>
                   </thead>
@@ -406,6 +447,17 @@ export default function TransferTracker() {
                         <td className="p-3 text-right font-medium">
                           {formatPrice(transfer.current_price)}
                         </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium">{transfer.ownership_percentage?.toFixed(1) || "0.0"}%</span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-medium">{transfer.absolute_ownership?.toLocaleString() || "0"}</span>
+                        </td>
+                        
+                        {/* Season totals section */}
+                        <td className="p-3 text-center border-l border-gray-200">
+                          <div className="text-xs text-muted-foreground">Season</div>
+                        </td>
                         <td className="p-3 text-center">
                           <span className="font-medium text-green-600">
                             {transfer.transfers_in?.toLocaleString() || "0"}
@@ -425,12 +477,6 @@ export default function TransferTracker() {
                           </span>
                         </td>
                         <td className="p-3 text-right">
-                          <span className="font-medium">{transfer.ownership_percentage?.toFixed(1) || "0.0"}%</span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <span className="font-medium">{transfer.absolute_ownership?.toLocaleString() || "0"}</span>
-                        </td>
-                        <td className="p-3 text-right">
                           <span className={`font-medium ${
                             transfer.net_transfers_percentage! > 0 ? "text-green-600" : 
                             transfer.net_transfers_percentage! < 0 ? "text-red-600" : "text-gray-600"
@@ -439,17 +485,35 @@ export default function TransferTracker() {
                           </span>
                         </td>
 
+                        {/* Gameweek section */}
+                        <td className="p-3 text-center border-l border-gray-200">
+                          <div className="text-xs text-muted-foreground">GW</div>
+                        </td>
                         <td className="p-3 text-center">
-                          <Badge 
-                            variant={
-                              transfer.transfer_rate_trend?.includes("Fast") ? "destructive" :
-                              transfer.transfer_rate_trend?.includes("Rising") ? "success" :
-                              transfer.transfer_rate_trend?.includes("Falling") ? "destructive" : "outline"
-                            }
-                            className="text-xs"
-                          >
-                            {transfer.transfer_rate_trend || "Stable"}
-                          </Badge>
+                          <span className="font-medium text-green-600">
+                            {transfer.transfers_in_event?.toLocaleString() || "0"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className="font-medium text-red-600">
+                            {transfer.transfers_out_event?.toLocaleString() || "0"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className={`font-medium ${
+                            (transfer.net_transfers_event || 0) > 0 ? "text-green-600" : 
+                            (transfer.net_transfers_event || 0) < 0 ? "text-red-600" : "text-gray-600"
+                          }`}>
+                            {(transfer.net_transfers_event || 0) > 0 ? "+" : ""}{transfer.net_transfers_event?.toLocaleString() || "0"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className={`font-medium ${
+                            (transfer.net_transfers_event_percentage || 0) > 0 ? "text-green-600" : 
+                            (transfer.net_transfers_event_percentage || 0) < 0 ? "text-red-600" : "text-gray-600"
+                          }`}>
+                            {(transfer.net_transfers_event_percentage || 0) > 0 ? "+" : ""}{transfer.net_transfers_event_percentage?.toFixed(2) || "0.00"}%
+                          </span>
                         </td>
                       </tr>
                     ))}
