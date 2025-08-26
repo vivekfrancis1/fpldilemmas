@@ -1031,12 +1031,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let estimatedTime = "Stable";
           
           if (netTransfers > 0) {
-            // Rising progress (can exceed 100%)
-            currentProgressPercentage = (netTransfers / adjustedRiseThreshold) * 100;
+            // Rising progress (can exceed 100%) - reduced by 80% to match industry standards
+            currentProgressPercentage = (netTransfers / adjustedRiseThreshold) * 100 * 0.2;
             progressDirection = "rise";
             
             // Calculate hourly change rate
-            hourlyChangeRate = transferVelocity / adjustedRiseThreshold * 100; // % per hour
+            hourlyChangeRate = transferVelocity / adjustedRiseThreshold * 100 * 0.2; // % per hour
             
             // Calculate expected progress by 7AM IST (next price update)
             const now = new Date();
@@ -1066,12 +1066,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               estimatedTime = "No momentum";
             }
           } else if (netTransfers < 0) {
-            // Falling progress (can exceed 100%)
-            currentProgressPercentage = (Math.abs(netTransfers) / adjustedFallThreshold) * 100;
+            // Falling progress (can exceed 100%) - reduced by 80% to match industry standards
+            currentProgressPercentage = (Math.abs(netTransfers) / adjustedFallThreshold) * 100 * 0.2;
             progressDirection = "fall";
             
             // Calculate hourly change rate
-            hourlyChangeRate = transferVelocity / adjustedFallThreshold * 100; // % per hour
+            hourlyChangeRate = transferVelocity / adjustedFallThreshold * 100 * 0.2; // % per hour
             
             // Calculate expected progress by 7AM IST
             const now = new Date();
