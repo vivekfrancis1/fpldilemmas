@@ -668,12 +668,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
+
+      
       // Enrich historical changes with FPL API data
       const enrichedChanges = historicalChanges.map((change: any) => {
         const playerData = playerMap.get(change.player_name.toLowerCase());
         
         if (playerData) {
-          return {
+          const enriched = {
             player_id: playerData.player_id,
             player_name: change.player_name,
             team_name: change.team_name || playerData.team_name,
@@ -688,10 +690,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             is_recent_change: Math.abs(playerData.cost_change_event) > 0,
             total_season_change: playerData.cost_change_start
           };
+          
+
+          
+          return enriched;
         }
         
         // Fallback for players not found in current FPL data
-        return {
+        const fallback = {
           player_id: change.player_name.hashCode ? change.player_name.hashCode() : Math.random() * 1000,
           player_name: change.player_name,
           team_name: change.team_name || "Unknown",
@@ -706,7 +712,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           is_recent_change: true,
           total_season_change: change.new_price - change.old_price
         };
+        
+
+        
+        return fallback;
       });
+      
+
       
       // Sort by most recent date first, then by price change magnitude
       enrichedChanges.sort((a: any, b: any) => {
@@ -717,6 +729,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Limit to 100 most recent changes
       const limitedChanges = enrichedChanges.slice(0, 100);
+      
+
       
       res.json(limitedChanges);
     } catch (error) {
@@ -791,13 +805,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Also try alternative parsing - looking for table rows with 4 cells
+        // More aggressive parsing approach to catch all players
+        // Look for any pattern with player data including Wood
+        const alternativePatterns = [
+          // Pattern 1: Text-based extraction after removing HTML
+          /([A-Za-zÀ-ÿ\s\.'']+?)\s+([A-Za-z\s']+?)\s+([\d\.]+)\s+([\d\.]+)/g,
+          // Pattern 2: Table cell extraction
+          /<td[^>]*>([\s\S]*?)<\/td>/g
+        ];
+        
+        // Clean the HTML section to plain text for easier parsing
+        const cleanText = sectionHtml
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        // Look for table rows more aggressively
         const rowPattern = /<tr[^>]*>[\s\S]*?<\/tr>/gi;
         const rows = sectionHtml.match(rowPattern);
         
         if (rows) {
           for (const row of rows) {
-            if (row.includes('Player') || row.includes('Team') || row.includes('Old Price')) continue;
+            if (row.includes('Player') || row.includes('Team') || row.includes('Old Price') || row.includes('New Price')) continue;
             
             const cellPattern = /<td[^>]*>([\s\S]*?)<\/td>/gi;
             const cells = [];
@@ -805,11 +838,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             while ((cellMatch = cellPattern.exec(row)) !== null) {
               const cellContent = cellMatch[1]
-                .replace(/<[^>]*>/g, '') // Remove HTML tags
+                .replace(/<img[^>]*>/gi, '') // Remove image tags specifically
+                .replace(/<[^>]*>/g, '') // Remove all other HTML tags
                 .replace(/&nbsp;/g, ' ')
                 .replace(/&amp;/g, '&')
+                .replace(/&#39;/g, "'") // Decode HTML entity for apostrophe
+                .replace(/&quot;/g, '"')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/![^)]*\)/g, '') // Remove markdown image syntax
+                .replace(/\s+/g, ' ') // Normalize whitespace
                 .trim();
-              cells.push(cellContent);
+              if (cellContent && cellContent.length > 0) {
+                cells.push(cellContent);
+              }
             }
             
             if (cells.length >= 4) {
@@ -821,7 +863,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const oldPrice = Math.round(parseFloat(oldPriceStr) * 10);
               const newPrice = Math.round(parseFloat(newPriceStr) * 10);
               
-              if (playerName && teamName && !isNaN(oldPrice) && !isNaN(newPrice)) {
+              if (playerName && teamName && !isNaN(oldPrice) && !isNaN(newPrice) && 
+                  playerName.length > 1 && teamName.length > 1) {
                 // Check if we already have this player for this date
                 const exists = changes.some(c => 
                   c.player_name === playerName && 
@@ -841,9 +884,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
+        
+        // Additional parsing for specific format matching Wood and other players
+        // Look for patterns in clean text like "Wood Nott'm Forest 7.6 7.7"
+        const textLines = cleanText.split('\n');
+        for (const line of textLines) {
+          const parts = line.trim().split(/\s+/);
+          if (parts.length >= 4) {
+            // Try to match: [PlayerName] [Team] [OldPrice] [NewPrice]
+            for (let i = 0; i <= parts.length - 4; i++) {
+              const playerName = parts[i];
+              let teamParts = [];
+              let priceIndex = -1;
+              
+              // Find where prices start (should be decimal numbers)
+              for (let j = i + 1; j < parts.length - 1; j++) {
+                if (/^\d+\.\d$/.test(parts[j]) && /^\d+\.\d$/.test(parts[j + 1])) {
+                  priceIndex = j;
+                  teamParts = parts.slice(i + 1, j);
+                  break;
+                }
+              }
+              
+              if (priceIndex > 0 && teamParts.length > 0) {
+                const teamName = teamParts.join(' ');
+                const oldPriceStr = parts[priceIndex];
+                const newPriceStr = parts[priceIndex + 1];
+                
+                const oldPrice = Math.round(parseFloat(oldPriceStr) * 10);
+                const newPrice = Math.round(parseFloat(newPriceStr) * 10);
+                
+                if (playerName && teamName && !isNaN(oldPrice) && !isNaN(newPrice)) {
+                  const exists = changes.some(c => 
+                    c.player_name === playerName && 
+                    c.change_date === changeDateStr
+                  );
+                  
+                  if (!exists) {
+                    changes.push({
+                      player_name: playerName,
+                      team_name: teamName,
+                      old_price: oldPrice,
+                      new_price: newPrice,
+                      change_date: changeDateStr
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
       }
       
       console.log(`✅ Parsed ${changes.length} historical price changes from LiveFPL`);
+      
+
       
       // If we didn't get many results, try a simple fallback approach
       if (changes.length < 10) {
