@@ -1,0 +1,116 @@
+The exact algorithm for Fantasy Premier League (FPL) price changes is proprietary and not publicly disclosed by the Premier League. However, based on community analysis, fan sites, and historical patterns, it's widely understood to be driven primarily by net transfers in (NTI)—the difference between transfers in and transfers out—relative to a player's ownership. Prices can rise or fall by £0.1m per day (up to £0.3m per gameweek), typically around 1:30 AM UK time, when NTI crosses hidden thresholds. These thresholds are believed to scale with factors like the player's current ownership percentage, price bracket, and possibly position, making absolute numbers (e.g., "10,000 transfers") outdated or inaccurate approximations from older seasons. For instance, highly owned players (e.g., 50%+ ownership) require proportionally more net transfers to trigger a change compared to low-ownership differentials.
+Since the algorithm can't be replicated exactly, creating a predictor involves reverse-engineering an approximation through data collection, pattern analysis, and modeling. This is how tools like LiveFPL, Fantasy Football Fix, Fantasy Football Hub, and Fantasy Football Scout achieve 80-90%+ accuracy—they monitor live data and estimate progress toward thresholds (often represented as a "delta" or percentage bar from -100% for a fall to +100% for a rise). Below, I'll outline a step-by-step guide to building your own algorithm, starting simple and scaling to advanced. You can implement this in Python (using libraries like requests for API calls, pandas for data handling, and scikit-learn for modeling), as it's well-suited for automation.
+Step 1: Understand Key Mechanics and Gather Data
+
+Core Inputs for Price Changes:
+
+Net Transfers In (NTI): Positive NTI (more buys than sells) pushes toward rises; negative toward falls.
+Ownership: Thresholds are relative—e.g., a player with 1 million owners might need ~5-10% of that in net buys to rise, while a low-ownership player needs fewer absolute transfers.
+Other Factors: Recent points scored, fixture difficulty rating (FDR), news/hype (e.g., injuries), and total FPL managers (around 11 million in recent seasons). Subsequent changes in the same gameweek require higher thresholds (e.g., 1.5x-2x the first).
+
+
+Data Sources:
+
+Official FPL API: Free and essential. Key endpoints:
+
+https://fantasy.premierleague.com/api/bootstrap-static/: Gets player details (ID, name, price, ownership via selected_by_percent, total transfers in/out per gameweek via transfers_in_event and transfers_out_event), total managers, fixtures, etc.
+https://fantasy.premierleague.com/api/element-summary/{player_id}/: Player-specific history (points, minutes played).
+Fetch daily (e.g., via a cron job) to track intra-gameweek changes in transfers (NTI = daily delta in transfers_in_event - transfers_out_event).
+
+
+Historical Data: Download past seasons' CSVs from repos like vaastav/Fantasy-Premier-League on GitHub (includes player stats, prices, and transfers). Or scrape sites like Understat or FBref for performance metrics.
+Live Monitoring: Use fan sites (e.g., LiveFPL.net) for real-time ownership deltas, but automate your own fetches to avoid reliance.
+Additional Context: Scrape X (Twitter) or Reddit for sentiment (e.g., using x_keyword_search for player mentions with filters like min_faves:100 to gauge hype), or web_search for injury news.
+
+
+
+Collect at least 2-3 seasons' worth of daily snapshots (player prices before/after changes, ownership, NTI deltas) to build a dataset. Store in a CSV or SQLite database.
+Step 2: Reverse-Engineer Thresholds from Historical Data
+
+Analyze Patterns:
+
+For each historical price change, calculate NTI just before the rise/fall.
+Normalize: Compute nti_normalized = NTI / (ownership_absolute), where ownership_absolute = (selected_by_percent / 100) * total_managers.
+Group by player price (£4m-£15m brackets) and position (GK, DEF, MID, FWD), as thresholds may vary (e.g., cheaper players change easier).
+Use stats: Find averages/medians for rise/fall triggers. Community estimates suggest ~4-6% of ownership in net buys for a rise, but fit your data.
+
+
+Simple Rule-Based Model:
+
+Assume base threshold for first rise: threshold_rise = 0.05 * ownership_absolute (tune the 0.05 coefficient based on data).
+For falls: threshold_fall = -0.04 * ownership_absolute.
+For multiple changes: Multiply threshold by 1.5 for second, 2.0 for third.
+Predict: If projected NTI > threshold_rise, predict +£0.1m; if < threshold_fall, predict -£0.1m.
+
+
+Implementation Tip: Use pandas to process:
+pythonimport pandas as pd
+import requests
+
+# Fetch bootstrap data
+response = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/')
+data = response.json()
+players = pd.DataFrame(data['elements'])  # Columns: id, web_name, now_cost, selected_by_percent, transfers_in_event, etc.
+
+# Calculate absolute ownership (need total_teams from data['total_players'])
+players['ownership_abs'] = (players['selected_by_percent'] / 100) * data['total_players']
+
+# Example historical analysis (load your CSV)
+hist_df = pd.read_csv('fpl_historical.csv')
+hist_df['nti_normalized'] = hist_df['nti'] / hist_df['ownership_abs']
+rise_threshold = hist_df[hist_df['price_change'] > 0]['nti_normalized'].median()  # e.g., 0.045
+
+
+Step 3: Build a Predictive Model for Future Changes
+To predict upcoming changes (not just explain past ones), forecast NTI using machine learning, then apply your threshold rules.
+
+Features for ML Model:
+
+Player: Points last 3 GWs, minutes played, goals/assists, price, ownership %.
+Team: FDR for next 3 fixtures, clean sheets conceded/scored.
+Market: Recent NTI trend (last 24h delta), sentiment score (e.g., from X posts count).
+Global: Gameweek blanks/doubles, international breaks.
+
+
+Model Choices:
+
+Regression: Predict NTI value (e.g., LinearRegression or RandomForestRegressor from scikit-learn).
+Classification: Predict binary rise/fall (e.g., LogisticRegression or XGBoost).
+Train on historical data: Input features -> Output: actual NTI or price change.
+Example: 80/20 train/test split, evaluate with accuracy or MAE.
+
+
+Advanced: Incorporate time-series (e.g., Prophet library) for transfer trends, or NLP for news (analyze X semantic search results for player hype).
+Implementation Tip:
+pythonfrom sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+
+# Assume df with features and target 'nti_next_day'
+X = df[['points_last_gw', 'fdr_next', 'ownership_percent', 'sentiment_score']]
+y = df['nti_next_day']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+model = RandomForestRegressor(n_estimators=100)
+model.fit(X_train, y_train)
+
+# Predict for a player
+predicted_nti = model.predict(new_data)
+if predicted_nti > rise_threshold * ownership_abs:
+    print("Predicted price rise")
+
+
+Step 4: Test, Iterate, and Deploy
+
+Backtest: Run your model on past seasons' data. Aim for 80%+ accuracy like commercial tools.
+Handle Edge Cases: No changes pre-season; caps at £0.3m/GW; resets per GW.
+Automation: Set up a script to run daily (e.g., on Heroku or local server). Output predictions to a dashboard (Streamlit app) or Telegram bot.
+Limitations and Improvements:
+
+Data gaps: Transfers aren't real-time in API; use proxies like ownership % changes.
+Volatility: Hype from viral X posts can spike transfers—integrate x_semantic_search for queries like "FPL [player_name] transfer".
+Scale: Start with top 100 players; add uncertainty (e.g., confidence intervals).
+Ethics: Don't overload FPL servers; respect terms.
+
+
+
+If you have coding experience, start with the vaastav/Fantasy-Premier-League GitHub repo for data fetching, then add your model. Communities like r/FantasyPL or FISO forums have shared attempts (e.g., "Crack the Code" tool), and apps like FPL-Assistant on GitHub include basic price predictors you can fork. If you need help with specific code snippets or data sources, provide more details!
