@@ -697,8 +697,7 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 1: Foundation</h4>
                       <p className="text-sm text-muted-foreground">
-                        Starts with <strong>Average Base xG per Team per Game:</strong> <span className="font-mono text-blue-600">1.35</span><br/>
-                        Universal foundation - all teams begin with the same base value
+                        <strong>Average Base xG per Team per Game:</strong> <span className="font-mono text-blue-600">1.35</span>
                       </p>
                     </div>
                     
