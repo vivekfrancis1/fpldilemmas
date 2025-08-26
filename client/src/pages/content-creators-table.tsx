@@ -143,17 +143,7 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
     setLocation(`/content-creators/${creatorId}/team`);
   };
 
-  const handleViewTransfers = async (creatorId: number) => {
-    try {
-      const response = await fetch(`/api/content-creators/${creatorId}/transfers`);
-      const transferData = await response.json();
-      
-      console.log("Transfer data:", transferData);
-      alert(`Found ${transferData.length || 0} transfers`);
-    } catch (error) {
-      alert("Failed to fetch transfer data");
-    }
-  };
+
 
   return (
     <TableRow className="hover:bg-muted/50">
@@ -195,26 +185,16 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
         {latest?.totalTransfers || "0"}
       </TableCell>
       <TableCell className="text-center">
-        <div className="flex gap-1 justify-center">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleViewTeam(creator.id)}
-            className="h-8 px-2"
-            title="View Team"
-          >
-            <Eye className="h-3 w-3" />
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleViewTransfers(creator.id)}
-            className="h-8 px-2"
-            title="View Transfers"
-          >
-            <RefreshCw className="h-3 w-3" />
-          </Button>
-        </div>
+        <Button
+          size="default"
+          variant="outline"
+          onClick={() => handleViewTeam(creator.id)}
+          className="h-9 px-4"
+          title="View Team"
+        >
+          <Eye className="h-4 w-4 mr-2" />
+          View Team
+        </Button>
       </TableCell>
     </TableRow>
   );
