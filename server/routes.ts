@@ -2453,16 +2453,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          // Phase 6: Market Bounds - Apply market constraints using admin settings
-          const marketFloor = Math.max(adminGoalSettings.absoluteMinGoals || 0.0, adminGoalSettings.minGoalsPerMatch || 0.0);
-          const marketCeiling = Math.min(adminGoalSettings.absoluteMaxGoals || 5.0, adminGoalSettings.maxGoalsPerMatch || 5.0);
+          // Phase 6: Market Bounds - Apply market multiplier constraints to base xG
+          const averageBaseXG = adminGoalSettings.averageBaseXGPerTeamPerGame || 1.35;
+          const marketFloor = averageBaseXG * (adminGoalSettings.marketFloorMultiplier || 0.40);
+          const marketCeiling = averageBaseXG * (adminGoalSettings.marketCeilingMultiplier || 2.0);
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
           
           // Phase 7: Confidence Bounds - Confidence multiplier removed from projections
           
           // Phase 8: Final Bounds - Absolute min/max limits to ensure realistic ranges
           const absoluteMin = adminGoalSettings.absoluteMinGoals || 0.0;
-          const absoluteMax = adminGoalSettings.absoluteMaxGoals || 5.0;
+          const absoluteMax = adminGoalSettings.absoluteMaxGoals || 7.0;
           const expectedGoals = Math.max(absoluteMin, Math.min(absoluteMax, baseExpectedGoals));
           
           return {
