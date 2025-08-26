@@ -45,7 +45,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: true },
         { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar, description: "Fixture difficulty analysis", popular: true },
-        { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Player price changes", popular: false }
+        { path: "/recent-price-changes", label: "Recent Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
+        { path: "/predicted-price-changes", label: "Predicted Price Changes", icon: Target, description: "All 705 players predictions", popular: false }
       ]
     },
     {

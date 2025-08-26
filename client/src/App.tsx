@@ -17,6 +17,8 @@ import LiveRank from "./pages/live-rank";
 import MyTeam from "./pages/my-team";
 import MyLeagues from "./pages/my-leagues";
 import PriceTracker from "./pages/price-tracker";
+import RecentPriceChanges from "./pages/recent-price-changes";
+import PredictedPriceChanges from "./pages/predicted-price-changes";
 import OpenFPLProjections from "./pages/openfpl-projections";
 import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
@@ -45,6 +47,8 @@ function Router() {
       <Route path="/my-team" component={MyTeam} />
       <Route path="/my-leagues" component={MyLeagues} />
       <Route path="/price-tracker" component={PriceTracker} />
+      <Route path="/recent-price-changes" component={RecentPriceChanges} />
+      <Route path="/predicted-price-changes" component={PredictedPriceChanges} />
       <Route path="/league-comparison" component={LeagueComparison} />
       <Route path="/player-statistics" component={PlayerStats} />
 
