@@ -10,7 +10,7 @@ import { db } from "../server/db";
 import { fplContentCreators } from "../shared/schema";
 
 const CONTENT_CREATORS = [
-  { name: "Let's Talk FPL (Andy Martin)", handle: "@LetsTalk_FPL", platform: "youtube", teamId: 44, description: "Popular YouTuber known for team reveals and draft advice." },
+  { name: "Let's Talk FPL", handle: "@LetsTalk_FPL", platform: "youtube", teamId: 44, description: "Popular YouTube channel known for team reveals and draft advice." },
   { name: "FPL Focal", handle: "@FPLFocal", platform: "twitter", teamId: 1964, description: "Data-driven content creator; finished around 4k last season." },
   { name: "FPL Harry", handle: "@FPL_Harry", platform: "youtube", teamId: 2524, description: "Engaging podcaster and streamer; often excels early in seasons." },
   { name: "FPL Raptor", handle: "@FPL__Raptor", platform: "youtube", teamId: 76, description: "Analytical YouTuber with strong community engagement." },

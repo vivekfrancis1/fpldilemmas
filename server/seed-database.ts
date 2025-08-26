@@ -14,11 +14,11 @@ export interface ContentCreatorSeed {
 const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
   {
     id: 1,
-    name: "Let's Talk FPL (Andy Martin)",
+    name: "Let's Talk FPL",
     handle: "@LetsTalk_FPL",
     platform: "youtube",
     managerId: 44,
-    description: "Popular YouTuber known for team reveals and draft advice."
+    description: "Popular YouTube channel known for team reveals and draft advice."
   },
   {
     id: 2,
