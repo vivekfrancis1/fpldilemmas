@@ -1,0 +1,91 @@
+Since the exact Fantasy Premier League (FPL) price change algorithm is proprietary and undisclosed, any formula is a reasoned approximation based on community insights, historical data, and patterns observed from sources like LiveFPL, Fantasy Football Fix, and r/FantasyPL discussions. These suggest that price changes (rises or falls of £0.1m per day, up to £0.3m per gameweek) are primarily driven by Net Transfers In (NTI = transfers in - transfers out), scaled by a player’s absolute ownership (total number of managers selecting the player). Additional factors like ownership percentage, player price, position, and recent performance may adjust thresholds, but NTI relative to ownership is the core driver.
+Hypothesized Formula
+Based on analysis, a plausible formula for predicting a price change could be:
+Price Rise:
+A player’s price increases by £0.1m when:
+NTI > T_rise * Ownership_Absolute
+Price Fall:
+A player’s price decreases by £0.1m when:
+NTI < -T_fall * Ownership_Absolute
+Where:
+
+NTI: Net Transfers In (transfers in - transfers out) over a 24-hour period (typically reset around 1:30 AM UK time).
+Ownership_Absolute: Total number of managers owning the player, calculated as (selected_by_percent / 100) * total_managers (e.g., ~11 million total managers in recent seasons).
+T_rise: Threshold coefficient for a price rise, estimated at ~0.045–0.06 (4.5–6% of absolute ownership).
+T_fall: Threshold coefficient for a price fall, estimated at ~0.035–0.05 (3.5–5% of absolute ownership).
+
+For subsequent changes in the same gameweek (e.g., second or third £0.1m rise/fall), thresholds likely increase (e.g., by 1.5x for the second change, 2x for the third).
+Addressing Your Example
+Your suggestion—Net transfers out > 20% of absolute ownership numbers for a £0.1m price change—is likely too high based on community estimates. For example:
+
+A player with 1 million owners (e.g., 10% of 10 million total managers) would need 200,000 net transfers out to trigger a fall. Historical data and fan tools suggest thresholds are closer to 40,000–60,000 net transfers for such a player (4–6% of ownership).
+
+Instead, a more realistic formula might look like:
+
+Price Rise: NTI > 0.05 * Ownership_Absolute
+Price Fall: NTI < -0.04 * Ownership_Absolute
+
+Example Calculation
+Let’s test with a hypothetical player:
+
+Player: Erling Haaland, £15.0m, 50% ownership.
+Ownership_Absolute: 50% of 11 million managers = 5.5 million.
+Thresholds:
+
+Rise: 0.05 * 5,500,000 = 275,000 net transfers in.
+Fall: -0.04 * 5,500,000 = -220,000 net transfers out.
+
+
+Prediction:
+
+If Haaland has 300,000 net transfers in over 24 hours, predict a +£0.1m rise.
+If he has -250,000 net transfers out, predict a -£0.1m fall.
+
+
+
+Refinements and Caveats
+
+Dynamic Thresholds: Coefficients (T_rise, T_fall) likely vary by:
+
+Price Bracket: Cheaper players (£4m–£6m) may need lower percentages (e.g., 3–4%) due to smaller transfer markets.
+Position: Goalkeepers/defenders might have slightly different thresholds than midfielders/forwards.
+Ownership Levels: Very low ownership (<1%) may trigger changes with fewer absolute transfers (e.g., 10,000–20,000).
+
+
+Other Factors:
+
+Recent points, injuries, or fixture difficulty (FDR) indirectly influence NTI by driving transfers.
+Sentiment (e.g., hype on X) can spike NTI unexpectedly—monitor via x_keyword_search for player mentions.
+
+
+Data Validation: Use historical data (e.g., from vaastav/Fantasy-Premier-League GitHub) to test. For instance, analyze NTI before known price changes in 2023/24 to estimate T_rise/T_fall (medians often fall around 4–6% for rises, 3–5% for falls).
+Limitations: The formula assumes linear scaling, but FPL may use non-linear or tiered thresholds. Daily API data (transfers_in_event - transfers_out_event) lags slightly, so real-time monitoring via ownership % changes or fan sites is needed.
+
+Implementation Sketch
+pythonimport requests
+import pandas as pd
+
+# Fetch FPL data
+response = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/')
+data = response.json()
+players = pd.DataFrame(data['elements'])
+total_managers = data['total_players']  # e.g., 11,000,000
+
+# Calculate absolute ownership and NTI
+players['ownership_abs'] = (players['selected_by_percent'] / 100) * total_managers
+players['nti'] = players['transfers_in_event'] - players['transfers_out_event']  # Daily delta
+
+# Predict price change
+T_rise, T_fall = 0.05, 0.04
+players['predicted_change'] = 0
+players.loc[players['nti'] > T_rise * players['ownership_abs'], 'predicted_change'] = 0.1
+players.loc[players['nti'] < -T_fall * players['ownership_abs'], 'predicted_change'] = -0.1
+
+print(players[['web_name', 'now_cost', 'nti', 'predicted_change']])
+Why This Formula?
+
+Community Basis: Tools like Fantasy Football Fix and LiveFPL estimate thresholds at ~4–6% of ownership for rises, slightly lower for falls, based on years of tracking.
+Scalability: Normalizing by ownership accounts for differences between high-ownership (e.g., Haaland) and low-ownership players (e.g., differentials).
+Simplicity: It’s implementable with FPL API data and testable against historical price changes.
+
+To improve, collect daily snapshots from the FPL API, backtest the formula, and adjust T_rise/T_fall per price/position. If you have specific players or seasons to analyze, I can help refine or simulate predictions!

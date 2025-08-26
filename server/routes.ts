@@ -922,28 +922,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const ownershipThresholdMultiplier = 0.05; // 5% of owned players need to transfer
           const ownedPlayers = (ownership / 100) * totalPlayers;
           
-          // Realistic FPL thresholds based on industry standards (LiveFPL/FFS)
-          // Base thresholds much higher to match real FPL algorithm
-          let riseThreshold = Math.max(
-            200000, // Minimum 200k transfers for low ownership players
-            ownedPlayers * 0.25 // 25% of owned players need to transfer in
-          );
+          // Accurate FPL thresholds based on community research (LiveFPL/FFS/r/FantasyPL)
+          // T_rise: 4.5-6% of absolute ownership, T_fall: 3.5-5% of absolute ownership
+          const riseCoefficient = 0.05; // 5% average for rises
+          const fallCoefficient = 0.04; // 4% average for falls
           
-          let fallThreshold = Math.max(
-            150000, // Minimum 150k transfers out regardless of ownership  
-            ownedPlayers * 0.15 // 15% of owned players need to transfer out
-          );
+          let riseThreshold = ownedPlayers * riseCoefficient;
+          let fallThreshold = ownedPlayers * fallCoefficient;
+          
+          // Minimum thresholds for very low ownership players
+          riseThreshold = Math.max(riseThreshold, 10000); // Minimum 10k transfers
+          fallThreshold = Math.max(fallThreshold, 8000); // Minimum 8k transfers
           
           // Apply FPL's official price change limits
           // Price changes are capped at 0.1m (1 unit) per day, 0.3m (3 units) per gameweek
           const maxDailyChange = 1; // 0.1m = 1 price unit
           const maxGameweekChange = 3; // 0.3m = 3 price units
           
-          // Adjust thresholds based on price tier (premium players much harder to move)
-          const priceMultiplier = currentPrice < 60 ? 0.6 : // Budget players easier
+          // Adjust thresholds based on price tier (community research shows modest price effects)
+          const priceMultiplier = currentPrice < 60 ? 0.85 : // Budget players slightly easier  
                                  currentPrice < 100 ? 1.0 : // Mid-price normal
-                                 currentPrice < 130 ? 2.5 : // Premium much harder
-                                 4.0; // Super premium extremely hard
+                                 currentPrice < 130 ? 1.2 : // Premium slightly harder
+                                 1.4; // Super premium harder
           
           riseThreshold *= priceMultiplier;
           fallThreshold *= priceMultiplier;
