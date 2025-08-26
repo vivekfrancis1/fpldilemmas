@@ -203,6 +203,14 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     platform: "twitter",
     managerId: 1301,
     description: "Top FPL manager with multiple top 1k finishes; contributor to The Athletic and FPL shows."
+  },
+  {
+    id: 25,
+    name: "Zophar",
+    handle: "@ZopharFPL",
+    platform: "twitter",
+    managerId: 5149,
+    description: "Co-host of The FPL Wire podcast; 8x top 10k finishes, best rank 17th overall."
   }
 ];
 
