@@ -161,17 +161,15 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
           <Badge variant={getRankBadgeVariant(latest?.overallRank)} className="mb-1">
             {latest?.overallRank ? `#${latest.overallRank.toLocaleString()}` : "N/A"}
           </Badge>
-          {creator.rankChange && (
-            <div className="text-xs">{getRankChangeDisplay(creator.rankChange)}</div>
-          )}
+          {getRankChangeDisplay(creator.rankChange)}
         </div>
       </TableCell>
       <TableCell className="text-right font-mono">
-        {latest?.overallPoints || "0"}
+        {latest?.overallPoints || "N/A"}
       </TableCell>
       <TableCell className="text-right">
         <div className="flex flex-col items-end">
-          <span className="font-mono font-bold">{latest?.gameweekPoints || "0"}</span>
+          <span className="font-mono font-bold">{latest?.gameweekPoints || "N/A"}</span>
           {latest?.gameweekRank && (
             <span className="text-xs text-muted-foreground">#{latest.gameweekRank.toLocaleString()}</span>
           )}
@@ -181,7 +179,7 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
         £{latest?.teamValue || 'N/A'}m
       </TableCell>
       <TableCell className="text-right font-mono">
-        {latest?.totalTransfers || "0"}
+        {latest?.totalTransfers || "N/A"}
       </TableCell>
       <TableCell className="text-center">
         <Button
