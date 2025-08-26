@@ -88,17 +88,19 @@ export default function TransferTracker() {
       
       // Calculate initial ownership (before any season transfers)
       // Initial Ownership = Current Absolute Ownership - Season Net Transfers
-      // If net transfers are negative (more out than in), initial ownership was higher
-      const initialOwnership = absoluteOwnership - (data.net_transfers || 0);
+      const initialOwnershipSeason = absoluteOwnership - (data.net_transfers || 0);
       
-      // Calculate season net transfer percentage
-      const netTransfersPercentage = absoluteOwnership > 0 ? 
-        Math.round((data.net_transfers / absoluteOwnership) * 10000) / 100 : 0;
-      
-      // Calculate gameweek net transfers and percentage
+      // Calculate initial ownership at gameweek start (before gameweek transfers)
       const netTransfersEvent = (data.transfers_in_event || 0) - (data.transfers_out_event || 0);
-      const netTransfersEventPercentage = absoluteOwnership > 0 ? 
-        Math.round((netTransfersEvent / absoluteOwnership) * 10000) / 100 : 0;
+      const initialOwnershipGameweek = absoluteOwnership - netTransfersEvent;
+      
+      // Calculate season net transfer percentage (as % of initial season ownership)
+      const netTransfersPercentage = initialOwnershipSeason > 0 ? 
+        Math.round((data.net_transfers / initialOwnershipSeason) * 10000) / 100 : 0;
+      
+      // Calculate gameweek net transfer percentage (as % of initial gameweek ownership)
+      const netTransfersEventPercentage = initialOwnershipGameweek > 0 ? 
+        Math.round((netTransfersEvent / initialOwnershipGameweek) * 10000) / 100 : 0;
       
 
       
@@ -106,7 +108,7 @@ export default function TransferTracker() {
         ...data,
         net_transfers_event: netTransfersEvent,
         absolute_ownership: absoluteOwnership,
-        initial_ownership: initialOwnership,
+        initial_ownership: initialOwnershipSeason,
         net_transfers_percentage: netTransfersPercentage,
         net_transfers_event_percentage: netTransfersEventPercentage
       };
