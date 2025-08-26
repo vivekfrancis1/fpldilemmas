@@ -315,19 +315,19 @@ export default function TeamCSProjections() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Team defensive strength ratings</li>
-                    <li>• Opposition attacking strength analysis</li>
+                    <li>• Team defensive performance data</li>
                     <li>• Historical clean sheet patterns</li>
-                    <li>• Fixture difficulty and venue factors</li>
+                    <li>• Opposition attacking strength</li>
+                    <li>• Fixture context factors</li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Methodology</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">Key Features</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Poisson distribution for goal probability</li>
-                    <li>• Advanced statistical clean sheet modeling</li>
-                    <li>• Home/away defensive adjustments</li>
-                    <li>• Form and injury impact analysis</li>
+                    <li>• Clean sheet probability percentages</li>
+                    <li>• Gameweek-by-gameweek analysis</li>
+                    <li>• Comparative defensive rankings</li>
+                    <li>• Updated regularly throughout season</li>
                   </ul>
                 </div>
               </div>

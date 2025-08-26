@@ -423,19 +423,19 @@ export default function TeamGoalsAgainstProjections() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Match projections with opponent expected goals</li>
-                    <li>• Team defensive statistics and form</li>
+                    <li>• Team defensive performance data</li>
                     <li>• Historical goals conceded patterns</li>
-                    <li>• Fixture difficulty and home/away factors</li>
+                    <li>• Opposition attacking strength</li>
+                    <li>• Fixture context factors</li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Defensive Analysis</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">Key Features</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Projected goals conceded per gameweek</li>
                     <li>• Lower values indicate stronger defense</li>
-                    <li>• Based on opponents' attacking projections</li>
-                    <li>• High confidence = ≤1.0 goals against per game</li>
-                    <li>• Rankings based on total goals conceded</li>
+                    <li>• Comparative defensive rankings</li>
+                    <li>• Updated regularly throughout season</li>
                   </ul>
                 </div>
               </div>

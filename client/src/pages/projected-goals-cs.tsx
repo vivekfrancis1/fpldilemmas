@@ -313,27 +313,26 @@ export default function ProjectedGoalsCS() {
           {/* Info Panel */}
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle className="text-lg">About Match Odds</CardTitle>
+              <CardTitle className="text-lg">About Match Projections</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Sports market analysis</li>
-                    <li>• Team attacking and defensive strength</li>
-                    <li>• Historical performance patterns</li>
-                    <li>• Home/away venue adjustments</li>
+                    <li>• Team performance analysis</li>
+                    <li>• Historical match data</li>
+                    <li>• Current form and statistics</li>
+                    <li>• Fixture context factors</li>
                   </ul>
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Key Metrics</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Goals: Expected goals (actual for completed games)</li>
-                    <li>• CS%: Clean sheet probability (0%/100% for completed games)</li>
-                    <li>• Result: W/L/D for completed games, PW/PL/PD for projected results</li>
-                    <li>• Color coding: Blue for high goals, Orange for high CS%</li>
-                    <li>• Updated regularly based on market movements</li>
+                    <li>• Goals: Projected team goals per match</li>
+                    <li>• CS%: Clean sheet probability percentage</li>
+                    <li>• Result: Match outcome predictions</li>
+                    <li>• Updated regularly throughout the season</li>
                   </ul>
                 </div>
               </div>

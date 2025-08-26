@@ -422,19 +422,19 @@ export default function TeamGoalProjections() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Sports market analysis and statistical modeling</li>
-                    <li>• Team attacking statistics and form</li>
+                    <li>• Team attacking performance data</li>
                     <li>• Historical goal-scoring patterns</li>
-                    <li>• Fixture difficulty and home/away factors</li>
+                    <li>• Current form and statistics</li>
+                    <li>• Fixture context factors</li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Methodology</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">Key Features</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Market-derived expected goals model</li>
-                    <li>• Poisson distribution for goal probability</li>
-                    <li>• Team strength ratings and fixture analysis</li>
-                    <li>• Confidence based on data reliability</li>
+                    <li>• Projected goals per gameweek</li>
+                    <li>• Season-long goal estimates</li>
+                    <li>• Comparative team analysis</li>
+                    <li>• Updated regularly throughout season</li>
                   </ul>
                 </div>
               </div>
