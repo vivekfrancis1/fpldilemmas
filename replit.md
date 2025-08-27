@@ -1,7 +1,7 @@
 # FPL Dilemmas
 
 ## Overview
-FPL Dilemmas is an analytics application designed for Fantasy Premier League (FPL) managers. It provides comprehensive player statistics, projections, and insights by fetching and analyzing data from the official FPL API. The application aims to empower users to make informed decisions for their fantasy football teams through intuitive data presentation, filtering, sorting, and statistical analysis capabilities. The project's ambition is to be a go-to tool for FPL managers seeking to optimize their team performance and gain a competitive edge.
+FPL Dilemmas is an analytics application for Fantasy Premier League (FPL) managers, providing comprehensive player statistics, projections, and insights by analyzing data from the official FPL API. Its purpose is to empower users to make informed decisions for their fantasy teams through intuitive data presentation, filtering, sorting, and statistical analysis, ultimately aiming to be a go-to tool for optimizing team performance and gaining a competitive edge.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -60,18 +60,15 @@ FPL Content Creators: Comprehensive tracking system with 24 creators with clean 
 
 ### Data Storage Solutions
 - **Primary Storage**: In-memory storage (Map and object caching).
-- **Database Configuration**: Drizzle ORM for PostgreSQL (Neon Database) for historical data.
-- **Caching Layer**: Custom `IStorage` interface with `MemStorage` for bootstrap and player summary data.
-- **Data Persistence**: Database storage for daily price tracking, transfer data, and historical records with scheduled collection.
+- **Database Configuration**: Drizzle ORM for PostgreSQL (Neon Database) for historical data and daily price tracking.
+- **Data Persistence**: Automated daily collection of player prices, ownership, and transfer data.
 - **Data Consistency**: All projection tools use deterministic calculations based on team ID and gameweek seeds.
-- **Daily Price Tracking**: Automated system fetches and stores player prices, ownership, and transfer data daily at 7:30 AM IST, calculating transfer differences and historical trends.
 
 ### API Integration
 - **External API**: Official Fantasy Premier League API (`https://fantasy.premierleague.com/api`).
 - **Key Endpoints**: `/bootstrap-static/`, `/element-summary/:playerId`, `/api/players/historical/:season`, `/api/seasons`.
 - **Data Validation**: Zod schemas for type-safe API response parsing.
 - **Historical Data**: Fetches previous seasons' data from `history_past` field.
-- **Error Handling**: Comprehensive error handling with user-friendly messages.
 
 ### Type Safety & Validation
 - **Schema Validation**: Zod schemas in `shared/schema.ts` for API responses.
@@ -108,4 +105,3 @@ FPL Content Creators: Comprehensive tracking system with 24 creators with clean 
 
 ### External APIs
 - **FPL API**: Official Fantasy Premier League API.
-- **Data Source**: Real-time data from `https://fantasy.premierleague.com/api`.
