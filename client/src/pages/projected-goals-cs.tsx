@@ -249,7 +249,22 @@ export default function ProjectedGoalsCS() {
                                 <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">HOME</span>
                               </div>
                               <div className="flex items-center space-x-2 sm:space-x-4">
-                                {/* Show RESULT first for finished matches */}
+                                <div className="text-center">
+                                  <div className="text-xs font-semibold text-gray-600 mb-1">GOALS</div>
+                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.homeTeam.expectedGoals)}`}>
+                                    {match.homeTeam.expectedGoals.toFixed(2)}
+                                  </div>
+                                </div>
+                                {/* Only show CS% for upcoming matches */}
+                                {!match.finished && (
+                                  <div className="text-center">
+                                    <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
+                                    <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
+                                      {match.homeTeam.cleanSheetOdds}%
+                                    </div>
+                                  </div>
+                                )}
+                                {/* Only show RESULT for finished matches */}
                                 {match.finished && (
                                   <div className="text-center">
                                     <div className="text-xs font-semibold text-gray-600 mb-1">RESULT</div>
@@ -258,21 +273,6 @@ export default function ProjectedGoalsCS() {
                                     </div>
                                   </div>
                                 )}
-                                {/* Show CS% first for upcoming matches */}
-                                {!match.finished && (
-                                  <div className="text-center">
-                                    <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
-                                    <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
-                                      {Math.round(match.homeTeam.cleanSheetOdds)}%
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="text-center">
-                                  <div className="text-xs font-semibold text-gray-600 mb-1">GOALS</div>
-                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.homeTeam.expectedGoals)}`}>
-                                    {match.homeTeam.expectedGoals.toFixed(2)}
-                                  </div>
-                                </div>
                               </div>
                             </div>
 
@@ -297,7 +297,7 @@ export default function ProjectedGoalsCS() {
                                   <div className="text-center">
                                     <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
                                     <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
-                                      {Math.round(match.awayTeam.cleanSheetOdds)}%
+                                      {match.awayTeam.cleanSheetOdds}%
                                     </div>
                                   </div>
                                 )}
