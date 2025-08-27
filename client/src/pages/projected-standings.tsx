@@ -6,8 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-
-
 interface TeamStanding {
   id: number;
   name: string;
@@ -58,32 +56,6 @@ export default function ProjectedStandings() {
     if (position === 7) return 'UECL';
     if (position >= 18) return 'REL';
     return '';
-  };
-
-  const getTeamLogo = (shortName: string) => {
-    const teamLogos: { [key: string]: string } = {
-      'ARS': '/team-logos/arsenal.svg',
-      'AVL': '/team-logos/aston-villa.svg',
-      'BOU': '/team-logos/bournemouth.svg',
-      'BRE': '/team-logos/brentford.svg',
-      'BHA': '/team-logos/brighton.svg',
-      'CHE': '/team-logos/chelsea.svg',
-      'CRY': '/team-logos/crystal-palace.svg',
-      'EVE': '/team-logos/everton.svg',
-      'FUL': '/team-logos/fulham.svg',
-      'IPS': '/team-logos/ipswich.svg',
-      'LEI': '/team-logos/leicester.svg',
-      'LIV': '/team-logos/liverpool.svg',
-      'MCI': '/team-logos/manchester-city.svg',
-      'MUN': '/team-logos/manchester-united.svg',
-      'NEW': '/team-logos/newcastle.svg',
-      'NFO': '/team-logos/nottingham-forest.svg',
-      'SOU': '/team-logos/southampton.svg',
-      'TOT': '/team-logos/tottenham.svg',
-      'WHU': '/team-logos/west-ham.svg',
-      'WOL': '/team-logos/wolves.svg',
-    };
-    return teamLogos[shortName] || '/team-logos/arsenal.svg'; // fallback to arsenal logo
   };
 
   if (isLoading || standingsLoading) {
@@ -210,12 +182,7 @@ export default function ProjectedStandings() {
                         </td>
                         
                         <td className="px-4 py-4">
-                          <div className="flex items-center gap-3">
-                            <img 
-                              src={getTeamLogo(team.shortName)} 
-                              alt={`${team.name} logo`}
-                              className="w-8 h-8 object-contain"
-                            />
+                          <div className="flex items-center">
                             <div>
                               <div className="text-sm font-medium text-gray-900">{team.name}</div>
                               <div className="text-xs text-gray-500">{team.shortName}</div>
