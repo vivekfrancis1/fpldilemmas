@@ -83,29 +83,29 @@ export default function ProjectedGoalsCS() {
   }, [filteredProjections]);
 
   const getGoalsColor = (goals: number) => {
-    if (goals >= 2.5) return 'bg-gradient-to-r from-purple-600 to-purple-700 text-white border-2 border-purple-800 ring-2 ring-purple-300';
-    if (goals >= 2.0) return 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white border-2 border-indigo-800 ring-2 ring-indigo-300';
-    if (goals >= 1.5) return 'bg-gradient-to-r from-blue-600 to-blue-700 text-white border-2 border-blue-800 ring-2 ring-blue-300';
-    if (goals >= 1.0) return 'bg-gradient-to-r from-slate-500 to-slate-600 text-white border-2 border-slate-700 ring-2 ring-slate-300';
-    return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white border-2 border-gray-600 ring-2 ring-gray-300';
+    if (goals >= 2.5) return 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border border-purple-300';
+    if (goals >= 2.0) return 'bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-800 border border-indigo-300';
+    if (goals >= 1.5) return 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-300';
+    if (goals >= 1.0) return 'bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border border-slate-300';
+    return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 border border-gray-300';
   };
 
   const getCSColor = (percentage: number) => {
-    if (percentage >= 50) return 'bg-gradient-to-r from-amber-600 to-amber-700 text-white border-2 border-amber-800 ring-2 ring-amber-300';
-    if (percentage >= 40) return 'bg-gradient-to-r from-orange-600 to-orange-700 text-white border-2 border-orange-800 ring-2 ring-orange-300';
-    if (percentage >= 30) return 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-2 border-yellow-700 ring-2 ring-yellow-300';
-    if (percentage >= 20) return 'bg-gradient-to-r from-slate-500 to-slate-600 text-white border-2 border-slate-700 ring-2 ring-slate-300';
-    return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white border-2 border-gray-600 ring-2 ring-gray-300';
+    if (percentage >= 50) return 'bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 border border-amber-300';
+    if (percentage >= 40) return 'bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border border-orange-300';
+    if (percentage >= 30) return 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300';
+    if (percentage >= 20) return 'bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border border-slate-300';
+    return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 border border-gray-300';
   };
 
   const getResultColor = (result: string) => {
-    if (result === 'win') return 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-800 ring-2 ring-green-300';
-    if (result === 'loss') return 'bg-gradient-to-r from-red-600 to-red-700 text-white border-2 border-red-800 ring-2 ring-red-300';
-    if (result === 'draw') return 'bg-gradient-to-r from-gray-600 to-gray-700 text-white border-2 border-gray-800 ring-2 ring-gray-300';
-    if (result === 'projected_win') return 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-2 border-emerald-700 ring-2 ring-emerald-300';
-    if (result === 'projected_loss') return 'bg-gradient-to-r from-rose-500 to-rose-600 text-white border-2 border-rose-700 ring-2 ring-rose-300';
-    if (result === 'projected_draw') return 'bg-gradient-to-r from-slate-500 to-slate-600 text-white border-2 border-slate-700 ring-2 ring-slate-300';
-    return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white border-2 border-gray-600';
+    if (result === 'win') return 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300';
+    if (result === 'loss') return 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300';
+    if (result === 'draw') return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 border border-gray-300';
+    if (result === 'projected_win') return 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800 border border-emerald-300';
+    if (result === 'projected_loss') return 'bg-gradient-to-r from-rose-100 to-rose-200 text-rose-800 border border-rose-300';
+    if (result === 'projected_draw') return 'bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border border-slate-300';
+    return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 border border-gray-300';
   };
 
   const getResultText = (result: string) => {
@@ -132,7 +132,7 @@ export default function ProjectedGoalsCS() {
 
   return (
     
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50/30">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
         <div className="w-full max-w-7xl mx-auto px-2 py-2">
           {/* Header - Compact */}
           <div className="text-center mb-3">
@@ -207,11 +207,11 @@ export default function ProjectedGoalsCS() {
 
           {/* Projections Table - Compact */}
           <Card className="overflow-hidden shadow-md border-0">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
+            <CardHeader className="bg-gradient-to-r from-blue-100 to-purple-100 text-gray-800 py-2 border-b border-gray-200">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Target className="h-4 w-4" />
                 Match Projections
-                <Badge className="bg-white/20 text-white border-white/30 ml-auto text-xs">
+                <Badge className="bg-blue-50 text-blue-700 border border-blue-200 ml-auto text-xs">
                   {filteredProjections.length} matches
                 </Badge>
               </CardTitle>
