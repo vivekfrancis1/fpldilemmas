@@ -215,7 +215,7 @@ export default function Home() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-blue-600" />
-                  Fixture Analyzer
+                  Fixture Difficulty Rating
                 </CardTitle>
                 <CardDescription>
                   Check upcoming fixtures and difficulty ratings to plan your transfers and captaincy choices.
