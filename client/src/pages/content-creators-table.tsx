@@ -169,11 +169,6 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
           {creator.playerName || 'N/A'}
         </span>
       </TableCell>
-      <TableCell className="text-left">
-        <span className="text-sm text-blue-600 dark:text-blue-400">
-          {creator.managerName || 'N/A'}
-        </span>
-      </TableCell>
       <TableCell className="text-right">
         <div className="flex flex-col items-end">
           <Badge variant={getRankBadgeVariant(latest?.overallRank)} className="mb-1">
@@ -371,7 +366,6 @@ export default function ContentCreators() {
                   {sortBy === 'managerId' && <ArrowUpDown className="h-4 w-4 inline ml-1" />}
                 </TableHead>
                 <TableHead className="text-left">Player Name</TableHead>
-                <TableHead className="text-left">Team Name</TableHead>
                 <TableHead 
                   className="text-right cursor-pointer hover:bg-muted/50" 
                   onClick={() => handleSort('rank')}
