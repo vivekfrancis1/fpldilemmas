@@ -150,7 +150,9 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
       <TableCell>
         {creator.playerName || 'N/A'}
       </TableCell>
-      {/* Team Name cell completely removed */}
+      <TableCell className="hidden">
+        {creator.managerName || 'N/A'}
+      </TableCell>
       <TableCell className="text-right">
         <div className="flex flex-col items-end">
           <Badge variant={getRankBadgeVariant(latest?.overallRank)} className="mb-1">
@@ -355,7 +357,7 @@ function ContentCreators() {
                   <TableHead className="w-[200px]">Creator</TableHead>
                   <TableHead className="text-right">Manager ID</TableHead>
                   <TableHead className="w-[150px]">Player Name</TableHead>
-                  {/* Team Name column hidden as requested */}
+                  <TableHead className="hidden">Team Name</TableHead>
                   <TableHead className="text-right cursor-pointer hover:bg-muted/50" onClick={() => setSortBy('rank')}>
                     Overall Rank {sortBy === 'rank' && <ArrowUpDown className="h-4 w-4 inline ml-1" />}
                   </TableHead>
