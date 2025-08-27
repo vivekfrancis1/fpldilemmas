@@ -273,43 +273,45 @@ export default function MyTeam() {
 
   if (!bootstrapData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading FPL data...</p>
+      
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading FPL data...</p>
+          </div>
         </div>
-      </div>
+      
     );
   }
 
   return (
-    <div className="fpl-page-wrapper">
-      <div className="fpl-container fpl-content-area fpl-content-spacing fpl-section-spacing">
-        {/* Page Header */}
-        <div className="fpl-page-header">
-          <div className="fpl-page-header-content">
-            <div className="fpl-page-title">
-              <Users className="h-8 w-8" />
-              <h1>My Team</h1>
+    
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30 overflow-x-hidden">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+          <div className="space-y-6">
+            {/* Header Section */}
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4">
+                <Users className="h-8 w-8 text-emerald-600" />
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">My Team</h1>
+              <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+                View your current FPL team formation, players, and squad value.
+              </p>
             </div>
-            <p className="fpl-page-subtitle">
-              View your current FPL team formation, players, squad value, and tactical setup
-            </p>
-            <p className="fpl-page-tagline">
-              "Analytical tools to beat the deadline blues"
-            </p>
-          </div>
-        </div>
 
-        {/* Search Section */}
-        <div className="fpl-card">
-          <div className="fpl-card-header">
-            <div className="fpl-card-title">
-              <Target className="h-5 w-5" />
-              Manager Search
-            </div>
-          </div>
-          <div className="fpl-card-content">
+            {/* Search Section */}
+            <Card className="bg-white shadow-sm border border-gray-100">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-emerald-600" />
+                  Manager Search
+                </CardTitle>
+                <CardDescription>
+                  Enter your FPL Manager ID to view your current team.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                     data-testid="input-manager-id"
@@ -329,27 +331,26 @@ export default function MyTeam() {
                   </Button>
                 </div>
                 
-              {getManagerIdFromCache() && (
-                <p className="mt-3 text-green-600 font-medium text-sm">
-                  ✓ Your last searched Manager ID ({getManagerIdFromCache()}) is automatically loaded
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+                {getManagerIdFromCache() && (
+                  <p className="mt-3 text-green-600 font-medium text-sm">
+                    ✓ Your last searched Manager ID ({getManagerIdFromCache()}) is automatically loaded
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Error Display */}
-        {teamError && (
-          <div className="fpl-error">
-            <div className="fpl-error-content">
-              Failed to load team data. Please check the Manager ID and try again.
-            </div>
-          </div>
-        )}
+            {/* Error Display */}
+            {teamError && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  Failed to load team data. Please check the Manager ID and try again.
+                </AlertDescription>
+              </Alert>
+            )}
 
-        {/* Team Overview Cards */}
-        {teamData && (
-          <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
+            {/* Team Overview Cards */}
+            {teamData && (
+              <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
                 <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between gap-2">
@@ -658,6 +659,6 @@ export default function MyTeam() {
           </div>
         </div>
       </div>
-    </div>
+    
   );
 }
