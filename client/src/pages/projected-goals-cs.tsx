@@ -276,32 +276,10 @@ export default function ProjectedGoalsCS() {
                               </div>
                             </div>
 
-                            {/* Away Team */}
+                            {/* Away Team - Mirror layout */}
                             <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <span className="font-bold text-base text-gray-800">
-                                  {match.awayTeam.shortName}
-                                </span>
-                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">AWAY</span>
-                              </div>
                               <div className="flex items-center space-x-2 sm:space-x-4">
-                                <div className="text-center">
-                                  <div className="text-xs font-semibold text-gray-600 mb-1">GOALS</div>
-                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.awayTeam.expectedGoals)}`}>
-                                    {match.awayTeam.expectedGoals.toFixed(2)}
-                                  </div>
-                                </div>
-                                {/* Only show CS% for upcoming matches */}
-                                {!match.finished && (
-                                  <div className="text-center">
-                                    <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
-                                    <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
-                                      {Math.round(match.awayTeam.cleanSheetOdds)}%
-                                    </div>
-                                  </div>
-                                )}
-                                {/* Only show RESULT for finished matches */}
+                                {/* Show RESULT first for finished matches */}
                                 {match.finished && (
                                   <div className="text-center">
                                     <div className="text-xs font-semibold text-gray-600 mb-1">RESULT</div>
@@ -310,6 +288,28 @@ export default function ProjectedGoalsCS() {
                                     </div>
                                   </div>
                                 )}
+                                {/* Show CS% first for upcoming matches */}
+                                {!match.finished && (
+                                  <div className="text-center">
+                                    <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
+                                    <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
+                                      {Math.round(match.awayTeam.cleanSheetOdds)}%
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="text-center">
+                                  <div className="text-xs font-semibold text-gray-600 mb-1">GOALS</div>
+                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.awayTeam.expectedGoals)}`}>
+                                    {match.awayTeam.expectedGoals.toFixed(2)}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">AWAY</span>
+                                <span className="font-bold text-base text-gray-800">
+                                  {match.awayTeam.shortName}
+                                </span>
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                               </div>
                             </div>
                           </div>
