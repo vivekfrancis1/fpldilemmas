@@ -3099,10 +3099,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get all players for this team with xG data
           const teamPlayersWithXG = playersWithXG.filter((p: any) => p.team === teamId);
           
-          // Filter out players with insufficient data (minimum 200 minutes)
-          const qualifiedPlayers = teamPlayersWithXG.filter(p => p.totalMinutes >= 200);
+          // Filter out players with insufficient data (minimum 45 minutes - adjust for early season)
+          const qualifiedPlayers = teamPlayersWithXG.filter(p => p.totalMinutes >= 45);
           
-          console.log(`DEBUG: Team ${team.name} - ${qualifiedPlayers.length}/${teamPlayersWithXG.length} players qualify (≥200 mins)`);
+          console.log(`DEBUG: Team ${team.name} - ${qualifiedPlayers.length}/${teamPlayersWithXG.length} players qualify (≥45 mins)`);
           
           // Calculate raw contributions using enhanced methodology
           const playerContributions: { [playerId: number]: { name: string, position: string, contribution: number, xgPer90: number, expectedMinutes: number } } = {};
@@ -3182,136 +3182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Skip legacy code completely - new methodology has been applied
       // LEGACY CODE DISABLED - xG methodology now used exclusively
       
-      // LEGACY CODE COMPLETELY DISABLED - xG methodology handles everything
-      const skipLegacyCode = true;
-      if (!skipLegacyCode) {
-        // All legacy historical data processing is disabled
-        console.log("DEBUG: Legacy code would run here but is disabled by xG methodology");
-      }
-      
-      // Now distribute goal shares among players for each team using 3-year weighted approach
-      Object.keys(teamSeasonTotals).forEach(teamIdStr => {
-        const teamId = parseInt(teamIdStr);
-        const team = bootstrapData.teams.find((t: any) => t.id === teamId);
-        
-        if (team && teamSeasonTotals[teamId].expectedGoals > 0) {
-          // Get all players for this team
-          const teamPlayers = bootstrapData.elements.filter((p: any) => p.team === teamId);
-          
-          // Calculate weighted goal shares using equal weighting (33.33% each year)
-          const weightedPlayerShares: { [playerId: number]: { name: string, position: string, totalWeightedShare: number, totalWeight: number } } = {};
-          
-          // Initialize all current players
-          teamPlayers.forEach(player => {
-            weightedPlayerShares[player.id] = {
-              name: `${player.first_name} ${player.second_name}`,
-              position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
-              totalWeightedShare: 0,
-              totalWeight: 0
-            };
-          });
-          
-          // Process all three data sources with equal weighting (33.33% each)
-          const allSeasons = ["current", "2024/25", "2023/24"];
-          
-          allSeasons.forEach(season => {
-            const seasonData = historicalData[season];
-            if (seasonData && seasonData.length > 0) {
-              // Calculate goal shares for this team in this season
-              let teamSeasonPlayers: any[] = [];
-              
-              if (season === "current") {
-                // For current season, use team ID
-                teamSeasonPlayers = seasonData.filter(p => p.team === teamId);
-              } else {
-                // For historical seasons, use team name matching since team IDs may differ
-                const currentTeamName = team.name;
-                teamSeasonPlayers = seasonData.filter(p => {
-                  const playerTeamName = p.team_name || p.teamName;
-                  return playerTeamName === currentTeamName;
-                });
-              }
-              
-              const teamTotalGoals = teamSeasonPlayers.reduce((sum, p) => sum + (p.goals_scored || p.goalsScored || 0), 0);
-              
-              console.log(`DEBUG: ${season} - Team ${team.name} has ${teamSeasonPlayers.length} players with ${teamTotalGoals} total goals`);
-              
-              if (teamTotalGoals > 0) {
-                teamSeasonPlayers.forEach(player => {
-                  const goals = player.goals_scored || player.goalsScored || 0;
-                  if (goals > 0) {
-                    const seasonGoalShare = (goals / teamTotalGoals) * 100;
-                    
-                    let matchedPlayerId: number | null = null;
-                    
-                    if (season === "current") {
-                      // Direct ID match for current season
-                      matchedPlayerId = player.id;
-                    } else {
-                      // Name matching for historical seasons
-                      const playerName = (getPlayerName(player.playerId) || `${player.first_name || player.firstName} ${player.second_name || player.secondName}`).toLowerCase();
-                      for (const currentPlayer of teamPlayers) {
-                        const currentName = (getPlayerName(currentPlayer.id) || `${currentPlayer.first_name} ${currentPlayer.second_name}`).toLowerCase();
-                        if (currentName === playerName) {
-                          matchedPlayerId = currentPlayer.id;
-                          break;
-                        }
-                      }
-                    }
-                    
-                    // Add weighted goal share if player matched
-                    if (matchedPlayerId && weightedPlayerShares[matchedPlayerId]) {
-                      weightedPlayerShares[matchedPlayerId].totalWeightedShare += seasonGoalShare * 0.3333;
-                      weightedPlayerShares[matchedPlayerId].totalWeight += 0.3333;
-                      console.log(`DEBUG: Added ${season} data for ${weightedPlayerShares[matchedPlayerId].name}: ${seasonGoalShare.toFixed(1)}% (${goals} goals of ${teamTotalGoals})`);
-                    } else if (season !== "current") {
-                      console.log(`DEBUG: Could not match historical player ${playerName} from ${season} (${goals} goals) to current squad`);
-                    }
-                  }
-                });
-              } else {
-                console.log(`DEBUG: No goals found for team ${team.name} in ${season}`);
-              }
-            }
-          });
-          
-          // Calculate final goal shares and projected goals
-          const finalPlayerShares: any[] = [];
-          
-          Object.keys(weightedPlayerShares).forEach(playerIdStr => {
-            const playerId = parseInt(playerIdStr);
-            const playerData = weightedPlayerShares[playerId];
-            
-            // Calculate final weighted goal share
-            const finalGoalShare = playerData.totalWeight > 0 ? 
-              playerData.totalWeightedShare / playerData.totalWeight : 0;
-            
-            if (finalGoalShare > 0) {
-              finalPlayerShares.push({
-                id: playerId,
-                name: playerData.name,
-                position: playerData.position,
-                goalShare: finalGoalShare
-              });
-            }
-          });
-          
-          // Normalize to ensure team totals 100%
-          const totalShare = finalPlayerShares.reduce((sum, p) => sum + p.goalShare, 0);
-          if (totalShare > 0) {
-            finalPlayerShares.forEach(player => {
-              player.goalShare = (player.goalShare / totalShare) * 100;
-              const projectedGoals = (teamSeasonTotals[teamId].expectedGoals * player.goalShare / 100);
-              
-              teamSeasonTotals[teamId].players[player.id] = {
-                name: player.name,
-                position: player.position,
-                projectedGoals: Math.round(projectedGoals * 100) / 100
-              };
-            });
-          }
-        }
-      });
+      console.log("DEBUG: All goal share calculations completed using xG per 90 methodology");
       
       const response = Object.keys(teamSeasonTotals).map(teamIdStr => {
         const teamId = parseInt(teamIdStr);
