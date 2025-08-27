@@ -443,26 +443,7 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="cost_change_start" label="Price Δ Start" />
               </th>
-              {!isHistoricalSeason && (
-                <th className="px-2 py-3 text-center min-w-[80px] font-semibold text-gray-900 text-xs sm:text-sm">
-                  EP This
-                </th>
-              )}
-              {!isHistoricalSeason && (
-                <th className="px-2 py-3 text-center min-w-[80px] font-semibold text-gray-900 text-xs sm:text-sm">
-                  EP Next
-                </th>
-              )}
-              {!isHistoricalSeason && (
-                <th className="px-2 py-3 text-center min-w-[80px] font-semibold text-gray-900 text-xs sm:text-sm">
-                  Squad #
-                </th>
-              )}
-              {!isHistoricalSeason && (
-                <th className="px-2 py-3 text-center min-w-[80px] font-semibold text-gray-900 text-xs sm:text-sm">
-                  Status
-                </th>
-              )}
+
             </tr>
           </thead>
           <tbody>
@@ -580,14 +561,7 @@ export default function PlayerStatsTable({
                       </span>
                     </div>
                   </td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.ep_this || '-'}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.ep_next || '-'}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.squad_number || '-'}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm">
-                    <Badge variant={(player.status === "a" || !player.status) ? "default" : player.status === "d" ? "secondary" : "destructive"}>
-                      {player.status === "a" ? "Available" : player.status === "d" ? "Doubtful" : player.status ? "Unavailable" : "Available"}
-                    </Badge>
-                  </td>
+
                 </tr>
               );
             })}
