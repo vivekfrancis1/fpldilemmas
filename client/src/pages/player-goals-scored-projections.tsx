@@ -32,16 +32,10 @@ export default function PlayerGoalsScoredProjections() {
     staleTime: 10 * 60 * 1000,
   });
 
-  // Get current gameweek and calculate next 6 gameweeks
-  const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 3;
-    const currentEvent = bootstrapData.events.find((event: any) => event.is_current);
-    return currentEvent ? currentEvent.id : 3;
-  }, [bootstrapData]);
-
+  // Fixed to show GW3-GW8 (next 6 gameweeks)
   const next6Gameweeks = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => currentGameweek + i).filter(gw => gw <= 38);
-  }, [currentGameweek]);
+    return [3, 4, 5, 6, 7, 8];
+  }, []);
 
   // Filter and sort data
   const filteredProjections = useMemo(() => {
@@ -297,14 +291,43 @@ export default function PlayerGoalsScoredProjections() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Player</th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">Team</th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">Pos</th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">6 GW</th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">Season</th>
+                    <th 
+                      className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
+                      onClick={() => setSortBy("name")}
+                    >
+                      Player {sortBy === "name" && "↓"}
+                    </th>
+                    <th 
+                      className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
+                      onClick={() => setSortBy("team")}
+                    >
+                      Team {sortBy === "team" && "↓"}
+                    </th>
+                    <th 
+                      className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
+                      onClick={() => setSortBy("position")}
+                    >
+                      Pos {sortBy === "position" && "↓"}
+                    </th>
+                    <th 
+                      className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
+                      onClick={() => setSortBy("total")}
+                    >
+                      6 GW {sortBy === "total" && "↓"}
+                    </th>
+                    <th 
+                      className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
+                      onClick={() => setSortBy("season")}
+                    >
+                      Season {sortBy === "season" && "↓"}
+                    </th>
                     {next6Gameweeks.map(gw => (
-                      <th key={gw} className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[60px]">
-                        GW{gw}
+                      <th 
+                        key={gw} 
+                        className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[60px] cursor-pointer hover:bg-gray-50"
+                        onClick={() => setSortBy(`gw${gw}`)}
+                      >
+                        GW{gw} {sortBy === `gw${gw}` && "↓"}
                       </th>
                     ))}
                   </tr>
@@ -353,19 +376,35 @@ export default function PlayerGoalsScoredProjections() {
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t-2 border-gray-300 bg-gray-100">
+                  <tr className="border-t border-gray-200 bg-blue-50">
                     <td className="py-3 px-4 font-bold text-gray-900" colSpan={3}>
-                      TOTALS
+                      6 GW TOTAL
                     </td>
                     <td className="py-3 px-2 text-center font-bold text-blue-600">
                       {totalGoals.overallTotal.toFixed(2)}
+                    </td>
+                    <td className="py-3 px-2 text-center font-bold text-gray-600">
+                      -
+                    </td>
+                    {next6Gameweeks.map(gw => (
+                      <td key={gw} className="py-3 px-2 text-center font-bold text-blue-600">
+                        {(totalGoals.gameweekTotals[gw] || 0).toFixed(2)}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-t border-gray-200 bg-green-50">
+                    <td className="py-3 px-4 font-bold text-gray-900" colSpan={3}>
+                      SEASON TOTAL
+                    </td>
+                    <td className="py-3 px-2 text-center font-bold text-gray-600">
+                      -
                     </td>
                     <td className="py-3 px-2 text-center font-bold text-green-600">
                       {totalGoals.seasonTotal.toFixed(2)}
                     </td>
                     {next6Gameweeks.map(gw => (
-                      <td key={gw} className="py-3 px-2 text-center font-bold text-gray-900">
-                        {(totalGoals.gameweekTotals[gw] || 0).toFixed(2)}
+                      <td key={gw} className="py-3 px-2 text-center font-bold text-gray-600">
+                        -
                       </td>
                     ))}
                   </tr>

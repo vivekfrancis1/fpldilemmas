@@ -46,6 +46,7 @@ FPL Content Creators: Updated terminology from "Team ID" to "Manager ID" through
 
 ### Feature Specifications
 - **Player Projections**: AI-powered projection model for minutes, goals, assists, clean sheets, bonus points, and CBIT% for upcoming weeks. Goals and assists derived from Goal Share and Assist Share tools.
+- **Player Goals Scored Projections**: Individual player goal projections for next 6 gameweeks (GW3-GW8) with 2 decimal precision, showing both 6-gameweek and season totals. Uses same styling and functionality as Team Goals Scored with clickable column headers for sorting.
 - **Match Projections**: Data aggregator displaying projected goals and clean sheet odds for each team by gameweek.
 - **Team Goal/Clean Sheet Projections**: Advanced team-level forecasting using 8-phase spread betting market analysis and statistical modeling.
 - **Goal/Assist Share**: Dedicated tools showing team expected goals/assists breakdown by player percentage share, extended to 6 gameweeks with historical data.
