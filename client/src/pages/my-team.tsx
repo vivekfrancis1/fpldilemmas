@@ -181,25 +181,16 @@ export default function MyTeam() {
   };
 
   const getDifficultyColor = (difficulty: number): string => {
-    switch (difficulty) {
-      case 1: return 'bg-green-500';
-      case 2: return 'bg-green-400';
-      case 3: return 'bg-yellow-400';
-      case 4: return 'bg-orange-400';
-      case 5: return 'bg-red-500';
-      default: return 'bg-gray-400';
-    }
+    if (difficulty === 1) return "bg-green-600 text-white"; // Very Easy - Dark Green (softer)
+    if (difficulty === 2) return "bg-green-100 text-green-800"; // Easy - Light Green
+    if (difficulty === 3) return "bg-gray-100 text-gray-800"; // Medium - Grey
+    if (difficulty === 4) return "bg-red-100 text-red-800"; // Hard - Light Red
+    return "bg-red-600 text-white"; // Very Hard (5) - Dark Red (softer)
   };
 
   const getDifficultyTextColor = (difficulty: number): string => {
-    switch (difficulty) {
-      case 1: return 'text-green-700';
-      case 2: return 'text-green-600';
-      case 3: return 'text-yellow-700';
-      case 4: return 'text-orange-700';
-      case 5: return 'text-red-700';
-      default: return 'text-gray-700';
-    }
+    // This function is now redundant as colors are handled in getDifficultyColor
+    return '';
   };
 
   const getCurrentGameweek = (): number => {
@@ -520,7 +511,7 @@ export default function MyTeam() {
                                             {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
                                               <div 
                                                 key={idx}
-                                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} text-white`}
+                                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
                                                 title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
                                               >
                                                 <span>{fixture.opponent}</span>
@@ -600,7 +591,7 @@ export default function MyTeam() {
                                       {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
                                         <div 
                                           key={idx}
-                                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} text-white`}
+                                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
                                           title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
                                         >
                                           <span>{fixture.opponent}</span>
