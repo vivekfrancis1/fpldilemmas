@@ -6,27 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-// Import team logos
-import arsenalLogo from "@/assets/team-logos/arsenal.png";
-import astonVillaLogo from "@/assets/team-logos/aston-villa.png";
-import bournemouthLogo from "@/assets/team-logos/bournemouth.png";
-import brentfordLogo from "@/assets/team-logos/brentford.png";
-import brightonLogo from "@/assets/team-logos/brighton.png";
-import chelseaLogo from "@/assets/team-logos/chelsea.png";
-import crystalPalaceLogo from "@/assets/team-logos/crystal-palace.png";
-import evertonLogo from "@/assets/team-logos/everton.png";
-import fulhamLogo from "@/assets/team-logos/fulham.png";
-import ipswichLogo from "@/assets/team-logos/ipswich.png";
-import leicesterLogo from "@/assets/team-logos/leicester.png";
-import liverpoolLogo from "@/assets/team-logos/liverpool.png";
-import manchesterCityLogo from "@/assets/team-logos/manchester-city.png";
-import manchesterUnitedLogo from "@/assets/team-logos/manchester-united.png";
-import newcastleLogo from "@/assets/team-logos/newcastle.png";
-import nottinghamForestLogo from "@/assets/team-logos/nottingham-forest.png";
-import southamptonLogo from "@/assets/team-logos/southampton.png";
-import tottenhamLogo from "@/assets/team-logos/tottenham.png";
-import westHamLogo from "@/assets/team-logos/west-ham.png";
-import wolvesLogo from "@/assets/team-logos/wolves.png";
+
 
 interface TeamStanding {
   id: number;
@@ -82,28 +62,28 @@ export default function ProjectedStandings() {
 
   const getTeamLogo = (shortName: string) => {
     const teamLogos: { [key: string]: string } = {
-      'ARS': arsenalLogo,
-      'AVL': astonVillaLogo,
-      'BOU': bournemouthLogo,
-      'BRE': brentfordLogo,
-      'BHA': brightonLogo,
-      'CHE': chelseaLogo,
-      'CRY': crystalPalaceLogo,
-      'EVE': evertonLogo,
-      'FUL': fulhamLogo,
-      'IPS': ipswichLogo,
-      'LEI': leicesterLogo,
-      'LIV': liverpoolLogo,
-      'MCI': manchesterCityLogo,
-      'MUN': manchesterUnitedLogo,
-      'NEW': newcastleLogo,
-      'NFO': nottinghamForestLogo,
-      'SOU': southamptonLogo,
-      'TOT': tottenhamLogo,
-      'WHU': westHamLogo,
-      'WOL': wolvesLogo,
+      'ARS': '/team-logos/arsenal.svg',
+      'AVL': '/team-logos/aston-villa.svg',
+      'BOU': '/team-logos/bournemouth.svg',
+      'BRE': '/team-logos/brentford.svg',
+      'BHA': '/team-logos/brighton.svg',
+      'CHE': '/team-logos/chelsea.svg',
+      'CRY': '/team-logos/crystal-palace.svg',
+      'EVE': '/team-logos/everton.svg',
+      'FUL': '/team-logos/fulham.svg',
+      'IPS': '/team-logos/ipswich.svg',
+      'LEI': '/team-logos/leicester.svg',
+      'LIV': '/team-logos/liverpool.svg',
+      'MCI': '/team-logos/manchester-city.svg',
+      'MUN': '/team-logos/manchester-united.svg',
+      'NEW': '/team-logos/newcastle.svg',
+      'NFO': '/team-logos/nottingham-forest.svg',
+      'SOU': '/team-logos/southampton.svg',
+      'TOT': '/team-logos/tottenham.svg',
+      'WHU': '/team-logos/west-ham.svg',
+      'WOL': '/team-logos/wolves.svg',
     };
-    return teamLogos[shortName] || arsenalLogo; // fallback to arsenal logo
+    return teamLogos[shortName] || '/team-logos/arsenal.svg'; // fallback to arsenal logo
   };
 
   if (isLoading || standingsLoading) {
