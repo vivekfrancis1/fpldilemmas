@@ -58,6 +58,32 @@ export default function ProjectedStandings() {
     return '';
   };
 
+  const getTeamLogo = (shortName: string) => {
+    const teamLogos: { [key: string]: string } = {
+      'ARS': '🔴', // Arsenal
+      'AVL': '🦁', // Aston Villa  
+      'BOU': '🍒', // Bournemouth
+      'BRE': '🐝', // Brentford
+      'BHA': '⚪', // Brighton
+      'CHE': '🔵', // Chelsea
+      'CRY': '🦅', // Crystal Palace
+      'EVE': '🔵', // Everton
+      'FUL': '⚪', // Fulham
+      'IPS': '🔵', // Ipswich Town
+      'LEI': '🦊', // Leicester City
+      'LIV': '🔴', // Liverpool
+      'MCI': '💙', // Manchester City
+      'MUN': '🔴', // Manchester United
+      'NEW': '⚫', // Newcastle United
+      'NFO': '🔴', // Nottingham Forest
+      'SOU': '🔴', // Southampton
+      'TOT': '⚪', // Tottenham
+      'WHU': '⚒️', // West Ham United
+      'WOL': '🟠', // Wolverhampton Wanderers
+    };
+    return teamLogos[shortName] || '⚽';
+  };
+
   if (isLoading || standingsLoading) {
     return (
       
@@ -182,7 +208,10 @@ export default function ProjectedStandings() {
                         </td>
                         
                         <td className="px-4 py-4">
-                          <div className="flex items-center">
+                          <div className="flex items-center gap-3">
+                            <div className="text-xl">
+                              {getTeamLogo(team.shortName)}
+                            </div>
                             <div>
                               <div className="text-sm font-medium text-gray-900">{team.name}</div>
                               <div className="text-xs text-gray-500">{team.shortName}</div>
