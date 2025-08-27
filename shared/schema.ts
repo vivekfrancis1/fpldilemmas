@@ -549,7 +549,8 @@ export const fplContentCreators = pgTable("fpl_content_creators", {
   name: varchar("name", { length: 100 }).notNull(),
   handle: varchar("handle", { length: 50 }).notNull(), // YouTube/Twitter handle
   managerId: integer("manager_id").notNull(), // FPL manager ID
-  managerName: varchar("manager_name", { length: 100 }).notNull(),
+  managerName: varchar("manager_name", { length: 100 }).notNull(), // FPL team name
+  playerName: varchar("player_name", { length: 100 }), // Player's real name (first + last)
   platform: varchar("platform", { length: 50 }).notNull(), // YouTube, Twitter, etc.
   description: text("description"),
   website: varchar("website", { length: 255 }),

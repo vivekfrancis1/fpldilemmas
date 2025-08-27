@@ -60,6 +60,7 @@ type FPLCreator = {
   handle: string;
   managerId: number;
   managerName: string;
+  playerName?: string;
   platform: string;
   description?: string;
   website?: string;
@@ -164,7 +165,12 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
         </span>
       </TableCell>
       <TableCell className="text-left">
-        <span className="text-sm">
+        <span className="text-sm font-medium">
+          {creator.playerName || 'N/A'}
+        </span>
+      </TableCell>
+      <TableCell className="text-left">
+        <span className="text-sm text-blue-600 dark:text-blue-400">
           {creator.managerName || 'N/A'}
         </span>
       </TableCell>
@@ -352,7 +358,8 @@ export default function ContentCreators() {
               <TableRow>
                 <TableHead className="w-[300px]">Creator</TableHead>
                 <TableHead className="text-center">Manager ID</TableHead>
-                <TableHead className="text-left">Manager Name</TableHead>
+                <TableHead className="text-left">Player Name</TableHead>
+                <TableHead className="text-left">Team Name</TableHead>
                 <TableHead 
                   className="text-right cursor-pointer hover:bg-muted/50" 
                   onClick={() => handleSort('rank')}
