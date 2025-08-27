@@ -257,9 +257,6 @@ export default function PredictedScores() {
                         Away Team
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Expected Goals
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
                     </tr>
@@ -317,14 +314,6 @@ export default function PredictedScores() {
                                match.awayTeam.result === 'loss' ? (match.finished ? 'L' : 'PL') :
                                (match.finished ? 'D' : 'PD')}
                             </Badge>
-                          </div>
-                        </td>
-                        
-                        
-                        <td className="px-4 py-4 text-center text-sm text-gray-600">
-                          {match.totalExpectedGoals.toFixed(2)}
-                          <div className="text-xs text-gray-500">
-                            ({match.totalPredictedGoals} predicted)
                           </div>
                         </td>
                         
