@@ -351,27 +351,27 @@ export default function MyTeam() {
             {teamData && (
               <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
                 <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="flex items-center justify-between">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-emerald-700 mb-1 truncate">Formation</p>
-                        <p className="text-2xl sm:text-3xl font-bold text-emerald-900 truncate" data-testid="text-formation">
+                        <p className="text-xs sm:text-sm font-medium text-emerald-700 mb-1 truncate">Formation</p>
+                        <p className="text-xl sm:text-2xl font-bold text-emerald-900 truncate" data-testid="text-formation">
                           {getFormationString()}
                         </p>
                       </div>
-                      <div className="p-2 sm:p-3 bg-emerald-200 rounded-full flex-shrink-0 ml-2">
-                        <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-700" />
+                      <div className="p-1.5 sm:p-2 bg-emerald-200 rounded-full flex-shrink-0">
+                        <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-700" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="flex items-center justify-between">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-green-700 mb-1 truncate">Squad Value</p>
-                        <p className="text-2xl sm:text-3xl font-bold text-green-900 truncate" data-testid="text-squad-value">
+                        <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Squad Value</p>
+                        <p className="text-xl sm:text-2xl font-bold text-green-900 truncate" data-testid="text-squad-value">
                           {formatPrice(getTotalTeamValue())}
                         </p>
                         {teamData.transfers && (
@@ -380,19 +380,19 @@ export default function MyTeam() {
                           </p>
                         )}
                       </div>
-                      <div className="p-2 sm:p-3 bg-green-200 rounded-full flex-shrink-0 ml-2">
-                        <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-green-700" />
+                      <div className="p-1.5 sm:p-2 bg-green-200 rounded-full flex-shrink-0">
+                        <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-700" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="flex items-center justify-between">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-blue-700 mb-1 truncate">Transfers</p>
-                        <p className="text-2xl sm:text-3xl font-bold text-blue-900 truncate" data-testid="text-transfers">
+                        <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Transfers</p>
+                        <p className="text-xl sm:text-2xl font-bold text-blue-900 truncate" data-testid="text-transfers">
                           {teamData.transfers ? `${teamData.transfers.made}/${teamData.transfers.limit}` : '0/1'}
                         </p>
                         {teamData.transfers && teamData.transfers.cost > 0 && (
@@ -401,42 +401,42 @@ export default function MyTeam() {
                           </p>
                         )}
                       </div>
-                      <div className="p-2 sm:p-3 bg-blue-200 rounded-full flex-shrink-0 ml-2">
-                        <Star className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700" />
+                      <div className="p-1.5 sm:p-2 bg-blue-200 rounded-full flex-shrink-0">
+                        <Star className="h-4 w-4 sm:h-5 sm:w-5 text-blue-700" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="flex items-center justify-between">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-orange-700 mb-1 truncate">GW2 Points</p>
-                        <p className="text-2xl sm:text-3xl font-bold text-orange-900 truncate" data-testid="text-gw2-points">
+                        <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">GW2 Points</p>
+                        <p className="text-xl sm:text-2xl font-bold text-orange-900 truncate" data-testid="text-gw2-points">
                           {getGW2Points() !== null ? getGW2Points() : '-'}
                         </p>
                         <p className="text-xs text-orange-600 mt-1 truncate">Gameweek 2</p>
                       </div>
-                      <div className="p-2 sm:p-3 bg-orange-200 rounded-full flex-shrink-0 ml-2">
-                        <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-orange-700" />
+                      <div className="p-1.5 sm:p-2 bg-orange-200 rounded-full flex-shrink-0">
+                        <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-orange-700" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 shadow-sm">
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="flex items-center justify-between">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-indigo-700 mb-1 truncate">Total Points</p>
-                        <p className="text-2xl sm:text-3xl font-bold text-indigo-900 truncate" data-testid="text-total-points">
+                        <p className="text-xs sm:text-sm font-medium text-indigo-700 mb-1 truncate">Total Points</p>
+                        <p className="text-xl sm:text-2xl font-bold text-indigo-900 truncate" data-testid="text-total-points">
                           {getTotalPoints()}
                         </p>
                         <p className="text-xs text-indigo-600 mt-1 truncate">All gameweeks</p>
                       </div>
-                      <div className="p-2 sm:p-3 bg-indigo-200 rounded-full flex-shrink-0 ml-2">
-                        <Star className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-700" />
+                      <div className="p-1.5 sm:p-2 bg-indigo-200 rounded-full flex-shrink-0">
+                        <Star className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-700" />
                       </div>
                     </div>
                   </CardContent>
