@@ -69,7 +69,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Third Party Projection Tools",
       items: [
-        { path: "/season-projections", label: "Season Goal Involvements", icon: TrendingUp, description: "Season-long goal involvements", popular: false },
         { path: "/openfpl-projections", label: "OpenFPL Player Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false }
       ]
     },
