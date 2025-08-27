@@ -38,9 +38,6 @@ export default function Captain() {
             <p className="fpl-page-subtitle">
               Enhanced with historical captaincy data (2016-2024) and advanced statistical modeling for optimal captain selection
             </p>
-            <p className="fpl-page-tagline">
-              "Analytical tools to beat the deadline blues"
-            </p>
           </div>
         </div>
         

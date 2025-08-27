@@ -162,9 +162,6 @@ function MyLeagues() {
             <p className="fpl-page-subtitle">
               Track your performance across all private leagues with detailed analytics and rankings
             </p>
-            <p className="fpl-page-tagline">
-              "Analytical tools to beat the deadline blues"
-            </p>
           </div>
         </div>
 

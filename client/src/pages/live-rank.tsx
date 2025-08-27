@@ -149,9 +149,6 @@ export default function LiveRank() {
             <p className="fpl-page-subtitle">
               Track your Fantasy Premier League rank and performance in real-time with comprehensive analytics
             </p>
-            <p className="fpl-page-tagline">
-              "Analytical tools to beat the deadline blues"
-            </p>
           </div>
         </div>
 

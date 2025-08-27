@@ -108,7 +108,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
               </div>
               <div className="min-w-0">
                 <h1 className="text-sm sm:text-base md:text-lg font-bold truncate">FPL Dilemmas</h1>
-                <p className="text-purple-200 text-xs hidden sm:block">Analytical tools to beat the deadline blues</p>
+                <p className="text-purple-200 text-xs hidden sm:block">Advanced FPL Analytics Platform</p>
               </div>
             </div>
             <Button

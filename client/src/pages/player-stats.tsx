@@ -83,9 +83,6 @@ export default function PlayerStats() {
             <p className="fpl-page-subtitle">
               Comprehensive player performance data and analytics for informed FPL decisions with historical season coverage
             </p>
-            <p className="fpl-page-tagline">
-              "Analytical tools to beat the deadline blues"
-            </p>
           </div>
         </div>
         

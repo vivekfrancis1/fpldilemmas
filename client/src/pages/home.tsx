@@ -14,7 +14,7 @@ export default function Home() {
             FPL Analysis Tools
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 mb-2" data-testid="text-main-subtitle">
-            Analytical tools to beat the deadline blues
+            Advanced Fantasy Premier League Analytics
           </p>
           <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto px-2" data-testid="text-main-description">
             Choose the right tool for your FPL decisions. Our most popular tools are highlighted for quick access.

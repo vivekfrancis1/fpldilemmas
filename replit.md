@@ -5,7 +5,7 @@ FPL Dilemmas is an analytics application designed for Fantasy Premier League (FP
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
-Site tagline: "Analytical tools to beat the deadline blues"
+Site tagline: Previously used "Analytical tools to beat the deadline blues" - removed from all tool headers per user request. Now uses "Advanced FPL Analytics Platform" in sidebar and home page.
 Navigation priority: My Live Rank as default landing page, with side navigation for all tools.
 Manager ID caching: All FPL manager tools (My Live Rank, My Team, My Leagues) now automatically save and pre-load the last searched Manager ID using localStorage for seamless cross-tool experience.
 My Team section: Added comprehensive team display under My FPL showing formation, squad value, transfers, and detailed player lineup with enhanced UI design.

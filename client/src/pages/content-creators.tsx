@@ -304,9 +304,6 @@ export default function ContentCreators() {
               <p className="fpl-page-subtitle">
                 Track performance of top Fantasy Premier League content creators and influencers
               </p>
-              <p className="fpl-page-tagline">
-                "Analytical tools to beat the deadline blues"
-              </p>
             </div>
           </div>
 
@@ -332,9 +329,6 @@ export default function ContentCreators() {
             </div>
             <p className="fpl-page-subtitle">
               Track performance of top Fantasy Premier League content creators and influencers
-            </p>
-            <p className="fpl-page-tagline">
-              "Analytical tools to beat the deadline blues"
             </p>
           </div>
         </div>
