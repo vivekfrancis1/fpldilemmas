@@ -222,6 +222,13 @@ export default function AdminGoalProjections() {
         averageAttackTeams: parseTeamArray(settings.averageAttackTeams) || DEFAULT_TEAM_TIERS.averageAttackTeams,
         weakAttackTeams: parseTeamArray(settings.weakAttackTeams) || DEFAULT_TEAM_TIERS.weakAttackTeams,
         promotedAttackTeams: parseTeamArray(settings.promotedAttackTeams) || DEFAULT_TEAM_TIERS.promotedAttackTeams,
+        
+        // Defense team assignments
+        eliteDefenseTeams: parseTeamArray(settings.eliteDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.eliteDefenseTeams,
+        strongDefenseTeams: parseTeamArray(settings.strongDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.strongDefenseTeams,
+        averageDefenseTeams: parseTeamArray(settings.averageDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.averageDefenseTeams,
+        weakDefenseTeams: parseTeamArray(settings.weakDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.weakDefenseTeams,
+        promotedDefenseTeams: parseTeamArray(settings.promotedDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.promotedDefenseTeams,
       };
       setFormData(settingsWithDefaults);
       setHasChanges(false);
@@ -253,11 +260,11 @@ export default function AdminGoalProjections() {
 
   // Default defensive tier assignments - Updated per user specifications
   const DEFAULT_DEFENSIVE_TIERS = {
-    eliteDefenseTeams: [1, 12], // Arsenal, Liverpool
-    strongDefenseTeams: [13, 7, 15, 16, 9], // Man City, Chelsea, Newcastle, Nott'm Forest, Everton
-    averageDefenseTeams: [2, 14, 8, 18, 10], // Aston Villa, Man Utd, Crystal Palace, Spurs, Fulham
-    weakDefenseTeams: [6, 4, 5, 19, 20], // Brighton, Bournemouth, Brentford, West Ham, Wolves
-    promotedDefenseTeams: [17, 11, 3], // Sunderland, Leeds, Burnley
+    eliteDefenseTeams: [1], // Arsenal
+    strongDefenseTeams: [12, 13, 7, 15, 16], // Liverpool, Man City, Chelsea, Newcastle, Nott'm Forest
+    averageDefenseTeams: [2, 9, 14, 18, 8, 10], // Aston Villa, Everton, Man Utd, Spurs, Crystal Palace, Fulham
+    weakDefenseTeams: [4, 5, 6, 19, 20], // Bournemouth, Brentford, Brighton, West Ham, Wolves
+    promotedDefenseTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
   };
 
   // Defensive tier assignment helper functions
