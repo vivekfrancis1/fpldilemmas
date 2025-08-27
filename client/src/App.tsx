@@ -23,7 +23,7 @@ import PriceTracker from "./pages/price-tracker";
 import RecentPriceChanges from "./pages/recent-price-changes";
 import TransferTracker from "./pages/transfer-tracker";
 import OpenFPLProjections from "./pages/openfpl-projections";
-import ContentCreators from "./pages/content-creators-table";
+import ContentCreators from "./pages/content-creators";
 import CreatorTeam from "./pages/creator-team";
 import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
