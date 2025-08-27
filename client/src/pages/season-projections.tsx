@@ -306,7 +306,7 @@ export default function SeasonProjections() {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-center">
                       <div className="text-xs text-gray-900 text-center leading-tight font-medium">
-                        {player.teamName}
+                        {player.team}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-center">
