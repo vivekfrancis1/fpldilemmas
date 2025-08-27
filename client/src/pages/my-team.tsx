@@ -615,12 +615,41 @@ export default function MyTeam() {
                                       if (!player) return null;
                                       return (
                                         <div className="flex flex-col items-center">
-                                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg ${
-                                            goalkeeper.is_captain ? 'bg-amber-500 ring-4 ring-amber-300' : 
-                                            goalkeeper.is_vice_captain ? 'bg-blue-500 ring-4 ring-blue-300' : 
-                                            'bg-yellow-600'
-                                          }`}>
-                                            {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                          <div className="relative">
+                                            {/* Jersey Shape */}
+                                            <div className={`w-14 h-16 rounded-t-xl rounded-b-md flex items-center justify-center text-xs font-bold text-white shadow-lg relative ${
+                                              goalkeeper.is_captain ? 'bg-amber-500' : 
+                                              goalkeeper.is_vice_captain ? 'bg-blue-500' : 
+                                              'bg-yellow-600'
+                                            }`}>
+                                              {/* Jersey number/initials */}
+                                              <div className="text-center">
+                                                <div className="text-sm font-black">
+                                                  {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                                </div>
+                                              </div>
+                                              
+                                              {/* Captain armband */}
+                                              {goalkeeper.is_captain && (
+                                                <div className="absolute -top-1 -right-1 w-4 h-6 bg-amber-300 rounded-sm flex items-center justify-center">
+                                                  <span className="text-xs font-bold text-amber-800">C</span>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Vice-captain badge */}
+                                              {goalkeeper.is_vice_captain && (
+                                                <div className="absolute -top-1 -right-1 w-4 h-6 bg-blue-300 rounded-sm flex items-center justify-center">
+                                                  <span className="text-xs font-bold text-blue-800">VC</span>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Jersey collar */}
+                                              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-3 bg-white/20 rounded-b-lg"></div>
+                                              
+                                              {/* Jersey sleeves */}
+                                              <div className="absolute top-2 -left-1 w-3 h-8 bg-current rounded-l-lg opacity-80"></div>
+                                              <div className="absolute top-2 -right-1 w-3 h-8 bg-current rounded-r-lg opacity-80"></div>
+                                            </div>
                                           </div>
                                           <div className="text-xs text-white bg-black/50 px-2 py-1 rounded mt-1 text-center">
                                             {player.web_name}
@@ -633,18 +662,47 @@ export default function MyTeam() {
 
                                 {/* Defenders */}
                                 <div className="absolute bottom-20 left-0 right-0">
-                                  <div className="flex justify-center gap-6">
+                                  <div className="flex justify-center gap-4">
                                     {defenders.map((pick, index) => {
                                       const player = getPlayerById(pick.element);
                                       if (!player) return null;
                                       return (
                                         <div key={pick.element} className="flex flex-col items-center">
-                                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg ${
-                                            pick.is_captain ? 'bg-amber-500 ring-4 ring-amber-300' : 
-                                            pick.is_vice_captain ? 'bg-blue-500 ring-4 ring-blue-300' : 
-                                            'bg-blue-600'
-                                          }`}>
-                                            {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                          <div className="relative">
+                                            {/* Jersey Shape */}
+                                            <div className={`w-14 h-16 rounded-t-xl rounded-b-md flex items-center justify-center text-xs font-bold text-white shadow-lg relative ${
+                                              pick.is_captain ? 'bg-amber-500' : 
+                                              pick.is_vice_captain ? 'bg-blue-500' : 
+                                              'bg-blue-600'
+                                            }`}>
+                                              {/* Jersey number/initials */}
+                                              <div className="text-center">
+                                                <div className="text-sm font-black">
+                                                  {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                                </div>
+                                              </div>
+                                              
+                                              {/* Captain armband */}
+                                              {pick.is_captain && (
+                                                <div className="absolute -top-1 -right-1 w-4 h-6 bg-amber-300 rounded-sm flex items-center justify-center">
+                                                  <span className="text-xs font-bold text-amber-800">C</span>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Vice-captain badge */}
+                                              {pick.is_vice_captain && (
+                                                <div className="absolute -top-1 -right-1 w-4 h-6 bg-blue-300 rounded-sm flex items-center justify-center">
+                                                  <span className="text-xs font-bold text-blue-800">VC</span>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Jersey collar */}
+                                              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-3 bg-white/20 rounded-b-lg"></div>
+                                              
+                                              {/* Jersey sleeves */}
+                                              <div className="absolute top-2 -left-1 w-3 h-8 bg-current rounded-l-lg opacity-80"></div>
+                                              <div className="absolute top-2 -right-1 w-3 h-8 bg-current rounded-r-lg opacity-80"></div>
+                                            </div>
                                           </div>
                                           <div className="text-xs text-white bg-black/50 px-2 py-1 rounded mt-1 text-center">
                                             {player.web_name}
@@ -657,18 +715,47 @@ export default function MyTeam() {
 
                                 {/* Midfielders */}
                                 <div className="absolute top-1/2 left-0 right-0 transform -translate-y-1/2">
-                                  <div className="flex justify-center gap-6">
+                                  <div className="flex justify-center gap-4">
                                     {midfielders.map((pick, index) => {
                                       const player = getPlayerById(pick.element);
                                       if (!player) return null;
                                       return (
                                         <div key={pick.element} className="flex flex-col items-center">
-                                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg ${
-                                            pick.is_captain ? 'bg-amber-500 ring-4 ring-amber-300' : 
-                                            pick.is_vice_captain ? 'bg-blue-500 ring-4 ring-blue-300' : 
-                                            'bg-green-600'
-                                          }`}>
-                                            {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                          <div className="relative">
+                                            {/* Jersey Shape */}
+                                            <div className={`w-14 h-16 rounded-t-xl rounded-b-md flex items-center justify-center text-xs font-bold text-white shadow-lg relative ${
+                                              pick.is_captain ? 'bg-amber-500' : 
+                                              pick.is_vice_captain ? 'bg-blue-500' : 
+                                              'bg-green-600'
+                                            }`}>
+                                              {/* Jersey number/initials */}
+                                              <div className="text-center">
+                                                <div className="text-sm font-black">
+                                                  {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                                </div>
+                                              </div>
+                                              
+                                              {/* Captain armband */}
+                                              {pick.is_captain && (
+                                                <div className="absolute -top-1 -right-1 w-4 h-6 bg-amber-300 rounded-sm flex items-center justify-center">
+                                                  <span className="text-xs font-bold text-amber-800">C</span>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Vice-captain badge */}
+                                              {pick.is_vice_captain && (
+                                                <div className="absolute -top-1 -right-1 w-4 h-6 bg-blue-300 rounded-sm flex items-center justify-center">
+                                                  <span className="text-xs font-bold text-blue-800">VC</span>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Jersey collar */}
+                                              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-3 bg-white/20 rounded-b-lg"></div>
+                                              
+                                              {/* Jersey sleeves */}
+                                              <div className="absolute top-2 -left-1 w-3 h-8 bg-current rounded-l-lg opacity-80"></div>
+                                              <div className="absolute top-2 -right-1 w-3 h-8 bg-current rounded-r-lg opacity-80"></div>
+                                            </div>
                                           </div>
                                           <div className="text-xs text-white bg-black/50 px-2 py-1 rounded mt-1 text-center">
                                             {player.web_name}
@@ -681,18 +768,47 @@ export default function MyTeam() {
 
                                 {/* Forwards */}
                                 <div className="absolute top-20 left-0 right-0">
-                                  <div className="flex justify-center gap-6">
+                                  <div className="flex justify-center gap-4">
                                     {forwards.map((pick, index) => {
                                       const player = getPlayerById(pick.element);
                                       if (!player) return null;
                                       return (
                                         <div key={pick.element} className="flex flex-col items-center">
-                                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg ${
-                                            pick.is_captain ? 'bg-amber-500 ring-4 ring-amber-300' : 
-                                            pick.is_vice_captain ? 'bg-blue-500 ring-4 ring-blue-300' : 
-                                            'bg-red-600'
-                                          }`}>
-                                            {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                          <div className="relative">
+                                            {/* Jersey Shape */}
+                                            <div className={`w-14 h-16 rounded-t-xl rounded-b-md flex items-center justify-center text-xs font-bold text-white shadow-lg relative ${
+                                              pick.is_captain ? 'bg-amber-500' : 
+                                              pick.is_vice_captain ? 'bg-blue-500' : 
+                                              'bg-red-600'
+                                            }`}>
+                                              {/* Jersey number/initials */}
+                                              <div className="text-center">
+                                                <div className="text-sm font-black">
+                                                  {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                                </div>
+                                              </div>
+                                              
+                                              {/* Captain armband */}
+                                              {pick.is_captain && (
+                                                <div className="absolute -top-1 -right-1 w-4 h-6 bg-amber-300 rounded-sm flex items-center justify-center">
+                                                  <span className="text-xs font-bold text-amber-800">C</span>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Vice-captain badge */}
+                                              {pick.is_vice_captain && (
+                                                <div className="absolute -top-1 -right-1 w-4 h-6 bg-blue-300 rounded-sm flex items-center justify-center">
+                                                  <span className="text-xs font-bold text-blue-800">VC</span>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Jersey collar */}
+                                              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-3 bg-white/20 rounded-b-lg"></div>
+                                              
+                                              {/* Jersey sleeves */}
+                                              <div className="absolute top-2 -left-1 w-3 h-8 bg-current rounded-l-lg opacity-80"></div>
+                                              <div className="absolute top-2 -right-1 w-3 h-8 bg-current rounded-r-lg opacity-80"></div>
+                                            </div>
                                           </div>
                                           <div className="text-xs text-white bg-black/50 px-2 py-1 rounded mt-1 text-center">
                                             {player.web_name}
@@ -710,27 +826,45 @@ export default function MyTeam() {
                           <div className="absolute bottom-2 left-2 bg-black/70 text-white p-3 rounded text-xs">
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-yellow-600 rounded-full"></div>
+                                <div className="w-4 h-5 bg-yellow-600 rounded-t-md rounded-b-sm relative">
+                                  <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
+                                </div>
                                 <span>Goalkeeper</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                                <div className="w-4 h-5 bg-blue-600 rounded-t-md rounded-b-sm relative">
+                                  <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
+                                </div>
                                 <span>Defender</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                                <div className="w-4 h-5 bg-green-600 rounded-t-md rounded-b-sm relative">
+                                  <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
+                                </div>
                                 <span>Midfielder</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-red-600 rounded-full"></div>
+                                <div className="w-4 h-5 bg-red-600 rounded-t-md rounded-b-sm relative">
+                                  <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
+                                </div>
                                 <span>Forward</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-amber-500 rounded-full ring-2 ring-amber-300"></div>
+                                <div className="w-4 h-5 bg-amber-500 rounded-t-md rounded-b-sm relative">
+                                  <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
+                                  <div className="absolute -top-0.5 -right-0.5 w-2 h-3 bg-amber-300 rounded-sm flex items-center justify-center">
+                                    <span className="text-[6px] font-bold text-amber-800">C</span>
+                                  </div>
+                                </div>
                                 <span>Captain</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-blue-500 rounded-full ring-2 ring-blue-300"></div>
+                                <div className="w-4 h-5 bg-blue-500 rounded-t-md rounded-b-sm relative">
+                                  <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
+                                  <div className="absolute -top-0.5 -right-0.5 w-2 h-3 bg-blue-300 rounded-sm flex items-center justify-center">
+                                    <span className="text-[6px] font-bold text-blue-800">VC</span>
+                                  </div>
+                                </div>
                                 <span>Vice Captain</span>
                               </div>
                             </div>
