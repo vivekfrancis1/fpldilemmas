@@ -300,7 +300,7 @@ export default function LiveRank() {
             <div className="fpl-card-header">
               <div className="fpl-card-title">
                 <Trophy className="h-5 w-5" />
-                Top Private League Positions
+                My Leagues
               </div>
             </div>
             <div className="fpl-card-content">
