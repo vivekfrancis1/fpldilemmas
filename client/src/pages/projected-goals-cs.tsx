@@ -278,6 +278,13 @@ export default function ProjectedGoalsCS() {
 
                             {/* Away Team - Mirror layout */}
                             <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="font-bold text-base text-gray-800">
+                                  {match.awayTeam.shortName}
+                                </span>
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">AWAY</span>
+                              </div>
                               <div className="flex items-center space-x-2 sm:space-x-4">
                                 {/* Show RESULT first for finished matches */}
                                 {match.finished && (
@@ -303,13 +310,6 @@ export default function ProjectedGoalsCS() {
                                     {match.awayTeam.expectedGoals.toFixed(2)}
                                   </div>
                                 </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">AWAY</span>
-                                <span className="font-bold text-base text-gray-800">
-                                  {match.awayTeam.shortName}
-                                </span>
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                               </div>
                             </div>
                           </div>
