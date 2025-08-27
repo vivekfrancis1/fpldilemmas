@@ -281,11 +281,12 @@ export default function PredictedScores() {
                             <span className="text-sm font-medium text-gray-900">
                               {match.homeTeam.shortName}
                             </span>
-                            <Badge className={`${getResultColor(match.homeTeam.result)} text-white text-xs`}>
-                              {match.homeTeam.result === 'win' ? (match.finished ? 'W' : 'PW') :
-                               match.homeTeam.result === 'loss' ? (match.finished ? 'L' : 'PL') :
-                               (match.finished ? 'D' : 'PD')}
-                            </Badge>
+                            {match.finished && (
+                              <Badge className={`${getResultColor(match.homeTeam.result)} text-white text-xs`}>
+                                {match.homeTeam.result === 'win' ? 'W' :
+                                 match.homeTeam.result === 'loss' ? 'L' : 'D'}
+                              </Badge>
+                            )}
                           </div>
                         </td>
                         
@@ -309,11 +310,12 @@ export default function PredictedScores() {
                             <span className="text-sm font-medium text-gray-900">
                               {match.awayTeam.shortName}
                             </span>
-                            <Badge className={`${getResultColor(match.awayTeam.result)} text-white text-xs`}>
-                              {match.awayTeam.result === 'win' ? (match.finished ? 'W' : 'PW') :
-                               match.awayTeam.result === 'loss' ? (match.finished ? 'L' : 'PL') :
-                               (match.finished ? 'D' : 'PD')}
-                            </Badge>
+                            {match.finished && (
+                              <Badge className={`${getResultColor(match.awayTeam.result)} text-white text-xs`}>
+                                {match.awayTeam.result === 'win' ? 'W' :
+                                 match.awayTeam.result === 'loss' ? 'L' : 'D'}
+                              </Badge>
+                            )}
                           </div>
                         </td>
                         
