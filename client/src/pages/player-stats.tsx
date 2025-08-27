@@ -52,75 +52,71 @@ export default function PlayerStats() {
 
   if (error) {
     return (
-      
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50/30 overflow-x-hidden">
-          <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
-            <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8 shadow-sm" data-testid="error-state">
-              <div className="flex items-center">
-                <i className="fas fa-exclamation-triangle text-red-500 mr-3"></i>
-                <div>
-                  <h3 className="text-red-800 font-medium">Failed to load player data</h3>
-                  <p className="text-red-600 text-sm mt-1">Unable to connect to FPL API. Please check your connection and try again.</p>
-                  <button 
-                    className="mt-3 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
-                    onClick={() => window.location.reload()}
-                    data-testid="button-retry"
-                  >
-                    Retry
-                  </button>
-                </div>
-              </div>
-            </div>
+      <div className="fpl-page-wrapper">
+        <div className="fpl-container fpl-content-area">
+          <div className="fpl-error" data-testid="error-state">
+            <h1 className="fpl-error-title">Failed to load player data</h1>
+            <p className="fpl-error-message">Unable to connect to FPL API. Please check your connection and try again.</p>
+            <button 
+              className="fpl-error-button"
+              onClick={() => window.location.reload()}
+              data-testid="button-retry"
+            >
+              Retry
+            </button>
           </div>
         </div>
-      
+      </div>
     );
   }
 
   return (
-    
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 overflow-x-hidden">
-        <div className="w-full max-w-7xl mx-auto px-1 sm:px-3 lg:px-4 py-2 sm:py-4 lg:py-8">
-          {/* Header Section */}
-          <div className="text-center mb-4 sm:mb-6 lg:mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full mb-3 sm:mb-4">
-              <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
+    <div className="fpl-page-wrapper">
+      <div className="fpl-container fpl-content-area fpl-section-spacing">
+        {/* Page Header */}
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <BarChart3 className="h-8 w-8" />
+              <h1>Player Statistics</h1>
             </div>
-            <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-4 px-2" data-testid="text-page-title">
-              Player Statistics
-            </h1>
-            <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed px-2" data-testid="text-page-description">
-              Comprehensive player performance data and analytics for informed FPL decisions. 
-              Filter, sort, and analyze every player in the Premier League.
+            <p className="fpl-page-subtitle">
+              Comprehensive player performance data and analytics for informed FPL decisions with historical season coverage
             </p>
-            
-            {/* Season Selector */}
-            <div className="flex justify-center mt-4 sm:mt-6 px-2">
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
-                <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-                  <SelectTrigger className="w-40 sm:w-48" data-testid="select-season">
-                    <SelectValue placeholder="Select season" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="current">
-                      <div className="flex items-center space-x-2">
-                        <span>2025-26 (Current)</span>
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                          Live
-                        </Badge>
-                      </div>
+            <p className="fpl-page-tagline">
+              "Analytical tools to beat the deadline blues"
+            </p>
+          </div>
+        </div>
+        
+        {/* Season Selector */}
+        <div className="fpl-card mb-6">
+          <div className="fpl-card-content">
+            <div className="flex items-center justify-center gap-3">
+              <Calendar className="h-5 w-5 text-slate-500" />
+              <Select value={selectedSeason} onValueChange={setSelectedSeason}>
+                <SelectTrigger className="w-48" data-testid="select-season">
+                  <SelectValue placeholder="Select season" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="current">
+                    <div className="flex items-center space-x-2">
+                      <span>2025-26 (Current)</span>
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                        Live
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                  {seasons?.sort((a, b) => b.localeCompare(a)).map((season) => (
+                    <SelectItem key={season} value={season}>
+                      {season}
                     </SelectItem>
-                    {seasons?.sort((a, b) => b.localeCompare(a)).map((season) => (
-                      <SelectItem key={season} value={season}>
-                        {season}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+        </div>
 
           {/* Quick Stats Overview */}
           <div className="mb-6 sm:mb-8">

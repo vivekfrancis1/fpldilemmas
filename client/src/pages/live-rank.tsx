@@ -137,34 +137,37 @@ export default function LiveRank() {
   const error = managerError || historyError;
 
   return (
-    
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30 overflow-x-hidden">
-        <div className="w-full max-w-7xl mx-auto px-1 sm:px-3 lg:px-4 py-2 sm:py-4 lg:py-8">
-          <div className="space-y-6">
-            {/* Header Section */}
-            <div className="text-center mb-4 sm:mb-6 lg:mb-8">
-              <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-emerald-100 rounded-full mb-3 sm:mb-4">
-                <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-emerald-600" />
-              </div>
-              <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-4 px-2">Live Rank Tracker</h1>
-              <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed px-2">
-                Track your FPL rank in real-time. Enter your manager ID to see your current position.
-              </p>
+    <div className="fpl-page-wrapper">
+      <div className="fpl-container fpl-content-area fpl-section-spacing">
+        {/* Page Header */}
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Trophy className="h-8 w-8" />
+              <h1>My Live Rank</h1>
             </div>
+            <p className="fpl-page-subtitle">
+              Track your Fantasy Premier League rank and performance in real-time with comprehensive analytics
+            </p>
+            <p className="fpl-page-tagline">
+              "Analytical tools to beat the deadline blues"
+            </p>
+          </div>
+        </div>
 
-            {/* Search Section */}
-            <Card className="bg-white shadow-sm border border-gray-100">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-emerald-600" />
-                  Manager Search
-                </CardTitle>
-                <CardDescription>
-                  Enter your FPL Manager ID. You can find this in your FPL URL when logged in.
-                </CardDescription>
-              </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-2">
+        {/* Search Section */}
+        <div className="fpl-card">
+          <div className="fpl-card-header">
+            <div className="fpl-card-title">
+              <Target className="h-5 w-5" />
+              Manager Search
+            </div>
+          </div>
+          <div className="fpl-card-content">
+            <p className="fpl-text-body mb-4">
+              Enter your FPL Manager ID. You can find this in your FPL URL when logged in.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
               <Input
                 data-testid="input-manager-id"
                 placeholder="Enter Manager ID (e.g., 123456)"
@@ -177,16 +180,16 @@ export default function LiveRank() {
                 data-testid="button-search-manager"
                 onClick={handleSearch} 
                 disabled={!managerId.trim() || isLoading}
-                className="sm:px-6"
+                className="fpl-button-primary"
               >
                 {isLoading ? "Searching..." : "Search"}
               </Button>
             </div>
             
-            <div className="mt-4 text-sm text-muted-foreground">
-              <p className="font-medium">How to find your Manager ID:</p>
-              <ol className="list-decimal list-inside space-y-1 mt-2">
-                <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">fantasy.premierleague.com</a></li>
+            <div className="mt-6 fpl-text-muted">
+              <p className="font-semibold mb-2">How to find your Manager ID:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">fantasy.premierleague.com</a></li>
                 <li>Sign in and go to "Pick Team" or "Points"</li>
                 <li>Your Manager ID is the number in the URL (e.g., /entry/123456/)</li>
               </ol>
@@ -196,8 +199,8 @@ export default function LiveRank() {
                 </p>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Error Display */}
         {error && (
@@ -208,18 +211,18 @@ export default function LiveRank() {
           </Alert>
         )}
 
-            {/* Manager Info and Ranks */}
-            {manager && (
-              <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-              {/* Manager Profile */}
-              <Card className="bg-white shadow-sm border border-gray-100">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Trophy className="h-5 w-5 text-amber-600" />
-                    Manager Profile
-                  </CardTitle>
-                </CardHeader>
-              <CardContent className="space-y-4">
+        {/* Manager Info and Ranks */}
+        {manager && (
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Manager Profile */}
+            <div className="fpl-card">
+              <div className="fpl-card-header">
+                <div className="fpl-card-title">
+                  <Trophy className="h-5 w-5" />
+                  Manager Profile
+                </div>
+              </div>
+              <div className="fpl-card-content space-y-4">
                 <div>
                   <h3 className="text-lg font-semibold" data-testid="text-manager-name">
                     {manager.player_first_name} {manager.player_last_name}
@@ -243,18 +246,18 @@ export default function LiveRank() {
                     <p className="text-xs sm:text-sm text-gray-600">Current Gameweek</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-              {/* Current Ranks */}
-              <Card className="bg-white shadow-sm border border-gray-100">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-blue-600" />
-                    Current Rankings
-                  </CardTitle>
-                </CardHeader>
-              <CardContent className="space-y-4">
+            {/* Current Ranks */}
+            <div className="fpl-card">
+              <div className="fpl-card-header">
+                <div className="fpl-card-title">
+                  <Activity className="h-5 w-5" />
+                  Current Rankings
+                </div>
+              </div>
+              <div className="fpl-card-content space-y-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Overall Rank</span>
@@ -289,24 +292,21 @@ export default function LiveRank() {
                     </span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         )}
 
         {/* League Standings */}
         {manager && getTopLeagues().length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <div className="fpl-card">
+            <div className="fpl-card-header">
+              <div className="fpl-card-title">
                 <Trophy className="h-5 w-5" />
                 Top Private League Positions
-              </CardTitle>
-              <CardDescription>
-                Your best positions in private leagues (top 100 only)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              </div>
+            </div>
+            <div className="fpl-card-content">
               <div className="space-y-3">
                 {getTopLeagues().map((league: any, index: number) => (
                   <div 
@@ -326,23 +326,20 @@ export default function LiveRank() {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Recent Performance */}
         {history?.current && history.current.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <div className="fpl-card">
+            <div className="fpl-card-header">
+              <div className="fpl-card-title">
                 <Calendar className="h-5 w-5" />
                 Recent Performance
-              </CardTitle>
-              <CardDescription>
-                Last 5 gameweeks performance and rank changes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              </div>
+            </div>
+            <div className="fpl-card-content">
               <div className="space-y-3">
                 {history.current.slice(-5).reverse().map((gameweek, index) => {
                   const previousGW = history.current[history.current.length - 1 - index - 1];
@@ -384,20 +381,20 @@ export default function LiveRank() {
                   );
                 })}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Previous Seasons */}
         {history?.past && history.past.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Historical Performance</CardTitle>
-              <CardDescription>
-                Your final rankings from previous seasons
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <div className="fpl-card">
+            <div className="fpl-card-header">
+              <div className="fpl-card-title">
+                <Calendar className="h-5 w-5" />
+                Historical Performance
+              </div>
+            </div>
+            <div className="fpl-card-content">
               <div className="grid gap-3 md:grid-cols-2">
                 {history.past.slice(-4).reverse().map((season, index) => (
                   <div 
@@ -419,12 +416,11 @@ export default function LiveRank() {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
+    </div>
     
   );
 }

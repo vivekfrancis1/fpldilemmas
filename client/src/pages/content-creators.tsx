@@ -292,19 +292,28 @@ export default function ContentCreators() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">FPL Content Creators</h1>
-            <p className="text-muted-foreground">
-              Track top FPL content creators
-            </p>
+      <div className="fpl-page-wrapper">
+        <div className="fpl-container fpl-content-area">
+          {/* Page Header */}
+          <div className="fpl-page-header">
+            <div className="fpl-page-header-content">
+              <div className="fpl-page-title">
+                <Users className="h-8 w-8" />
+                <h1>FPL Content Creators</h1>
+              </div>
+              <p className="fpl-page-subtitle">
+                Track performance of top Fantasy Premier League content creators and influencers
+              </p>
+              <p className="fpl-page-tagline">
+                "Analytical tools to beat the deadline blues"
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p>Loading content creators...</p>
+
+          {/* Loading State */}
+          <div className="fpl-loading">
+            <RefreshCw className="fpl-loading-spinner" />
+            <p className="fpl-loading-text">Loading content creators data...</p>
           </div>
         </div>
       </div>
@@ -312,46 +321,55 @@ export default function ContentCreators() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">FPL Content Creators</h1>
-          <p className="text-muted-foreground">
-            Track top FPL content creators
-          </p>
+    <div className="fpl-page-wrapper">
+      <div className="fpl-container fpl-content-area fpl-section-spacing">
+        {/* Page Header */}
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Users className="h-8 w-8" />
+              <h1>FPL Content Creators</h1>
+            </div>
+            <p className="fpl-page-subtitle">
+              Track performance of top Fantasy Premier League content creators and influencers
+            </p>
+            <p className="fpl-page-tagline">
+              "Analytical tools to beat the deadline blues"
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href="/">
-            <Button variant="outline" size="sm">
-              <Home className="h-4 w-4 mr-2" />
-              Back to Home
+
+        {/* Controls */}
+        <div className="fpl-controls">
+          <div className="fpl-controls-left">
+            <Button
+              onClick={() => refreshDataMutation.mutate()}
+              disabled={refreshDataMutation.isPending}
+              className="fpl-button-primary"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshDataMutation.isPending ? 'animate-spin' : ''}`} />
+              {refreshDataMutation.isPending ? 'Refreshing...' : 'Refresh FPL Data'}
             </Button>
-          </Link>
+            <Link href="/">
+              <Button variant="outline" className="fpl-button-secondary">
+                <Home className="h-4 w-4 mr-2" />
+                Back to Home
+              </Button>
+            </Link>
+          </div>
+          <div className="fpl-controls-right">
+            <p className="fpl-text-muted">
+              Click column headers to sort • Showing {sortedCreators?.length || 0} creators
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* Controls */}
-      <div className="flex items-center justify-between">
-        <Button
-          onClick={() => refreshDataMutation.mutate()}
-          disabled={refreshDataMutation.isPending}
-          variant="outline"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshDataMutation.isPending ? 'animate-spin' : ''}`} />
-          {refreshDataMutation.isPending ? 'Refreshing...' : 'Refresh FPL Data'}
-        </Button>
-
-        <div className="text-sm text-muted-foreground">
-          Click column headers to sort • Showing {sortedCreators?.length || 0} creators
-        </div>
-      </div>
-
-      {/* Content Creators Table */}
-      {sortedCreators && sortedCreators.length > 0 ? (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
+        {/* Content Creators Table */}
+        {sortedCreators && sortedCreators.length > 0 ? (
+          <div className="fpl-table-container">
+            <div className="fpl-table-scroll">
+              <Table>
+                <TableHeader>
               <TableRow>
                 <TableHead className="w-[300px]">Creator</TableHead>
                 <TableHead 
@@ -386,26 +404,26 @@ export default function ContentCreators() {
                 <TableHead className="text-right">Team Value</TableHead>
                 <TableHead className="text-right">Transfers</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedCreators.map((creator) => (
-                <CreatorTableRow key={creator.id} creator={creator} />
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <Card className="bg-gray-50">
-          <CardContent className="flex flex-col items-center justify-center py-8">
-            <Users className="h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Content Creators Found</h3>
-            <p className="text-gray-500 text-center max-w-md">
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {sortedCreators.map((creator) => (
+                  <CreatorTableRow key={creator.id} creator={creator} />
+                ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        ) : (
+          <div className="fpl-empty">
+            <Users className="fpl-empty-icon" />
+            <h3 className="fpl-empty-title">No Content Creators Found</h3>
+            <p className="fpl-empty-message">
               Get started by adding some FPL content creators to track their performance.
             </p>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
