@@ -131,32 +131,32 @@ export default function ProjectedGoalsCS() {
   return (
     
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50/30">
-        <div className="w-full max-w-6xl mx-auto px-4 py-8">
+        <div className="w-full max-w-6xl mx-auto px-4 py-4">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-              <Target className="h-8 w-8 text-blue-600" />
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-2">
+              <Target className="h-6 w-6 text-blue-600" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-page-title">
               {startGameweek === endGameweek ? 
                 `PL GW${startGameweek}: Match Projections` : 
                 `PL GW${startGameweek}-${endGameweek}: Match Projections`}
             </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
+            <p className="text-sm text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
               Goals and clean sheets for gameweeks {startGameweek} to {endGameweek} - actual results for completed games, projections for upcoming games
             </p>
           </div>
 
           {/* Controls */}
-          <Card className="mb-6 shadow-md border-0">
-            <CardContent className="p-6">
-              <div className="flex flex-wrap gap-6 items-center">
+          <Card className="mb-4 shadow-md border-0">
+            <CardContent className="p-3">
+              <div className="flex flex-wrap gap-4 items-center">
 
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-blue-600" />
-                  <label className="text-sm font-semibold text-gray-700">Starting Gameweek:</label>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-600" />
+                  <label className="text-xs font-semibold text-gray-700">From:</label>
                   <Select value={startGameweek} onValueChange={setStartGameweek}>
-                    <SelectTrigger className="w-28 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                    <SelectTrigger className="w-20 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -167,11 +167,11 @@ export default function ProjectedGoalsCS() {
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-blue-600" />
-                  <label className="text-sm font-semibold text-gray-700">Ending Gameweek:</label>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-600" />
+                  <label className="text-xs font-semibold text-gray-700">To:</label>
                   <Select value={endGameweek} onValueChange={setEndGameweek}>
-                    <SelectTrigger className="w-28 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                    <SelectTrigger className="w-20 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -182,11 +182,11 @@ export default function ProjectedGoalsCS() {
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Filter className="h-5 w-5 text-blue-600" />
-                  <label className="text-sm font-semibold text-gray-700">Team:</label>
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-blue-600" />
+                  <label className="text-xs font-semibold text-gray-700">Team:</label>
                   <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                    <SelectTrigger className="w-36 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                    <SelectTrigger className="w-28 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -205,11 +205,11 @@ export default function ProjectedGoalsCS() {
 
           {/* Projections Table */}
           <Card className="overflow-hidden shadow-lg border-0">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Target className="h-6 w-6" />
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Target className="h-5 w-5" />
                 Match Projections
-                <Badge className="bg-white/20 text-white border-white/30 ml-auto">
+                <Badge className="bg-white/20 text-white border-white/30 ml-auto text-xs">
                   {filteredProjections.length} matches
                 </Badge>
               </CardTitle>
@@ -222,12 +222,12 @@ export default function ProjectedGoalsCS() {
                   return (
                     <div key={groupKey}>
                       {/* Day Header */}
-                      <div className="bg-gradient-to-r from-gray-100 to-gray-50 px-3 sm:px-6 py-2 sm:py-3 border-b border-gray-200">
+                      <div className="bg-gradient-to-r from-gray-100 to-gray-50 px-4 py-2 border-b border-gray-200">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-base text-gray-800">
+                          <span className="font-bold text-sm text-gray-800">
                             GW{projections[0]?.gameweek}
                           </span>
-                          <span className="text-sm text-gray-600 font-medium">{projections.length} matches</span>
+                          <span className="text-xs text-gray-600 font-medium">{projections.length} matches</span>
                         </div>
                       </div>
                       
@@ -235,31 +235,31 @@ export default function ProjectedGoalsCS() {
                       {projections.map((match, index) => (
                         <div 
                           key={`${match.id}-${index}`} 
-                          className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-100 last:border-b-0 hover:bg-blue-50/50 transition-colors duration-200"
+                          className="px-3 py-2 border-b border-gray-100 last:border-b-0 hover:bg-blue-50/50 transition-colors duration-200"
                           data-testid={`match-row-${match.homeTeam.shortName}-${match.awayTeam.shortName}`}
                         >
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {/* Home Team */}
-                            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100">
+                            <div className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-100">
                               <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="font-bold text-base text-gray-800">
+                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                <span className="font-bold text-sm text-gray-800">
                                   {match.homeTeam.shortName}
                                 </span>
-                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">HOME</span>
+                                <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">H</span>
                               </div>
-                              <div className="flex items-center space-x-2 sm:space-x-4">
+                              <div className="flex items-center space-x-2">
                                 <div className="text-center">
-                                  <div className="text-xs font-semibold text-gray-600 mb-1">GOALS</div>
-                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.homeTeam.expectedGoals)}`}>
+                                  <div className="text-xs font-semibold text-gray-600 mb-0.5">GOALS</div>
+                                  <div className={`px-2 py-1 rounded text-xs font-bold shadow-sm ${getGoalsColor(match.homeTeam.expectedGoals)}`}>
                                     {match.homeTeam.expectedGoals.toFixed(2)}
                                   </div>
                                 </div>
                                 {/* Only show CS% for upcoming matches */}
                                 {!match.finished && (
                                   <div className="text-center">
-                                    <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
-                                    <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
+                                    <div className="text-xs font-semibold text-gray-600 mb-0.5">CS%</div>
+                                    <div className={`px-2 py-1 rounded text-xs font-bold shadow-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
                                       {match.homeTeam.cleanSheetOdds}%
                                     </div>
                                   </div>
@@ -267,8 +267,8 @@ export default function ProjectedGoalsCS() {
                                 {/* Only show RESULT for finished matches */}
                                 {match.finished && (
                                   <div className="text-center">
-                                    <div className="text-xs font-semibold text-gray-600 mb-1">RESULT</div>
-                                    <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getResultColor(match.homeTeam.result)}`}>
+                                    <div className="text-xs font-semibold text-gray-600 mb-0.5">RESULT</div>
+                                    <div className={`px-2 py-1 rounded text-xs font-bold shadow-sm ${getResultColor(match.homeTeam.result)}`}>
                                       {getResultText(match.homeTeam.result)}
                                     </div>
                                   </div>
@@ -277,26 +277,26 @@ export default function ProjectedGoalsCS() {
                             </div>
 
                             {/* Away Team */}
-                            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <div className="flex items-center justify-between p-2 bg-blue-50 rounded border border-blue-100">
                               <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <span className="font-bold text-base text-gray-800">
+                                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                <span className="font-bold text-sm text-gray-800">
                                   {match.awayTeam.shortName}
                                 </span>
-                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">AWAY</span>
+                                <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">A</span>
                               </div>
-                              <div className="flex items-center space-x-2 sm:space-x-4">
+                              <div className="flex items-center space-x-2">
                                 <div className="text-center">
-                                  <div className="text-xs font-semibold text-gray-600 mb-1">GOALS</div>
-                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getGoalsColor(match.awayTeam.expectedGoals)}`}>
+                                  <div className="text-xs font-semibold text-gray-600 mb-0.5">GOALS</div>
+                                  <div className={`px-2 py-1 rounded text-xs font-bold shadow-sm ${getGoalsColor(match.awayTeam.expectedGoals)}`}>
                                     {match.awayTeam.expectedGoals.toFixed(2)}
                                   </div>
                                 </div>
                                 {/* Only show CS% for upcoming matches */}
                                 {!match.finished && (
                                   <div className="text-center">
-                                    <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
-                                    <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
+                                    <div className="text-xs font-semibold text-gray-600 mb-0.5">CS%</div>
+                                    <div className={`px-2 py-1 rounded text-xs font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
                                       {match.awayTeam.cleanSheetOdds}%
                                     </div>
                                   </div>
@@ -304,8 +304,8 @@ export default function ProjectedGoalsCS() {
                                 {/* Only show RESULT for finished matches */}
                                 {match.finished && (
                                   <div className="text-center">
-                                    <div className="text-xs font-semibold text-gray-600 mb-1">RESULT</div>
-                                    <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getResultColor(match.awayTeam.result)}`}>
+                                    <div className="text-xs font-semibold text-gray-600 mb-0.5">RESULT</div>
+                                    <div className={`px-2 py-1 rounded text-xs font-bold shadow-sm ${getResultColor(match.awayTeam.result)}`}>
                                       {getResultText(match.awayTeam.result)}
                                     </div>
                                   </div>
