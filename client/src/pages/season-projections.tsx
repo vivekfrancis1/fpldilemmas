@@ -294,13 +294,8 @@ export default function SeasonProjections() {
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <div className="text-sm font-medium text-gray-900">
-                          {player.fullName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {player.name}
-                        </div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {player.fullName}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-center">
