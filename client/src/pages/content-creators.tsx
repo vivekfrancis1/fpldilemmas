@@ -141,7 +141,7 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
           <div>
             <div className="font-medium">{creator.name}</div>
             <div className="text-sm text-muted-foreground">{creator.handle}</div>
-            <div className="text-xs text-muted-foreground">ID: {creator.teamId}</div>
+            <div className="text-xs text-muted-foreground">ID: {creator.managerId}</div>
           </div>
         </div>
       </TableCell>
