@@ -33,7 +33,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "FPL Harry",
     handle: "@FPL_Harry",
     platform: "youtube",
-    managerId: 2524,
+    managerId: 1320,
     description: "Engaging podcaster and streamer; often excels early in seasons."
   },
   {
@@ -137,7 +137,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "FPL Pras",
     handle: "@Pras_fpl",
     platform: "twitter",
-    managerId: 1349,
+    managerId: 3570,
     description: "Podcaster on The FPL Wire; data-focused strategies."
   },
   {
@@ -153,7 +153,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "BigMan Bakar",
     handle: "@BigManBakar",
     platform: "twitter",
-    managerId: 397,
+    managerId: 963,
     description: "High-ranking player sharing advanced tactics."
   },
   {
