@@ -125,8 +125,8 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
 
   const getDifficultyColor = (difficulty: number): string => {
     if (difficulty <= 2) return "bg-green-100 text-green-800";
-    if (difficulty <= 3) return "bg-yellow-100 text-yellow-800";
-    if (difficulty <= 4) return "bg-orange-100 text-orange-800";
+    if (difficulty <= 3) return "bg-gray-100 text-gray-800";
+    if (difficulty <= 4) return "bg-gray-200 text-gray-800";
     return "bg-red-100 text-red-800";
   };
 
@@ -140,7 +140,7 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
   const getAvgDifficultyIcon = (avgDifficulty: number) => {
     if (avgDifficulty <= 2.5) return <TrendingDown className="h-4 w-4 text-green-600" />;
     if (avgDifficulty >= 3.5) return <TrendingUp className="h-4 w-4 text-red-600" />;
-    return <ArrowRight className="h-4 w-4 text-yellow-600" />;
+    return <ArrowRight className="h-4 w-4 text-gray-600" />;
   };
 
   if (isLoading || fixturesLoading) {
