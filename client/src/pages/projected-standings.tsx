@@ -160,9 +160,6 @@ export default function ProjectedStandings() {
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Pts
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Form
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -223,14 +220,6 @@ export default function ProjectedStandings() {
                         <td className="px-4 py-4 text-center text-sm font-bold text-gray-900">
                           {team.points}
                         </td>
-                        
-                        <td className="px-4 py-4 text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <Badge variant="outline" className="text-xs">
-                              {team.actualGames}A + {team.projectedGames}P
-                            </Badge>
-                          </div>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -268,12 +257,12 @@ export default function ProjectedStandings() {
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Form Column</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">Projection Details</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• A: Actual games played</li>
-                    <li>• P: Projected games remaining</li>
                     <li>• Based on current results + expected outcomes</li>
                     <li>• Goals rounded to nearest whole number</li>
+                    <li>• Updated after each gameweek</li>
+                    <li>• Combines actual and projected data</li>
                   </ul>
                 </div>
               </div>
