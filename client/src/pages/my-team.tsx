@@ -105,6 +105,12 @@ export default function MyTeam() {
     enabled: !!searchedId,
   });
 
+  // Get manager history for points data
+  const { data: historyData } = useQuery({
+    queryKey: ["/api/manager", searchedId, "history"],
+    enabled: !!searchedId,
+  });
+
   // Get fixtures for teams
   const { data: fixturesData } = useQuery({
     queryKey: ["/api/fixtures"],
@@ -237,6 +243,17 @@ export default function MyTeam() {
     }, 0);
   };
 
+  const getGW2Points = (): number | null => {
+    if (!historyData?.current || !Array.isArray(historyData.current)) return null;
+    const gw2Data = historyData.current.find((gw: any) => gw.event === 2);
+    return gw2Data?.points || null;
+  };
+
+  const getTotalPoints = (): number => {
+    if (!historyData?.current || !Array.isArray(historyData.current)) return 0;
+    return historyData.current.reduce((total: number, gw: any) => total + (gw.points || 0), 0);
+  };
+
   const sortPlayersByPosition = (picks: TeamPick[]) => {
     return picks.sort((a, b) => {
       const playerA = getPlayerById(a.element);
@@ -332,7 +349,7 @@ export default function MyTeam() {
 
             {/* Team Overview Cards */}
             {teamData && (
-              <div className="grid gap-4 sm:gap-6 lg:grid-cols-4">
+              <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-6">
                 <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
@@ -403,6 +420,40 @@ export default function MyTeam() {
                       </div>
                       <div className="p-3 bg-purple-200 rounded-full">
                         <Target className="h-6 w-6 text-purple-700" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-orange-700 mb-1">GW2 Points</p>
+                        <p className="text-3xl font-bold text-orange-900" data-testid="text-gw2-points">
+                          {getGW2Points() !== null ? getGW2Points() : '-'}
+                        </p>
+                        <p className="text-xs text-orange-600 mt-1">Gameweek 2</p>
+                      </div>
+                      <div className="p-3 bg-orange-200 rounded-full">
+                        <Trophy className="h-6 w-6 text-orange-700" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 shadow-sm">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-indigo-700 mb-1">Total Points</p>
+                        <p className="text-3xl font-bold text-indigo-900" data-testid="text-total-points">
+                          {getTotalPoints()}
+                        </p>
+                        <p className="text-xs text-indigo-600 mt-1">All gameweeks</p>
+                      </div>
+                      <div className="p-3 bg-indigo-200 rounded-full">
+                        <Star className="h-6 w-6 text-indigo-700" />
                       </div>
                     </div>
                   </CardContent>
