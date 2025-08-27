@@ -412,9 +412,9 @@ export default function MyFPLDashboard() {
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">£{formatPrice(teamData.transfers.value)}m</div>
+                      <div className="text-2xl font-bold">£{teamData?.transfers?.value ? formatPrice(teamData.transfers.value) : 'N/A'}m</div>
                       <p className="text-xs text-muted-foreground">
-                        Bank: £{formatPrice(teamData.transfers.bank)}m
+                        Bank: £{teamData?.transfers?.bank ? formatPrice(teamData.transfers.bank) : 'N/A'}m
                       </p>
                     </CardContent>
                   </Card>
@@ -440,9 +440,9 @@ export default function MyFPLDashboard() {
                       <Activity className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{teamData.transfers.made}/{teamData.transfers.limit}</div>
+                      <div className="text-2xl font-bold">{teamData?.transfers?.made || 0}/{teamData?.transfers?.limit || 0}</div>
                       <p className="text-xs text-muted-foreground">
-                        Cost: {teamData.transfers.cost} points
+                        Cost: {teamData?.transfers?.cost || 0} points
                       </p>
                     </CardContent>
                   </Card>
@@ -455,7 +455,7 @@ export default function MyFPLDashboard() {
                     <CardContent>
                       <div className="text-2xl font-bold">GW{getNextGameweek()}</div>
                       <p className="text-xs text-muted-foreground">
-                        {teamData.transfers.status}
+                        {teamData?.transfers?.status || 'N/A'}
                       </p>
                     </CardContent>
                   </Card>
@@ -470,7 +470,7 @@ export default function MyFPLDashboard() {
                   <CardContent>
                     <div className="space-y-4">
                       {["GK", "DEF", "MID", "FWD"].map(position => {
-                        const players = teamData.picks
+                        const players = (teamData?.picks || [])
                           .filter(pick => pick.position <= 11)
                           .map(pick => ({ ...pick, player: getPlayerById(pick.element) }))
                           .filter(pick => pick.player && getPositionName(pick.player.element_type) === position);
@@ -513,7 +513,7 @@ export default function MyFPLDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid gap-2">
-                      {teamData.picks
+                      {(teamData?.picks || [])
                         .filter(pick => pick.position > 11)
                         .map(pick => {
                           const player = getPlayerById(pick.element);
