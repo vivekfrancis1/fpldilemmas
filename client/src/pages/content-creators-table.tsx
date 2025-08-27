@@ -158,6 +158,16 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
           </div>
         </div>
       </TableCell>
+      <TableCell className="text-center">
+        <span className="font-mono text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+          {creator.managerId}
+        </span>
+      </TableCell>
+      <TableCell className="text-left">
+        <span className="text-sm">
+          {creator.managerName || 'N/A'}
+        </span>
+      </TableCell>
       <TableCell className="text-right">
         <div className="flex flex-col items-end">
           <Badge variant={getRankBadgeVariant(latest?.overallRank)} className="mb-1">
@@ -341,6 +351,8 @@ export default function ContentCreators() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[300px]">Creator</TableHead>
+                <TableHead className="text-center">Manager ID</TableHead>
+                <TableHead className="text-left">Manager Name</TableHead>
                 <TableHead 
                   className="text-right cursor-pointer hover:bg-muted/50" 
                   onClick={() => handleSort('rank')}
