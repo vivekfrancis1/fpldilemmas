@@ -14,7 +14,7 @@ export type SortableField =
   | "influence" | "creativity" | "threat" | "ict_index" | "event_points" 
   | "dreamteam_count" | "own_goals" | "cost_change_event" | "cost_change_event_fall"
   | "cost_change_start" | "cost_change_start_fall" | "ep_next" | "ep_this"
-  | "squad_number";
+  | "squad_number" | "defensive_contributions";
 
 export interface SortState {
   field: SortableField;

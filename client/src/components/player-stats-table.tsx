@@ -111,6 +111,7 @@ export default function PlayerStatsTable({
           case "ep_next": return parseFloat(player.ep_next || "0") || 0;
           case "ep_this": return parseFloat(player.ep_this || "0") || 0;
           case "squad_number": return player.squad_number || 0;
+          case "defensive_contributions": return (player.clean_sheets || 0) * 2 + (player.saves || 0) * 0.1 + (player.penalties_saved || 0) * 3 - (player.goals_conceded || 0) * 0.5 - (player.own_goals || 0) * 2 - (player.yellow_cards || 0) * 0.5 - (player.red_cards || 0) * 2;
           default: return player.total_points;
         }
       };
@@ -322,6 +323,9 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="clean_sheets" label="CS" />
               </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="defensive_contributions" label="Def Contrib" />
+              </th>
               {/* Defensive contributions */}
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="goals_conceded" label="GC" />
@@ -475,6 +479,18 @@ export default function PlayerStatsTable({
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{player.goals_scored || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-blue-600">{player.assists || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{player.clean_sheets || 0}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-purple-600">
+                    {formatValue(
+                      (player.clean_sheets || 0) * 2 + 
+                      (player.saves || 0) * 0.1 + 
+                      (player.penalties_saved || 0) * 3 - 
+                      (player.goals_conceded || 0) * 0.5 - 
+                      (player.own_goals || 0) * 2 - 
+                      (player.yellow_cards || 0) * 0.5 - 
+                      (player.red_cards || 0) * 2, 
+                      'decimal'
+                    )}
+                  </td>
                   {/* Defensive contributions */}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{player.goals_conceded || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.saves || 0}</td>
