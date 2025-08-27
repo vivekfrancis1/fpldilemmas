@@ -150,7 +150,7 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
       <TableCell>
         {creator.playerName || 'N/A'}
       </TableCell>
-      {/* Team Name cell hidden as requested */}
+      {/* Team Name cell completely removed */}
       <TableCell className="text-right">
         <div className="flex flex-col items-end">
           <Badge variant={getRankBadgeVariant(latest?.overallRank)} className="mb-1">
