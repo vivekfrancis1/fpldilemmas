@@ -387,15 +387,10 @@ export default function TransferTracker() {
                           Ownership %
                         </SortableHeader>
                       </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="absolute_ownership" className="text-right">
-                          Current Own.
-                        </SortableHeader>
-                      </th>
                       <th className="text-right p-2 border-l border-gray-200">
                         <div className="text-xs font-semibold text-green-600 mb-1">THIS GAMEWEEK</div>
                         <SortableHeader field="net_transfers_event" className="text-right">
-                          Net
+                          Net Transfers
                         </SortableHeader>
                       </th>
                       <th className="text-right p-2">
@@ -406,7 +401,7 @@ export default function TransferTracker() {
                       <th className="text-right p-2 border-l border-gray-200">
                         <div className="text-xs font-semibold text-blue-600 mb-1">SEASON TOTALS</div>
                         <SortableHeader field="net_transfers" className="text-right">
-                          Net
+                          Net Transfers
                         </SortableHeader>
                       </th>
                       <th className="text-right p-2">
@@ -446,9 +441,6 @@ export default function TransferTracker() {
                         </td>
                         <td className="p-3 text-right">
                           <span className="font-medium">{transfer.ownership_percentage?.toFixed(1) || "0.0"}%</span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <span className="font-medium">{transfer.absolute_ownership?.toLocaleString() || "0"}</span>
                         </td>
                         
                         {/* Gameweek section - only Net and Net % columns */}
