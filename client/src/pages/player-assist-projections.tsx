@@ -1,365 +1,390 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, TrendingUp, Filter, Search, Zap, ChevronUp, ChevronDown } from "lucide-react";
-import { BootstrapData } from "@shared/schema";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PlayerAssistProjection {
-  id: number;
-  name: string;
-  team: string;
+  playerId: number;
+  playerName: string;
   teamShort: string;
   position: string;
-  currentPrice: number;
-  projectedAssists: number;
-  assistShare: number;
+  gameweekProjections: { [gameweek: number]: number };
+  totalProjectedAssists: number;
 }
 
 export default function PlayerAssistProjections() {
+  const [sortBy, setSortBy] = useState("total");
+  const [filterTeam, setFilterTeam] = useState("all");
+  const [filterPosition, setFilterPosition] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [selectedPosition, setSelectedPosition] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("assists");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
-  const { data: bootstrapData, isLoading: bootstrapLoading } = useQuery<BootstrapData>({
-    queryKey: ["/api/bootstrap-static"],
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: playerProjections, isLoading: projectionsLoading, error } = useQuery<PlayerAssistProjection[]>({
+  const { data: projections = [], isLoading } = useQuery({
     queryKey: ["/api/player-assist-projections"],
     staleTime: 10 * 60 * 1000,
   });
 
-  // Filter and sort data
-  const filteredAndSortedData = useMemo(() => {
-    if (!playerProjections) return [];
+  const { data: bootstrapData } = useQuery({
+    queryKey: ["/api/bootstrap-static"],
+    staleTime: 30 * 60 * 1000,
+  });
 
-    let filtered = playerProjections.filter(player => {
+  // Fixed to show GW3-GW8 (next 6 gameweeks)
+  const next6Gameweeks = useMemo(() => {
+    return [3, 4, 5, 6, 7, 8];
+  }, []);
+
+  // Filter and sort data
+  const filteredProjections = useMemo(() => {
+    if (!projections.length) return [];
+
+    let filtered = projections.filter((player: PlayerAssistProjection) => {
+      const matchesTeam = filterTeam === "all" || player.teamShort === filterTeam;
+      const matchesPosition = filterPosition === "all" || player.position === filterPosition;
       const matchesSearch = searchTerm === "" || 
-        player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        player.team.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesTeam = selectedTeam === "all" || player.teamShort === selectedTeam;
-      const matchesPosition = selectedPosition === "all" || player.position === selectedPosition;
+        player.playerName.toLowerCase().includes(searchTerm.toLowerCase());
       
-      return matchesSearch && matchesTeam && matchesPosition;
+      return matchesTeam && matchesPosition && matchesSearch;
     });
 
     // Sort the filtered data
-    filtered.sort((a, b) => {
-      let result = 0;
+    filtered.sort((a: PlayerAssistProjection, b: PlayerAssistProjection) => {
       switch (sortBy) {
-        case "assists":
-          result = b.projectedAssists - a.projectedAssists;
-          break;
-        case "share":
-          result = b.assistShare - a.assistShare;
-          break;
-        case "price":
-          result = a.currentPrice - b.currentPrice;
-          break;
         case "name":
-          result = a.name.localeCompare(b.name);
-          break;
+          return a.playerName.localeCompare(b.playerName);
         case "team":
-          result = a.team.localeCompare(b.team);
-          break;
+          return a.teamShort.localeCompare(b.teamShort);
+        case "position":
+          return a.position.localeCompare(b.position);
+        case "total":
+          const aNext6Total = next6Gameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
+          const bNext6Total = next6Gameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+          return bNext6Total - aNext6Total;
+        case "season":
+          return b.totalProjectedAssists - a.totalProjectedAssists;
         default:
-          result = b.projectedAssists - a.projectedAssists;
+          if (sortBy.startsWith("gw")) {
+            const gw = parseInt(sortBy.replace("gw", ""));
+            return (b.gameweekProjections[gw] || 0) - (a.gameweekProjections[gw] || 0);
+          }
+          return 0;
       }
-      return sortDirection === "asc" ? -result : result;
     });
 
     return filtered;
-  }, [playerProjections, searchTerm, selectedTeam, selectedPosition, sortBy, sortDirection]);
+  }, [projections, filterTeam, filterPosition, searchTerm, sortBy, next6Gameweeks]);
 
-  const handleSort = (column: string) => {
-    if (sortBy === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortDirection(column === "price" || column === "name" || column === "team" ? "asc" : "desc");
-    }
+  // Get unique teams and positions for filters
+  const teams = useMemo(() => {
+    if (!bootstrapData?.teams) return [];
+    return bootstrapData.teams.map((team: any) => ({
+      id: team.id,
+      name: team.name,
+      short_name: team.short_name,
+    }));
+  }, [bootstrapData]);
+
+  const positions = ["Goalkeeper", "Defender", "Midfielder", "Forward"];
+
+  // Calculate total assists for footer
+  const totalAssists = useMemo(() => {
+    const gameweekTotals: { [gameweek: number]: number } = {};
+    let overallTotal = 0;
+    let seasonTotal = 0;
+
+    filteredProjections.forEach((player: PlayerAssistProjection) => {
+      const next6Total = next6Gameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
+      overallTotal += next6Total;
+      seasonTotal += player.totalProjectedAssists;
+
+      next6Gameweeks.forEach(gw => {
+        if (!gameweekTotals[gw]) gameweekTotals[gw] = 0;
+        gameweekTotals[gw] += player.gameweekProjections[gw] || 0;
+      });
+    });
+
+    return { overallTotal, seasonTotal, gameweekTotals };
+  }, [filteredProjections, next6Gameweeks]);
+
+  // Color coding for assist cells
+  const getAssistsColor = (assists: number) => {
+    if (assists >= 1.5) return "bg-green-100 text-green-800 border-green-200";
+    if (assists >= 1.0) return "bg-blue-100 text-blue-800 border-blue-200";
+    if (assists >= 0.7) return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    if (assists >= 0.5) return "bg-orange-100 text-orange-800 border-orange-200";
+    return "bg-red-100 text-red-800 border-red-200";
   };
 
-  const getSortIcon = (column: string) => {
-    if (sortBy !== column) return null;
-    return sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />;
-  };
+  // Summary statistics
+  const summaryStats = useMemo(() => {
+    if (!filteredProjections.length) return [];
 
-  const isLoading = bootstrapLoading || projectionsLoading;
+    const next6Total = totalAssists.overallTotal;
+    const avgNext6 = next6Total / filteredProjections.length;
+    const seasonTotal = totalAssists.seasonTotal;
+    const avgSeason = seasonTotal / filteredProjections.length;
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30">
-        <div className="w-full max-w-7xl mx-auto px-4 py-8">
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Zap className="h-6 w-6 text-red-600 mr-3" />
-                <div>
-                  <h3 className="font-semibold text-red-800">Error Loading Data</h3>
-                  <p className="text-red-600">Unable to load player assist projections. Please try again later.</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+    return [
+      { label: "Total Players", value: filteredProjections.length.toString(), color: "bg-blue-50 text-blue-700" },
+      { label: "6 GW Total Assists", value: next6Total.toFixed(1), color: "bg-green-50 text-green-700" },
+      { label: "Avg per Player (6 GW)", value: avgNext6.toFixed(2), color: "bg-yellow-50 text-yellow-700" },
+      { label: "Season Total Assists", value: seasonTotal.toFixed(1), color: "bg-purple-50 text-purple-700" },
+      { label: "Avg per Player (Season)", value: avgSeason.toFixed(2), color: "bg-indigo-50 text-indigo-700" }
+    ];
+  }, [filteredProjections, totalAssists]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50/30">
-        <div className="w-full max-w-7xl mx-auto px-4 py-8">
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading player assist projections...</p>
-          </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Loading player assist projections...</div>
         </div>
       </div>
     );
   }
 
-  const positions = Array.from(new Set(playerProjections?.map(p => p.position) || [])).sort();
-  const teams = Array.from(new Set(playerProjections?.map(p => p.teamShort) || [])).sort();
+  if (!projections.length) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">No Data Available</h2>
+          <p className="text-gray-600">No assist projection data found.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30">
-        <div className="w-full max-w-7xl mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <TrendingUp className="h-8 w-8 text-purple-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              Player Assist Projections
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Individual player assist projections for the 2025-26 season based on team assist distribution and historical patterns
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Player Assist Projections
+          </h1>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Individual player assist projections for the next 6 gameweeks (GW3-GW8) based on historical data and team assist share analysis.
+          </p>
+        </div>
 
-          {/* Controls */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        {/* Summary Statistics */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          {summaryStats.map((stat, index) => (
+            <Card key={index} className="shadow-sm">
+              <CardContent className={`p-4 text-center ${stat.color} rounded-lg`}>
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <div className="text-sm font-medium">{stat.label}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Filters and Controls */}
+        <Card className="mb-8 shadow-lg">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Team</label>
+                <Select value={filterTeam} onValueChange={setFilterTeam}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Teams" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Teams</SelectItem>
+                    {teams.map((team: any) => (
+                      <SelectItem key={team.id} value={team.short_name}>
+                        {team.short_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Position</label>
+                <Select value={filterPosition} onValueChange={setFilterPosition}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Positions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Positions</SelectItem>
+                    {positions.map((position) => (
+                      <SelectItem key={position} value={position}>
+                        {position}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Sort By</label>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="total">6 GW Total</SelectItem>
+                    <SelectItem value="season">Season Total</SelectItem>
+                    <SelectItem value="name">Player Name</SelectItem>
+                    <SelectItem value="team">Team</SelectItem>
+                    <SelectItem value="position">Position</SelectItem>
+                    {next6Gameweeks.map(gw => (
+                      <SelectItem key={gw} value={`gw${gw}`}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Search Player</label>
                 <Input
-                  placeholder="Search players or teams..."
+                  placeholder="Search by name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                  data-testid="input-search"
+                  className="w-full"
                 />
               </div>
-
-              {/* Team Filter */}
-              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger className="border-gray-300 focus:border-purple-500" data-testid="select-team">
-                  <SelectValue placeholder="All Teams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {teams.map(team => (
-                    <SelectItem key={team} value={team}>{team}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Position Filter */}
-              <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                <SelectTrigger className="border-gray-300 focus:border-purple-500" data-testid="select-position">
-                  <SelectValue placeholder="All Positions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Positions</SelectItem>
-                  {positions.map(position => (
-                    <SelectItem key={position} value={position}>{position}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Sort By */}
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="border-gray-300 focus:border-purple-500" data-testid="select-sort">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="assists">Projected Assists</SelectItem>
-                  <SelectItem value="share">Assist Share %</SelectItem>
-                  <SelectItem value="price">Price (Low to High)</SelectItem>
-                  <SelectItem value="name">Name (A-Z)</SelectItem>
-                  <SelectItem value="team">Team (A-Z)</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Results Count */}
-              <div className="flex items-center justify-center bg-gray-50 rounded-lg px-4 py-2">
-                <Users className="h-4 w-4 text-gray-500 mr-2" />
-                <span className="text-sm font-medium text-gray-700">
-                  {filteredAndSortedData.length} players
-                </span>
-              </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Results Table */}
-          <Card className="shadow-lg border-0">
-            <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-t-lg">
-              <CardTitle className="text-xl font-bold flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2" />
-                Player Assist Projections 2025-26
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
+        {/* Main Table */}
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-center text-xl text-gray-800">
+              Player Assist Projections (Next 6 Gameweeks)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th 
+                      className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
+                      onClick={() => setSortBy("name")}
+                    >
+                      Player {sortBy === "name" && "↓"}
+                    </th>
+                    <th 
+                      className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
+                      onClick={() => setSortBy("team")}
+                    >
+                      Team {sortBy === "team" && "↓"}
+                    </th>
+                    <th 
+                      className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
+                      onClick={() => setSortBy("position")}
+                    >
+                      Pos {sortBy === "position" && "↓"}
+                    </th>
+                    {next6Gameweeks.map(gw => (
                       <th 
-                        className="text-left py-4 px-6 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                        onClick={() => handleSort("name")}
-                        data-testid="header-name"
+                        key={gw} 
+                        className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[60px] cursor-pointer hover:bg-gray-50"
+                        onClick={() => setSortBy(`gw${gw}`)}
                       >
-                        <div className="flex items-center">
-                          Player
-                          {getSortIcon("name")}
-                        </div>
+                        GW{gw} {sortBy === `gw${gw}` && "↓"}
                       </th>
-                      <th 
-                        className="text-left py-4 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                        onClick={() => handleSort("team")}
-                        data-testid="header-team"
-                      >
-                        <div className="flex items-center">
-                          Team
-                          {getSortIcon("team")}
-                        </div>
-                      </th>
-                      <th className="text-left py-4 px-4 font-semibold text-gray-700">Position</th>
-                      <th 
-                        className="text-center py-4 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                        onClick={() => handleSort("price")}
-                        data-testid="header-price"
-                      >
-                        <div className="flex items-center justify-center">
-                          Price
-                          {getSortIcon("price")}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-center py-4 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                        onClick={() => handleSort("assists")}
-                        data-testid="header-assists"
-                      >
-                        <div className="flex items-center justify-center">
-                          Projected Assists
-                          {getSortIcon("assists")}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-center py-4 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                        onClick={() => handleSort("share")}
-                        data-testid="header-share"
-                      >
-                        <div className="flex items-center justify-center">
-                          Team Share %
-                          {getSortIcon("share")}
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {filteredAndSortedData.map((player, index) => (
-                      <tr 
-                        key={player.id} 
-                        className="hover:bg-gray-50 transition-colors"
-                        data-testid={`row-player-${player.id}`}
-                      >
-                        <td className="py-4 px-6">
-                          <div className="flex items-center">
-                            <div className="font-semibold text-gray-900">{player.name}</div>
+                    ))}
+                    <th 
+                      className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
+                      onClick={() => setSortBy("total")}
+                    >
+                      6 GW {sortBy === "total" && "↓"}
+                    </th>
+                    <th 
+                      className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
+                      onClick={() => setSortBy("season")}
+                    >
+                      Season {sortBy === "season" && "↓"}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProjections.map((player: PlayerAssistProjection, index) => {
+                    const next6Total = next6Gameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
+                    
+                    return (
+                      <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-gray-900">
+                            {player.playerName}
                           </div>
                         </td>
-                        <td className="py-4 px-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <td className="py-3 px-2 text-center">
+                          <Badge variant="outline" className="text-xs font-medium">
                             {player.teamShort}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4">
-                          <Badge variant="outline" className="text-xs">
-                            {player.position}
                           </Badge>
                         </td>
-                        <td className="py-4 px-4 text-center">
-                          <span className="font-medium text-gray-900">
-                            £{player.currentPrice.toFixed(1)}m
+                        <td className="py-3 px-2 text-center text-sm text-gray-600">
+                          {player.position}
+                        </td>
+                        {next6Gameweeks.map(gw => {
+                          const assists = player.gameweekProjections[gw] || 0;
+                          return (
+                            <td key={gw} className="py-3 px-2 text-center">
+                              <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getAssistsColor(assists)}`}>
+                                {assists.toFixed(2)}
+                              </span>
+                            </td>
+                          );
+                        })}
+                        <td className="py-3 px-2 text-center">
+                          <span className="font-bold text-gray-900">
+                            {next6Total.toFixed(2)}
                           </span>
                         </td>
-                        <td className="py-4 px-4 text-center">
-                          <span className="text-lg font-bold text-purple-600">
-                            {player.projectedAssists.toFixed(1)}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <span className="font-medium text-gray-700">
-                            {player.assistShare.toFixed(1)}%
+                        <td className="py-3 px-2 text-center">
+                          <span className="text-sm text-gray-600">
+                            {player.totalProjectedAssists.toFixed(2)}
                           </span>
                         </td>
                       </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-gray-200 bg-blue-50">
+                    <td className="py-3 px-4 font-bold text-gray-900" colSpan={3}>
+                      6 GW TOTAL
+                    </td>
+                    {next6Gameweeks.map(gw => (
+                      <td key={gw} className="py-3 px-2 text-center font-bold text-blue-600">
+                        {(totalAssists.gameweekTotals[gw] || 0).toFixed(2)}
+                      </td>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {filteredAndSortedData.length === 0 && (
-            <div className="text-center py-12">
-              <Filter className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No players found</h3>
-              <p className="text-gray-500">Try adjusting your filters or search criteria.</p>
+                    <td className="py-3 px-2 text-center font-bold text-blue-600">
+                      {totalAssists.overallTotal.toFixed(2)}
+                    </td>
+                    <td className="py-3 px-2 text-center font-bold text-gray-600">
+                      -
+                    </td>
+                  </tr>
+                  <tr className="border-t border-gray-200 bg-green-50">
+                    <td className="py-3 px-4 font-bold text-gray-900" colSpan={3}>
+                      SEASON TOTAL
+                    </td>
+                    {next6Gameweeks.map(gw => (
+                      <td key={gw} className="py-3 px-2 text-center font-bold text-gray-600">
+                        -
+                      </td>
+                    ))}
+                    <td className="py-3 px-2 text-center font-bold text-gray-600">
+                      -
+                    </td>
+                    <td className="py-3 px-2 text-center font-bold text-green-600">
+                      {totalAssists.seasonTotal.toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
-          )}
-
-          {/* Info Section */}
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-purple-200 bg-purple-50">
-              <CardContent className="p-6">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Season-long assist projections based on Team Assist Projections</li>
-                    <li>• Historical assist patterns from 2023-24 and 2024-25 seasons</li>
-                    <li>• Weighted distribution ensuring 100% team coverage</li>
-                    <li>• Individual player assist shares calculated from historical data</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-blue-200 bg-blue-50">
-              <CardContent className="p-6">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Use Cases</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Identify season-long assist providers per team</li>
-                    <li>• Compare creative players across different teams</li>
-                    <li>• Plan long-term fantasy transfers for assist points</li>
-                    <li>• Analyze value for money in creative midfielders</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
+    </div>
   );
 }

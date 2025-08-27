@@ -3403,6 +3403,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player Assist Projections endpoint - converts assist share data to individual player projections
+  app.get("/api/player-assist-projections", async (req, res) => {
+    try {
+      console.log("DEBUG: Player Assist Projections API called - generating from assist share data");
+      
+      // Fetch assist share season data
+      const assistShareResponse = await fetch("http://localhost:5000/api/assist-share-season");
+      if (!assistShareResponse.ok) {
+        throw new Error("Failed to fetch assist share data");
+      }
+      
+      const assistShareData = await assistShareResponse.json();
+      
+      // Convert assist share data to individual player projections
+      const allPlayerProjections: any[] = [];
+      
+      assistShareData.forEach((teamData: any) => {
+        if (teamData.players && Object.keys(teamData.players).length > 0) {
+          Object.keys(teamData.players).forEach(playerIdStr => {
+            const playerId = parseInt(playerIdStr);
+            const playerData = teamData.players[playerId];
+            
+            if (playerData && playerData.projectedAssists > 0) {
+              // Calculate gameweek projections (distribute season total across 38 gameweeks)
+              const avgAssistsPerGameweek = playerData.projectedAssists / 38;
+              const gameweekProjections: { [gameweek: number]: number } = {};
+              
+              // Generate projections for all 38 gameweeks
+              for (let gw = 1; gw <= 38; gw++) {
+                gameweekProjections[gw] = Math.round(avgAssistsPerGameweek * 100) / 100;
+              }
+              
+              allPlayerProjections.push({
+                playerId: playerId,
+                playerName: playerData.name,
+                teamShort: teamData.teamShort,
+                position: playerData.position,
+                gameweekProjections,
+                totalProjectedAssists: Math.round(playerData.projectedAssists * 100) / 100
+              });
+            }
+          });
+        }
+      });
+      
+      // Sort by total projected assists (highest first)
+      allPlayerProjections.sort((a, b) => b.totalProjectedAssists - a.totalProjectedAssists);
+      
+      console.log(`DEBUG: Generated assist projections for ${allPlayerProjections.length} players using assist share data`);
+      res.json(allPlayerProjections);
+    } catch (error) {
+      console.error("Error generating player assist projections:", error);
+      res.status(500).json({ error: "Failed to generate player assist projections" });
+    }
+  });
+
   // Season-long Assist Share endpoint - uses Team Assist Projections totals with historical assist data
   app.get("/api/assist-share-season", async (req, res) => {
     try {
