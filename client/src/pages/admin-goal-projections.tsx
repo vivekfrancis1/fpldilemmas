@@ -172,8 +172,8 @@ export default function AdminGoalProjections() {
   const DEFAULT_TEAM_TIERS = {
     eliteAttackTeams: [12, 13], // Liverpool, Man City
     strongAttackTeams: [1, 7, 15, 18, 2], // Arsenal, Chelsea, Newcastle, Spurs, Aston Villa
-    averageAttackTeams: [6, 14, 4, 5, 10], // Brighton, Man Utd, Bournemouth, Brentford, Fulham
-    weakAttackTeams: [8, 9, 16, 19, 20], // Crystal Palace, Everton, Nott'm Forest, West Ham, Wolves
+    averageAttackTeams: [6, 14, 4, 5, 10, 8], // Brighton, Man Utd, Bournemouth, Brentford, Fulham, Crystal Palace
+    weakAttackTeams: [9, 16, 19, 20], // Everton, Nott'm Forest, West Ham, Wolves
     promotedAttackTeams: [17, 11, 3], // Sunderland, Leeds, Burnley
   };
 
