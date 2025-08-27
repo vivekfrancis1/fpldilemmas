@@ -394,21 +394,6 @@ export default function TransferTracker() {
                       </th>
                       <th className="text-right p-2 border-l border-gray-200">
                         <div className="text-xs font-semibold text-green-600 mb-1">THIS GAMEWEEK</div>
-                        <SortableHeader field="initial_ownership_gameweek" className="text-right">
-                          Initial Own.
-                        </SortableHeader>
-                      </th>
-                      <th className="text-center p-2">
-                        <SortableHeader field="transfers_in_event" className="text-center">
-                          In
-                        </SortableHeader>
-                      </th>
-                      <th className="text-center p-2">
-                        <SortableHeader field="transfers_out_event" className="text-center">
-                          Out
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right p-2">
                         <SortableHeader field="net_transfers_event" className="text-right">
                           Net
                         </SortableHeader>
@@ -420,21 +405,6 @@ export default function TransferTracker() {
                       </th>
                       <th className="text-right p-2 border-l border-gray-200">
                         <div className="text-xs font-semibold text-blue-600 mb-1">SEASON TOTALS</div>
-                        <SortableHeader field="initial_ownership" className="text-right">
-                          Initial Own.
-                        </SortableHeader>
-                      </th>
-                      <th className="text-center p-2">
-                        <SortableHeader field="transfers_in" className="text-center">
-                          In
-                        </SortableHeader>
-                      </th>
-                      <th className="text-center p-2">
-                        <SortableHeader field="transfers_out" className="text-center">
-                          Out
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right p-2">
                         <SortableHeader field="net_transfers" className="text-right">
                           Net
                         </SortableHeader>
@@ -481,21 +451,8 @@ export default function TransferTracker() {
                           <span className="font-medium">{transfer.absolute_ownership?.toLocaleString() || "0"}</span>
                         </td>
                         
-                        {/* Gameweek section - moved before season totals */}
+                        {/* Gameweek section - only Net and Net % columns */}
                         <td className="p-3 text-right border-l border-gray-200">
-                          <span className="font-medium">{transfer.initial_ownership_gameweek?.toLocaleString() || "0"}</span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <span className="font-medium text-green-600">
-                            {transfer.transfers_in_event?.toLocaleString() || "0"}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <span className="font-medium text-red-600">
-                            {transfer.transfers_out_event?.toLocaleString() || "0"}
-                          </span>
-                        </td>
-                        <td className="p-3 text-right">
                           <span className={`font-medium ${
                             (transfer.net_transfers_event || 0) > 0 ? "text-green-600" : 
                             (transfer.net_transfers_event || 0) < 0 ? "text-red-600" : "text-gray-600"
@@ -512,21 +469,8 @@ export default function TransferTracker() {
                           </span>
                         </td>
 
-                        {/* Season totals section - moved after gameweek */}
+                        {/* Season totals section - only Net and Net % columns */}
                         <td className="p-3 text-right border-l border-gray-200">
-                          <span className="font-medium">{transfer.initial_ownership?.toLocaleString() || "0"}</span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <span className="font-medium text-green-600">
-                            {transfer.transfers_in?.toLocaleString() || "0"}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <span className="font-medium text-red-600">
-                            {transfer.transfers_out?.toLocaleString() || "0"}
-                          </span>
-                        </td>
-                        <td className="p-3 text-right">
                           <span className={`font-medium ${
                             transfer.net_transfers > 0 ? "text-green-600" : 
                             transfer.net_transfers < 0 ? "text-red-600" : "text-gray-600"
