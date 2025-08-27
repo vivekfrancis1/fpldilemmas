@@ -3241,6 +3241,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player Goals Scored Projections endpoint - gameweek by gameweek breakdown
+  app.get("/api/player-goals-scored-projections", async (req, res) => {
+    try {
+      console.log(`DEBUG: Player Goals Scored Projections API called`);
+      
+      // Fetch required data
+      const [bootstrapResponse, teamGoalProjectionsResponse, goalShareResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("http://localhost:5000/api/team-goal-projections"),
+        fetch("http://localhost:5000/api/goal-share-season")
+      ]);
+      
+      if (!bootstrapResponse.ok || !teamGoalProjectionsResponse.ok || !goalShareResponse.ok) {
+        throw new Error("Failed to fetch required data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const teamGoalProjections = await teamGoalProjectionsResponse.json();
+      const goalShareData = await goalShareResponse.json();
+      
+      console.log(`DEBUG: Fetched data - ${goalShareData.length} teams with goal share data`);
+      
+      // Create player projections by distributing team goals across gameweeks based on goal share
+      const playerProjections: any[] = [];
+      
+      goalShareData.forEach((teamData: any) => {
+        // Find corresponding team goal projections
+        const teamProjections = teamGoalProjections.find((t: any) => t.id === teamData.teamId);
+        if (!teamProjections) return;
+        
+        // Find team in bootstrap data for additional info
+        const team = bootstrapData.teams.find((t: any) => t.id === teamData.teamId);
+        if (!team) return;
+        
+        // Process each player in the team
+        teamData.players.forEach((player: any) => {
+          if (player.goalShare < 0.1) return; // Skip players with minimal goal share
+          
+          const gameweekProjections: { [gameweek: number]: number } = {};
+          let totalProjectedGoals = 0;
+          
+          // Distribute player's share across each gameweek based on team's gameweek projections
+          Object.entries(teamProjections.gameweekProjections).forEach(([gw, teamGoals]: [string, any]) => {
+            const gameweek = parseInt(gw);
+            const playerGoalsForGW = (typeof teamGoals === 'number') ? 
+              (teamGoals * (player.goalShare / 100)) : 0;
+            
+            gameweekProjections[gameweek] = Math.round(playerGoalsForGW * 100) / 100;
+            totalProjectedGoals += playerGoalsForGW;
+          });
+          
+          playerProjections.push({
+            playerId: player.id,
+            playerName: player.name,
+            teamName: team.name,
+            teamShort: team.short_name,
+            position: player.position,
+            totalProjectedGoals: Math.round(totalProjectedGoals * 10) / 10,
+            gameweekProjections,
+            goalShare: player.goalShare
+          });
+        });
+      });
+      
+      console.log(`DEBUG: Generated projections for ${playerProjections.length} players`);
+      
+      // Sort by total projected goals descending
+      playerProjections.sort((a, b) => b.totalProjectedGoals - a.totalProjectedGoals);
+      
+      res.json(playerProjections);
+    } catch (error) {
+      console.error("Error generating player goals scored projections:", error);
+      res.status(500).json({ error: "Failed to generate player goals scored projections" });
+    }
+  });
+
   // Player Total Goal Projections endpoint - uses saved Goal Share data
   app.get("/api/player-goal-projections", async (req, res) => {
     try {

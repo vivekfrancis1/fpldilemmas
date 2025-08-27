@@ -15,6 +15,7 @@ import GoalShare from "./pages/goal-share";
 import AssistShare from "./pages/assist-share";
 import PlayerGoalProjections from "./pages/player-goal-projections";
 import PlayerAssistProjections from "./pages/player-assist-projections";
+import PlayerGoalsScoredProjections from "./pages/player-goals-scored-projections";
 import Watchlist from "./pages/watchlist";
 import LiveRank from "./pages/live-rank";
 import MyTeam from "./pages/my-team";
@@ -73,6 +74,7 @@ function Router() {
       <Route path="/assist-share" component={AssistShare} />
       <Route path="/player-goal-projections" component={PlayerGoalProjections} />
       <Route path="/player-assist-projections" component={PlayerAssistProjections} />
+      <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
       <Route path="/season-projections" component={SeasonProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
