@@ -25,8 +25,8 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "FPL Focal",
     handle: "@FPLFocal",
     platform: "twitter",
-    managerId: 1964,
-    description: "Data-driven content creator; finished around 4k last season."
+    managerId: 200,
+    description: "Data-driven content creator."
   },
   {
     id: 3,
@@ -41,7 +41,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "FPL Raptor",
     handle: "@FPL__Raptor",
     platform: "youtube",
-    managerId: 76,
+    managerId: 1587,
     description: "Analytical YouTuber with strong community engagement."
   },
   {
@@ -49,7 +49,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "FPL Pickle",
     handle: "@FPLPickle",
     platform: "twitter",
-    managerId: 5080,
+    managerId: 14501,
     description: "Humorous FPL content with tips and memes."
   },
   {
@@ -57,7 +57,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "FPL Mate",
     handle: "@FPLMate",
     platform: "twitter",
-    managerId: 89,
+    managerId: 16267,
     description: "Meme-focused creator active in FPL discussions."
   },
   {
@@ -65,7 +65,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "Ben Crellin",
     handle: "@BenCrellin",
     platform: "twitter",
-    managerId: 64,
+    managerId: 6586,
     description: "Fixture ticker expert; creates essential spreadsheets for planning."
   },
   {
@@ -73,15 +73,15 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "Az Phillips",
     handle: "@AzPhillipsFPL",
     platform: "twitter",
-    managerId: 2833,
-    description: "Insightful analyst and podcaster."
+    managerId: 441,
+    description: "Insightful analyst and podcaster on FPL BlackBox."
   },
   {
     id: 9,
     name: "Kelly Somers",
     handle: "@KellySomers",
     platform: "twitter",
-    managerId: 3,
+    managerId: 1924811,
     description: "Official FPL Podcast host; provides expert insights."
   },
   {
@@ -89,7 +89,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "Julien Laurens",
     handle: "@LaurensJulien",
     platform: "twitter",
-    managerId: 1379,
+    managerId: 1514450,
     description: "ESPN pundit sharing occasional FPL tips."
   },
   {
@@ -105,7 +105,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "Lee Bonfield",
     handle: "@FPLFamily",
     platform: "twitter",
-    managerId: 41,
+    managerId: 341,
     description: "Co-host of FPL Family Podcast."
   },
   {
@@ -113,7 +113,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "Holly Shand",
     handle: "@HollyShand",
     platform: "twitter",
-    managerId: 35,
+    managerId: 135,
     description: "Writer and podcaster focused on women's football and FPL."
   },
   {
@@ -121,7 +121,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "Ian Irving",
     handle: "@IanIrving_",
     platform: "twitter",
-    managerId: 1328,
+    managerId: 7577129,
     description: "Podcast contributor with in-depth analysis."
   },
   {
@@ -129,7 +129,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "FPL Sonaldo",
     handle: "@FPLSonaldo",
     platform: "twitter",
-    managerId: 6896,
+    managerId: 16725,
     description: "Humorous takes on FPL; active in community leagues."
   },
   {
@@ -145,7 +145,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "Gianni Buttice",
     handle: "@GianniButtice",
     platform: "twitter",
-    managerId: 9176,
+    managerId: 17614,
     description: "Data-driven FPL analysis and tools."
   },
   {
@@ -177,7 +177,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "Chunkz",
     handle: "@Chunkz",
     platform: "youtube",
-    managerId: 8061,
+    managerId: 2253812,
     description: "YouTuber and influencer with entertaining FPL content."
   },
   {
