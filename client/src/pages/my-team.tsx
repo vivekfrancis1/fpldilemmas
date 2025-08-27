@@ -653,7 +653,10 @@ export default function MyTeam() {
                     </div>
                   </CardContent>
                 </Card>
-        )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
