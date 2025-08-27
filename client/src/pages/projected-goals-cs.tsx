@@ -233,21 +233,37 @@ export default function ProjectedGoalsCS() {
                         </div>
                       </div>
                       
-                      {/* Column Headers - Show once per gameweek */}
+                      {/* Column Headers - Show once per gameweek - Aligned with data */}
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 px-2 pt-2 pb-1">
-                        <div className="text-center">
-                          <div className="flex justify-center space-x-6">
+                        <div className="flex items-center justify-end px-3 space-x-2">
+                          <div className="text-center w-[45px]">
                             <span className="text-xs font-bold text-gray-600">GOALS</span>
-                            {projections.some(p => !p.finished) && <span className="text-xs font-bold text-gray-600">CS%</span>}
-                            {projections.some(p => p.finished) && <span className="text-xs font-bold text-gray-600">RESULT</span>}
                           </div>
+                          {projections.some(p => !p.finished) && (
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">CS%</span>
+                            </div>
+                          )}
+                          {projections.some(p => p.finished) && (
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">RESULT</span>
+                            </div>
+                          )}
                         </div>
-                        <div className="text-center">
-                          <div className="flex justify-center space-x-6">
+                        <div className="flex items-center justify-end px-3 space-x-2">
+                          <div className="text-center w-[45px]">
                             <span className="text-xs font-bold text-gray-600">GOALS</span>
-                            {projections.some(p => !p.finished) && <span className="text-xs font-bold text-gray-600">CS%</span>}
-                            {projections.some(p => p.finished) && <span className="text-xs font-bold text-gray-600">RESULT</span>}
                           </div>
+                          {projections.some(p => !p.finished) && (
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">CS%</span>
+                            </div>
+                          )}
+                          {projections.some(p => p.finished) && (
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">RESULT</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
