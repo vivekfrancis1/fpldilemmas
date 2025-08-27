@@ -309,6 +309,15 @@ export default function PlayerGoalsScoredProjections() {
                     >
                       Pos {sortBy === "position" && "↓"}
                     </th>
+                    {next6Gameweeks.map(gw => (
+                      <th 
+                        key={gw} 
+                        className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[60px] cursor-pointer hover:bg-gray-50"
+                        onClick={() => setSortBy(`gw${gw}`)}
+                      >
+                        GW{gw} {sortBy === `gw${gw}` && "↓"}
+                      </th>
+                    ))}
                     <th 
                       className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
                       onClick={() => setSortBy("total")}
@@ -321,15 +330,6 @@ export default function PlayerGoalsScoredProjections() {
                     >
                       Season {sortBy === "season" && "↓"}
                     </th>
-                    {next6Gameweeks.map(gw => (
-                      <th 
-                        key={gw} 
-                        className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[60px] cursor-pointer hover:bg-gray-50"
-                        onClick={() => setSortBy(`gw${gw}`)}
-                      >
-                        GW{gw} {sortBy === `gw${gw}` && "↓"}
-                      </th>
-                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -351,16 +351,6 @@ export default function PlayerGoalsScoredProjections() {
                         <td className="py-3 px-2 text-center text-sm text-gray-600">
                           {player.position}
                         </td>
-                        <td className="py-3 px-2 text-center">
-                          <span className="font-bold text-gray-900">
-                            {next6Total.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          <span className="text-sm text-gray-600">
-                            {player.totalProjectedGoals.toFixed(2)}
-                          </span>
-                        </td>
                         {next6Gameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw] || 0;
                           return (
@@ -371,6 +361,16 @@ export default function PlayerGoalsScoredProjections() {
                             </td>
                           );
                         })}
+                        <td className="py-3 px-2 text-center">
+                          <span className="font-bold text-gray-900">
+                            {next6Total.toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <span className="text-sm text-gray-600">
+                            {player.totalProjectedGoals.toFixed(2)}
+                          </span>
+                        </td>
                       </tr>
                     );
                   })}
@@ -380,33 +380,33 @@ export default function PlayerGoalsScoredProjections() {
                     <td className="py-3 px-4 font-bold text-gray-900" colSpan={3}>
                       6 GW TOTAL
                     </td>
+                    {next6Gameweeks.map(gw => (
+                      <td key={gw} className="py-3 px-2 text-center font-bold text-blue-600">
+                        {(totalGoals.gameweekTotals[gw] || 0).toFixed(2)}
+                      </td>
+                    ))}
                     <td className="py-3 px-2 text-center font-bold text-blue-600">
                       {totalGoals.overallTotal.toFixed(2)}
                     </td>
                     <td className="py-3 px-2 text-center font-bold text-gray-600">
                       -
                     </td>
-                    {next6Gameweeks.map(gw => (
-                      <td key={gw} className="py-3 px-2 text-center font-bold text-blue-600">
-                        {(totalGoals.gameweekTotals[gw] || 0).toFixed(2)}
-                      </td>
-                    ))}
                   </tr>
                   <tr className="border-t border-gray-200 bg-green-50">
                     <td className="py-3 px-4 font-bold text-gray-900" colSpan={3}>
                       SEASON TOTAL
-                    </td>
-                    <td className="py-3 px-2 text-center font-bold text-gray-600">
-                      -
-                    </td>
-                    <td className="py-3 px-2 text-center font-bold text-green-600">
-                      {totalGoals.seasonTotal.toFixed(2)}
                     </td>
                     {next6Gameweeks.map(gw => (
                       <td key={gw} className="py-3 px-2 text-center font-bold text-gray-600">
                         -
                       </td>
                     ))}
+                    <td className="py-3 px-2 text-center font-bold text-gray-600">
+                      -
+                    </td>
+                    <td className="py-3 px-2 text-center font-bold text-green-600">
+                      {totalGoals.seasonTotal.toFixed(2)}
+                    </td>
                   </tr>
                 </tfoot>
               </table>
