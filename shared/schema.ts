@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { pgTable, serial, text, integer, timestamp, boolean, decimal, json, varchar, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
 // Hardcoded Premier League Teams Data
@@ -87,6 +86,22 @@ export const playerSchema = z.object({
   transfers_in_event: z.number(),
   transfers_out: z.number(),
   transfers_out_event: z.number(),
+  // New defensive contribution fields for 2025/26 season
+  defensive_contribution: z.number().optional(),
+  defensive_contribution_per_90: z.number().optional(),
+  tackles: z.number().optional(),
+  recoveries: z.number().optional(),
+  clearances_blocks_interceptions: z.number().optional(),
+  starts: z.number().optional(),
+  starts_per_90: z.number().optional(),
+  expected_goals: z.string().optional(),
+  expected_assists: z.string().optional(),
+  expected_goal_involvements: z.string().optional(),
+  expected_goals_per_90: z.number().optional(),
+  expected_assists_per_90: z.number().optional(),
+  expected_goal_involvements_per_90: z.number().optional(),
+  expected_goals_conceded: z.string().optional(),
+  expected_goals_conceded_per_90: z.number().optional(),
 });
 
 // Historical player data schema for previous seasons
@@ -199,18 +214,20 @@ export type PlayerSummary = z.infer<typeof playerSummarySchema>;
 // Re-export watchlist types
 export * from "./watchlist-schema";
 
-// Import pgTable for database schema definitions
+// Import database utilities for schema definitions
 import { sql } from 'drizzle-orm';
 import {
-  index,
-  integer,
   pgTable,
-  timestamp,
-  varchar,
-  decimal,
-  date,
-  boolean,
+  serial,
   text,
+  integer,
+  timestamp,
+  boolean,
+  decimal,
+  json,
+  varchar,
+  index,
+  date,
 } from "drizzle-orm/pg-core";
 
 // Session storage table

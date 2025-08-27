@@ -111,6 +111,17 @@ export default function PlayerStatsTable({
           case "ep_next": return parseFloat(player.ep_next || "0") || 0;
           case "ep_this": return parseFloat(player.ep_this || "0") || 0;
           case "squad_number": return player.squad_number || 0;
+          // New defensive contribution fields (2025/26 season only)
+          case "defensive_contribution": return player.defensive_contribution || 0;
+          case "defensive_contribution_per_90": return player.defensive_contribution_per_90 || 0;
+          case "tackles": return player.tackles || 0;
+          case "recoveries": return player.recoveries || 0;
+          case "clearances_blocks_interceptions": return player.clearances_blocks_interceptions || 0;
+          case "starts": return player.starts || 0;
+          case "starts_per_90": return player.starts_per_90 || 0;
+          case "expected_goals": return parseFloat(player.expected_goals || "0") || 0;
+          case "expected_assists": return parseFloat(player.expected_assists || "0") || 0;
+          case "expected_goal_involvements": return parseFloat(player.expected_goal_involvements || "0") || 0;
           default: return player.total_points;
         }
       };
@@ -329,6 +340,32 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="saves" label="Saves" />
               </th>
+              {/* New Defensive Contribution Fields - 2025/26 Season Only */}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[90px]">
+                  <SortableHeader field="defensive_contribution" label="Def Contrib" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[90px]">
+                  <SortableHeader field="tackles" label="Tackles" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[90px]">
+                  <SortableHeader field="recoveries" label="Recoveries" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[90px]">
+                  <SortableHeader field="clearances_blocks_interceptions" label="CBI" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="starts" label="Starts" />
+                </th>
+              )}
               {/* All other data points */}
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="bonus" label="Bonus" />
@@ -478,6 +515,22 @@ export default function PlayerStatsTable({
                   {/* Defensive contributions */}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{player.goals_conceded || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.saves || 0}</td>
+                  {/* New Defensive Contribution Fields - 2025/26 Season Only */}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-orange-600">{player.defensive_contribution || 0}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-blue-700">{player.tackles || 0}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700">{player.recoveries || 0}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-purple-700">{player.clearances_blocks_interceptions || 0}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.starts || 0}</td>
+                  )}
                   {/* All other data points */}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.bonus || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.bps || 0}</td>
