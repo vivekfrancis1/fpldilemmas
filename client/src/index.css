@@ -74,6 +74,13 @@ button, a, input, select, textarea {
   @apply w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8;
 }
 
+/* Content spacing adjustments for sidebar layout */
+@media (min-width: 1024px) {
+  .fpl-content-spacing {
+    @apply ml-6 xl:ml-8;
+  }
+}
+
 .fpl-page-wrapper {
   min-height: 100vh;
   background: var(--fpl-bg-gradient);
@@ -81,7 +88,7 @@ button, a, input, select, textarea {
 }
 
 .fpl-content-area {
-  @apply py-6 sm:py-8 lg:py-12;
+  @apply py-6 sm:py-8 lg:py-12 lg:ml-4 xl:ml-6;
 }
 
 .fpl-section-spacing {

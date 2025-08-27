@@ -150,27 +150,33 @@ function MyLeagues() {
   };
 
   return (
-    
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Leagues</h1>
-            <p className="text-gray-600 mt-1">Track your performance across all leagues</p>
+    <div className="fpl-page-wrapper">
+      <div className="fpl-container fpl-content-area fpl-content-spacing fpl-section-spacing">
+        {/* Page Header */}
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Trophy className="h-8 w-8" />
+              <h1>My Leagues</h1>
+            </div>
+            <p className="fpl-page-subtitle">
+              Track your performance across all private leagues with detailed analytics and rankings
+            </p>
+            <p className="fpl-page-tagline">
+              "Analytical tools to beat the deadline blues"
+            </p>
           </div>
         </div>
 
-      {/* Manager Search */}
-      <Card className="bg-white shadow-sm border border-gray-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Enter Manager ID
-          </CardTitle>
-          <CardDescription>
-            Enter your FPL Manager ID to view your leagues and performance
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        {/* Manager Search */}
+        <div className="fpl-card">
+          <div className="fpl-card-header">
+            <div className="fpl-card-title">
+              <Search className="h-5 w-5" />
+              Enter Manager ID
+            </div>
+          </div>
+          <div className="fpl-card-content">
           <div className="flex gap-2">
             <Input
               type="number"
@@ -188,20 +194,20 @@ function MyLeagues() {
             >
               Search
             </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Error States */}
-      {managerError && (
+          {/* Error States */}
+        {managerError && (
         <Alert className="border-red-200 bg-red-50">
           <AlertDescription className="text-red-700">
             Failed to load manager data. Please check the Manager ID and try again.
           </AlertDescription>
         </Alert>
-      )}
+        )}
 
-      {leaguesError && (
+        {leaguesError && (
         <Alert className="border-red-200 bg-red-50">
           <AlertDescription className="text-red-700">
             Failed to load leagues data. Please try again.
@@ -209,15 +215,13 @@ function MyLeagues() {
         </Alert>
       )}
 
-      {/* Loading State */}
-      {(isLoadingManager || isLoadingLeagues) && searchedId && (
-        <div className="flex items-center justify-center py-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-gray-600 mt-2">Loading leagues...</p>
+        {/* Loading State */}
+        {(isLoadingManager || isLoadingLeagues) && searchedId && (
+          <div className="fpl-loading">
+            <div className="fpl-loading-spinner"></div>
+            <p className="fpl-loading-text">Loading leagues...</p>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Manager Info */}
       {managerData && (
@@ -320,7 +324,7 @@ function MyLeagues() {
         );
       })()}
       </div>
-    
+    </div>
   );
 }
 
