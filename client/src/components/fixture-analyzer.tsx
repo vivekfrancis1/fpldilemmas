@@ -124,23 +124,27 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
   }, [data, fixtures, selectedGameweeks]);
 
   const getDifficultyColor = (difficulty: number): string => {
-    if (difficulty <= 2) return "bg-green-100 text-green-800";
-    if (difficulty <= 3) return "bg-gray-100 text-gray-800";
-    if (difficulty <= 4) return "bg-gray-200 text-gray-800";
-    return "bg-red-100 text-red-800";
+    if (difficulty === 1) return "bg-green-700 text-white"; // Very Easy - Dark Green
+    if (difficulty === 2) return "bg-green-100 text-green-800"; // Easy - Light Green
+    if (difficulty === 3) return "bg-gray-100 text-gray-800"; // Medium - Grey
+    if (difficulty === 4) return "bg-red-100 text-red-800"; // Hard - Light Red
+    return "bg-red-700 text-white"; // Very Hard (5) - Dark Red
   };
 
   const getDifficultyText = (difficulty: number): string => {
-    if (difficulty <= 2) return "Easy";
-    if (difficulty <= 3) return "Moderate";
-    if (difficulty <= 4) return "Hard";
+    if (difficulty === 1) return "Very Easy";
+    if (difficulty === 2) return "Easy";
+    if (difficulty === 3) return "Medium";
+    if (difficulty === 4) return "Hard";
     return "Very Hard";
   };
 
   const getAvgDifficultyIcon = (avgDifficulty: number) => {
-    if (avgDifficulty <= 2.5) return <TrendingDown className="h-4 w-4 text-green-600" />;
-    if (avgDifficulty >= 3.5) return <TrendingUp className="h-4 w-4 text-red-600" />;
-    return <ArrowRight className="h-4 w-4 text-gray-600" />;
+    if (avgDifficulty <= 1.5) return <TrendingDown className="h-4 w-4 text-green-700" />; // Very Easy
+    if (avgDifficulty <= 2.5) return <TrendingDown className="h-4 w-4 text-green-600" />; // Easy
+    if (avgDifficulty <= 3.5) return <ArrowRight className="h-4 w-4 text-gray-600" />; // Medium
+    if (avgDifficulty <= 4.5) return <TrendingUp className="h-4 w-4 text-red-500" />; // Hard
+    return <TrendingUp className="h-4 w-4 text-red-700" />; // Very Hard
   };
 
   if (isLoading || fixturesLoading) {
