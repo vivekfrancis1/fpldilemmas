@@ -244,14 +244,14 @@ export default function MyTeam() {
   };
 
   const getGW2Points = (): number | null => {
-    if (!historyData?.current || !Array.isArray(historyData.current)) return null;
-    const gw2Data = historyData.current.find((gw: any) => gw.event === 2);
+    if (!historyData || !Array.isArray((historyData as any)?.current)) return null;
+    const gw2Data = (historyData as any).current.find((gw: any) => gw.event === 2);
     return gw2Data?.points || null;
   };
 
   const getTotalPoints = (): number => {
-    if (!historyData?.current || !Array.isArray(historyData.current)) return 0;
-    return historyData.current.reduce((total: number, gw: any) => total + (gw.points || 0), 0);
+    if (!historyData || !Array.isArray((historyData as any)?.current)) return 0;
+    return (historyData as any).current.reduce((total: number, gw: any) => total + (gw.points || 0), 0);
   };
 
   const sortPlayersByPosition = (picks: TeamPick[]) => {
@@ -558,14 +558,14 @@ export default function MyTeam() {
                                         {/* Next 3 fixtures */}
                                         <div className="space-y-1">
                                           <div className="text-xs font-medium text-gray-600">Next 3 fixtures:</div>
-                                          <div className="flex gap-1">
+                                          <div className="flex gap-1 flex-wrap">
                                             {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
                                               <div 
                                                 key={idx}
-                                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
+                                                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
                                                 title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
                                               >
-                                                <span>{fixture.opponent}</span>
+                                                <span className="truncate max-w-[40px]">{fixture.opponent}</span>
                                                 <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
                                               </div>
                                             ))}
@@ -642,10 +642,10 @@ export default function MyTeam() {
                                       {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
                                         <div 
                                           key={idx}
-                                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
+                                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
                                           title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
                                         >
-                                          <span>{fixture.opponent}</span>
+                                          <span className="truncate max-w-[40px]">{fixture.opponent}</span>
                                           <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
                                         </div>
                                       ))}
