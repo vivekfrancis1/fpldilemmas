@@ -255,18 +255,24 @@ export default function ProjectedGoalsCS() {
                                     {match.homeTeam.expectedGoals.toFixed(2)}
                                   </div>
                                 </div>
-                                <div className="text-center">
-                                  <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
-                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
-                                    {match.homeTeam.cleanSheetOdds}%
+                                {/* Only show CS% for upcoming matches */}
+                                {!match.finished && (
+                                  <div className="text-center">
+                                    <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
+                                    <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
+                                      {match.homeTeam.cleanSheetOdds}%
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-xs font-semibold text-gray-600 mb-1">RESULT</div>
-                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getResultColor(match.homeTeam.result)}`}>
-                                    {getResultText(match.homeTeam.result)}
+                                )}
+                                {/* Only show RESULT for finished matches */}
+                                {match.finished && (
+                                  <div className="text-center">
+                                    <div className="text-xs font-semibold text-gray-600 mb-1">RESULT</div>
+                                    <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getResultColor(match.homeTeam.result)}`}>
+                                      {getResultText(match.homeTeam.result)}
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
                             </div>
 
@@ -286,18 +292,24 @@ export default function ProjectedGoalsCS() {
                                     {match.awayTeam.expectedGoals.toFixed(2)}
                                   </div>
                                 </div>
-                                <div className="text-center">
-                                  <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
-                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
-                                    {match.awayTeam.cleanSheetOdds}%
+                                {/* Only show CS% for upcoming matches */}
+                                {!match.finished && (
+                                  <div className="text-center">
+                                    <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
+                                    <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
+                                      {match.awayTeam.cleanSheetOdds}%
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-xs font-semibold text-gray-600 mb-1">RESULT</div>
-                                  <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getResultColor(match.awayTeam.result)}`}>
-                                    {getResultText(match.awayTeam.result)}
+                                )}
+                                {/* Only show RESULT for finished matches */}
+                                {match.finished && (
+                                  <div className="text-center">
+                                    <div className="text-xs font-semibold text-gray-600 mb-1">RESULT</div>
+                                    <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getResultColor(match.awayTeam.result)}`}>
+                                      {getResultText(match.awayTeam.result)}
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
                             </div>
                           </div>
