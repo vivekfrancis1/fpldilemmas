@@ -310,13 +310,8 @@ export default function SeasonProjections() {
                       </Badge>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-center">
-                      <div className="flex flex-col items-center space-y-1">
-                        <Badge className={`text-xs font-medium text-white ${getTeamColor(player.team)}`}>
-                          {player.team}
-                        </Badge>
-                        <div className="text-xs text-gray-500 text-center leading-tight">
-                          {player.teamName}
-                        </div>
+                      <div className="text-xs text-gray-900 text-center leading-tight font-medium">
+                        {player.teamName}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-center">
