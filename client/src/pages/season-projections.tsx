@@ -133,8 +133,8 @@ export default function SeasonProjections() {
     switch (position) {
       case "GKP": return "🥅";
       case "DEF": return "🛡️";
-      case "MID": return "⚡";
-      case "FWD": return "⚽";
+      case "MID": return "";
+      case "FWD": return "";
       default: return "👤";
     }
   };
