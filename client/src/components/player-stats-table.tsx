@@ -239,8 +239,8 @@ export default function PlayerStatsTable({
     return null;
   };
 
-  // Check if we're viewing historical data
-  const isHistoricalSeason = season && season !== "2025/26";
+  // Check if we're viewing historical data - current season shows defensive contribution fields
+  const isHistoricalSeason = season && season !== "2025/26" && season !== "current";
 
   if (isLoading) {
     return (
