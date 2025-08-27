@@ -6,6 +6,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
+// Import team logos
+import arsenalLogo from "@/assets/team-logos/arsenal.png";
+import astonVillaLogo from "@/assets/team-logos/aston-villa.png";
+import bournemouthLogo from "@/assets/team-logos/bournemouth.png";
+import brentfordLogo from "@/assets/team-logos/brentford.png";
+import brightonLogo from "@/assets/team-logos/brighton.png";
+import chelseaLogo from "@/assets/team-logos/chelsea.png";
+import crystalPalaceLogo from "@/assets/team-logos/crystal-palace.png";
+import evertonLogo from "@/assets/team-logos/everton.png";
+import fulhamLogo from "@/assets/team-logos/fulham.png";
+import ipswichLogo from "@/assets/team-logos/ipswich.png";
+import leicesterLogo from "@/assets/team-logos/leicester.png";
+import liverpoolLogo from "@/assets/team-logos/liverpool.png";
+import manchesterCityLogo from "@/assets/team-logos/manchester-city.png";
+import manchesterUnitedLogo from "@/assets/team-logos/manchester-united.png";
+import newcastleLogo from "@/assets/team-logos/newcastle.png";
+import nottinghamForestLogo from "@/assets/team-logos/nottingham-forest.png";
+import southamptonLogo from "@/assets/team-logos/southampton.png";
+import tottenhamLogo from "@/assets/team-logos/tottenham.png";
+import westHamLogo from "@/assets/team-logos/west-ham.png";
+import wolvesLogo from "@/assets/team-logos/wolves.png";
+
 interface TeamStanding {
   id: number;
   name: string;
@@ -60,28 +82,28 @@ export default function ProjectedStandings() {
 
   const getTeamLogo = (shortName: string) => {
     const teamLogos: { [key: string]: string } = {
-      'ARS': '🔴', // Arsenal
-      'AVL': '🦁', // Aston Villa  
-      'BOU': '🍒', // Bournemouth
-      'BRE': '🐝', // Brentford
-      'BHA': '⚪', // Brighton
-      'CHE': '🔵', // Chelsea
-      'CRY': '🦅', // Crystal Palace
-      'EVE': '🔵', // Everton
-      'FUL': '⚪', // Fulham
-      'IPS': '🔵', // Ipswich Town
-      'LEI': '🦊', // Leicester City
-      'LIV': '🔴', // Liverpool
-      'MCI': '💙', // Manchester City
-      'MUN': '🔴', // Manchester United
-      'NEW': '⚫', // Newcastle United
-      'NFO': '🔴', // Nottingham Forest
-      'SOU': '🔴', // Southampton
-      'TOT': '⚪', // Tottenham
-      'WHU': '⚒️', // West Ham United
-      'WOL': '🟠', // Wolverhampton Wanderers
+      'ARS': arsenalLogo,
+      'AVL': astonVillaLogo,
+      'BOU': bournemouthLogo,
+      'BRE': brentfordLogo,
+      'BHA': brightonLogo,
+      'CHE': chelseaLogo,
+      'CRY': crystalPalaceLogo,
+      'EVE': evertonLogo,
+      'FUL': fulhamLogo,
+      'IPS': ipswichLogo,
+      'LEI': leicesterLogo,
+      'LIV': liverpoolLogo,
+      'MCI': manchesterCityLogo,
+      'MUN': manchesterUnitedLogo,
+      'NEW': newcastleLogo,
+      'NFO': nottinghamForestLogo,
+      'SOU': southamptonLogo,
+      'TOT': tottenhamLogo,
+      'WHU': westHamLogo,
+      'WOL': wolvesLogo,
     };
-    return teamLogos[shortName] || '⚽';
+    return teamLogos[shortName] || arsenalLogo; // fallback to arsenal logo
   };
 
   if (isLoading || standingsLoading) {
@@ -209,9 +231,11 @@ export default function ProjectedStandings() {
                         
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="text-xl">
-                              {getTeamLogo(team.shortName)}
-                            </div>
+                            <img 
+                              src={getTeamLogo(team.shortName)} 
+                              alt={`${team.name} logo`}
+                              className="w-8 h-8 object-contain"
+                            />
                             <div>
                               <div className="text-sm font-medium text-gray-900">{team.name}</div>
                               <div className="text-xs text-gray-500">{team.shortName}</div>
