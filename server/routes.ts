@@ -2986,23 +2986,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("http://localhost:5000/api/team-goal-projections")
+        fetch("http://localhost:5000/api/team-projections-combined")
       ]);
       
       if (!bootstrapResponse.ok || !teamProjectionsResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API or Team Goal Projections");
+        throw new Error("Failed to fetch data from FPL API or Team Combined Projections");
       }
       
       const bootstrapData = await bootstrapResponse.json();
       const teamProjectionsData = await teamProjectionsResponse.json();
       
-      console.log("DEBUG: Goal Share Season API - using Team Goal Projections totals");
+      console.log("DEBUG: Goal Share Season API - using Team Combined Projections season totals");
       
-      // Step 1: Calculate team season totals from Team Goal Projections
+      // Step 1: Calculate team season totals from Team Combined Projections (Goals Scored)
       const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
       
-      // Aggregate expected goals from Team Goal Projections data
-      teamProjectionsData.forEach((team: any) => {
+      // Aggregate expected goals from Team Combined Projections Goals Scored data
+      teamProjectionsData.goalsScored.forEach((team: any) => {
         if (!teamSeasonTotals[team.id]) {
           teamSeasonTotals[team.id] = {
             expectedGoals: 0,
@@ -3018,6 +3018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
+      console.log(`DEBUG: Team totals from Combined Projections - LIV: ${teamSeasonTotals[12]?.expectedGoals.toFixed(2)}, MCI: ${teamSeasonTotals[13]?.expectedGoals.toFixed(2)}`);
       console.log("DEBUG: Starting xG per 90 methodology implementation");
       
       // Step 2: Get current season xG data for all players
