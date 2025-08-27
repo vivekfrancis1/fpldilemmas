@@ -3403,45 +3403,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Assist Projections endpoint - converts assist share data to individual player projections
+  // Player Assist Projections endpoint - converts assist share data to individual player projections using gameweek-specific team projections
   app.get("/api/player-assist-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Assist Projections API called - generating from assist share data");
+      console.log("DEBUG: Player Assist Projections API called - generating from assist share data with gameweek-specific team projections");
       
-      // Fetch assist share season data
-      const assistShareResponse = await fetch("http://localhost:5000/api/assist-share-season");
-      if (!assistShareResponse.ok) {
-        throw new Error("Failed to fetch assist share data");
+      // Fetch both assist share season data and team assist projections
+      const [assistShareResponse, teamAssistResponse] = await Promise.all([
+        fetch("http://localhost:5000/api/assist-share-season"),
+        fetch("http://localhost:5000/api/team-assist-projections")
+      ]);
+      
+      if (!assistShareResponse.ok || !teamAssistResponse.ok) {
+        throw new Error("Failed to fetch required data");
       }
       
       const assistShareData = await assistShareResponse.json();
+      const teamAssistProjections = await teamAssistResponse.json();
       
-      // Convert assist share data to individual player projections
+      // Convert assist share data to individual player projections using team gameweek projections
       const allPlayerProjections: any[] = [];
       
       assistShareData.forEach((teamData: any) => {
-        if (teamData.players && Object.keys(teamData.players).length > 0) {
-          Object.keys(teamData.players).forEach(playerIdStr => {
-            const playerId = parseInt(playerIdStr);
-            const playerData = teamData.players[playerId];
-            
-            if (playerData && playerData.projectedAssists > 0) {
-              // Calculate gameweek projections (distribute season total across 38 gameweeks)
-              const avgAssistsPerGameweek = playerData.projectedAssists / 38;
+        if (teamData.players && teamData.players.length > 0) {
+          // Find corresponding team assist projections
+          const teamProjections = teamAssistProjections.find((team: any) => team.teamShort === teamData.teamShort);
+          
+          if (!teamProjections) {
+            console.warn(`DEBUG: No team projections found for ${teamData.teamShort}`);
+            return;
+          }
+          
+          teamData.players.forEach((playerData: any) => {
+            if (playerData && playerData.assistShare && playerData.assistShare > 0) {
               const gameweekProjections: { [gameweek: number]: number } = {};
+              let totalProjectedAssists = 0;
               
-              // Generate projections for all 38 gameweeks
-              for (let gw = 1; gw <= 38; gw++) {
-                gameweekProjections[gw] = Math.round(avgAssistsPerGameweek * 100) / 100;
-              }
+              // Distribute player's assist share across each gameweek based on team's gameweek projections
+              Object.entries(teamProjections.gameweekProjections).forEach(([gw, teamAssists]: [string, any]) => {
+                const gameweek = parseInt(gw);
+                const playerAssistsForGW = (typeof teamAssists === 'number') ? 
+                  (teamAssists * (playerData.assistShare / 100)) : 0;
+                
+                gameweekProjections[gameweek] = Math.round(playerAssistsForGW * 100) / 100;
+                totalProjectedAssists += playerAssistsForGW;
+              });
               
               allPlayerProjections.push({
-                playerId: playerId,
+                playerId: playerData.id,
                 playerName: playerData.name,
                 teamShort: teamData.teamShort,
                 position: playerData.position,
                 gameweekProjections,
-                totalProjectedAssists: Math.round(playerData.projectedAssists * 100) / 100
+                totalProjectedAssists: Math.round(totalProjectedAssists * 100) / 100,
+                assistShare: playerData.assistShare
               });
             }
           });
@@ -3451,7 +3466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sort by total projected assists (highest first)
       allPlayerProjections.sort((a, b) => b.totalProjectedAssists - a.totalProjectedAssists);
       
-      console.log(`DEBUG: Generated assist projections for ${allPlayerProjections.length} players using assist share data`);
+      console.log(`DEBUG: Generated assist projections for ${allPlayerProjections.length} players using gameweek-specific team projections`);
       res.json(allPlayerProjections);
     } catch (error) {
       console.error("Error generating player assist projections:", error);
