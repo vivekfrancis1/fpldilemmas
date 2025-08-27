@@ -34,7 +34,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     handle: "@FPL_Harry",
     platform: "youtube",
     managerId: 1320,
-    description: "Engaging podcaster and streamer; often excels early in seasons."
+    description: "Engaging podcaster and streamer."
   },
   {
     id: 4,
@@ -154,7 +154,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     handle: "@BigManBakar",
     platform: "twitter",
     managerId: 963,
-    description: "High-ranking player sharing advanced tactics."
+    description: "Shares advanced tactics."
   },
   {
     id: 19,
@@ -162,7 +162,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     handle: "@FPL_Yelena",
     platform: "twitter",
     managerId: 251,
-    description: "Rising creator with consistent top ranks."
+    description: "Rising creator"
   },
   {
     id: 20,
