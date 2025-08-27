@@ -243,10 +243,11 @@ export default function MyTeam() {
     }, 0);
   };
 
-  const getGW2Points = (): number | null => {
+  const getCurrentGameweekPoints = (): number | null => {
     if (!historyData || !Array.isArray((historyData as any)?.current)) return null;
-    const gw2Data = (historyData as any).current.find((gw: any) => gw.event === 2);
-    return gw2Data?.points || null;
+    const currentGW = getCurrentGameweek();
+    const currentGWData = (historyData as any).current.find((gw: any) => gw.event === currentGW);
+    return currentGWData?.points || null;
   };
 
   const getTotalPoints = (): number => {
@@ -412,11 +413,11 @@ export default function MyTeam() {
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">GW2 Points</p>
-                        <p className="text-xl sm:text-2xl font-bold text-orange-900 truncate" data-testid="text-gw2-points">
-                          {getGW2Points() !== null ? getGW2Points() : '-'}
+                        <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Current GW Points</p>
+                        <p className="text-xl sm:text-2xl font-bold text-orange-900 truncate" data-testid="text-current-gw-points">
+                          {getCurrentGameweekPoints() !== null ? getCurrentGameweekPoints() : '-'}
                         </p>
-                        <p className="text-xs text-orange-600 mt-1 truncate">Gameweek 2</p>
+                        <p className="text-xs text-orange-600 mt-1 truncate">GW {getCurrentGameweek()}</p>
                       </div>
                       <div className="p-1.5 sm:p-2 bg-orange-200 rounded-full flex-shrink-0">
                         <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-orange-700" />
