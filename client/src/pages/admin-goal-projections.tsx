@@ -283,11 +283,13 @@ export default function AdminGoalProjections() {
 
     const eliteDefenseTeams = parseTeamArray(formData.eliteDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.eliteDefenseTeams;
     const strongDefenseTeams = parseTeamArray(formData.strongDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.strongDefenseTeams;
+    const averageDefenseTeams = parseTeamArray(formData.averageDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.averageDefenseTeams;
     const weakDefenseTeams = parseTeamArray(formData.weakDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.weakDefenseTeams;
     const promotedDefenseTeams = parseTeamArray(formData.promotedDefenseTeams) || DEFAULT_DEFENSIVE_TIERS.promotedDefenseTeams;
 
     if (eliteDefenseTeams.includes(teamId)) return 'elite';
     if (strongDefenseTeams.includes(teamId)) return 'strong';
+    if (averageDefenseTeams.includes(teamId)) return 'average';
     if (weakDefenseTeams.includes(teamId)) return 'weak';
     if (promotedDefenseTeams.includes(teamId)) return 'promoted';
     return 'average';
