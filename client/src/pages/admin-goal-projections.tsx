@@ -89,8 +89,8 @@ const DEFAULT_TEAM_TIERS = {
   weakAttackTeams: [9, 16, 20], // Everton, Nott'm Forest, Wolves
   promotedAttackTeams: [17, 11, 3], // Sunderland, Leeds, Burnley
   // DEFENSE TEAMS  
-  eliteDefenseTeams: [1, 12], // Arsenal, Liverpool
-  strongDefenseTeams: [13, 7, 15, 16, 9], // Man City, Chelsea, Newcastle, Nott'm Forest, Everton
+  eliteDefenseTeams: [1], // Arsenal
+  strongDefenseTeams: [12, 13, 7, 15, 16, 9], // Liverpool, Man City, Chelsea, Newcastle, Nott'm Forest, Everton
   averageDefenseTeams: [2, 14, 8, 18, 10], // Aston Villa, Man Utd, Crystal Palace, Spurs, Fulham
   weakDefenseTeams: [6, 4, 5, 19, 20], // Brighton, Bournemouth, Brentford, West Ham, Wolves
   promotedDefenseTeams: [17, 11, 3], // Sunderland, Leeds, Burnley
