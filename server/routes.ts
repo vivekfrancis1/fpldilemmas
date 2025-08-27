@@ -35,8 +35,8 @@ const MASTER_TEAM_DEFAULTS = {
   // Defense Team Assignments
   eliteDefenseTeams: [1], // Arsenal
   strongDefenseTeams: [12, 13, 7, 15, 16], // Liverpool, Man City, Chelsea, Newcastle, Nottingham Forest
-  averageDefenseTeams: [2, 9, 14, 18], // Aston Villa, Everton, Manchester United, Tottenham
-  weakDefenseTeams: [4, 5, 6, 8, 10, 19, 20], // Bournemouth, Brentford, Brighton, Crystal Palace, Fulham, West Ham, Wolves
+  averageDefenseTeams: [2, 9, 14, 18, 8, 10], // Aston Villa, Everton, Manchester United, Tottenham, Crystal Palace, Fulham
+  weakDefenseTeams: [4, 5, 6, 19, 20], // Bournemouth, Brentford, Brighton, West Ham, Wolves
   promotedDefenseTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
   
   // Defense Multipliers
