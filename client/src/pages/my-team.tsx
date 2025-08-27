@@ -349,111 +349,94 @@ export default function MyTeam() {
 
             {/* Team Overview Cards */}
             {teamData && (
-              <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-6">
+              <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
                 <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-emerald-700 mb-1">Formation</p>
-                        <p className="text-3xl font-bold text-emerald-900" data-testid="text-formation">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-emerald-700 mb-1 truncate">Formation</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-emerald-900 truncate" data-testid="text-formation">
                           {getFormationString()}
                         </p>
                       </div>
-                      <div className="p-3 bg-emerald-200 rounded-full">
-                        <Trophy className="h-6 w-6 text-emerald-700" />
+                      <div className="p-2 sm:p-3 bg-emerald-200 rounded-full flex-shrink-0 ml-2">
+                        <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-700" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-green-700 mb-1">Squad Value</p>
-                        <p className="text-3xl font-bold text-green-900" data-testid="text-squad-value">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-green-700 mb-1 truncate">Squad Value</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-green-900 truncate" data-testid="text-squad-value">
                           {formatPrice(getTotalTeamValue())}
                         </p>
                         {teamData.transfers && (
-                          <p className="text-xs text-green-600 mt-1">
+                          <p className="text-xs text-green-600 mt-1 truncate">
                             Bank: {formatPrice(teamData.transfers.bank)}
                           </p>
                         )}
                       </div>
-                      <div className="p-3 bg-green-200 rounded-full">
-                        <DollarSign className="h-6 w-6 text-green-700" />
+                      <div className="p-2 sm:p-3 bg-green-200 rounded-full flex-shrink-0 ml-2">
+                        <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-green-700" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-blue-700 mb-1">Transfers</p>
-                        <p className="text-3xl font-bold text-blue-900" data-testid="text-transfers">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-blue-700 mb-1 truncate">Transfers</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-blue-900 truncate" data-testid="text-transfers">
                           {teamData.transfers ? `${teamData.transfers.made}/${teamData.transfers.limit}` : '0/1'}
                         </p>
                         {teamData.transfers && teamData.transfers.cost > 0 && (
-                          <p className="text-xs text-red-600 mt-1">
+                          <p className="text-xs text-red-600 mt-1 truncate">
                             Cost: -{teamData.transfers.cost} pts
                           </p>
                         )}
                       </div>
-                      <div className="p-3 bg-blue-200 rounded-full">
-                        <Star className="h-6 w-6 text-blue-700" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-purple-700 mb-1">Gameweek</p>
-                        <p className="text-3xl font-bold text-purple-900">
-                          GW {getCurrentGameweek()}
-                        </p>
-                        <p className="text-xs text-purple-600 mt-1">Current</p>
-                      </div>
-                      <div className="p-3 bg-purple-200 rounded-full">
-                        <Target className="h-6 w-6 text-purple-700" />
+                      <div className="p-2 sm:p-3 bg-blue-200 rounded-full flex-shrink-0 ml-2">
+                        <Star className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-orange-700 mb-1">GW2 Points</p>
-                        <p className="text-3xl font-bold text-orange-900" data-testid="text-gw2-points">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-orange-700 mb-1 truncate">GW2 Points</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-orange-900 truncate" data-testid="text-gw2-points">
                           {getGW2Points() !== null ? getGW2Points() : '-'}
                         </p>
-                        <p className="text-xs text-orange-600 mt-1">Gameweek 2</p>
+                        <p className="text-xs text-orange-600 mt-1 truncate">Gameweek 2</p>
                       </div>
-                      <div className="p-3 bg-orange-200 rounded-full">
-                        <Trophy className="h-6 w-6 text-orange-700" />
+                      <div className="p-2 sm:p-3 bg-orange-200 rounded-full flex-shrink-0 ml-2">
+                        <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-orange-700" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 shadow-sm">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-indigo-700 mb-1">Total Points</p>
-                        <p className="text-3xl font-bold text-indigo-900" data-testid="text-total-points">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-indigo-700 mb-1 truncate">Total Points</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-indigo-900 truncate" data-testid="text-total-points">
                           {getTotalPoints()}
                         </p>
-                        <p className="text-xs text-indigo-600 mt-1">All gameweeks</p>
+                        <p className="text-xs text-indigo-600 mt-1 truncate">All gameweeks</p>
                       </div>
-                      <div className="p-3 bg-indigo-200 rounded-full">
-                        <Star className="h-6 w-6 text-indigo-700" />
+                      <div className="p-2 sm:p-3 bg-indigo-200 rounded-full flex-shrink-0 ml-2">
+                        <Star className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-700" />
                       </div>
                     </div>
                   </CardContent>
