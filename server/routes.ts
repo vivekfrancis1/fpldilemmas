@@ -3536,7 +3536,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       weightedPlayerShares[matchedPlayerId].totalWeight += 0.3333;
                       console.log(`DEBUG: Added ${season} data for ${weightedPlayerShares[matchedPlayerId].name}: ${seasonAssistShare.toFixed(1)}% (${assists} assists of ${teamTotalAssists})`);
                     } else if (season !== "current") {
-                      console.log(`DEBUG: Could not match historical player ${playerName} from ${season} (${assists} assists) to current squad`);
+                      const playerNameForDebug = (getPlayerName(player.playerId) || `${player.first_name || player.firstName} ${player.second_name || player.secondName}`);
+                      console.log(`DEBUG: Could not match historical player ${playerNameForDebug} from ${season} (${assists} assists) to current squad`);
                     }
                   }
                 });
