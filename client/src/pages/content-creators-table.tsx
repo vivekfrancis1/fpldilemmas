@@ -273,6 +273,10 @@ export default function ContentCreators() {
         valueA = a.name.toLowerCase();
         valueB = b.name.toLowerCase();
         break;
+      case "managerId":
+        valueA = a.managerId;
+        valueB = b.managerId;
+        break;
       default:
         return 0;
     }
@@ -357,7 +361,13 @@ export default function ContentCreators() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[300px]">Creator</TableHead>
-                <TableHead className="text-center">Manager ID</TableHead>
+                <TableHead 
+                  className="text-center cursor-pointer hover:bg-muted/50" 
+                  onClick={() => handleSort('managerId')}
+                >
+                  Manager ID 
+                  {sortBy === 'managerId' && <ArrowUpDown className="h-4 w-4 inline ml-1" />}
+                </TableHead>
                 <TableHead className="text-left">Player Name</TableHead>
                 <TableHead className="text-left">Team Name</TableHead>
                 <TableHead 
