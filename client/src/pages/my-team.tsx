@@ -238,6 +238,35 @@ export default function MyTeam() {
     return `${counts.def}-${counts.mid}-${counts.fwd}`;
   };
 
+  const getTeamColors = (teamId: number): { primary: string; secondary: string } => {
+    const teamColorMap: { [key: number]: { primary: string; secondary: string } } = {
+      1: { primary: 'bg-red-600', secondary: 'bg-red-500' }, // Arsenal
+      2: { primary: 'bg-pink-600', secondary: 'bg-pink-500' }, // Aston Villa
+      3: { primary: 'bg-yellow-500', secondary: 'bg-yellow-400' }, // Brentford
+      4: { primary: 'bg-blue-600', secondary: 'bg-blue-500' }, // Brighton
+      5: { primary: 'bg-amber-600', secondary: 'bg-amber-500' }, // Burnley
+      6: { primary: 'bg-blue-800', secondary: 'bg-blue-700' }, // Chelsea
+      7: { primary: 'bg-blue-600', secondary: 'bg-red-500' }, // Crystal Palace
+      8: { primary: 'bg-blue-600', secondary: 'bg-blue-500' }, // Everton
+      9: { primary: 'bg-white', secondary: 'bg-gray-100' }, // Fulham
+      10: { primary: 'bg-red-600', secondary: 'bg-red-500' }, // Liverpool
+      11: { primary: 'bg-green-600', secondary: 'bg-green-500' }, // Luton Town
+      12: { primary: 'bg-sky-400', secondary: 'bg-sky-300' }, // Manchester City
+      13: { primary: 'bg-red-700', secondary: 'bg-red-600' }, // Manchester United
+      14: { primary: 'bg-black', secondary: 'bg-gray-800' }, // Newcastle
+      15: { primary: 'bg-red-600', secondary: 'bg-red-500' }, // Nottingham Forest
+      16: { primary: 'bg-red-600', secondary: 'bg-blue-600' }, // Sheffield United
+      17: { primary: 'bg-white', secondary: 'bg-gray-100' }, // Tottenham
+      18: { primary: 'bg-blue-600', secondary: 'bg-blue-500' }, // West Ham
+      19: { primary: 'bg-yellow-500', secondary: 'bg-black' }, // Wolves
+      20: { primary: 'bg-orange-600', secondary: 'bg-orange-500' }, // Bournemouth
+      21: { primary: 'bg-blue-600', secondary: 'bg-blue-500' }, // Leicester City
+      22: { primary: 'bg-yellow-500', secondary: 'bg-green-600' }, // Ipswich Town
+    };
+    
+    return teamColorMap[teamId] || { primary: 'bg-gray-600', secondary: 'bg-gray-500' };
+  };
+
   const getTotalTeamValue = (): number => {
     if (!teamData?.picks || !bootstrapData) return 0;
     
@@ -613,14 +642,16 @@ export default function MyTeam() {
                                     {(() => {
                                       const player = getPlayerById(goalkeeper.element);
                                       if (!player) return null;
+                                      const playerTeam = getPlayerTeam(player);
+                                      const teamColors = getTeamColors(playerTeam?.id || 0);
                                       return (
                                         <div className="flex flex-col items-center">
                                           <div className="relative">
                                             {/* Jersey Shape */}
-                                            <div className={`w-14 h-16 rounded-t-xl rounded-b-md flex items-center justify-center text-xs font-bold text-white shadow-lg relative ${
-                                              goalkeeper.is_captain ? 'bg-amber-500' : 
-                                              goalkeeper.is_vice_captain ? 'bg-blue-500' : 
-                                              'bg-yellow-600'
+                                            <div className={`w-14 h-16 rounded-t-xl rounded-b-md flex items-center justify-center text-xs font-bold shadow-lg relative ${
+                                              goalkeeper.is_captain ? 'bg-amber-500 text-white' : 
+                                              goalkeeper.is_vice_captain ? 'bg-blue-500 text-white' : 
+                                              `${teamColors.primary} ${teamColors.primary.includes('white') ? 'text-black border-2 border-gray-300' : 'text-white'}`
                                             }`}>
                                               {/* Jersey number/initials */}
                                               <div className="text-center">
@@ -666,14 +697,16 @@ export default function MyTeam() {
                                     {defenders.map((pick, index) => {
                                       const player = getPlayerById(pick.element);
                                       if (!player) return null;
+                                      const playerTeam = getPlayerTeam(player);
+                                      const teamColors = getTeamColors(playerTeam?.id || 0);
                                       return (
                                         <div key={pick.element} className="flex flex-col items-center">
                                           <div className="relative">
                                             {/* Jersey Shape */}
-                                            <div className={`w-14 h-16 rounded-t-xl rounded-b-md flex items-center justify-center text-xs font-bold text-white shadow-lg relative ${
-                                              pick.is_captain ? 'bg-amber-500' : 
-                                              pick.is_vice_captain ? 'bg-blue-500' : 
-                                              'bg-blue-600'
+                                            <div className={`w-14 h-16 rounded-t-xl rounded-b-md flex items-center justify-center text-xs font-bold shadow-lg relative ${
+                                              pick.is_captain ? 'bg-amber-500 text-white' : 
+                                              pick.is_vice_captain ? 'bg-blue-500 text-white' : 
+                                              `${teamColors.primary} ${teamColors.primary.includes('white') ? 'text-black border-2 border-gray-300' : 'text-white'}`
                                             }`}>
                                               {/* Jersey number/initials */}
                                               <div className="text-center">
@@ -719,14 +752,16 @@ export default function MyTeam() {
                                     {midfielders.map((pick, index) => {
                                       const player = getPlayerById(pick.element);
                                       if (!player) return null;
+                                      const playerTeam = getPlayerTeam(player);
+                                      const teamColors = getTeamColors(playerTeam?.id || 0);
                                       return (
                                         <div key={pick.element} className="flex flex-col items-center">
                                           <div className="relative">
                                             {/* Jersey Shape */}
-                                            <div className={`w-14 h-16 rounded-t-xl rounded-b-md flex items-center justify-center text-xs font-bold text-white shadow-lg relative ${
-                                              pick.is_captain ? 'bg-amber-500' : 
-                                              pick.is_vice_captain ? 'bg-blue-500' : 
-                                              'bg-green-600'
+                                            <div className={`w-14 h-16 rounded-t-xl rounded-b-md flex items-center justify-center text-xs font-bold shadow-lg relative ${
+                                              pick.is_captain ? 'bg-amber-500 text-white' : 
+                                              pick.is_vice_captain ? 'bg-blue-500 text-white' : 
+                                              `${teamColors.primary} ${teamColors.primary.includes('white') ? 'text-black border-2 border-gray-300' : 'text-white'}`
                                             }`}>
                                               {/* Jersey number/initials */}
                                               <div className="text-center">
@@ -772,14 +807,16 @@ export default function MyTeam() {
                                     {forwards.map((pick, index) => {
                                       const player = getPlayerById(pick.element);
                                       if (!player) return null;
+                                      const playerTeam = getPlayerTeam(player);
+                                      const teamColors = getTeamColors(playerTeam?.id || 0);
                                       return (
                                         <div key={pick.element} className="flex flex-col items-center">
                                           <div className="relative">
                                             {/* Jersey Shape */}
-                                            <div className={`w-14 h-16 rounded-t-xl rounded-b-md flex items-center justify-center text-xs font-bold text-white shadow-lg relative ${
-                                              pick.is_captain ? 'bg-amber-500' : 
-                                              pick.is_vice_captain ? 'bg-blue-500' : 
-                                              'bg-red-600'
+                                            <div className={`w-14 h-16 rounded-t-xl rounded-b-md flex items-center justify-center text-xs font-bold shadow-lg relative ${
+                                              pick.is_captain ? 'bg-amber-500 text-white' : 
+                                              pick.is_vice_captain ? 'bg-blue-500 text-white' : 
+                                              `${teamColors.primary} ${teamColors.primary.includes('white') ? 'text-black border-2 border-gray-300' : 'text-white'}`
                                             }`}>
                                               {/* Jersey number/initials */}
                                               <div className="text-center">
@@ -825,47 +862,64 @@ export default function MyTeam() {
                           {/* Pitch Legend */}
                           <div className="absolute bottom-2 left-2 bg-black/70 text-white p-3 rounded text-xs">
                             <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-5 bg-yellow-600 rounded-t-md rounded-b-sm relative">
-                                  <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
-                                </div>
-                                <span>Goalkeeper</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-5 bg-blue-600 rounded-t-md rounded-b-sm relative">
-                                  <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
-                                </div>
-                                <span>Defender</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-5 bg-green-600 rounded-t-md rounded-b-sm relative">
-                                  <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
-                                </div>
-                                <span>Midfielder</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-5 bg-red-600 rounded-t-md rounded-b-sm relative">
-                                  <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
-                                </div>
-                                <span>Forward</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-5 bg-amber-500 rounded-t-md rounded-b-sm relative">
-                                  <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
-                                  <div className="absolute -top-0.5 -right-0.5 w-2 h-3 bg-amber-300 rounded-sm flex items-center justify-center">
-                                    <span className="text-[6px] font-bold text-amber-800">C</span>
+                              <div className="font-medium mb-2">Team Colors</div>
+                              <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-5 bg-red-600 rounded-t-md rounded-b-sm relative">
+                                    <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
                                   </div>
+                                  <span>Liverpool</span>
                                 </div>
-                                <span>Captain</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-5 bg-blue-500 rounded-t-md rounded-b-sm relative">
-                                  <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
-                                  <div className="absolute -top-0.5 -right-0.5 w-2 h-3 bg-blue-300 rounded-sm flex items-center justify-center">
-                                    <span className="text-[6px] font-bold text-blue-800">VC</span>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-5 bg-sky-400 rounded-t-md rounded-b-sm relative">
+                                    <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
                                   </div>
+                                  <span>Man City</span>
                                 </div>
-                                <span>Vice Captain</span>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-5 bg-blue-800 rounded-t-md rounded-b-sm relative">
+                                    <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
+                                  </div>
+                                  <span>Chelsea</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-5 bg-red-700 rounded-t-md rounded-b-sm relative">
+                                    <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
+                                  </div>
+                                  <span>Man Utd</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-5 bg-white border-2 border-gray-300 rounded-t-md rounded-b-sm relative">
+                                    <div className="absolute top-0 left-1/2 w-2 h-1 bg-black/20 rounded-b transform -translate-x-1/2"></div>
+                                  </div>
+                                  <span>Tottenham</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-5 bg-black rounded-t-md rounded-b-sm relative">
+                                    <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
+                                  </div>
+                                  <span>Newcastle</span>
+                                </div>
+                              </div>
+                              <div className="border-t border-white/30 pt-2 mt-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-5 bg-amber-500 rounded-t-md rounded-b-sm relative">
+                                    <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
+                                    <div className="absolute -top-0.5 -right-0.5 w-2 h-3 bg-amber-300 rounded-sm flex items-center justify-center">
+                                      <span className="text-[6px] font-bold text-amber-800">C</span>
+                                    </div>
+                                  </div>
+                                  <span>Captain</span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <div className="w-4 h-5 bg-blue-500 rounded-t-md rounded-b-sm relative">
+                                    <div className="absolute top-0 left-1/2 w-2 h-1 bg-white/20 rounded-b transform -translate-x-1/2"></div>
+                                    <div className="absolute -top-0.5 -right-0.5 w-2 h-3 bg-blue-300 rounded-sm flex items-center justify-center">
+                                      <span className="text-[6px] font-bold text-blue-800">VC</span>
+                                    </div>
+                                  </div>
+                                  <span>Vice Captain</span>
+                                </div>
                               </div>
                             </div>
                           </div>
