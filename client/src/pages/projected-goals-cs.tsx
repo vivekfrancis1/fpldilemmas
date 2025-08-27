@@ -305,7 +305,7 @@ export default function ProjectedGoalsCS() {
                                       {!match1.finished && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match1.homeTeam.cleanSheetOdds)}`}>
-                                            {match1.homeTeam.cleanSheetOdds}%
+                                            {Math.round(match1.homeTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
                                       )}
@@ -338,7 +338,7 @@ export default function ProjectedGoalsCS() {
                                       {!match1.finished && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match1.awayTeam.cleanSheetOdds)}`}>
-                                            {match1.awayTeam.cleanSheetOdds}%
+                                            {Math.round(match1.awayTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
                                       )}
@@ -384,7 +384,7 @@ export default function ProjectedGoalsCS() {
                                       {!match2.finished && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match2.homeTeam.cleanSheetOdds)}`}>
-                                            {match2.homeTeam.cleanSheetOdds}%
+                                            {Math.round(match2.homeTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
                                       )}
@@ -417,7 +417,7 @@ export default function ProjectedGoalsCS() {
                                       {!match2.finished && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match2.awayTeam.cleanSheetOdds)}`}>
-                                            {match2.awayTeam.cleanSheetOdds}%
+                                            {Math.round(match2.awayTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
                                       )}
