@@ -223,6 +223,8 @@ export default function ContentCreators() {
   const { data: creators = [], isLoading } = useQuery({
     queryKey: ["/api/content-creators"],
     retry: 3,
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0, // Don't cache data
   });
 
   // Refresh FPL data mutation
