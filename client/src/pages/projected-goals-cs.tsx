@@ -207,11 +207,11 @@ export default function ProjectedGoalsCS() {
 
           {/* Projections Table - Compact */}
           <Card className="overflow-hidden shadow-md border-0">
-            <CardHeader className="bg-gradient-to-r from-blue-100 to-purple-100 text-gray-800 py-2 border-b border-gray-200">
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Target className="h-4 w-4" />
                 Match Projections
-                <Badge className="bg-blue-50 text-blue-700 border border-blue-200 ml-auto text-xs">
+                <Badge className="bg-white/20 text-white border-white/30 ml-auto text-xs">
                   {filteredProjections.length} matches
                 </Badge>
               </CardTitle>
@@ -259,7 +259,7 @@ export default function ProjectedGoalsCS() {
                                       <span className="font-bold text-sm text-gray-800">
                                         {match1.homeTeam.shortName}
                                       </span>
-                                      <span className="text-xs bg-emerald-500 text-white px-1.5 py-0.5 rounded-full font-bold">H</span>
+                                      <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(H)</span>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center">
@@ -295,7 +295,7 @@ export default function ProjectedGoalsCS() {
                                       <span className="font-bold text-sm text-gray-800">
                                         {match1.awayTeam.shortName}
                                       </span>
-                                      <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold">A</span>
+                                      <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(A)</span>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center">
@@ -344,7 +344,7 @@ export default function ProjectedGoalsCS() {
                                       <span className="font-bold text-sm text-gray-800">
                                         {match2.homeTeam.shortName}
                                       </span>
-                                      <span className="text-xs bg-emerald-500 text-white px-1.5 py-0.5 rounded-full font-bold">H</span>
+                                      <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(H)</span>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center">
@@ -380,7 +380,7 @@ export default function ProjectedGoalsCS() {
                                       <span className="font-bold text-sm text-gray-800">
                                         {match2.awayTeam.shortName}
                                       </span>
-                                      <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold">A</span>
+                                      <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(A)</span>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center">
