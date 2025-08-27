@@ -263,7 +263,7 @@ export default function ProjectedGoalsCS() {
                                   <div className="text-center">
                                     <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
                                     <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
-                                      {match.homeTeam.cleanSheetOdds}%
+                                      {Math.round(match.homeTeam.cleanSheetOdds)}%
                                     </div>
                                   </div>
                                 )}
@@ -297,7 +297,7 @@ export default function ProjectedGoalsCS() {
                                   <div className="text-center">
                                     <div className="text-xs font-semibold text-gray-600 mb-1">CS%</div>
                                     <div className={`px-3 py-2 rounded-lg text-sm font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
-                                      {match.awayTeam.cleanSheetOdds}%
+                                      {Math.round(match.awayTeam.cleanSheetOdds)}%
                                     </div>
                                   </div>
                                 )}
