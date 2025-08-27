@@ -60,7 +60,7 @@ const seasonProjectionsData: SeasonProjection[] = [
   { rank: 42, name: "Havertz", fullName: "Kai Havertz", team: "ARS", teamName: "Arsenal", position: "FWD", goals: 8.5, assists: 3.6, totalInvolvements: 12.1 },
   { rank: 43, name: "Schade", fullName: "Kevin Schade", team: "BRE", teamName: "Brentford", position: "FWD", goals: 7.8, assists: 4.1, totalInvolvements: 11.9 },
   { rank: 44, name: "Szoboszlai", fullName: "Dominik Szoboszlai", team: "LIV", teamName: "Liverpool", position: "MID", goals: 5.8, assists: 6.0, totalInvolvements: 11.8 },
-  { rank: 45, name: "Thiago", fullName: "Thiago Alcântara", team: "SOU", teamName: "Southampton", position: "MID", goals: 9.3, assists: 2.4, totalInvolvements: 11.6 },
+  { rank: 45, name: "Thiago", fullName: "Thiago", team: "SOU", teamName: "Southampton", position: "MID", goals: 9.3, assists: 2.4, totalInvolvements: 11.6 },
   { rank: 46, name: "Enzo", fullName: "Enzo Fernández", team: "CHE", teamName: "Chelsea", position: "MID", goals: 5.5, assists: 6.0, totalInvolvements: 11.5 },
   { rank: 47, name: "Murphy", fullName: "Jacob Murphy", team: "NEW", teamName: "Newcastle United", position: "MID", goals: 4.9, assists: 6.5, totalInvolvements: 11.4 },
   { rank: 48, name: "Paqueta", fullName: "Lucas Paquetá", team: "WHU", teamName: "West Ham United", position: "MID", goals: 6.8, assists: 4.6, totalInvolvements: 11.4 },
