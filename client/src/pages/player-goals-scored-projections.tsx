@@ -1,11 +1,10 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Target, Users, TrendingUp, Calendar, Trophy, Filter } from "lucide-react";
+import { Target, Filter, BarChart3, Trophy } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 
 interface PlayerGoalProjection {
   playerId: number;
@@ -14,8 +13,8 @@ interface PlayerGoalProjection {
   teamShort: string;
   position: string;
   totalProjectedGoals: number;
-  gameweekProjections: { [gameweek: number]: number }; // Goals projected for each gameweek
-  goalShare: number; // Percentage share of team's goals
+  gameweekProjections: { [gameweek: number]: number };
+  goalShare: number;
 }
 
 export default function PlayerGoalsScoredProjections() {
@@ -24,48 +23,88 @@ export default function PlayerGoalsScoredProjections() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("total");
 
-  const { data: bootstrapData, isLoading: bootstrapLoading } = useQuery<BootstrapData>({
+  const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
-    staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch player goal projections data
   const { data: playerGoalData, isLoading: playerGoalLoading, error } = useQuery<PlayerGoalProjection[]>({
     queryKey: ["/api/player-goals-scored-projections"],
     staleTime: 10 * 60 * 1000,
   });
 
-  const isLoading = bootstrapLoading || playerGoalLoading;
+  // Get current gameweek and calculate next 6 gameweeks
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 3;
+    const currentEvent = bootstrapData.events.find((event: any) => event.is_current);
+    return currentEvent ? currentEvent.id : 3;
+  }, [bootstrapData]);
+
+  const next6Gameweeks = useMemo(() => {
+    return Array.from({ length: 6 }, (_, i) => currentGameweek + i).filter(gw => gw <= 38);
+  }, [currentGameweek]);
 
   // Filter and sort data
-  const filteredData = useMemo(() => {
+  const filteredProjections = useMemo(() => {
     if (!playerGoalData) return [];
 
-    let filtered = playerGoalData.filter(player => {
-      if (selectedTeam !== "all" && player.teamShort !== selectedTeam) return false;
-      if (selectedPosition !== "all" && player.position !== selectedPosition) return false;
-      if (searchQuery && !player.playerName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      return true;
-    });
+    return playerGoalData
+      .filter(player => {
+        if (selectedTeam !== "all" && player.teamShort !== selectedTeam) return false;
+        if (selectedPosition !== "all" && player.position !== selectedPosition) return false;
+        if (searchQuery && !player.playerName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy.startsWith('gw')) {
+          const gwNumber = parseInt(sortBy.replace('gw', ''));
+          const aValue = a.gameweekProjections[gwNumber] || 0;
+          const bValue = b.gameweekProjections[gwNumber] || 0;
+          return bValue - aValue;
+        }
+        
+        switch (sortBy) {
+          case "total": {
+            // Calculate next 6 gameweeks total for sorting
+            const aPeriodTotal = next6Gameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
+            const bPeriodTotal = next6Gameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+            return bPeriodTotal - aPeriodTotal;
+          }
+          case "season": return b.totalProjectedGoals - a.totalProjectedGoals;
+          case "name": return a.playerName.localeCompare(b.playerName);
+          case "team": return a.teamName.localeCompare(b.teamName);
+          case "position": return a.position.localeCompare(b.position);
+          default: {
+            const aPeriodTotal = next6Gameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
+            const bPeriodTotal = next6Gameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+            return bPeriodTotal - aPeriodTotal;
+          }
+        }
+      });
+  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy, next6Gameweeks]);
 
-    // Sort by selected criteria
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "total":
-          return b.totalProjectedGoals - a.totalProjectedGoals;
-        case "goalShare":
-          return b.goalShare - a.goalShare;
-        case "name":
-          return a.playerName.localeCompare(b.playerName);
-        case "team":
-          return a.teamName.localeCompare(b.teamName);
-        default:
-          return b.totalProjectedGoals - a.totalProjectedGoals;
-      }
+  const totalGoals = useMemo(() => {
+    if (!filteredProjections.length) return { gameweekTotals: {}, overallTotal: 0, seasonTotal: 0, averagePerGame: 0 };
+    
+    const gameweekTotals: { [gameweek: number]: number } = {};
+    let overallTotal = 0;
+    let seasonTotal = 0;
+    
+    const totalWeeks = next6Gameweeks.length;
+    
+    // Calculate totals for next 6 gameweeks
+    next6Gameweeks.forEach(gwNumber => {
+      const gwTotal = filteredProjections.reduce((sum, player) => sum + (player.gameweekProjections[gwNumber] || 0), 0);
+      gameweekTotals[gwNumber] = gwTotal;
+      overallTotal += gwTotal;
     });
-
-    return filtered;
-  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy]);
+    
+    // Calculate season total
+    seasonTotal = filteredProjections.reduce((sum, player) => sum + player.totalProjectedGoals, 0);
+    
+    const averagePerGame = overallTotal / totalWeeks;
+    
+    return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
+  }, [filteredProjections, next6Gameweeks]);
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
@@ -85,270 +124,257 @@ export default function PlayerGoalsScoredProjections() {
     }));
   }, [bootstrapData]);
 
-  // Get current gameweek and calculate next 6 gameweeks
-  const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 1;
-    const currentEvent = bootstrapData.events.find((event: any) => event.is_current);
-    return currentEvent ? currentEvent.id : 1;
-  }, [bootstrapData]);
+  const getGoalsColor = (goals: number) => {
+    if (goals >= 2.5) return 'bg-green-50 text-green-800 font-semibold';
+    if (goals >= 2.0) return 'bg-blue-50 text-blue-800 font-medium';
+    if (goals >= 1.5) return 'bg-yellow-50 text-yellow-800';
+    if (goals >= 1.0) return 'bg-orange-50 text-orange-800';
+    return 'bg-red-50 text-red-800';
+  };
 
-  const next6Gameweeks = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => currentGameweek + i).filter(gw => gw <= 38);
-  }, [currentGameweek]);
-
-  // Calculate summary stats for next 6 gameweeks
-  const summaryStats = useMemo(() => {
-    if (!filteredData.length) return { totalPlayers: 0, total6GW: 0, totalSeason: 0, avg6GW: 0, topScorer: null };
-    
-    const total6GW = filteredData.reduce((sum, player) => {
-      const next6Goals = next6Gameweeks.reduce((gwSum, gw) => gwSum + (player.gameweekProjections[gw] || 0), 0);
-      return sum + next6Goals;
-    }, 0);
-    
-    const totalSeason = filteredData.reduce((sum, player) => sum + player.totalProjectedGoals, 0);
-    const topScorer = filteredData[0];
-    
-    return {
-      totalPlayers: filteredData.length,
-      total6GW: Math.round(total6GW * 100) / 100,
-      totalSeason: Math.round(totalSeason * 100) / 100,
-      avg6GW: Math.round((total6GW / filteredData.length) * 100) / 100,
-      topScorer
-    };
-  }, [filteredData, next6Gameweeks]);
-
-  if (isLoading) {
+  if (isLoading || playerGoalLoading) {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <Target className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold">Player Goals Scored Projections</h1>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-32 bg-gray-200 rounded-lg animate-pulse" />
-          ))}
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="h-96 bg-gray-200 rounded animate-pulse" />
-        </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <Target className="h-8 w-8 text-red-600" />
-          <h1 className="text-3xl font-bold">Player Goals Scored Projections</h1>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50/30">
+        <div className="w-full max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+              <Target className="h-8 w-8 text-red-600" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Error Loading Data</h1>
+            <p className="text-lg text-red-600">Unable to load player goal projections. Please try again later.</p>
+          </div>
         </div>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-red-600">Error loading player goal projections data. Please try again later.</p>
-          </CardContent>
-        </Card>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center gap-3 mb-6">
-        <Target className="h-8 w-8 text-blue-600" />
-        <div>
-          <h1 className="text-3xl font-bold">Player Goals Scored Projections</h1>
-          <p className="text-gray-600 mt-1">Individual player goal projections for the next 6 gameweeks based on team shares and xG analysis</p>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50/30">
+      <div className="w-full max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4">
+            <Target className="h-8 w-8 text-orange-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
+            Player Goals Scored Projections
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
+            Individual player goal projections for the next 6 gameweeks based on team shares and xG analysis
+          </p>
         </div>
-      </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-600" />
-              <div>
+        {/* Controls */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-wrap gap-4 items-end">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-500" />
+                <label className="text-sm font-medium text-gray-700">Team:</label>
+                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Teams</SelectItem>
+                    {teams.map(team => (
+                      <SelectItem key={team.id} value={team.short}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Position:</label>
+                <Select value={selectedPosition} onValueChange={setSelectedPosition}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {positions.map(pos => (
+                      <SelectItem key={pos.id} value={pos.name}>
+                        {pos.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-gray-500" />
+                <label className="text-sm font-medium text-gray-700">Sort by:</label>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="total">6 GW Total</SelectItem>
+                    <SelectItem value="season">Season Total</SelectItem>
+                    <SelectItem value="name">Player Name</SelectItem>
+                    <SelectItem value="team">Team</SelectItem>
+                    <SelectItem value="position">Position</SelectItem>
+                    {next6Gameweeks.map(gw => (
+                      <SelectItem key={gw} value={`gw${gw}`}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                <label className="text-sm font-medium text-gray-700">Search:</label>
+                <input
+                  type="text"
+                  placeholder="Search players..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">{filteredProjections.length}</p>
                 <p className="text-sm text-gray-600">Players</p>
-                <p className="text-2xl font-bold">{summaryStats.totalPlayers}</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm text-gray-600">Next 6 GW Total</p>
-                <p className="text-2xl font-bold">{summaryStats.total6GW}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-600">{totalGoals.overallTotal.toFixed(2)}</p>
+                <p className="text-sm text-gray-600">6 GW Total</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
-              <div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">{totalGoals.seasonTotal.toFixed(2)}</p>
                 <p className="text-sm text-gray-600">Season Total</p>
-                <p className="text-2xl font-bold">{summaryStats.totalSeason}</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-purple-600">{totalGoals.averagePerGame.toFixed(2)}</p>
+                <p className="text-sm text-gray-600">Avg Per GW</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Player Goals Table */}
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-600" />
-              <div>
-                <p className="text-sm text-gray-600">Top Scorer</p>
-                <p className="text-lg font-bold">{summaryStats.topScorer?.playerName || "N/A"}</p>
-                <p className="text-sm text-gray-500">{summaryStats.topScorer?.totalProjectedGoals.toFixed(2) || "0.00"} goals</p>
-              </div>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5" />
+              Player Goals - Next 6 Gameweeks ({filteredProjections.length} players)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Player</th>
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">Team</th>
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">Pos</th>
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">6 GW</th>
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">Season</th>
+                    {next6Gameweeks.map(gw => (
+                      <th key={gw} className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[60px]">
+                        GW{gw}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProjections.map((player, index) => {
+                    const next6Total = next6Gameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
+                    
+                    return (
+                      <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-gray-900">
+                            {player.playerName}
+                          </div>
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <Badge variant="outline" className="text-xs font-medium">
+                            {player.teamShort}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-2 text-center text-sm text-gray-600">
+                          {player.position}
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <span className="font-bold text-gray-900">
+                            {next6Total.toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <span className="text-sm text-gray-600">
+                            {player.totalProjectedGoals.toFixed(2)}
+                          </span>
+                        </td>
+                        {next6Gameweeks.map(gw => {
+                          const goals = player.gameweekProjections[gw] || 0;
+                          return (
+                            <td key={gw} className="py-3 px-2 text-center">
+                              <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getGoalsColor(goals)}`}>
+                                {goals.toFixed(2)}
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-gray-300 bg-gray-100">
+                    <td className="py-3 px-4 font-bold text-gray-900" colSpan={3}>
+                      TOTALS
+                    </td>
+                    <td className="py-3 px-2 text-center font-bold text-blue-600">
+                      {totalGoals.overallTotal.toFixed(2)}
+                    </td>
+                    <td className="py-3 px-2 text-center font-bold text-green-600">
+                      {totalGoals.seasonTotal.toFixed(2)}
+                    </td>
+                    {next6Gameweeks.map(gw => (
+                      <td key={gw} className="py-3 px-2 text-center font-bold text-gray-900">
+                        {(totalGoals.gameweekTotals[gw] || 0).toFixed(2)}
+                      </td>
+                    ))}
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Team</label>
-              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Teams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {teams.map(team => (
-                    <SelectItem key={team.id} value={team.short}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-2">Position</label>
-              <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Positions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Positions</SelectItem>
-                  {positions.map(pos => (
-                    <SelectItem key={pos.id} value={pos.name}>
-                      {pos.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-2">Sort By</label>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="total">Total Goals</SelectItem>
-                  <SelectItem value="goalShare">Goal Share</SelectItem>
-                  <SelectItem value="name">Player Name</SelectItem>
-                  <SelectItem value="team">Team</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Search Player</label>
-              <Input
-                placeholder="Search by player name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Player Goals Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Player Goals - Next 6 Gameweeks ({filteredData.length} players)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3 font-semibold sticky left-0 bg-white">Player</th>
-                  <th className="text-left p-3 font-semibold">Team</th>
-                  <th className="text-left p-3 font-semibold">Pos</th>
-                  <th className="text-center p-3 font-semibold">6 GW</th>
-                  <th className="text-center p-3 font-semibold">Season</th>
-                  {next6Gameweeks.map((gw) => (
-                    <th key={gw} className="text-center p-2 text-xs font-medium min-w-[50px]">
-                      GW{gw}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredData.map((player, index) => {
-                  const next6Total = next6Gameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
-                  
-                  return (
-                    <tr key={player.playerId} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                      <td className="p-3 sticky left-0 bg-inherit font-medium">
-                        <div>
-                          <p className="font-semibold">{player.playerName}</p>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <Badge variant="outline" className="text-xs">
-                          {player.teamShort}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-sm text-gray-600">{player.position}</td>
-                      <td className="p-3 text-center font-bold text-lg">
-                        {next6Total.toFixed(2)}
-                      </td>
-                      <td className="p-3 text-center font-bold text-sm text-gray-600">
-                        {player.totalProjectedGoals.toFixed(2)}
-                      </td>
-                      {next6Gameweeks.map((gw) => {
-                        const goals = player.gameweekProjections[gw] || 0;
-                        return (
-                          <td key={gw} className="text-center p-2">
-                            <span className={`text-xs ${goals >= 1 ? 'font-bold text-green-600' : 
-                                           goals >= 0.5 ? 'font-medium text-orange-600' : 
-                                           'text-gray-400'}`}>
-                              {goals.toFixed(2)}
-                            </span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
