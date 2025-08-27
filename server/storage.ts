@@ -908,7 +908,7 @@ export class DatabaseStorage implements IStorage {
       const tracking = await db.select()
         .from(fplCreatorTracking)
         .where(eq(fplCreatorTracking.creatorId, creatorId))
-        .orderBy(desc(fplCreatorTracking.gameweek))
+        .orderBy(desc(fplCreatorTracking.recordedAt))
         .limit(limit);
       console.log(`✅ Found ${tracking.length} tracking records for creator ${creatorId}`);
       return tracking;
@@ -935,7 +935,7 @@ export class DatabaseStorage implements IStorage {
       const [latest] = await db.select()
         .from(fplCreatorTracking)
         .where(eq(fplCreatorTracking.creatorId, creatorId))
-        .orderBy(desc(fplCreatorTracking.gameweek))
+        .orderBy(desc(fplCreatorTracking.recordedAt))
         .limit(1);
       return latest;
     } catch (error) {
