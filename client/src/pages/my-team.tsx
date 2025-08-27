@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Target, Trophy, Star, DollarSign } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Users, Target, Trophy, Star, DollarSign, List, Settings } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TeamPick {
@@ -441,7 +442,7 @@ export default function MyTeam() {
               </Card>
             )}
 
-            {/* Starting XI */}
+            {/* Starting XI with View Toggle */}
             {teamData && (
               <div className="grid gap-6 lg:grid-cols-2">
                 <Card className="bg-white shadow-lg border border-gray-200">
@@ -454,101 +455,289 @@ export default function MyTeam() {
                       Your team for Gameweek {getCurrentGameweek()}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="space-y-0">
-                      {/* Group by position */}
-                      {[1, 2, 3, 4].map(positionType => {
-                        const playersInPosition = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
-                          .filter(pick => {
-                            const player = getPlayerById(pick.element);
-                            return player?.element_type === positionType;
-                          });
-                        
-                        if (playersInPosition.length === 0) return null;
+                  <CardContent className="p-4">
+                    <Tabs defaultValue="list" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2 mb-4">
+                        <TabsTrigger value="list" className="flex items-center gap-2">
+                          <List className="h-4 w-4" />
+                          List View
+                        </TabsTrigger>
+                        <TabsTrigger value="pitch" className="flex items-center gap-2">
+                          <Settings className="h-4 w-4" />
+                          Pitch View
+                        </TabsTrigger>
+                      </TabsList>
 
-                        const positionName = getPositionName(positionType);
-                        const positionColors = {
-                          1: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-                          2: 'bg-blue-50 border-blue-200 text-blue-800',
-                          3: 'bg-green-50 border-green-200 text-green-800',
-                          4: 'bg-red-50 border-red-200 text-red-800'
-                        };
+                      <TabsContent value="list" className="mt-0">
+                        <div className="space-y-0 -mx-4">
+                          {/* Group by position */}
+                          {[1, 2, 3, 4].map(positionType => {
+                            const playersInPosition = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
+                              .filter(pick => {
+                                const player = getPlayerById(pick.element);
+                                return player?.element_type === positionType;
+                              });
+                            
+                            if (playersInPosition.length === 0) return null;
 
-                        return (
-                          <div key={positionType} className="border-b border-gray-100 last:border-b-0">
-                            <div className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide ${positionColors[positionType as keyof typeof positionColors]} border-l-4`}>
-                              {positionName}s ({playersInPosition.length})
-                            </div>
-                            {playersInPosition.map((pick, index) => {
-                              const player = getPlayerById(pick.element);
-                              if (!player) return null;
+                            const positionName = getPositionName(positionType);
+                            const positionColors = {
+                              1: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+                              2: 'bg-blue-50 border-blue-200 text-blue-800',
+                              3: 'bg-green-50 border-green-200 text-green-800',
+                              4: 'bg-red-50 border-red-200 text-red-800'
+                            };
 
-                              return (
-                                <div 
-                                  key={pick.element} 
-                                  className={`flex items-center justify-between p-4 border-l-4 hover:bg-gray-50 transition-colors ${
-                                    pick.is_captain ? 'bg-amber-50 border-amber-400' : 
-                                    pick.is_vice_captain ? 'bg-blue-50 border-blue-400' : 
-                                    'border-gray-200 hover:border-gray-300'
-                                  }`}
-                                  data-testid={`starting-player-${index}`}
-                                >
-                                  <div className="flex items-center gap-3 flex-1">
-                                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
-                                      {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-semibold text-gray-900">{player.web_name}</span>
-                                        {pick.is_captain && (
-                                          <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2 py-1">C</Badge>
-                                        )}
-                                        {pick.is_vice_captain && (
-                                          <Badge variant="outline" className="border-blue-300 text-blue-700 text-xs px-2 py-1">VC</Badge>
-                                        )}
-                                      </div>
-                                      <div className="space-y-2 mt-2">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm font-medium text-gray-700">{getTeamName(player)}</span>
-                                          <span className="text-xs text-gray-500">Form: {player.form}</span>
+                            return (
+                              <div key={positionType} className="border-b border-gray-100 last:border-b-0">
+                                <div className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide ${positionColors[positionType as keyof typeof positionColors]} border-l-4`}>
+                                  {positionName}s ({playersInPosition.length})
+                                </div>
+                                {playersInPosition.map((pick, index) => {
+                                  const player = getPlayerById(pick.element);
+                                  if (!player) return null;
+
+                                  return (
+                                    <div 
+                                      key={pick.element} 
+                                      className={`flex items-center justify-between p-4 border-l-4 hover:bg-gray-50 transition-colors ${
+                                        pick.is_captain ? 'bg-amber-50 border-amber-400' : 
+                                        pick.is_vice_captain ? 'bg-blue-50 border-blue-400' : 
+                                        'border-gray-200 hover:border-gray-300'
+                                      }`}
+                                      data-testid={`starting-player-${index}`}
+                                    >
+                                      <div className="flex items-center gap-3 flex-1">
+                                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
+                                          {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                                         </div>
-                                        
-                                        {/* Next 3 fixtures */}
-                                        <div className="space-y-1">
-                                          <div className="text-xs font-medium text-gray-600">Next 3 fixtures:</div>
-                                          <div className="flex gap-1">
-                                            {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
-                                              <div 
-                                                key={idx}
-                                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} text-white`}
-                                                title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
-                                              >
-                                                <span>{fixture.opponent}</span>
-                                                <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
-                                              </div>
-                                            ))}
-                                            {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
-                                              <span className="text-xs text-gray-400">No upcoming fixtures</span>
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-semibold text-gray-900">{player.web_name}</span>
+                                            {pick.is_captain && (
+                                              <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2 py-1">C</Badge>
                                             )}
+                                            {pick.is_vice_captain && (
+                                              <Badge variant="outline" className="border-blue-300 text-blue-700 text-xs px-2 py-1">VC</Badge>
+                                            )}
+                                          </div>
+                                          <div className="space-y-2 mt-2">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-sm font-medium text-gray-700">{getTeamName(player)}</span>
+                                              <span className="text-xs text-gray-500">Form: {player.form}</span>
+                                            </div>
+                                            
+                                            {/* Next 3 fixtures */}
+                                            <div className="space-y-1">
+                                              <div className="text-xs font-medium text-gray-600">Next 3 fixtures:</div>
+                                              <div className="flex gap-1">
+                                                {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
+                                                  <div 
+                                                    key={idx}
+                                                    className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} text-white`}
+                                                    title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
+                                                  >
+                                                    <span>{fixture.opponent}</span>
+                                                    <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
+                                                  </div>
+                                                ))}
+                                                {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
+                                                  <span className="text-xs text-gray-400">No upcoming fixtures</span>
+                                                )}
+                                              </div>
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
+                                      <div className="text-right space-y-1">
+                                        <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
+                                        <p className="text-sm text-gray-600">{player.total_points} pts</p>
+                                        <div className="text-xs text-gray-500">
+                                          <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                                        </div>
+                                      </div>
                                     </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="pitch" className="mt-0">
+                        {/* Football Pitch View */}
+                        <div className="relative bg-gradient-to-b from-green-400 to-green-500 rounded-lg p-6 min-h-[600px]">
+                          {/* Pitch Lines */}
+                          <div className="absolute inset-4 border-2 border-white rounded-md">
+                            {/* Center line */}
+                            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white transform -translate-y-px"></div>
+                            {/* Center circle */}
+                            <div className="absolute top-1/2 left-1/2 w-24 h-24 border-2 border-white rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+                            {/* Goal areas */}
+                            <div className="absolute top-0 left-1/2 w-20 h-8 border-b-2 border-l-2 border-r-2 border-white transform -translate-x-1/2"></div>
+                            <div className="absolute bottom-0 left-1/2 w-20 h-8 border-t-2 border-l-2 border-r-2 border-white transform -translate-x-1/2"></div>
+                          </div>
+
+                          {/* Player Positions based on Formation */}
+                          {(() => {
+                            const formation = getFormationCounts();
+                            const startingPlayers = teamData.picks.filter(pick => pick.position <= 11);
+                            
+                            // Group players by position
+                            const goalkeeper = startingPlayers.find(pick => {
+                              const player = getPlayerById(pick.element);
+                              return player?.element_type === 1;
+                            });
+                            
+                            const defenders = startingPlayers.filter(pick => {
+                              const player = getPlayerById(pick.element);
+                              return player?.element_type === 2;
+                            });
+                            
+                            const midfielders = startingPlayers.filter(pick => {
+                              const player = getPlayerById(pick.element);
+                              return player?.element_type === 3;
+                            });
+                            
+                            const forwards = startingPlayers.filter(pick => {
+                              const player = getPlayerById(pick.element);
+                              return player?.element_type === 4;
+                            });
+
+                            return (
+                              <div className="absolute inset-6">
+                                {/* Goalkeeper */}
+                                {goalkeeper && (
+                                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                                    {(() => {
+                                      const player = getPlayerById(goalkeeper.element);
+                                      if (!player) return null;
+                                      return (
+                                        <div className="flex flex-col items-center">
+                                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg ${
+                                            goalkeeper.is_captain ? 'bg-amber-500 ring-4 ring-amber-300' : 
+                                            goalkeeper.is_vice_captain ? 'bg-blue-500 ring-4 ring-blue-300' : 
+                                            'bg-yellow-600'
+                                          }`}>
+                                            {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                          </div>
+                                          <div className="text-xs text-white bg-black/50 px-2 py-1 rounded mt-1 text-center">
+                                            {player.web_name}
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
-                                  <div className="text-right space-y-1">
-                                    <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
-                                    <p className="text-sm text-gray-600">{player.total_points} pts</p>
-                                    <div className="text-xs text-gray-500">
-                                      <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
-                                    </div>
+                                )}
+
+                                {/* Defenders */}
+                                <div className="absolute bottom-20 left-0 right-0">
+                                  <div className="flex justify-center gap-6">
+                                    {defenders.map((pick, index) => {
+                                      const player = getPlayerById(pick.element);
+                                      if (!player) return null;
+                                      return (
+                                        <div key={pick.element} className="flex flex-col items-center">
+                                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg ${
+                                            pick.is_captain ? 'bg-amber-500 ring-4 ring-amber-300' : 
+                                            pick.is_vice_captain ? 'bg-blue-500 ring-4 ring-blue-300' : 
+                                            'bg-blue-600'
+                                          }`}>
+                                            {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                          </div>
+                                          <div className="text-xs text-white bg-black/50 px-2 py-1 rounded mt-1 text-center">
+                                            {player.web_name}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
-                              );
-                            })}
+
+                                {/* Midfielders */}
+                                <div className="absolute top-1/2 left-0 right-0 transform -translate-y-1/2">
+                                  <div className="flex justify-center gap-6">
+                                    {midfielders.map((pick, index) => {
+                                      const player = getPlayerById(pick.element);
+                                      if (!player) return null;
+                                      return (
+                                        <div key={pick.element} className="flex flex-col items-center">
+                                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg ${
+                                            pick.is_captain ? 'bg-amber-500 ring-4 ring-amber-300' : 
+                                            pick.is_vice_captain ? 'bg-blue-500 ring-4 ring-blue-300' : 
+                                            'bg-green-600'
+                                          }`}>
+                                            {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                          </div>
+                                          <div className="text-xs text-white bg-black/50 px-2 py-1 rounded mt-1 text-center">
+                                            {player.web_name}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Forwards */}
+                                <div className="absolute top-20 left-0 right-0">
+                                  <div className="flex justify-center gap-6">
+                                    {forwards.map((pick, index) => {
+                                      const player = getPlayerById(pick.element);
+                                      if (!player) return null;
+                                      return (
+                                        <div key={pick.element} className="flex flex-col items-center">
+                                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg ${
+                                            pick.is_captain ? 'bg-amber-500 ring-4 ring-amber-300' : 
+                                            pick.is_vice_captain ? 'bg-blue-500 ring-4 ring-blue-300' : 
+                                            'bg-red-600'
+                                          }`}>
+                                            {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                          </div>
+                                          <div className="text-xs text-white bg-black/50 px-2 py-1 rounded mt-1 text-center">
+                                            {player.web_name}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Pitch Legend */}
+                          <div className="absolute bottom-2 left-2 bg-black/70 text-white p-3 rounded text-xs">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-yellow-600 rounded-full"></div>
+                                <span>Goalkeeper</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                                <span>Defender</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                                <span>Midfielder</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-red-600 rounded-full"></div>
+                                <span>Forward</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-amber-500 rounded-full ring-2 ring-amber-300"></div>
+                                <span>Captain</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-blue-500 rounded-full ring-2 ring-blue-300"></div>
+                                <span>Vice Captain</span>
+                              </div>
+                            </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
                   </CardContent>
                 </Card>
 
