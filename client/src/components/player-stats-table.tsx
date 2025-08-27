@@ -305,6 +305,22 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="total_points" label="Total Pts" />
               </th>
+              {/* Key Performance Stats - immediately after points */}
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="goals_scored" label="Goals" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="assists" label="Assists" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="clean_sheets" label="CS" />
+              </th>
+              {/* New Defensive Contribution Fields - 2025/26 Season Only */}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[90px]">
+                  <SortableHeader field="defensive_contribution" label="Def Contrib" />
+                </th>
+              )}
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="value_season" label="Value" />
               </th>
@@ -325,27 +341,11 @@ export default function PlayerStatsTable({
                 <SortableHeader field="minutes" label="Minutes" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="goals_scored" label="Goals" />
-              </th>
-              <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="assists" label="Assists" />
-              </th>
-              <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="clean_sheets" label="CS" />
-              </th>
-              {/* Defensive contributions */}
-              <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="goals_conceded" label="GC" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="saves" label="Saves" />
               </th>
-              {/* New Defensive Contribution Fields - 2025/26 Season Only */}
-              {!isHistoricalSeason && (
-                <th className="px-2 py-3 text-center min-w-[90px]">
-                  <SortableHeader field="defensive_contribution" label="Def Contrib" />
-                </th>
-              )}
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[90px]">
                   <SortableHeader field="tackles" label="Tackles" />
@@ -481,6 +481,14 @@ export default function PlayerStatsTable({
                     <span className="text-xs sm:text-sm font-medium">£{((player.now_cost || player.end_cost || 0) / 10).toFixed(1)}m</span>
                   </td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-fpl-purple">{player.total_points || 0}</td>
+                  {/* Key Performance Stats - immediately after points */}
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{player.goals_scored || 0}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-blue-600">{player.assists || 0}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{player.clean_sheets || 0}</td>
+                  {/* New Defensive Contribution Fields - 2025/26 Season Only */}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-orange-600">{player.defensive_contribution || 0}</td>
+                  )}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700 font-semibold">{formatValue(player.value_season || player.value_form || 0, 'decimal')}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.points_per_game || player.form || 0, 'decimal')}</td>
                   {!isHistoricalSeason && (
@@ -490,16 +498,8 @@ export default function PlayerStatsTable({
                     <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-purple-700">{formatValue(player.selected_by_percent || 0, 'decimal')}%</td>
                   )}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.minutes || 0}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{player.goals_scored || 0}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-blue-600">{player.assists || 0}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{player.clean_sheets || 0}</td>
-                  {/* Defensive contributions */}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{player.goals_conceded || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.saves || 0}</td>
-                  {/* New Defensive Contribution Fields - 2025/26 Season Only */}
-                  {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-orange-600">{player.defensive_contribution || 0}</td>
-                  )}
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-blue-700">{player.tackles || 0}</td>
                   )}
