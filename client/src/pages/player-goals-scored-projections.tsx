@@ -85,20 +85,37 @@ export default function PlayerGoalsScoredProjections() {
     }));
   }, [bootstrapData]);
 
-  // Calculate summary stats
+  // Get current gameweek and calculate next 6 gameweeks
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 1;
+    const currentEvent = bootstrapData.events.find((event: any) => event.is_current);
+    return currentEvent ? currentEvent.id : 1;
+  }, [bootstrapData]);
+
+  const next6Gameweeks = useMemo(() => {
+    return Array.from({ length: 6 }, (_, i) => currentGameweek + i).filter(gw => gw <= 38);
+  }, [currentGameweek]);
+
+  // Calculate summary stats for next 6 gameweeks
   const summaryStats = useMemo(() => {
-    if (!filteredData.length) return { totalPlayers: 0, totalGoals: 0, avgGoals: 0, topScorer: null };
+    if (!filteredData.length) return { totalPlayers: 0, total6GW: 0, totalSeason: 0, avg6GW: 0, topScorer: null };
     
-    const totalGoals = filteredData.reduce((sum, player) => sum + player.totalProjectedGoals, 0);
+    const total6GW = filteredData.reduce((sum, player) => {
+      const next6Goals = next6Gameweeks.reduce((gwSum, gw) => gwSum + (player.gameweekProjections[gw] || 0), 0);
+      return sum + next6Goals;
+    }, 0);
+    
+    const totalSeason = filteredData.reduce((sum, player) => sum + player.totalProjectedGoals, 0);
     const topScorer = filteredData[0];
     
     return {
       totalPlayers: filteredData.length,
-      totalGoals: Math.round(totalGoals * 10) / 10,
-      avgGoals: Math.round((totalGoals / filteredData.length) * 10) / 10,
+      total6GW: Math.round(total6GW * 100) / 100,
+      totalSeason: Math.round(totalSeason * 100) / 100,
+      avg6GW: Math.round((total6GW / filteredData.length) * 100) / 100,
       topScorer
     };
-  }, [filteredData]);
+  }, [filteredData, next6Gameweeks]);
 
   if (isLoading) {
     return (
@@ -143,7 +160,7 @@ export default function PlayerGoalsScoredProjections() {
         <Target className="h-8 w-8 text-blue-600" />
         <div>
           <h1 className="text-3xl font-bold">Player Goals Scored Projections</h1>
-          <p className="text-gray-600 mt-1">Individual player goal projections across 38 gameweeks based on team shares and xG analysis</p>
+          <p className="text-gray-600 mt-1">Individual player goal projections for the next 6 gameweeks based on team shares and xG analysis</p>
         </div>
       </div>
 
@@ -166,8 +183,8 @@ export default function PlayerGoalsScoredProjections() {
             <div className="flex items-center gap-2">
               <Target className="h-5 w-5 text-green-600" />
               <div>
-                <p className="text-sm text-gray-600">Total Goals</p>
-                <p className="text-2xl font-bold">{summaryStats.totalGoals}</p>
+                <p className="text-sm text-gray-600">Next 6 GW Total</p>
+                <p className="text-2xl font-bold">{summaryStats.total6GW}</p>
               </div>
             </div>
           </CardContent>
@@ -176,10 +193,10 @@ export default function PlayerGoalsScoredProjections() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-orange-600" />
+              <TrendingUp className="h-5 w-5 text-blue-600" />
               <div>
-                <p className="text-sm text-gray-600">Average Goals</p>
-                <p className="text-2xl font-bold">{summaryStats.avgGoals}</p>
+                <p className="text-sm text-gray-600">Season Total</p>
+                <p className="text-2xl font-bold">{summaryStats.totalSeason}</p>
               </div>
             </div>
           </CardContent>
@@ -192,7 +209,7 @@ export default function PlayerGoalsScoredProjections() {
               <div>
                 <p className="text-sm text-gray-600">Top Scorer</p>
                 <p className="text-lg font-bold">{summaryStats.topScorer?.playerName || "N/A"}</p>
-                <p className="text-sm text-gray-500">{summaryStats.topScorer?.totalProjectedGoals || 0} goals</p>
+                <p className="text-sm text-gray-500">{summaryStats.topScorer?.totalProjectedGoals.toFixed(2) || "0.00"} goals</p>
               </div>
             </div>
           </CardContent>
@@ -269,7 +286,7 @@ export default function PlayerGoalsScoredProjections() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Player Goals by Gameweek ({filteredData.length} players)
+            Player Goals - Next 6 Gameweeks ({filteredData.length} players)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -280,52 +297,53 @@ export default function PlayerGoalsScoredProjections() {
                   <th className="text-left p-3 font-semibold sticky left-0 bg-white">Player</th>
                   <th className="text-left p-3 font-semibold">Team</th>
                   <th className="text-left p-3 font-semibold">Pos</th>
-                  <th className="text-center p-3 font-semibold">Total</th>
-                  <th className="text-center p-3 font-semibold">Share</th>
-                  {Array.from({ length: 38 }, (_, i) => (
-                    <th key={i + 1} className="text-center p-2 text-xs font-medium min-w-[40px]">
-                      {i + 1}
+                  <th className="text-center p-3 font-semibold">6 GW</th>
+                  <th className="text-center p-3 font-semibold">Season</th>
+                  {next6Gameweeks.map((gw) => (
+                    <th key={gw} className="text-center p-2 text-xs font-medium min-w-[50px]">
+                      GW{gw}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filteredData.map((player, index) => (
-                  <tr key={player.playerId} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                    <td className="p-3 sticky left-0 bg-inherit font-medium">
-                      <div>
-                        <p className="font-semibold">{player.playerName}</p>
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <Badge variant="outline" className="text-xs">
-                        {player.teamShort}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-sm text-gray-600">{player.position}</td>
-                    <td className="p-3 text-center font-bold text-lg">
-                      {player.totalProjectedGoals.toFixed(1)}
-                    </td>
-                    <td className="p-3 text-center">
-                      <span className="text-sm font-medium">
-                        {player.goalShare.toFixed(1)}%
-                      </span>
-                    </td>
-                    {Array.from({ length: 38 }, (_, i) => {
-                      const gw = i + 1;
-                      const goals = player.gameweekProjections[gw] || 0;
-                      return (
-                        <td key={gw} className="text-center p-2">
-                          <span className={`text-xs ${goals >= 1 ? 'font-bold text-green-600' : 
-                                         goals >= 0.5 ? 'font-medium text-orange-600' : 
-                                         'text-gray-400'}`}>
-                            {goals > 0 ? goals.toFixed(1) : '0.0'}
-                          </span>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                {filteredData.map((player, index) => {
+                  const next6Total = next6Gameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
+                  
+                  return (
+                    <tr key={player.playerId} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                      <td className="p-3 sticky left-0 bg-inherit font-medium">
+                        <div>
+                          <p className="font-semibold">{player.playerName}</p>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <Badge variant="outline" className="text-xs">
+                          {player.teamShort}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-sm text-gray-600">{player.position}</td>
+                      <td className="p-3 text-center font-bold text-lg">
+                        {next6Total.toFixed(2)}
+                      </td>
+                      <td className="p-3 text-center font-bold text-sm text-gray-600">
+                        {player.totalProjectedGoals.toFixed(2)}
+                      </td>
+                      {next6Gameweeks.map((gw) => {
+                        const goals = player.gameweekProjections[gw] || 0;
+                        return (
+                          <td key={gw} className="text-center p-2">
+                            <span className={`text-xs ${goals >= 1 ? 'font-bold text-green-600' : 
+                                           goals >= 0.5 ? 'font-medium text-orange-600' : 
+                                           'text-gray-400'}`}>
+                              {goals.toFixed(2)}
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
