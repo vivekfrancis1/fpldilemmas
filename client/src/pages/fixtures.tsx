@@ -340,15 +340,15 @@ export default function Fixtures() {
             <TabsList className="grid grid-cols-3 w-full">
               <TabsTrigger value="difficulty" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                Balanced FDR
+                Overall FDR
               </TabsTrigger>
               <TabsTrigger value="attacking" className="flex items-center gap-2">
                 <Sword className="h-4 w-4" />
-                Attacking FDR
+                FDR for Attack
               </TabsTrigger>
               <TabsTrigger value="defensive" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                Defensive FDR
+                FDR for Defence
               </TabsTrigger>
             </TabsList>
 
