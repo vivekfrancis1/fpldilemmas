@@ -124,11 +124,11 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
   }, [data, fixtures, selectedGameweeks]);
 
   const getDifficultyColor = (difficulty: number): string => {
-    if (difficulty === 1) return "bg-green-700 text-white"; // Very Easy - Dark Green
+    if (difficulty === 1) return "bg-green-600 text-white"; // Very Easy - Dark Green (softer)
     if (difficulty === 2) return "bg-green-100 text-green-800"; // Easy - Light Green
     if (difficulty === 3) return "bg-gray-100 text-gray-800"; // Medium - Grey
     if (difficulty === 4) return "bg-red-100 text-red-800"; // Hard - Light Red
-    return "bg-red-700 text-white"; // Very Hard (5) - Dark Red
+    return "bg-red-600 text-white"; // Very Hard (5) - Dark Red (softer)
   };
 
   const getDifficultyText = (difficulty: number): string => {

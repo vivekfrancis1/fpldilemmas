@@ -79,11 +79,11 @@ export default function Fixtures() {
   // Get difficulty rating color class
   const getDifficultyColor = (difficulty: number) => {
     switch (difficulty) {
-      case 1: return 'bg-green-700 text-white'; // Very Easy - Dark Green
+      case 1: return 'bg-green-600 text-white'; // Very Easy - Dark Green (softer)
       case 2: return 'bg-green-100 text-green-800'; // Easy - Light Green  
       case 3: return 'bg-gray-100 text-gray-800'; // Medium - Grey
       case 4: return 'bg-red-100 text-red-800'; // Hard - Light Red
-      case 5: return 'bg-red-700 text-white'; // Very Hard - Dark Red
+      case 5: return 'bg-red-600 text-white'; // Very Hard - Dark Red (softer)
       default: return 'bg-gray-300 text-gray-900';
     }
   };
@@ -526,11 +526,11 @@ export default function Fixtures() {
                                 // Color by opponent's defensive tier (exact same colors as Balanced FDR)
                                 const getOpponentDefenseColor = (defenseTier: string) => {
                                   switch (defenseTier) {
-                                    case 'elite': return 'bg-red-700 text-white'; // Very Hard (FDR 5)
+                                    case 'elite': return 'bg-red-600 text-white'; // Very Hard (FDR 5) - softer
                                     case 'strong': return 'bg-red-100 text-red-800'; // Hard (FDR 4)
                                     case 'average': return 'bg-gray-100 text-gray-800'; // Medium (FDR 3)
                                     case 'weak': return 'bg-green-100 text-green-800'; // Easy (FDR 2)
-                                    case 'promoted': return 'bg-green-700 text-white'; // Very Easy (FDR 1)
+                                    case 'promoted': return 'bg-green-600 text-white'; // Very Easy (FDR 1) - softer
                                     default: return 'bg-gray-300 text-gray-900';
                                   }
                                 };
@@ -638,11 +638,11 @@ export default function Fixtures() {
                                 // Color by opponent's attacking tier (exact same colors as Balanced FDR)
                                 const getOpponentAttackColor = (attackTier: string) => {
                                   switch (attackTier) {
-                                    case 'elite': return 'bg-red-700 text-white'; // Very Hard (FDR 5)
+                                    case 'elite': return 'bg-red-600 text-white'; // Very Hard (FDR 5) - softer
                                     case 'strong': return 'bg-red-100 text-red-800'; // Hard (FDR 4)
                                     case 'average': return 'bg-gray-100 text-gray-800'; // Medium (FDR 3)
                                     case 'weak': return 'bg-green-100 text-green-800'; // Easy (FDR 2)
-                                    case 'promoted': return 'bg-green-700 text-white'; // Very Easy (FDR 1)
+                                    case 'promoted': return 'bg-green-600 text-white'; // Very Easy (FDR 1) - softer
                                     default: return 'bg-gray-300 text-gray-900';
                                   }
                                 };
