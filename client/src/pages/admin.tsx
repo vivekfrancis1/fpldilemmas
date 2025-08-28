@@ -30,8 +30,6 @@ interface NewCreatorForm {
   name: string;
   handle: string;
   managerId: string;
-  managerName: string;
-  playerName: string;
   platform: string;
   description: string;
   website: string;
@@ -54,8 +52,6 @@ export default function Admin() {
     name: "",
     handle: "",
     managerId: "",
-    managerName: "",
-    playerName: "",
     platform: "",
     description: "",
     website: ""
@@ -76,8 +72,6 @@ export default function Admin() {
           name: newCreator.name,
           handle: newCreator.handle,
           managerId: parseInt(newCreator.managerId),
-          managerName: newCreator.managerName,
-          playerName: newCreator.playerName,
           platform: newCreator.platform,
           description: newCreator.description,
           website: newCreator.website || null
@@ -91,8 +85,6 @@ export default function Admin() {
         name: "",
         handle: "",
         managerId: "",
-        managerName: "",
-        playerName: "",
         platform: "",
         description: "",
         website: ""
@@ -155,8 +147,6 @@ export default function Admin() {
       name: creator.name,
       handle: creator.handle,
       managerId: creator.managerId,
-      managerName: creator.managerName,
-      playerName: creator.playerName,
       platform: creator.platform,
       description: creator.description,
       website: creator.website
@@ -257,24 +247,7 @@ export default function Admin() {
                   data-testid="input-creator-manager-id"
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium">Manager Name</label>
-                <Input
-                  placeholder="e.g., DANIELS XI"
-                  value={newCreatorForm.managerName}
-                  onChange={(e) => setNewCreatorForm({ ...newCreatorForm, managerName: e.target.value })}
-                  data-testid="input-creator-manager-name"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Player Name</label>
-                <Input
-                  placeholder="e.g., Harry Daniels"
-                  value={newCreatorForm.playerName}
-                  onChange={(e) => setNewCreatorForm({ ...newCreatorForm, playerName: e.target.value })}
-                  data-testid="input-creator-player-name"
-                />
-              </div>
+
               <div>
                 <label className="text-sm font-medium">Platform *</label>
                 <Select
@@ -360,22 +333,7 @@ export default function Admin() {
                         data-testid={`input-edit-manager-id-${creator.id}`}
                       />
                     </div>
-                    <div>
-                      <label className="text-sm font-medium">Manager Name</label>
-                      <Input
-                        value={editForm.managerName || ""}
-                        onChange={(e) => setEditForm({ ...editForm, managerName: e.target.value })}
-                        data-testid={`input-edit-manager-name-${creator.id}`}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Player Name</label>
-                      <Input
-                        value={editForm.playerName || ""}
-                        onChange={(e) => setEditForm({ ...editForm, playerName: e.target.value })}
-                        data-testid={`input-edit-player-name-${creator.id}`}
-                      />
-                    </div>
+
                     <div>
                       <label className="text-sm font-medium">Platform</label>
                       <Select
@@ -443,7 +401,7 @@ export default function Admin() {
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="font-medium">Manager ID:</span>
                         <span className="ml-2" data-testid={`text-manager-id-${creator.id}`}>
@@ -451,15 +409,9 @@ export default function Admin() {
                         </span>
                       </div>
                       <div>
-                        <span className="font-medium">Manager Name:</span>
-                        <span className="ml-2" data-testid={`text-manager-name-${creator.id}`}>
-                          {creator.managerName}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-medium">Player Name:</span>
-                        <span className="ml-2" data-testid={`text-player-name-${creator.id}`}>
-                          {creator.playerName}
+                        <span className="font-medium">Platform:</span>
+                        <span className="ml-2 capitalize" data-testid={`text-platform-${creator.id}`}>
+                          {creator.platform}
                         </span>
                       </div>
                     </div>
