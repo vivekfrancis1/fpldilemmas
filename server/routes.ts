@@ -6320,7 +6320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let viceCaptainPlayerName = null;
           
           try {
-            const teamResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/event/${currentGameweek}/picks/`);
+            const teamResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/event/${currentGameweek}/picks/`);
             if (teamResponse.ok) {
               const teamData = await teamResponse.json();
               currentTeam = teamData.picks;
@@ -6345,7 +6345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let transfersOut = [];
           
           try {
-            const transferResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/transfers/`);
+            const transferResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/transfers/`);
             if (transferResponse.ok) {
               const transferData = await transferResponse.json();
               
