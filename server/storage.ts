@@ -849,11 +849,25 @@ export class DatabaseStorage implements IStorage {
   async getContentCreators(): Promise<FplContentCreator[]> {
     try {
       console.log(`📊 Fetching content creators from database...`);
+      console.log(`🔗 Database connection status: ${process.env.DATABASE_URL ? 'URL available' : 'URL missing'}`);
+      
+      // Test database connectivity first
+      const testResult = await db.execute(sql`SELECT 1 as test`);
+      console.log(`✅ Database connectivity test passed: ${testResult ? 'Success' : 'Failed'}`);
+      
       const creators = await db.select().from(fplContentCreators).orderBy(fplContentCreators.name);
       console.log(`✅ Found ${creators.length} content creators in database`);
       return creators;
     } catch (error) {
-      console.error("Error fetching content creators from database:", error);
+      console.error("❌ Error fetching content creators from database:", error);
+      console.error("Database error details:", {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      
+      // Return empty array instead of failing completely
+      console.log("⚠️ Returning empty array due to database error");
       return [];
     }
   }

@@ -6035,37 +6035,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // FPL Content Creators API routes
   app.get("/api/content-creators", async (req, res) => {
     try {
+      console.log(`🔍 Content Creators API called in ${process.env.NODE_ENV || 'development'} environment`);
+      console.log(`📊 Database URL available: ${process.env.DATABASE_URL ? 'Yes' : 'No'}`);
+      
       const creators = await storage.getContentCreators();
+      console.log(`📊 Retrieved ${creators.length} creators from storage`);
+      
+      if (creators.length === 0) {
+        console.log("⚠️ No creators found in storage, returning empty array");
+        return res.json([]);
+      }
       
       // Get latest tracking data for each creator to enrich the response
       const creatorsWithLatestData = await Promise.all(
         creators.map(async (creator) => {
-          const latestTracking = await storage.getLatestCreatorTracking(creator.id);
-          const history = await storage.getCreatorTracking(creator.id, 2);
-          
-          // Calculate rank change if we have historical data
-          let rankChange = undefined;
-          if (history.length >= 2) {
-            const current = history[0]?.overallRank;
-            const previous = history[1]?.overallRank;
-            if (current && previous) {
-              rankChange = previous - current; // Positive means rank improved (went down in number)
+          try {
+            const latestTracking = await storage.getLatestCreatorTracking(creator.id);
+            const history = await storage.getCreatorTracking(creator.id, 2);
+            
+            // Calculate rank change if we have historical data
+            let rankChange = undefined;
+            if (history.length >= 2) {
+              const current = history[0]?.overallRank;
+              const previous = history[1]?.overallRank;
+              if (current && previous) {
+                rankChange = previous - current; // Positive means rank improved (went down in number)
+              }
             }
+            
+            return {
+              ...creator,
+              latestTracking,
+              rankChange,
+              pointsThisGw: latestTracking?.gameweekPoints
+            };
+          } catch (trackingError) {
+            console.error(`⚠️ Error fetching tracking for creator ${creator.id}:`, trackingError);
+            // Return creator without tracking data if tracking fetch fails
+            return {
+              ...creator,
+              latestTracking: null,
+              rankChange: undefined,
+              pointsThisGw: undefined
+            };
           }
-          
-          return {
-            ...creator,
-            latestTracking,
-            rankChange,
-            pointsThisGw: latestTracking?.gameweekPoints
-          };
         })
       );
       
+      console.log(`✅ Successfully prepared ${creatorsWithLatestData.length} creators with tracking data`);
       res.json(creatorsWithLatestData);
     } catch (error) {
-      console.error("Error fetching content creators:", error);
-      res.status(500).json({ error: "Failed to fetch content creators" });
+      console.error("❌ Error fetching content creators:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      res.status(500).json({ 
+        error: "Failed to fetch content creators",
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
     }
   });
 
