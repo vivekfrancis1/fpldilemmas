@@ -274,10 +274,35 @@ export const dailyPlayerPrices = pgTable("daily_player_prices", {
   index("idx_daily_prices_date").on(table.recordDate),
 ]);
 
+// Price changes table for tracking actual price movements
+export const priceChanges = pgTable("price_changes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name").notNull(),
+  teamId: integer("team_id"),
+  teamName: varchar("team_name"),
+  position: varchar("position"),
+  oldPrice: integer("old_price").notNull(), // Previous price
+  newPrice: integer("new_price").notNull(), // New price after change
+  priceChange: integer("price_change").notNull(), // Change amount (can be negative)
+  changeDate: date("change_date").notNull(), // Date when change was detected
+  ownership: decimal("ownership", { precision: 5, scale: 2 }).notNull(), // Ownership at time of change
+  transfersIn: integer("transfers_in").default(0), // Transfers in on change day
+  transfersOut: integer("transfers_out").default(0), // Transfers out on change day
+  totalSeasonChange: integer("total_season_change").default(0), // Total change from season start
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_price_changes_player").on(table.playerId),
+  index("idx_price_changes_date").on(table.changeDate),
+  index("idx_price_changes_player_date").on(table.playerId, table.changeDate),
+]);
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type DailyPlayerPrice = typeof dailyPlayerPrices.$inferSelect;
 export type InsertDailyPlayerPrice = typeof dailyPlayerPrices.$inferInsert;
+export type PriceChange = typeof priceChanges.$inferSelect;
+export type InsertPriceChange = typeof priceChanges.$inferInsert;
 
 // FPL Teams table with projection metadata
 export const fplTeams = pgTable("fpl_teams", {

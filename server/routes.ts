@@ -632,95 +632,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Price tracking endpoints
   
-  // Get recent actual price changes from LiveFPL historical data + FPL API
+  // Get recent actual price changes from database (FPL API based)
   app.get("/api/price-changes/recent", async (req, res) => {
     try {
-      // Fetch historical price changes from LiveFPL
-      const liveFplResponse = await fetch("https://plan.livefpl.net/price_changes");
-      const liveFplHtml = await liveFplResponse.text();
+      console.log("📊 Fetching recent price changes from database...");
       
-      // Parse LiveFPL data to extract price changes
-      const historicalChanges = await parseLiveFplPriceChanges(liveFplHtml);
+      // Get recent price changes from our tracking system
+      const priceChanges = await storage.getPriceChanges(100);
       
-      // Also fetch current FPL API data for any recent changes not yet on LiveFPL
-      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      const bootstrapData = await bootstrapResponse.json();
-      const elements = bootstrapData.elements;
-      const teams = bootstrapData.teams;
-      const positions = bootstrapData.element_types;
+      // Format data for frontend compatibility
+      const formattedChanges = priceChanges.map((change: any) => ({
+        player_id: change.playerId,
+        player_name: change.playerName,
+        team_name: change.teamName || "Unknown",
+        position: change.position || "Unknown",
+        old_price: change.oldPrice,
+        current_price: change.newPrice,
+        price_change: change.priceChange,
+        change_date: change.changeDate,
+        ownership: parseFloat(change.ownership || "0"),
+        transfers_in: change.transfersIn || 0,
+        transfers_out: change.transfersOut || 0,
+        is_recent_change: true,
+        total_season_change: change.totalSeasonChange || 0
+      }));
       
-      // Create a map of player names to FPL data for matching
-      const playerMap = new Map();
-      elements.forEach((player: any) => {
-        const team = teams.find((t: any) => t.id === player.team);
-        const position = positions.find((p: any) => p.id === player.element_type);
+      // If no price changes recorded yet, initialize with current FPL data
+      if (formattedChanges.length === 0) {
+        console.log("🔄 No price changes found, initializing with current FPL season data...");
         
-        playerMap.set(player.web_name.toLowerCase(), {
-          player_id: player.id,
-          team_name: team?.short_name || "Unknown",
-          position: position?.singular_name_short || "Unknown",
-          ownership: parseFloat(player.selected_by_percent || "0"),
-          transfers_in: player.transfers_in_event || 0,
-          transfers_out: player.transfers_out_event || 0,
-          current_price: player.now_cost,
-          cost_change_event: player.cost_change_event || 0,
-          cost_change_start: player.cost_change_start || 0
-        });
-      });
-      
-      // Enrich historical changes with FPL API data
-      const enrichedChanges = historicalChanges.map((change: any) => {
-        const playerData = playerMap.get(change.player_name.toLowerCase());
-        
-        if (playerData) {
-          return {
-            player_id: playerData.player_id,
-            player_name: change.player_name,
-            team_name: change.team_name || playerData.team_name,
-            position: playerData.position,
-            old_price: change.old_price,
-            current_price: change.new_price,
-            price_change: change.new_price - change.old_price,
-            change_date: change.change_date,
-            ownership: playerData.ownership,
-            transfers_in: playerData.transfers_in,
-            transfers_out: playerData.transfers_out,
-            is_recent_change: Math.abs(playerData.cost_change_event) > 0,
-            total_season_change: playerData.cost_change_start
-          };
+        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        if (!bootstrapResponse.ok) {
+          throw new Error("Failed to fetch FPL bootstrap data");
         }
         
-        // Fallback for players not found in current FPL data
-        return {
-          player_id: change.player_name.hashCode ? change.player_name.hashCode() : Math.random() * 1000,
-          player_name: change.player_name,
-          team_name: change.team_name || "Unknown",
-          position: "Unknown",
-          old_price: change.old_price,
-          current_price: change.new_price,
-          price_change: change.new_price - change.old_price,
-          change_date: change.change_date,
-          ownership: 0,
-          transfers_in: 0,
-          transfers_out: 0,
-          is_recent_change: true,
-          total_season_change: change.new_price - change.old_price
-        };
-      });
+        const bootstrapData = await bootstrapResponse.json();
+        const elements = bootstrapData.elements;
+        const teams = bootstrapData.teams;
+        const positions = bootstrapData.element_types;
+        
+        // Get players with season price changes
+        const playersWithChanges = elements.filter((player: any) => 
+          Math.abs(player.cost_change_start || 0) > 0
+        );
+        
+        console.log(`📈 Found ${playersWithChanges.length} players with season price changes`);
+        
+        // Create initial price change records for August 28, 2025
+        const initialChanges = playersWithChanges.map((player: any) => {
+          const team = teams.find((t: any) => t.id === player.team);
+          const position = positions.find((p: any) => p.id === player.element_type);
+          const originalPrice = player.now_cost - (player.cost_change_start || 0);
+          
+          return {
+            player_id: player.id,
+            player_name: player.web_name,
+            team_name: team?.short_name || "Unknown",
+            position: position?.singular_name_short || "Unknown",
+            old_price: originalPrice,
+            current_price: player.now_cost,
+            price_change: player.cost_change_start || 0,
+            change_date: "2025-08-28", // Initial date as requested
+            ownership: parseFloat(player.selected_by_percent || "0"),
+            transfers_in: player.transfers_in_event || 0,
+            transfers_out: player.transfers_out_event || 0,
+            is_recent_change: Math.abs(player.cost_change_event || 0) > 0,
+            total_season_change: player.cost_change_start || 0
+          };
+        });
+        
+        // Store initial changes in database
+        for (const change of initialChanges) {
+          try {
+            await storage.addPriceChange({
+              playerId: change.player_id,
+              playerName: change.player_name,
+              teamId: null,
+              teamName: change.team_name,
+              position: change.position,
+              oldPrice: change.old_price,
+              newPrice: change.current_price,
+              priceChange: change.price_change,
+              changeDate: change.change_date,
+              ownership: change.ownership.toString(),
+              transfersIn: change.transfers_in,
+              transfersOut: change.transfers_out,
+              totalSeasonChange: change.total_season_change
+            });
+          } catch (error) {
+            // Ignore duplicate entries
+            if (!error.message?.includes('duplicate')) {
+              console.error(`Error storing change for ${change.player_name}:`, error);
+            }
+          }
+        }
+        
+        console.log(`✅ Initialized ${initialChanges.length} price changes`);
+        return res.json(initialChanges);
+      }
       
-      // Sort by most recent date first, then by price change magnitude
-      enrichedChanges.sort((a: any, b: any) => {
-        const dateComparison = new Date(b.change_date).getTime() - new Date(a.change_date).getTime();
-        if (dateComparison !== 0) return dateComparison;
-        return Math.abs(b.price_change) - Math.abs(a.price_change);
-      });
+      console.log(`✅ Returning ${formattedChanges.length} recent price changes`);
+      res.json(formattedChanges);
       
-      // Limit to 100 most recent changes
-      const limitedChanges = enrichedChanges.slice(0, 100);
-      
-      res.json(limitedChanges);
     } catch (error) {
-      console.error("Error fetching price changes:", error);
+      console.error("❌ Error fetching price changes:", error);
       res.status(500).json({
         error: "Failed to fetch price changes",
         message: error instanceof Error ? error.message : "Unknown error",
@@ -728,160 +743,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper function to parse LiveFPL price changes HTML
-  async function parseLiveFplPriceChanges(html: string) {
-    const changes: any[] = [];
-    
+  // Manual trigger for price data fetch (for testing/admin use)
+  app.post("/api/price-changes/trigger-fetch", async (req, res) => {
     try {
-      console.log("📊 Parsing LiveFPL price changes data...");
-      
-      // Look for price change sections with a more flexible approach
-      // Find all text patterns that match "Price Changes DD/M" followed by table data
-      const dateHeaderPattern = /Price Changes (\d{1,2}\/\d{1,2})/g;
-      const dateMatches = [];
-      let match;
-      
-      while ((match = dateHeaderPattern.exec(html)) !== null) {
-        dateMatches.push({
-          date: match[1],
-          startIndex: match.index
-        });
-      }
-      
-      console.log(`Found ${dateMatches.length} date headers in LiveFPL data`);
-      
-      for (let i = 0; i < dateMatches.length; i++) {
-        const currentMatch = dateMatches[i];
-        const nextMatch = dateMatches[i + 1];
-        
-        // Extract the section between this date and the next (or end of HTML)
-        const sectionEnd = nextMatch ? nextMatch.startIndex : html.length;
-        const sectionHtml = html.substring(currentMatch.startIndex, sectionEnd);
-        
-        // Parse the date
-        const dateStr = currentMatch.date; // e.g., "26/8"
-        const [day, month] = dateStr.split('/');
-        const currentYear = new Date().getFullYear();
-        const changeDate = new Date(currentYear, parseInt(month) - 1, parseInt(day));
-        const changeDateStr = changeDate.toISOString().split('T')[0];
-        
-        // Look for player data patterns - more flexible regex
-        // Match patterns like: PlayerName | TeamName | OldPrice | NewPrice
-        const playerPattern = /([A-Za-z\s\.]+?)\s*\|\s*([A-Za-z\s']+?)\s*\|\s*([\d\.]+)\s*\|\s*([\d\.]+)/g;
-        let playerMatch;
-        
-        while ((playerMatch = playerPattern.exec(sectionHtml)) !== null) {
-          const playerName = playerMatch[1].trim();
-          const teamName = playerMatch[2].trim();
-          const oldPriceStr = playerMatch[3].trim();
-          const newPriceStr = playerMatch[4].trim();
-          
-          // Convert prices from string format (e.g., "7.6") to integer format (76)
-          const oldPrice = Math.round(parseFloat(oldPriceStr) * 10);
-          const newPrice = Math.round(parseFloat(newPriceStr) * 10);
-          
-          if (playerName && teamName && !isNaN(oldPrice) && !isNaN(newPrice)) {
-            changes.push({
-              player_name: playerName,
-              team_name: teamName,
-              old_price: oldPrice,
-              new_price: newPrice,
-              change_date: changeDateStr
-            });
-          }
-        }
-        
-        // Also try alternative parsing - looking for table rows with 4 cells
-        const rowPattern = /<tr[^>]*>[\s\S]*?<\/tr>/gi;
-        const rows = sectionHtml.match(rowPattern);
-        
-        if (rows) {
-          for (const row of rows) {
-            if (row.includes('Player') || row.includes('Team') || row.includes('Old Price')) continue;
-            
-            const cellPattern = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-            const cells = [];
-            let cellMatch;
-            
-            while ((cellMatch = cellPattern.exec(row)) !== null) {
-              const cellContent = cellMatch[1]
-                .replace(/<[^>]*>/g, '') // Remove HTML tags
-                .replace(/&nbsp;/g, ' ')
-                .replace(/&amp;/g, '&')
-                .trim();
-              cells.push(cellContent);
-            }
-            
-            if (cells.length >= 4) {
-              const playerName = cells[0];
-              const teamName = cells[1];
-              const oldPriceStr = cells[2];
-              const newPriceStr = cells[3];
-              
-              const oldPrice = Math.round(parseFloat(oldPriceStr) * 10);
-              const newPrice = Math.round(parseFloat(newPriceStr) * 10);
-              
-              if (playerName && teamName && !isNaN(oldPrice) && !isNaN(newPrice)) {
-                // Check if we already have this player for this date
-                const exists = changes.some(c => 
-                  c.player_name === playerName && 
-                  c.change_date === changeDateStr
-                );
-                
-                if (!exists) {
-                  changes.push({
-                    player_name: playerName,
-                    team_name: teamName,
-                    old_price: oldPrice,
-                    new_price: newPrice,
-                    change_date: changeDateStr
-                  });
-                }
-              }
-            }
-          }
-        }
-      }
-      
-      console.log(`✅ Parsed ${changes.length} historical price changes from LiveFPL`);
-      
-      // If we didn't get many results, try a simple fallback approach
-      if (changes.length < 10) {
-        console.log("🔄 Trying fallback parsing approach...");
-        return parseSimpleLiveFplFallback(html);
-      }
-      
-      return changes;
+      console.log("🚀 Manual price data fetch triggered");
+      await priceScheduler.triggerManualFetch();
+      res.json({ 
+        success: true, 
+        message: "Price data fetch completed successfully",
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
-      console.error("Error parsing LiveFPL price changes:", error);
-      return parseSimpleLiveFplFallback(html);
+      console.error("Error in manual price fetch:", error);
+      res.status(500).json({
+        error: "Failed to fetch price data",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
     }
-  }
-
-  // Fallback parsing function with hardcoded recent data as last resort
-  async function parseSimpleLiveFplFallback(html: string) {
-    console.log("📊 Using fallback parsing for LiveFPL data");
-    
-    // If parsing fails completely, return some recent realistic data based on FPL patterns
-    // This ensures the user always sees meaningful data
-    const recentDates = [];
-    const today = new Date();
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      recentDates.push(date.toISOString().split('T')[0]);
-    }
-    
-    return [
-      { player_name: "Wood", team_name: "Nott'm Forest", old_price: 76, new_price: 77, change_date: recentDates[0] },
-      { player_name: "João Pedro", team_name: "Chelsea", old_price: 75, new_price: 76, change_date: recentDates[0] },
-      { player_name: "Richarlison", team_name: "Spurs", old_price: 66, new_price: 67, change_date: recentDates[0] },
-      { player_name: "Trossard", team_name: "Arsenal", old_price: 70, new_price: 69, change_date: recentDates[0] },
-      { player_name: "Haaland", team_name: "Man City", old_price: 140, new_price: 141, change_date: recentDates[1] },
-      { player_name: "Gabriel", team_name: "Arsenal", old_price: 60, new_price: 61, change_date: recentDates[1] },
-      { player_name: "Saliba", team_name: "Arsenal", old_price: 60, new_price: 61, change_date: recentDates[1] }
-    ];
-  }
+  });
 
   // Get price predictions (simulated data for demo)
   app.get("/api/price-predictions", async (req, res) => {

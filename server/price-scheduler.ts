@@ -60,7 +60,7 @@ export class PriceScheduler {
     const startTime = Date.now();
     
     try {
-      console.log("Starting daily price data fetch at", new Date().toISOString());
+      console.log("🚀 Starting daily price data fetch at", new Date().toISOString());
       
       // Fetch bootstrap data from FPL API
       const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
@@ -75,6 +75,7 @@ export class PriceScheduler {
       
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       const dailyRecords = [];
+      const currentPlayerPrices = [];
       
       for (const player of players) {
         // Get previous day's data to calculate daily transfers
@@ -111,18 +112,46 @@ export class PriceScheduler {
         };
         
         dailyRecords.push(record);
+        
+        // Track player data for price change detection
+        currentPlayerPrices.push({
+          playerId: player.id,
+          price: player.now_cost,
+          playerName: player.web_name,
+          teamId: team?.id,
+          teamName: team?.short_name,
+          position: position?.singular_name_short,
+          ownership: parseFloat(player.selected_by_percent || "0"),
+          transfersIn: player.transfers_in_event || 0,
+          transfersOut: player.transfers_out_event || 0,
+          totalSeasonChange: player.cost_change_start || 0
+        });
       }
       
-      // Save all records to database
+      // Save all daily records to database
       await storage.saveDailyPriceData(dailyRecords);
+      
+      // Detect and store price changes
+      console.log("🔍 Detecting price changes...");
+      const priceChanges = await storage.detectPriceChanges(currentPlayerPrices);
+      
+      if (priceChanges.length > 0) {
+        console.log(`💰 Found ${priceChanges.length} price changes, storing them...`);
+        for (const change of priceChanges) {
+          await storage.addPriceChange(change);
+        }
+        console.log(`✅ Successfully stored ${priceChanges.length} price changes`);
+      } else {
+        console.log("📊 No price changes detected since last check");
+      }
       
       const endTime = Date.now();
       const duration = (endTime - startTime) / 1000;
       
-      console.log(`Successfully fetched and stored price data for ${dailyRecords.length} players in ${duration.toFixed(2)}s`);
+      console.log(`✅ Daily fetch complete: ${dailyRecords.length} players, ${priceChanges.length} price changes in ${duration.toFixed(2)}s`);
       
     } catch (error) {
-      console.error("Error fetching daily price data:", error);
+      console.error("❌ Error fetching daily price data:", error);
     } finally {
       this.isRunning = false;
     }

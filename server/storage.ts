@@ -1,4 +1,4 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, fplContentCreators, fplCreatorTracking } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type PriceChange, type InsertPriceChange, fplContentCreators, fplCreatorTracking, priceChanges } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
 import { eq, sql, inArray, desc } from "drizzle-orm";
@@ -62,6 +62,12 @@ export interface IStorage {
   getCreatorTracking(creatorId: number, limit?: number): Promise<FplCreatorTracking[]>;
   addCreatorTracking(tracking: InsertFplCreatorTracking): Promise<FplCreatorTracking>;
   getLatestCreatorTracking(creatorId: number): Promise<FplCreatorTracking | undefined>;
+  
+  // Price changes tracking operations
+  getPriceChanges(limit?: number): Promise<PriceChange[]>;
+  addPriceChange(priceChange: InsertPriceChange): Promise<PriceChange>;
+  getLatestPlayerPrice(playerId: number): Promise<{ price: number; date: string } | null>;
+  detectPriceChanges(currentPrices: Array<{ playerId: number; price: number; playerName: string; teamId?: number; teamName?: string; position?: string; ownership: number; transfersIn: number; transfersOut: number; totalSeasonChange: number }>): Promise<InsertPriceChange[]>;
   
 }
 
@@ -957,6 +963,117 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error fetching latest tracking for creator ${creatorId}:`, error);
       return undefined;
+    }
+  }
+
+  // Price changes tracking operations
+  async getPriceChanges(limit: number = 100): Promise<PriceChange[]> {
+    try {
+      console.log(`📊 Fetching recent price changes (limit: ${limit})...`);
+      const changes = await db.select()
+        .from(priceChanges)
+        .orderBy(desc(priceChanges.changeDate), desc(priceChanges.createdAt))
+        .limit(limit);
+      console.log(`✅ Found ${changes.length} price changes`);
+      return changes;
+    } catch (error) {
+      console.error("Error fetching price changes:", error);
+      return [];
+    }
+  }
+
+  async addPriceChange(priceChange: InsertPriceChange): Promise<PriceChange> {
+    try {
+      console.log(`💰 Recording price change for ${priceChange.playerName}: ${priceChange.oldPrice}→${priceChange.newPrice}`);
+      const [newChange] = await db.insert(priceChanges).values(priceChange).returning();
+      console.log(`✅ Price change recorded for ${priceChange.playerName}`);
+      return newChange;
+    } catch (error) {
+      console.error("Error adding price change:", error);
+      throw error;
+    }
+  }
+
+  async getLatestPlayerPrice(playerId: number): Promise<{ price: number; date: string } | null> {
+    try {
+      // First check price changes table for most recent change
+      const [latestChange] = await db.select()
+        .from(priceChanges)
+        .where(eq(priceChanges.playerId, playerId))
+        .orderBy(desc(priceChanges.changeDate))
+        .limit(1);
+        
+      if (latestChange) {
+        return {
+          price: latestChange.newPrice,
+          date: latestChange.changeDate
+        };
+      }
+      
+      // Fallback to daily price data
+      const latestDaily = await this.getLatestPriceData(playerId);
+      if (latestDaily) {
+        return {
+          price: latestDaily.currentPrice,
+          date: latestDaily.recordDate
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`Error getting latest price for player ${playerId}:`, error);
+      return null;
+    }
+  }
+
+  async detectPriceChanges(currentPrices: Array<{ 
+    playerId: number; 
+    price: number; 
+    playerName: string; 
+    teamId?: number; 
+    teamName?: string; 
+    position?: string; 
+    ownership: number; 
+    transfersIn: number; 
+    transfersOut: number; 
+    totalSeasonChange: number 
+  }>): Promise<InsertPriceChange[]> {
+    try {
+      console.log(`🔍 Detecting price changes for ${currentPrices.length} players...`);
+      const priceChangesToAdd: InsertPriceChange[] = [];
+      const today = new Date().toISOString().split('T')[0];
+      
+      for (const playerData of currentPrices) {
+        const latestPrice = await this.getLatestPlayerPrice(playerData.playerId);
+        
+        if (latestPrice && latestPrice.price !== playerData.price) {
+          // Price has changed!
+          const priceChange: InsertPriceChange = {
+            playerId: playerData.playerId,
+            playerName: playerData.playerName,
+            teamId: playerData.teamId || null,
+            teamName: playerData.teamName || null,
+            position: playerData.position || null,
+            oldPrice: latestPrice.price,
+            newPrice: playerData.price,
+            priceChange: playerData.price - latestPrice.price,
+            changeDate: today,
+            ownership: playerData.ownership.toString(),
+            transfersIn: playerData.transfersIn,
+            transfersOut: playerData.transfersOut,
+            totalSeasonChange: playerData.totalSeasonChange
+          };
+          
+          priceChangesToAdd.push(priceChange);
+          console.log(`💰 Price change detected: ${playerData.playerName} ${latestPrice.price}→${playerData.price} (${priceChange.priceChange > 0 ? '+' : ''}${priceChange.priceChange})`);
+        }
+      }
+      
+      console.log(`✅ Detected ${priceChangesToAdd.length} price changes`);
+      return priceChangesToAdd;
+    } catch (error) {
+      console.error("Error detecting price changes:", error);
+      return [];
     }
   }
 
