@@ -55,32 +55,38 @@ function Router() {
       <Route path="/" component={LiveRank} />
       <Route path="/live-rank" component={LiveRank} />
       <Route path="/fixtures" component={Fixtures} />
-      <Route path="/transfers" component={Transfers} />
-      <Route path="/captain" component={Captain} />
-      <Route path="/watchlist" component={Watchlist} />
+      {/* Production tools - always available */}
       <Route path="/my-team" component={MyTeam} />
       <Route path="/my-leagues" component={MyLeagues} />
-      <Route path="/price-tracker" component={PriceTracker} />
       <Route path="/recent-price-changes" component={RecentPriceChanges} />
       <Route path="/predicted-price-changes" component={TransferTracker} />
-      <Route path="/league-comparison" component={LeagueComparison} />
       <Route path="/player-statistics" component={PlayerStats} />
-
       <Route path="/projected-goals-cs" component={ProjectedGoalsCS} />
       <Route path="/projected-standings" component={ProjectedStandings} />
       <Route path="/predicted-scores" component={PredictedScores} />
-      <Route path="/results-projections" component={ResultsProjections} />
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
       <Route path="/team-goals-against-projections" component={TeamGoalsAgainstProjections} />
-      <Route path="/team-assist-projections" component={TeamAssistProjections} />
       <Route path="/team-cs-projections" component={TeamCSProjections} />
-      <Route path="/goal-share" component={GoalShare} />
-      <Route path="/assist-share" component={AssistShare} />
-      <Route path="/player-goal-projections" component={PlayerGoalProjections} />
-      <Route path="/player-assist-projections" component={PlayerAssistProjections} />
-      <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
-      <Route path="/season-projections" component={SeasonProjections} />
+
+      {/* Development-only tools - hidden in production */}
+      {isDevelopment && (
+        <>
+          <Route path="/transfers" component={Transfers} />
+          <Route path="/captain" component={Captain} />
+          <Route path="/watchlist" component={Watchlist} />
+          <Route path="/price-tracker" component={PriceTracker} />
+          <Route path="/league-comparison" component={LeagueComparison} />
+          <Route path="/results-projections" component={ResultsProjections} />
+          <Route path="/team-assist-projections" component={TeamAssistProjections} />
+          <Route path="/goal-share" component={GoalShare} />
+          <Route path="/assist-share" component={AssistShare} />
+          <Route path="/player-goal-projections" component={PlayerGoalProjections} />
+          <Route path="/player-assist-projections" component={PlayerAssistProjections} />
+          <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
+          <Route path="/season-projections" component={SeasonProjections} />
+        </>
+      )}
       
       {/* Admin routes - only available in development */}
       {isDevelopment && (
