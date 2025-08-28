@@ -367,9 +367,15 @@ export default function Admin() {
                       {creator.twitterHandle && (
                         <div>
                           <span className="font-medium">Twitter:</span>
-                          <span className="ml-2 text-blue-600" data-testid={`text-twitter-handle-${creator.id}`}>
+                          <a
+                            href={`https://x.com/${creator.twitterHandle.replace('@', '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-blue-600 hover:underline"
+                            data-testid={`link-twitter-handle-${creator.id}`}
+                          >
                             {creator.twitterHandle}
-                          </span>
+                          </a>
                         </div>
                       )}
                       {creator.youtubeUrl && (
