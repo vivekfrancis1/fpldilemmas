@@ -75,14 +75,14 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/openfpl-projections", label: "OpenFPL Player Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false }
       ]
     },
-    ...(isDevelopment ? [{
-      section: "Admin Tools (Dev Only)", 
+    {
+      section: "Admin Tools", 
       items: [
         { path: "/admin-content-creators", label: "Content Creators Admin", icon: Settings, description: "Manage content creators", popular: false },
         { path: "/admin-goal-projections", label: "Goal Settings Admin", icon: Settings, description: "Configure goal projection settings", popular: false },
         { path: "/admin-upset-config", label: "Upset Config Admin", icon: Settings, description: "Configure upset predictions", popular: false }
       ]
-    }] : []),
+    },
     ...(isDevelopment ? [{
       section: "Under Development", 
       items: [

@@ -88,14 +88,10 @@ function Router() {
         </>
       )}
       
-      {/* Admin routes - only available in development */}
-      {isDevelopment && (
-        <>
-          <Route path="/admin-goal-projections" component={AdminGoalProjections} />
-          <Route path="/admin-upset-config" component={AdminUpsetConfig} />
-          <Route path="/admin-content-creators" component={Admin} />
-        </>
-      )}
+      {/* Admin routes - available in production with secret key */}
+      <Route path="/admin-goal-projections" component={AdminGoalProjections} />
+      <Route path="/admin-upset-config" component={AdminUpsetConfig} />
+      <Route path="/admin-content-creators" component={Admin} />
       
       <Route path="/content-creators" component={ContentCreators} />
       <Route path="/content-creators/:id/team" component={CreatorTeam} />

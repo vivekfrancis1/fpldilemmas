@@ -77,19 +77,37 @@ const MASTER_TEAM_DEFAULTS = {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Environment-based admin access middleware
-  const requireDevelopmentEnvironment = (req: any, res: any, next: any) => {
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(404).json({ 
-        error: "Not Found",
-        message: "Admin tools are not available in production environment"
+  // Secure admin access middleware with secret key authentication
+  const requireAdminAccess = (req: any, res: any, next: any) => {
+    // In development, allow access without secret key
+    if (process.env.NODE_ENV === 'development') {
+      next();
+      return;
+    }
+    
+    // In production, require ADMIN_SECRET_KEY in URL parameters
+    const providedKey = req.query.admin_key;
+    const requiredKey = process.env.ADMIN_SECRET_KEY;
+    
+    if (!requiredKey) {
+      return res.status(503).json({ 
+        error: "Service Unavailable",
+        message: "Admin access not configured" 
       });
     }
+    
+    if (!providedKey || providedKey !== requiredKey) {
+      return res.status(401).json({ 
+        error: "Unauthorized",
+        message: "Invalid or missing admin key" 
+      });
+    }
+    
     next();
   };
 
   // Apply admin middleware to all admin routes
-  app.use('/api/admin/*', requireDevelopmentEnvironment);
+  app.use('/api/admin/*', requireAdminAccess);
 
   // Health check endpoint for production monitoring
   app.get("/health", (req, res) => {
@@ -6045,7 +6063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/content-creators", requireDevelopmentEnvironment, async (req, res) => {
+  app.post("/api/content-creators", requireAdminAccess, async (req, res) => {
     try {
       const creatorData = req.body;
       
@@ -6079,7 +6097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/content-creators/:id", requireDevelopmentEnvironment, async (req, res) => {
+  app.put("/api/content-creators/:id", requireAdminAccess, async (req, res) => {
     try {
       const { id } = req.params;
       const creatorId = parseInt(id);
@@ -6103,7 +6121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/content-creators/:id", requireDevelopmentEnvironment, async (req, res) => {
+  app.delete("/api/content-creators/:id", requireAdminAccess, async (req, res) => {
     try {
       const { id } = req.params;
       const creatorId = parseInt(id);
@@ -6270,7 +6288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/content-creators/bulk", requireDevelopmentEnvironment, async (req, res) => {
+  app.post("/api/content-creators/bulk", requireAdminAccess, async (req, res) => {
     try {
       const { creators } = req.body;
       
@@ -6309,7 +6327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/content-creators/refresh", requireDevelopmentEnvironment, async (req, res) => {
+  app.post("/api/content-creators/refresh", requireAdminAccess, async (req, res) => {
     try {
       // This will fetch latest FPL data for all content creators from the FPL API
       const creators = await storage.getContentCreators();
@@ -6451,7 +6469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual database seeding endpoint (for production deployment if needed)
-  app.post("/api/content-creators/seed", requireDevelopmentEnvironment, async (req, res) => {
+  app.post("/api/content-creators/seed", requireAdminAccess, async (req, res) => {
     try {
       const { seedContentCreators } = await import("./seed-database");
       await seedContentCreators();
@@ -6470,7 +6488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reset content creators with correct Manager IDs
-  app.post("/api/content-creators/reset", requireDevelopmentEnvironment, async (req, res) => {
+  app.post("/api/content-creators/reset", requireAdminAccess, async (req, res) => {
     try {
       console.log("🔄 Resetting content creators with correct Manager IDs...");
       
