@@ -90,12 +90,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Apply admin middleware to all admin routes
   app.use('/api/admin/*', requireDevelopmentEnvironment);
-  
-  // Protect only specific admin CRUD operations for content creators
-  // This middleware only applies to POST/PUT/DELETE routes, not GET routes
-  app.post('/api/content-creators*', requireDevelopmentEnvironment);
-  app.put('/api/content-creators*', requireDevelopmentEnvironment);
-  app.delete('/api/content-creators*', requireDevelopmentEnvironment);
 
   // Player data routes
   app.get("/api/bootstrap-static", async (req, res) => {
@@ -6094,7 +6088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/content-creators", async (req, res) => {
+  app.post("/api/content-creators", requireDevelopmentEnvironment, async (req, res) => {
     try {
       const creatorData = req.body;
       
@@ -6128,7 +6122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/content-creators/:id", async (req, res) => {
+  app.put("/api/content-creators/:id", requireDevelopmentEnvironment, async (req, res) => {
     try {
       const { id } = req.params;
       const creatorId = parseInt(id);
@@ -6152,7 +6146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/content-creators/:id", async (req, res) => {
+  app.delete("/api/content-creators/:id", requireDevelopmentEnvironment, async (req, res) => {
     try {
       const { id } = req.params;
       const creatorId = parseInt(id);
@@ -6319,7 +6313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/content-creators/bulk", async (req, res) => {
+  app.post("/api/content-creators/bulk", requireDevelopmentEnvironment, async (req, res) => {
     try {
       const { creators } = req.body;
       
@@ -6358,7 +6352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/content-creators/refresh", async (req, res) => {
+  app.post("/api/content-creators/refresh", requireDevelopmentEnvironment, async (req, res) => {
     try {
       // This will fetch latest FPL data for all content creators from the FPL API
       const creators = await storage.getContentCreators();
@@ -6500,7 +6494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual database seeding endpoint (for production deployment if needed)
-  app.post("/api/content-creators/seed", async (req, res) => {
+  app.post("/api/content-creators/seed", requireDevelopmentEnvironment, async (req, res) => {
     try {
       const { seedContentCreators } = await import("./seed-database");
       await seedContentCreators();
@@ -6519,7 +6513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reset content creators with correct Manager IDs
-  app.post("/api/content-creators/reset", async (req, res) => {
+  app.post("/api/content-creators/reset", requireDevelopmentEnvironment, async (req, res) => {
     try {
       console.log("🔄 Resetting content creators with correct Manager IDs...");
       
