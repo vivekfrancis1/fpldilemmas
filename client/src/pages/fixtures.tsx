@@ -360,11 +360,11 @@ export default function Fixtures() {
                   <span>1-2 Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-yellow-400 rounded"></div>
+                  <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
                   <span>3 Medium</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-orange-500 rounded"></div>
+                  <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
                   <span>4 Hard</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -459,15 +459,15 @@ export default function Fixtures() {
                   <span>1 Very Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-400 rounded"></div>
+                  <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
                   <span>2 Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-yellow-400 rounded"></div>
+                  <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
                   <span>3 Medium</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-orange-500 rounded"></div>
+                  <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
                   <span>4 Hard</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -571,15 +571,15 @@ export default function Fixtures() {
                   <span>1 Very Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-400 rounded"></div>
+                  <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
                   <span>2 Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-yellow-400 rounded"></div>
+                  <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
                   <span>3 Medium</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-orange-500 rounded"></div>
+                  <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
                   <span>4 Hard</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -697,7 +697,7 @@ export default function Fixtures() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 bg-yellow-400 rounded"></div>
+                      <div className="w-6 h-6 bg-gray-100 border border-gray-300 rounded"></div>
                       <div>
                         <span className="font-medium">3: Medium</span>
                         <p className="text-sm text-gray-600">Average difficulty - consider form and other factors</p>
