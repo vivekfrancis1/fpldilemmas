@@ -637,8 +637,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("📊 Fetching recent price changes from database...");
       
-      // Get recent price changes from our tracking system
-      const priceChanges = await storage.getPriceChanges(100);
+      // Get ALL price changes from our tracking system 
+      const priceChanges = await storage.getPriceChanges(300);
       
       // Format data for frontend compatibility
       const formattedChanges = priceChanges.map((change: any) => ({
