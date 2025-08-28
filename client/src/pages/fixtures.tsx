@@ -344,11 +344,11 @@ export default function Fixtures() {
               </TabsTrigger>
               <TabsTrigger value="attacking" className="flex items-center gap-2">
                 <Sword className="h-4 w-4" />
-                FDR for Attack
+                FDR for Attackers
               </TabsTrigger>
               <TabsTrigger value="defensive" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                FDR for Defence
+                FDR for Defenders
               </TabsTrigger>
             </TabsList>
 
