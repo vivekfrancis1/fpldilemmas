@@ -137,7 +137,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "FPL Pras",
     handle: "@Pras_fpl",
     platform: "twitter",
-    managerId: 3570,
+    managerId: 2570,
     description: "Podcaster on The FPL Wire; data-focused strategies."
   },
   {
@@ -185,7 +185,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "Lateriser12",
     handle: "@Lateriser",
     platform: "twitter",
-    managerId: 1122,
+    managerId: 5469,
     description: "Co-host of The FPL Wire podcast; multiple top 200 finishes and elite FPL veteran."
   },
   {
@@ -201,7 +201,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "Abdul Rehman (FPL Salah)",
     handle: "@FPL_Salah",
     platform: "twitter",
-    managerId: 1301,
+    managerId: 124,
     description: "Top FPL manager with multiple top 1k finishes; contributor to The Athletic and FPL shows."
   },
   {

@@ -56,6 +56,7 @@ export interface IStorage {
   addContentCreator(creator: InsertFplContentCreator): Promise<FplContentCreator>;
   updateContentCreator(id: number, updates: Partial<InsertFplContentCreator>): Promise<FplContentCreator>;
   deleteContentCreator(id: number): Promise<void>;
+  clearContentCreators(): Promise<void>;
   
   // FPL Creator Tracking operations
   getCreatorTracking(creatorId: number, limit?: number): Promise<FplCreatorTracking[]>;
@@ -316,6 +317,10 @@ export class MemStorage implements IStorage {
   }
 
   async deleteContentCreator(id: number): Promise<void> {
+    throw new Error("MemStorage: Content creator operations not supported. Use DatabaseStorage.");
+  }
+
+  async clearContentCreators(): Promise<void> {
     throw new Error("MemStorage: Content creator operations not supported. Use DatabaseStorage.");
   }
 
@@ -897,6 +902,17 @@ export class DatabaseStorage implements IStorage {
       console.log(`✅ Successfully deleted content creator: ${id}`);
     } catch (error) {
       console.error("Error deleting content creator:", error);
+      throw error;
+    }
+  }
+
+  async clearContentCreators(): Promise<void> {
+    try {
+      console.log(`🗑️ Clearing all content creators...`);
+      await db.delete(fplContentCreators);
+      console.log(`✅ Successfully cleared all content creators`);
+    } catch (error) {
+      console.error("Error clearing content creators:", error);
       throw error;
     }
   }

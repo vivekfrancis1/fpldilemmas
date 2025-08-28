@@ -11,7 +11,7 @@ Manager ID caching: All FPL manager tools (My Live Rank, My Team, My Leagues) no
 Projection Tools Limit: All projection tools (Player Projections, Match Projections, Team Goal/CS Projections, Goal Share, Assist Share) now limited to next 6 gameweeks only for focused analysis with updated dropdowns and defaults. Updated to show only future gameweeks excluding current/finished gameweeks for better forward-looking analysis. Match Projections now dynamically adapts to exclude started gameweeks. Goal Share and Assist Share successfully extended to display data for all 6 gameweeks with proper API integration.
 Most popular tools: Player Statistics, My Live Rank, and Fixture Analyzer.
 Fixture Analyzer display: Shows 6 gameweeks by default with user customization up to GW38 for comprehensive fixture analysis.
-FPL Content Creators: Updated terminology from "Team ID" to "Manager ID" throughout the codebase for better clarity. Table structure updated to show separate columns for Creator, Manager ID, Player Name, with Team Name column hidden as requested.
+FPL Content Creators: Updated terminology from "Team ID" to "Manager ID" throughout the codebase for better clarity. Table structure updated to show separate columns for Creator, Manager ID, Player Name, with Team Name column hidden as requested. Manager IDs hardcoded to correct authentic values (FPL Harry: 1320, FPL Pras: 2570) ensuring consistency between development and production environments.
 
 ## System Architecture
 

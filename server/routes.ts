@@ -6421,6 +6421,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reset content creators with correct Manager IDs
+  app.post("/api/content-creators/reset", async (req, res) => {
+    try {
+      console.log("🔄 Resetting content creators with correct Manager IDs...");
+      
+      // Clear existing content creators
+      await storage.clearContentCreators();
+      console.log("✅ Cleared existing content creators");
+      
+      // Reseed with corrected data
+      const { seedContentCreators } = await import("./seed-database");
+      await seedContentCreators();
+      console.log("✅ Reseeded content creators with correct Manager IDs");
+      
+      // Verify the reset by fetching updated data
+      const creators = await storage.getContentCreators();
+      const fplHarry = creators.find(c => c.name === "FPL Harry");
+      const fplPras = creators.find(c => c.name === "FPL Pras");
+      
+      res.json({ 
+        success: true, 
+        message: "Content creators reset successfully with correct Manager IDs",
+        verification: {
+          totalCreators: creators.length,
+          fplHarryManagerId: fplHarry?.managerId,
+          fplPrasManagerId: fplPras?.managerId
+        }
+      });
+    } catch (error) {
+      console.error("Reset failed:", error);
+      res.status(500).json({ 
+        error: "Failed to reset content creators",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   console.log("✓ Content Creators API routes registered successfully");
 
   const httpServer = createServer(app);
