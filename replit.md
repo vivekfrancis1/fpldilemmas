@@ -53,7 +53,7 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Captain Selector**: Enhanced with historical captaincy performance data (2016-2024), 6-factor scoring algorithm, and ownership analysis.
 - **Transfer Tracker**: Authentic transfer data analysis (transfers in/out, net transfers, ownership percentages) using real FPL API data.
 - **Open FPL Projections**: Advanced machine learning projection tool using position-specific ensemble models, multi-horizon forecasting, and hourly updates.
-- **Price Tracker**: Split into "Recent Price Changes" (actual FPL API data) and "Predicted Price Changes" (community-researched algorithm with dual progress bars).
+- **Price Tracker**: Complete FPL API-based system tracking actual price changes only. Replaced LiveFPL dependency with authentic FPL bootstrap data. From August 29, 2025 onwards, only records actual daily price rises/falls with old price, new price, change amount, and date. Historical data shows 143 season price changes initialized on August 28, 2025.
 - **Historical Data**: Year selection functionality for player statistics from 2016/17 season onwards.
 - **Defensive Contribution Analytics**: Integration of new FPL API defensive data points (Defensive Contribution, Tackles, Recoveries, CBI, Starts) for 2025/26 season.
 - **Goal Range Compression**: Implemented realistic Premier League goal distributions by compressing team season totals (30-85 goal range).

@@ -1039,37 +1039,43 @@ export class DatabaseStorage implements IStorage {
     totalSeasonChange: number 
   }>): Promise<InsertPriceChange[]> {
     try {
-      console.log(`🔍 Detecting price changes for ${currentPrices.length} players...`);
+      console.log(`🔍 Detecting actual price changes for ${currentPrices.length} players...`);
       const priceChangesToAdd: InsertPriceChange[] = [];
       const today = new Date().toISOString().split('T')[0];
       
       for (const playerData of currentPrices) {
         const latestPrice = await this.getLatestPlayerPrice(playerData.playerId);
         
+        // Only track if we have previous data AND the price has actually changed
         if (latestPrice && latestPrice.price !== playerData.price) {
-          // Price has changed!
-          const priceChange: InsertPriceChange = {
-            playerId: playerData.playerId,
-            playerName: playerData.playerName,
-            teamId: playerData.teamId || null,
-            teamName: playerData.teamName || null,
-            position: playerData.position || null,
-            oldPrice: latestPrice.price,
-            newPrice: playerData.price,
-            priceChange: playerData.price - latestPrice.price,
-            changeDate: today,
-            ownership: playerData.ownership.toString(),
-            transfersIn: playerData.transfersIn,
-            transfersOut: playerData.transfersOut,
-            totalSeasonChange: playerData.totalSeasonChange
-          };
+          const actualPriceChange = playerData.price - latestPrice.price;
           
-          priceChangesToAdd.push(priceChange);
-          console.log(`💰 Price change detected: ${playerData.playerName} ${latestPrice.price}→${playerData.price} (${priceChange.priceChange > 0 ? '+' : ''}${priceChange.priceChange})`);
+          // Only record if there's an actual price change (rise or fall)
+          if (actualPriceChange !== 0) {
+            const priceChange: InsertPriceChange = {
+              playerId: playerData.playerId,
+              playerName: playerData.playerName,
+              teamId: playerData.teamId || null,
+              teamName: playerData.teamName || null,
+              position: playerData.position || null,
+              oldPrice: latestPrice.price,
+              newPrice: playerData.price,
+              priceChange: actualPriceChange,
+              changeDate: today,
+              ownership: playerData.ownership.toString(),
+              transfersIn: playerData.transfersIn,
+              transfersOut: playerData.transfersOut,
+              totalSeasonChange: playerData.totalSeasonChange
+            };
+            
+            priceChangesToAdd.push(priceChange);
+            const changeType = actualPriceChange > 0 ? "RISE" : "FALL";
+            console.log(`💰 ${changeType}: ${playerData.playerName} ${latestPrice.price}→${playerData.price} (${actualPriceChange > 0 ? '+' : ''}${actualPriceChange})`);
+          }
         }
       }
       
-      console.log(`✅ Detected ${priceChangesToAdd.length} price changes`);
+      console.log(`✅ Detected ${priceChangesToAdd.length} actual price changes`);
       return priceChangesToAdd;
     } catch (error) {
       console.error("Error detecting price changes:", error);

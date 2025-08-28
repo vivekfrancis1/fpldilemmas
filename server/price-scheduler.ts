@@ -131,18 +131,18 @@ export class PriceScheduler {
       // Save all daily records to database
       await storage.saveDailyPriceData(dailyRecords);
       
-      // Detect and store price changes
-      console.log("🔍 Detecting price changes...");
+      // Detect and store actual price changes (only rises/falls from tomorrow)
+      console.log("🔍 Detecting actual price changes from previous day...");
       const priceChanges = await storage.detectPriceChanges(currentPlayerPrices);
       
       if (priceChanges.length > 0) {
-        console.log(`💰 Found ${priceChanges.length} price changes, storing them...`);
+        console.log(`💰 Found ${priceChanges.length} actual price changes, storing them...`);
         for (const change of priceChanges) {
           await storage.addPriceChange(change);
         }
         console.log(`✅ Successfully stored ${priceChanges.length} price changes`);
       } else {
-        console.log("📊 No price changes detected since last check");
+        console.log("📊 No actual price changes detected since yesterday");
       }
       
       const endTime = Date.now();

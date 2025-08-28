@@ -657,78 +657,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total_season_change: change.totalSeasonChange || 0
       }));
       
-      // If no price changes recorded yet, initialize with current FPL data
+      // From now on, we only show actual price changes that occurred after tracking started
       if (formattedChanges.length === 0) {
-        console.log("🔄 No price changes found, initializing with current FPL season data...");
-        
-        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-        if (!bootstrapResponse.ok) {
-          throw new Error("Failed to fetch FPL bootstrap data");
-        }
-        
-        const bootstrapData = await bootstrapResponse.json();
-        const elements = bootstrapData.elements;
-        const teams = bootstrapData.teams;
-        const positions = bootstrapData.element_types;
-        
-        // Get players with season price changes
-        const playersWithChanges = elements.filter((player: any) => 
-          Math.abs(player.cost_change_start || 0) > 0
-        );
-        
-        console.log(`📈 Found ${playersWithChanges.length} players with season price changes`);
-        
-        // Create initial price change records for August 28, 2025
-        const initialChanges = playersWithChanges.map((player: any) => {
-          const team = teams.find((t: any) => t.id === player.team);
-          const position = positions.find((p: any) => p.id === player.element_type);
-          const originalPrice = player.now_cost - (player.cost_change_start || 0);
-          
-          return {
-            player_id: player.id,
-            player_name: player.web_name,
-            team_name: team?.short_name || "Unknown",
-            position: position?.singular_name_short || "Unknown",
-            old_price: originalPrice,
-            current_price: player.now_cost,
-            price_change: player.cost_change_start || 0,
-            change_date: "2025-08-28", // Initial date as requested
-            ownership: parseFloat(player.selected_by_percent || "0"),
-            transfers_in: player.transfers_in_event || 0,
-            transfers_out: player.transfers_out_event || 0,
-            is_recent_change: Math.abs(player.cost_change_event || 0) > 0,
-            total_season_change: player.cost_change_start || 0
-          };
-        });
-        
-        // Store initial changes in database
-        for (const change of initialChanges) {
-          try {
-            await storage.addPriceChange({
-              playerId: change.player_id,
-              playerName: change.player_name,
-              teamId: null,
-              teamName: change.team_name,
-              position: change.position,
-              oldPrice: change.old_price,
-              newPrice: change.current_price,
-              priceChange: change.price_change,
-              changeDate: change.change_date,
-              ownership: change.ownership.toString(),
-              transfersIn: change.transfers_in,
-              transfersOut: change.transfers_out,
-              totalSeasonChange: change.total_season_change
-            });
-          } catch (error) {
-            // Ignore duplicate entries
-            if (!error.message?.includes('duplicate')) {
-              console.error(`Error storing change for ${change.player_name}:`, error);
-            }
-          }
-        }
-        
-        console.log(`✅ Initialized ${initialChanges.length} price changes`);
-        return res.json(initialChanges);
+        console.log("📊 No price changes recorded yet - system ready to track future changes");
+        return res.json([]);
       }
       
       console.log(`✅ Returning ${formattedChanges.length} recent price changes`);
