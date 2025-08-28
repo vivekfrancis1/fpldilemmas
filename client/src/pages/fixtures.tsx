@@ -76,14 +76,14 @@ export default function Fixtures() {
     }
   }, [availableGameweeks, gameweekRange.start]);
 
-  // Get attack tier color class (updated from difficulty ratings)
-  const getAttackTierColor = (attackTier: string) => {
-    switch (attackTier) {
-      case 'promoted': return 'bg-green-600 text-white'; // Promoted Team - Dark Green
-      case 'weak': return 'bg-green-100 text-green-800'; // Weak Attack - Light Green  
-      case 'average': return 'bg-gray-100 text-gray-800'; // Average Attack - Grey
-      case 'strong': return 'bg-red-100 text-red-800'; // Strong Attack - Light Red
-      case 'elite': return 'bg-red-600 text-white'; // Elite Attack - Dark Red
+  // Get difficulty rating color class
+  const getDifficultyColor = (difficulty: number) => {
+    switch (difficulty) {
+      case 1: return 'bg-green-600 text-white'; // Very Easy - Dark Green (softer)
+      case 2: return 'bg-green-100 text-green-800'; // Easy - Light Green  
+      case 3: return 'bg-gray-100 text-gray-800'; // Medium - Grey
+      case 4: return 'bg-red-100 text-red-800'; // Hard - Light Red
+      case 5: return 'bg-red-600 text-white'; // Very Hard - Dark Red (softer)
       default: return 'bg-gray-300 text-gray-900';
     }
   };
@@ -425,17 +425,10 @@ export default function Fixtures() {
                                   }`}>
                                     {fixture ? (
                                       <div 
-                                        className={`px-1 py-1 rounded text-xs font-medium ${(() => {
-                                          const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
-                                          const attackTier = opponentId ? getAttackingTier(opponentId) : 'average';
-                                          return getAttackTierColor(attackTier);
-                                        })()} ${
+                                        className={`px-1 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
                                           fixture.finished ? 'opacity-50' : ''
                                         }`}
-                                        title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - ${(() => {
-                                          const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
-                                          return opponentId ? getAttackingTier(opponentId) : 'average';
-                                        })()} attack`}
+                                        title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} (FDR: ${fixture.difficulty})`}
                                         data-testid={`fixture-${team.id}-${gw}`}
                                       >
                                         <span className="truncate text-xs font-medium whitespace-nowrap">
@@ -688,47 +681,33 @@ export default function Fixtures() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Info className="h-5 w-5" />
-                Opponent Attack Tier Guide
+                Fixture Difficulty Rating Guide
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Attack Tier Scale</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">Difficulty Scale</h4>
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <div className="w-6 h-6 bg-green-600 rounded"></div>
                       <div>
-                        <span className="font-medium">Promoted Team</span>
-                        <p className="text-sm text-gray-600">Weakest attacking teams - easiest clean sheet chances</p>
+                        <span className="font-medium">1-2: Easy</span>
+                        <p className="text-sm text-gray-600">Favorable fixtures - high scoring potential</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 bg-green-100 border border-green-300 rounded"></div>
+                      <div className="w-6 h-6 bg-yellow-400 rounded"></div>
                       <div>
-                        <span className="font-medium">Weak Attack</span>
-                        <p className="text-sm text-gray-600">Poor attacking teams - good clean sheet potential</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 bg-gray-100 border border-gray-300 rounded"></div>
-                      <div>
-                        <span className="font-medium">Average Attack</span>
-                        <p className="text-sm text-gray-600">Moderate attacking threat - mixed clean sheet chances</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 bg-red-100 border border-red-300 rounded"></div>
-                      <div>
-                        <span className="font-medium">Strong Attack</span>
-                        <p className="text-sm text-gray-600">Good attacking teams - challenging for clean sheets</p>
+                        <span className="font-medium">3: Medium</span>
+                        <p className="text-sm text-gray-600">Average difficulty - consider form and other factors</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="w-6 h-6 bg-red-600 rounded"></div>
                       <div>
-                        <span className="font-medium">Elite Attack</span>
-                        <p className="text-sm text-gray-600">Best attacking teams - avoid for clean sheet potential</p>
+                        <span className="font-medium">4-5: Hard</span>
+                        <p className="text-sm text-gray-600">Challenging fixtures - lower scoring potential</p>
                       </div>
                     </div>
                   </div>
