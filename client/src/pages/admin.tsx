@@ -20,6 +20,8 @@ interface ContentCreator {
   platform: string;
   description: string;
   website: string | null;
+  twitterHandle: string | null;
+  youtubeUrl: string | null;
   followers: number | null;
   isActive: boolean;
   addedDate: string;
@@ -33,6 +35,8 @@ interface NewCreatorForm {
   platform: string;
   description: string;
   website: string;
+  twitterHandle: string;
+  youtubeUrl: string;
 }
 
 const PLATFORMS = [
@@ -54,13 +58,15 @@ export default function Admin() {
     managerId: "",
     platform: "",
     description: "",
-    website: ""
+    website: "",
+    twitterHandle: "",
+    youtubeUrl: ""
   });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: creators = [], isLoading } = useQuery({
+  const { data: creators = [], isLoading } = useQuery<ContentCreator[]>({
     queryKey: ["/api/content-creators"],
   });
 
@@ -68,13 +74,18 @@ export default function Admin() {
     mutationFn: async (newCreator: any) => {
       return apiRequest("/api/content-creators", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           name: newCreator.name,
           handle: newCreator.handle,
           managerId: parseInt(newCreator.managerId),
           platform: newCreator.platform,
           description: newCreator.description,
-          website: newCreator.website || null
+          website: newCreator.website || null,
+          twitterHandle: newCreator.twitterHandle || null,
+          youtubeUrl: newCreator.youtubeUrl || null
         }),
       });
     },
@@ -87,7 +98,9 @@ export default function Admin() {
         managerId: "",
         platform: "",
         description: "",
-        website: ""
+        website: "",
+        twitterHandle: "",
+        youtubeUrl: ""
       });
       toast({
         title: "Success",
@@ -107,6 +120,9 @@ export default function Admin() {
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<ContentCreator> }) => {
       return apiRequest(`/api/content-creators/${id}`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(updates),
       });
     },
@@ -149,7 +165,9 @@ export default function Admin() {
       managerId: creator.managerId,
       platform: creator.platform,
       description: creator.description,
-      website: creator.website
+      website: creator.website,
+      twitterHandle: creator.twitterHandle,
+      youtubeUrl: creator.youtubeUrl
     });
   };
 
@@ -275,6 +293,24 @@ export default function Admin() {
                   data-testid="input-creator-website"
                 />
               </div>
+              <div>
+                <label className="text-sm font-medium">Twitter Handle</label>
+                <Input
+                  placeholder="e.g., @FPL_Harry"
+                  value={newCreatorForm.twitterHandle}
+                  onChange={(e) => setNewCreatorForm({ ...newCreatorForm, twitterHandle: e.target.value })}
+                  data-testid="input-creator-twitter-handle"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">YouTube URL</label>
+                <Input
+                  placeholder="e.g., https://youtube.com/@FPLHarry"
+                  value={newCreatorForm.youtubeUrl}
+                  onChange={(e) => setNewCreatorForm({ ...newCreatorForm, youtubeUrl: e.target.value })}
+                  data-testid="input-creator-youtube-url"
+                />
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium">Description</label>
@@ -358,6 +394,24 @@ export default function Admin() {
                         value={editForm.website || ""}
                         onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
                         data-testid={`input-edit-website-${creator.id}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Twitter Handle</label>
+                      <Input
+                        placeholder="e.g., @FPL_Harry"
+                        value={editForm.twitterHandle || ""}
+                        onChange={(e) => setEditForm({ ...editForm, twitterHandle: e.target.value })}
+                        data-testid={`input-edit-twitter-handle-${creator.id}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">YouTube URL</label>
+                      <Input
+                        placeholder="e.g., https://youtube.com/@FPLHarry"
+                        value={editForm.youtubeUrl || ""}
+                        onChange={(e) => setEditForm({ ...editForm, youtubeUrl: e.target.value })}
+                        data-testid={`input-edit-youtube-url-${creator.id}`}
                       />
                     </div>
                   </div>

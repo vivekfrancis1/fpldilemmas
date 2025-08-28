@@ -571,6 +571,8 @@ export const fplContentCreators = pgTable("fpl_content_creators", {
   platform: varchar("platform", { length: 50 }).notNull(), // YouTube, Twitter, etc.
   description: text("description"),
   website: varchar("website", { length: 255 }),
+  twitterHandle: varchar("twitter_handle", { length: 100 }), // Twitter handle (e.g., @FPL_Harry)
+  youtubeUrl: varchar("youtube_url", { length: 255 }), // YouTube channel URL
   followers: integer("followers"),
   isActive: boolean("is_active").default(true),
   addedDate: timestamp("added_date").defaultNow(),
