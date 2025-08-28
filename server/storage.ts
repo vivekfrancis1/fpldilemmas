@@ -343,6 +343,23 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
+  // Price changes tracking operations (in-memory stubs)
+  async getPriceChanges(limit?: number): Promise<PriceChange[]> {
+    return [];
+  }
+
+  async addPriceChange(priceChange: InsertPriceChange): Promise<PriceChange> {
+    throw new Error("MemStorage: Price change operations not supported. Use DatabaseStorage.");
+  }
+
+  async getLatestPlayerPrice(playerId: number): Promise<{ price: number; date: string } | null> {
+    return null;
+  }
+
+  async detectPriceChanges(currentPrices: Array<{ playerId: number; price: number; playerName: string; teamId?: number; teamName?: string; position?: string; ownership: number; transfersIn: number; transfersOut: number; totalSeasonChange: number }>): Promise<InsertPriceChange[]> {
+    return [];
+  }
+
 }
 
 // Database-backed storage with fallback to memory storage

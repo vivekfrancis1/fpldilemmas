@@ -568,7 +568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const bootstrapData = await bootstrapResponse.json();
           currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
         } else {
-          currentGameweek = 1; // fallback
+          currentGameweek = "1"; // fallback
         }
       }
       
@@ -1418,7 +1418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let unifiedProjectionSettings: any = null;
 
   // Load settings from database
-  async function loadUnifiedProjectionSettings() {
+  async function loadUnifiedProjectionSettings(): Promise<any> {
     try {
       const [settings] = await db.select().from(unifiedProjectionSettingsTable).limit(1);
       
@@ -1484,7 +1484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Create default settings in database
-  async function createDefaultUnifiedProjectionSettings() {
+  async function createDefaultUnifiedProjectionSettings(): Promise<any> {
     try {
       const defaultSettings = {
         autoBalance: true,
@@ -2653,7 +2653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate totals and averages across all 38 gameweeks
         const allGameweeks = Array.from({ length: 38 }, (_, i) => i + 1);
         const totalCSProbability = allGameweeks.reduce((sum, gw) => {
-          const projection = projections.find(p => p && p.gameweek === gw);
+          const projection = projections.find((p: any) => p && p.gameweek === gw);
           return sum + (projection ? projection.cleanSheetOdds : 0);
         }, 0);
         const averageCleanSheetOdds = totalCSProbability / 38;
@@ -2672,7 +2672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Advanced multi-dimensional confidence assessment
         const marketConfidence = teamBettingData.confidence; // Base market reliability
         const performanceConsistency = projections.length > 0 ? 
-          Math.max(0, 1 - (Math.max(...projections.map(p => p.cleanSheetOdds)) - Math.min(...projections.map(p => p.cleanSheetOdds))) / 80) : 0;
+          Math.max(0, 1 - (Math.max(...projections.map((p: any) => p.cleanSheetOdds)) - Math.min(...projections.map((p: any) => p.cleanSheetOdds))) / 80) : 0;
         const volumeConfidence = Math.min(1.0, projections.length / 5); // 5+ fixtures for full confidence
         const qualityBonus = averageCleanSheetOdds >= 35 ? 0.15 : averageCleanSheetOdds >= 25 ? 0.10 : 0;
         
@@ -2851,7 +2851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Generated ${allGoalShareData.length} total team entries for GW2-GW7 using Team Goal Projections`);
       
       // Debug: Check gameweeks in data
-      const uniqueGameweeks = [...new Set(allGoalShareData.map(item => item.gameweek))];
+      const uniqueGameweeks = [...new Set(allGoalShareData.map((item: any) => item.gameweek))];
       console.log(`DEBUG: Unique gameweeks in data: ${uniqueGameweeks.join(', ')}`);
       
       // Filter to requested gameweek if specific, otherwise return all
@@ -2869,9 +2869,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Debug logging for key players
-      filteredData.forEach(team => {
+      filteredData.forEach((team: any) => {
         if (team.players && (targetGameweek === 0 || team.gameweek === targetGameweek)) {
-          team.players.forEach(player => {
+          team.players.forEach((player: any) => {
             if (player.name && (player.name.includes('Bowen') || player.name.includes('Salah') || player.name.includes('Haaland'))) {
               console.log(`GOAL_SHARE_API ${player.name} GW${team.gameweek}: goalShare=${player.goalShare}%, projectedGoals=${player.projectedGoals}, teamGoals=${team.expectedGoals}`);
             }
@@ -3500,7 +3500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             historicalData[season] = historicalPlayers;
           }
         } catch (error) {
-          console.warn(`Could not fetch historical data for ${season}:`, error.message);
+          console.warn(`Could not fetch historical data for ${season}:`, (error as Error).message);
           historicalData[season] = [];
         }
       }));
@@ -3518,7 +3518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const weightedPlayerShares: { [playerId: number]: { name: string, position: string, totalWeightedShare: number, totalWeight: number } } = {};
           
           // Initialize all current players
-          teamPlayers.forEach(player => {
+          teamPlayers.forEach((player: any) => {
             weightedPlayerShares[player.id] = {
               name: `${player.first_name} ${player.second_name}`,
               position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
@@ -3880,12 +3880,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = await fixturesResponse.json();
       
       // Get Goal Share data for the specific gameweek
-      const goalShareData = generateGoalShareFromTeamProjections(bootstrapData, fixturesData, 1, gameweek);
+      const goalShareData = generateGoalShareFromTeamProjections(bootstrapData, fixturesData, [], gameweek);
       
       // Find Jarrod Bowen in the data
-      const bowenData = [];
-      goalShareData.forEach(team => {
-        const bowen = team.players.find(p => p.name.includes('Jarrod Bowen'));
+      const bowenData: any[] = [];
+      goalShareData.forEach((team: any) => {
+        const bowen = team.players.find((p: any) => p.name.includes('Jarrod Bowen'));
         if (bowen) {
           bowenData.push({
             gameweek: team.gameweek,
@@ -5438,6 +5438,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Step 5: Calculate contributions and normalize
       const teamResults: any[] = [];
+      const playersWithXG: any[] = []; // Declare missing variable
+      const teamSeasonTotals: any = {}; // Declare missing variable
       
       Object.keys(teamSeasonTotals).forEach(teamIdStr => {
         const teamId = parseInt(teamIdStr);
@@ -5450,8 +5452,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalContribution = 0;
           const contributions: any[] = [];
           
-          teamPlayersWithXG.forEach(player => {
-            const projectedMinutes = calculateProjectedMinutes(player);
+          teamPlayersWithXG.forEach((player: any) => {
+            const projectedMinutes = calculateExpectedMinutes(player, playersWithXG);
             
             // Position multipliers
             let positionMultiplier = 1.0;
@@ -5482,7 +5484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const normalizedShare = totalContribution > 0 ? 
               (player.contribution / totalContribution) * teamSeasonTotals[teamId].expectedGoals : 0;
             
-            const goalShare = teamSeasonTotals[teamId].expectedGoals > 0 ? 
+            const goalShare = teamSeasonTotals[teamId] && teamSeasonTotals[teamId].expectedGoals > 0 ? 
               (normalizedShare / teamSeasonTotals[teamId].expectedGoals) * 100 : 0;
             
             return {
