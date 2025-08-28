@@ -747,6 +747,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual price data refresh endpoint for Recent Price Changes page
+  app.post("/api/price-changes/refresh", async (req, res) => {
+    try {
+      console.log("🔄 Manual price data refresh triggered by user from Recent Price Changes page");
+      
+      // Import and trigger manual fetch from price scheduler
+      const { priceScheduler } = await import("./price-scheduler");
+      await priceScheduler.triggerManualFetch();
+      
+      console.log("✅ Manual price data refresh completed successfully");
+      res.json({
+        success: true,
+        message: "Price data refreshed successfully from FPL API",
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error("❌ Error during manual price data refresh:", error);
+      res.status(500).json({
+        error: "Failed to refresh price data",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // One-time import endpoint to seed production database with development data
   app.post("/api/price-changes/import-seed-data", async (req, res) => {
     try {

@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, BarChart3 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, BarChart3, RefreshCw } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 
 interface PriceChange {
@@ -28,6 +30,8 @@ export default function RecentPriceChanges() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [changeTypeFilter, setChangeTypeFilter] = useState("all");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -38,6 +42,44 @@ export default function RecentPriceChanges() {
     queryKey: ["/api/price-changes/recent"],
     refetchInterval: 60000, // Refresh every minute
   });
+
+  // Refresh mutation for manual data update
+  const refreshMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/price-changes/refresh", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to refresh price data");
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate and refetch the price changes data
+      queryClient.invalidateQueries({ queryKey: ["/api/price-changes/recent"] });
+      toast({
+        title: "Price Data Refreshed",
+        description: data.message || "Successfully fetched latest data from FPL API",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Refresh Failed",
+        description: error instanceof Error ? error.message : "Failed to refresh price data",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRefresh = () => {
+    refreshMutation.mutate();
+  };
 
   const getPlayersByPosition = () => {
     if (!bootstrapData) return [];
@@ -178,42 +220,59 @@ export default function RecentPriceChanges() {
         {/* Search and Filters */}
         <Card className="mb-6">
           <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search players or teams..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                    data-testid="input-search-players"
-                  />
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search players or teams..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                      data-testid="input-search-players"
+                    />
+                  </div>
                 </div>
+                <Select value={positionFilter} onValueChange={setPositionFilter}>
+                  <SelectTrigger className="w-full sm:w-48" data-testid="select-position-filter">
+                    <SelectValue placeholder="All Positions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Positions</SelectItem>
+                    {getPlayersByPosition().map(pos => (
+                      <SelectItem key={pos.id} value={pos.name}>
+                        {pos.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={changeTypeFilter} onValueChange={setChangeTypeFilter}>
+                  <SelectTrigger className="w-full sm:w-48" data-testid="select-change-filter">
+                    <SelectValue placeholder="All Changes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Changes</SelectItem>
+                    <SelectItem value="rises">Price Rises</SelectItem>
+                    <SelectItem value="falls">Price Falls</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Select value={positionFilter} onValueChange={setPositionFilter}>
-                <SelectTrigger className="w-full sm:w-48" data-testid="select-position-filter">
-                  <SelectValue placeholder="All Positions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Positions</SelectItem>
-                  {getPlayersByPosition().map(pos => (
-                    <SelectItem key={pos.id} value={pos.name}>
-                      {pos.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={changeTypeFilter} onValueChange={setChangeTypeFilter}>
-                <SelectTrigger className="w-full sm:w-48" data-testid="select-change-filter">
-                  <SelectValue placeholder="All Changes" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Changes</SelectItem>
-                  <SelectItem value="rises">Price Rises</SelectItem>
-                  <SelectItem value="falls">Price Falls</SelectItem>
-                </SelectContent>
-              </Select>
+              
+              {/* Refresh Button */}
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleRefresh}
+                  disabled={refreshMutation.isPending}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  data-testid="button-refresh-prices"
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
+                  {refreshMutation.isPending ? "Refreshing..." : "Refresh from FPL API"}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
