@@ -281,11 +281,6 @@ export default function ProjectedGoalsCS() {
                                   className="bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden"
                                   data-testid={`match-row-${match1.homeTeam.shortName}-${match1.awayTeam.shortName}`}
                                 >
-                                  {/* Match Header - Smaller */}
-                                  <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-3 py-1 flex items-center justify-center">
-                                    <span className="text-white text-xs font-bold opacity-90">MATCH {pairIndex * 2 + 1}</span>
-                                  </div>
-
                                   {/* Home Team - Compact */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50">
                                     <div className="flex items-center gap-2">
@@ -360,11 +355,6 @@ export default function ProjectedGoalsCS() {
                                   className="bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden"
                                   data-testid={`match-row-${match2.homeTeam.shortName}-${match2.awayTeam.shortName}`}
                                 >
-                                  {/* Match Header - Smaller */}
-                                  <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-3 py-1 flex items-center justify-center">
-                                    <span className="text-white text-xs font-bold opacity-90">MATCH {pairIndex * 2 + 2}</span>
-                                  </div>
-
                                   {/* Home Team - Compact */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50">
                                     <div className="flex items-center gap-2">
