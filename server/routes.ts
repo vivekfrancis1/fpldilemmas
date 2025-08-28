@@ -6079,6 +6079,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/content-creators/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const creatorId = parseInt(id);
+      
+      if (!creatorId || creatorId <= 0) {
+        return res.status(400).json({ error: "Invalid creator ID" });
+      }
+
+      // Check if creator exists
+      const existingCreator = await storage.getContentCreatorById(creatorId);
+      if (!existingCreator) {
+        return res.status(404).json({ error: "Content creator not found" });
+      }
+
+      // Update the creator
+      const updatedCreator = await storage.updateContentCreator(creatorId, req.body);
+      res.json(updatedCreator);
+    } catch (error) {
+      console.error("Error updating content creator:", error);
+      res.status(500).json({ error: "Failed to update content creator" });
+    }
+  });
+
   app.get("/api/content-creators/:id/history", async (req, res) => {
     try {
       const { id } = req.params;
