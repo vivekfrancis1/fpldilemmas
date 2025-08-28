@@ -2811,9 +2811,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return player.xgPer90;
   }
 
-  // Enhanced Goal Share endpoint using xG per 90 methodology
+  // Add simple caching for goal share data
+  let goalShareCache: { data: any, timestamp: number } | null = null;
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  // Enhanced Goal Share endpoint with improved performance
   app.get("/api/goal-share-season", async (req, res) => {
     try {
+      // Check cache first
+      if (goalShareCache && Date.now() - goalShareCache.timestamp < CACHE_DURATION) {
+        console.log("DEBUG: Returning cached goal share data");
+        return res.json(goalShareCache.data);
+      }
       const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
         fetch("http://localhost:5000/api/team-projections-combined")
@@ -2826,7 +2835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const teamProjectionsData = await teamProjectionsResponse.json();
       
-      console.log("DEBUG: Goal Share Season API - using Team Combined Projections season totals");
+      console.log("DEBUG: Goal Share Season API - using simplified approach for better performance");
       
       // Step 1: Calculate team season totals from Team Combined Projections (Goals Scored)
       const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
@@ -2849,65 +2858,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       console.log(`DEBUG: Team totals from Combined Projections - LIV: ${teamSeasonTotals[12]?.expectedGoals.toFixed(2)}, MCI: ${teamSeasonTotals[13]?.expectedGoals.toFixed(2)}`);
-      console.log("DEBUG: Starting xG per 90 methodology implementation");
+      console.log("DEBUG: Using simplified player distribution for improved performance");
       
-      // Step 2: Get current season xG data for all players
+      // Step 2: Calculate player shares using basic metrics (faster approach)
       const playersWithXG: any[] = [];
-      for (const player of bootstrapData.elements) {
-        try {
-          // Fetch player's detailed xG data from element-summary
-          const playerSummaryResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-          if (playerSummaryResponse.ok) {
-            const playerSummary = await playerSummaryResponse.json();
-            
-            // Calculate current season xG per 90 from history data
-            let totalXG = 0;
-            let totalMinutes = 0;
-            
-            if (playerSummary.history && playerSummary.history.length > 0) {
-              playerSummary.history.forEach((gameweek: any) => {
-                totalXG += parseFloat(gameweek.expected_goals || 0);
-                totalMinutes += parseInt(gameweek.minutes || 0);
-              });
-            }
-            
-            // Calculate xG per 90 minutes (handle division by zero)
-            const xgPer90 = totalMinutes > 0 ? (totalXG / totalMinutes) * 90 : 0;
-            
-            playersWithXG.push({
-              id: player.id,
-              team: player.team,
-              name: `${player.first_name} ${player.second_name}`,
-              position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
-              element_type: player.element_type,
-              minutes: player.minutes,
-              goals_scored: player.goals_scored,
-              totalXG,
-              totalMinutes,
-              xgPer90: Math.round(xgPer90 * 1000) / 1000 // Round to 3 decimal places
-            });
-          }
-        } catch (error) {
-          // If can't fetch player data, use fallback based on current goals and minutes
-          const estimatedXG = player.goals_scored * 1.1; // Conservative estimate
-          const xgPer90 = player.minutes > 0 ? (estimatedXG / player.minutes) * 90 : 0;
-          
-          playersWithXG.push({
-            id: player.id,
-            team: player.team,
-            name: `${player.first_name} ${player.second_name}`,
-            position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
-            element_type: player.element_type,
-            minutes: player.minutes,
-            goals_scored: player.goals_scored,
-            totalXG: estimatedXG,
-            totalMinutes: player.minutes,
-            xgPer90: Math.round(xgPer90 * 1000) / 1000
-          });
-        }
-      }
       
-      console.log(`DEBUG: Calculated xG per 90 for ${playersWithXG.length} players`);
+      // Use bootstrap data directly to avoid 700+ API calls
+      bootstrapData.elements.forEach((player: any) => {
+        // Use available metrics from bootstrap data (goals, assists, xG stats)
+        const totalXG = parseFloat(player.expected_goals || 0);
+        const totalMinutes = parseInt(player.minutes || 0);
+        const xgPer90 = totalMinutes > 0 ? (totalXG / totalMinutes) * 90 : 0;
+        
+        playersWithXG.push({
+          id: player.id,
+          team: player.team,
+          name: `${player.first_name} ${player.second_name}`,
+          position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
+          element_type: player.element_type,
+          minutes: player.minutes,
+          goals_scored: player.goals_scored,
+          totalXG,
+          totalMinutes,
+          xgPer90: Math.round(xgPer90 * 1000) / 1000 // Round to 3 decimal places
+        });
+      });
+      
+      console.log(`DEBUG: Processed ${playersWithXG.length} players using bootstrap data`);
       
       // Step 3: Expected minutes and sample size adjustments handled by helper functions
       
@@ -3063,6 +3040,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         response: response
       };
       console.log(`DEBUG: Saved 2025/26 goal share data for Player Total Goals tool`);
+      
+      // Cache the response for future requests
+      goalShareCache = {
+        data: response,
+        timestamp: Date.now()
+      };
       
       res.json(response);
     } catch (error) {
