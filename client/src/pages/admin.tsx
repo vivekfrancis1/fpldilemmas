@@ -56,18 +56,12 @@ export default function Admin() {
 
   const addCreatorMutation = useMutation({
     mutationFn: async (newCreator: any) => {
-      return apiRequest("/api/content-creators", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: newCreator.name,
-          managerId: parseInt(newCreator.managerId),
-          description: newCreator.description,
-          twitterHandle: newCreator.twitterHandle || null,
-          youtubeUrl: newCreator.youtubeUrl || null
-        }),
+      return apiRequest("/api/content-creators", "POST", {
+        name: newCreator.name,
+        managerId: parseInt(newCreator.managerId),
+        description: newCreator.description,
+        twitterHandle: newCreator.twitterHandle || null,
+        youtubeUrl: newCreator.youtubeUrl || null
       });
     },
     onSuccess: () => {
@@ -96,13 +90,7 @@ export default function Admin() {
 
   const updateCreatorMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<ContentCreator> }) => {
-      return apiRequest(`/api/content-creators/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updates),
-      });
+      return apiRequest(`/api/content-creators/${id}`, "PUT", updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/content-creators"] });
