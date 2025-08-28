@@ -747,6 +747,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // One-time import endpoint to seed production database with development data
+  app.post("/api/price-changes/import-seed-data", async (req, res) => {
+    try {
+      console.log("🌱 Importing seed price change data to production...");
+      
+      // Check if data already exists to prevent duplicate imports
+      const existingData = await storage.getPriceChanges(1);
+      if (existingData.length > 0) {
+        return res.status(400).json({
+          error: "Data already exists",
+          message: "Price change data already exists in this database. This endpoint is for initial seeding only.",
+          existing_records: existingData.length
+        });
+      }
+
+      // Hardcoded seed data from development database
+      const seedData = [
+        { playerId: 663, playerName: "J.Arias", teamName: "WOL", position: "MID", oldPrice: 55, newPrice: 54, priceChange: -1, changeDate: "2025-08-28", ownership: 0.50, transfersIn: 989, transfersOut: 8221, totalSeasonChange: -1 },
+        { playerId: 655, playerName: "Fábio Silva", teamName: "WOL", position: "FWD", oldPrice: 50, newPrice: 49, priceChange: -1, changeDate: "2025-08-28", ownership: 0.50, transfersIn: 1819, transfersOut: 8756, totalSeasonChange: -1 },
+        { playerId: 645, playerName: "Fer López", teamName: "WOL", position: "MID", oldPrice: 55, newPrice: 54, priceChange: -1, changeDate: "2025-08-28", ownership: 0.00, transfersIn: 61, transfersOut: 520, totalSeasonChange: -1 },
+        { playerId: 642, playerName: "Hee Chan", teamName: "WOL", position: "MID", oldPrice: 60, newPrice: 59, priceChange: -1, changeDate: "2025-08-28", ownership: 0.10, transfersIn: 720, transfersOut: 2376, totalSeasonChange: -1 },
+        { playerId: 671, playerName: "Wilson", teamName: "WHU", position: "FWD", oldPrice: 60, newPrice: 59, priceChange: -1, changeDate: "2025-08-28", ownership: 0.40, transfersIn: 1632, transfersOut: 7503, totalSeasonChange: -1 },
+        { playerId: 625, playerName: "Füllkrug", teamName: "WHU", position: "FWD", oldPrice: 60, newPrice: 59, priceChange: -1, changeDate: "2025-08-28", ownership: 2.40, transfersIn: 7407, transfersOut: 76693, totalSeasonChange: -1 },
+        { playerId: 624, playerName: "Bowen", teamName: "WHU", position: "FWD", oldPrice: 80, newPrice: 78, priceChange: -2, changeDate: "2025-08-28", ownership: 9.30, transfersIn: 8132, transfersOut: 318595, totalSeasonChange: -2 },
+        { playerId: 617, playerName: "Cornet", teamName: "WHU", position: "MID", oldPrice: 50, newPrice: 49, priceChange: -1, changeDate: "2025-08-28", ownership: 0.00, transfersIn: 84, transfersOut: 416, totalSeasonChange: -1 },
+        { playerId: 616, playerName: "Álvarez", teamName: "WHU", position: "MID", oldPrice: 50, newPrice: 49, priceChange: -1, changeDate: "2025-08-28", ownership: 0.10, transfersIn: 610, transfersOut: 3603, totalSeasonChange: -1 },
+        { playerId: 614, playerName: "Ward-Prowse", teamName: "WHU", position: "MID", oldPrice: 60, newPrice: 59, priceChange: -1, changeDate: "2025-08-28", ownership: 0.30, transfersIn: 1212, transfersOut: 4790, totalSeasonChange: -1 },
+        { playerId: 613, playerName: "Souček", teamName: "WHU", position: "MID", oldPrice: 60, newPrice: 59, priceChange: -1, changeDate: "2025-08-28", ownership: 0.60, transfersIn: 504, transfersOut: 10098, totalSeasonChange: -1 },
+        { playerId: 612, playerName: "L.Paquetá", teamName: "WHU", position: "MID", oldPrice: 60, newPrice: 59, priceChange: -1, changeDate: "2025-08-28", ownership: 1.10, transfersIn: 25753, transfersOut: 11803, totalSeasonChange: -1 },
+        { playerId: 609, playerName: "Todibo", teamName: "WHU", position: "DEF", oldPrice: 45, newPrice: 44, priceChange: -1, changeDate: "2025-08-28", ownership: 0.10, transfersIn: 525, transfersOut: 1727, totalSeasonChange: -1 },
+        { playerId: 606, playerName: "Mavropanos", teamName: "WHU", position: "DEF", oldPrice: 45, newPrice: 44, priceChange: -1, changeDate: "2025-08-28", ownership: 0.00, transfersIn: 69, transfersOut: 573, totalSeasonChange: -1 },
+        { playerId: 605, playerName: "Kilman", teamName: "WHU", position: "DEF", oldPrice: 45, newPrice: 44, priceChange: -1, changeDate: "2025-08-28", ownership: 0.20, transfersIn: 1203, transfersOut: 3649, totalSeasonChange: -1 },
+        { playerId: 604, playerName: "Emerson", teamName: "WHU", position: "DEF", oldPrice: 45, newPrice: 44, priceChange: -1, changeDate: "2025-08-28", ownership: 0.20, transfersIn: 970, transfersOut: 2617, totalSeasonChange: -1 },
+        { playerId: 600, playerName: "Areola", teamName: "WHU", position: "GKP", oldPrice: 45, newPrice: 44, priceChange: -1, changeDate: "2025-08-28", ownership: 3.40, transfersIn: 3098, transfersOut: 49766, totalSeasonChange: -1 },
+        { playerId: 597, playerName: "Richarlison", teamName: "TOT", position: "FWD", oldPrice: 65, newPrice: 67, priceChange: 2, changeDate: "2025-08-28", ownership: 11.80, transfersIn: 542956, transfersOut: 77229, totalSeasonChange: 2 },
+        { playerId: 596, playerName: "Solanke", teamName: "TOT", position: "FWD", oldPrice: 75, newPrice: 73, priceChange: -2, changeDate: "2025-08-28", ownership: 2.70, transfersIn: 7582, transfersOut: 84074, totalSeasonChange: -2 },
+        { playerId: 590, playerName: "Bryan", teamName: "TOT", position: "MID", oldPrice: 50, newPrice: 49, priceChange: -1, changeDate: "2025-08-28", ownership: 0.00, transfersIn: 147, transfersOut: 584, totalSeasonChange: -1 },
+        { playerId: 589, playerName: "Solomon", teamName: "TOT", position: "MID", oldPrice: 55, newPrice: 54, priceChange: -1, changeDate: "2025-08-28", ownership: 0.00, transfersIn: 20, transfersOut: 215, totalSeasonChange: -1 },
+        { playerId: 588, playerName: "Odobert", teamName: "TOT", position: "MID", oldPrice: 55, newPrice: 54, priceChange: -1, changeDate: "2025-08-28", ownership: 0.00, transfersIn: 323, transfersOut: 498, totalSeasonChange: -1 },
+        { playerId: 587, playerName: "Bissouma", teamName: "TOT", position: "MID", oldPrice: 55, newPrice: 54, priceChange: -1, changeDate: "2025-08-28", ownership: 0.10, transfersIn: 41, transfersOut: 4045, totalSeasonChange: -1 },
+        { playerId: 584, playerName: "Tel", teamName: "TOT", position: "MID", oldPrice: 65, newPrice: 64, priceChange: -1, changeDate: "2025-08-28", ownership: 0.10, transfersIn: 706, transfersOut: 2584, totalSeasonChange: -1 },
+        { playerId: 582, playerName: "Kudus", teamName: "TOT", position: "MID", oldPrice: 65, newPrice: 66, priceChange: 1, changeDate: "2025-08-28", ownership: 31.10, transfersIn: 435827, transfersOut: 106109, totalSeasonChange: 1 }
+      ];
+
+      console.log(`🌱 Seeding ${seedData.length} price change records...`);
+      
+      // Add each record using the existing storage method
+      let addedCount = 0;
+      for (const record of seedData) {
+        try {
+          await storage.addPriceChange({
+            playerId: record.playerId,
+            playerName: record.playerName,
+            teamName: record.teamName,
+            position: record.position,
+            oldPrice: record.oldPrice,
+            newPrice: record.newPrice,
+            priceChange: record.priceChange,
+            changeDate: record.changeDate,
+            ownership: record.ownership.toString(),
+            transfersIn: record.transfersIn,
+            transfersOut: record.transfersOut,
+            totalSeasonChange: record.totalSeasonChange
+          });
+          addedCount++;
+        } catch (error) {
+          console.error(`Failed to add record for player ${record.playerName}:`, error);
+        }
+      }
+
+      console.log(`✅ Successfully seeded ${addedCount} price change records`);
+      
+      res.json({
+        success: true,
+        message: `Successfully imported ${addedCount} price change records`,
+        records_imported: addedCount,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error("❌ Error importing seed data:", error);
+      res.status(500).json({
+        error: "Failed to import seed data",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Get price predictions (simulated data for demo)
   app.get("/api/price-predictions", async (req, res) => {
     try {
