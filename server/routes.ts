@@ -934,6 +934,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             transfers_out: player.transfers_out || 0,  // Season total transfers out
             transfers_in_event: player.transfers_in_event || 0,  // Gameweek transfers in
             transfers_out_event: player.transfers_out_event || 0,  // Gameweek transfers out
+            // Price change data from FPL API
+            price_change_event: player.cost_change_event || 0,  // Price change this gameweek
+            price_change_season: player.cost_change_start || 0,  // Total price change this season
             reason: reason,
             probability: probability,
             rise_threshold: Math.round(adjustedRiseThreshold),

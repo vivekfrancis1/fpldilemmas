@@ -24,6 +24,9 @@ interface TransferData {
   transfers_in_event: number;
   transfers_out_event: number;
   net_transfers_event: number;
+  // Price change data from FPL API
+  price_change_event: number;  // Price change this gameweek
+  price_change_season: number; // Total price change this season
   // Calculated fields
   absolute_ownership?: number;
   initial_ownership?: number;
@@ -32,7 +35,7 @@ interface TransferData {
   net_transfers_event_percentage?: number;
 }
 
-type SortField = 'net_transfers' | 'transfers_in' | 'transfers_out' | 'transfers_in_event' | 'transfers_out_event' | 'net_transfers_event' | 'ownership_percentage' | 'absolute_ownership' | 'initial_ownership' | 'initial_ownership_gameweek' | 'net_transfers_percentage' | 'net_transfers_event_percentage' | 'current_price';
+type SortField = 'net_transfers' | 'transfers_in' | 'transfers_out' | 'transfers_in_event' | 'transfers_out_event' | 'net_transfers_event' | 'ownership_percentage' | 'absolute_ownership' | 'initial_ownership' | 'initial_ownership_gameweek' | 'net_transfers_percentage' | 'net_transfers_event_percentage' | 'current_price' | 'price_change_event' | 'price_change_season';
 type SortDirection = 'asc' | 'desc';
 
 export default function TransferTracker() {
@@ -153,6 +156,14 @@ export default function TransferTracker() {
         case 'net_transfers_event_percentage':
           aValue = a.net_transfers_event_percentage || 0;
           bValue = b.net_transfers_event_percentage || 0;
+          break;
+        case 'price_change_event':
+          aValue = a.price_change_event || 0;
+          bValue = b.price_change_event || 0;
+          break;
+        case 'price_change_season':
+          aValue = a.price_change_season || 0;
+          bValue = b.price_change_season || 0;
           break;
 
         default:
@@ -398,6 +409,11 @@ export default function TransferTracker() {
                           Net %
                         </SortableHeader>
                       </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="price_change_event" className="text-right">
+                          Price Change GW
+                        </SortableHeader>
+                      </th>
                       <th className="text-right p-2 border-l border-gray-200">
                         <div className="text-xs font-semibold text-blue-600 mb-1">SEASON TOTALS</div>
                         <SortableHeader field="net_transfers" className="text-right">
@@ -407,6 +423,11 @@ export default function TransferTracker() {
                       <th className="text-right p-2">
                         <SortableHeader field="net_transfers_percentage" className="text-right">
                           Net %
+                        </SortableHeader>
+                      </th>
+                      <th className="text-right p-2">
+                        <SortableHeader field="price_change_season" className="text-right">
+                          Price Change Season
                         </SortableHeader>
                       </th>
                     </tr>
@@ -460,8 +481,16 @@ export default function TransferTracker() {
                             {(transfer.net_transfers_event_percentage || 0) > 0 ? "+" : ""}{(transfer.net_transfers_event_percentage || 0).toFixed(2)}%
                           </span>
                         </td>
+                        <td className="p-3 text-right">
+                          <span className={`font-medium ${
+                            (transfer.price_change_event || 0) > 0 ? "text-green-600" : 
+                            (transfer.price_change_event || 0) < 0 ? "text-red-600" : "text-gray-600"
+                          }`}>
+                            {(transfer.price_change_event || 0) > 0 ? "+" : ""}{((transfer.price_change_event || 0) / 10).toFixed(1)}m
+                          </span>
+                        </td>
 
-                        {/* Season totals section - only Net and Net % columns */}
+                        {/* Season totals section - Net, Net %, and Price Change columns */}
                         <td className="p-3 text-right border-l border-gray-200">
                           <span className={`font-medium ${
                             transfer.net_transfers > 0 ? "text-green-600" : 
@@ -476,6 +505,14 @@ export default function TransferTracker() {
                             transfer.net_transfers_percentage! < 0 ? "text-red-600" : "text-gray-600"
                           }`}>
                             {transfer.net_transfers_percentage! > 0 ? "+" : ""}{transfer.net_transfers_percentage?.toFixed(2) || "0.00"}%
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className={`font-medium ${
+                            (transfer.price_change_season || 0) > 0 ? "text-green-600" : 
+                            (transfer.price_change_season || 0) < 0 ? "text-red-600" : "text-gray-600"
+                          }`}>
+                            {(transfer.price_change_season || 0) > 0 ? "+" : ""}{((transfer.price_change_season || 0) / 10).toFixed(1)}m
                           </span>
                         </td>
                       </tr>
