@@ -90,7 +90,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Apply admin middleware to all admin routes
   app.use('/api/admin/*', requireDevelopmentEnvironment);
-  app.use('/api/content-creators', requireDevelopmentEnvironment);
+  
+  // Protect only the admin CRUD operations for content creators, not the read-only display
+  app.use('/api/content-creators', (req, res, next) => {
+    // Allow GET requests in production (for public display)
+    if (req.method === 'GET') {
+      return next();
+    }
+    // Block POST, PUT, DELETE in production (admin operations only)
+    return requireDevelopmentEnvironment(req, res, next);
+  });
 
   // Player data routes
   app.get("/api/bootstrap-static", async (req, res) => {
