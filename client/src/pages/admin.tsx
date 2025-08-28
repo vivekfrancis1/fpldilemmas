@@ -56,7 +56,7 @@ export default function Admin() {
 
   const addCreatorMutation = useMutation({
     mutationFn: async (newCreator: any) => {
-      return apiRequest("/api/content-creators", "POST", {
+      return apiRequest("POST", "/api/content-creators", {
         name: newCreator.name,
         managerId: parseInt(newCreator.managerId),
         description: newCreator.description,
@@ -90,7 +90,7 @@ export default function Admin() {
 
   const updateCreatorMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<ContentCreator> }) => {
-      return apiRequest(`/api/content-creators/${id}`, "PUT", updates);
+      return apiRequest("PUT", `/api/content-creators/${id}`, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/content-creators"] });
