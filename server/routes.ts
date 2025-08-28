@@ -91,6 +91,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Apply admin middleware to all admin routes
   app.use('/api/admin/*', requireDevelopmentEnvironment);
 
+  // Health check endpoint for production monitoring
+  app.get("/health", (req, res) => {
+    res.json({ 
+      status: "OK", 
+      environment: process.env.NODE_ENV || 'development',
+      timestamp: new Date().toISOString(),
+      version: "1.0.0"
+    });
+  });
+
   // Player data routes
   app.get("/api/bootstrap-static", async (req, res) => {
     try {
