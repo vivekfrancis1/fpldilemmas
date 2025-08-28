@@ -83,11 +83,28 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/admin-upset-config", label: "Upset Config Admin", icon: Settings, description: "Configure upset predictions", popular: false }
       ]
     }] : []),
+    ...(isDevelopment ? [{
+      section: "Under Development", 
+      items: [
+        { path: "/goal-share", label: "Goal Share", icon: Target, description: "Team goal share analysis", popular: false },
+        { path: "/assist-share", label: "Assist Share", icon: Zap, description: "Team assist share analysis", popular: false },
+        { path: "/transfers", label: "Transfers", icon: ArrowRightLeft, description: "Transfer analysis tool", popular: false },
+        { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection tool", popular: false },
+        { path: "/watchlist", label: "Watchlist", icon: Heart, description: "Player watchlist", popular: false },
+        { path: "/price-tracker", label: "Price Tracker", icon: RefreshCw, description: "Price tracking tool", popular: false },
+        { path: "/league-comparison", label: "League Analysis", icon: Users, description: "League comparison tool", popular: false },
+        { path: "/results-projections", label: "Results Projections", icon: BarChart3, description: "Match results projections", popular: false },
+        { path: "/team-assist-projections", label: "Team Assists", icon: Zap, description: "Team assist projections", popular: false },
+        { path: "/player-goal-projections", label: "Player Goals", icon: Target, description: "Individual player goal projections", popular: false },
+        { path: "/player-assist-projections", label: "Player Assists", icon: Zap, description: "Individual player assist projections", popular: false },
+        { path: "/player-goals-scored-projections", label: "Player Goals Scored", icon: Target, description: "Player goals scored projections", popular: false },
+        { path: "/season-projections", label: "Season Projections", icon: Trophy, description: "Full season projections", popular: false }
+      ]
+    }] : []),
     {
       section: "Analysis Tools", 
       items: [
-        // { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
-        // { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
+        // Reserved for future production analysis tools
       ]
     },
 
