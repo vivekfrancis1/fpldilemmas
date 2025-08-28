@@ -246,8 +246,6 @@ export async function seedContentCreators(): Promise<void> {
         try {
           await db.insert(fplContentCreators).values({
             name: creator.name,
-            handle: creator.handle,
-            platform: creator.platform,
             managerId: creator.managerId,
             managerName: creator.name, // Use name as manager name
             description: creator.description

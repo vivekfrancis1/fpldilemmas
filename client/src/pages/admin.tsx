@@ -13,13 +13,10 @@ import { apiRequest } from "@/lib/queryClient";
 interface ContentCreator {
   id: number;
   name: string;
-  handle: string;
   managerId: number;
   managerName: string;
   playerName: string;
-  platform: string;
   description: string;
-  website: string | null;
   twitterHandle: string | null;
   youtubeUrl: string | null;
   followers: number | null;
@@ -30,23 +27,13 @@ interface ContentCreator {
 
 interface NewCreatorForm {
   name: string;
-  handle: string;
   managerId: string;
-  platform: string;
   description: string;
-  website: string;
   twitterHandle: string;
   youtubeUrl: string;
 }
 
-const PLATFORMS = [
-  { value: "youtube", label: "YouTube" },
-  { value: "twitter", label: "Twitter/X" },
-  { value: "instagram", label: "Instagram" },
-  { value: "tiktok", label: "TikTok" },
-  { value: "podcast", label: "Podcast" },
-  { value: "website", label: "Website" }
-];
+
 
 export default function Admin() {
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -54,11 +41,8 @@ export default function Admin() {
   const [editForm, setEditForm] = useState<Partial<ContentCreator>>({});
   const [newCreatorForm, setNewCreatorForm] = useState<NewCreatorForm>({
     name: "",
-    handle: "",
     managerId: "",
-    platform: "",
     description: "",
-    website: "",
     twitterHandle: "",
     youtubeUrl: ""
   });
@@ -79,11 +63,8 @@ export default function Admin() {
         },
         body: JSON.stringify({
           name: newCreator.name,
-          handle: newCreator.handle,
           managerId: parseInt(newCreator.managerId),
-          platform: newCreator.platform,
           description: newCreator.description,
-          website: newCreator.website || null,
           twitterHandle: newCreator.twitterHandle || null,
           youtubeUrl: newCreator.youtubeUrl || null
         }),
@@ -94,11 +75,8 @@ export default function Admin() {
       setIsAddingNew(false);
       setNewCreatorForm({
         name: "",
-        handle: "",
         managerId: "",
-        platform: "",
         description: "",
-        website: "",
         twitterHandle: "",
         youtubeUrl: ""
       });
@@ -145,10 +123,10 @@ export default function Admin() {
   });
 
   const handleAddCreator = () => {
-    if (!newCreatorForm.name || !newCreatorForm.managerId || !newCreatorForm.platform) {
+    if (!newCreatorForm.name || !newCreatorForm.managerId) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields (Name and Manager ID)",
         variant: "destructive",
       });
       return;
@@ -161,11 +139,8 @@ export default function Admin() {
     setEditingId(creator.id);
     setEditForm({
       name: creator.name,
-      handle: creator.handle,
       managerId: creator.managerId,
-      platform: creator.platform,
       description: creator.description,
-      website: creator.website,
       twitterHandle: creator.twitterHandle,
       youtubeUrl: creator.youtubeUrl
     });
@@ -246,15 +221,7 @@ export default function Admin() {
                   data-testid="input-creator-name"
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium">Handle</label>
-                <Input
-                  placeholder="e.g., @FPL_Harry"
-                  value={newCreatorForm.handle}
-                  onChange={(e) => setNewCreatorForm({ ...newCreatorForm, handle: e.target.value })}
-                  data-testid="input-creator-handle"
-                />
-              </div>
+
               <div>
                 <label className="text-sm font-medium">Manager ID *</label>
                 <Input
@@ -266,33 +233,8 @@ export default function Admin() {
                 />
               </div>
 
-              <div>
-                <label className="text-sm font-medium">Platform *</label>
-                <Select
-                  value={newCreatorForm.platform}
-                  onValueChange={(value) => setNewCreatorForm({ ...newCreatorForm, platform: value })}
-                >
-                  <SelectTrigger data-testid="select-creator-platform">
-                    <SelectValue placeholder="Select platform" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PLATFORMS.map((platform) => (
-                      <SelectItem key={platform.value} value={platform.value}>
-                        {platform.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Website</label>
-                <Input
-                  placeholder="e.g., https://example.com"
-                  value={newCreatorForm.website}
-                  onChange={(e) => setNewCreatorForm({ ...newCreatorForm, website: e.target.value })}
-                  data-testid="input-creator-website"
-                />
-              </div>
+
+
               <div>
                 <label className="text-sm font-medium">Twitter Handle</label>
                 <Input
@@ -352,14 +294,7 @@ export default function Admin() {
                         data-testid={`input-edit-name-${creator.id}`}
                       />
                     </div>
-                    <div>
-                      <label className="text-sm font-medium">Handle</label>
-                      <Input
-                        value={editForm.handle || ""}
-                        onChange={(e) => setEditForm({ ...editForm, handle: e.target.value })}
-                        data-testid={`input-edit-handle-${creator.id}`}
-                      />
-                    </div>
+
                     <div>
                       <label className="text-sm font-medium">Manager ID</label>
                       <Input
@@ -370,32 +305,8 @@ export default function Admin() {
                       />
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium">Platform</label>
-                      <Select
-                        value={editForm.platform || ""}
-                        onValueChange={(value) => setEditForm({ ...editForm, platform: value })}
-                      >
-                        <SelectTrigger data-testid={`select-edit-platform-${creator.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PLATFORMS.map((platform) => (
-                            <SelectItem key={platform.value} value={platform.value}>
-                              {platform.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Website</label>
-                      <Input
-                        value={editForm.website || ""}
-                        onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
-                        data-testid={`input-edit-website-${creator.id}`}
-                      />
-                    </div>
+
+
                     <div>
                       <label className="text-sm font-medium">Twitter Handle</label>
                       <Input
@@ -446,14 +357,7 @@ export default function Admin() {
                       <h3 className="text-lg font-semibold" data-testid={`text-creator-name-${creator.id}`}>
                         {creator.name}
                       </h3>
-                      <Badge variant="outline" data-testid={`badge-platform-${creator.id}`}>
-                        {creator.platform}
-                      </Badge>
-                      {creator.handle && (
-                        <span className="text-sm text-muted-foreground" data-testid={`text-creator-handle-${creator.id}`}>
-                          {creator.handle}
-                        </span>
-                      )}
+
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
@@ -462,29 +366,38 @@ export default function Admin() {
                           {creator.managerId}
                         </span>
                       </div>
-                      <div>
-                        <span className="font-medium">Platform:</span>
-                        <span className="ml-2 capitalize" data-testid={`text-platform-${creator.id}`}>
-                          {creator.platform}
-                        </span>
-                      </div>
+
                     </div>
                     {creator.description && (
                       <p className="text-sm text-muted-foreground" data-testid={`text-creator-description-${creator.id}`}>
                         {creator.description}
                       </p>
                     )}
-                    {creator.website && (
-                      <a
-                        href={creator.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:underline"
-                        data-testid={`link-creator-website-${creator.id}`}
-                      >
-                        {creator.website}
-                      </a>
-                    )}
+                    <div className="flex flex-wrap gap-4 text-sm">
+                      {creator.twitterHandle && (
+                        <div>
+                          <span className="font-medium">Twitter:</span>
+                          <span className="ml-2 text-blue-600" data-testid={`text-twitter-handle-${creator.id}`}>
+                            {creator.twitterHandle}
+                          </span>
+                        </div>
+                      )}
+                      {creator.youtubeUrl && (
+                        <div>
+                          <span className="font-medium">YouTube:</span>
+                          <a
+                            href={creator.youtubeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-red-600 hover:underline"
+                            data-testid={`link-youtube-url-${creator.id}`}
+                          >
+                            Channel
+                          </a>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="text-xs text-muted-foreground">
                       Added: {new Date(creator.addedDate).toLocaleDateString()} | 
                       Last Updated: {new Date(creator.lastUpdated).toLocaleDateString()}
