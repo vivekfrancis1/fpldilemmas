@@ -75,7 +75,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Analysis Tools", 
       items: [
-        { path: "/admin-content-creators", label: "Admin", icon: Settings, description: "Manage content creators", popular: false },
+        // { path: "/admin-content-creators", label: "Admin", icon: Settings, description: "Manage content creators", popular: false },
         // { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
         // { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
       ]
