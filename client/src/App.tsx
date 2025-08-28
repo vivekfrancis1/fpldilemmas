@@ -80,7 +80,7 @@ function Router() {
       <Route path="/season-projections" component={SeasonProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
       <Route path="/admin-upset-config" component={AdminUpsetConfig} />
-      <Route path="/admin" component={Admin} />
+      <Route path="/admin-content-creators" component={Admin} />
       <Route path="/content-creators" component={ContentCreators} />
       <Route path="/content-creators/:id/team" component={CreatorTeam} />
 
