@@ -79,11 +79,11 @@ export default function Fixtures() {
   // Get difficulty rating color class
   const getDifficultyColor = (difficulty: number) => {
     switch (difficulty) {
-      case 1: return 'bg-green-200 text-green-800'; // Very Easy - Very Light Green
+      case 1: return 'bg-green-300 text-green-800'; // Very Easy - Light Green
       case 2: return 'bg-green-100 text-green-800'; // Easy - Light Green  
       case 3: return 'bg-gray-100 text-gray-800'; // Medium - Grey
       case 4: return 'bg-red-100 text-red-800'; // Hard - Light Red
-      case 5: return 'bg-red-200 text-red-800'; // Very Hard - Very Light Red
+      case 5: return 'bg-red-300 text-red-800'; // Very Hard - Light Red
       default: return 'bg-gray-300 text-gray-900';
     }
   };
@@ -151,7 +151,7 @@ export default function Fixtures() {
       case 'strong': return 'bg-blue-600 text-white';
       case 'average': return 'bg-gray-500 text-white';
       case 'weak': return 'bg-orange-600 text-white';
-      case 'promoted': return 'bg-red-200 text-red-800';
+      case 'promoted': return 'bg-red-300 text-red-800';
       default: return 'bg-gray-300 text-gray-900';
     }
   };
@@ -356,7 +356,7 @@ export default function Fixtures() {
             <TabsContent value="difficulty" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-200 border border-green-300 rounded"></div>
+                  <div className="w-3 h-3 bg-green-300 rounded"></div>
                   <span>1 Very Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -372,7 +372,7 @@ export default function Fixtures() {
                   <span>4 Hard</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-200 border border-red-300 rounded"></div>
+                  <div className="w-3 h-3 bg-red-300 rounded"></div>
                   <span>5 Very Hard</span>
                 </div>
                 <div className="text-xs text-gray-600">
@@ -459,7 +459,7 @@ export default function Fixtures() {
             <TabsContent value="attacking" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-200 border border-green-300 rounded"></div>
+                  <div className="w-3 h-3 bg-green-300 rounded"></div>
                   <span>1 Very Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -475,7 +475,7 @@ export default function Fixtures() {
                   <span>4 Hard</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-200 border border-red-300 rounded"></div>
+                  <div className="w-3 h-3 bg-red-300 rounded"></div>
                   <span>5 Very Hard</span>
                 </div>
                 <div className="text-xs text-gray-600">
@@ -530,11 +530,11 @@ export default function Fixtures() {
                                 // Color by opponent's defensive tier (exact same colors as Balanced FDR)
                                 const getOpponentDefenseColor = (defenseTier: string) => {
                                   switch (defenseTier) {
-                                    case 'elite': return 'bg-red-200 text-red-800'; // Very Hard (FDR 5) - very light red
+                                    case 'elite': return 'bg-red-300 text-red-800'; // Very Hard (FDR 5) - light red
                                     case 'strong': return 'bg-red-100 text-red-800'; // Hard (FDR 4)
                                     case 'average': return 'bg-gray-100 text-gray-800'; // Medium (FDR 3)
                                     case 'weak': return 'bg-green-100 text-green-800'; // Easy (FDR 2)
-                                    case 'promoted': return 'bg-green-200 text-green-800'; // Very Easy (FDR 1) - very light green
+                                    case 'promoted': return 'bg-green-300 text-green-800'; // Very Easy (FDR 1) - light green
                                     default: return 'bg-gray-300 text-gray-900';
                                   }
                                 };
@@ -571,7 +571,7 @@ export default function Fixtures() {
             <TabsContent value="defensive" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-200 border border-green-300 rounded"></div>
+                  <div className="w-3 h-3 bg-green-300 rounded"></div>
                   <span>1 Very Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -587,7 +587,7 @@ export default function Fixtures() {
                   <span>4 Hard</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-200 border border-red-300 rounded"></div>
+                  <div className="w-3 h-3 bg-red-300 rounded"></div>
                   <span>5 Very Hard</span>
                 </div>
                 <div className="text-xs text-gray-600">
@@ -642,11 +642,11 @@ export default function Fixtures() {
                                 // Color by opponent's attacking tier (exact same colors as Balanced FDR)
                                 const getOpponentAttackColor = (attackTier: string) => {
                                   switch (attackTier) {
-                                    case 'elite': return 'bg-red-200 text-red-800'; // Very Hard (FDR 5) - very light red
+                                    case 'elite': return 'bg-red-300 text-red-800'; // Very Hard (FDR 5) - light red
                                     case 'strong': return 'bg-red-100 text-red-800'; // Hard (FDR 4)
                                     case 'average': return 'bg-gray-100 text-gray-800'; // Medium (FDR 3)
                                     case 'weak': return 'bg-green-100 text-green-800'; // Easy (FDR 2)
-                                    case 'promoted': return 'bg-green-200 text-green-800'; // Very Easy (FDR 1) - very light green
+                                    case 'promoted': return 'bg-green-300 text-green-800'; // Very Easy (FDR 1) - light green
                                     default: return 'bg-gray-300 text-gray-900';
                                   }
                                 };
@@ -694,7 +694,7 @@ export default function Fixtures() {
                   <h4 className="font-semibold text-gray-900 mb-2">Difficulty Scale</h4>
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 bg-green-200 border border-green-300 rounded"></div>
+                      <div className="w-6 h-6 bg-green-300 rounded"></div>
                       <div>
                         <span className="font-medium">1: Very Easy</span>
                         <p className="text-sm text-gray-600">Highly favorable fixtures - excellent scoring potential</p>
@@ -722,7 +722,7 @@ export default function Fixtures() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 bg-red-200 border border-red-300 rounded"></div>
+                      <div className="w-6 h-6 bg-red-300 rounded"></div>
                       <div>
                         <span className="font-medium">5: Very Hard</span>
                         <p className="text-sm text-gray-600">Highly challenging fixtures - low scoring potential</p>
