@@ -632,13 +632,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Price tracking endpoints
   
+  // Debug endpoint to check database connection and data
+  app.get("/api/price-changes/debug", async (req, res) => {
+    try {
+      console.log("🔍 DEBUG: Checking price changes database status...");
+      
+      // Test database connection
+      const { sql } = await import("drizzle-orm");
+      const connectionTest = await db.execute(sql`SELECT 1 as test`);
+      console.log("✅ Database connection successful");
+      
+      // Check if price_changes table exists
+      const tableCheck = await db.execute(sql`
+        SELECT table_name FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'price_changes'
+      `);
+      console.log(`✅ price_changes table exists: ${tableCheck.rows.length > 0}`);
+      
+      // Get count of records
+      const countResult = await db.execute(sql`SELECT COUNT(*) as count FROM price_changes`);
+      const recordCount = countResult.rows[0]?.count || 0;
+      console.log(`✅ Price changes records: ${recordCount}`);
+      
+      // Get sample records
+      const sampleData = await storage.getPriceChanges(5);
+      console.log(`✅ Sample data retrieved: ${sampleData.length} records`);
+      
+      // Return debug info
+      res.json({
+        database_connected: true,
+        table_exists: tableCheck.rows.length > 0,
+        total_records: recordCount,
+        sample_records: sampleData.length,
+        sample_data: sampleData,
+        environment: process.env.NODE_ENV || 'unknown',
+        database_url_exists: !!process.env.DATABASE_URL
+      });
+      
+    } catch (error) {
+      console.error("❌ DEBUG: Error checking price changes database:", error);
+      res.status(500).json({
+        error: "Database debug failed",
+        message: error instanceof Error ? error.message : "Unknown error",
+        database_connected: false
+      });
+    }
+  });
+
   // Get recent actual price changes from database (FPL API based)
   app.get("/api/price-changes/recent", async (req, res) => {
     try {
       console.log("📊 Fetching recent price changes from database...");
+      console.log(`🔧 Environment: ${process.env.NODE_ENV || 'unknown'}`);
+      console.log(`🔧 Database URL exists: ${!!process.env.DATABASE_URL}`);
       
       // Get all recent price changes from our tracking system
       const priceChanges = await storage.getPriceChanges(500); // Increased limit to show all changes
+      console.log(`📊 Raw data from storage: ${priceChanges.length} records`);
       
       // Format data for frontend compatibility
       const formattedChanges = priceChanges.map((change: any) => ({
@@ -660,6 +710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // From now on, we only show actual price changes that occurred after tracking started
       if (formattedChanges.length === 0) {
         console.log("📊 No price changes recorded yet - system ready to track future changes");
+        console.log("🔧 Consider running the debug endpoint /api/price-changes/debug to investigate");
         return res.json([]);
       }
       
@@ -668,9 +719,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
     } catch (error) {
       console.error("❌ Error fetching price changes:", error);
+      console.error("❌ Full error details:", error);
       res.status(500).json({
         error: "Failed to fetch price changes",
         message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined
       });
     }
   });
