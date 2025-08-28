@@ -455,7 +455,7 @@ export default function Fixtures() {
             <TabsContent value="attacking" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-600 rounded"></div>
+                  <div className="w-3 h-3 bg-green-500 rounded"></div>
                   <span>1 Very Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -471,7 +471,7 @@ export default function Fixtures() {
                   <span>4 Hard</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-600 rounded"></div>
+                  <div className="w-3 h-3 bg-red-500 rounded"></div>
                   <span>5 Very Hard</span>
                 </div>
                 <div className="text-xs text-gray-600">
@@ -567,7 +567,7 @@ export default function Fixtures() {
             <TabsContent value="defensive" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-600 rounded"></div>
+                  <div className="w-3 h-3 bg-green-500 rounded"></div>
                   <span>1 Very Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -583,7 +583,7 @@ export default function Fixtures() {
                   <span>4 Hard</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-600 rounded"></div>
+                  <div className="w-3 h-3 bg-red-500 rounded"></div>
                   <span>5 Very Hard</span>
                 </div>
                 <div className="text-xs text-gray-600">
@@ -638,11 +638,11 @@ export default function Fixtures() {
                                 // Color by opponent's attacking tier (exact same colors as Balanced FDR)
                                 const getOpponentAttackColor = (attackTier: string) => {
                                   switch (attackTier) {
-                                    case 'elite': return 'bg-red-600 text-white'; // Very Hard (FDR 5) - softer
+                                    case 'elite': return 'bg-red-500 text-white'; // Very Hard (FDR 5) - easier on eyes
                                     case 'strong': return 'bg-red-100 text-red-800'; // Hard (FDR 4)
                                     case 'average': return 'bg-gray-100 text-gray-800'; // Medium (FDR 3)
                                     case 'weak': return 'bg-green-100 text-green-800'; // Easy (FDR 2)
-                                    case 'promoted': return 'bg-green-600 text-white'; // Very Easy (FDR 1) - softer
+                                    case 'promoted': return 'bg-green-500 text-white'; // Very Easy (FDR 1) - easier on eyes
                                     default: return 'bg-gray-300 text-gray-900';
                                   }
                                 };
