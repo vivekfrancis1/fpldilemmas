@@ -357,7 +357,11 @@ export default function Fixtures() {
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-green-500 rounded"></div>
-                  <span>1-2 Easy</span>
+                  <span>1 Very Easy</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
+                  <span>2 Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
@@ -692,8 +696,15 @@ export default function Fixtures() {
                     <div className="flex items-center gap-3">
                       <div className="w-6 h-6 bg-green-500 rounded"></div>
                       <div>
-                        <span className="font-medium">1-2: Easy</span>
-                        <p className="text-sm text-gray-600">Favorable fixtures - high scoring potential</p>
+                        <span className="font-medium">1: Very Easy</span>
+                        <p className="text-sm text-gray-600">Highly favorable fixtures - excellent scoring potential</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 bg-green-100 border border-green-200 rounded"></div>
+                      <div>
+                        <span className="font-medium">2: Easy</span>
+                        <p className="text-sm text-gray-600">Good fixtures - above average scoring potential</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -704,10 +715,17 @@ export default function Fixtures() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 bg-red-100 border border-red-200 rounded"></div>
+                      <div>
+                        <span className="font-medium">4: Hard</span>
+                        <p className="text-sm text-gray-600">Difficult fixtures - below average scoring potential</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
                       <div className="w-6 h-6 bg-red-500 rounded"></div>
                       <div>
-                        <span className="font-medium">4-5: Hard</span>
-                        <p className="text-sm text-gray-600">Challenging fixtures - lower scoring potential</p>
+                        <span className="font-medium">5: Very Hard</span>
+                        <p className="text-sm text-gray-600">Highly challenging fixtures - low scoring potential</p>
                       </div>
                     </div>
                   </div>
