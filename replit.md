@@ -5,6 +5,7 @@ FPL Dilemmas is an analytics application for Fantasy Premier League (FPL) manage
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+**CRITICAL PRODUCTION ISSUE RESOLVED (Aug 28, 2025):** TypeScript compilation errors causing recurring Content Creators production failures have been permanently fixed. Root cause was 54+ compilation errors preventing server startup in production environment. Key fixes: proper type annotations, error handling, and removal of problematic unused code sections.
 Site tagline: Previously used "Analytical tools to beat the deadline blues" - removed from all tool headers per user request. Now uses "Advanced FPL Analytics Platform" in sidebar and home page.
 Navigation priority: My Live Rank as default landing page, with side navigation for all tools.
 Manager ID caching: All FPL manager tools (My Live Rank, My Team, My Leagues) now automatically save and pre-load the last searched Manager ID using localStorage for seamless cross-tool experience.

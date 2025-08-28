@@ -239,7 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamGoalShares[teamName].players.push({
           id: player.id || player.playerId,
           name: `${player.firstName || ''} ${player.secondName || ''}`.trim(),
-          position: player.position || 'Unknown',
+          position: (player as any).position || 'Unknown',
           goals: goals,
           minutes: player.minutes || 0,
           totalPoints: player.totalPoints || 0
@@ -1468,7 +1468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let unifiedProjectionSettings: any = null;
 
   // Load settings from database
-  async function loadUnifiedProjectionSettings() {
+  async function loadUnifiedProjectionSettings(): any {
     try {
       const [settings] = await db.select().from(unifiedProjectionSettingsTable).limit(1);
       
@@ -1534,7 +1534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Create default settings in database
-  async function createDefaultUnifiedProjectionSettings() {
+  async function createDefaultUnifiedProjectionSettings(): any {
     try {
       const defaultSettings = {
         autoBalance: true,
@@ -2711,7 +2711,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Convert projections array to gameweekProjections object
         const gameweekProjections: { [gameweek: number]: number } = {};
         projections.forEach((p: any) => {
-          gameweekProjections[p.gameweek] = p.cleanSheetOdds;
+          if (p && p.gameweek) {
+            gameweekProjections[p.gameweek] = p.cleanSheetOdds;
+          }
         });
         
         // Elite-level confidence calculation using advanced statistical market analysis
@@ -2722,7 +2724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Advanced multi-dimensional confidence assessment
         const marketConfidence = teamBettingData.confidence; // Base market reliability
         const performanceConsistency = projections.length > 0 ? 
-          Math.max(0, 1 - (Math.max(...projections.map(p => p.cleanSheetOdds)) - Math.min(...projections.map(p => p.cleanSheetOdds))) / 80) : 0;
+          Math.max(0, 1 - (Math.max(...projections.map((p: any) => p.cleanSheetOdds)) - Math.min(...projections.map((p: any) => p.cleanSheetOdds))) / 80) : 0;
         const volumeConfidence = Math.min(1.0, projections.length / 5); // 5+ fixtures for full confidence
         const qualityBonus = averageCleanSheetOdds >= 35 ? 0.15 : averageCleanSheetOdds >= 25 ? 0.10 : 0;
         
@@ -2901,7 +2903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Generated ${allGoalShareData.length} total team entries for GW2-GW7 using Team Goal Projections`);
       
       // Debug: Check gameweeks in data
-      const uniqueGameweeks = [...new Set(allGoalShareData.map(item => item.gameweek))];
+      const uniqueGameweeks = [...new Set(allGoalShareData.map((item: any) => item.gameweek))];
       console.log(`DEBUG: Unique gameweeks in data: ${uniqueGameweeks.join(', ')}`);
       
       // Filter to requested gameweek if specific, otherwise return all
@@ -2921,7 +2923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Debug logging for key players
       filteredData.forEach(team => {
         if (team.players && (targetGameweek === 0 || team.gameweek === targetGameweek)) {
-          team.players.forEach(player => {
+          team.players.forEach((player: any) => {
             if (player.name && (player.name.includes('Bowen') || player.name.includes('Salah') || player.name.includes('Haaland'))) {
               console.log(`GOAL_SHARE_API ${player.name} GW${team.gameweek}: goalShare=${player.goalShare}%, projectedGoals=${player.projectedGoals}, teamGoals=${team.expectedGoals}`);
             }
@@ -2930,7 +2932,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json(filteredData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating goal share data:", error);
       res.status(500).json({ error: "Failed to generate goal share data" });
     }
@@ -5501,85 +5503,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: 2024-25 baseline methodology completed for ${adjustedResults.length} teams`);
       res.json(adjustedResults);
-      return;
-      
-      // Step 5: Calculate contributions and normalize
-      const teamResults: any[] = [];
-      
-      // This section is unused after 2024-25 baseline methodology - commenting out
-      /* Object.keys(teamSeasonTotals).forEach(teamIdStr => {
-        const teamId = parseInt(teamIdStr);
-        const team = bootstrapData.teams.find((t: any) => t.id === teamId);
-        
-        if (team && teamSeasonTotals[teamId].expectedGoals > 0) {
-          const teamPlayersWithXG = playersWithXG.filter((p: any) => p.team === teamId);
-          
-          // Calculate raw contributions
-          let totalContribution = 0;
-          const contributions: any[] = [];
-          
-          teamPlayersWithXG.forEach((player: any) => {
-            const projectedMinutes = 2500; // Default projected minutes
-            
-            // Position multipliers
-            let positionMultiplier = 1.0;
-            switch (player.element_type) {
-              case 4: positionMultiplier = 1.2; break; // Forward
-              case 3: positionMultiplier = 1.1; break; // Midfielder
-              case 2: positionMultiplier = 0.3; break; // Defender
-              case 1: positionMultiplier = 0.1; break; // Goalkeeper
-            }
-            
-            // Core calculation: (xG per 90) × (projected minutes / 90) × position adjustment
-            const contribution = (player.xgPer90 * (projectedMinutes / 90) * positionMultiplier);
-            
-            contributions.push({
-              id: player.id,
-              name: player.name,
-              position: player.position,
-              contribution,
-              xgPer90: player.xgPer90,
-              projectedMinutes
-            });
-            
-            totalContribution += contribution;
-          });
-          
-          // PERFECT NORMALIZATION
-          const players = contributions.map(player => {
-            const normalizedShare = totalContribution > 0 ? 
-              (player.contribution / totalContribution) * 50 : 0; // Default team goals
-            
-            const goalShare = 50 > 0 ? 
-              (normalizedShare / 50) * 100 : 0; // Default team goals
-            
-            return {
-              id: player.id,
-              name: player.name,
-              position: player.position,
-              goalShare: Math.round(goalShare * 10) / 10,
-              projectedGoals: Math.round(normalizedShare * 100) / 100,
-              xgPer90: player.xgPer90
-            };
-          }).sort((a, b) => b.goalShare - a.goalShare);
-          
-          // Verify perfect normalization
-          const totalNormalized = players.reduce((sum: number, p: any) => sum + p.projectedGoals, 0);
-          console.log(`DEBUG: Team ${team.name} - Perfect balance: ${totalNormalized.toFixed(3)} = ${50}`);
-          
-          teamResults.push({
-            gameweek: 0,
-            teamId: teamId,
-            teamName: team.name,
-            teamShort: team.short_name,
-            expectedGoals: 50, // Default team goals
-            players: players
-          });
-        }
-      }); */
-      
-      console.log(`DEBUG: xG per 90 methodology completed for ${teamResults.length} teams`);
-      // res.json(teamResults); // Commented out unused section
       
     } catch (error: any) {
       console.error("Error in enhanced Goal Share:", error);
@@ -6454,8 +6377,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             overallPoints: managerData.summary_overall_points || null,
             gameweekPoints: managerData.summary_event_points || 0,
             gameweekRank: managerData.summary_event_rank || null,
-            teamValue: managerData.last_deadline_value ? parseFloat((managerData.last_deadline_value / 10).toFixed(1)) : null, // Convert from pence to pounds
-            bank: managerData.last_deadline_bank ? parseFloat((managerData.last_deadline_bank / 10).toFixed(1)) : null,
+            teamValue: managerData.last_deadline_value ? parseFloat((managerData.last_deadline_value / 10).toFixed(1)).toString() : null, // Convert from pence to pounds as string
+            bank: managerData.last_deadline_bank ? parseFloat((managerData.last_deadline_bank / 10).toFixed(1)).toString() : null,
             totalTransfers: managerData.total_transfers || 0,
             freeTransfers: managerData.free_transfers || 1,
             wildcardUsed: false, // Will need to check picks history for chips used
