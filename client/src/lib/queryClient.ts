@@ -1,5 +1,4 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { addAdminKeyToUrl } from "./adminAuth";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -13,10 +12,7 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Add admin key for admin endpoints if needed
-  const finalUrl = url.includes('/api/admin') ? addAdminKeyToUrl(url) : url;
-  
-  const res = await fetch(finalUrl, {
+  const res = await fetch(url, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -46,10 +42,7 @@ export const getQueryFn: <T>(options: {
       url = queryKey.join("/") as string;
     }
     
-    // Add admin key for admin endpoints if needed
-    const finalUrl = url.includes('/api/admin') ? addAdminKeyToUrl(url) : url;
-    
-    const res = await fetch(finalUrl, {
+    const res = await fetch(url, {
       credentials: "include",
     });
 

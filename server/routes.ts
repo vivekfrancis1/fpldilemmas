@@ -77,48 +77,6 @@ const MASTER_TEAM_DEFAULTS = {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Secure admin access middleware with secret key authentication
-  const requireAdminAccess = (req: any, res: any, next: any) => {
-    // In development, allow access without secret key
-    if (process.env.NODE_ENV === 'development') {
-      next();
-      return;
-    }
-    
-    // In production, require ADMIN_SECRET_KEY in URL parameters
-    const providedKey = req.query.admin_key;
-    const requiredKey = process.env.ADMIN_SECRET_KEY;
-    
-    if (!requiredKey) {
-      return res.status(503).json({ 
-        error: "Service Unavailable",
-        message: "Admin access not configured" 
-      });
-    }
-    
-    if (!providedKey || providedKey !== requiredKey) {
-      return res.status(401).json({ 
-        error: "Unauthorized",
-        message: "Invalid or missing admin key" 
-      });
-    }
-    
-    next();
-  };
-
-  // Apply admin middleware to all admin routes
-  app.use('/api/admin/*', requireAdminAccess);
-
-  // Health check endpoint for production monitoring
-  app.get("/health", (req, res) => {
-    res.json({ 
-      status: "OK", 
-      environment: process.env.NODE_ENV || 'development',
-      timestamp: new Date().toISOString(),
-      version: "1.0.0"
-    });
-  });
-
   // Player data routes
   app.get("/api/bootstrap-static", async (req, res) => {
     try {
@@ -267,7 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamGoalShares[teamName].players.push({
           id: player.id || player.playerId,
           name: `${player.firstName || ''} ${player.secondName || ''}`.trim(),
-          position: (player as any).position || 'Unknown',
+          position: player.position || 'Unknown',
           goals: goals,
           minutes: player.minutes || 0,
           totalPoints: player.totalPoints || 0
@@ -610,7 +568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const bootstrapData = await bootstrapResponse.json();
           currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
         } else {
-          currentGameweek = "1"; // fallback
+          currentGameweek = 1; // fallback
         }
       }
       
@@ -1496,7 +1454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let unifiedProjectionSettings: any = null;
 
   // Load settings from database
-  async function loadUnifiedProjectionSettings(): any {
+  async function loadUnifiedProjectionSettings() {
     try {
       const [settings] = await db.select().from(unifiedProjectionSettingsTable).limit(1);
       
@@ -1562,7 +1520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Create default settings in database
-  async function createDefaultUnifiedProjectionSettings(): any {
+  async function createDefaultUnifiedProjectionSettings() {
     try {
       const defaultSettings = {
         autoBalance: true,
@@ -2469,29 +2427,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Weather Conditions: Adverse weather reduces shot accuracy and intensity
           const hasAdverseWeather = (fixture.event + team.id + opponent.id) % 8 === 0; // Simulated adverse weather (rain/cold/wind)
           if (hasAdverseWeather) {
-            baseExpectedGoals *= adminGoalSettings.weatherConditionsGoalsMultiplier || 0.93;
+            baseExpectedGoals *= adminGoalSettings.weatherConditionsGoalsMultiplier || MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier;
           }
           
           // Referee Influence: Lenient refs allow more open play, strict refs suppress risks
           const refereeStyle = (fixture.event * 7 + team.id) % 3; // Simulated referee style
           if (refereeStyle === 0) { // Lenient referee (high fouls/penalties)
-            baseExpectedGoals *= 1.05;
+            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || MASTER_TEAM_DEFAULTS.refereeInfluenceMultiplier) * 1.05;
           } else if (refereeStyle === 1) { // Strict referee (low fouls)
-            baseExpectedGoals *= 0.95;
+            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || MASTER_TEAM_DEFAULTS.refereeInfluenceMultiplier) * 0.95;
           }
           // refereeStyle === 2 is neutral (1.0 multiplier)
           
           // Post-International Break: Travel, jet lag, and squad disruption reduce intensity
           const isPostInternationalBreak = fixture.event === 4 || fixture.event === 8 || fixture.event === 16 || fixture.event === 29; // Typical break gameweeks
           if (isPostInternationalBreak) {
-            baseExpectedGoals *= 0.95;
+            baseExpectedGoals *= adminGoalSettings.postInternationalBreakMultiplier || MASTER_TEAM_DEFAULTS.postInternationalBreakMultiplier;
           }
           
           // Travel Distance/Fatigue: Long journeys cause fatigue, reducing away xG (away teams only)
           if (!isHome) { // Apply only to away teams
             const isLongTrip = (team.id + opponent.id) % 5 === 0; // Simulated long travel distance (>300km)
             if (isLongTrip) {
-              baseExpectedGoals *= 0.96;
+              baseExpectedGoals *= adminGoalSettings.travelDistanceFatigueMultiplier || MASTER_TEAM_DEFAULTS.travelDistanceFatigueMultiplier;
             }
           }
           
@@ -2739,9 +2697,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Convert projections array to gameweekProjections object
         const gameweekProjections: { [gameweek: number]: number } = {};
         projections.forEach((p: any) => {
-          if (p && p.gameweek) {
-            gameweekProjections[p.gameweek] = p.cleanSheetOdds;
-          }
+          gameweekProjections[p.gameweek] = p.cleanSheetOdds;
         });
         
         // Elite-level confidence calculation using advanced statistical market analysis
@@ -2752,7 +2708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Advanced multi-dimensional confidence assessment
         const marketConfidence = teamBettingData.confidence; // Base market reliability
         const performanceConsistency = projections.length > 0 ? 
-          Math.max(0, 1 - (Math.max(...projections.map((p: any) => p.cleanSheetOdds)) - Math.min(...projections.map((p: any) => p.cleanSheetOdds))) / 80) : 0;
+          Math.max(0, 1 - (Math.max(...projections.map(p => p.cleanSheetOdds)) - Math.min(...projections.map(p => p.cleanSheetOdds))) / 80) : 0;
         const volumeConfidence = Math.min(1.0, projections.length / 5); // 5+ fixtures for full confidence
         const qualityBonus = averageCleanSheetOdds >= 35 ? 0.15 : averageCleanSheetOdds >= 25 ? 0.10 : 0;
         
@@ -2931,7 +2887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Generated ${allGoalShareData.length} total team entries for GW2-GW7 using Team Goal Projections`);
       
       // Debug: Check gameweeks in data
-      const uniqueGameweeks = [...new Set(allGoalShareData.map((item: any) => item.gameweek))];
+      const uniqueGameweeks = [...new Set(allGoalShareData.map(item => item.gameweek))];
       console.log(`DEBUG: Unique gameweeks in data: ${uniqueGameweeks.join(', ')}`);
       
       // Filter to requested gameweek if specific, otherwise return all
@@ -2951,7 +2907,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Debug logging for key players
       filteredData.forEach(team => {
         if (team.players && (targetGameweek === 0 || team.gameweek === targetGameweek)) {
-          team.players.forEach((player: any) => {
+          team.players.forEach(player => {
             if (player.name && (player.name.includes('Bowen') || player.name.includes('Salah') || player.name.includes('Haaland'))) {
               console.log(`GOAL_SHARE_API ${player.name} GW${team.gameweek}: goalShare=${player.goalShare}%, projectedGoals=${player.projectedGoals}, teamGoals=${team.expectedGoals}`);
             }
@@ -2960,7 +2916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json(filteredData);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error generating goal share data:", error);
       res.status(500).json({ error: "Failed to generate goal share data" });
     }
@@ -3264,7 +3220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             goalShare: Math.round(goalShare * 10) / 10,
             projectedGoals: player.projectedGoals
           };
-        }).sort((a: any, b: any) => b.goalShare - a.goalShare);
+        }).sort((a, b) => b.goalShare - a.goalShare);
         
         // Debug logging for key players
         players.forEach(player => {
@@ -5279,30 +5235,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Helper function to process fixtures with projection data
-  function processFixtureWithProjections(fixture: any, homeTeam: any, awayTeam: any, gameweek: number, currentGameweek: number): any {
-    const matchOdds: any = {
+  function processFixtureWithProjections(fixture: any, homeTeam: any, awayTeam: any, gameweek: number, currentGameweek: number) {
+    const matchOdds = {
       id: fixture.id,
       gameweek: gameweek,
       kickoffTime: fixture.kickoff_time || `2025-08-${15 + gameweek}T15:00:00Z`,
       finished: fixture.finished,
-      matchResult: '',
-      totalExpectedGoals: 0,
-      confidence: 'Medium',
       homeTeam: {
         id: homeTeam.id,
         name: homeTeam.name,
-        shortName: homeTeam.shortName,
-        expectedGoals: 0,
-        cleanSheetOdds: 0,
-        result: ''
+        shortName: homeTeam.shortName
       },
       awayTeam: {
         id: awayTeam.id,
         name: awayTeam.name,
-        shortName: awayTeam.shortName,
-        expectedGoals: 0,
-        cleanSheetOdds: 0,
-        result: ''
+        shortName: awayTeam.shortName
       }
     };
     
@@ -5507,13 +5454,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             xgPer90: adjustedProjectedGoals > 0 ? 
               Math.round((adjustedProjectedGoals / 30) * 100) / 100 : 0 // Estimate based on ~30 games
           };
-        }).filter((p: any) => p !== null); // Remove transferred players
+        }).filter(p => p !== null); // Remove transferred players
         
         // Normalize to ensure team total is realistic
-        const totalAdjustedGoals = adjustedPlayers.reduce((sum: number, p: any) => sum + p.projectedGoals, 0);
+        const totalAdjustedGoals = adjustedPlayers.reduce((sum, p) => sum + p.projectedGoals, 0);
         const targetTeamGoals = team2024.expectedGoals * 0.95; // Slight conservative adjustment
         
-        const normalizedPlayers = adjustedPlayers.map((player: any) => {
+        const normalizedPlayers = adjustedPlayers.map(player => {
           const normalizedGoals = totalAdjustedGoals > 0 ? 
             (player.projectedGoals / totalAdjustedGoals) * targetTeamGoals : 0;
           const normalizedShare = targetTeamGoals > 0 ? 
@@ -5524,7 +5471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             goalShare: Math.round(normalizedShare * 10) / 10,
             projectedGoals: Math.round(normalizedGoals * 10) / 10
           };
-        }).sort((a: any, b: any) => b.goalShare - a.goalShare);
+        }).sort((a, b) => b.goalShare - a.goalShare);
         
         adjustedResults.push({
           gameweek: 0,
@@ -5540,8 +5487,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: 2024-25 baseline methodology completed for ${adjustedResults.length} teams`);
       res.json(adjustedResults);
+      return;
       
-    } catch (error: any) {
+      // Step 5: Calculate contributions and normalize
+      const teamResults: any[] = [];
+      
+      Object.keys(teamSeasonTotals).forEach(teamIdStr => {
+        const teamId = parseInt(teamIdStr);
+        const team = bootstrapData.teams.find((t: any) => t.id === teamId);
+        
+        if (team && teamSeasonTotals[teamId].expectedGoals > 0) {
+          const teamPlayersWithXG = playersWithXG.filter((p: any) => p.team === teamId);
+          
+          // Calculate raw contributions
+          let totalContribution = 0;
+          const contributions: any[] = [];
+          
+          teamPlayersWithXG.forEach(player => {
+            const projectedMinutes = calculateProjectedMinutes(player);
+            
+            // Position multipliers
+            let positionMultiplier = 1.0;
+            switch (player.element_type) {
+              case 4: positionMultiplier = 1.2; break; // Forward
+              case 3: positionMultiplier = 1.1; break; // Midfielder
+              case 2: positionMultiplier = 0.3; break; // Defender
+              case 1: positionMultiplier = 0.1; break; // Goalkeeper
+            }
+            
+            // Core calculation: (xG per 90) × (projected minutes / 90) × position adjustment
+            const contribution = (player.xgPer90 * (projectedMinutes / 90) * positionMultiplier);
+            
+            contributions.push({
+              id: player.id,
+              name: player.name,
+              position: player.position,
+              contribution,
+              xgPer90: player.xgPer90,
+              projectedMinutes
+            });
+            
+            totalContribution += contribution;
+          });
+          
+          // PERFECT NORMALIZATION
+          const players = contributions.map(player => {
+            const normalizedShare = totalContribution > 0 ? 
+              (player.contribution / totalContribution) * teamSeasonTotals[teamId].expectedGoals : 0;
+            
+            const goalShare = teamSeasonTotals[teamId].expectedGoals > 0 ? 
+              (normalizedShare / teamSeasonTotals[teamId].expectedGoals) * 100 : 0;
+            
+            return {
+              id: player.id,
+              name: player.name,
+              position: player.position,
+              goalShare: Math.round(goalShare * 10) / 10,
+              projectedGoals: Math.round(normalizedShare * 100) / 100,
+              xgPer90: player.xgPer90
+            };
+          }).sort((a, b) => b.goalShare - a.goalShare);
+          
+          // Verify perfect normalization
+          const totalNormalized = players.reduce((sum, p) => sum + p.projectedGoals, 0);
+          console.log(`DEBUG: Team ${team.name} - Perfect balance: ${totalNormalized.toFixed(3)} = ${teamSeasonTotals[teamId].expectedGoals.toFixed(3)}`);
+          
+          teamResults.push({
+            gameweek: 0,
+            teamId: teamId,
+            teamName: team.name,
+            teamShort: team.short_name,
+            expectedGoals: Math.round(teamSeasonTotals[teamId].expectedGoals * 100) / 100,
+            players: players
+          });
+        }
+      });
+      
+      console.log(`DEBUG: xG per 90 methodology completed for ${teamResults.length} teams`);
+      res.json(teamResults);
+      
+    } catch (error) {
       console.error("Error in enhanced Goal Share:", error);
       res.status(500).json({ error: "Failed to generate enhanced goal share data" });
     }
@@ -5983,87 +6008,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ Current Players API routes registered successfully");
 
-  // FPL Content Creators API routes  
+  // FPL Content Creators API routes
   app.get("/api/content-creators", async (req, res) => {
     try {
-      console.log(`🔍 Content Creators API called in ${process.env.NODE_ENV || 'development'} environment`);
-      console.log(`📊 Database URL available: ${process.env.DATABASE_URL ? 'Yes' : 'No'}`);
-      
-      // Add comprehensive error handling and fallback
-      let creators: any[] = [];
-      try {
-        console.log("🔄 Attempting to call storage.getContentCreators()...");
-        creators = await storage.getContentCreators();
-        console.log(`📊 Retrieved ${creators.length} creators from storage`);
-      } catch (storageError) {
-        console.error("❌ CRITICAL: Storage.getContentCreators failed:", storageError);
-        console.error("❌ Storage error details:", {
-          name: (storageError as any).name,
-          message: (storageError as any).message,
-          stack: (storageError as any).stack
-        });
-        // Return empty array if database fails
-        return res.json([]);
-      }
-      
-      if (creators.length === 0) {
-        console.log("⚠️ No creators found in storage, returning empty array");
-        return res.json([]);
-      }
+      const creators = await storage.getContentCreators();
       
       // Get latest tracking data for each creator to enrich the response
       const creatorsWithLatestData = await Promise.all(
         creators.map(async (creator) => {
-          try {
-            const latestTracking = await storage.getLatestCreatorTracking(creator.id);
-            const history = await storage.getCreatorTracking(creator.id, 2);
-            
-            // Calculate rank change if we have historical data
-            let rankChange = undefined;
-            if (history.length >= 2) {
-              const current = history[0]?.overallRank;
-              const previous = history[1]?.overallRank;
-              if (current && previous) {
-                rankChange = previous - current; // Positive means rank improved (went down in number)
-              }
+          const latestTracking = await storage.getLatestCreatorTracking(creator.id);
+          const history = await storage.getCreatorTracking(creator.id, 2);
+          
+          // Calculate rank change if we have historical data
+          let rankChange = undefined;
+          if (history.length >= 2) {
+            const current = history[0]?.overallRank;
+            const previous = history[1]?.overallRank;
+            if (current && previous) {
+              rankChange = previous - current; // Positive means rank improved (went down in number)
             }
-            
-            return {
-              ...creator,
-              latestTracking,
-              rankChange,
-              pointsThisGw: latestTracking?.gameweekPoints
-            };
-          } catch (trackingError) {
-            console.error(`⚠️ Error fetching tracking for creator ${creator.id}:`, trackingError);
-            // Return creator without tracking data if tracking fetch fails
-            return {
-              ...creator,
-              latestTracking: null,
-              rankChange: undefined,
-              pointsThisGw: undefined
-            };
           }
+          
+          return {
+            ...creator,
+            latestTracking,
+            rankChange,
+            pointsThisGw: latestTracking?.gameweekPoints
+          };
         })
       );
       
-      console.log(`✅ Successfully prepared ${creatorsWithLatestData.length} creators with tracking data`);
       res.json(creatorsWithLatestData);
-    } catch (error: any) {
-      console.error("❌ Error fetching content creators:", error);
-      console.error("Error details:", {
-        message: error?.message,
-        stack: error?.stack,
-        name: error?.name
-      });
-      res.status(500).json({ 
-        error: "Failed to fetch content creators",
-        details: process.env.NODE_ENV === 'development' ? error?.message : 'Internal server error'
-      });
+    } catch (error) {
+      console.error("Error fetching content creators:", error);
+      res.status(500).json({ error: "Failed to fetch content creators" });
     }
   });
 
-  app.post("/api/content-creators", requireAdminAccess, async (req, res) => {
+  app.post("/api/content-creators", async (req, res) => {
     try {
       const creatorData = req.body;
       
@@ -6097,7 +6079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/content-creators/:id", requireAdminAccess, async (req, res) => {
+  app.put("/api/content-creators/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const creatorId = parseInt(id);
@@ -6121,7 +6103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/content-creators/:id", requireAdminAccess, async (req, res) => {
+  app.delete("/api/content-creators/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const creatorId = parseInt(id);
@@ -6288,7 +6270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/content-creators/bulk", requireAdminAccess, async (req, res) => {
+  app.post("/api/content-creators/bulk", async (req, res) => {
     try {
       const { creators } = req.body;
       
@@ -6327,7 +6309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/content-creators/refresh", requireAdminAccess, async (req, res) => {
+  app.post("/api/content-creators/refresh", async (req, res) => {
     try {
       // This will fetch latest FPL data for all content creators from the FPL API
       const creators = await storage.getContentCreators();
@@ -6428,8 +6410,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             overallPoints: managerData.summary_overall_points || null,
             gameweekPoints: managerData.summary_event_points || 0,
             gameweekRank: managerData.summary_event_rank || null,
-            teamValue: managerData.last_deadline_value ? parseFloat((managerData.last_deadline_value / 10).toFixed(1)).toString() : null, // Convert from pence to pounds as string
-            bank: managerData.last_deadline_bank ? parseFloat((managerData.last_deadline_bank / 10).toFixed(1)).toString() : null,
+            teamValue: managerData.last_deadline_value ? parseFloat((managerData.last_deadline_value / 10).toFixed(1)) : null, // Convert from pence to pounds
+            bank: managerData.last_deadline_bank ? parseFloat((managerData.last_deadline_bank / 10).toFixed(1)) : null,
             totalTransfers: managerData.total_transfers || 0,
             freeTransfers: managerData.free_transfers || 1,
             wildcardUsed: false, // Will need to check picks history for chips used
@@ -6469,7 +6451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual database seeding endpoint (for production deployment if needed)
-  app.post("/api/content-creators/seed", requireAdminAccess, async (req, res) => {
+  app.post("/api/content-creators/seed", async (req, res) => {
     try {
       const { seedContentCreators } = await import("./seed-database");
       await seedContentCreators();
@@ -6488,7 +6470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reset content creators with correct Manager IDs
-  app.post("/api/content-creators/reset", requireAdminAccess, async (req, res) => {
+  app.post("/api/content-creators/reset", async (req, res) => {
     try {
       console.log("🔄 Resetting content creators with correct Manager IDs...");
       
@@ -6521,20 +6503,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Failed to reset content creators",
         message: error instanceof Error ? error.message : "Unknown error"
       });
-    }
-  });
-
-  // Add a simple fallback route for testing
-  app.get("/api/content-creators-test", async (req, res) => {
-    try {
-      res.json({ 
-        status: "OK", 
-        environment: process.env.NODE_ENV || 'development',
-        timestamp: new Date().toISOString(),
-        message: "Content Creators test endpoint working"
-      });
-    } catch (error) {
-      res.status(500).json({ error: "Test endpoint failed" });
     }
   });
 
