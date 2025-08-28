@@ -582,7 +582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const bootstrapData = await bootstrapResponse.json();
           currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
         } else {
-          currentGameweek = 1; // fallback
+          currentGameweek = "1"; // fallback
         }
       }
       
@@ -2441,29 +2441,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Weather Conditions: Adverse weather reduces shot accuracy and intensity
           const hasAdverseWeather = (fixture.event + team.id + opponent.id) % 8 === 0; // Simulated adverse weather (rain/cold/wind)
           if (hasAdverseWeather) {
-            baseExpectedGoals *= adminGoalSettings.weatherConditionsGoalsMultiplier || MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier;
+            baseExpectedGoals *= adminGoalSettings.weatherConditionsGoalsMultiplier || 0.93;
           }
           
           // Referee Influence: Lenient refs allow more open play, strict refs suppress risks
           const refereeStyle = (fixture.event * 7 + team.id) % 3; // Simulated referee style
           if (refereeStyle === 0) { // Lenient referee (high fouls/penalties)
-            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || MASTER_TEAM_DEFAULTS.refereeInfluenceMultiplier) * 1.05;
+            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || 1.0) * 1.05;
           } else if (refereeStyle === 1) { // Strict referee (low fouls)
-            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || MASTER_TEAM_DEFAULTS.refereeInfluenceMultiplier) * 0.95;
+            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || 1.0) * 0.95;
           }
           // refereeStyle === 2 is neutral (1.0 multiplier)
           
           // Post-International Break: Travel, jet lag, and squad disruption reduce intensity
           const isPostInternationalBreak = fixture.event === 4 || fixture.event === 8 || fixture.event === 16 || fixture.event === 29; // Typical break gameweeks
           if (isPostInternationalBreak) {
-            baseExpectedGoals *= adminGoalSettings.postInternationalBreakMultiplier || MASTER_TEAM_DEFAULTS.postInternationalBreakMultiplier;
+            baseExpectedGoals *= adminGoalSettings.postInternationalBreakMultiplier || 0.95;
           }
           
           // Travel Distance/Fatigue: Long journeys cause fatigue, reducing away xG (away teams only)
           if (!isHome) { // Apply only to away teams
             const isLongTrip = (team.id + opponent.id) % 5 === 0; // Simulated long travel distance (>300km)
             if (isLongTrip) {
-              baseExpectedGoals *= adminGoalSettings.travelDistanceFatigueMultiplier || MASTER_TEAM_DEFAULTS.travelDistanceFatigueMultiplier;
+              baseExpectedGoals *= adminGoalSettings.travelDistanceFatigueMultiplier || 0.96;
             }
           }
           

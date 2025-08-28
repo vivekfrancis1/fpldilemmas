@@ -861,9 +861,9 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("❌ Error fetching content creators from database:", error);
       console.error("Database error details:", {
-        message: error.message,
-        code: error.code,
-        stack: error.stack
+        message: (error as any).message,
+        code: (error as any).code,
+        stack: (error as any).stack
       });
       
       // Return empty array instead of failing completely
