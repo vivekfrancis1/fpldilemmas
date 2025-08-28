@@ -2457,23 +2457,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Referee Influence: Lenient refs allow more open play, strict refs suppress risks
           const refereeStyle = (fixture.event * 7 + team.id) % 3; // Simulated referee style
           if (refereeStyle === 0) { // Lenient referee (high fouls/penalties)
-            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || 1.0) * 1.05;
+            baseExpectedGoals *= 1.05;
           } else if (refereeStyle === 1) { // Strict referee (low fouls)
-            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || 1.0) * 0.95;
+            baseExpectedGoals *= 0.95;
           }
           // refereeStyle === 2 is neutral (1.0 multiplier)
           
           // Post-International Break: Travel, jet lag, and squad disruption reduce intensity
           const isPostInternationalBreak = fixture.event === 4 || fixture.event === 8 || fixture.event === 16 || fixture.event === 29; // Typical break gameweeks
           if (isPostInternationalBreak) {
-            baseExpectedGoals *= adminGoalSettings.postInternationalBreakMultiplier || 0.95;
+            baseExpectedGoals *= 0.95;
           }
           
           // Travel Distance/Fatigue: Long journeys cause fatigue, reducing away xG (away teams only)
           if (!isHome) { // Apply only to away teams
             const isLongTrip = (team.id + opponent.id) % 5 === 0; // Simulated long travel distance (>300km)
             if (isLongTrip) {
-              baseExpectedGoals *= adminGoalSettings.travelDistanceFatigueMultiplier || 0.96;
+              baseExpectedGoals *= 0.96;
             }
           }
           
@@ -3246,7 +3246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             goalShare: Math.round(goalShare * 10) / 10,
             projectedGoals: player.projectedGoals
           };
-        }).sort((a, b) => b.goalShare - a.goalShare);
+        }).sort((a: any, b: any) => b.goalShare - a.goalShare);
         
         // Debug logging for key players
         players.forEach(player => {
@@ -5261,21 +5261,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Helper function to process fixtures with projection data
-  function processFixtureWithProjections(fixture: any, homeTeam: any, awayTeam: any, gameweek: number, currentGameweek: number) {
-    const matchOdds = {
+  function processFixtureWithProjections(fixture: any, homeTeam: any, awayTeam: any, gameweek: number, currentGameweek: number): any {
+    const matchOdds: any = {
       id: fixture.id,
       gameweek: gameweek,
       kickoffTime: fixture.kickoff_time || `2025-08-${15 + gameweek}T15:00:00Z`,
       finished: fixture.finished,
+      matchResult: '',
+      totalExpectedGoals: 0,
+      confidence: 'Medium',
       homeTeam: {
         id: homeTeam.id,
         name: homeTeam.name,
-        shortName: homeTeam.shortName
+        shortName: homeTeam.shortName,
+        expectedGoals: 0,
+        cleanSheetOdds: 0,
+        result: ''
       },
       awayTeam: {
         id: awayTeam.id,
         name: awayTeam.name,
-        shortName: awayTeam.shortName
+        shortName: awayTeam.shortName,
+        expectedGoals: 0,
+        cleanSheetOdds: 0,
+        result: ''
       }
     };
     
@@ -5480,13 +5489,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             xgPer90: adjustedProjectedGoals > 0 ? 
               Math.round((adjustedProjectedGoals / 30) * 100) / 100 : 0 // Estimate based on ~30 games
           };
-        }).filter(p => p !== null); // Remove transferred players
+        }).filter((p: any) => p !== null); // Remove transferred players
         
         // Normalize to ensure team total is realistic
-        const totalAdjustedGoals = adjustedPlayers.reduce((sum, p) => sum + p.projectedGoals, 0);
+        const totalAdjustedGoals = adjustedPlayers.reduce((sum: number, p: any) => sum + p.projectedGoals, 0);
         const targetTeamGoals = team2024.expectedGoals * 0.95; // Slight conservative adjustment
         
-        const normalizedPlayers = adjustedPlayers.map(player => {
+        const normalizedPlayers = adjustedPlayers.map((player: any) => {
           const normalizedGoals = totalAdjustedGoals > 0 ? 
             (player.projectedGoals / totalAdjustedGoals) * targetTeamGoals : 0;
           const normalizedShare = targetTeamGoals > 0 ? 
@@ -5497,7 +5506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             goalShare: Math.round(normalizedShare * 10) / 10,
             projectedGoals: Math.round(normalizedGoals * 10) / 10
           };
-        }).sort((a, b) => b.goalShare - a.goalShare);
+        }).sort((a: any, b: any) => b.goalShare - a.goalShare);
         
         adjustedResults.push({
           gameweek: 0,
