@@ -996,11 +996,11 @@ export class DatabaseStorage implements IStorage {
 
   async getLatestPlayerPrice(playerId: number): Promise<{ price: number; date: string } | null> {
     try {
-      // First check price changes table for most recent change
+      // Check price changes table for most recent recorded price
       const [latestChange] = await db.select()
         .from(priceChanges)
         .where(eq(priceChanges.playerId, playerId))
-        .orderBy(desc(priceChanges.changeDate))
+        .orderBy(desc(priceChanges.changeDate), desc(priceChanges.createdAt))
         .limit(1);
         
       if (latestChange) {
@@ -1010,15 +1010,7 @@ export class DatabaseStorage implements IStorage {
         };
       }
       
-      // Fallback to daily price data
-      const latestDaily = await this.getLatestPriceData(playerId);
-      if (latestDaily) {
-        return {
-          price: latestDaily.currentPrice,
-          date: latestDaily.recordDate
-        };
-      }
-      
+      // If no price changes recorded yet, return null so we don't track historical changes
       return null;
     } catch (error) {
       console.error(`Error getting latest price for player ${playerId}:`, error);
@@ -1044,11 +1036,12 @@ export class DatabaseStorage implements IStorage {
       const today = new Date().toISOString().split('T')[0];
       
       for (const playerData of currentPrices) {
-        const latestPrice = await this.getLatestPlayerPrice(playerData.playerId);
+        // Get the player's last recorded price from our price_changes table
+        const latestRecordedPrice = await this.getLatestPlayerPrice(playerData.playerId);
         
-        // Only track if we have previous data AND the price has actually changed
-        if (latestPrice && latestPrice.price !== playerData.price) {
-          const actualPriceChange = playerData.price - latestPrice.price;
+        // Only track if we have previous data in our table AND the price has actually changed
+        if (latestRecordedPrice && latestRecordedPrice.price !== playerData.price) {
+          const actualPriceChange = playerData.price - latestRecordedPrice.price;
           
           // Only record if there's an actual price change (rise or fall)
           if (actualPriceChange !== 0) {
@@ -1058,7 +1051,7 @@ export class DatabaseStorage implements IStorage {
               teamId: playerData.teamId || null,
               teamName: playerData.teamName || null,
               position: playerData.position || null,
-              oldPrice: latestPrice.price,
+              oldPrice: latestRecordedPrice.price,
               newPrice: playerData.price,
               priceChange: actualPriceChange,
               changeDate: today,
@@ -1070,8 +1063,11 @@ export class DatabaseStorage implements IStorage {
             
             priceChangesToAdd.push(priceChange);
             const changeType = actualPriceChange > 0 ? "RISE" : "FALL";
-            console.log(`💰 ${changeType}: ${playerData.playerName} ${latestPrice.price}→${playerData.price} (${actualPriceChange > 0 ? '+' : ''}${actualPriceChange})`);
+            console.log(`💰 ${changeType}: ${playerData.playerName} (table: ${latestRecordedPrice.price} → current: ${playerData.price}) = ${actualPriceChange > 0 ? '+' : ''}${actualPriceChange}`);
           }
+        } else if (!latestRecordedPrice) {
+          // Player not in our tracking table yet - this is expected behavior now
+          // We only track future changes, not initialize with current season data
         }
       }
       
