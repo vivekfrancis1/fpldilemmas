@@ -54,11 +54,7 @@ export default function Admin() {
     queryKey: ["/api/content-creators"],
   });
 
-  // Debug: Log the FPL Harry data to console
-  const fplHarry = creators.find(c => c.name === "FPL Harry");
-  if (fplHarry) {
-    console.log("FPL Harry data:", fplHarry);
-  }
+
 
   const addCreatorMutation = useMutation({
     mutationFn: async (newCreator: any) => {
@@ -383,10 +379,10 @@ export default function Admin() {
                             href={creator.youtubeUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="ml-2 text-red-600 hover:underline"
+                            className="ml-2 text-red-600 hover:underline break-all"
                             data-testid={`link-youtube-url-${creator.id}`}
                           >
-                            Channel
+                            {creator.youtubeUrl}
                           </a>
                         </div>
                       )}
