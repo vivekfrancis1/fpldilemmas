@@ -57,13 +57,12 @@ import { SiInstagram, SiTiktok } from "react-icons/si";
 type FPLCreator = {
   id: number;
   name: string;
-  handle: string;
   managerId: number;
   managerName: string;
   playerName?: string;
-  platform: string;
   description?: string;
-  website?: string;
+  twitterHandle?: string | null;
+  youtubeUrl?: string | null;
   followers?: number;
   isActive: boolean;
   addedDate: string;
@@ -87,24 +86,7 @@ type FPLCreatorTracking = {
 
 type CreatorWithLatestData = FPLCreator;
 
-function getPlatformIcon(platform: string) {
-  switch (platform.toLowerCase()) {
-    case "youtube":
-      return <Youtube className="h-4 w-4 text-red-600" />;
-    case "twitter":
-      return <Trophy className="h-4 w-4 text-blue-500" />;
-    case "podcast":
-      return <Crown className="h-4 w-4 text-purple-600" />;
-    case "blog":
-      return <Trophy className="h-4 w-4 text-green-600" />;
-    case "tiktok":
-      return <SiTiktok className="h-4 w-4 text-black" />;
-    case "instagram":
-      return <SiInstagram className="h-4 w-4 text-pink-500" />;
-    default:
-      return <Users className="h-4 w-4 text-gray-500" />;
-  }
-}
+
 
 function getRankBadgeVariant(rank?: number): "default" | "secondary" | "destructive" | "outline" {
   if (!rank) return "outline";
@@ -145,12 +127,36 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
     <TableRow className="hover:bg-muted/50">
       <TableCell>
         <div className="flex items-center gap-3">
-          {getPlatformIcon(creator.platform)}
+          <Users className="h-4 w-4 text-blue-600" />
           <div>
             <div className="font-medium">{creator.name}</div>
             {creator.description && (
               <div className="text-xs text-muted-foreground mt-1 max-w-xs">{creator.description}</div>
             )}
+            <div className="flex flex-wrap gap-3 mt-2">
+              {creator.twitterHandle && (
+                <a
+                  href={`https://x.com/${creator.twitterHandle.replace('@', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:underline"
+                  data-testid={`link-creator-twitter-${creator.id}`}
+                >
+                  {creator.twitterHandle}
+                </a>
+              )}
+              {creator.youtubeUrl && (
+                <a
+                  href={creator.youtubeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-red-600 hover:underline break-all"
+                  data-testid={`link-creator-youtube-${creator.id}`}
+                >
+                  YouTube
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </TableCell>
