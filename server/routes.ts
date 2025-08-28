@@ -6050,7 +6050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const creatorData = req.body;
       
       // Validate required fields
-      if (!creatorData.name || !creatorData.handle || !creatorData.teamId || !creatorData.teamName || !creatorData.platform) {
+      if (!creatorData.name || !creatorData.managerId || !creatorData.managerName) {
         return res.status(400).json({ error: "Missing required fields" });
       }
       
@@ -6218,7 +6218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Fetch transfer history
-      const transferResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.teamId}/transfers/`);
+      const transferResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/transfers/`);
       if (!transferResponse.ok) {
         return res.status(400).json({ error: "Failed to fetch transfer data" });
       }
