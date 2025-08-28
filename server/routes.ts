@@ -77,6 +77,21 @@ const MASTER_TEAM_DEFAULTS = {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Environment-based admin access middleware
+  const requireDevelopmentEnvironment = (req: any, res: any, next: any) => {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ 
+        error: "Not Found",
+        message: "Admin tools are not available in production environment"
+      });
+    }
+    next();
+  };
+
+  // Apply admin middleware to all admin routes
+  app.use('/api/admin/*', requireDevelopmentEnvironment);
+  app.use('/api/content-creators', requireDevelopmentEnvironment);
+
   // Player data routes
   app.get("/api/bootstrap-static", async (req, res) => {
     try {

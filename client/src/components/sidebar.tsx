@@ -30,6 +30,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [location] = useLocation();
 
   const isActive = (path: string) => location === path;
+  
+  // Check if we're in development environment
+  const isDevelopment = import.meta.env.DEV;
 
   const navItems = [
     {
@@ -72,10 +75,17 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/openfpl-projections", label: "OpenFPL Player Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false }
       ]
     },
+    ...(isDevelopment ? [{
+      section: "Admin Tools (Dev Only)", 
+      items: [
+        { path: "/admin-content-creators", label: "Content Creators Admin", icon: Settings, description: "Manage content creators", popular: false },
+        { path: "/admin-goal-projections", label: "Goal Settings Admin", icon: Settings, description: "Configure goal projection settings", popular: false },
+        { path: "/admin-upset-config", label: "Upset Config Admin", icon: Settings, description: "Configure upset predictions", popular: false }
+      ]
+    }] : []),
     {
       section: "Analysis Tools", 
       items: [
-        { path: "/admin-content-creators", label: "Admin", icon: Settings, description: "Manage content creators", popular: false },
         // { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
         // { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
       ]

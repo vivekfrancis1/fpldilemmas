@@ -47,6 +47,9 @@ function Router() {
   // Track page views when routes change
   useAnalytics();
   
+  // Check if we're in development environment
+  const isDevelopment = import.meta.env.DEV;
+  
   return (
     <Switch>
       <Route path="/" component={LiveRank} />
@@ -78,9 +81,16 @@ function Router() {
       <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
       <Route path="/season-projections" component={SeasonProjections} />
-      <Route path="/admin-goal-projections" component={AdminGoalProjections} />
-      <Route path="/admin-upset-config" component={AdminUpsetConfig} />
-      <Route path="/admin-content-creators" component={Admin} />
+      
+      {/* Admin routes - only available in development */}
+      {isDevelopment && (
+        <>
+          <Route path="/admin-goal-projections" component={AdminGoalProjections} />
+          <Route path="/admin-upset-config" component={AdminUpsetConfig} />
+          <Route path="/admin-content-creators" component={Admin} />
+        </>
+      )}
+      
       <Route path="/content-creators" component={ContentCreators} />
       <Route path="/content-creators/:id/team" component={CreatorTeam} />
 
