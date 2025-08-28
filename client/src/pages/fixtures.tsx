@@ -79,11 +79,11 @@ export default function Fixtures() {
   // Get difficulty rating color class
   const getDifficultyColor = (difficulty: number) => {
     switch (difficulty) {
-      case 1: return 'bg-green-600 text-white'; // Very Easy - Dark Green (softer)
+      case 1: return 'bg-green-500 text-white'; // Very Easy - Medium Green (easier on eyes)
       case 2: return 'bg-green-100 text-green-800'; // Easy - Light Green  
       case 3: return 'bg-gray-100 text-gray-800'; // Medium - Grey
       case 4: return 'bg-red-100 text-red-800'; // Hard - Light Red
-      case 5: return 'bg-red-600 text-white'; // Very Hard - Dark Red (softer)
+      case 5: return 'bg-red-500 text-white'; // Very Hard - Medium Red (easier on eyes)
       default: return 'bg-gray-300 text-gray-900';
     }
   };
