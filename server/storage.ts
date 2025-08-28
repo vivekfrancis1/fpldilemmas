@@ -967,7 +967,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Price changes tracking operations
-  async getPriceChanges(limit: number = 200): Promise<PriceChange[]> {
+  async getPriceChanges(limit: number = 100): Promise<PriceChange[]> {
     try {
       console.log(`📊 Fetching recent price changes (limit: ${limit})...`);
       const changes = await db.select()
