@@ -137,7 +137,7 @@ const CONTENT_CREATORS_SEED: ContentCreatorSeed[] = [
     name: "FPL Pras",
     handle: "@Pras_fpl",
     platform: "twitter",
-    managerId: 2570,
+    managerId: 3570,
     description: "Podcaster on The FPL Wire; data-focused strategies."
   },
   {
