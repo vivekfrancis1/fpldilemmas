@@ -233,9 +233,10 @@ export default function ProjectedGoalsCS() {
                         </div>
                       </div>
                       
-                      {/* Column Headers - Show once per gameweek - Aligned with data */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 px-2 pt-2 pb-1">
-                        <div className="flex items-center justify-end px-3 space-x-2">
+                      {/* Column Headers - Mobile: single row, Desktop: dual columns */}
+                      <div className="px-2 pt-2 pb-1">
+                        {/* Mobile header - single set of labels */}
+                        <div className="lg:hidden flex items-center justify-end px-3 space-x-2">
                           <div className="text-center w-[45px]">
                             <span className="text-xs font-bold text-gray-600">GOALS</span>
                           </div>
@@ -250,20 +251,39 @@ export default function ProjectedGoalsCS() {
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center justify-end px-3 space-x-2">
-                          <div className="text-center w-[45px]">
-                            <span className="text-xs font-bold text-gray-600">GOALS</span>
+                        
+                        {/* Desktop header - dual columns */}
+                        <div className="hidden lg:grid lg:grid-cols-2 gap-3">
+                          <div className="flex items-center justify-end px-3 space-x-2">
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">GOALS</span>
+                            </div>
+                            {projections.some(p => !p.finished) && (
+                              <div className="text-center w-[45px]">
+                                <span className="text-xs font-bold text-gray-600">CS%</span>
+                              </div>
+                            )}
+                            {projections.some(p => p.finished) && (
+                              <div className="text-center w-[45px]">
+                                <span className="text-xs font-bold text-gray-600">RESULT</span>
+                              </div>
+                            )}
                           </div>
-                          {projections.some(p => !p.finished) && (
+                          <div className="flex items-center justify-end px-3 space-x-2">
                             <div className="text-center w-[45px]">
-                              <span className="text-xs font-bold text-gray-600">CS%</span>
+                              <span className="text-xs font-bold text-gray-600">GOALS</span>
                             </div>
-                          )}
-                          {projections.some(p => p.finished) && (
-                            <div className="text-center w-[45px]">
-                              <span className="text-xs font-bold text-gray-600">RESULT</span>
-                            </div>
-                          )}
+                            {projections.some(p => !p.finished) && (
+                              <div className="text-center w-[45px]">
+                                <span className="text-xs font-bold text-gray-600">CS%</span>
+                              </div>
+                            )}
+                            {projections.some(p => p.finished) && (
+                              <div className="text-center w-[45px]">
+                                <span className="text-xs font-bold text-gray-600">RESULT</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
 
