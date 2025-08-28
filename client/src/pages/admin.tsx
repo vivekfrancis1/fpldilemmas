@@ -54,6 +54,12 @@ export default function Admin() {
     queryKey: ["/api/content-creators"],
   });
 
+  // Debug: Log the FPL Harry data to console
+  const fplHarry = creators.find(c => c.name === "FPL Harry");
+  if (fplHarry) {
+    console.log("FPL Harry data:", fplHarry);
+  }
+
   const addCreatorMutation = useMutation({
     mutationFn: async (newCreator: any) => {
       return apiRequest("POST", "/api/content-creators", {
