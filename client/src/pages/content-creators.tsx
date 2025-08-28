@@ -153,7 +153,7 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
                   className="text-xs text-red-600 hover:underline break-all"
                   data-testid={`link-creator-youtube-${creator.id}`}
                 >
-                  YouTube
+                  {creator.youtubeUrl.split('/').pop() || 'YouTube'}
                 </a>
               )}
             </div>
