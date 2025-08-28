@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Save, X, Users, Shield } from "lucide-react";
+import { Plus, Edit, Save, X, Users, Shield, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface ContentCreator {
@@ -112,6 +112,26 @@ export default function Admin() {
     },
   });
 
+  const deleteCreatorMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/content-creators/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/content-creators"] });
+      toast({
+        title: "Success",
+        description: "Content creator deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete content creator",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddCreator = () => {
     if (!newCreatorForm.name || !newCreatorForm.managerId) {
       toast({
@@ -149,6 +169,12 @@ export default function Admin() {
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditForm({});
+  };
+
+  const handleDeleteCreator = (id: number, name: string) => {
+    if (window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+      deleteCreatorMutation.mutate(id);
+    }
   };
 
   if (isLoading) {
@@ -399,15 +425,28 @@ export default function Admin() {
                       Last Updated: {new Date(creator.lastUpdated).toLocaleDateString()}
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditCreator(creator)}
-                    data-testid={`button-edit-creator-${creator.id}`}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditCreator(creator)}
+                      data-testid={`button-edit-creator-${creator.id}`}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteCreator(creator.id, creator.name)}
+                      disabled={deleteCreatorMutation.isPending}
+                      data-testid={`button-delete-creator-${creator.id}`}
+                      className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {deleteCreatorMutation.isPending ? "Deleting..." : "Delete"}
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>

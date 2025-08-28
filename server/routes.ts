@@ -6103,6 +6103,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/content-creators/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const creatorId = parseInt(id);
+      
+      if (!creatorId || creatorId <= 0) {
+        return res.status(400).json({ error: "Invalid creator ID" });
+      }
+
+      // Check if creator exists
+      const existingCreator = await storage.getContentCreatorById(creatorId);
+      if (!existingCreator) {
+        return res.status(404).json({ error: "Content creator not found" });
+      }
+
+      // Delete the creator
+      await storage.deleteContentCreator(creatorId);
+      res.json({ success: true, message: "Content creator deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting content creator:", error);
+      res.status(500).json({ error: "Failed to delete content creator" });
+    }
+  });
+
   app.get("/api/content-creators/:id/history", async (req, res) => {
     try {
       const { id } = req.params;
