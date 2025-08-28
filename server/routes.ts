@@ -5956,14 +5956,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ Current Players API routes registered successfully");
 
-  // FPL Content Creators API routes
+  // FPL Content Creators API routes  
   app.get("/api/content-creators", async (req, res) => {
     try {
       console.log(`🔍 Content Creators API called in ${process.env.NODE_ENV || 'development'} environment`);
       console.log(`📊 Database URL available: ${process.env.DATABASE_URL ? 'Yes' : 'No'}`);
       
-      const creators = await storage.getContentCreators();
-      console.log(`📊 Retrieved ${creators.length} creators from storage`);
+      // Add comprehensive error handling and fallback
+      let creators: any[] = [];
+      try {
+        console.log("🔄 Attempting to call storage.getContentCreators()...");
+        creators = await storage.getContentCreators();
+        console.log(`📊 Retrieved ${creators.length} creators from storage`);
+      } catch (storageError) {
+        console.error("❌ CRITICAL: Storage.getContentCreators failed:", storageError);
+        console.error("❌ Storage error details:", {
+          name: (storageError as any).name,
+          message: (storageError as any).message,
+          stack: (storageError as any).stack
+        });
+        // Return empty array if database fails
+        return res.json([]);
+      }
       
       if (creators.length === 0) {
         console.log("⚠️ No creators found in storage, returning empty array");
@@ -6480,6 +6494,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Failed to reset content creators",
         message: error instanceof Error ? error.message : "Unknown error"
       });
+    }
+  });
+
+  // Add a simple fallback route for testing
+  app.get("/api/content-creators-test", async (req, res) => {
+    try {
+      res.json({ 
+        status: "OK", 
+        environment: process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString(),
+        message: "Content Creators test endpoint working"
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Test endpoint failed" });
     }
   });
 
