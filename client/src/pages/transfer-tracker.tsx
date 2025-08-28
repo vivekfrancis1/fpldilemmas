@@ -185,14 +185,14 @@ export default function TransferTracker() {
   }) => (
     <Button
       variant="ghost"
-      className={`h-auto p-3 justify-start font-medium text-xs hover:bg-muted/50 ${className}`}
+      className={`h-auto p-1 justify-start font-semibold text-xs hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors ${className}`}
       onClick={() => handleSort(field)}
       data-testid={`header-${field}`}
     >
       <div className="flex items-center gap-1">
-        {children}
+        <span className="text-gray-700 dark:text-gray-200">{children}</span>
         {sortField === field && (
-          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 text-gray-600 dark:text-gray-300" /> : <ChevronDown className="h-3 w-3 text-gray-600 dark:text-gray-300" />
         )}
       </div>
     </Button>
@@ -278,48 +278,46 @@ export default function TransferTracker() {
         </div>
 
         {/* Search and Filters */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search players or teams..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                    data-testid="input-search-players"
-                  />
-                </div>
+        <div className="bg-white dark:bg-gray-900 rounded-lg border shadow-sm p-3 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search players or teams..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-9 text-sm border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400"
+                  data-testid="input-search-players"
+                />
               </div>
-              <Select value={positionFilter} onValueChange={setPositionFilter}>
-                <SelectTrigger className="w-full sm:w-48" data-testid="select-position-filter">
-                  <SelectValue placeholder="All Positions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Positions</SelectItem>
-                  {getPlayersByPosition().map(pos => (
-                    <SelectItem key={pos.id} value={pos.name}>
-                      {pos.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={transferTypeFilter} onValueChange={setTransferTypeFilter}>
-                <SelectTrigger className="w-full sm:w-48" data-testid="select-transfer-type-filter">
-                  <SelectValue placeholder="All Transfers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Transfers</SelectItem>
-                  <SelectItem value="in">Net In</SelectItem>
-                  <SelectItem value="out">Net Out</SelectItem>
-                  <SelectItem value="stable">Stable</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
-          </CardContent>
-        </Card>
+            <Select value={positionFilter} onValueChange={setPositionFilter}>
+              <SelectTrigger className="w-full sm:w-36 h-9 text-sm border-gray-300 dark:border-gray-600" data-testid="select-position-filter">
+                <SelectValue placeholder="Position" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Positions</SelectItem>
+                {getPlayersByPosition().map(pos => (
+                  <SelectItem key={pos.id} value={pos.name}>
+                    {pos.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={transferTypeFilter} onValueChange={setTransferTypeFilter}>
+              <SelectTrigger className="w-full sm:w-36 h-9 text-sm border-gray-300 dark:border-gray-600" data-testid="select-transfer-type-filter">
+                <SelectValue placeholder="Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Transfers</SelectItem>
+                <SelectItem value="in">Net In</SelectItem>
+                <SelectItem value="out">Net Out</SelectItem>
+                <SelectItem value="stable">Stable</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
         {/* Error Display */}
         {transfersError && (
@@ -386,48 +384,72 @@ export default function TransferTracker() {
                 ))}
               </div>
             ) : sortedAndFilteredTransfers.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b bg-muted/20">
-                      <th className="text-left p-2 sticky left-0 bg-muted/20 z-10 border-r border-gray-200">Player</th>
-                      <th className="text-left p-2">Team/Pos</th>
-                      <th className="text-right p-2">Price</th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="ownership_percentage" className="text-right">
-                          Ownership %
+                    <tr className="border-b bg-gray-50/80 dark:bg-gray-800/50">
+                      <th className="text-left py-2 px-3 sticky left-0 bg-gray-50/80 dark:bg-gray-800/50 z-10 border-r border-gray-200 dark:border-gray-700 min-w-[120px]">
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">Player</div>
+                      </th>
+                      <th className="text-left py-2 px-2 min-w-[80px]">
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">Team/Pos</div>
+                      </th>
+                      <th className="text-right py-2 px-2 min-w-[60px]">
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">Price</div>
+                      </th>
+                      <th className="text-right py-2 px-2 min-w-[70px]">
+                        <SortableHeader field="ownership_percentage" className="text-right font-semibold">
+                          Own %
                         </SortableHeader>
                       </th>
-                      <th className="text-right p-2 border-l border-gray-200">
-                        <div className="text-xs font-semibold text-green-600 mb-1">THIS GAMEWEEK</div>
-                        <SortableHeader field="net_transfers_event" className="text-right">
+                      
+                      {/* Gameweek Section */}
+                      <th className="text-center py-1 px-2 border-l-2 border-green-200 dark:border-green-700 bg-green-50/50 dark:bg-green-900/20" colSpan={3}>
+                        <div className="text-xs font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">This Gameweek</div>
+                      </th>
+                      
+                      {/* Season Section */}
+                      <th className="text-center py-1 px-2 border-l-2 border-blue-200 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/20" colSpan={3}>
+                        <div className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Season Totals</div>
+                      </th>
+                    </tr>
+                    <tr className="border-b bg-gray-25 dark:bg-gray-900/30">
+                      <th></th>
+                      <th></th>
+                      <th></th>
+                      <th></th>
+                      
+                      {/* Gameweek Sub-headers */}
+                      <th className="text-right py-1 px-2 border-l border-green-200 dark:border-green-700 min-w-[80px]">
+                        <SortableHeader field="net_transfers_event" className="text-right text-xs">
                           Net Transfers
                         </SortableHeader>
                       </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="net_transfers_event_percentage" className="text-right">
+                      <th className="text-right py-1 px-2 min-w-[60px]">
+                        <SortableHeader field="net_transfers_event_percentage" className="text-right text-xs">
                           Net %
                         </SortableHeader>
                       </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="price_change_event" className="text-right">
-                          Price Change GW
+                      <th className="text-right py-1 px-2 min-w-[70px]">
+                        <SortableHeader field="price_change_event" className="text-right text-xs">
+                          Price Δ
                         </SortableHeader>
                       </th>
-                      <th className="text-right p-2 border-l border-gray-200">
-                        <div className="text-xs font-semibold text-blue-600 mb-1">SEASON TOTALS</div>
-                        <SortableHeader field="net_transfers" className="text-right">
+                      
+                      {/* Season Sub-headers */}
+                      <th className="text-right py-1 px-2 border-l border-blue-200 dark:border-blue-700 min-w-[80px]">
+                        <SortableHeader field="net_transfers" className="text-right text-xs">
                           Net Transfers
                         </SortableHeader>
                       </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="net_transfers_percentage" className="text-right">
+                      <th className="text-right py-1 px-2 min-w-[60px]">
+                        <SortableHeader field="net_transfers_percentage" className="text-right text-xs">
                           Net %
                         </SortableHeader>
                       </th>
-                      <th className="text-right p-2">
-                        <SortableHeader field="price_change_season" className="text-right">
-                          Price Change Season
+                      <th className="text-right py-1 px-2 min-w-[70px]">
+                        <SortableHeader field="price_change_season" className="text-right text-xs">
+                          Price Δ
                         </SortableHeader>
                       </th>
                     </tr>
@@ -436,11 +458,11 @@ export default function TransferTracker() {
                     {sortedAndFilteredTransfers.map((transfer: TransferData, index: number) => (
                       <tr 
                         key={`${transfer.player_id}-${index}`}
-                        className="border-b hover:bg-muted/50 transition-colors"
+                        className="border-b hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors group"
                         data-testid={`transfer-${transfer.player_id}`}
                       >
-                        <td className="p-3 sticky left-0 bg-white dark:bg-gray-950 z-10 border-r border-gray-200">
-                          <div className="flex items-center gap-2">
+                        <td className="py-2 px-3 sticky left-0 bg-white dark:bg-gray-950 group-hover:bg-gray-50/50 dark:group-hover:bg-gray-800/30 z-10 border-r border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center gap-1.5">
                             {transfer.net_transfers > 0 ? (
                               <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
                             ) : transfer.net_transfers < 0 ? (
@@ -448,71 +470,81 @@ export default function TransferTracker() {
                             ) : (
                               <BarChart3 className="h-3 w-3 text-gray-400 flex-shrink-0" />
                             )}
-                            <span className="font-medium">{transfer.player_name}</span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{transfer.player_name}</span>
                           </div>
                         </td>
-                        <td className="p-3">
-                          <div>
-                            <div className="font-medium text-xs">{transfer.team_name}</div>
-                            <div className="text-xs text-muted-foreground">{transfer.position}</div>
+                        <td className="py-2 px-2">
+                          <div className="space-y-0.5">
+                            <div className="font-medium text-xs text-gray-800 dark:text-gray-200">{transfer.team_name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium">{transfer.position}</div>
                           </div>
                         </td>
-                        <td className="p-3 text-right font-medium">
-                          {formatPrice(transfer.current_price)}
+                        <td className="py-2 px-2 text-right">
+                          <span className="font-semibold text-gray-900 dark:text-gray-100">
+                            {formatPrice(transfer.current_price)}
+                          </span>
                         </td>
-                        <td className="p-3 text-right">
-                          <span className="font-medium">{transfer.ownership_percentage?.toFixed(1) || "0.0"}%</span>
+                        <td className="py-2 px-2 text-right">
+                          <span className="font-semibold text-gray-900 dark:text-gray-100">
+                            {transfer.ownership_percentage?.toFixed(1) || "0.0"}%
+                          </span>
                         </td>
                         
-                        {/* Gameweek section - only Net and Net % columns */}
-                        <td className="p-3 text-right border-l border-gray-200">
-                          <span className={`font-medium ${
-                            (transfer.net_transfers_event || 0) > 0 ? "text-green-600" : 
-                            (transfer.net_transfers_event || 0) < 0 ? "text-red-600" : "text-gray-600"
+                        {/* Gameweek section with improved compact styling */}
+                        <td className="py-2 px-2 text-right border-l border-green-200 dark:border-green-700 bg-green-50/20 dark:bg-green-900/10">
+                          <span className={`font-semibold text-sm ${
+                            (transfer.net_transfers_event || 0) > 0 ? "text-green-700 dark:text-green-400" : 
+                            (transfer.net_transfers_event || 0) < 0 ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
                           }`}>
-                            {(transfer.net_transfers_event || 0) > 0 ? "+" : ""}{(transfer.net_transfers_event || 0).toLocaleString()}
+                            {(transfer.net_transfers_event || 0) > 0 ? "+" : ""}{Math.abs(transfer.net_transfers_event || 0) >= 1000 ? 
+                              `${((transfer.net_transfers_event || 0) / 1000).toFixed(0)}k` : 
+                              (transfer.net_transfers_event || 0).toLocaleString()}
                           </span>
                         </td>
-                        <td className="p-3 text-right">
-                          <span className={`font-medium ${
-                            (transfer.net_transfers_event_percentage || 0) > 0 ? "text-green-600" : 
-                            (transfer.net_transfers_event_percentage || 0) < 0 ? "text-red-600" : "text-gray-600"
+                        <td className="py-2 px-2 text-right bg-green-50/20 dark:bg-green-900/10">
+                          <span className={`font-semibold text-sm ${
+                            (transfer.net_transfers_event_percentage || 0) > 0 ? "text-green-700 dark:text-green-400" : 
+                            (transfer.net_transfers_event_percentage || 0) < 0 ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
                           }`}>
-                            {(transfer.net_transfers_event_percentage || 0) > 0 ? "+" : ""}{(transfer.net_transfers_event_percentage || 0).toFixed(2)}%
+                            {(transfer.net_transfers_event_percentage || 0) > 0 ? "+" : ""}{(transfer.net_transfers_event_percentage || 0).toFixed(1)}%
                           </span>
                         </td>
-                        <td className="p-3 text-right">
-                          <span className={`font-medium ${
-                            (transfer.price_change_event || 0) > 0 ? "text-green-600" : 
-                            (transfer.price_change_event || 0) < 0 ? "text-red-600" : "text-gray-600"
+                        <td className="py-2 px-2 text-right bg-green-50/20 dark:bg-green-900/10">
+                          <span className={`font-bold text-sm px-1 py-0.5 rounded ${
+                            (transfer.price_change_event || 0) > 0 ? "text-green-800 dark:text-green-300 bg-green-100 dark:bg-green-800/30" : 
+                            (transfer.price_change_event || 0) < 0 ? "text-red-800 dark:text-red-300 bg-red-100 dark:bg-red-800/30" : 
+                            "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/30"
                           }`}>
-                            {(transfer.price_change_event || 0) > 0 ? "+" : ""}{((transfer.price_change_event || 0) / 10).toFixed(1)}m
+                            {(transfer.price_change_event || 0) > 0 ? "+" : ""}{((transfer.price_change_event || 0) / 10).toFixed(1)}
                           </span>
                         </td>
 
-                        {/* Season totals section - Net, Net %, and Price Change columns */}
-                        <td className="p-3 text-right border-l border-gray-200">
-                          <span className={`font-medium ${
-                            transfer.net_transfers > 0 ? "text-green-600" : 
-                            transfer.net_transfers < 0 ? "text-red-600" : "text-gray-600"
+                        {/* Season totals section with improved compact styling */}
+                        <td className="py-2 px-2 text-right border-l border-blue-200 dark:border-blue-700 bg-blue-50/20 dark:bg-blue-900/10">
+                          <span className={`font-semibold text-sm ${
+                            transfer.net_transfers > 0 ? "text-blue-700 dark:text-blue-400" : 
+                            transfer.net_transfers < 0 ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
                           }`}>
-                            {transfer.net_transfers > 0 ? "+" : ""}{transfer.net_transfers?.toLocaleString() || "0"}
+                            {transfer.net_transfers > 0 ? "+" : ""}{Math.abs(transfer.net_transfers) >= 1000 ? 
+                              `${(transfer.net_transfers / 1000).toFixed(0)}k` : 
+                              transfer.net_transfers?.toLocaleString() || "0"}
                           </span>
                         </td>
-                        <td className="p-3 text-right">
-                          <span className={`font-medium ${
-                            transfer.net_transfers_percentage! > 0 ? "text-green-600" : 
-                            transfer.net_transfers_percentage! < 0 ? "text-red-600" : "text-gray-600"
+                        <td className="py-2 px-2 text-right bg-blue-50/20 dark:bg-blue-900/10">
+                          <span className={`font-semibold text-sm ${
+                            transfer.net_transfers_percentage! > 0 ? "text-blue-700 dark:text-blue-400" : 
+                            transfer.net_transfers_percentage! < 0 ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
                           }`}>
-                            {transfer.net_transfers_percentage! > 0 ? "+" : ""}{transfer.net_transfers_percentage?.toFixed(2) || "0.00"}%
+                            {transfer.net_transfers_percentage! > 0 ? "+" : ""}{transfer.net_transfers_percentage?.toFixed(1) || "0.0"}%
                           </span>
                         </td>
-                        <td className="p-3 text-right">
-                          <span className={`font-medium ${
-                            (transfer.price_change_season || 0) > 0 ? "text-green-600" : 
-                            (transfer.price_change_season || 0) < 0 ? "text-red-600" : "text-gray-600"
+                        <td className="py-2 px-2 text-right bg-blue-50/20 dark:bg-blue-900/10">
+                          <span className={`font-bold text-sm px-1 py-0.5 rounded ${
+                            (transfer.price_change_season || 0) > 0 ? "text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-800/30" : 
+                            (transfer.price_change_season || 0) < 0 ? "text-red-800 dark:text-red-300 bg-red-100 dark:bg-red-800/30" : 
+                            "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/30"
                           }`}>
-                            {(transfer.price_change_season || 0) > 0 ? "+" : ""}{((transfer.price_change_season || 0) / 10).toFixed(1)}m
+                            {(transfer.price_change_season || 0) > 0 ? "+" : ""}{((transfer.price_change_season || 0) / 10).toFixed(1)}
                           </span>
                         </td>
                       </tr>
