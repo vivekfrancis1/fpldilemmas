@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, BarChart3, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, BarChart3, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 
 interface PriceChange {
@@ -28,10 +28,15 @@ interface PriceChange {
   total_season_change: number;
 }
 
+type SortField = 'change_date' | 'player_name' | 'team_name' | 'position' | 'old_price' | 'current_price' | 'price_change' | 'ownership' | 'transfers_in' | 'transfers_out' | 'transfers_in_gw' | 'transfers_out_gw';
+type SortDirection = 'asc' | 'desc';
+
 export default function RecentPriceChanges() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [changeTypeFilter, setChangeTypeFilter] = useState("all");
+  const [sortField, setSortField] = useState<SortField>('change_date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -83,6 +88,15 @@ export default function RecentPriceChanges() {
     refreshMutation.mutate();
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
   const getPlayersByPosition = () => {
     if (!bootstrapData) return [];
     return bootstrapData.element_types.map(position => ({
@@ -91,16 +105,35 @@ export default function RecentPriceChanges() {
     }));
   };
 
-  const filteredChanges = Array.isArray(priceChanges) ? priceChanges.filter((change: PriceChange) => {
-    const matchesSearch = change.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         change.team_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPosition = positionFilter === "all" || change.position === positionFilter;
-    const matchesChangeType = changeTypeFilter === "all" || 
-                             (changeTypeFilter === "rises" && change.price_change > 0) ||
-                             (changeTypeFilter === "falls" && change.price_change < 0) ||
-                             (changeTypeFilter === "active" && change.price_change === 0);
-    return matchesSearch && matchesPosition && matchesChangeType;
-  }) : [];
+  const filteredAndSortedChanges = Array.isArray(priceChanges) ? priceChanges
+    .filter((change: PriceChange) => {
+      const matchesSearch = change.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           change.team_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesPosition = positionFilter === "all" || change.position === positionFilter;
+      const matchesChangeType = changeTypeFilter === "all" || 
+                               (changeTypeFilter === "rises" && change.price_change > 0) ||
+                               (changeTypeFilter === "falls" && change.price_change < 0) ||
+                               (changeTypeFilter === "active" && change.price_change === 0);
+      return matchesSearch && matchesPosition && matchesChangeType;
+    })
+    .sort((a: PriceChange, b: PriceChange) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+      
+      // Handle string comparison for dates and names
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        const result = aValue.localeCompare(bValue);
+        return sortDirection === 'asc' ? result : -result;
+      }
+      
+      // Handle numeric comparison
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        const result = aValue - bValue;
+        return sortDirection === 'asc' ? result : -result;
+      }
+      
+      return 0;
+    }) : [];
 
   // Calculate comprehensive season statistics
   const getSeasonStats = () => {
@@ -327,29 +360,124 @@ export default function RecentPriceChanges() {
                   </div>
                 ))}
               </div>
-            ) : filteredChanges.length > 0 ? (
+            ) : filteredAndSortedChanges.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/20">
-                      <th className="text-left p-3 font-medium">Player</th>
-                      <th className="text-left p-3 font-medium">Team</th>
-                      <th className="text-left p-3 font-medium">Position</th>
-                      <th className="text-right p-3 font-medium">Old Price</th>
-                      <th className="text-right p-3 font-medium">Price Change</th>
-                      <th className="text-right p-3 font-medium">Current Price</th>
-                      <th className="text-right p-3 font-medium">Net Transfers (GW)</th>
-                      <th className="text-right p-3 font-medium">Net Transfers (Season)</th>
-                      <th className="text-right p-3 font-medium">Date</th>
+                      <th 
+                        className="text-left p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => handleSort('change_date')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Date
+                          {sortField === 'change_date' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-left p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => handleSort('player_name')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Player
+                          {sortField === 'player_name' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-left p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => handleSort('team_name')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Team
+                          {sortField === 'team_name' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-left p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => handleSort('position')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Position
+                          {sortField === 'position' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => handleSort('old_price')}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          Old Price
+                          {sortField === 'old_price' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => handleSort('price_change')}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          Price Change
+                          {sortField === 'price_change' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => handleSort('current_price')}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          Current Price
+                          {sortField === 'current_price' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => handleSort('transfers_in_gw')}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          Net Transfers (GW)
+                          {sortField === 'transfers_in_gw' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => handleSort('transfers_in')}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          Net Transfers (Season)
+                          {sortField === 'transfers_in' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          )}
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredChanges.map((change: PriceChange, index: number) => (
+                    {filteredAndSortedChanges.map((change: PriceChange, index: number) => (
                       <tr 
                         key={`${change.player_id}-${index}`}
                         className="border-b hover:bg-muted/50 transition-colors"
                         data-testid={`price-change-${change.player_id}`}
                       >
+                        <td className="p-3">
+                          <div className="text-sm text-muted-foreground">
+                            {new Date(change.change_date).toLocaleDateString()}
+                          </div>
+                        </td>
                         <td className="p-3">
                           <div className="flex items-center gap-2">
                             {change.price_change > 0 ? (
@@ -399,13 +527,6 @@ export default function RecentPriceChanges() {
                               return `${sign}${(seasonNet/1000).toFixed(0)}k`;
                             })()}
                           </div>
-                        </td>
-                        <td className="p-3 text-right text-sm text-muted-foreground">
-                          {new Date(change.change_date).toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: '2-digit'
-                          })}
                         </td>
                       </tr>
                     ))}

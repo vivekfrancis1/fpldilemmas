@@ -16,11 +16,11 @@ export class PriceScheduler {
   }
 
   private startScheduler() {
-    // Calculate time until next 7:30 AM IST
-    const nextRun = this.getNext730AMIST();
+    // Calculate time until next 7:05 AM IST
+    const nextRun = this.getNext705AMIST();
     const timeUntilRun = nextRun.getTime() - Date.now();
     
-    console.log(`Next price data fetch scheduled for: ${nextRun.toISOString()} (IST 7:30 AM)`);
+    console.log(`Next price data fetch scheduled for: ${nextRun.toISOString()} (IST 7:05 AM)`);
     
     // Set initial timeout
     setTimeout(() => {
@@ -33,15 +33,15 @@ export class PriceScheduler {
     }, timeUntilRun);
   }
 
-  private getNext730AMIST(): Date {
+  private getNext705AMIST(): Date {
     const now = new Date();
     const istNow = new Date(now.getTime() + IST_OFFSET);
     
-    // Create target time: 7:30 AM IST today
+    // Create target time: 7:05 AM IST today
     const target = new Date(istNow);
-    target.setHours(7, 30, 0, 0);
+    target.setHours(7, 5, 0, 0);
     
-    // If we've already passed 7:30 AM IST today, schedule for tomorrow
+    // If we've already passed 7:05 AM IST today, schedule for tomorrow
     if (istNow.getTime() >= target.getTime()) {
       target.setDate(target.getDate() + 1);
     }
@@ -182,7 +182,7 @@ export class PriceScheduler {
    * Get scheduler status
    */
   getStatus(): { isRunning: boolean; nextRun: string } {
-    const nextRun = this.getNext730AMIST();
+    const nextRun = this.getNext705AMIST();
     return {
       isRunning: this.isRunning,
       nextRun: nextRun.toISOString()
