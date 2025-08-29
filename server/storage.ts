@@ -1085,9 +1085,34 @@ export class DatabaseStorage implements IStorage {
               totalSeasonChange: playerData.totalSeasonChange
             };
             
-            priceChangesToAdd.push(priceChange);
-            const changeType = playerData.totalSeasonChange > 0 ? "RISE" : "FALL";
-            console.log(`🔄 SEASON ${changeType}: ${playerData.playerName} (${originalPrice} → ${playerData.price}) = ${playerData.totalSeasonChange > 0 ? '+' : ''}${playerData.totalSeasonChange}`);
+            // Split 0.2 changes into two 0.1 changes
+            if (Math.abs(playerData.totalSeasonChange) === 2) {
+              const direction = playerData.totalSeasonChange > 0 ? 1 : -1;
+              const midPrice = originalPrice + direction;
+              
+              // First 0.1 change
+              const firstChange: InsertPriceChange = {
+                ...priceChange,
+                newPrice: midPrice,
+                priceChange: direction
+              };
+              priceChangesToAdd.push(firstChange);
+              
+              // Second 0.1 change
+              const secondChange: InsertPriceChange = {
+                ...priceChange,
+                oldPrice: midPrice,
+                priceChange: direction
+              };
+              priceChangesToAdd.push(secondChange);
+              
+              const changeType = playerData.totalSeasonChange > 0 ? "RISE" : "FALL";
+              console.log(`🔄 SEASON ${changeType} (SPLIT): ${playerData.playerName} (${originalPrice} → ${midPrice} → ${playerData.price}) = 2x${direction > 0 ? '+' : ''}0.1`);
+            } else {
+              priceChangesToAdd.push(priceChange);
+              const changeType = playerData.totalSeasonChange > 0 ? "RISE" : "FALL";
+              console.log(`🔄 SEASON ${changeType}: ${playerData.playerName} (${originalPrice} → ${playerData.price}) = ${playerData.totalSeasonChange > 0 ? '+' : ''}${playerData.totalSeasonChange}`);
+            }
           }
         }
         
@@ -1124,9 +1149,34 @@ export class DatabaseStorage implements IStorage {
               totalSeasonChange: playerData.totalSeasonChange
             };
             
-            priceChangesToAdd.push(priceChange);
-            const changeType = actualPriceChange > 0 ? "RISE" : "FALL";
-            console.log(`💰 ${changeType}: ${playerData.playerName} (table: ${latestRecordedPrice.price} → current: ${playerData.price}) = ${actualPriceChange > 0 ? '+' : ''}${actualPriceChange}`);
+            // Split 0.2 changes into two 0.1 changes
+            if (Math.abs(actualPriceChange) === 2) {
+              const direction = actualPriceChange > 0 ? 1 : -1;
+              const midPrice = latestRecordedPrice.price + direction;
+              
+              // First 0.1 change
+              const firstChange: InsertPriceChange = {
+                ...priceChange,
+                newPrice: midPrice,
+                priceChange: direction
+              };
+              priceChangesToAdd.push(firstChange);
+              
+              // Second 0.1 change
+              const secondChange: InsertPriceChange = {
+                ...priceChange,
+                oldPrice: midPrice,
+                priceChange: direction
+              };
+              priceChangesToAdd.push(secondChange);
+              
+              const changeType = actualPriceChange > 0 ? "RISE" : "FALL";
+              console.log(`💰 ${changeType} (SPLIT): ${playerData.playerName} (${latestRecordedPrice.price} → ${midPrice} → ${playerData.price}) = 2x${direction > 0 ? '+' : ''}0.1`);
+            } else {
+              priceChangesToAdd.push(priceChange);
+              const changeType = actualPriceChange > 0 ? "RISE" : "FALL";
+              console.log(`💰 ${changeType}: ${playerData.playerName} (table: ${latestRecordedPrice.price} → current: ${playerData.price}) = ${actualPriceChange > 0 ? '+' : ''}${actualPriceChange}`);
+            }
           }
         }
       }
@@ -1136,6 +1186,17 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error detecting price changes:", error);
       return [];
+    }
+  }
+
+  async clearPriceChanges(): Promise<void> {
+    try {
+      console.log("🗑️ Clearing all price changes data...");
+      await db.delete(priceChanges);
+      console.log("✅ All price changes data cleared");
+    } catch (error) {
+      console.error("Error clearing price changes:", error);
+      throw error;
     }
   }
 
