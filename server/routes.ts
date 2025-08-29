@@ -858,6 +858,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual trigger for price split worker (checks for and splits 0.2 changes)
+  app.post("/api/price-changes/trigger-split-check", async (req, res) => {
+    try {
+      console.log("🔄 Manual price split check triggered");
+      const { priceSplitWorker } = await import("./price-split-worker");
+      await priceSplitWorker.triggerManualSplitCheck();
+      res.json({ 
+        success: true, 
+        message: "Price split check completed successfully",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error in manual price split check:", error);
+      res.status(500).json({
+        error: "Failed to perform price split check",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Get price split worker status
+  app.get("/api/price-changes/split-worker-status", async (req, res) => {
+    try {
+      const { priceSplitWorker } = await import("./price-split-worker");
+      const status = priceSplitWorker.getStatus();
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting price split worker status:", error);
+      res.status(500).json({
+        error: "Failed to get worker status",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // One-time import endpoint to seed production database with development data
   app.post("/api/price-changes/import-seed-data", async (req, res) => {
     try {

@@ -1200,6 +1200,17 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async removePriceChange(id: number): Promise<void> {
+    try {
+      console.log(`🗑️ Removing price change with ID: ${id}`);
+      await db.delete(priceChanges).where(eq(priceChanges.id, id));
+      console.log(`✅ Price change removed (ID: ${id})`);
+    } catch (error) {
+      console.error(`Error removing price change ${id}:`, error);
+      throw error;
+    }
+  }
+
 }
 
 // Use database-backed storage with memory fallback
