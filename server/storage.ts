@@ -1,7 +1,7 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type PriceChange, type InsertPriceChange, fplContentCreators, fplCreatorTracking, priceChanges, dailyPlayerPrices } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type PriceChange, type InsertPriceChange, fplContentCreators, fplCreatorTracking, priceChanges } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
-import { eq, sql, inArray, desc, asc } from "drizzle-orm";
+import { eq, sql, inArray, desc } from "drizzle-orm";
 
 export interface IStorage {
   getBootstrapData(): Promise<BootstrapData | undefined>;
@@ -1067,20 +1067,6 @@ export class DatabaseStorage implements IStorage {
             // Calculate original season price
             const originalPrice = playerData.price - playerData.totalSeasonChange;
             
-            // Calculate net percentages based on initial ownership
-            const netTransfersGw = playerData.transfersInGw - playerData.transfersOutGw;
-            const netTransfersSeason = playerData.transfersIn - playerData.transfersOut;
-            
-            // Get initial ownership from transfer tracker (earliest recorded data)
-            const initialOwnership = await this.getInitialOwnership(playerData.playerId);
-            const initialOwnershipGw = initialOwnership || playerData.ownership;
-            const initialOwnershipSeason = initialOwnership || playerData.ownership;
-            
-            // Calculate net percentages (avoid division by zero)
-            // Note: FPL ownership is in percentage, convert to total players (approx 10M players)
-            const netPercentGw = initialOwnershipGw > 0 ? (netTransfersGw / (initialOwnershipGw * 100000)) * 100 : 0;
-            const netPercentSeason = initialOwnershipSeason > 0 ? (netTransfersSeason / (initialOwnershipSeason * 100000)) * 100 : 0;
-
             const priceChange: InsertPriceChange = {
               playerId: playerData.playerId,
               playerName: playerData.playerName,
@@ -1096,9 +1082,7 @@ export class DatabaseStorage implements IStorage {
               transfersOut: playerData.transfersOut,
               transfersInGw: playerData.transfersInGw,
               transfersOutGw: playerData.transfersOutGw,
-              totalSeasonChange: playerData.totalSeasonChange,
-              netPercentGw: netPercentGw.toString(),
-              netPercentSeason: netPercentSeason.toString()
+              totalSeasonChange: playerData.totalSeasonChange
             };
             
             // Split 0.2 changes into two 0.1 changes
@@ -1147,20 +1131,6 @@ export class DatabaseStorage implements IStorage {
           
           // Only record if there's an actual price change (rise or fall)
           if (actualPriceChange !== 0) {
-            // Calculate net percentages for regular price changes
-            const netTransfersGw = playerData.transfersInGw - playerData.transfersOutGw;
-            const netTransfersSeason = playerData.transfersIn - playerData.transfersOut;
-            
-            // Get initial ownership from transfer tracker (earliest recorded data)
-            const initialOwnership = await this.getInitialOwnership(playerData.playerId);
-            const initialOwnershipGw = initialOwnership || playerData.ownership;
-            const initialOwnershipSeason = initialOwnership || playerData.ownership;
-            
-            // Calculate net percentages (avoid division by zero)
-            // Note: FPL ownership is in percentage, convert to total players (approx 10M players)
-            const netPercentGw = initialOwnershipGw > 0 ? (netTransfersGw / (initialOwnershipGw * 100000)) * 100 : 0;
-            const netPercentSeason = initialOwnershipSeason > 0 ? (netTransfersSeason / (initialOwnershipSeason * 100000)) * 100 : 0;
-
             const priceChange: InsertPriceChange = {
               playerId: playerData.playerId,
               playerName: playerData.playerName,
@@ -1176,9 +1146,7 @@ export class DatabaseStorage implements IStorage {
               transfersOut: playerData.transfersOut,
               transfersInGw: playerData.transfersInGw,
               transfersOutGw: playerData.transfersOutGw,
-              totalSeasonChange: playerData.totalSeasonChange,
-              netPercentGw: netPercentGw.toString(),
-              netPercentSeason: netPercentSeason.toString()
+              totalSeasonChange: playerData.totalSeasonChange
             };
             
             // Split 0.2 changes into two 0.1 changes
@@ -1232,7 +1200,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async removePriceChange(id: string): Promise<void> {
+  async removePriceChange(id: number): Promise<void> {
     try {
       console.log(`🗑️ Removing price change with ID: ${id}`);
       await db.delete(priceChanges).where(eq(priceChanges.id, id));
@@ -1240,26 +1208,6 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error removing price change ${id}:`, error);
       throw error;
-    }
-  }
-
-  // Helper method to get initial ownership from transfer tracker
-  async getInitialOwnership(playerId: number): Promise<number | null> {
-    try {
-      const result = await db
-        .select({ ownership: dailyPlayerPrices.ownership })
-        .from(dailyPlayerPrices)
-        .where(eq(dailyPlayerPrices.playerId, playerId))
-        .orderBy(asc(dailyPlayerPrices.recordDate))
-        .limit(1);
-      
-      if (result.length > 0) {
-        return parseFloat(result[0].ownership || "0");
-      }
-      return null;
-    } catch (error) {
-      console.error(`Error fetching initial ownership for player ${playerId}:`, error);
-      return null;
     }
   }
 

@@ -705,8 +705,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transfers_out: change.transfersOut || 0,
         transfers_in_gw: change.transfersInGw || 0,
         transfers_out_gw: change.transfersOutGw || 0,
-        net_percent_gw: parseFloat(change.netPercentGw || "0"),
-        net_percent_season: parseFloat(change.netPercentSeason || "0"),
         is_recent_change: true,
         total_season_change: change.totalSeasonChange || 0
       }));

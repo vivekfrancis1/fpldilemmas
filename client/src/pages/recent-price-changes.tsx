@@ -338,8 +338,8 @@ export default function RecentPriceChanges() {
                       <th className="text-right p-3 font-medium">Old Price</th>
                       <th className="text-right p-3 font-medium">Price Change</th>
                       <th className="text-right p-3 font-medium">Current Price</th>
-                      <th className="text-right p-3 font-medium">Net % GW</th>
-                      <th className="text-right p-3 font-medium">Net % Season</th>
+                      <th className="text-right p-3 font-medium">Net Transfers (GW)</th>
+                      <th className="text-right p-3 font-medium">Net Transfers (Season)</th>
                       <th className="text-right p-3 font-medium">Date</th>
                     </tr>
                   </thead>
@@ -384,18 +384,19 @@ export default function RecentPriceChanges() {
                         <td className="p-3 text-right">
                           <div className="text-xs font-medium">
                             {(() => {
-                              const netPercent = (change as any).net_percent_gw || 0;
-                              const sign = netPercent > 0 ? '+' : '';
-                              return `${sign}${netPercent.toFixed(2)}%`;
+                              const gwNet = (change.transfers_in_gw || 0) - (change.transfers_out_gw || 0);
+                              const sign = gwNet > 0 ? '+' : '';
+                              const formatted = Math.abs(gwNet) >= 1000 ? `${(gwNet/1000).toFixed(0)}k` : gwNet.toString();
+                              return `${sign}${formatted}`;
                             })()}
                           </div>
                         </td>
                         <td className="p-3 text-right">
                           <div className="text-xs font-medium">
                             {(() => {
-                              const netPercent = (change as any).net_percent_season || 0;
-                              const sign = netPercent > 0 ? '+' : '';
-                              return `${sign}${netPercent.toFixed(2)}%`;
+                              const seasonNet = (change.transfers_in || 0) - (change.transfers_out || 0);
+                              const sign = seasonNet > 0 ? '+' : '';
+                              return `${sign}${(seasonNet/1000).toFixed(0)}k`;
                             })()}
                           </div>
                         </td>
