@@ -62,18 +62,18 @@ export class PriceSplitWorker {
     try {
       console.log("🔍 Starting daily price split check at", new Date().toISOString());
       
-      // Get all price changes from database
+      // Get all price changes from database table
       const allPriceChanges = await storage.getPriceChanges(1000);
       
-      // Find any 0.2 changes (price_change = ±2)
+      // Find any 0.2 changes (price_change = ±2) in the database
       const twoPointChanges = allPriceChanges.filter(change => Math.abs(change.priceChange) === 2);
       
       if (twoPointChanges.length === 0) {
-        console.log("✅ No 0.2 price changes found - all changes are properly split");
+        console.log("✅ No 0.2 price changes found in database - all changes are properly split");
         return;
       }
       
-      console.log(`🔄 Found ${twoPointChanges.length} price changes of 0.2 that need splitting`);
+      console.log(`🔄 Found ${twoPointChanges.length} database records with 0.2 price changes that need splitting`);
       
       for (const change of twoPointChanges) {
         await this.splitSinglePriceChange(change);
@@ -82,7 +82,7 @@ export class PriceSplitWorker {
       const endTime = Date.now();
       const duration = (endTime - startTime) / 1000;
       
-      console.log(`✅ Price split check complete: processed ${twoPointChanges.length} splits in ${duration.toFixed(2)}s`);
+      console.log(`✅ Price split check complete: processed ${twoPointChanges.length} database splits in ${duration.toFixed(2)}s`);
       
     } catch (error) {
       console.error("❌ Error during price split check:", error);
@@ -96,10 +96,11 @@ export class PriceSplitWorker {
       const direction = originalChange.priceChange > 0 ? 1 : -1;
       const midPrice = originalChange.oldPrice + direction;
       
-      console.log(`🔄 Splitting ${originalChange.playerName}: ${originalChange.oldPrice} → ${originalChange.newPrice} (change: ${originalChange.priceChange})`);
+      console.log(`🔄 Splitting database record: ${originalChange.playerName} ${originalChange.oldPrice} → ${originalChange.newPrice} (change: ${originalChange.priceChange})`);
       
-      // Remove the original 0.2 change
+      // Remove the original 0.2 change from database
       await storage.removePriceChange(originalChange.id);
+      console.log(`🗑️ Removed original 0.2 change record for ${originalChange.playerName}`);
       
       // Add first 0.1 change
       const firstChange = {
@@ -121,6 +122,7 @@ export class PriceSplitWorker {
       };
       
       await storage.addPriceChange(firstChange);
+      console.log(`➕ Added first 0.1 change: ${originalChange.playerName} (${originalChange.oldPrice} → ${midPrice})`);
       
       // Add second 0.1 change
       const secondChange = {
@@ -130,11 +132,12 @@ export class PriceSplitWorker {
       };
       
       await storage.addPriceChange(secondChange);
+      console.log(`➕ Added second 0.1 change: ${originalChange.playerName} (${midPrice} → ${originalChange.newPrice})`);
       
-      console.log(`✅ Split complete: ${originalChange.playerName} (${originalChange.oldPrice} → ${midPrice} → ${originalChange.newPrice})`);
+      console.log(`✅ Database split complete: ${originalChange.playerName} (${originalChange.oldPrice} → ${midPrice} → ${originalChange.newPrice})`);
       
     } catch (error) {
-      console.error(`❌ Error splitting price change for ${originalChange.playerName}:`, error);
+      console.error(`❌ Error splitting database record for ${originalChange.playerName}:`, error);
     }
   }
 
