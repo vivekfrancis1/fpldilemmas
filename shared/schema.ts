@@ -292,6 +292,8 @@ export const priceChanges = pgTable("price_changes", {
   transfersInGw: integer("transfers_in_gw").default(0), // Gameweek transfers in
   transfersOutGw: integer("transfers_out_gw").default(0), // Gameweek transfers out
   totalSeasonChange: integer("total_season_change").default(0), // Total change from season start
+  netPercentGw: decimal("net_percent_gw", { precision: 6, scale: 2 }), // Net transfers as % of initial GW ownership
+  netPercentSeason: decimal("net_percent_season", { precision: 6, scale: 2 }), // Net transfers as % of initial season ownership
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_price_changes_player").on(table.playerId),
