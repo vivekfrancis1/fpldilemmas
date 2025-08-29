@@ -287,6 +287,16 @@ export default function RecentPriceChanges() {
           </Alert>
         )}
 
+        {/* Info message for new databases */}
+        {!isLoadingChanges && Array.isArray(priceChanges) && priceChanges.length === 0 && (
+          <Alert className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              No price changes recorded yet. Click "Refresh from FPL API" to initialize the database with season price changes.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Recent Price Changes */}
         <Card>
           <CardHeader>

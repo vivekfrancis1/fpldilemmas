@@ -1052,6 +1052,46 @@ export class DatabaseStorage implements IStorage {
       const priceChangesToAdd: InsertPriceChange[] = [];
       const today = new Date().toISOString().split('T')[0];
       
+      // Check if this is the first run (empty price_changes table)
+      const existingChanges = await this.getPriceChanges(1);
+      const isFirstRun = existingChanges.length === 0;
+      
+      if (isFirstRun) {
+        console.log("🌱 First run detected - initializing price changes table with season data");
+        
+        // Initialize with all players who have had price changes this season
+        for (const playerData of currentPrices) {
+          if (playerData.totalSeasonChange !== 0) {
+            // Calculate original season price
+            const originalPrice = playerData.price - playerData.totalSeasonChange;
+            
+            const priceChange: InsertPriceChange = {
+              playerId: playerData.playerId,
+              playerName: playerData.playerName,
+              teamId: playerData.teamId || null,
+              teamName: playerData.teamName || null,
+              position: playerData.position || null,
+              oldPrice: originalPrice,
+              newPrice: playerData.price,
+              priceChange: playerData.totalSeasonChange,
+              changeDate: today,
+              ownership: playerData.ownership.toString(),
+              transfersIn: playerData.transfersIn,
+              transfersOut: playerData.transfersOut,
+              totalSeasonChange: playerData.totalSeasonChange
+            };
+            
+            priceChangesToAdd.push(priceChange);
+            const changeType = playerData.totalSeasonChange > 0 ? "RISE" : "FALL";
+            console.log(`🔄 SEASON ${changeType}: ${playerData.playerName} (${originalPrice} → ${playerData.price}) = ${playerData.totalSeasonChange > 0 ? '+' : ''}${playerData.totalSeasonChange}`);
+          }
+        }
+        
+        console.log(`✅ Initialized with ${priceChangesToAdd.length} season price changes`);
+        return priceChangesToAdd;
+      }
+      
+      // Regular price change detection for subsequent runs
       for (const playerData of currentPrices) {
         // Get the player's last recorded price from our price_changes table
         const latestRecordedPrice = await this.getLatestPlayerPrice(playerData.playerId);
@@ -1082,9 +1122,6 @@ export class DatabaseStorage implements IStorage {
             const changeType = actualPriceChange > 0 ? "RISE" : "FALL";
             console.log(`💰 ${changeType}: ${playerData.playerName} (table: ${latestRecordedPrice.price} → current: ${playerData.price}) = ${actualPriceChange > 0 ? '+' : ''}${actualPriceChange}`);
           }
-        } else if (!latestRecordedPrice) {
-          // Player not in our tracking table yet - this is expected behavior now
-          // We only track future changes, not initialize with current season data
         }
       }
       
