@@ -122,8 +122,10 @@ export class PriceScheduler {
           teamName: team?.short_name,
           position: position?.singular_name_short,
           ownership: parseFloat(player.selected_by_percent || "0"),
-          transfersIn: player.transfers_in_event || 0,
-          transfersOut: player.transfers_out_event || 0,
+          transfersIn: player.transfers_in || 0, // Season total transfers
+          transfersOut: player.transfers_out || 0, // Season total transfers
+          transfersInGw: player.transfers_in_event || 0, // Gameweek transfers
+          transfersOutGw: player.transfers_out_event || 0, // Gameweek transfers
           totalSeasonChange: player.cost_change_start || 0
         });
       }

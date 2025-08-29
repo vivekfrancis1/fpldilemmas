@@ -22,6 +22,8 @@ interface PriceChange {
   ownership: number;
   transfers_in: number;
   transfers_out: number;
+  transfers_in_gw: number;
+  transfers_out_gw: number;
   is_recent_change: boolean;
   total_season_change: number;
 }
@@ -331,10 +333,13 @@ export default function RecentPriceChanges() {
                   <thead>
                     <tr className="border-b bg-muted/20">
                       <th className="text-left p-3 font-medium">Player</th>
-                      <th className="text-left p-3 font-medium">Team/Pos</th>
-                      <th className="text-center p-3 font-medium">Price Change</th>
+                      <th className="text-left p-3 font-medium">Team</th>
+                      <th className="text-left p-3 font-medium">Position</th>
+                      <th className="text-right p-3 font-medium">Old Price</th>
+                      <th className="text-right p-3 font-medium">Price Change</th>
                       <th className="text-right p-3 font-medium">Current Price</th>
-                      <th className="text-right p-3 font-medium">Net Transfers</th>
+                      <th className="text-right p-3 font-medium">Net Transfers (GW)</th>
+                      <th className="text-right p-3 font-medium">Net Transfers (Season)</th>
                       <th className="text-right p-3 font-medium">Date</th>
                     </tr>
                   </thead>
@@ -360,36 +365,39 @@ export default function RecentPriceChanges() {
                           </div>
                         </td>
                         <td className="p-3">
-                          <div>
-                            <div className="font-medium text-xs">{change.team_name}</div>
-                            <div className="text-xs text-muted-foreground">{change.position}</div>
-                          </div>
+                          <div className="font-medium text-sm">{change.team_name}</div>
                         </td>
                         <td className="p-3">
-                          {change.price_change !== 0 ? (
-                            <div className="flex items-center justify-center gap-2">
-                              <span className="text-sm text-muted-foreground">
-                                {formatPrice(change.old_price)}
-                              </span>
-                              <span>→</span>
-                              <Badge variant={change.price_change > 0 ? "success" : "destructive"}>
-                                {change.price_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.price_change))}
-                              </Badge>
-                            </div>
-                          ) : (
-                            <Badge variant="secondary">
-                              No Change
-                            </Badge>
-                          )}
+                          <div className="text-sm text-muted-foreground">{change.position}</div>
+                        </td>
+                        <td className="p-3 text-right font-medium">
+                          {formatPrice(change.old_price)}
+                        </td>
+                        <td className="p-3 text-right">
+                          <Badge variant={change.price_change > 0 ? "success" : "destructive"}>
+                            {change.price_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.price_change))}
+                          </Badge>
                         </td>
                         <td className="p-3 text-right font-medium">
                           {formatPrice(change.current_price)}
                         </td>
                         <td className="p-3 text-right">
-                          <div className="text-xs">
-                            <p className="text-green-600">In: {(change.transfers_in/1000).toFixed(0)}k</p>
-                            <p className="text-red-600">Out: {(change.transfers_out/1000).toFixed(0)}k</p>
-                            <p className="font-medium">Net: {((change.transfers_in - change.transfers_out)/1000).toFixed(0)}k</p>
+                          <div className="text-xs font-medium">
+                            {(() => {
+                              const gwNet = (change.transfers_in_gw || 0) - (change.transfers_out_gw || 0);
+                              const sign = gwNet > 0 ? '+' : '';
+                              const formatted = Math.abs(gwNet) >= 1000 ? `${(gwNet/1000).toFixed(0)}k` : gwNet.toString();
+                              return `${sign}${formatted}`;
+                            })()}
+                          </div>
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="text-xs font-medium">
+                            {(() => {
+                              const seasonNet = (change.transfers_in || 0) - (change.transfers_out || 0);
+                              const sign = seasonNet > 0 ? '+' : '';
+                              return `${sign}${(seasonNet/1000).toFixed(0)}k`;
+                            })()}
                           </div>
                         </td>
                         <td className="p-3 text-right text-sm text-muted-foreground">

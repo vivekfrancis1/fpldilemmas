@@ -1045,6 +1045,8 @@ export class DatabaseStorage implements IStorage {
     ownership: number; 
     transfersIn: number; 
     transfersOut: number; 
+    transfersInGw: number; 
+    transfersOutGw: number; 
     totalSeasonChange: number 
   }>): Promise<InsertPriceChange[]> {
     try {
@@ -1078,6 +1080,8 @@ export class DatabaseStorage implements IStorage {
               ownership: playerData.ownership.toString(),
               transfersIn: playerData.transfersIn,
               transfersOut: playerData.transfersOut,
+              transfersInGw: playerData.transfersInGw,
+              transfersOutGw: playerData.transfersOutGw,
               totalSeasonChange: playerData.totalSeasonChange
             };
             
@@ -1115,6 +1119,8 @@ export class DatabaseStorage implements IStorage {
               ownership: playerData.ownership.toString(),
               transfersIn: playerData.transfersIn,
               transfersOut: playerData.transfersOut,
+              transfersInGw: playerData.transfersInGw,
+              transfersOutGw: playerData.transfersOutGw,
               totalSeasonChange: playerData.totalSeasonChange
             };
             

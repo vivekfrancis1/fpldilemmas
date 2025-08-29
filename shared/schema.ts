@@ -287,8 +287,10 @@ export const priceChanges = pgTable("price_changes", {
   priceChange: integer("price_change").notNull(), // Change amount (can be negative)
   changeDate: date("change_date").notNull(), // Date when change was detected
   ownership: decimal("ownership", { precision: 5, scale: 2 }).notNull(), // Ownership at time of change
-  transfersIn: integer("transfers_in").default(0), // Transfers in on change day
-  transfersOut: integer("transfers_out").default(0), // Transfers out on change day
+  transfersIn: integer("transfers_in").default(0), // Season total transfers in
+  transfersOut: integer("transfers_out").default(0), // Season total transfers out
+  transfersInGw: integer("transfers_in_gw").default(0), // Gameweek transfers in
+  transfersOutGw: integer("transfers_out_gw").default(0), // Gameweek transfers out
   totalSeasonChange: integer("total_season_change").default(0), // Total change from season start
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
