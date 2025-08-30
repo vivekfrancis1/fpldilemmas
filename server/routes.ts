@@ -6601,8 +6601,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
 
           
-          // Assists points - assists API uses "gw" prefix
-          const assistsProjected = assistPlayer?.gameweekProjections?.[`gw${gw}`] || 0;
+          // Assists points - assists API uses string keys without "gw" prefix
+          const assistsProjected = assistPlayer?.gameweekProjections?.[gw.toString()] || 0;
           const assistPoints = assistsProjected * pointsSystem.assists[player.position as keyof typeof pointsSystem.assists];
           gwTotal += assistPoints;
           
