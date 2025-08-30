@@ -45,6 +45,7 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Historical Data**: Fetches previous seasons' data from `history_past` field.
 
 ### Feature Specifications
+- **My Dashboard**: Comprehensive FPL overview combining My Live Rank, My Team, and My Leagues in a single tabbed interface. Features overview cards, detailed team analysis, league standings, and performance history with automatic manager ID caching.
 - **Player Projections**: AI-powered projection model for minutes, goals, assists, clean sheets, bonus points, and CBIT% for upcoming weeks. Goals and assists derived from Goal Share and Assist Share tools.
 - **Player Goals Scored Projections**: Individual player goal projections for next 6 gameweeks (GW3-GW8) with 2 decimal precision, showing both 6-gameweek and season totals. Uses same styling and functionality as Team Goals Scored with clickable column headers for sorting.
 - **Match Projections**: Data aggregator displaying projected goals and clean sheet odds for each team by gameweek.

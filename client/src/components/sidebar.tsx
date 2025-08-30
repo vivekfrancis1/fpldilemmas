@@ -35,6 +35,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "My FPL",
       items: [
+        { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview", popular: true },
         { path: "/", label: "My Live Rank", icon: TrendingUp, description: "Real-time FPL rank", popular: false },
         { path: "/my-team", label: "My Team", icon: Users, description: "View your current team", popular: false },
         { path: "/my-leagues", label: "My Leagues", icon: Trophy, description: "League performance analysis", popular: false }
