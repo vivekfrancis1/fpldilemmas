@@ -5071,6 +5071,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player Minutes Projections endpoint - estimates expected minutes and points per game
+  app.get("/api/player-minutes-projections", async (req, res) => {
+    try {
+      // Fetch FPL bootstrap data
+      const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!response.ok) {
+        throw new Error("Failed to fetch FPL bootstrap data");
+      }
+      
+      const bootstrapData = await response.json();
+      const players = bootstrapData.elements;
+      const teams = bootstrapData.teams;
+      const positions = bootstrapData.element_types;
+      
+      // Get current gameweek
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      // Calculate player minutes projections
+      const playerMinutesProjections = players.map((player: any) => {
+        const team = teams.find((t: any) => t.id === player.team);
+        const position = positions.find((p: any) => p.id === player.element_type);
+        
+        // Calculate expected minutes per game based on current performance
+        let expectedMinutesPerGame = 0;
+        let projectedMinutes = 0;
+        let pointsPerGame = 0;
+        let totalProjectedPoints = 0;
+        
+        // Base minutes calculation on current minutes and games played
+        const totalMinutes = player.minutes || 0;
+        const totalGames = Math.max(currentGameweek - 1, 1); // Avoid division by zero
+        const currentMinutesPerGame = totalMinutes / totalGames;
+        
+        // Expected minutes estimation based on current form and role
+        if (currentMinutesPerGame >= 75) {
+          // Regular starter
+          expectedMinutesPerGame = Math.min(88, currentMinutesPerGame * 1.02); // Slight boost for consistent starters
+        } else if (currentMinutesPerGame >= 45) {
+          // Squad rotation player
+          expectedMinutesPerGame = currentMinutesPerGame * 1.0; // Maintain current rate
+        } else if (currentMinutesPerGame >= 20) {
+          // Substitute/impact player
+          expectedMinutesPerGame = Math.min(60, currentMinutesPerGame * 1.15); // Potential for more opportunities
+        } else if (currentMinutesPerGame >= 5) {
+          // Fringe player
+          expectedMinutesPerGame = Math.min(30, currentMinutesPerGame * 1.2); // Small chance for breakthrough
+        } else {
+          // Rarely plays
+          expectedMinutesPerGame = Math.min(10, currentMinutesPerGame * 1.1);
+        }
+        
+        // Adjust based on form and recent performances
+        const form = parseFloat(player.form) || 0;
+        const formAdjustment = Math.max(0.8, Math.min(1.2, 1 + (form - 5) / 20)); // Form adjustment between 0.8-1.2
+        expectedMinutesPerGame *= formAdjustment;
+        
+        // Project minutes for next 6 gameweeks
+        const gameweeksToProject = 6;
+        projectedMinutes = expectedMinutesPerGame * gameweeksToProject;
+        
+        // Calculate points per game based on current total points
+        const totalPoints = player.total_points || 0;
+        pointsPerGame = totalPoints / totalGames;
+        
+        // Adjust points per game based on expected minutes change
+        const minutesRatio = expectedMinutesPerGame / Math.max(currentMinutesPerGame, 1);
+        pointsPerGame *= Math.max(0.5, Math.min(1.5, minutesRatio)); // Cap the adjustment
+        
+        // Calculate total projected points for next 6 gameweeks
+        totalProjectedPoints = pointsPerGame * gameweeksToProject;
+        
+        // Calculate value rating (points per million cost)
+        const cost = player.now_cost / 10; // Convert to millions
+        const valueRating = cost > 0 ? pointsPerGame / cost * 10 : 0; // Scale by 10 for better readability
+        
+        return {
+          playerId: player.id,
+          playerName: player.web_name,
+          teamShort: team?.short_name || 'UNK',
+          position: position?.singular_name || 'Unknown',
+          currentMinutes: totalMinutes,
+          expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
+          projectedMinutes: Math.round(projectedMinutes),
+          pointsPerGame: Math.round(pointsPerGame * 10) / 10,
+          totalProjectedPoints: Math.round(totalProjectedPoints * 10) / 10,
+          form: form,
+          selectedByPercent: parseFloat(player.selected_by_percent) || 0,
+          nowCost: player.now_cost,
+          valueRating: Math.round(valueRating * 10) / 10
+        };
+      })
+      .filter((player: any) => player.expectedMinutesPerGame >= 0) // Include all players
+      .sort((a: any, b: any) => b.pointsPerGame - a.pointsPerGame); // Sort by points per game descending
+      
+      console.log(`DEBUG: Generated minutes projections for ${playerMinutesProjections.length} players`);
+      res.json(playerMinutesProjections);
+    } catch (error) {
+      console.error("Error generating player minutes projections:", error);
+      res.status(500).json({ error: "Failed to generate player minutes projections" });
+    }
+  });
+
   // Predicted Scores endpoint - rounds match projections to whole numbers with outcomes
   app.get("/api/predicted-scores", async (req, res) => {
     try {

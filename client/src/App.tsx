@@ -16,6 +16,7 @@ import AssistShare from "./pages/assist-share";
 import PlayerGoalProjections from "./pages/player-goal-projections";
 import PlayerGoalsScoredProjections from "./pages/player-goals-scored-projections";
 import PlayerAssistProjections from "./pages/player-assist-projections";
+import PlayerMinutes from "./pages/player-minutes";
 import Watchlist from "./pages/watchlist";
 import LiveRank from "./pages/live-rank";
 import MyTeam from "./pages/my-team";
@@ -70,6 +71,7 @@ function Router() {
       <Route path="/predicted-scores" component={PredictedScores} />
       <Route path="/results-projections" component={ResultsProjections} />
       <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
+      <Route path="/player-minutes" component={PlayerMinutes} />
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
       <Route path="/team-goals-against-projections" component={TeamGoalsAgainstProjections} />
       <Route path="/team-assist-projections" component={TeamAssistProjections} />
