@@ -271,7 +271,7 @@ class ProjectionService {
 
       console.log(`DEBUG: Cached ${players.length} player projections in ${duration}ms`);
 
-      // Return in API format
+      // Return in API format with detailed breakdowns
       return players.map(player => ({
         playerId: player.playerId,
         name: player.playerName,
@@ -283,7 +283,20 @@ class ProjectionService {
         gameweekProjections: player.gameweekProjections,
         totalExpectedPoints: player.totalExpectedPoints,
         seasonTotalPoints: player.seasonTotalPoints,
-        averagePerGameweek: player.averagePerGameweek
+        averagePerGameweek: player.averagePerGameweek,
+        // Include detailed point breakdowns for tooltip functionality
+        pointsFromGoals: player.pointsFromGoals,
+        pointsFromAssists: player.pointsFromAssists,
+        pointsFromCleanSheets: player.pointsFromCleanSheets,
+        pointsFromDefensiveContributions: player.pointsFromDefensiveContributions,
+        pointsFromMinutes: player.pointsFromMinutes,
+        pointsFromBonus: player.pointsFromBonus,
+        totalPointsFromGoals: player.totalGoalPoints,
+        totalPointsFromAssists: player.totalAssistPoints,
+        totalPointsFromCleanSheets: player.totalCleanSheetPoints,
+        totalPointsFromDefensiveContributions: player.totalDefensivePoints,
+        totalPointsFromMinutes: player.totalMinutesPoints,
+        totalPointsFromBonus: player.totalBonusPoints
       })).sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
 
     } catch (error) {

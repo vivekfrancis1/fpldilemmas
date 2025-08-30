@@ -507,6 +507,47 @@ export type TeamProjection = typeof teamProjections.$inferSelect;
 export type InsertTeamProjection = typeof teamProjections.$inferInsert;
 export type ProjectionUpdateLog = typeof projectionUpdateLog.$inferSelect;
 
+// Player Contributions - Detailed breakdown of individual player contributions to team totals
+export const playerContributions = pgTable("player_contributions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name").notNull(),
+  teamId: integer("team_id").notNull(),
+  gameweekRange: varchar("gameweek_range").notNull(),
+  season: varchar("season").notNull().default("2025/26"),
+  
+  // Raw projections (goals, assists, etc.)
+  projectedGoals: decimal("projected_goals", { precision: 6, scale: 2 }).notNull().default("0"),
+  projectedAssists: decimal("projected_assists", { precision: 6, scale: 2 }).notNull().default("0"),
+  projectedCleanSheets: decimal("projected_clean_sheets", { precision: 6, scale: 2 }).notNull().default("0"),
+  projectedDefensiveContributions: decimal("projected_defensive_contributions", { precision: 6, scale: 2 }).notNull().default("0"),
+  projectedMinutes: decimal("projected_minutes", { precision: 6, scale: 2 }).notNull().default("0"),
+  projectedBonus: decimal("projected_bonus", { precision: 6, scale: 2 }).notNull().default("0"),
+  
+  // FPL point conversions by category
+  goalsToPoints: decimal("goals_to_points", { precision: 6, scale: 2 }).notNull().default("0"),
+  assistsToPoints: decimal("assists_to_points", { precision: 6, scale: 2 }).notNull().default("0"),
+  cleanSheetsToPoints: decimal("clean_sheets_to_points", { precision: 6, scale: 2 }).notNull().default("0"),
+  defensiveToPoints: decimal("defensive_to_points", { precision: 6, scale: 2 }).notNull().default("0"),
+  minutesToPoints: decimal("minutes_to_points", { precision: 6, scale: 2 }).notNull().default("0"),
+  bonusToPoints: decimal("bonus_to_points", { precision: 6, scale: 2 }).notNull().default("0"),
+  
+  // Team share percentages
+  goalSharePercentage: decimal("goal_share_percentage", { precision: 5, scale: 2 }).default("0"),
+  assistSharePercentage: decimal("assist_share_percentage", { precision: 5, scale: 2 }).default("0"),
+  
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_player_contributions_player").on(table.playerId),
+  index("idx_player_contributions_team").on(table.teamId),
+  index("idx_player_contributions_range").on(table.gameweekRange),
+  uniqueIndex("idx_player_contributions_unique").on(table.playerId, table.gameweekRange, table.season),
+]);
+
+export type PlayerContribution = typeof playerContributions.$inferSelect;
+export type InsertPlayerContribution = typeof playerContributions.$inferInsert;
+
 // Admin settings for Team Goal Projections model
 export const adminGoalProjectionSettings = pgTable("admin_goal_projection_settings", {
   id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
