@@ -922,6 +922,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Database analysis endpoint for investigating discrepancies
+  app.get("/api/price-changes/analysis", async (req, res) => {
+    try {
+      console.log("🔍 Analyzing price changes database...");
+      
+      // Get total count
+      const countResult = await db.execute(sql`SELECT COUNT(*) as count FROM price_changes`);
+      const totalCount = countResult.rows[0]?.count || 0;
+      
+      // Get date range
+      const rangeResult = await db.execute(sql`
+        SELECT 
+          MIN(change_date) as earliest_date,
+          MAX(change_date) as latest_date,
+          COUNT(DISTINCT change_date) as unique_dates
+        FROM price_changes
+      `);
+      const dateInfo = rangeResult.rows[0] || {};
+      
+      // Get recent changes by date
+      const recentByDate = await db.execute(sql`
+        SELECT 
+          change_date,
+          COUNT(*) as changes_count,
+          SUM(CASE WHEN price_change > 0 THEN 1 ELSE 0 END) as price_rises,
+          SUM(CASE WHEN price_change < 0 THEN 1 ELSE 0 END) as price_falls
+        FROM price_changes
+        GROUP BY change_date
+        ORDER BY change_date DESC
+        LIMIT 10
+      `);
+      
+      // Get player with most changes
+      const topPlayersResult = await db.execute(sql`
+        SELECT 
+          player_name,
+          COUNT(*) as change_count,
+          SUM(price_change) as total_change
+        FROM price_changes
+        GROUP BY player_id, player_name
+        ORDER BY change_count DESC
+        LIMIT 5
+      `);
+      
+      console.log(`✅ Analysis complete: ${totalCount} total records`);
+      res.json({
+        environment: process.env.NODE_ENV || 'unknown',
+        total_records: totalCount,
+        date_range: {
+          earliest: dateInfo.earliest_date,
+          latest: dateInfo.latest_date,
+          unique_dates: dateInfo.unique_dates
+        },
+        recent_changes_by_date: recentByDate.rows,
+        most_changed_players: topPlayersResult.rows,
+        analysis_timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error("❌ Error analyzing price changes:", error);
+      res.status(500).json({
+        error: "Analysis failed",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Manual price data refresh endpoint for Recent Price Changes page
   app.post("/api/price-changes/refresh", async (req, res) => {
     try {
