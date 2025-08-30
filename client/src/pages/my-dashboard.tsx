@@ -80,18 +80,26 @@ interface TeamPick {
 
 interface TeamData {
   picks: TeamPick[];
-  chips: Array<{
-    name: string;
-    time: string;
+  active_chip: string | null;
+  automatic_subs: Array<{
+    entry: number;
+    element_in: number;
+    element_out: number;
     event: number;
   }>;
-  transfers: {
-    cost: number;
-    status: string;
-    limit: number;
-    made: number;
+  entry_history: {
+    event: number;
+    points: number;
+    total_points: number;
+    rank: number;
+    rank_sort: number;
+    overall_rank: number;
+    percentile_rank: number;
     bank: number;
     value: number;
+    event_transfers: number;
+    event_transfers_cost: number;
+    points_on_bench: number;
   };
 }
 
@@ -153,17 +161,30 @@ interface League {
   code_privacy: string;
 }
 
-interface LeagueData {
-  id: number;
-  name: string;
-  standings: LeagueStanding[];
-  league_type: string;
-  admin_entry: number;
-  started: boolean;
-  code_privacy: string;
-  has_cup: boolean;
-  cup_league?: number;
-  rank?: number;
+interface LeagueResponse {
+  classic: Array<{
+    id: number;
+    name: string;
+    short_name: string;
+    created: string;
+    closed: boolean;
+    max_entries: number | null;
+    league_type: string;
+    admin_entry: number | null;
+    start_event: number;
+    entry_can_leave: boolean;
+    entry_can_admin: boolean;
+    entry_can_invite: boolean;
+    has_cup: boolean;
+    cup_league: number | null;
+    cup_qualified: boolean | null;
+    rank_count: number | null;
+    entry_percentile_rank: number | null;
+    entry_rank: number;
+    entry_last_rank: number;
+  }>;
+  h2h: any[];
+  cup: any;
 }
 
 interface LeagueStanding {
@@ -229,7 +250,7 @@ export default function MyDashboard() {
     enabled: !!searchedId,
   });
 
-  const { data: leaguesData, isLoading: isLoadingLeagues, error: leaguesError } = useQuery<LeagueData[]>({
+  const { data: leaguesData, isLoading: isLoadingLeagues, error: leaguesError } = useQuery<LeagueResponse>({
     queryKey: ["/api/manager", searchedId, "leagues"],
     enabled: !!searchedId,
   });
@@ -312,11 +333,8 @@ export default function MyDashboard() {
   };
 
   const getTeamValue = () => {
-    if (!teamData?.picks || !bootstrapData?.elements) return 0;
-    return teamData.picks.reduce((total, pick) => {
-      const player = bootstrapData.elements.find(p => p.id === pick.element);
-      return total + (player?.now_cost || 0);
-    }, 0) / 10;
+    if (!teamData?.entry_history?.value) return 0;
+    return teamData.entry_history.value / 10;
   };
 
   const isLoading = isLoadingManager || isLoadingHistory || isLoadingTeam || isLoadingLeagues;
@@ -499,7 +517,7 @@ export default function MyDashboard() {
 
             {/* Team Tab */}
             <TabsContent value="team" className="space-y-6">
-              {teamData && teamData.transfers && (
+              {teamData && teamData.entry_history && (
                 <>
                   {/* Team Stats */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -520,7 +538,7 @@ export default function MyDashboard() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-muted-foreground">In the Bank</p>
-                            <p className="text-2xl font-bold">£{((teamData.transfers?.bank || 0) / 10).toFixed(1)}m</p>
+                            <p className="text-2xl font-bold">£{((teamData.entry_history?.bank || 0) / 10).toFixed(1)}m</p>
                           </div>
                           <Target className="h-8 w-8 text-blue-500" />
                         </div>
@@ -532,7 +550,7 @@ export default function MyDashboard() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-muted-foreground">Transfers Made</p>
-                            <p className="text-2xl font-bold">{teamData.transfers?.made || 0}/{teamData.transfers?.limit || 0}</p>
+                            <p className="text-2xl font-bold">{teamData.entry_history?.event_transfers || 0}/1</p>
                           </div>
                           <Users className="h-8 w-8 text-purple-500" />
                         </div>
@@ -613,9 +631,9 @@ export default function MyDashboard() {
 
             {/* Leagues Tab */}
             <TabsContent value="leagues" className="space-y-6">
-              {leaguesData && leaguesData.length > 0 ? (
+              {leaguesData && leaguesData.classic && leaguesData.classic.length > 0 ? (
                 <div className="space-y-6">
-                  {leaguesData.map((league) => (
+                  {leaguesData.classic.filter(league => league.entry_rank > 0).map((league) => (
                     <Card key={league.id}>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -623,51 +641,42 @@ export default function MyDashboard() {
                           {league.name}
                         </CardTitle>
                         <CardDescription>
-                          {league.league_type === 'x' ? 'Classic League' : 'Head-to-Head League'}
+                          {league.league_type === 'x' ? 'Classic League' : 'System League'} • {league.rank_count?.toLocaleString()} entries
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          {league.standings.slice(0, 10).map((entry, index) => (
-                            <div 
-                              key={entry.entry} 
-                              className={`flex items-center justify-between p-3 rounded-lg border ${
-                                entry.entry.toString() === searchedId ? 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800' : ''
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Badge variant={entry.entry.toString() === searchedId ? 'default' : 'secondary'}>
-                                  #{entry.rank}
-                                </Badge>
-                                <div>
-                                  <div className="font-medium">
-                                    {entry.player_name}
-                                    {entry.entry.toString() === searchedId && (
-                                      <span className="text-blue-600 ml-2 text-sm">(You)</span>
-                                    )}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {entry.entry_name}
-                                  </div>
+                          <div className="flex items-center justify-between p-3 rounded-lg border bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                            <div className="flex items-center gap-3">
+                              <Badge variant="default">
+                                #{league.entry_rank.toLocaleString()}
+                              </Badge>
+                              <div>
+                                <div className="font-medium">
+                                  Your Position
+                                  <span className="text-blue-600 ml-2 text-sm">(You)</span>
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {league.entry_percentile_rank}th percentile
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <div className="font-medium">{entry.total.toLocaleString()} pts</div>
-                                {entry.rank !== entry.last_rank && (
-                                  <div className={`flex items-center text-xs ${
-                                    entry.rank < entry.last_rank ? 'text-green-600' : 'text-red-600'
-                                  }`}>
-                                    {entry.rank < entry.last_rank ? (
-                                      <ChevronUp className="h-3 w-3" />
-                                    ) : (
-                                      <ChevronDown className="h-3 w-3" />
-                                    )}
-                                    {Math.abs(entry.rank - entry.last_rank)}
-                                  </div>
-                                )}
-                              </div>
                             </div>
-                          ))}
+                            <div className="text-right">
+                              <div className="font-medium">{managerData?.summary_overall_points.toLocaleString()} pts</div>
+                              {league.entry_rank !== league.entry_last_rank && (
+                                <div className={`flex items-center text-xs ${
+                                  league.entry_rank < league.entry_last_rank ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {league.entry_rank < league.entry_last_rank ? (
+                                    <ChevronUp className="h-3 w-3" />
+                                  ) : (
+                                    <ChevronDown className="h-3 w-3" />
+                                  )}
+                                  {Math.abs(league.entry_rank - league.entry_last_rank)}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
