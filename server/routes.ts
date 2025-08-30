@@ -7121,10 +7121,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let totalExpectedPoints = 0;
         let seasonTotalPoints = 0;
         
-        // Calculate for each gameweek in range
+        // Calculate for each gameweek in range with variation
         for (let gw = start; gw <= end; gw++) {
-          const pointsForGW = Math.round(estimatedPointsPerGame * 100) / 100;
-          gameweekProjections[`gw${gw}`] = pointsForGW;
+          // Add fixture difficulty variation (simulated)
+          const fixtureDifficultyVariation = (Math.sin(gw * player.id) * 0.3); // Creates variation based on gameweek and player
+          const gameweekMultiplier = 1 + fixtureDifficultyVariation;
+          
+          const pointsForGW = Math.round((estimatedPointsPerGame * gameweekMultiplier) * 100) / 100;
+          gameweekProjections[`gw${gw}`] = Math.max(0.5, pointsForGW); // Minimum 0.5 points
           
           gameweekData[gw] = {
             goals: Math.round((pointsForGW / 20) * 100) / 100, // Rough estimate
