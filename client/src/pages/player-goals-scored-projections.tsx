@@ -327,7 +327,7 @@ export default function PlayerGoalsScoredProjections() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 sticky left-0 bg-white border-r border-gray-200">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 sticky left-0 bg-white border-r border-gray-200 z-10">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -427,7 +427,7 @@ export default function PlayerGoalsScoredProjections() {
                     
                     return (
                       <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
-                        <td className="py-3 px-4 sticky left-0 bg-inherit border-r border-gray-200">
+                        <td className="py-3 px-4 sticky left-0 bg-white border-r border-gray-200 z-10">
                           <div className="font-semibold text-gray-900">
                             {player.playerName}
                           </div>
@@ -469,7 +469,7 @@ export default function PlayerGoalsScoredProjections() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-gray-200 bg-blue-50">
-                    <td className="py-3 px-4 font-bold text-gray-900" colSpan={3}>
+                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-blue-50 border-r border-gray-200 z-10" colSpan={3}>
                       6 GW TOTAL
                     </td>
                     {next6Gameweeks.map(gw => (
@@ -485,7 +485,7 @@ export default function PlayerGoalsScoredProjections() {
                     </td>
                   </tr>
                   <tr className="border-t border-gray-200 bg-green-50">
-                    <td className="py-3 px-4 font-bold text-gray-900" colSpan={3}>
+                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-green-50 border-r border-gray-200 z-10" colSpan={3}>
                       SEASON TOTAL
                     </td>
                     {next6Gameweeks.map(gw => (
