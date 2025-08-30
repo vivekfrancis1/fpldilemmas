@@ -687,8 +687,8 @@ export default function MyDashboard() {
                     <CardContent className="p-4 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-blue-600 mb-1 sm:mb-2">Total Points</p>
-                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900">{managerData.summary_overall_points.toLocaleString()}</p>
+                          <p className="text-xs font-medium text-blue-600 mb-1">Total Points</p>
+                          <p className="text-lg sm:text-xl font-bold text-blue-900">{managerData.summary_overall_points.toLocaleString()}</p>
                         </div>
                         <div className="p-1.5 bg-blue-100 rounded-full flex-shrink-0">
                           <Target className="h-4 w-4 text-blue-600" />
@@ -702,10 +702,10 @@ export default function MyDashboard() {
                     <CardContent className="p-4 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-amber-600 mb-1 sm:mb-2">Overall Rank</p>
-                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-amber-900">{formatRank(managerData.summary_overall_rank)}</p>
+                          <p className="text-xs font-medium text-amber-600 mb-1">Overall Rank</p>
+                          <p className="text-lg sm:text-xl font-bold text-amber-900">{formatRank(managerData.summary_overall_rank)}</p>
                           {getRankChange() !== null && (
-                            <div className={`flex items-center text-xs sm:text-sm mt-1 sm:mt-2 ${getRankChange()! > 0 ? 'text-green-600' : getRankChange()! < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                            <div className={`flex items-center text-xs mt-1 ${getRankChange()! > 0 ? 'text-green-600' : getRankChange()! < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                               {getRankChange()! > 0 ? (
                                 <TrendingUp className="h-3 w-3 mr-1 flex-shrink-0" />
                               ) : getRankChange()! < 0 ? (
@@ -729,9 +729,9 @@ export default function MyDashboard() {
                     <CardContent className="p-4 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-green-600 mb-1 sm:mb-2">GW Points</p>
-                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900">{managerData.summary_event_points}</p>
-                          <p className="text-xs sm:text-sm text-green-600 font-medium mt-1">
+                          <p className="text-xs font-medium text-green-600 mb-1">GW Points</p>
+                          <p className="text-lg sm:text-xl font-bold text-green-900">{managerData.summary_event_points}</p>
+                          <p className="text-xs text-green-600 font-medium mt-1">
                             GW{managerData.current_event}
                           </p>
                         </div>
@@ -747,8 +747,8 @@ export default function MyDashboard() {
                     <CardContent className="p-4 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-purple-600 mb-1 sm:mb-2">GW Rank</p>
-                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900">{formatRank(managerData.summary_event_rank)}</p>
+                          <p className="text-xs font-medium text-purple-600 mb-1">GW Rank</p>
+                          <p className="text-lg sm:text-xl font-bold text-purple-900">{formatRank(managerData.summary_event_rank)}</p>
                         </div>
                         <div className="p-1.5 bg-purple-100 rounded-full flex-shrink-0">
                           <Calendar className="h-4 w-4 text-purple-600" />
