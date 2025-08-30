@@ -4103,7 +4103,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const totalShare = finalPlayerShares.reduce((sum, p) => sum + p.assistShare, 0);
           if (totalShare > 0 && finalPlayerShares.length > 0) {
             finalPlayerShares.forEach(player => {
-              player.assistShare = (player.assistShare / totalShare) * 100;
+              // First normalize to 100%
+              let normalizedShare = (player.assistShare / totalShare) * 100;
+              
+              // Apply position caps again AFTER normalization to prevent unrealistic individual shares
+              const getPositionShareCap = (position: string): number => {
+                switch (position.toLowerCase()) {
+                  case 'goalkeeper': return 2; // Max 2% share for GKs
+                  case 'defender': return 15; // Max 15% share for defenders
+                  case 'midfielder': return 35; // Max 35% share for midfielders
+                  case 'forward': return 25; // Max 25% share for forwards
+                  default: return 20;
+                }
+              };
+              
+              const positionShareCap = getPositionShareCap(player.position);
+              const finalCappedShare = Math.min(normalizedShare, positionShareCap);
+              
+              if (finalCappedShare !== normalizedShare) {
+                console.log(`DEBUG: Post-normalization cap applied to ${player.name}: ${normalizedShare.toFixed(1)}% → ${finalCappedShare.toFixed(1)}% (${player.position} cap: ${positionShareCap}%)`);
+              }
+              
+              player.assistShare = finalCappedShare;
               const projectedAssists = (teamSeasonTotals[teamId].expectedAssists * player.assistShare / 100);
               
               teamSeasonTotals[teamId].players[player.id] = {
