@@ -232,6 +232,7 @@ import {
   jsonb,
   varchar,
   index,
+  uniqueIndex,
   date,
 } from "drizzle-orm/pg-core";
 
@@ -408,6 +409,103 @@ export const fplTeams = pgTable("fpl_teams", {
 
 export type FplTeam = typeof fplTeams.$inferSelect;
 export type InsertFplTeam = typeof fplTeams.$inferInsert;
+
+// Player Projections Cache - Stores pre-calculated projections for fast retrieval
+export const playerProjections = pgTable("player_projections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name").notNull(),
+  teamId: integer("team_id").notNull(),
+  teamName: varchar("team_name").notNull(),
+  position: varchar("position").notNull(),
+  elementType: integer("element_type").notNull(), // 1=GK, 2=DEF, 3=MID, 4=FWD
+  
+  // Current season data (from FPL API)
+  currentPrice: integer("current_price").notNull(), // Price in tenths (e.g., 75 = £7.5m)
+  ownership: decimal("ownership", { precision: 5, scale: 2 }).notNull(),
+  
+  // Gameweek-specific projections (stored as JSON for flexibility)
+  goalProjections: jsonb("goal_projections").notNull(), // {gw4: 0.15, gw5: 0.22, ...}
+  assistProjections: jsonb("assist_projections").notNull(),
+  cleanSheetProjections: jsonb("clean_sheet_projections").notNull(),
+  minutesProjections: jsonb("minutes_projections").notNull(),
+  defensiveProjections: jsonb("defensive_projections").notNull(),
+  totalPointsProjections: jsonb("total_points_projections").notNull(),
+  
+  // Summary stats for quick access
+  totalGoals: decimal("total_goals", { precision: 5, scale: 2 }).notNull(),
+  totalAssists: decimal("total_assists", { precision: 5, scale: 2 }).notNull(),
+  totalPoints: decimal("total_points", { precision: 6, scale: 2 }).notNull(),
+  averagePointsPerGameweek: decimal("average_points_per_gameweek", { precision: 5, scale: 2 }).notNull(),
+  seasonProjectedPoints: integer("season_projected_points").notNull(),
+  
+  // Projection metadata
+  gameweekRange: varchar("gameweek_range").notNull(), // "4-9", "10-15", etc.
+  startGameweek: integer("start_gameweek").notNull(),
+  endGameweek: integer("end_gameweek").notNull(),
+  season: varchar("season").notNull().default("2025/26"),
+  
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_player_projections_player").on(table.playerId),
+  index("idx_player_projections_range").on(table.startGameweek, table.endGameweek),
+  index("idx_player_projections_total_points").on(table.totalPoints),
+  index("idx_player_projections_updated").on(table.lastUpdated),
+  uniqueIndex("idx_player_projections_unique").on(table.playerId, table.startGameweek, table.endGameweek, table.season),
+]);
+
+// Team Projections Cache - Stores team-level projections  
+export const teamProjections = pgTable("team_projections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamId: integer("team_id").notNull(),
+  teamName: varchar("team_name").notNull(),
+  
+  // Gameweek-specific team projections
+  goalProjections: jsonb("goal_projections").notNull(), // {gw4: 1.8, gw5: 2.1, ...}
+  cleanSheetProjections: jsonb("clean_sheet_projections").notNull(), // {gw4: 0.45, gw5: 0.32, ...}
+  goalsAgainstProjections: jsonb("goals_against_projections").notNull(),
+  
+  // Goal/assist share data by position
+  goalShareData: jsonb("goal_share_data").notNull(), // {gw4: {playerId: sharePercentage}, ...}
+  assistShareData: jsonb("assist_share_data").notNull(),
+  
+  // Range metadata
+  gameweekRange: varchar("gameweek_range").notNull(),
+  startGameweek: integer("start_gameweek").notNull(),
+  endGameweek: integer("end_gameweek").notNull(),
+  season: varchar("season").notNull().default("2025/26"),
+  
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_team_projections_team").on(table.teamId),
+  index("idx_team_projections_range").on(table.startGameweek, table.endGameweek),
+  uniqueIndex("idx_team_projections_unique").on(table.teamId, table.startGameweek, table.endGameweek, table.season),
+]);
+
+// Projection Update Log - Track when projections were last calculated
+export const projectionUpdateLog = pgTable("projection_update_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  updateType: varchar("update_type").notNull(), // "player_projections", "team_projections", "full_refresh"
+  gameweekRange: varchar("gameweek_range").notNull(),
+  playersUpdated: integer("players_updated").default(0),
+  teamsUpdated: integer("teams_updated").default(0),
+  duration: integer("duration").notNull(), // Update duration in milliseconds
+  status: varchar("status").notNull(), // "success", "partial", "failed"
+  errorDetails: jsonb("error_details"),
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at").defaultNow(),
+}, (table) => [
+  index("idx_projection_log_type").on(table.updateType),
+  index("idx_projection_log_completed").on(table.completedAt),
+]);
+
+export type PlayerProjection = typeof playerProjections.$inferSelect;
+export type InsertPlayerProjection = typeof playerProjections.$inferInsert;
+export type TeamProjection = typeof teamProjections.$inferSelect;
+export type InsertTeamProjection = typeof teamProjections.$inferInsert;
+export type ProjectionUpdateLog = typeof projectionUpdateLog.$inferSelect;
 
 // Admin settings for Team Goal Projections model
 export const adminGoalProjectionSettings = pgTable("admin_goal_projection_settings", {

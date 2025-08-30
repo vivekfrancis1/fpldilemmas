@@ -5,6 +5,7 @@ import { priceScheduler } from "./price-scheduler";
 import { insertPriceAlertSchema, unifiedProjectionSettings as unifiedProjectionSettingsTable, historicalPlayerStats } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
+import { projectionService } from "./projection-service";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 
@@ -7078,194 +7079,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
       
-      // Check cache first for performance
-      const cacheKey = `total-points-${start}-${end}`;
-      const cached = totalPointsCache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < TOTAL_POINTS_CACHE_DURATION) {
-        console.log(`DEBUG: Serving cached Player Total Points for GW${start}-${end}`);
-        return res.json(cached.data);
-      }
-      
-      console.log(`DEBUG: Computing Player Total Points for GW${start}-${end} - cache miss`);
-      
-      // Fast bootstrap fetch and parallel component data fetching with timeout
+      console.log(`DEBUG: Player Total Points API - using database service for GW${start}-${end}`);
       const startTime = Date.now();
       
-      const fetchWithTimeout = (url: string, timeout = 8000) => {
-        return Promise.race([
-          fetch(url),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
-        ]);
-      };
+      // Use projection service for ultra-fast database lookup
+      const projections = await projectionService.getPlayerTotalPoints(start, end);
       
-      try {
-        const [bootstrapResponse, goalsResponse, assistsResponse, cleanSheetsResponse] = await Promise.all([
-          fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-          fetchWithTimeout(`http://localhost:5000/api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`, 8000),
-          fetchWithTimeout(`http://localhost:5000/api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`, 5000),
-          fetchWithTimeout(`http://localhost:5000/api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`, 5000)
-        ]);
-        
-        if (!bootstrapResponse.ok) {
-          throw new Error("Bootstrap API failed");
-        }
-        
-        const [bootstrapData, goalsData, assistsData, cleanSheetsData] = await Promise.all([
-          bootstrapResponse.json(),
-          goalsResponse.ok ? (goalsResponse as Response).json() : [],
-          assistsResponse.ok ? (assistsResponse as Response).json() : [],
-          cleanSheetsResponse.ok ? (cleanSheetsResponse as Response).json() : []
-        ]);
-        
-        console.log(`DEBUG: Fast fetch completed in ${Date.now() - startTime}ms`);
-        
-        // Streamlined calculation without minutes/defensive data for speed
-        const bootstrapData_typed = bootstrapData as any;
-        const goalsData_typed = goalsData as any[];
-        const assistsData_typed = assistsData as any[];
-        const cleanSheetsData_typed = cleanSheetsData as any[];
-
-        // Create efficient lookup maps
-        const assistsMap = new Map(assistsData_typed.map((p: any) => [p.playerId, p]));
-        const cleanSheetsMap = new Map(cleanSheetsData_typed.map((p: any) => [p.playerId, p]));
-        const fplPlayersMap = new Map(bootstrapData_typed.elements.map((p: any) => [p.id, p]));
-        const fplTeamsMap = new Map(bootstrapData_typed.teams.map((t: any) => [t.id, t]));
-
-        // Simplified scoring system for fast calculation
-        const pointsSystem = {
-          goals: { GKP: 6, DEF: 6, MID: 5, FWD: 4 },
-          assists: { GKP: 3, DEF: 3, MID: 3, FWD: 3 },
-          minutes: 2, // Base appearance points
-          cleanSheet: { GKP: 4, DEF: 4, MID: 1, FWD: 0 }
-        };
-
-        const totalPointsProjections = [];
-
-        // Streamlined calculation using only goals, assists, and clean sheets for speed
-        for (const player of goalsData_typed) {
-          const assistPlayer = assistsMap.get(player.playerId);
-          const cleanSheetPlayer = cleanSheetsMap.get(player.playerId);
-          const fplPlayer = fplPlayersMap.get(player.playerId);
-          const fplTeam = fplPlayer ? fplTeamsMap.get(fplPlayer.team) : null;
-          
-          if (!fplPlayer) continue; // Skip if no FPL data
-
-          const gameweekProjections: { [key: string]: number } = {};
-          let totalExpectedPoints = 0;
-          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][fplPlayer.element_type] || 'MID';
-
-          // Process each gameweek in the range
-          for (let gw = start; gw <= end; gw++) {
-            let gwTotal = 2; // Base minutes points
-
-            // Goals points
-            const goalsProjected = player.gameweekProjections?.[gw.toString()] || 0;
-            const goalPoints = goalsProjected * (pointsSystem.goals[position as keyof typeof pointsSystem.goals] || 4);
-            gwTotal += goalPoints;
-
-            // Assists points
-            const assistsProjected = assistPlayer?.gameweekProjections?.[gw.toString()] || 0;
-            const assistPoints = assistsProjected * (pointsSystem.assists[position as keyof typeof pointsSystem.assists] || 3);
-            gwTotal += assistPoints;
-
-            // Clean sheet points
-            const csPoints = cleanSheetPlayer?.gameweekProjections?.[`gw${gw}`] || 0;
-            gwTotal += csPoints;
-
-            gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;
-            totalExpectedPoints += gwTotal;
-          }
-
-          // Only add players with meaningful projections
-          if (totalExpectedPoints > 2 * (end - start + 1)) { // More than just base minutes
-            const avgPerGameweek = totalExpectedPoints / (end - start + 1);
-            const seasonTotalPoints = Math.round(avgPerGameweek * 38);
-
-            totalPointsProjections.push({
-              playerId: player.playerId,
-              name: fplPlayer.web_name,
-              fullName: `${fplPlayer.first_name} ${fplPlayer.second_name}`,
-              team: fplTeam ? fplTeam.short_name : 'UNK',
-              position,
-              price: fplPlayer.now_cost / 10,
-              ownership: parseFloat(fplPlayer.selected_by_percent),
-              gameweekProjections,
-              totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
-              seasonTotalPoints,
-              averagePerGameweek: Math.round(avgPerGameweek * 100) / 100
-            });
-          }
-        }
-
-        // Sort by total expected points (descending)
-        totalPointsProjections.sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
-
-        // Cache the result for future requests
-        totalPointsCache.set(cacheKey, {
-          data: totalPointsProjections,
-          timestamp: Date.now()
-        });
-
-        console.log(`DEBUG: Generated optimized total points for ${totalPointsProjections.length} players in ${Date.now() - startTime}ms`);
-        res.json(totalPointsProjections);
-        
-      } catch (error) {
-        console.error("Error in fast fetch, falling back to simplified calculation:", error);
-        
-        // Fallback: Use only bootstrap data for basic calculation
-        try {
-          const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-          if (!bootstrapResponse.ok) throw new Error("Bootstrap API failed");
-          
-          const bootstrapData = await bootstrapResponse.json();
-          const fplPlayersMap = new Map(bootstrapData.elements.map((p: any) => [p.id, p]));
-          const fplTeamsMap = new Map(bootstrapData.teams.map((t: any) => [t.id, t]));
-          
-          // Simple calculation using form/ICT from bootstrap
-          const fallbackProjections = bootstrapData.elements
-            .filter((p: any) => parseFloat(p.selected_by_percent) > 0.1) // Only include owned players
-            .slice(0, 100) // Limit to top 100 players
-            .map((fplPlayer: any) => {
-              const fplTeam = fplTeamsMap.get(fplPlayer.team);
-              const gameweekProjections: { [key: string]: number } = {};
-              
-              // Simple form-based projection
-              const basePoints = (fplPlayer.form || 0) * 1.2;
-              let totalExpectedPoints = 0;
-              
-              for (let gw = start; gw <= end; gw++) {
-                gameweekProjections[`gw${gw}`] = basePoints;
-                totalExpectedPoints += basePoints;
-              }
-              
-              return {
-                playerId: fplPlayer.id,
-                name: fplPlayer.web_name,
-                fullName: `${fplPlayer.first_name} ${fplPlayer.second_name}`,
-                team: fplTeam ? fplTeam.short_name : 'UNK',
-                position: ['', 'GKP', 'DEF', 'MID', 'FWD'][fplPlayer.element_type] || 'MID',
-                price: fplPlayer.now_cost / 10,
-                ownership: parseFloat(fplPlayer.selected_by_percent),
-                gameweekProjections,
-                totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
-                seasonTotalPoints: Math.round(totalExpectedPoints * 38 / (end - start + 1)),
-                averagePerGameweek: Math.round(totalExpectedPoints / (end - start + 1) * 100) / 100
-              };
-            })
-            .sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
-          
-          console.log(`DEBUG: Fallback calculation returned ${fallbackProjections.length} players`);
-          res.json(fallbackProjections);
-          
-        } catch (fallbackError) {
-          console.error("Error in fallback calculation:", fallbackError);
-          res.status(500).json({ error: "Failed to generate total points projections" });
-        }
-      }
+      const duration = Date.now() - startTime;
+      console.log(`DEBUG: Served ${projections.length} player projections in ${duration}ms`);
+      
+      res.json(projections);
       
     } catch (error) {
-      console.error("Error generating player total points:", error);
-      res.status(500).json({ error: "Failed to generate total points projections" });
+      console.error("Error in database-backed player total points:", error);
+      res.status(500).json({ error: "Failed to get player total points projections" });
     }
   });
 
