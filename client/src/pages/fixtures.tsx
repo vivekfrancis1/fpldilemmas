@@ -171,14 +171,21 @@ export default function Fixtures() {
   };
 
   // Build fixture matrix with average FDR calculation
-  const { fixtureMatrix, teamAverageFDR } = useMemo(() => {
-    if (!fixturesData || !bootstrapData?.events) return { fixtureMatrix: {}, teamAverageFDR: {} };
+  const { fixtureMatrix, teamAverageFDR, teamAverageAttackingFDR, teamAverageDefensiveFDR } = useMemo(() => {
+    if (!fixturesData || !bootstrapData?.events) return { 
+      fixtureMatrix: {}, 
+      teamAverageFDR: {}, 
+      teamAverageAttackingFDR: {}, 
+      teamAverageDefensiveFDR: {} 
+    };
     
     // Use hardcoded teams for better performance
     const teams = PREMIER_LEAGUE_TEAMS;
 
     const matrix: Record<number, Record<number, { opponent: string, difficulty: number, isHome: boolean, finished: boolean }>> = {};
     const avgFDR: Record<number, number> = {};
+    const avgAttackingFDR: Record<number, number> = {};
+    const avgDefensiveFDR: Record<number, number> = {};
     
     // Initialize matrix
     bootstrapData.teams.forEach(team => {
@@ -211,18 +218,78 @@ export default function Fixtures() {
       }
     });
 
-    // Calculate average FDR for each team
+    // Calculate average FDR for each team (all three types)
     bootstrapData.teams.forEach(team => {
       const teamFixtures = Object.values(matrix[team.id] || {});
       if (teamFixtures.length > 0) {
+        // Original average FDR
         const totalDifficulty = teamFixtures.reduce((sum, fixture) => sum + fixture.difficulty, 0);
         avgFDR[team.id] = parseFloat((totalDifficulty / teamFixtures.length).toFixed(2));
+        
+        // Average Attacking FDR (based on opponent defensive strength)
+        const gameweeks = Object.keys(matrix[team.id]).map(gw => parseInt(gw));
+        let totalAttackingDifficulty = 0;
+        let totalDefensiveDifficulty = 0;
+        let validFixtures = 0;
+        
+        gameweeks.forEach(gw => {
+          const fixture = matrix[team.id][gw];
+          if (fixture) {
+            const opponentId = bootstrapData.teams.find(t => t.short_name === fixture.opponent)?.id;
+            if (opponentId) {
+              // Calculate attacking difficulty (opponent's defensive tier)
+              const opponentDefenseTier = getDefensiveTier(opponentId);
+              const attackingDifficulty = (() => {
+                switch (opponentDefenseTier) {
+                  case 'elite': return 5;
+                  case 'strong': return 4;
+                  case 'average': return 3;
+                  case 'weak': return 2;
+                  case 'promoted': return 1;
+                  default: return 3;
+                }
+              })();
+              
+              // Calculate defensive difficulty (opponent's attacking tier)
+              const opponentAttackTier = getAttackingTier(opponentId);
+              const defensiveDifficulty = (() => {
+                switch (opponentAttackTier) {
+                  case 'elite': return 5;
+                  case 'strong': return 4;
+                  case 'average': return 3;
+                  case 'weak': return 2;
+                  case 'promoted': return 1;
+                  default: return 3;
+                }
+              })();
+              
+              totalAttackingDifficulty += attackingDifficulty;
+              totalDefensiveDifficulty += defensiveDifficulty;
+              validFixtures++;
+            }
+          }
+        });
+        
+        if (validFixtures > 0) {
+          avgAttackingFDR[team.id] = parseFloat((totalAttackingDifficulty / validFixtures).toFixed(2));
+          avgDefensiveFDR[team.id] = parseFloat((totalDefensiveDifficulty / validFixtures).toFixed(2));
+        } else {
+          avgAttackingFDR[team.id] = 0;
+          avgDefensiveFDR[team.id] = 0;
+        }
       } else {
         avgFDR[team.id] = 0;
+        avgAttackingFDR[team.id] = 0;
+        avgDefensiveFDR[team.id] = 0;
       }
     });
 
-    return { fixtureMatrix: matrix, teamAverageFDR: avgFDR };
+    return { 
+      fixtureMatrix: matrix, 
+      teamAverageFDR: avgFDR,
+      teamAverageAttackingFDR: avgAttackingFDR,
+      teamAverageDefensiveFDR: avgDefensiveFDR
+    };
   }, [bootstrapData, fixturesData, gameweekRange]);
 
   const gameweeks = useMemo(() => {
@@ -300,10 +367,17 @@ export default function Fixtures() {
             : b.short_name.localeCompare(a.short_name)
         );
       case 'fdr-avg':
+        // Use different average FDR based on active tab
+        const getAvgFDR = (teamId: number) => {
+          if (activeTab === 'attacking') return teamAverageAttackingFDR[teamId] || 0;
+          if (activeTab === 'defensive') return teamAverageDefensiveFDR[teamId] || 0;
+          return teamAverageFDR[teamId] || 0;
+        };
+        
         return teams.sort((a, b) => 
           sortDirection === 'asc' 
-            ? (teamAverageFDR[a.id] || 0) - (teamAverageFDR[b.id] || 0)
-            : (teamAverageFDR[b.id] || 0) - (teamAverageFDR[a.id] || 0)
+            ? getAvgFDR(a.id) - getAvgFDR(b.id)
+            : getAvgFDR(b.id) - getAvgFDR(a.id)
         );
       case 'fdr-asc':
         return teams.sort((a, b) => (teamAverageFDR[a.id] || 0) - (teamAverageFDR[b.id] || 0));
@@ -337,7 +411,7 @@ export default function Fixtures() {
         }
         return teams.sort((a, b) => a.short_name.localeCompare(b.short_name));
     }
-  }, [fixtureMatrix, teamAverageFDR, sortBy, sortDirection, bootstrapData, activeTab]);
+  }, [fixtureMatrix, teamAverageFDR, teamAverageAttackingFDR, teamAverageDefensiveFDR, sortBy, sortDirection, bootstrapData, activeTab]);
 
   if (error) {
     return (
@@ -642,6 +716,19 @@ export default function Fixtures() {
                               {sortBy !== 'team' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
                             </button>
                           </th>
+                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">
+                            <button
+                              onClick={() => handleSort('fdr-avg')}
+                              className="flex items-center gap-1 hover:text-blue-600 transition-colors mx-auto"
+                              data-testid="sort-avg-fdr-attacking"
+                            >
+                              Avg FDR
+                              {sortBy === 'fdr-avg' && (
+                                sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                              )}
+                              {sortBy !== 'fdr-avg' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                            </button>
+                          </th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
@@ -663,11 +750,22 @@ export default function Fixtures() {
                       </thead>
                       <tbody>
                         {sortedTeams.map(team => {
+                          const avgFDR = teamAverageAttackingFDR[team.id];
                           return (
                             <tr key={team.id} className="border-b hover:bg-gray-50">
                               <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">{team.short_name}</span>
+                                </div>
+                              </td>
+                              <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
+                                <div className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                                  avgFDR <= 2 ? 'bg-green-100 text-green-800' :
+                                  avgFDR <= 3 ? 'bg-yellow-100 text-yellow-800' :
+                                  avgFDR <= 4 ? 'bg-orange-100 text-orange-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {avgFDR > 0 ? avgFDR : '-'}
                                 </div>
                               </td>
                               {gameweeks.map(gw => {
@@ -776,6 +874,19 @@ export default function Fixtures() {
                               {sortBy !== 'team' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
                             </button>
                           </th>
+                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">
+                            <button
+                              onClick={() => handleSort('fdr-avg')}
+                              className="flex items-center gap-1 hover:text-blue-600 transition-colors mx-auto"
+                              data-testid="sort-avg-fdr-defensive"
+                            >
+                              Avg FDR
+                              {sortBy === 'fdr-avg' && (
+                                sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                              )}
+                              {sortBy !== 'fdr-avg' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                            </button>
+                          </th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
@@ -797,11 +908,22 @@ export default function Fixtures() {
                       </thead>
                       <tbody>
                         {sortedTeams.map(team => {
+                          const avgFDR = teamAverageDefensiveFDR[team.id];
                           return (
                             <tr key={team.id} className="border-b hover:bg-gray-50">
                               <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">{team.short_name}</span>
+                                </div>
+                              </td>
+                              <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
+                                <div className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                                  avgFDR <= 2 ? 'bg-green-100 text-green-800' :
+                                  avgFDR <= 3 ? 'bg-yellow-100 text-yellow-800' :
+                                  avgFDR <= 4 ? 'bg-orange-100 text-orange-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {avgFDR > 0 ? avgFDR : '-'}
                                 </div>
                               </td>
                               {gameweeks.map(gw => {
