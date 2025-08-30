@@ -251,50 +251,71 @@ class GameweekCacheService {
    */
   private async insertPlayerGameweekData(data: GameweekPlayerData): Promise<void> {
     try {
-      await pool.query(`
-        INSERT INTO ${gameweekPlayerDataTable} (
-          player_id, gameweek, season, minutes, goals_scored, assists, clean_sheets,
-          goals_conceded, own_goals, penalties_saved, penalties_missed, yellow_cards,
-          red_cards, saves, bonus, bps, total_points, defensive_contribution,
-          tackles, recoveries, clearances_blocks_interceptions, starts,
-          was_home, opponent_team, fixture_id, kickoff_time
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 
-          $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
-        )
-        ON CONFLICT (player_id, gameweek) DO UPDATE SET
-          minutes = EXCLUDED.minutes,
-          goals_scored = EXCLUDED.goals_scored,
-          assists = EXCLUDED.assists,
-          clean_sheets = EXCLUDED.clean_sheets,
-          goals_conceded = EXCLUDED.goals_conceded,
-          own_goals = EXCLUDED.own_goals,
-          penalties_saved = EXCLUDED.penalties_saved,
-          penalties_missed = EXCLUDED.penalties_missed,
-          yellow_cards = EXCLUDED.yellow_cards,
-          red_cards = EXCLUDED.red_cards,
-          saves = EXCLUDED.saves,
-          bonus = EXCLUDED.bonus,
-          bps = EXCLUDED.bps,
-          total_points = EXCLUDED.total_points,
-          defensive_contribution = EXCLUDED.defensive_contribution,
-          tackles = EXCLUDED.tackles,
-          recoveries = EXCLUDED.recoveries,
-          clearances_blocks_interceptions = EXCLUDED.clearances_blocks_interceptions,
-          starts = EXCLUDED.starts,
-          was_home = EXCLUDED.was_home,
-          opponent_team = EXCLUDED.opponent_team,
-          fixture_id = EXCLUDED.fixture_id,
-          kickoff_time = EXCLUDED.kickoff_time,
-          updated_at = NOW()
-      `, [
-        data.playerId, data.gameweek, data.season, data.minutes, data.goals_scored,
-        data.assists, data.clean_sheets, data.goals_conceded, data.own_goals,
-        data.penalties_saved, data.penalties_missed, data.yellow_cards, data.red_cards,
-        data.saves, data.bonus, data.bps, data.total_points, data.defensive_contribution,
-        data.tackles, data.recoveries, data.clearances_blocks_interceptions, data.starts,
-        data.wasHome, data.opponentTeam, data.fixtureId, data.kickoffTime
-      ]);
+      // First check if record exists
+      const existingResult = await pool.query(
+        `SELECT id FROM ${gameweekPlayerDataTable} WHERE player_id = $1 AND gameweek = $2 AND season = $3`,
+        [data.playerId, data.gameweek, data.season]
+      );
+
+      if (existingResult.rows.length > 0) {
+        // Update existing record
+        await pool.query(`
+          UPDATE ${gameweekPlayerDataTable} SET
+            minutes = $4,
+            goals_scored = $5,
+            assists = $6,
+            clean_sheets = $7,
+            goals_conceded = $8,
+            own_goals = $9,
+            penalties_saved = $10,
+            penalties_missed = $11,
+            yellow_cards = $12,
+            red_cards = $13,
+            saves = $14,
+            bonus = $15,
+            bps = $16,
+            total_points = $17,
+            defensive_contribution = $18,
+            tackles = $19,
+            recoveries = $20,
+            clearances_blocks_interceptions = $21,
+            starts = $22,
+            was_home = $23,
+            opponent_team = $24,
+            fixture_id = $25,
+            kickoff_time = $26,
+            updated_at = NOW()
+          WHERE player_id = $1 AND gameweek = $2 AND season = $3
+        `, [
+          data.playerId, data.gameweek, data.season, data.minutes, data.goals_scored,
+          data.assists, data.clean_sheets, data.goals_conceded, data.own_goals,
+          data.penalties_saved, data.penalties_missed, data.yellow_cards, data.red_cards,
+          data.saves, data.bonus, data.bps, data.total_points, data.defensive_contribution,
+          data.tackles, data.recoveries, data.clearances_blocks_interceptions, data.starts,
+          data.wasHome, data.opponentTeam, data.fixtureId, data.kickoffTime
+        ]);
+      } else {
+        // Insert new record
+        await pool.query(`
+          INSERT INTO ${gameweekPlayerDataTable} (
+            player_id, gameweek, season, minutes, goals_scored, assists, clean_sheets,
+            goals_conceded, own_goals, penalties_saved, penalties_missed, yellow_cards,
+            red_cards, saves, bonus, bps, total_points, defensive_contribution,
+            tackles, recoveries, clearances_blocks_interceptions, starts,
+            was_home, opponent_team, fixture_id, kickoff_time
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 
+            $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
+          )
+        `, [
+          data.playerId, data.gameweek, data.season, data.minutes, data.goals_scored,
+          data.assists, data.clean_sheets, data.goals_conceded, data.own_goals,
+          data.penalties_saved, data.penalties_missed, data.yellow_cards, data.red_cards,
+          data.saves, data.bonus, data.bps, data.total_points, data.defensive_contribution,
+          data.tackles, data.recoveries, data.clearances_blocks_interceptions, data.starts,
+          data.wasHome, data.opponentTeam, data.fixtureId, data.kickoffTime
+        ]);
+      }
     } catch (error) {
       console.error("Error inserting player gameweek data:", error);
       throw error;
