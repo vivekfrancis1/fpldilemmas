@@ -1,10 +1,12 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Target, Filter, BarChart3, Trophy } from "lucide-react";
+import { Target, Filter, BarChart3, Trophy, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface PlayerGoalProjection {
   playerId: number;
@@ -22,6 +24,7 @@ export default function PlayerGoalsScoredProjections() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("total");
+  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
 
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -56,25 +59,27 @@ export default function PlayerGoalsScoredProjections() {
           return bValue - aValue;
         }
         
+        const multiplier = sortDirection === 'desc' ? 1 : -1;
+        
         switch (sortBy) {
           case "total": {
             // Calculate next 6 gameweeks total for sorting
             const aPeriodTotal = next6Gameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
             const bPeriodTotal = next6Gameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
-            return bPeriodTotal - aPeriodTotal;
+            return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
-          case "season": return b.totalProjectedGoals - a.totalProjectedGoals;
-          case "name": return a.playerName.localeCompare(b.playerName);
-          case "team": return a.teamName.localeCompare(b.teamName);
-          case "position": return a.position.localeCompare(b.position);
+          case "season": return (b.totalProjectedGoals - a.totalProjectedGoals) * multiplier;
+          case "name": return a.playerName.localeCompare(b.playerName) * multiplier;
+          case "team": return a.teamName.localeCompare(b.teamName) * multiplier;
+          case "position": return a.position.localeCompare(b.position) * multiplier;
           default: {
             const aPeriodTotal = next6Gameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
             const bPeriodTotal = next6Gameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
-            return bPeriodTotal - aPeriodTotal;
+            return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
         }
       });
-  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy, next6Gameweeks]);
+  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy, sortDirection, next6Gameweeks]);
 
   const totalGoals = useMemo(() => {
     if (!filteredProjections.length) return { gameweekTotals: {}, overallTotal: 0, seasonTotal: 0, averagePerGame: 0 };
@@ -117,6 +122,15 @@ export default function PlayerGoalsScoredProjections() {
       name: type.singular_name
     }));
   }, [bootstrapData]);
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortBy(column);
+      setSortDirection('desc');
+    }
+  };
 
   const getGoalsColor = (goals: number) => {
     if (goals >= 2.5) return 'bg-green-50 text-green-800 font-semibold';
@@ -205,10 +219,21 @@ export default function PlayerGoalsScoredProjections() {
                 </Select>
               </div>
 
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Search className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                <Input
+                  placeholder="Search players..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-xs"
+                  data-testid="input-search-players"
+                />
+              </div>
+
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-gray-500" />
                 <label className="text-sm font-medium text-gray-700">Sort by:</label>
-                <Select value={sortBy} onValueChange={setSortBy}>
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value)}>
                   <SelectTrigger className="w-40">
                     <SelectValue />
                   </SelectTrigger>
@@ -225,16 +250,7 @@ export default function PlayerGoalsScoredProjections() {
                 </Select>
               </div>
 
-              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                <label className="text-sm font-medium text-gray-700">Search:</label>
-                <input
-                  type="text"
-                  placeholder="Search players..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
+
             </div>
           </CardContent>
         </Card>
@@ -291,44 +307,97 @@ export default function PlayerGoalsScoredProjections() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th 
-                      className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
-                      onClick={() => setSortBy("name")}
-                    >
-                      Player {sortBy === "name" && "↓"}
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 sticky left-0 bg-white border-r border-gray-200">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                        onClick={() => handleSort("name")}
+                        data-testid="sort-player-name"
+                      >
+                        Player
+                        {sortBy === "name" && (
+                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                        )}
+                        {sortBy !== "name" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                      </Button>
                     </th>
-                    <th 
-                      className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
-                      onClick={() => setSortBy("team")}
-                    >
-                      Team {sortBy === "team" && "↓"}
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                        onClick={() => handleSort("team")}
+                        data-testid="sort-team"
+                      >
+                        Team
+                        {sortBy === "team" && (
+                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                        )}
+                        {sortBy !== "team" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                      </Button>
                     </th>
-                    <th 
-                      className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
-                      onClick={() => setSortBy("position")}
-                    >
-                      Pos {sortBy === "position" && "↓"}
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                        onClick={() => handleSort("position")}
+                        data-testid="sort-position"
+                      >
+                        Pos
+                        {sortBy === "position" && (
+                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                        )}
+                        {sortBy !== "position" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                      </Button>
                     </th>
                     {next6Gameweeks.map(gw => (
-                      <th 
-                        key={gw} 
-                        className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[60px] cursor-pointer hover:bg-gray-50"
-                        onClick={() => setSortBy(`gw${gw}`)}
-                      >
-                        GW{gw} {sortBy === `gw${gw}` && "↓"}
+                      <th key={gw} className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[70px]">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                          onClick={() => handleSort(`gw${gw}`)}
+                          data-testid={`sort-gw${gw}`}
+                        >
+                          GW{gw}
+                          {sortBy === `gw${gw}` && (
+                            sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                          )}
+                          {sortBy !== `gw${gw}` && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                        </Button>
                       </th>
                     ))}
-                    <th 
-                      className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
-                      onClick={() => setSortBy("total")}
-                    >
-                      6 GW {sortBy === "total" && "↓"}
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900 border-l border-gray-200">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                        onClick={() => handleSort("total")}
+                        data-testid="sort-total"
+                      >
+                        6 GW
+                        {sortBy === "total" && (
+                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                        )}
+                        {sortBy !== "total" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                      </Button>
                     </th>
-                    <th 
-                      className="text-center py-3 px-2 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" 
-                      onClick={() => setSortBy("season")}
-                    >
-                      Season {sortBy === "season" && "↓"}
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                        onClick={() => handleSort("season")}
+                        data-testid="sort-season"
+                      >
+                        Season
+                        {sortBy === "season" && (
+                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                        )}
+                        {sortBy !== "season" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                      </Button>
                     </th>
                   </tr>
                 </thead>
@@ -337,10 +406,13 @@ export default function PlayerGoalsScoredProjections() {
                     const next6Total = next6Gameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
                     
                     return (
-                      <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
-                        <td className="py-3 px-4">
-                          <div className="font-medium text-gray-900">
+                      <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                        <td className="py-3 px-4 sticky left-0 bg-inherit border-r border-gray-200">
+                          <div className="font-semibold text-gray-900">
                             {player.playerName}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {player.goalShare.toFixed(1)}% share
                           </div>
                         </td>
                         <td className="py-3 px-2 text-center">
@@ -361,13 +433,13 @@ export default function PlayerGoalsScoredProjections() {
                             </td>
                           );
                         })}
-                        <td className="py-3 px-2 text-center">
-                          <span className="font-bold text-gray-900">
+                        <td className="py-3 px-2 text-center border-l border-gray-200">
+                          <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-sm">
                             {next6Total.toFixed(2)}
                           </span>
                         </td>
                         <td className="py-3 px-2 text-center">
-                          <span className="text-sm text-gray-600">
+                          <span className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-sm font-medium">
                             {player.totalProjectedGoals.toFixed(2)}
                           </span>
                         </td>
