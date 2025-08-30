@@ -46,6 +46,7 @@ import AdminGoalProjections from "./pages/admin-goal-projections";
 import AdminUpsetConfig from "./pages/admin-upset-config";
 import Admin from "./pages/admin";
 import AdminDataPopulation from "./pages/admin-data-population";
+import DefensiveContributionProjections from "./pages/defensive-contribution-projections";
 
 
 function Router() {
@@ -86,6 +87,7 @@ function Router() {
       <Route path="/player-goal-projections" component={PlayerGoalProjections} />
       <Route path="/player-assist-projections" component={PlayerAssistProjections} />
       <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
+      <Route path="/defensive-contribution-projections" component={DefensiveContributionProjections} />
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
       <Route path="/season-projections" component={SeasonProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />

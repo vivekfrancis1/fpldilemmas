@@ -8150,6 +8150,202 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Defensive contribution projections endpoint
+  app.get("/api/defensive-contribution-projections", async (req, res) => {
+    try {
+      console.log('DEBUG: Starting defensive contribution projections calculation...');
+      
+      // Fetch current season players
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch current players data");
+      }
+      const currentData = await bootstrapResponse.json();
+      
+      // Since defensive metrics aren't in historical data, use current season FPL data
+      // and combine with any available historical minutes/form data
+      const historicalMinutesData = await db
+        .select()
+        .from(historicalPlayerStats)
+        .where(sql`season IN ('2024/25', '2023/24') AND minutes > 300`);
+      
+      console.log(`DEBUG: Found ${historicalMinutesData.length} historical minutes records`);
+      
+      // Get current season defensive stats from FPL API for all players
+      const currentSeasonDefensiveData = new Map();
+      
+      for (const player of currentData.elements) {
+        // Include all players with any defensive stats (even if 0) who have played minutes
+        if (player.minutes > 0) {
+          // Calculate defensive contribution using FPL formula
+          const cbi = player.clearances_blocks_interceptions || 0;
+          const tackles = player.tackles || 0;
+          const recoveries = player.recoveries || 0;
+          
+          // Position-specific defensive contribution calculation
+          const defensiveContribution = player.element_type === 2 ? // Defender
+            cbi + tackles : // Defenders: CBI + Tackles
+            cbi + tackles + recoveries; // Mid/Fwd: CBI + Tackles + Recoveries
+          
+          const minutes = player.minutes || 1;
+          const dcPer90 = (defensiveContribution * 90) / minutes;
+          const tacklesPer90 = (tackles * 90) / minutes;
+          const recoveriesPer90 = (recoveries * 90) / minutes;
+          const cbiPer90 = (cbi * 90) / minutes;
+          
+          currentSeasonDefensiveData.set(player.id, {
+            defensiveContribution,
+            tackles,
+            recoveries,
+            cbi,
+            minutes,
+            dcPer90,
+            tacklesPer90,
+            recoveriesPer90,
+            cbiPer90
+          });
+        }
+      }
+      
+      console.log(`DEBUG: Found ${currentSeasonDefensiveData.size} players with current defensive data`);
+      
+      // Group historical minutes data by player
+      const playerHistoricalMinutes = historicalMinutesData.reduce((acc, record) => {
+        if (!acc[record.playerId]) {
+          acc[record.playerId] = [];
+        }
+        acc[record.playerId].push(record);
+        return acc;
+      }, {} as Record<number, any[]>);
+      
+      const projections: any[] = [];
+      
+      // Calculate projections for each current player with defensive data
+      currentData.elements.forEach((player: any) => {
+        const currentDefensiveStats = currentSeasonDefensiveData.get(player.id);
+        if (!currentDefensiveStats) return;
+        
+        const playerMinutesHistory = playerHistoricalMinutes[player.id] || [];
+        
+        // Use current season defensive stats as baseline
+        const currentStats = currentDefensiveStats;
+        
+        // Calculate historical minutes patterns for confidence
+        playerMinutesHistory.sort((a, b) => b.season.localeCompare(a.season));
+        
+        // Estimate playing time based on historical patterns
+        const historicalMinutes = playerMinutesHistory.map(h => h.minutes);
+        const avgHistoricalMinutes = historicalMinutes.length > 0 ? 
+          historicalMinutes.reduce((sum, m) => sum + m, 0) / historicalMinutes.length : 0;
+        
+        // Calculate minutes consistency for confidence
+        const minutesConsistency = historicalMinutes.length > 1 ? 
+          1 - (Math.abs(historicalMinutes[0] - historicalMinutes[1]) / Math.max(historicalMinutes[0], historicalMinutes[1], 1)) : 0.5;
+        
+        // Base projections on current season performance
+        const currentDCPer90 = currentStats.dcPer90;
+        const currentTacklesPer90 = currentStats.tacklesPer90;
+        const currentRecoveriesPer90 = currentStats.recoveriesPer90;
+        const currentCBIPer90 = currentStats.cbiPer90;
+        const currentMinutes = currentStats.minutes;
+        
+        // Only project for players with meaningful sample size (minimum 90 minutes)
+        if (currentMinutes < 90) return;
+        
+        // Form factor based on current vs expected performance
+        const positionExpectedDC = player.element_type === 1 ? 1.0 : // GK
+                                  player.element_type === 2 ? 4.5 : // DEF
+                                  player.element_type === 3 ? 3.0 : // MID
+                                  2.0; // FWD
+        
+        const formFactor = Math.min(Math.max(currentDCPer90 / positionExpectedDC, 0.3), 2.0);
+        
+        // Estimate minutes per gameweek based on current and historical data
+        const estimatedMinutesPerGW = currentMinutes > 1500 ? 85 :
+                                    currentMinutes > 800 ? 70 :
+                                    currentMinutes > 400 ? 50 : 30;
+        
+        // Calculate confidence based on minutes played and consistency
+        const minutesConfidence = Math.min(currentMinutes / 1500, 1); // 0-1 based on minutes played
+        const historyConfidence = playerMinutesHistory.length > 0 ? Math.min(playerMinutesHistory.length / 2, 1) : 0.3;
+        const consistencyConfidence = minutesConsistency;
+        
+        const confidence = (minutesConfidence * 0.5 + historyConfidence * 0.3 + consistencyConfidence * 0.2);
+        
+        // Generate gameweek projections
+        const gameweekProjections = Array.from({ length: 6 }, (_, i) => {
+          const gameweek = i + 4; // Start from GW4
+          const minutesThisGW = estimatedMinutesPerGW;
+          const projectedDC = currentDCPer90 * formFactor * minutesThisGW / 90;
+          const projectedTackles = currentTacklesPer90 * formFactor * minutesThisGW / 90;
+          const projectedRecoveries = currentRecoveriesPer90 * formFactor * minutesThisGW / 90;
+          const projectedCBI = currentCBIPer90 * formFactor * minutesThisGW / 90;
+          
+          return {
+            gameweek,
+            defensiveContribution: Math.round(projectedDC * 100) / 100,
+            tackles: Math.round(projectedTackles * 100) / 100,
+            recoveries: Math.round(projectedRecoveries * 100) / 100,
+            cbi: Math.round(projectedCBI * 100) / 100,
+            minutes: minutesThisGW
+          };
+        });
+        
+        const team = currentData.teams.find((t: any) => t.id === player.team);
+        const position = currentData.element_types.find((p: any) => p.id === player.element_type);
+        
+        projections.push({
+          playerId: player.id,
+          playerName: player.web_name,
+          position: position?.singular_name || 'Unknown',
+          teamName: team?.short_name || 'Unknown',
+          teamCode: team?.code || 0,
+          currentSeasonMinutes: currentMinutes,
+          historicalSeasons: playerMinutesHistory.length,
+          currentSeasonStats: {
+            defensiveContribution: currentStats.defensiveContribution,
+            tackles: currentStats.tackles,
+            recoveries: currentStats.recoveries,
+            cbi: currentStats.cbi,
+            dcPer90: Math.round(currentDCPer90 * 100) / 100,
+            tacklesPer90: Math.round(currentTacklesPer90 * 100) / 100,
+            recoveriesPer90: Math.round(currentRecoveriesPer90 * 100) / 100,
+            cbiPer90: Math.round(currentCBIPer90 * 100) / 100
+          },
+          projectedDefensiveContribution: Math.round((currentDCPer90 * formFactor) * 100) / 100,
+          projectedTackles: Math.round((currentTacklesPer90 * formFactor) * 100) / 100,
+          projectedRecoveries: Math.round((currentRecoveriesPer90 * formFactor) * 100) / 100,
+          projectedCBI: Math.round((currentCBIPer90 * formFactor) * 100) / 100,
+          form: Math.round(formFactor * 100) / 100,
+          confidence: Math.round(confidence * 100) / 100,
+          gameweekProjections
+        });
+      });
+      
+      // Sort by projected defensive contribution
+      projections.sort((a, b) => b.projectedDefensiveContribution - a.projectedDefensiveContribution);
+      
+      console.log(`DEBUG: Generated defensive projections for ${projections.length} players`);
+      
+      res.json({
+        success: true,
+        count: projections.length,
+        data: projections,
+        metadata: {
+          seasonsAnalyzed: ['2024/25', '2023/24'],
+          calculatedAt: new Date().toISOString(),
+          topDefender: projections[0]?.playerName || 'N/A',
+          averageProjection: projections.length > 0 ? 
+            (projections.reduce((sum, p) => sum + p.projectedDefensiveContribution, 0) / projections.length).toFixed(2) : '0'
+        }
+      });
+      
+    } catch (error) {
+      console.error("Error generating defensive contribution projections:", error);
+      res.status(500).json({ error: "Failed to generate defensive projections" });
+    }
+  });
+
   console.log("✓ Historical Player Stats API routes registered successfully");
 
   const httpServer = createServer(app);
