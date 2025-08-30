@@ -687,13 +687,83 @@ export default function PlayerGoalsScoredProjections() {
                         {sortBy !== "name" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
                       </Button>
                     </th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">Team</th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">Pos</th>
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                        onClick={() => handleSort("team")}
+                        data-testid="sort-team-points"
+                      >
+                        Team
+                        {sortBy === "team" && (
+                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                        )}
+                        {sortBy !== "team" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                      </Button>
+                    </th>
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                        onClick={() => handleSort("position")}
+                        data-testid="sort-position-points"
+                      >
+                        Pos
+                        {sortBy === "position" && (
+                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                        )}
+                        {sortBy !== "position" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                      </Button>
+                    </th>
                     {selectedGameweeks.map(gw => (
-                      <th key={gw} className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[70px]">GW{gw}</th>
+                      <th key={gw} className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[70px]">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                          onClick={() => handleSort(`gw${gw}`)}
+                          data-testid={`sort-gw${gw}-points`}
+                        >
+                          GW{gw}
+                          {sortBy === `gw${gw}` && (
+                            sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                          )}
+                          {sortBy !== `gw${gw}` && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                        </Button>
+                      </th>
                     ))}
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900 border-l border-gray-200">{selectedGameweeks.length} GW Pts</th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">Season Pts</th>
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900 border-l border-gray-200">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                        onClick={() => handleSort("total")}
+                        data-testid="sort-total-points"
+                      >
+                        {selectedGameweeks.length} GW Pts
+                        {sortBy === "total" && (
+                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                        )}
+                        {sortBy !== "total" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                      </Button>
+                    </th>
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                        onClick={() => handleSort("season")}
+                        data-testid="sort-season-points"
+                      >
+                        Season Pts
+                        {sortBy === "season" && (
+                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                        )}
+                        {sortBy !== "season" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                      </Button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
