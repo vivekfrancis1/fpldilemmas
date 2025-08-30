@@ -15,11 +15,11 @@ interface PlayerMinutesProjection {
   currentMinutes: number;
   currentMinutesPerGame: number;
   expectedMinutesPerGame: number;
-  selectedByPercent: number;
+  pointsFromMinutes: number;
   benchAppearances: number;
 }
 
-type SortField = 'name' | 'team' | 'position' | 'currentMinutes' | 'expectedMinutes';
+type SortField = 'name' | 'team' | 'position' | 'currentMinutes' | 'expectedMinutes' | 'pointsFromMinutes';
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerMinutes() {
@@ -86,6 +86,10 @@ export default function PlayerMinutes() {
         case 'currentMinutes':
           aValue = a.currentMinutesPerGame;
           bValue = b.currentMinutesPerGame;
+          break;
+        case 'pointsFromMinutes':
+          aValue = a.pointsFromMinutes;
+          bValue = b.pointsFromMinutes;
           break;
 
         default:
@@ -170,7 +174,7 @@ export default function PlayerMinutes() {
             Player Minutes
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-            Expected minutes per game and points projections for each player, calculated using rotation patterns, form, and historical data
+            Expected minutes per game and FPL points from minutes for each player, calculated using rotation patterns and current form
           </p>
         </div>
 
@@ -313,7 +317,7 @@ export default function PlayerMinutes() {
             <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
               <CardTitle className="flex items-center">
                 <Clock className="h-6 w-6 text-blue-600 mr-2" />
-                Player Minutes Projections
+                Player Minutes & Points from Minutes
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -367,7 +371,13 @@ export default function PlayerMinutes() {
                         </Button>
                       </th>
                       <th className="px-6 py-4 text-center">
-                        <span className="font-semibold text-gray-700">Ownership %</span>
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort('pointsFromMinutes')}
+                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto"
+                        >
+                          Points from Minutes {getSortIcon('pointsFromMinutes')}
+                        </Button>
                       </th>
                     </tr>
                   </thead>
@@ -414,8 +424,8 @@ export default function PlayerMinutes() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className="font-semibold text-purple-600">
-                            {player.selectedByPercent.toFixed(1)}%
+                          <div className={`font-bold text-lg ${player.pointsFromMinutes >= 2 ? 'text-green-600' : player.pointsFromMinutes >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
+                            {player.pointsFromMinutes}
                           </div>
                         </td>
                       </tr>

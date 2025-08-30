@@ -5124,6 +5124,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
 
         
+        // Calculate points from minutes based on FPL system
+        let pointsFromMinutes = 0;
+        if (expectedMinutesPerGame >= 60) {
+          pointsFromMinutes = 2; // Full 60+ minutes = 2 points
+        } else if (expectedMinutesPerGame > 0) {
+          pointsFromMinutes = 1; // Any playing time under 60 minutes = 1 point
+        }
+        // 0 minutes = 0 points (default)
+        
         return {
           playerId: player.id,
           playerName: player.web_name,
@@ -5132,7 +5141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentMinutes: totalMinutes,
           currentMinutesPerGame: Math.round(currentMinutesPerGame * 10) / 10,
           expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
-          selectedByPercent: parseFloat(player.selected_by_percent) || 0,
+          pointsFromMinutes: pointsFromMinutes,
           benchAppearances: Math.max(0, (player.total_points > 0 ? totalGames - (player.starts || 0) : 0))
         };
       })
