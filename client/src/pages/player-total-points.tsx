@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info } from "lucide-react";
+import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -222,6 +223,168 @@ interface PlayerTotalPointsData {
 }
 
 type SortField = 'name' | 'position' | 'team' | 'totalExpectedPoints' | 'seasonTotalPoints' | 'averagePerGameweek' | string;
+
+// Helper function to render component-specific table
+function ComponentTable({ 
+  component, 
+  filteredAndSortedData, 
+  gameweekRange, 
+  handleSort, 
+  getSortIcon,
+  colorScheme
+}: {
+  component: 'total' | 'goals' | 'assists' | 'cleansheets' | 'defensive' | 'minutes';
+  filteredAndSortedData: PlayerTotalPointsData[];
+  gameweekRange: number[];
+  handleSort: (field: SortField) => void;
+  getSortIcon: (field: SortField) => JSX.Element | null;
+  colorScheme: {
+    bg: string;
+    totalBg: string;
+    textColor: string;
+    totalField: string;
+    pointsField: string;
+  };
+}) {
+  const getComponentValue = (player: PlayerTotalPointsData, gw: number) => {
+    const gwKey = `gw${gw}`;
+    switch (component) {
+      case 'total':
+        return player.gameweekProjections?.[gwKey] || 0;
+      case 'goals':
+        return player.pointsFromGoals?.[gwKey] || 0;
+      case 'assists':
+        return player.pointsFromAssists?.[gwKey] || 0;
+      case 'cleansheets':
+        return player.pointsFromCleanSheets?.[gwKey] || 0;
+      case 'defensive':
+        return player.pointsFromDefensiveContributions?.[gwKey] || 0;
+      case 'minutes':
+        return player.pointsFromMinutes?.[gwKey] || 0;
+      default:
+        return 0;
+    }
+  };
+
+  const getTotalValue = (player: PlayerTotalPointsData) => {
+    switch (component) {
+      case 'total':
+        return player.totalExpectedPoints || 0;
+      case 'goals':
+        return player.totalPointsFromGoals || 0;
+      case 'assists':
+        return player.totalPointsFromAssists || 0;
+      case 'cleansheets':
+        return player.totalPointsFromCleanSheets || 0;
+      case 'defensive':
+        return player.totalPointsFromDefensiveContributions || 0;
+      case 'minutes':
+        return player.totalPointsFromMinutes || 0;
+      default:
+        return 0;
+    }
+  };
+
+  const getValueColor = (value: number) => {
+    if (component === 'minutes') {
+      return value >= 2 ? colorScheme.textColor : value >= 1 ? 'text-gray-600' : 'text-gray-500';
+    }
+    return value >= 4 ? colorScheme.textColor : value >= 2 ? 'text-gray-600' : 'text-gray-500';
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50 border-b">
+          <tr>
+            <th className="px-4 py-3 text-left font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('name')}>
+              <div className="flex items-center gap-1">Player {getSortIcon('name')}</div>
+            </th>
+            <th className="px-4 py-3 text-left font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('position')}>
+              <div className="flex items-center gap-1">Pos {getSortIcon('position')}</div>
+            </th>
+            <th className="px-4 py-3 text-left font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('team')}>
+              <div className="flex items-center gap-1">Team {getSortIcon('team')}</div>
+            </th>
+            {gameweekRange.map(gw => (
+              <th key={gw} className={`px-3 py-3 text-center font-medium text-gray-700 ${colorScheme.bg} border-x ${component === 'total' ? 'cursor-pointer hover:bg-blue-100 transition-colors' : ''}`} onClick={component === 'total' ? () => handleSort(`gw${gw}`) : undefined}>
+                <div className="flex items-center justify-center gap-1">
+                  GW{gw} {component === 'total' ? getSortIcon(`gw${gw}`) : ''}
+                </div>
+              </th>
+            ))}
+            <th className={`px-4 py-3 text-center font-medium text-gray-700 ${colorScheme.totalBg} cursor-pointer hover:bg-gray-100 transition-colors`} onClick={() => handleSort(colorScheme.totalField)}>
+              <div className="flex items-center justify-center gap-1">
+                Range Total {getSortIcon(colorScheme.totalField)}
+              </div>
+            </th>
+            {component === 'total' && (
+              <>
+                <th className="px-4 py-3 text-center font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors bg-gradient-to-r from-purple-50 to-violet-50" onClick={() => handleSort('seasonTotalPoints')}>
+                  <div className="flex items-center justify-center gap-1">Season Total {getSortIcon('seasonTotalPoints')}</div>
+                </th>
+                <th className="px-4 py-3 text-center font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors bg-gradient-to-r from-orange-50 to-amber-50" onClick={() => handleSort('averagePerGameweek')}>
+                  <div className="flex items-center justify-center gap-1">Avg/GW {getSortIcon('averagePerGameweek')}</div>
+                </th>
+              </>
+            )}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          {filteredAndSortedData.map((player, index) => (
+            <tr key={player.playerId} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+              <td className="px-4 py-4">
+                <div>
+                  <div className="font-semibold text-gray-900">{player.name}</div>
+                  <div className="text-xs text-gray-500">£{player.price ? (player.price / 10).toFixed(1) : '0.0'}m • {player.ownership ? player.ownership.toFixed(1) : '0.0'}%</div>
+                </div>
+              </td>
+              <td className="px-4 py-4"><Badge variant="outline" className="text-xs">{player.position}</Badge></td>
+              <td className="px-4 py-4 font-medium text-gray-700">{player.team}</td>
+              {gameweekRange.map(gw => {
+                const value = getComponentValue(player, gw);
+                return (
+                  <td key={gw} className={`px-3 py-4 text-center ${colorScheme.bg}/30 border-x`}>
+                    {component === 'total' ? (
+                      <GameweekPointBreakdownTooltip player={player} gameweek={gw} />
+                    ) : (
+                      <span className={`font-medium ${getValueColor(value)}`}>
+                        {component === 'minutes' ? value.toFixed(0) : value.toFixed(1)}
+                      </span>
+                    )}
+                  </td>
+                );
+              })}
+              <td className={`px-4 py-4 text-center ${colorScheme.totalBg}`}>
+                {component === 'total' ? (
+                  <RangeTotalBreakdownTooltip player={player} />
+                ) : (
+                  <span className={`font-bold ${colorScheme.textColor}`}>
+                    {component === 'minutes' ? getTotalValue(player).toFixed(0) : getTotalValue(player).toFixed(1)}
+                  </span>
+                )}
+              </td>
+              {component === 'total' && (
+                <>
+                  <td className="px-4 py-4 text-center bg-gradient-to-r from-purple-50 to-violet-50">
+                    <span className="font-bold text-purple-800">
+                      {player.seasonTotalPoints?.toFixed(1) || '0.0'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 text-center bg-gradient-to-r from-orange-50 to-amber-50">
+                    <span className="font-bold text-orange-800">
+                      {player.averagePerGameweek?.toFixed(1) || '0.0'}
+                    </span>
+                  </td>
+                </>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 export default function PlayerTotalPoints() {
   const [startGameweek, setStartGameweek] = useState(4);
@@ -451,7 +614,7 @@ export default function PlayerTotalPoints() {
           </div>
         </div>
 
-        {/* Data Table */}
+        {/* Data Tabs */}
         {isLoading ? (
           <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
             <div className="flex items-center justify-center">
@@ -471,125 +634,142 @@ export default function PlayerTotalPoints() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th 
-                        className="px-4 py-3 text-left font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => handleSort('name')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Player {getSortIcon('name')}
-                        </div>
-                      </th>
-                      <th 
-                        className="px-4 py-3 text-left font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => handleSort('position')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Pos {getSortIcon('position')}
-                        </div>
-                      </th>
-                      <th 
-                        className="px-4 py-3 text-left font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => handleSort('team')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Team {getSortIcon('team')}
-                        </div>
-                      </th>
-                      
-                      {/* Gameweek columns */}
-                      {gameweekRange.map(gw => (
-                        <th 
-                          key={gw} 
-                          className="px-3 py-3 text-center font-medium text-gray-700 bg-blue-50 border-x cursor-pointer hover:bg-blue-100 transition-colors"
-                          onClick={() => handleSort(`gw${gw}`)}
-                        >
-                          <div className="flex items-center justify-center gap-1">
-                            GW{gw} {getSortIcon(`gw${gw}`)}
-                          </div>
-                        </th>
-                      ))}
-                      
-                      <th 
-                        className="px-4 py-3 text-center font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors bg-gradient-to-r from-green-50 to-emerald-50"
-                        onClick={() => handleSort('totalExpectedPoints')}
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          Range Total {getSortIcon('totalExpectedPoints')}
-                        </div>
-                      </th>
-                      
-                      <th 
-                        className="px-4 py-3 text-center font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors bg-gradient-to-r from-purple-50 to-violet-50"
-                        onClick={() => handleSort('seasonTotalPoints')}
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          Season Total {getSortIcon('seasonTotalPoints')}
-                        </div>
-                      </th>
-                      
-                      <th 
-                        className="px-4 py-3 text-center font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors bg-gradient-to-r from-orange-50 to-amber-50"
-                        onClick={() => handleSort('averagePerGameweek')}
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          Avg/GW {getSortIcon('averagePerGameweek')}
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {filteredAndSortedData.map((player, index) => (
-                      <tr key={player.playerId} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                        <td className="px-4 py-4">
-                          <div>
-                            <div className="font-semibold text-gray-900">{player.name}</div>
-                            <div className="text-xs text-gray-500">£{player.price ? (player.price / 10).toFixed(1) : '0.0'}m • {player.ownership ? player.ownership.toFixed(1) : '0.0'}%</div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <Badge variant="outline" className="text-xs">
-                            {player.position}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-4 font-medium text-gray-700">{player.team}</td>
-                        
-                        {/* Gameweek points */}
-                        {gameweekRange.map(gw => {
-                          const points = player.gameweekProjections[`gw${gw}`];
-                          return (
-                            <td key={gw} className="px-3 py-4 text-center bg-blue-50/30 border-x">
-                              <GameweekPointBreakdownTooltip player={player} gameweek={gw} />
-                            </td>
-                          );
-                        })}
-                        
-                        {/* Range Total with Breakdown Tooltip */}
-                        <td className="px-4 py-4 text-center bg-gradient-to-r from-green-50 to-emerald-50">
-                          <RangeTotalBreakdownTooltip player={player} />
-                        </td>
-                        
-                        {/* Season Total */}
-                        <td className="px-4 py-4 text-center bg-gradient-to-r from-purple-50 to-violet-50">
-                          <span className="font-bold text-purple-800">
-                            {player.seasonTotalPoints?.toFixed(1) || '0.0'}
-                          </span>
-                        </td>
-                        
-                        {/* Average per GW */}
-                        <td className="px-4 py-4 text-center bg-gradient-to-r from-orange-50 to-amber-50">
-                          <span className="font-bold text-orange-800">
-                            {player.averagePerGameweek?.toFixed(1) || '0.0'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Tabs defaultValue="total" className="w-full">
+                <TabsList className="grid w-full grid-cols-6 bg-gray-50 p-1 m-4 mb-0">
+                  <TabsTrigger value="total" className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4" />
+                    Total Points
+                  </TabsTrigger>
+                  <TabsTrigger value="goals" className="flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Goals
+                  </TabsTrigger>
+                  <TabsTrigger value="assists" className="flex items-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    Assists
+                  </TabsTrigger>
+                  <TabsTrigger value="cleansheets" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Clean Sheets
+                  </TabsTrigger>
+                  <TabsTrigger value="defensive" className="flex items-center gap-2">
+                    <Swords className="h-4 w-4" />
+                    Defensive
+                  </TabsTrigger>
+                  <TabsTrigger value="minutes" className="flex items-center gap-2">
+                    <Timer className="h-4 w-4" />
+                    Minutes
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Total Points Tab */}
+                <TabsContent value="total">
+                  <ComponentTable
+                    component="total"
+                    filteredAndSortedData={filteredAndSortedData}
+                    gameweekRange={gameweekRange}
+                    handleSort={handleSort}
+                    getSortIcon={getSortIcon}
+                    colorScheme={{
+                      bg: 'bg-blue-50',
+                      totalBg: 'bg-gradient-to-r from-green-50 to-emerald-50',
+                      textColor: 'text-green-800',
+                      totalField: 'totalExpectedPoints',
+                      pointsField: 'gameweekProjections'
+                    }}
+                  />
+                </TabsContent>
+
+                {/* Goals Tab */}
+                <TabsContent value="goals">
+                  <ComponentTable
+                    component="goals"
+                    filteredAndSortedData={filteredAndSortedData}
+                    gameweekRange={gameweekRange}
+                    handleSort={handleSort}
+                    getSortIcon={getSortIcon}
+                    colorScheme={{
+                      bg: 'bg-green-50',
+                      totalBg: 'bg-gradient-to-r from-green-50 to-emerald-50',
+                      textColor: 'text-green-800',
+                      totalField: 'totalPointsFromGoals',
+                      pointsField: 'pointsFromGoals'
+                    }}
+                  />
+                </TabsContent>
+
+                {/* Assists Tab */}
+                <TabsContent value="assists">
+                  <ComponentTable
+                    component="assists"
+                    filteredAndSortedData={filteredAndSortedData}
+                    gameweekRange={gameweekRange}
+                    handleSort={handleSort}
+                    getSortIcon={getSortIcon}
+                    colorScheme={{
+                      bg: 'bg-blue-50',
+                      totalBg: 'bg-gradient-to-r from-blue-50 to-cyan-50',
+                      textColor: 'text-blue-800',
+                      totalField: 'totalPointsFromAssists',
+                      pointsField: 'pointsFromAssists'
+                    }}
+                  />
+                </TabsContent>
+
+                {/* Clean Sheets Tab */}
+                <TabsContent value="cleansheets">
+                  <ComponentTable
+                    component="cleansheets"
+                    filteredAndSortedData={filteredAndSortedData}
+                    gameweekRange={gameweekRange}
+                    handleSort={handleSort}
+                    getSortIcon={getSortIcon}
+                    colorScheme={{
+                      bg: 'bg-yellow-50',
+                      totalBg: 'bg-gradient-to-r from-yellow-50 to-orange-50',
+                      textColor: 'text-yellow-800',
+                      totalField: 'totalPointsFromCleanSheets',
+                      pointsField: 'pointsFromCleanSheets'
+                    }}
+                  />
+                </TabsContent>
+
+                {/* Defensive Tab */}
+                <TabsContent value="defensive">
+                  <ComponentTable
+                    component="defensive"
+                    filteredAndSortedData={filteredAndSortedData}
+                    gameweekRange={gameweekRange}
+                    handleSort={handleSort}
+                    getSortIcon={getSortIcon}
+                    colorScheme={{
+                      bg: 'bg-orange-50',
+                      totalBg: 'bg-gradient-to-r from-orange-50 to-red-50',
+                      textColor: 'text-orange-800',
+                      totalField: 'totalPointsFromDefensiveContributions',
+                      pointsField: 'pointsFromDefensiveContributions'
+                    }}
+                  />
+                </TabsContent>
+
+                {/* Minutes Tab */}
+                <TabsContent value="minutes">
+                  <ComponentTable
+                    component="minutes"
+                    filteredAndSortedData={filteredAndSortedData}
+                    gameweekRange={gameweekRange}
+                    handleSort={handleSort}
+                    getSortIcon={getSortIcon}
+                    colorScheme={{
+                      bg: 'bg-purple-50',
+                      totalBg: 'bg-gradient-to-r from-purple-50 to-violet-50',
+                      textColor: 'text-purple-800',
+                      totalField: 'totalPointsFromMinutes',
+                      pointsField: 'pointsFromMinutes'
+                    }}
+                  />
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         )}
