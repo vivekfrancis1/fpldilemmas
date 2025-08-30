@@ -574,11 +574,16 @@ export default function MyDashboard() {
     <div className="fpl-page-wrapper">
       <div className="fpl-container fpl-content-area">
         {/* Page Header */}
-        <div className="text-center mb-8 sm:mb-12">
-          <h1 className="fpl-heading-hero mb-3 sm:mb-4">My FPL Dashboard</h1>
-          <p className="fpl-text-body max-w-2xl mx-auto">
-            Complete overview of your Fantasy Premier League performance with detailed team analysis, league standings, and performance tracking
-          </p>
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Trophy className="h-8 w-8" />
+              <h1>My FPL Dashboard</h1>
+            </div>
+            <p className="fpl-page-subtitle">
+              Complete overview of your Fantasy Premier League performance with detailed team analysis, league standings, and performance tracking
+            </p>
+          </div>
         </div>
 
         {/* Manager Search Section */}

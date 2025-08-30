@@ -50,7 +50,7 @@ function Router() {
   
   return (
     <Switch>
-      <Route path="/" component={LiveRank} />
+      <Route path="/" component={MyDashboard} />
       <Route path="/live-rank" component={LiveRank} />
       <Route path="/my-dashboard" component={MyDashboard} />
       <Route path="/fixtures" component={Fixtures} />

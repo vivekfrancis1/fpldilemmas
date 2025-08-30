@@ -6,7 +6,7 @@ FPL Dilemmas is an analytics application for Fantasy Premier League (FPL) manage
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 Site tagline: Previously used "Analytical tools to beat the deadline blues" - removed from all tool headers per user request. Now uses "Advanced FPL Analytics Platform" in sidebar and home page.
-Navigation priority: My Live Rank as default landing page, with side navigation for all tools.
+Navigation priority: My Dashboard as default landing page (home route '/'), with side navigation for all tools.
 Manager ID caching: All FPL manager tools (My Live Rank, My Team, My Leagues) now automatically save and pre-load the last searched Manager ID using localStorage for seamless cross-tool experience.
 Projection Tools Limit: All projection tools (Player Projections, Match Projections, Team Goal/CS Projections, Goal Share, Assist Share) now limited to next 6 gameweeks only for focused analysis with updated dropdowns and defaults. Updated to show only future gameweeks excluding current/finished gameweeks for better forward-looking analysis. Match Projections now dynamically adapts to exclude started gameweeks. Goal Share and Assist Share successfully extended to display data for all 6 gameweeks with proper API integration.
 Most popular tools: Player Statistics, My Live Rank, and Fixture Analyzer.
@@ -45,7 +45,7 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Historical Data**: Fetches previous seasons' data from `history_past` field.
 
 ### Feature Specifications
-- **My Dashboard**: Comprehensive FPL overview combining My Live Rank, My Team, and My Leagues in a single tabbed interface. Features overview cards, detailed team analysis, league standings, and performance history with automatic manager ID caching.
+- **My Dashboard**: Comprehensive FPL overview combining My Live Rank, My Team, and My Leagues in a single tabbed interface. Features overview cards, detailed team analysis, league standings, and performance history with automatic manager ID caching. Now serves as the home page with professional header matching site design system.
 - **Player Projections**: AI-powered projection model for minutes, goals, assists, clean sheets, bonus points, and CBIT% for upcoming weeks. Goals and assists derived from Goal Share and Assist Share tools.
 - **Player Goals Scored Projections**: Individual player goal projections for next 6 gameweeks (GW3-GW8) with 2 decimal precision, showing both 6-gameweek and season totals. Uses same styling and functionality as Team Goals Scored with clickable column headers for sorting.
 - **Match Projections**: Data aggregator displaying projected goals and clean sheet odds for each team by gameweek.
