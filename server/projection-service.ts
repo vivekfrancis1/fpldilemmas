@@ -114,10 +114,10 @@ class ProjectionService {
       }
       const bootstrapData = await bootstrapResponse.json();
 
-      // Simple but fast calculation using bootstrap data
+      // Include all players who are available for selection (status 'a' = available, 'i' = injured but still selectable)
       const players = bootstrapData.elements
-        .filter((p: any) => parseFloat(p.selected_by_percent) > 0.1)
-        .slice(0, 150) // Limit to top 150 players for performance
+        .filter((p: any) => p.status !== 'u') // Exclude only unavailable players (transfers, suspended permanently)
+        .sort((a: any, b: any) => parseFloat(b.total_points) - parseFloat(a.total_points)) // Sort by total points
         .map((fplPlayer: any) => {
           const team = bootstrapData.teams.find((t: any) => t.id === fplPlayer.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][fplPlayer.element_type] || 'MID';

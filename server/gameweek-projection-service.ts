@@ -42,10 +42,10 @@ class GameweekProjectionService {
         WHERE gameweek = ${gameweek} AND season = '2025/26'
       `);
       
-      // Process each player
+      // Process all available players (including injured but selectable)
       const players = bootstrapData.elements
-        .filter((p: any) => parseFloat(p.selected_by_percent) > 0.1)
-        .slice(0, 150); // Top 150 players
+        .filter((p: any) => p.status !== 'u') // Exclude only unavailable players
+        .sort((a: any, b: any) => parseFloat(b.total_points) - parseFloat(a.total_points)); // Sort by total points
       
       const playerPromises = players.map(async (fplPlayer: any) => {
         const team = bootstrapData.teams.find((t: any) => t.id === fplPlayer.team);
