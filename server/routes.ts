@@ -989,6 +989,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Historical price changes synchronization endpoint
+  app.post("/api/price-changes/sync-historical", async (req, res) => {
+    try {
+      console.log("🔄 Starting historical price changes synchronization...");
+      
+      // Check if database is empty
+      const countResult = await db.execute(sql`SELECT COUNT(*) as count FROM price_changes`);
+      const currentCount = countResult.rows[0]?.count || 0;
+      console.log(`📊 Current database has ${currentCount} price changes`);
+      
+      // Fetch current season data from FPL API
+      const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!response.ok) {
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const bootstrapData = await response.json();
+      const players = bootstrapData.elements;
+      const teams = bootstrapData.teams;
+      const positions = bootstrapData.element_types;
+      
+      const today = new Date().toISOString().split('T')[0];
+      let syncedChanges = 0;
+      
+      console.log("🔍 Checking for players with season-to-date price changes...");
+      
+      // Force initialization of season price changes for players with cost_change_start != 0
+      const playersWithSeasonChanges = players.filter((p: any) => 
+        p.cost_change_start && p.cost_change_start !== 0
+      );
+      
+      console.log(`📊 Found ${playersWithSeasonChanges.length} players with season price changes`);
+      
+      for (const player of playersWithSeasonChanges) {
+        // Check if we already have changes for this player
+        const existingChanges = await db.select()
+          .from(priceChanges)
+          .where(eq(priceChanges.playerId, player.id));
+          
+        if (existingChanges.length === 0) {
+          // Player has price changes but we have no records - add historical change
+          const team = teams.find((t: any) => t.id === player.team);
+          const position = positions.find((p: any) => p.id === player.element_type);
+          
+          const originalPrice = player.now_cost - player.cost_change_start;
+          const totalSeasonChange = player.cost_change_start;
+          
+          const priceChange = {
+            playerId: player.id,
+            playerName: player.web_name,
+            teamId: team?.id || null,
+            teamName: team?.short_name || null,
+            position: position?.singular_name_short || null,
+            oldPrice: originalPrice,
+            newPrice: player.now_cost,
+            priceChange: totalSeasonChange,
+            changeDate: today,
+            ownership: player.selected_by_percent?.toString() || "0",
+            transfersIn: player.transfers_in || 0,
+            transfersOut: player.transfers_out || 0,
+            transfersInGw: player.transfers_in_event || 0,
+            transfersOutGw: player.transfers_out_event || 0,
+            totalSeasonChange: totalSeasonChange
+          };
+          
+          // Split 0.2 changes into two 0.1 changes if needed
+          if (Math.abs(totalSeasonChange) === 2) {
+            const direction = totalSeasonChange > 0 ? 1 : -1;
+            const midPrice = originalPrice + direction;
+            
+            // First change
+            await storage.addPriceChange({
+              ...priceChange,
+              newPrice: midPrice,
+              priceChange: direction
+            });
+            
+            // Second change  
+            await storage.addPriceChange({
+              ...priceChange,
+              oldPrice: midPrice,
+              priceChange: direction
+            });
+            
+            syncedChanges += 2;
+            console.log(`✅ Synced split changes for ${player.web_name}: ${originalPrice} → ${midPrice} → ${player.now_cost}`);
+          } else {
+            await storage.addPriceChange(priceChange);
+            syncedChanges += 1;
+            console.log(`✅ Synced change for ${player.web_name}: ${originalPrice} → ${player.now_cost} (${totalSeasonChange > 0 ? '+' : ''}${totalSeasonChange})`);
+          }
+        }
+      }
+      
+      console.log(`✅ Historical sync complete: ${syncedChanges} price changes added`);
+      res.json({
+        success: true,
+        message: `Successfully synced ${syncedChanges} historical price changes`,
+        players_checked: playersWithSeasonChanges.length,
+        changes_added: syncedChanges,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error("❌ Error syncing historical price changes:", error);
+      res.status(500).json({
+        error: "Failed to sync historical data",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Manual price data refresh endpoint for Recent Price Changes page
   app.post("/api/price-changes/refresh", async (req, res) => {
     try {
