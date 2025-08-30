@@ -691,6 +691,19 @@ export default function MyDashboard() {
                           );
                         })}
                     </div>
+                    
+                    {/* Analyze League Button */}
+                    <div className="pt-4 border-t border-gray-200 mt-4">
+                      <Button 
+                        onClick={() => window.location.href = '/my-leagues'}
+                        variant="default" 
+                        size="sm" 
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                      >
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        Analyze League
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               )}
