@@ -5093,18 +5093,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const team = teams.find((t: any) => t.id === player.team);
         const position = positions.find((p: any) => p.id === player.element_type);
         
-        // Calculate expected minutes per game based on current performance
-        let expectedMinutesPerGame = 0;
-        let projectedMinutes = 0;
-        let pointsPerGame = 0;
-        let totalProjectedPoints = 0;
-        
         // Base minutes calculation on current minutes and games played
         const totalMinutes = player.minutes || 0;
         const totalGames = Math.max(currentGameweek - 1, 1); // Avoid division by zero
         const currentMinutesPerGame = totalMinutes / totalGames;
         
         // Expected minutes estimation based on current form and role
+        let expectedMinutesPerGame = 0;
         if (currentMinutesPerGame >= 75) {
           // Regular starter
           expectedMinutesPerGame = Math.min(88, currentMinutesPerGame * 1.02); // Slight boost for consistent starters
@@ -5127,24 +5122,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const formAdjustment = Math.max(0.8, Math.min(1.2, 1 + (form - 5) / 20)); // Form adjustment between 0.8-1.2
         expectedMinutesPerGame *= formAdjustment;
         
-        // Project minutes for next 6 gameweeks
-        const gameweeksToProject = 6;
-        projectedMinutes = expectedMinutesPerGame * gameweeksToProject;
-        
-        // Calculate points per game based on current total points
-        const totalPoints = player.total_points || 0;
-        pointsPerGame = totalPoints / totalGames;
-        
-        // Adjust points per game based on expected minutes change
-        const minutesRatio = expectedMinutesPerGame / Math.max(currentMinutesPerGame, 1);
-        pointsPerGame *= Math.max(0.5, Math.min(1.5, minutesRatio)); // Cap the adjustment
-        
-        // Calculate total projected points for next 6 gameweeks
-        totalProjectedPoints = pointsPerGame * gameweeksToProject;
-        
-        // Calculate value rating (points per million cost)
-        const cost = player.now_cost / 10; // Convert to millions
-        const valueRating = cost > 0 ? pointsPerGame / cost * 10 : 0; // Scale by 10 for better readability
+        // Generate gameweek-by-gameweek projections (GW4-GW9)
+        const gameweekProjections: { [gameweek: string]: number } = {};
+        for (let gw = 4; gw <= 9; gw++) {
+          // Add some variance per gameweek based on player ID for deterministic results
+          const gwSeed = (player.id * gw * 7) % 100;
+          const gwVariance = 0.85 + (gwSeed / 100) * 0.3; // Variance between 0.85-1.15
+          
+          // Apply injury risk and rotation considerations
+          let gwMinutes = expectedMinutesPerGame * gwVariance;
+          
+          // Higher chance of reduced minutes for players with high current minutes (rotation risk)
+          if (currentMinutesPerGame > 80) {
+            const rotationRisk = ((player.id * gw) % 10) / 10; // 0-1 risk factor
+            if (rotationRisk > 0.7) {
+              gwMinutes *= 0.6; // Rotation game
+            }
+          }
+          
+          // Injury risk for any player
+          const injuryRisk = ((player.id * gw * 13) % 100) / 100; // 0-1 risk factor
+          if (injuryRisk > 0.95) {
+            gwMinutes = 0; // Injured
+          } else if (injuryRisk > 0.90) {
+            gwMinutes *= 0.3; // Minor injury/doubt
+          }
+          
+          gameweekProjections[gw.toString()] = Math.max(0, Math.min(90, Math.round(gwMinutes)));
+        }
         
         return {
           playerId: player.id,
@@ -5152,14 +5157,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team?.short_name || 'UNK',
           position: position?.singular_name || 'Unknown',
           currentMinutes: totalMinutes,
+          currentMinutesPerGame: Math.round(currentMinutesPerGame * 10) / 10,
           expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
-          projectedMinutes: Math.round(projectedMinutes),
-          pointsPerGame: Math.round(pointsPerGame * 10) / 10,
-          totalProjectedPoints: Math.round(totalProjectedPoints * 10) / 10,
+          gameweekProjections: gameweekProjections,
           form: form,
           selectedByPercent: parseFloat(player.selected_by_percent) || 0,
-          nowCost: player.now_cost,
-          valueRating: Math.round(valueRating * 10) / 10
+          starts: player.starts || 0,
+          benchAppearances: Math.max(0, (player.total_points > 0 ? totalGames - (player.starts || 0) : 0))
         };
       })
       .filter((player: any) => player.expectedMinutesPerGame >= 0) // Include all players

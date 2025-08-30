@@ -13,17 +13,16 @@ interface PlayerMinutesProjection {
   teamShort: string;
   position: string;
   currentMinutes: number;
+  currentMinutesPerGame: number;
   expectedMinutesPerGame: number;
-  projectedMinutes: number;
-  pointsPerGame: number;
-  totalProjectedPoints: number;
+  gameweekProjections: { [gameweek: string]: number };
   form: number;
   selectedByPercent: number;
-  nowCost: number;
-  valueRating: number;
+  starts: number;
+  benchAppearances: number;
 }
 
-type SortField = 'name' | 'team' | 'position' | 'expectedMinutes' | 'pointsPerGame' | 'totalPoints' | 'value';
+type SortField = 'name' | 'team' | 'position' | 'currentMinutes' | 'expectedMinutes' | 'form' | 'starts';
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerMinutes() {
@@ -31,9 +30,10 @@ export default function PlayerMinutes() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [startGameweek, setStartGameweek] = useState<number>(4); // Default to next gameweek
   const [endGameweek, setEndGameweek] = useState<number>(9); // Default to 6 gameweeks ahead
-  const [sortField, setSortField] = useState<SortField>('pointsPerGame');
+  const [sortField, setSortField] = useState<SortField>('expectedMinutes');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [minMinutes, setMinMinutes] = useState<string>("30"); // Minimum minutes filter
+  const [selectedGameweek, setSelectedGameweek] = useState<number>(4); // Gameweek to display
 
   // Fetch player minutes projections data
   const { data: playerMinutesData, isLoading, error } = useQuery<PlayerMinutesProjection[]>({
@@ -86,21 +86,21 @@ export default function PlayerMinutes() {
           aValue = a.expectedMinutesPerGame;
           bValue = b.expectedMinutesPerGame;
           break;
-        case 'pointsPerGame':
-          aValue = a.pointsPerGame;
-          bValue = b.pointsPerGame;
+        case 'currentMinutes':
+          aValue = a.currentMinutesPerGame;
+          bValue = b.currentMinutesPerGame;
           break;
-        case 'totalPoints':
-          aValue = a.totalProjectedPoints;
-          bValue = b.totalProjectedPoints;
+        case 'form':
+          aValue = a.form;
+          bValue = b.form;
           break;
-        case 'value':
-          aValue = a.valueRating;
-          bValue = b.valueRating;
+        case 'starts':
+          aValue = a.starts;
+          bValue = b.starts;
           break;
         default:
-          aValue = a.pointsPerGame;
-          bValue = b.pointsPerGame;
+          aValue = a.expectedMinutesPerGame;
+          bValue = b.expectedMinutesPerGame;
       }
       
       if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -141,10 +141,10 @@ export default function PlayerMinutes() {
     }
   };
 
-  const getValueRatingColor = (rating: number) => {
-    if (rating >= 8) return 'text-green-600 font-bold';
-    if (rating >= 6) return 'text-blue-600 font-semibold';
-    if (rating >= 4) return 'text-orange-600';
+  const getMinutesColor = (minutes: number) => {
+    if (minutes >= 80) return 'text-green-600 font-bold';
+    if (minutes >= 60) return 'text-blue-600 font-semibold';
+    if (minutes >= 30) return 'text-orange-600';
     return 'text-red-600';
   };
 
@@ -203,11 +203,11 @@ export default function PlayerMinutes() {
               <div className="flex items-center">
                 <Target className="h-8 w-8 mb-2" />
                 <div className="ml-4">
-                  <p className="text-green-100 text-sm">Avg Points/Game</p>
+                  <p className="text-green-100 text-sm">Avg Current Min/Game</p>
                   <p className="text-2xl font-bold">
                     {filteredAndSortedData.length > 0 ? 
-                      (filteredAndSortedData.reduce((sum, p) => sum + p.pointsPerGame, 0) / filteredAndSortedData.length).toFixed(1) 
-                      : '0.0'}
+                      Math.round(filteredAndSortedData.reduce((sum, p) => sum + p.currentMinutesPerGame, 0) / filteredAndSortedData.length) 
+                      : '0'}
                   </p>
                 </div>
               </div>
@@ -235,9 +235,9 @@ export default function PlayerMinutes() {
               <div className="flex items-center">
                 <TrendingUp className="h-8 w-8 mb-2" />
                 <div className="ml-4">
-                  <p className="text-orange-100 text-sm">Starters (60+ min)</p>
+                  <p className="text-orange-100 text-sm">Regular Starters</p>
                   <p className="text-2xl font-bold">
-                    {filteredAndSortedData.filter(p => p.expectedMinutesPerGame >= 60).length}
+                    {filteredAndSortedData.filter(p => p.starts >= 2).length}
                   </p>
                 </div>
               </div>
@@ -298,6 +298,24 @@ export default function PlayerMinutes() {
                 </Select>
               </div>
 
+              <div className="flex items-center gap-3">
+                <Calendar className="h-5 w-5 text-blue-600" />
+                <label className="text-sm font-semibold text-gray-700">Gameweek:</label>
+                <Select value={selectedGameweek.toString()} onValueChange={(value) => setSelectedGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-24 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="4">GW4</SelectItem>
+                    <SelectItem value="5">GW5</SelectItem>
+                    <SelectItem value="6">GW6</SelectItem>
+                    <SelectItem value="7">GW7</SelectItem>
+                    <SelectItem value="8">GW8</SelectItem>
+                    <SelectItem value="9">GW9</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="ml-auto flex items-center gap-2 text-sm text-gray-600">
                 <TrendingUp className="h-4 w-4" />
                 <span>{filteredAndSortedData.length} players</span>
@@ -321,7 +339,7 @@ export default function PlayerMinutes() {
             <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
               <CardTitle className="flex items-center">
                 <Clock className="h-6 w-6 text-blue-600 mr-2" />
-                Player Minutes & Points Projections
+                Player Minutes Projections
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -359,6 +377,15 @@ export default function PlayerMinutes() {
                       <th className="px-6 py-4 text-center">
                         <Button
                           variant="ghost"
+                          onClick={() => handleSort('currentMinutes')}
+                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto"
+                        >
+                          Current Min/Game {getSortIcon('currentMinutes')}
+                        </Button>
+                      </th>
+                      <th className="px-6 py-4 text-center">
+                        <Button
+                          variant="ghost"
                           onClick={() => handleSort('expectedMinutes')}
                           className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto"
                         >
@@ -366,34 +393,25 @@ export default function PlayerMinutes() {
                         </Button>
                       </th>
                       <th className="px-6 py-4 text-center">
+                        <span className="font-semibold text-gray-700">GW{selectedGameweek} Minutes</span>
+                      </th>
+                      <th className="px-6 py-4 text-center">
                         <Button
                           variant="ghost"
-                          onClick={() => handleSort('pointsPerGame')}
+                          onClick={() => handleSort('starts')}
                           className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto"
                         >
-                          Points/Game {getSortIcon('pointsPerGame')}
+                          Starts {getSortIcon('starts')}
                         </Button>
                       </th>
                       <th className="px-6 py-4 text-center">
                         <Button
                           variant="ghost"
-                          onClick={() => handleSort('totalPoints')}
+                          onClick={() => handleSort('form')}
                           className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto"
                         >
-                          6GW Points {getSortIcon('totalPoints')}
+                          Form {getSortIcon('form')}
                         </Button>
-                      </th>
-                      <th className="px-6 py-4 text-center">
-                        <Button
-                          variant="ghost"
-                          onClick={() => handleSort('value')}
-                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto"
-                        >
-                          Value Rating {getSortIcon('value')}
-                        </Button>
-                      </th>
-                      <th className="px-6 py-4 text-center">
-                        <span className="font-semibold text-gray-700">Cost</span>
                       </th>
                     </tr>
                   </thead>
@@ -424,31 +442,34 @@ export default function PlayerMinutes() {
                           </Badge>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className="font-semibold text-gray-900">
-                            {player.expectedMinutesPerGame.toFixed(0)}
+                          <div className={`font-semibold ${getMinutesColor(player.currentMinutesPerGame)}`}>
+                            {Math.round(player.currentMinutesPerGame)}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {(player.expectedMinutesPerGame / 90 * 100).toFixed(0)}%
+                            {Math.round((player.currentMinutesPerGame / 90) * 100)}%
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className="font-bold text-blue-600 text-lg">
-                            {player.pointsPerGame.toFixed(1)}
+                          <div className={`font-bold text-lg ${getMinutesColor(player.expectedMinutesPerGame)}`}>
+                            {Math.round(player.expectedMinutesPerGame)}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {Math.round((player.expectedMinutesPerGame / 90) * 100)}%
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className="font-semibold text-green-600">
-                            {player.totalProjectedPoints.toFixed(1)}
+                          <div className={`font-semibold ${getMinutesColor(player.gameweekProjections?.[selectedGameweek] || 0)}`}>
+                            {Math.round(player.gameweekProjections?.[selectedGameweek] || 0)}
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className={`font-bold text-lg ${getValueRatingColor(player.valueRating)}`}>
-                            {player.valueRating.toFixed(1)}
+                          <div className="font-semibold text-blue-600">
+                            {player.starts}
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className="font-mono text-gray-900">
-                            £{(player.nowCost / 10).toFixed(1)}m
+                          <div className="font-semibold text-purple-600">
+                            {player.form.toFixed(1)}
                           </div>
                         </td>
                       </tr>
