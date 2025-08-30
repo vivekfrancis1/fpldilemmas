@@ -654,8 +654,8 @@ export default function MyDashboard() {
                                   </div>
                                   <div className="text-sm text-muted-foreground">
                                     {leagueTypeLabel} • {league.rank_count?.toLocaleString()} managers
-                                    {league.entry_percentile_rank && (
-                                      <span> • {league.entry_percentile_rank}th percentile</span>
+                                    {league.rank_count && league.entry_rank && (
+                                      <span> • {Math.round(((league.rank_count - league.entry_rank) / league.rank_count) * 100)}th percentile</span>
                                     )}
                                   </div>
                                 </div>
