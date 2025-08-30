@@ -3445,10 +3445,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // HYBRID CALCULATION: Use actual goals + projected goals for remaining matches
             const hybridSeasonGoals = actualGoalsFromCompleted + projectedGoalsFromRemaining;
-            const contribution = hybridSeasonGoals * positionMultiplier;
+            
+            // Apply expected minutes weighting to prevent backup players from dominating
+            const maxExpectedMinutes = Math.max(...playersWithXG.map(p => calculateExpectedMinutes(p, playersWithXG)), 1); // Prevent division by zero
+            const minutesWeight = Math.max(0.1, expectedMinutes / maxExpectedMinutes); // Minimum weight of 0.1
+            const contribution = hybridSeasonGoals * positionMultiplier * minutesWeight;
             
             if (player.name.includes('Salah') || player.name.includes('Haaland') || player.actualGoalsScored > 2) {
-              console.log(`DEBUG: ${player.name} hybrid calculation - Actual: ${actualGoalsFromCompleted}, Projected remaining: ${projectedGoalsFromRemaining.toFixed(2)}, Total: ${hybridSeasonGoals.toFixed(2)}`);
+              console.log(`DEBUG: ${player.name} hybrid calculation - Actual: ${actualGoalsFromCompleted}, Projected remaining: ${projectedGoalsFromRemaining.toFixed(2)}, Total: ${hybridSeasonGoals.toFixed(2)}, Minutes weight: ${minutesWeight.toFixed(2)}`);
             }
             
             playerContributions[player.id] = {
@@ -3998,11 +4002,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       }
                     }
                     
-                    // Add weighted assist share if player matched
+                    // Add weighted assist share if player matched, but weight by expected minutes
                     if (matchedPlayerId && weightedPlayerShares[matchedPlayerId]) {
-                      weightedPlayerShares[matchedPlayerId].totalWeightedShare += seasonAssistShare * 0.3333;
-                      weightedPlayerShares[matchedPlayerId].totalWeight += 0.3333;
-                      console.log(`DEBUG: Added ${season} data for ${weightedPlayerShares[matchedPlayerId].name}: ${seasonAssistShare.toFixed(1)}% (${assists} assists of ${teamTotalAssists})`);
+                      // Get current player data to calculate expected minutes weighting
+                      const currentPlayer = teamPlayers.find(p => p.id === matchedPlayerId);
+                      if (currentPlayer) {
+                        // Calculate expected minutes for this player
+                        const expectedMinutes = calculateExpectedMinutes(currentPlayer, teamPlayers);
+                        const maxExpectedMinutes = Math.max(...teamPlayers.map(p => calculateExpectedMinutes(p, teamPlayers)), 1); // Prevent division by zero
+                        
+                        // Weight assist share by expected minutes (players with more expected minutes get higher weight)
+                        const minutesWeight = Math.max(0.1, expectedMinutes / maxExpectedMinutes); // Minimum weight of 0.1
+                        const adjustedAssistShare = seasonAssistShare * minutesWeight;
+                        
+                        weightedPlayerShares[matchedPlayerId].totalWeightedShare += adjustedAssistShare * 0.3333;
+                        weightedPlayerShares[matchedPlayerId].totalWeight += 0.3333;
+                        console.log(`DEBUG: Added ${season} data for ${weightedPlayerShares[matchedPlayerId].name}: ${seasonAssistShare.toFixed(1)}% → ${adjustedAssistShare.toFixed(1)}% (minutes weight: ${minutesWeight.toFixed(2)})`);
+                      }
                     } else if (season !== "current") {
                       const playerNameForDebug = (getPlayerName(player.playerId) || `${player.first_name || player.firstName} ${player.second_name || player.secondName}`);
                       console.log(`DEBUG: Could not match historical player ${playerNameForDebug} from ${season} (${assists} assists) to current squad`);
