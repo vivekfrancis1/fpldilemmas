@@ -200,7 +200,7 @@ export default function PlayerAssistProjections() {
             <Zap className="h-8 w-8 text-green-600" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-            Player Assist Projections
+            Player Assists
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
             Individual player assist projections for gameweeks 4-9, calculated using team assist projections and weighted historical assist share data with expected minutes factoring
