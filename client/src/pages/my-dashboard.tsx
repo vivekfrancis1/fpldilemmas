@@ -292,6 +292,7 @@ export default function MyDashboard() {
                           {isCurrentManager && <span className="text-blue-600 ml-2 text-sm">(You)</span>}
                         </p>
                         <p className="text-sm text-muted-foreground">{entry.entry_name}</p>
+                        <p className="text-xs text-gray-500">Manager ID: {entry.entry}</p>
                       </div>
                     </div>
                     <div className="text-right">
