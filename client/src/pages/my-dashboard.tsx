@@ -688,10 +688,10 @@ export default function MyDashboard() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-xs sm:text-sm font-medium text-blue-600 mb-1 sm:mb-2">Total Points</p>
-                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 truncate">{managerData.summary_overall_points.toLocaleString()}</p>
+                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900">{managerData.summary_overall_points.toLocaleString()}</p>
                         </div>
-                        <div className="p-2 sm:p-3 bg-blue-100 rounded-full flex-shrink-0">
-                          <Target className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-blue-600" />
+                        <div className="p-1.5 bg-blue-100 rounded-full flex-shrink-0">
+                          <Target className="h-4 w-4 text-blue-600" />
                         </div>
                       </div>
                     </CardContent>
@@ -703,7 +703,7 @@ export default function MyDashboard() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-xs sm:text-sm font-medium text-amber-600 mb-1 sm:mb-2">Overall Rank</p>
-                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-amber-900 truncate">{formatRank(managerData.summary_overall_rank)}</p>
+                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-amber-900">{formatRank(managerData.summary_overall_rank)}</p>
                           {getRankChange() !== null && (
                             <div className={`flex items-center text-xs sm:text-sm mt-1 sm:mt-2 ${getRankChange()! > 0 ? 'text-green-600' : getRankChange()! < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                               {getRankChange()! > 0 ? (
@@ -711,14 +711,14 @@ export default function MyDashboard() {
                               ) : getRankChange()! < 0 ? (
                                 <TrendingDown className="h-3 w-3 mr-1 flex-shrink-0" />
                               ) : null}
-                              <span className="truncate">
+                              <span>
                                 {getRankChange()! > 0 ? '+' : ''}{formatRank(getRankChange()!)}
                               </span>
                             </div>
                           )}
                         </div>
-                        <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0">
-                          <Trophy className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-amber-600" />
+                        <div className="p-1.5 bg-amber-100 rounded-full flex-shrink-0">
+                          <Trophy className="h-4 w-4 text-amber-600" />
                         </div>
                       </div>
                     </CardContent>
@@ -730,13 +730,13 @@ export default function MyDashboard() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-xs sm:text-sm font-medium text-green-600 mb-1 sm:mb-2">GW Points</p>
-                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 truncate">{managerData.summary_event_points}</p>
-                          <p className="text-xs sm:text-sm text-green-600 font-medium mt-1 truncate">
+                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900">{managerData.summary_event_points}</p>
+                          <p className="text-xs sm:text-sm text-green-600 font-medium mt-1">
                             GW{managerData.current_event}
                           </p>
                         </div>
-                        <div className="p-2 sm:p-3 bg-green-100 rounded-full flex-shrink-0">
-                          <Activity className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-green-600" />
+                        <div className="p-1.5 bg-green-100 rounded-full flex-shrink-0">
+                          <Activity className="h-4 w-4 text-green-600" />
                         </div>
                       </div>
                     </CardContent>
@@ -748,10 +748,10 @@ export default function MyDashboard() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-xs sm:text-sm font-medium text-purple-600 mb-1 sm:mb-2">GW Rank</p>
-                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 truncate">{formatRank(managerData.summary_event_rank)}</p>
+                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900">{formatRank(managerData.summary_event_rank)}</p>
                         </div>
-                        <div className="p-2 sm:p-3 bg-purple-100 rounded-full flex-shrink-0">
-                          <Calendar className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-purple-600" />
+                        <div className="p-1.5 bg-purple-100 rounded-full flex-shrink-0">
+                          <Calendar className="h-4 w-4 text-purple-600" />
                         </div>
                       </div>
                     </CardContent>
