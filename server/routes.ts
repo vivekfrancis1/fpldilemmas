@@ -5156,6 +5156,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player Clean Sheet Points endpoint - calculates expected CS points per player per gameweek
+  app.get("/api/player-cleansheet-points", async (req, res) => {
+    try {
+      const { gameweek } = req.query;
+      const targetGameweek = parseInt(gameweek as string) || 4;
+      
+      // Fetch required data
+      console.log(`DEBUG: Fetching data for clean sheet points for GW${targetGameweek}`);
+      const [bootstrapResponse, teamCSResponse, playerMinutesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("http://localhost:5000/api/team-cs-projections"),
+        fetch("http://localhost:5000/api/player-minutes-projections")
+      ]);
+      
+      console.log(`DEBUG: Response status - Bootstrap: ${bootstrapResponse.ok}, Team CS: ${teamCSResponse.ok}, Player Minutes: ${playerMinutesResponse.ok}`);
+      
+      if (!bootstrapResponse.ok || !teamCSResponse.ok || !playerMinutesResponse.ok) {
+        throw new Error("Failed to fetch required data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const teamCSData = await teamCSResponse.json();
+      const playerMinutesData = await playerMinutesResponse.json();
+      
+      const players = bootstrapData.elements;
+      const teams = bootstrapData.teams;
+      const positions = bootstrapData.element_types;
+      
+      // Create player clean sheet points projections
+      const playerCleanSheetProjections: any[] = [];
+      
+      players.forEach((player: any) => {
+        const team = teams.find((t: any) => t.id === player.team);
+        const position = positions.find((p: any) => p.id === player.element_type);
+        const playerMinutes = playerMinutesData.find((pm: any) => pm.playerId === player.id);
+        
+        if (!team || !position || !playerMinutes) return;
+        
+        // Find team's clean sheet projection for the target gameweek
+        const teamCSProjection = teamCSData.find((tcs: any) => tcs.id === team.id);
+        if (!teamCSProjection || !teamCSProjection.gameweekProjections[targetGameweek.toString()]) return;
+        
+        const teamCleanSheetPercent = teamCSProjection.gameweekProjections[targetGameweek.toString()];
+        
+        // Calculate probability of playing 60+ minutes
+        // If expected minutes >= 60, probability is high (0.85-0.95)
+        // If expected minutes is 45-59, probability is medium (0.5-0.7) 
+        // If expected minutes is 30-44, probability is low (0.2-0.4)
+        // If expected minutes < 30, probability is very low (0.05-0.15)
+        let probabilityPlays60Plus = 0;
+        const expectedMinutes = playerMinutes.expectedMinutesPerGame;
+        
+        if (expectedMinutes >= 75) {
+          probabilityPlays60Plus = 0.95; // Very likely starter
+        } else if (expectedMinutes >= 60) {
+          probabilityPlays60Plus = 0.85; // Likely starter
+        } else if (expectedMinutes >= 45) {
+          probabilityPlays60Plus = 0.60; // Rotation player
+        } else if (expectedMinutes >= 30) {
+          probabilityPlays60Plus = 0.30; // Squad player
+        } else if (expectedMinutes >= 15) {
+          probabilityPlays60Plus = 0.10; // Fringe player
+        } else {
+          probabilityPlays60Plus = 0.02; // Rarely plays
+        }
+        
+        // Calculate expected clean sheet points
+        // CS% × Probability plays 60+ mins × 4 points
+        const expectedCleanSheetPoints = (teamCleanSheetPercent / 100) * probabilityPlays60Plus * 4;
+        
+        playerCleanSheetProjections.push({
+          playerId: player.id,
+          playerName: player.web_name,
+          teamShort: team.short_name,
+          position: position.singular_name,
+          gameweek: targetGameweek,
+          teamCleanSheetPercent: teamCleanSheetPercent,
+          probabilityPlays60Plus: probabilityPlays60Plus,
+          expectedCleanSheetPoints: Math.round(expectedCleanSheetPoints * 100) / 100
+        });
+      });
+      
+      // Sort by expected points descending
+      playerCleanSheetProjections.sort((a, b) => b.expectedCleanSheetPoints - a.expectedCleanSheetPoints);
+      
+      console.log(`DEBUG: Generated clean sheet points for ${playerCleanSheetProjections.length} players for GW${targetGameweek}`);
+      res.json(playerCleanSheetProjections);
+    } catch (error) {
+      console.error("Error generating player clean sheet points:", error);
+      res.status(500).json({ error: "Failed to generate player clean sheet points" });
+    }
+  });
+
   // Predicted Scores endpoint - rounds match projections to whole numbers with outcomes
   app.get("/api/predicted-scores", async (req, res) => {
     try {
