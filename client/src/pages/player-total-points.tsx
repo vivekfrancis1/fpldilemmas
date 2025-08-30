@@ -307,9 +307,9 @@ function ComponentTable({
               <div className="flex items-center gap-1">Team {getSortIcon('team')}</div>
             </th>
             {gameweekRange.map(gw => (
-              <th key={gw} className={`px-3 py-3 text-center font-medium text-gray-700 ${colorScheme.bg} border-x ${component === 'total' ? 'cursor-pointer hover:bg-blue-100 transition-colors' : ''}`} onClick={component === 'total' ? () => handleSort(`gw${gw}`) : undefined}>
+              <th key={gw} className={`px-3 py-3 text-center font-medium text-gray-700 ${colorScheme.bg} border-x cursor-pointer hover:bg-gray-100 transition-colors`} onClick={() => handleSort(component === 'total' ? `gw${gw}` : `${colorScheme.pointsField}.gw${gw}`)}>
                 <div className="flex items-center justify-center gap-1">
-                  GW{gw} {component === 'total' ? getSortIcon(`gw${gw}`) : ''}
+                  GW{gw} {getSortIcon(component === 'total' ? `gw${gw}` : `${colorScheme.pointsField}.gw${gw}`)}
                 </div>
               </th>
             ))}
@@ -447,11 +447,19 @@ export default function PlayerTotalPoints() {
     filtered.sort((a, b) => {
       let aValue, bValue;
       
-      // Handle gameweek-specific sorting
-      if (sortField.startsWith('gw')) {
+      // Handle component-specific gameweek sorting (e.g., "pointsFromGoals.gw4")
+      if (sortField.includes('.gw')) {
+        const [component, gwKey] = sortField.split('.');
+        aValue = a[component]?.[gwKey] || 0;
+        bValue = b[component]?.[gwKey] || 0;
+      }
+      // Handle total points gameweek sorting
+      else if (sortField.startsWith('gw')) {
         aValue = a.gameweekProjections?.[sortField] || 0;
         bValue = b.gameweekProjections?.[sortField] || 0;
-      } else {
+      } 
+      // Handle regular field sorting
+      else {
         aValue = a[sortField];
         bValue = b[sortField];
       }
