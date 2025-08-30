@@ -219,7 +219,7 @@ export default function RecentPriceChanges() {
                   <p className="text-xl sm:text-2xl font-bold text-green-700" data-testid="text-today-rises">
                     {todayStats.todayRises}
                   </p>
-                  <p className="text-xs sm:text-sm text-green-600 font-medium">Price Rises Today</p>
+                  <p className="text-xs sm:text-sm text-green-600 font-medium">Price rises today</p>
                 </div>
               </div>
             </CardContent>
@@ -235,7 +235,7 @@ export default function RecentPriceChanges() {
                   <p className="text-xl sm:text-2xl font-bold text-red-700" data-testid="text-today-falls">
                     {todayStats.todayFalls}
                   </p>
-                  <p className="text-xs sm:text-sm text-red-600 font-medium">Price Falls Today</p>
+                  <p className="text-xs sm:text-sm text-red-600 font-medium">Price falls today</p>
                 </div>
               </div>
             </CardContent>
@@ -251,7 +251,7 @@ export default function RecentPriceChanges() {
                   <p className="text-xl sm:text-2xl font-bold text-blue-700" data-testid="text-today-changes">
                     {todayStats.todayChanges}
                   </p>
-                  <p className="text-xs sm:text-sm text-blue-600 font-medium">Total Changes Today</p>
+                  <p className="text-xs sm:text-sm text-blue-600 font-medium">Total price changes today</p>
                 </div>
               </div>
             </CardContent>
@@ -270,7 +270,7 @@ export default function RecentPriceChanges() {
                   <p className="text-xl sm:text-2xl font-bold text-green-600" data-testid="text-total-rises">
                     {seasonStats.totalRises}
                   </p>
-                  <p className="text-xs sm:text-sm text-gray-600">Total Price Rises This Season</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Price rises this season</p>
                   {seasonStats.avgRiseAmount > 0 && (
                     <p className="text-xs text-green-500 mt-1">
                       Avg: +£{(seasonStats.avgRiseAmount / 10).toFixed(1)}m
@@ -291,7 +291,7 @@ export default function RecentPriceChanges() {
                   <p className="text-xl sm:text-2xl font-bold text-red-600" data-testid="text-total-falls">
                     {seasonStats.totalFalls}
                   </p>
-                  <p className="text-xs sm:text-sm text-gray-600">Total Price Falls This Season</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Price falls this season</p>
                   {seasonStats.avgFallAmount > 0 && (
                     <p className="text-xs text-red-500 mt-1">
                       Avg: -£{(seasonStats.avgFallAmount / 10).toFixed(1)}m
@@ -312,7 +312,7 @@ export default function RecentPriceChanges() {
                   <p className="text-xl sm:text-2xl font-bold text-blue-600" data-testid="text-total-changes">
                     {seasonStats.totalChanges}
                   </p>
-                  <p className="text-xs sm:text-sm text-gray-600">Total Price Changes</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Total price changes this season</p>
                   <p className="text-xs text-blue-500 mt-1">
                     {seasonStats.totalRises}↗ {seasonStats.totalFalls}↘
                   </p>
