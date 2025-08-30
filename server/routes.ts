@@ -395,7 +395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamAssistShares[teamName].players.push({
           id: player.id,
           name: playerFullName,
-          position: player.position || 'Unknown',
+          position: player.elementTypeName || 'Unknown',
           assists: assists,
           minutes: player.minutes || 0,
           totalPoints: player.totalPoints || 0
