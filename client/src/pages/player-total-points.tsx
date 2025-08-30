@@ -63,6 +63,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <span className="font-medium text-orange-700">
                 {player.pointsFromDefensiveContributions?.[gwKey]?.toFixed(1) || '0.0'}
               </span>
+              <span className="text-xs text-gray-400 ml-1">(2 if DC≥10/12)</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⏱️ Minutes:</span>
@@ -153,6 +154,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <span className="font-medium text-orange-700">
                 {player.totalPointsFromDefensiveContributions?.toFixed(1) || '0.0'}
               </span>
+              <span className="text-xs text-gray-400 ml-1">(2 if DC≥10/12)</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⏱️ Minutes:</span>

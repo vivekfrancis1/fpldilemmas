@@ -7326,7 +7326,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   assistPoints = actualAssists * 3;
                   minutesPoints = actualMinutes >= 60 ? 2 : actualMinutes >= 1 ? 1 : 0;
                   cleanSheetPoints = actualCleanSheets * (position === 'GKP' ? 4 : position === 'DEF' ? 4 : 0);
-                  defensivePoints = actualDefensive * 2;
+                  // FPL Defensive Contribution Points: 2 points if DC >= 10 for DEF, >= 12 for MID/FWD
+                  const dcThreshold = position === 'DEF' ? 10 : 12;
+                  defensivePoints = actualDefensive >= dcThreshold ? 2 : 0;
                   bonusPoints = actualBonus;
                   
                   // Additional actual scoring components (saves, penalties, cards, etc.)
@@ -7392,8 +7394,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             if (position === 'DEF' || position === 'MID') {
-              const dcEstimate = position === 'DEF' ? 1.2 : 0.6;
-              defensivePoints = dcEstimate * 2;
+              // Estimate probability of reaching DC threshold for FPL points
+              const dcThreshold = position === 'DEF' ? 10 : 12;
+              const avgDC = position === 'DEF' ? 8 : 4; // Rough estimates
+              const thresholdProb = Math.min(avgDC / dcThreshold, 0.6); // Max 60% chance
+              defensivePoints = thresholdProb * 2; // 2 points if threshold reached
             }
             
             bonusPoints = 0; // No individual bonus projection tool available
