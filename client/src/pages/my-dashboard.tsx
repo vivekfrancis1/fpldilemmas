@@ -681,17 +681,17 @@ export default function MyDashboard() {
 
               {/* Overview Tab */}
               <TabsContent value="overview" className="fpl-section-spacing mt-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                   {/* Total Points */}
                   <Card className="border-0 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-blue-600 mb-2">Total Points</p>
-                          <p className="text-3xl font-bold text-blue-900">{managerData.summary_overall_points.toLocaleString()}</p>
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-blue-600 mb-1 sm:mb-2">Total Points</p>
+                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 truncate">{managerData.summary_overall_points.toLocaleString()}</p>
                         </div>
-                        <div className="p-3 bg-blue-100 rounded-full">
-                          <Target className="h-8 w-8 text-blue-600" />
+                        <div className="p-2 sm:p-3 bg-blue-100 rounded-full flex-shrink-0">
+                          <Target className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-blue-600" />
                         </div>
                       </div>
                     </CardContent>
@@ -699,24 +699,26 @@ export default function MyDashboard() {
 
                   {/* Overall Rank */}
                   <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-amber-600 mb-2">Overall Rank</p>
-                          <p className="text-3xl font-bold text-amber-900">{formatRank(managerData.summary_overall_rank)}</p>
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-amber-600 mb-1 sm:mb-2">Overall Rank</p>
+                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-amber-900 truncate">{formatRank(managerData.summary_overall_rank)}</p>
                           {getRankChange() !== null && (
-                            <div className={`flex items-center text-sm mt-2 ${getRankChange()! > 0 ? 'text-green-600' : getRankChange()! < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                            <div className={`flex items-center text-xs sm:text-sm mt-1 sm:mt-2 ${getRankChange()! > 0 ? 'text-green-600' : getRankChange()! < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                               {getRankChange()! > 0 ? (
-                                <TrendingUp className="h-3 w-3 mr-1" />
+                                <TrendingUp className="h-3 w-3 mr-1 flex-shrink-0" />
                               ) : getRankChange()! < 0 ? (
-                                <TrendingDown className="h-3 w-3 mr-1" />
+                                <TrendingDown className="h-3 w-3 mr-1 flex-shrink-0" />
                               ) : null}
-                              {getRankChange()! > 0 ? '+' : ''}{formatRank(getRankChange()!)}
+                              <span className="truncate">
+                                {getRankChange()! > 0 ? '+' : ''}{formatRank(getRankChange()!)}
+                              </span>
                             </div>
                           )}
                         </div>
-                        <div className="p-3 bg-amber-100 rounded-full">
-                          <Trophy className="h-8 w-8 text-amber-600" />
+                        <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0">
+                          <Trophy className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-amber-600" />
                         </div>
                       </div>
                     </CardContent>
@@ -724,17 +726,17 @@ export default function MyDashboard() {
 
                   {/* Gameweek Points */}
                   <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-green-600 mb-2">GW Points</p>
-                          <p className="text-3xl font-bold text-green-900">{managerData.summary_event_points}</p>
-                          <p className="text-sm text-green-600 font-medium mt-1">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-green-600 mb-1 sm:mb-2">GW Points</p>
+                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 truncate">{managerData.summary_event_points}</p>
+                          <p className="text-xs sm:text-sm text-green-600 font-medium mt-1 truncate">
                             GW{managerData.current_event}
                           </p>
                         </div>
-                        <div className="p-3 bg-green-100 rounded-full">
-                          <Activity className="h-8 w-8 text-green-600" />
+                        <div className="p-2 sm:p-3 bg-green-100 rounded-full flex-shrink-0">
+                          <Activity className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-green-600" />
                         </div>
                       </div>
                     </CardContent>
@@ -742,14 +744,14 @@ export default function MyDashboard() {
 
                   {/* Gameweek Rank */}
                   <Card className="border-0 bg-gradient-to-br from-purple-50 to-violet-50 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-purple-600 mb-2">GW Rank</p>
-                          <p className="text-3xl font-bold text-purple-900">{formatRank(managerData.summary_event_rank)}</p>
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-purple-600 mb-1 sm:mb-2">GW Rank</p>
+                          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 truncate">{formatRank(managerData.summary_event_rank)}</p>
                         </div>
-                        <div className="p-3 bg-purple-100 rounded-full">
-                          <Calendar className="h-8 w-8 text-purple-600" />
+                        <div className="p-2 sm:p-3 bg-purple-100 rounded-full flex-shrink-0">
+                          <Calendar className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-purple-600" />
                         </div>
                       </div>
                     </CardContent>
