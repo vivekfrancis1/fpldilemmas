@@ -512,8 +512,18 @@ export default function Fixtures() {
                     <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
-                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Avg FDR</th>
+                          <th 
+                            className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24 cursor-pointer hover:bg-gray-100"
+                            onClick={() => setSortBy('team')}
+                          >
+                            Team {sortBy === 'team' && '↑'}
+                          </th>
+                          <th 
+                            className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l cursor-pointer hover:bg-gray-100"
+                            onClick={() => setSortBy(sortBy === 'fdr-asc' ? 'fdr-desc' : 'fdr-asc')}
+                          >
+                            Avg FDR {sortBy === 'fdr-asc' ? '↑' : sortBy === 'fdr-desc' ? '↓' : ''}
+                          </th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
@@ -599,8 +609,18 @@ export default function Fixtures() {
                     <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
-                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Avg Attack</th>
+                          <th 
+                            className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24 cursor-pointer hover:bg-gray-100"
+                            onClick={() => setSortBy('team')}
+                          >
+                            Team {sortBy === 'team' && '↑'}
+                          </th>
+                          <th 
+                            className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l cursor-pointer hover:bg-gray-100"
+                            onClick={() => setSortBy(sortBy === 'attack-asc' ? 'attack-desc' : 'attack-asc')}
+                          >
+                            Avg Attack {sortBy === 'attack-asc' ? '↑' : sortBy === 'attack-desc' ? '↓' : ''}
+                          </th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
@@ -701,8 +721,18 @@ export default function Fixtures() {
                     <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
-                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Avg Defence</th>
+                          <th 
+                            className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24 cursor-pointer hover:bg-gray-100"
+                            onClick={() => setSortBy('team')}
+                          >
+                            Team {sortBy === 'team' && '↑'}
+                          </th>
+                          <th 
+                            className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l cursor-pointer hover:bg-gray-100"
+                            onClick={() => setSortBy(sortBy === 'defence-asc' ? 'defence-desc' : 'defence-asc')}
+                          >
+                            Avg Defence {sortBy === 'defence-asc' ? '↑' : sortBy === 'defence-desc' ? '↓' : ''}
+                          </th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
