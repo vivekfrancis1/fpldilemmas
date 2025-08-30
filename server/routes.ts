@@ -4087,13 +4087,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               player.assistShare = (player.assistShare / totalShare) * 100;
               const projectedAssists = (teamSeasonTotals[teamId].expectedAssists * player.assistShare / 100);
               
-              // Apply final reality check - max 12 assists for any individual player
-              const cappedProjectedAssists = Math.min(projectedAssists, 12);
-              
               teamSeasonTotals[teamId].players[player.id] = {
                 name: player.name,
                 position: player.position,
-                projectedAssists: Math.round(cappedProjectedAssists * 100) / 100
+                projectedAssists: Math.round(projectedAssists * 100) / 100
               };
             });
             
