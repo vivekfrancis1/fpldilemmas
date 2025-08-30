@@ -7321,7 +7321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   minutesPoints = actualMinutes >= 60 ? 2 : actualMinutes >= 1 ? 1 : 0;
                   cleanSheetPoints = actualCleanSheets * (position === 'GKP' ? 4 : position === 'DEF' ? 4 : 0);
                   defensivePoints = actualDefensive * 2;
-                  bonusPoints = actualBonus;
+                  bonusPoints = actualBonus; // Use actual bonus from FPL API for completed gameweeks
                   
                   // Use actual total (more accurate than component sum due to other scoring)
                   gameweekProjections[`gw${gw}`] = actualTotalPoints;
@@ -7379,7 +7379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               defensivePoints = dcEstimate * 2;
             }
             
-            bonusPoints = (goalPoints + assistPoints) * 0.1;
+            bonusPoints = 0; // No individual bonus projection tool available
             
             const gwTotal = goalPoints + assistPoints + minutesPoints + cleanSheetPoints + defensivePoints + bonusPoints;
             gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;

@@ -72,6 +72,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <span className="font-medium text-pink-700">
                 {player.pointsFromBonus?.[gwKey]?.toFixed(1) || '0.0'}
               </span>
+              <span className="text-xs text-gray-400 ml-1">(actual only)</span>
             </div>
           </div>
           <div className="border-t pt-2 mt-3">
@@ -158,6 +159,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <span className="font-medium text-pink-700">
                 {player.totalPointsFromBonus?.toFixed(1) || '0.0'}
               </span>
+              <span className="text-xs text-gray-400 ml-1">(actual only)</span>
             </div>
           </div>
           <div className="border-t pt-2 mt-3">
