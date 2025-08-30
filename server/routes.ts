@@ -4031,40 +4031,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
           
-          // Calculate final assist shares and projected assists
+          // Calculate final assist shares and projected assists with realistic caps
           const finalPlayerShares: any[] = [];
           
           Object.keys(weightedPlayerShares).forEach(playerIdStr => {
             const playerId = parseInt(playerIdStr);
             const playerData = weightedPlayerShares[playerId];
+            const currentPlayer = teamPlayers.find(p => p.id === playerId);
+            
+            // Skip players with very low expected minutes (likely not starters)
+            if (currentPlayer) {
+              const expectedMinutes = calculateExpectedMinutes(currentPlayer, teamPlayers);
+              if (expectedMinutes < 800) {
+                console.log(`DEBUG: Skipping ${playerData.name} - too few expected minutes (${expectedMinutes})`);
+                return;
+              }
+            }
             
             // Calculate final weighted assist share
             const finalAssistShare = playerData.totalWeight > 0 ? 
               playerData.totalWeightedShare / playerData.totalWeight : 0;
             
-            if (finalAssistShare > 0) {
+            // Apply realistic caps based on position
+            const getPositionCap = (position: string): number => {
+              switch (position.toLowerCase()) {
+                case 'goalkeeper': return 2; // Max 2% for GKs
+                case 'defender': return 15; // Max 15% for defenders
+                case 'midfielder': return 35; // Max 35% for midfielders
+                case 'forward': return 25; // Max 25% for forwards
+                default: return 20;
+              }
+            };
+            
+            const positionCap = getPositionCap(playerData.position);
+            const cappedAssistShare = Math.min(finalAssistShare, positionCap);
+            
+            if (cappedAssistShare !== finalAssistShare) {
+              console.log(`DEBUG: Capped ${playerData.name} assist share: ${finalAssistShare.toFixed(1)}% → ${cappedAssistShare.toFixed(1)}% (${playerData.position} cap: ${positionCap}%)`);
+            }
+            
+            if (cappedAssistShare > 0) {
               finalPlayerShares.push({
                 id: playerId,
                 name: playerData.name,
                 position: playerData.position,
-                assistShare: finalAssistShare
+                assistShare: cappedAssistShare
               });
             }
           });
           
-          // Normalize to ensure team totals 100%
+          // Normalize to ensure team totals 100% with reasonable distribution
           const totalShare = finalPlayerShares.reduce((sum, p) => sum + p.assistShare, 0);
-          if (totalShare > 0) {
+          if (totalShare > 0 && finalPlayerShares.length > 0) {
             finalPlayerShares.forEach(player => {
               player.assistShare = (player.assistShare / totalShare) * 100;
               const projectedAssists = (teamSeasonTotals[teamId].expectedAssists * player.assistShare / 100);
               
+              // Apply final reality check - max 12 assists for any individual player
+              const cappedProjectedAssists = Math.min(projectedAssists, 12);
+              
               teamSeasonTotals[teamId].players[player.id] = {
                 name: player.name,
                 position: player.position,
-                projectedAssists: Math.round(projectedAssists * 100) / 100
+                projectedAssists: Math.round(cappedProjectedAssists * 100) / 100
               };
             });
+            
+            console.log(`DEBUG: Team ${team.name} distributed assists among ${finalPlayerShares.length} players`);
+          } else {
+            console.log(`DEBUG: No valid assist shares for team ${team.name}`);
           }
         }
       });
