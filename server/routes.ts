@@ -7959,8 +7959,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Fixed historical data population endpoint
-  app.post("/api/historical-player-stats/populate-fixed", async (req, res) => {
+  // Comprehensive historical data population endpoint for ALL players
+  app.post("/api/historical-player-stats/populate-all", async (req, res) => {
     try {
       const { season } = req.body;
       
@@ -7968,9 +7968,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Season parameter required (format: '2022/23')" });
       }
 
-      console.log(`DEBUG: Starting FIXED historical stats population for ${season}`);
+      console.log(`DEBUG: Starting COMPREHENSIVE historical stats population for ${season} - ALL 500+ PLAYERS`);
 
-      // Fetch current season data to get player list
+      // Fetch current season data to get complete player list
       const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch current bootstrap data");
@@ -7980,19 +7980,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const results: any[] = [];
       let processedCount = 0;
       let foundDataCount = 0;
+      let apiRequestCount = 0;
 
-      // Process first 20 players for testing
-      const testPlayers = currentBootstrap.elements.slice(0, 20);
+      // Process ALL players (500+) for complete historical data
+      const allPlayers = currentBootstrap.elements;
+      console.log(`DEBUG: Processing ${allPlayers.length} total players for ${season}`);
       
-      for (const player of testPlayers) {
+      // Process in batches of 50 to avoid overwhelming the FPL API
+      for (let i = 0; i < allPlayers.length; i += 50) {
+        const batch = allPlayers.slice(i, i + 50);
+        console.log(`DEBUG: Processing batch ${Math.floor(i/50) + 1}/${Math.ceil(allPlayers.length/50)} (players ${i+1}-${Math.min(i+50, allPlayers.length)})`);
+        
+        const batchPromises = batch.map(async (player: any) => {
         try {
           processedCount++;
+          apiRequestCount++;
           
           // Fetch player's historical data
           const playerResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
           if (!playerResponse.ok) {
-            console.log(`DEBUG: Failed to fetch data for player ${player.id}: ${player.web_name}`);
-            continue;
+            return null;
           }
           
           const playerData = await playerResponse.json();
@@ -8002,8 +8009,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const seasonData = historicalSeasons.find((h: any) => h.season_name === season);
 
           if (!seasonData) {
-            console.log(`DEBUG: No data for ${player.web_name} in ${season}`);
-            continue;
+            return null;
           }
 
           foundDataCount++;
@@ -8066,22 +8072,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cleanSheetsPer90: calculatePer90(seasonData.clean_sheets || 0, seasonData.minutes || 0),
           };
 
-          results.push(historicalRecord);
-          console.log(`DEBUG: Added ${player.web_name} from ${season}: ${seasonData.total_points} pts, ${seasonData.goals_scored} goals, ${seasonData.assists} assists`);
+          return historicalRecord;
           
         } catch (error) {
-          console.error(`Error processing player ${player.web_name}:`, error);
+          return null;
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      const validResults = batchResults.filter(result => result !== null);
+      
+      if (validResults.length > 0) {
+        try {
+          results.push(...validResults);
+          await db.insert(historicalPlayerStats).values(validResults).onConflictDoNothing();
+          console.log(`DEBUG: Batch ${Math.floor(i/50) + 1} - inserted ${validResults.length} records`);
+        } catch (dbError) {
+          console.error("Batch insertion failed:", dbError);
         }
       }
-
-      // Store results in database
-      if (results.length > 0) {
-        try {
-          await db.insert(historicalPlayerStats).values(results).onConflictDoNothing();
-          console.log(`DEBUG: Successfully inserted ${results.length} historical records for ${season}`);
-        } catch (dbError) {
-          console.error("Database insertion failed:", dbError);
-        }
+      
+      // Add delay between batches to be respectful to FPL API
+      await new Promise(resolve => setTimeout(resolve, 200));
       }
 
       res.json({
@@ -8090,6 +8102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playersProcessed: processedCount,
         playersWithHistoricalData: foundDataCount,
         recordsInserted: results.length,
+        apiRequestCount: apiRequestCount,
         message: `Successfully processed ${processedCount} players, found ${foundDataCount} with data, inserted ${results.length} records for ${season}`,
         sampleData: results.slice(0, 3)
       });
