@@ -25,6 +25,8 @@ export default function PlayerGoalsScoredProjections() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("total");
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
+  const [startGameweek, setStartGameweek] = useState<number>(3);
+  const [endGameweek, setEndGameweek] = useState<number>(8);
   
   const queryClient = useQueryClient();
 
@@ -38,10 +40,14 @@ export default function PlayerGoalsScoredProjections() {
     refetchOnMount: true,
   });
 
-  // Fixed to show GW3-GW8 (next 6 gameweeks)
-  const next6Gameweeks = useMemo(() => {
-    return [3, 4, 5, 6, 7, 8];
-  }, []);
+  // Dynamic gameweek range based on user selection (default: GW3-GW8)
+  const selectedGameweeks = useMemo(() => {
+    const gameweeks = [];
+    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+      gameweeks.push(gw);
+    }
+    return gameweeks;
+  }, [startGameweek, endGameweek]);
 
   // Filter and sort data
   const filteredProjections = useMemo(() => {
@@ -66,9 +72,9 @@ export default function PlayerGoalsScoredProjections() {
         
         switch (sortBy) {
           case "total": {
-            // Calculate next 6 gameweeks total for sorting
-            const aPeriodTotal = next6Gameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
-            const bPeriodTotal = next6Gameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+            // Calculate selected gameweeks total for sorting
+            const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
+            const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
             return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
           case "season": return (b.totalProjectedGoals - a.totalProjectedGoals) * multiplier;
@@ -76,13 +82,13 @@ export default function PlayerGoalsScoredProjections() {
           case "team": return a.teamName.localeCompare(b.teamName) * multiplier;
           case "position": return a.position.localeCompare(b.position) * multiplier;
           default: {
-            const aPeriodTotal = next6Gameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
-            const bPeriodTotal = next6Gameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+            const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
+            const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
             return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
         }
       });
-  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy, sortDirection, next6Gameweeks]);
+  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy, sortDirection, selectedGameweeks]);
 
   const totalGoals = useMemo(() => {
     if (!filteredProjections.length) return { gameweekTotals: {}, overallTotal: 0, seasonTotal: 0, averagePerGame: 0 };
@@ -91,10 +97,10 @@ export default function PlayerGoalsScoredProjections() {
     let overallTotal = 0;
     let seasonTotal = 0;
     
-    const totalWeeks = next6Gameweeks.length;
+    const totalWeeks = selectedGameweeks.length;
     
-    // Calculate totals for next 6 gameweeks
-    next6Gameweeks.forEach(gwNumber => {
+    // Calculate totals for selected gameweeks
+    selectedGameweeks.forEach(gwNumber => {
       const gwTotal = filteredProjections.reduce((sum, player) => sum + (player.gameweekProjections[gwNumber] || 0), 0);
       gameweekTotals[gwNumber] = gwTotal;
       overallTotal += gwTotal;
@@ -106,7 +112,7 @@ export default function PlayerGoalsScoredProjections() {
     const averagePerGame = overallTotal / totalWeeks;
     
     return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
-  }, [filteredProjections, next6Gameweeks]);
+  }, [filteredProjections, selectedGameweeks]);
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
@@ -204,6 +210,36 @@ export default function PlayerGoalsScoredProjections() {
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex flex-wrap gap-4 items-end">
+              {/* Gameweek Range Filter */}
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-500" />
+                <label className="text-sm font-medium text-gray-700">From GW:</label>
+                <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 36 }, (_, i) => i + 3).map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">To GW:</label>
+                <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 39 - startGameweek }, (_, i) => i + startGameweek).map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-gray-500" />
                 <label className="text-sm font-medium text-gray-700">Team:</label>
@@ -258,12 +294,12 @@ export default function PlayerGoalsScoredProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="total">6 GW Total</SelectItem>
+                    <SelectItem value="total">{selectedGameweeks.length} GW Total</SelectItem>
                     <SelectItem value="season">Season Total</SelectItem>
                     <SelectItem value="name">Player Name</SelectItem>
                     <SelectItem value="team">Team</SelectItem>
                     <SelectItem value="position">Position</SelectItem>
-                    {next6Gameweeks.map(gw => (
+                    {selectedGameweeks.map(gw => (
                       <SelectItem key={gw} value={`gw${gw}`}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
@@ -290,7 +326,7 @@ export default function PlayerGoalsScoredProjections() {
             <CardContent className="p-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-600">{totalGoals.overallTotal.toFixed(2)}</p>
-                <p className="text-sm text-gray-600">6 GW Total</p>
+                <p className="text-sm text-gray-600">{selectedGameweeks.length} GW Total</p>
               </div>
             </CardContent>
           </Card>
@@ -308,7 +344,7 @@ export default function PlayerGoalsScoredProjections() {
             <CardContent className="p-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-purple-600">{totalGoals.averagePerGame.toFixed(2)}</p>
-                <p className="text-sm text-gray-600">Avg Per GW</p>
+                <p className="text-sm text-gray-600">Avg Per GW (GW{startGameweek}-{endGameweek})</p>
               </div>
             </CardContent>
           </Card>
@@ -372,7 +408,7 @@ export default function PlayerGoalsScoredProjections() {
                         {sortBy !== "position" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
                       </Button>
                     </th>
-                    {next6Gameweeks.map(gw => (
+                    {selectedGameweeks.map(gw => (
                       <th key={gw} className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[70px]">
                         <Button
                           variant="ghost"
@@ -397,7 +433,7 @@ export default function PlayerGoalsScoredProjections() {
                         onClick={() => handleSort("total")}
                         data-testid="sort-total"
                       >
-                        6 GW
+                        {selectedGameweeks.length} GW
                         {sortBy === "total" && (
                           sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
                         )}
@@ -423,7 +459,7 @@ export default function PlayerGoalsScoredProjections() {
                 </thead>
                 <tbody>
                   {filteredProjections.map((player, index) => {
-                    const next6Total = next6Gameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
+                    const selectedTotal = selectedGameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
                     
                     return (
                       <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
@@ -443,7 +479,7 @@ export default function PlayerGoalsScoredProjections() {
                         <td className="py-3 px-2 text-center text-sm text-gray-600">
                           {player.position}
                         </td>
-                        {next6Gameweeks.map(gw => {
+                        {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw] || 0;
                           return (
                             <td key={gw} className="py-3 px-2 text-center">
@@ -455,7 +491,7 @@ export default function PlayerGoalsScoredProjections() {
                         })}
                         <td className="py-3 px-2 text-center border-l border-gray-200">
                           <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-sm">
-                            {next6Total.toFixed(2)}
+                            {selectedTotal.toFixed(2)}
                           </span>
                         </td>
                         <td className="py-3 px-2 text-center">
@@ -470,9 +506,9 @@ export default function PlayerGoalsScoredProjections() {
                 <tfoot>
                   <tr className="border-t border-gray-200 bg-blue-50">
                     <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-blue-50 border-r border-gray-200 z-10" colSpan={3}>
-                      6 GW TOTAL
+                      {selectedGameweeks.length} GW TOTAL
                     </td>
-                    {next6Gameweeks.map(gw => (
+                    {selectedGameweeks.map(gw => (
                       <td key={gw} className="py-3 px-2 text-center font-bold text-blue-600">
                         {(totalGoals.gameweekTotals[gw] || 0).toFixed(2)}
                       </td>
@@ -488,7 +524,7 @@ export default function PlayerGoalsScoredProjections() {
                     <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-green-50 border-r border-gray-200 z-10" colSpan={3}>
                       SEASON TOTAL
                     </td>
-                    {next6Gameweeks.map(gw => (
+                    {selectedGameweeks.map(gw => (
                       <td key={gw} className="py-3 px-2 text-center font-bold text-gray-600">
                         -
                       </td>
