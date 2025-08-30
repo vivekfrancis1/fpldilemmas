@@ -642,23 +642,23 @@ export default function PlayerTotalPoints() {
                   </TabsTrigger>
                   <TabsTrigger value="goals" className="flex items-center gap-2">
                     <Target className="h-4 w-4" />
-                    Goals
+                    Goal Points
                   </TabsTrigger>
                   <TabsTrigger value="assists" className="flex items-center gap-2">
                     <Zap className="h-4 w-4" />
-                    Assists
+                    Assist Points
                   </TabsTrigger>
                   <TabsTrigger value="cleansheets" className="flex items-center gap-2">
                     <Shield className="h-4 w-4" />
-                    Clean Sheets
+                    CS Points
                   </TabsTrigger>
                   <TabsTrigger value="defensive" className="flex items-center gap-2">
                     <Swords className="h-4 w-4" />
-                    Defensive
+                    DC Points
                   </TabsTrigger>
                   <TabsTrigger value="minutes" className="flex items-center gap-2">
                     <Timer className="h-4 w-4" />
-                    Minutes
+                    Mins Points
                   </TabsTrigger>
                 </TabsList>
 
