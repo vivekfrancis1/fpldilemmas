@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Target, Filter, BarChart3, Trophy, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Target, Filter, BarChart3, Trophy, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,6 +25,8 @@ export default function PlayerGoalsScoredProjections() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("total");
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
+  
+  const queryClient = useQueryClient();
 
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -32,7 +34,8 @@ export default function PlayerGoalsScoredProjections() {
 
   const { data: playerGoalData, isLoading: playerGoalLoading, error } = useQuery<PlayerGoalProjection[]>({
     queryKey: ["/api/player-goals-scored-projections"],
-    staleTime: 10 * 60 * 1000,
+    staleTime: 0, // Force fresh data to show updated hybrid calculations
+    refetchOnMount: true,
   });
 
   // Fixed to show GW3-GW8 (next 6 gameweeks)
@@ -132,6 +135,11 @@ export default function PlayerGoalsScoredProjections() {
     }
   };
 
+  const handleRefreshData = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["/api/player-goals-scored-projections"] });
+    await queryClient.refetchQueries({ queryKey: ["/api/player-goals-scored-projections"] });
+  };
+
   const getGoalsColor = (goals: number) => {
     if (goals >= 2.5) return 'bg-green-50 text-green-800 font-semibold';
     if (goals >= 2.0) return 'bg-blue-50 text-blue-800 font-medium';
@@ -172,11 +180,23 @@ export default function PlayerGoalsScoredProjections() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4">
             <Target className="h-8 w-8 text-orange-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-            Player Goals Scored Projections
-          </h1>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <h1 className="text-3xl font-bold text-gray-900" data-testid="text-page-title">
+              Player Goals Scored Projections
+            </h1>
+            <Button
+              onClick={handleRefreshData}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              data-testid="button-refresh-data"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh Data
+            </Button>
+          </div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-            Individual player goal projections for the next 6 gameweeks based on team shares and xG analysis
+            Hybrid projections using actual goals from completed matches + projected goals for remaining fixtures
           </p>
         </div>
 
