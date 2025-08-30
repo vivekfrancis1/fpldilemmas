@@ -7306,22 +7306,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // Use actual total points from FPL API
                   const actualTotalPoints = gameweekHistory.total_points || 0;
                   
-                  // Break down into components for detailed analysis
+                  // Break down into components for detailed analysis using comprehensive FPL data
                   const actualGoals = gameweekHistory.goals_scored || 0;
                   const actualAssists = gameweekHistory.assists || 0;
                   const actualMinutes = gameweekHistory.minutes || 0;
                   const actualCleanSheets = gameweekHistory.clean_sheets || 0;
                   const actualDefensive = gameweekHistory.defensive_contribution || 0;
                   const actualBonus = gameweekHistory.bonus || 0;
+                  const actualSaves = gameweekHistory.saves || 0;
+                  const actualYellowCards = gameweekHistory.yellow_cards || 0;
+                  const actualRedCards = gameweekHistory.red_cards || 0;
+                  const actualGoalsConceded = gameweekHistory.goals_conceded || 0;
+                  const actualPenaltiesMissed = gameweekHistory.penalties_missed || 0;
+                  const actualOwnGoals = gameweekHistory.own_goals || 0;
                   
-                  // Calculate component points
+                  // Calculate component points using actual FPL scoring
                   const pointsPerGoal = position === 'FWD' ? 4 : position === 'MID' ? 5 : 6;
                   goalPoints = actualGoals * pointsPerGoal;
                   assistPoints = actualAssists * 3;
                   minutesPoints = actualMinutes >= 60 ? 2 : actualMinutes >= 1 ? 1 : 0;
                   cleanSheetPoints = actualCleanSheets * (position === 'GKP' ? 4 : position === 'DEF' ? 4 : 0);
                   defensivePoints = actualDefensive * 2;
-                  bonusPoints = actualBonus; // Use actual bonus from FPL API for completed gameweeks
+                  bonusPoints = actualBonus;
+                  
+                  // Additional actual scoring components (saves, penalties, cards, etc.)
+                  const savePoints = position === 'GKP' ? Math.floor(actualSaves / 3) : 0; // 1 point per 3 saves for GKP
+                  const cardPenalties = (actualYellowCards * -1) + (actualRedCards * -3); // -1 for yellow, -3 for red
+                  const concededPenalties = position === 'GKP' || position === 'DEF' ? Math.floor(actualGoalsConceded / 2) * -1 : 0; // -1 per 2 goals conceded for GKP/DEF
+                  const penaltyMissPenalties = actualPenaltiesMissed * -2; // -2 for penalty miss
+                  const ownGoalPenalties = actualOwnGoals * -2; // -2 for own goal
+                  
+                  // Update component totals with comprehensive actual data
+                  const otherPoints = savePoints + cardPenalties + concededPenalties + penaltyMissPenalties + ownGoalPenalties;
+                  console.log(`DEBUG: Player ${fplPlayer.id} GW${gw} comprehensive breakdown - Goals: ${goalPoints}, Assists: ${assistPoints}, CS: ${cleanSheetPoints}, DC: ${defensivePoints}, Minutes: ${minutesPoints}, Bonus: ${bonusPoints}, Other: ${otherPoints}, Total: ${actualTotalPoints}`);
                   
                   // Use actual total (more accurate than component sum due to other scoring)
                   gameweekProjections[`gw${gw}`] = actualTotalPoints;
