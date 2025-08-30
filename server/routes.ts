@@ -7077,24 +7077,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Player Total Points API called for GW${start}-${end}`);
       
-      // Fetch all component data from existing endpoints
-      const [goalsResponse, assistsResponse, cleanSheetsResponse, minutesResponse, bootstrapResponse] = await Promise.all([
+      // Fetch all component data from existing endpoints including defensive contributions
+      const [goalsResponse, assistsResponse, cleanSheetsResponse, minutesResponse, defensiveResponse, bootstrapResponse] = await Promise.all([
         fetch(`http://localhost:5000/api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
         fetch(`http://localhost:5000/api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
         fetch(`http://localhost:5000/api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`),
         fetch(`http://localhost:5000/api/player-minutes-projections?startGameweek=${start}&endGameweek=${end}`),
+        fetch(`http://localhost:5000/api/player-defensive-contributions?startGameweek=${start}&endGameweek=${end}`),
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
       ]);
       
-      if (!goalsResponse.ok || !assistsResponse.ok || !cleanSheetsResponse.ok || !minutesResponse.ok || !bootstrapResponse.ok) {
+      if (!goalsResponse.ok || !assistsResponse.ok || !cleanSheetsResponse.ok || !minutesResponse.ok || !defensiveResponse.ok || !bootstrapResponse.ok) {
         throw new Error("Failed to fetch component data");
       }
       
-      const [goalsData, assistsData, cleanSheetsData, minutesData, bootstrapData] = await Promise.all([
+      const [goalsData, assistsData, cleanSheetsData, minutesData, defensiveData, bootstrapData] = await Promise.all([
         goalsResponse.json(),
         assistsResponse.json(),
         cleanSheetsResponse.json(),
         minutesResponse.json(),
+        defensiveResponse.json(),
         bootstrapResponse.json()
       ]);
       
@@ -7105,6 +7107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assistsMap = new Map();
       const cleanSheetsMap = new Map();
       const minutesMap = new Map();
+      const defensiveMap = new Map();
       
       // Populate lookup maps
       goalsData.forEach((player: any) => {
@@ -7121,6 +7124,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       minutesData.forEach((player: any) => {
         minutesMap.set(player.playerId, player);
+      });
+      
+      defensiveData.forEach((player: any) => {
+        defensiveMap.set(player.playerId, player);
       });
       
       // FPL scoring system points
@@ -7164,6 +7171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const assistPlayer = assistsMap.get(player.playerId);
         const cleanSheetPlayer = cleanSheetsMap.get(player.playerId);
         const minutesPlayer = minutesMap.get(player.playerId);
+        const defensivePlayer = defensiveMap.get(player.playerId);
         const fplPlayer = fplPlayersMap.get(player.playerId);
         
         // Calculate gameweek-by-gameweek totals using hybrid approach
@@ -7185,20 +7193,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (isGameweekFinished && fplPlayer) {
             // For completely finished gameweeks, use actual total points
             // This would be implemented with individual player data fetch in production
-            gwTotal = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, pointsSystem);
+            gwTotal = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, defensivePlayer, pointsSystem);
             actualGameweeks++;
             console.log(`DEBUG: GW${gw} FINISHED - ${player.playerName}: ${gwTotal.toFixed(2)} points (actual data framework)`);
             
           } else if (isGameweekCurrent && fplPlayer) {
             // For ongoing gameweek, use projections for now (fixture-level analysis framework in place)
             // TODO: Implement async fixture analysis in next optimization
-            gwTotal = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, pointsSystem);
+            gwTotal = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, defensivePlayer, pointsSystem);
             actualGameweeks++; // Framework ready for actual fixture analysis
             console.log(`DEBUG: GW${gw} ONGOING - ${player.playerName}: ${gwTotal.toFixed(2)} points (fixture analysis ready)`);
             
           } else {
             // Use projections for future gameweeks
-            gwTotal = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, pointsSystem);
+            gwTotal = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, defensivePlayer, pointsSystem);
             projectedGameweeks++;
             console.log(`DEBUG: GW${gw} FUTURE - ${player.playerName}: ${gwTotal.toFixed(2)} points (projection)`);
           }
@@ -7238,7 +7246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper function to calculate projected points for a gameweek
-  function calculateProjectedPoints(gw: number, player: any, assistPlayer: any, cleanSheetPlayer: any, minutesPlayer: any, pointsSystem: any) {
+  function calculateProjectedPoints(gw: number, player: any, assistPlayer: any, cleanSheetPlayer: any, minutesPlayer: any, defensivePlayer: any, pointsSystem: any) {
     let gwTotal = 0;
     
     // Goals points - goals API uses string keys without "gw" prefix
@@ -7258,6 +7266,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Minutes points - use pointsFromMinutes from minutes API (same for all gameweeks)
     const minutesPoints = minutesPlayer?.pointsFromMinutes || 0;
     gwTotal += minutesPoints;
+    
+    // Defensive contribution points - 2 points for defenders/midfielders/forwards when DC >= threshold
+    if (defensivePlayer?.gameweekProjections) {
+      const defensiveContributions = defensivePlayer.gameweekProjections[gw.toString()] || 0;
+      let defensivePoints = 0;
+      
+      // FPL defensive contribution scoring rules based on position
+      if (player.position === 'Defender' && defensiveContributions >= 10) {
+        defensivePoints = 2;
+      } else if ((player.position === 'Midfielder' || player.position === 'Forward') && defensiveContributions >= 12) {
+        defensivePoints = 2;
+      }
+      
+      gwTotal += defensivePoints;
+    }
     
     return gwTotal;
   }
