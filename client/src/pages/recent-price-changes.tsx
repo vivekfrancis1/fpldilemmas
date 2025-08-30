@@ -117,6 +117,21 @@ export default function RecentPriceChanges() {
       return matchesSearch && matchesPosition && matchesChangeType;
     })
     .sort((a: PriceChange, b: PriceChange) => {
+      // First, sort by date (most recent first)
+      const dateComparison = b.change_date.localeCompare(a.change_date);
+      if (dateComparison !== 0) {
+        return dateComparison;
+      }
+      
+      // For same date, sort by price change type (rises first, then falls)
+      const aPriceChange = a.price_change;
+      const bPriceChange = b.price_change;
+      
+      // If one is rise and other is fall, rises come first
+      if (aPriceChange > 0 && bPriceChange < 0) return -1;
+      if (aPriceChange < 0 && bPriceChange > 0) return 1;
+      
+      // If both are rises or both are falls, apply user-selected sorting
       let aValue = a[sortField];
       let bValue = b[sortField];
       
