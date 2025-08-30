@@ -3203,7 +3203,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Use bootstrap data directly to avoid 700+ API calls
       bootstrapData.elements.forEach((player: any) => {
-        // Use available metrics from bootstrap data (goals, assists, xG stats)
+        // PRIORITIZE ACTUAL GOALS: Use actual goals scored for completed matches
+        const actualGoalsScored = parseInt(player.goals_scored || 0);
         const totalXG = parseFloat(player.expected_goals || 0);
         const totalMinutes = parseInt(player.minutes || 0);
         const xgPer90 = totalMinutes > 0 ? (totalXG / totalMinutes) * 90 : 0;
@@ -3215,7 +3216,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
           element_type: player.element_type,
           minutes: player.minutes,
-          goals_scored: player.goals_scored,
+          goals_scored: actualGoalsScored,
+          actualGoalsScored, // Explicit field for actual goals
           totalXG,
           totalMinutes,
           xgPer90: Math.round(xgPer90 * 1000) / 1000 // Round to 3 decimal places
@@ -3255,15 +3257,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalContribution = 0;
           
           qualifiedPlayers.forEach(player => {
+            // HYBRID APPROACH: Use actual goals for completed matches + projections for remaining matches
+            const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+            const completedGameweeks = currentGameweek - 1; // GW1 is completed
+            const remainingGameweeks = 38 - completedGameweeks;
+            
+            // Calculate goals per game from actual performance
+            const actualGoalsPerGame = completedGameweeks > 0 ? player.actualGoalsScored / completedGameweeks : 0;
+            
             // Apply sample size regression with type-safe position lookup
             const positionAvg = player.element_type === 1 ? 0.02 : 
                               player.element_type === 2 ? 0.08 : 
                               player.element_type === 3 ? 0.15 : 0.35;
-            let adjustedXGPer90 = adjustForSampleSize(player, positionAvg);
+            let projectedXGPer90 = adjustForSampleSize(player, positionAvg);
             
             // PENALTY TAKER ADJUSTMENT - Add penalty goals that xG excludes
             const penaltyAdjustment = getPenaltyTakerAdjustment(player.name, player.id);
-            adjustedXGPer90 += penaltyAdjustment;
+            projectedXGPer90 += penaltyAdjustment;
+            
+            // HYBRID CALCULATION: Actual goals from completed matches + projected for remaining
+            const actualGoalsFromCompleted = player.actualGoalsScored;
+            const projectedGoalsFromRemaining = (projectedXGPer90 / 90) * calculateExpectedMinutes(player, playersWithXG) * (remainingGameweeks / 38);
             
             // Calculate expected minutes with realistic projections
             const expectedMinutes = calculateExpectedMinutes(player, playersWithXG);
@@ -3285,14 +3299,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 break;
             }
             
-            // Core calculation: (adjusted xG per 90) × (expected minutes / 90) × conservative position adjustment
-            const contribution = (adjustedXGPer90 * (expectedMinutes / 90) * positionMultiplier);
+            // HYBRID CALCULATION: Use actual goals + projected goals for remaining matches
+            const hybridSeasonGoals = actualGoalsFromCompleted + projectedGoalsFromRemaining;
+            const contribution = hybridSeasonGoals * positionMultiplier;
+            
+            if (player.name.includes('Salah') || player.name.includes('Haaland') || player.actualGoalsScored > 2) {
+              console.log(`DEBUG: ${player.name} hybrid calculation - Actual: ${actualGoalsFromCompleted}, Projected remaining: ${projectedGoalsFromRemaining.toFixed(2)}, Total: ${hybridSeasonGoals.toFixed(2)}`);
+            }
             
             playerContributions[player.id] = {
               name: player.name,
               position: player.position,
               contribution,
-              xgPer90: adjustedXGPer90,
+              xgPer90: projectedXGPer90,
               expectedMinutes
             };
             
