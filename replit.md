@@ -50,7 +50,7 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Player Goals Scored Projections**: Individual player goal projections for next 6 gameweeks with hybrid calculation methodology. Uses actual goals scored from completed matches combined with projections for remaining fixtures. Includes penalty taker adjustments and synchronized with Goal Share tool calculations. Features professional UI redesign with interactive sorting, color-coded projections, and enhanced data presentation matching site design system.
 - **Match Projections**: Data aggregator displaying projected goals and clean sheet odds for each team by gameweek.
 - **Team Goal/Clean Sheet Projections**: Advanced team-level forecasting using 8-phase spread betting market analysis and statistical modeling.
-- **Goal/Assist Share**: Dedicated tools showing team expected goals/assists breakdown by player percentage share, extended to 6 gameweeks with historical data.
+- **Goal/Assist Share**: Dedicated tools showing team expected goals/assists breakdown by player percentage share, extended to 6 gameweeks with historical data. Both tools display seasons in descending order (2025/26, 2024/25, 2023/24) with consistent departed player filtering.
 - **Captain Selector**: Enhanced with historical captaincy performance data (2016-2024), 6-factor scoring algorithm, and ownership analysis.
 - **Transfer Tracker**: Authentic transfer data analysis (transfers in/out, net transfers, ownership percentages) using real FPL API data.
 - **Open FPL Projections**: Advanced machine learning projection tool using position-specific ensemble models, multi-horizon forecasting, and hourly updates.
