@@ -653,7 +653,10 @@ export default function MyDashboard() {
                                     {league.name}
                                   </div>
                                   <div className="text-sm text-muted-foreground">
-                                    {leagueTypeLabel} • {league.rank_count?.toLocaleString()} entries
+                                    {leagueTypeLabel} • {league.rank_count?.toLocaleString()} managers
+                                    {league.entry_percentile_rank && (
+                                      <span> • {league.entry_percentile_rank}th percentile</span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
