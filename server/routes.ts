@@ -5010,6 +5010,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function for FPL API requests with retry logic
+  const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await fetch(url, {
+          timeout: 15000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; FPL-Analytics/1.0)',
+            'Accept': 'application/json',
+          }
+        });
+        
+        if (response.ok) {
+          return response;
+        }
+        
+        console.warn(`FPL API ${url} returned ${response.status}${i < retries - 1 ? ', retrying...' : ''}`);
+        
+        if (i === retries - 1) {
+          throw new Error(`FPL API returned ${response.status} after ${retries} attempts`);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+      } catch (error) {
+        if (i === retries - 1) throw error;
+        console.warn(`FPL API ${url} failed: ${error}${i < retries - 1 ? ', retrying...' : ''}`);
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+      }
+    }
+  };
+
   // Combined Team Projections endpoint - Perfect Balance with Shared Variance
   app.get("/api/team-projections-combined", async (req, res) => {
     // FORCE disable all caching to ensure admin changes reflect immediately
@@ -5026,12 +5057,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { PREMIER_LEAGUE_TEAMS } = await import("@shared/schema");
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("https://fantasy.premierleague.com/api/fixtures/")
+        fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetchWithRetry("https://fantasy.premierleague.com/api/fixtures/")
       ]);
       
-      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API");
+      if (!bootstrapResponse || !fixturesResponse) {
+        throw new Error("Failed to fetch data from FPL API after retries");
       }
       
       const bootstrapData = await bootstrapResponse.json();

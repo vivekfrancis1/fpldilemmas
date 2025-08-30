@@ -170,8 +170,24 @@ export default function PlayerGoalsScoredProjections() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
               <Target className="h-8 w-8 text-red-600" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Error Loading Data</h1>
-            <p className="text-lg text-red-600">Unable to load player goal projections. Please try again later.</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Service Temporarily Unavailable</h1>
+            <p className="text-lg text-gray-600 mb-4">
+              The FPL API is currently experiencing issues. This usually resolves within a few minutes.
+            </p>
+            <div className="max-w-md mx-auto bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-yellow-800">
+                <strong>What's happening:</strong> The official Fantasy Premier League API is temporarily returning 503 errors. 
+                This is not an issue with our platform.
+              </p>
+            </div>
+            <Button
+              onClick={handleRefreshData}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+              data-testid="button-retry"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
           </div>
         </div>
       </div>
