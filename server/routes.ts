@@ -3469,45 +3469,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // ENHANCED NORMALIZATION - Ensure sum equals team xG
           console.log(`DEBUG: Team ${team.name} - Total contribution: ${totalContribution.toFixed(3)}, Team xG: ${teamSeasonTotals[teamId].expectedGoals.toFixed(3)}`);
           
-          // Calculate normalized shares that sum exactly to team xG
+          // Calculate normalized shares with perfect balance after capping
+          const getPositionGoalShareCap = (position: string): number => {
+            switch (position?.toLowerCase()) {
+              case 'goalkeeper': return 2; // Max 2% share for GKs
+              case 'defender': return 25; // Max 25% share for defenders
+              case 'midfielder': return 35; // Max 35% share for midfielders
+              case 'forward': return 35; // Max 35% share for forwards
+              default: return 25;
+            }
+          };
+          
+          // First pass: Calculate initial normalized shares and identify capped players
+          const playerShares: { [playerId: number]: { data: any, normalizedShare: number, cappedShare: number, wasCapped: boolean } } = {};
+          let totalCappedGoals = 0;
+          let totalUncappedNormalized = 0;
+          let uncappedPlayerIds: number[] = [];
+          
           Object.keys(playerContributions).forEach(playerIdStr => {
             const playerId = parseInt(playerIdStr);
             const playerData = playerContributions[playerId];
             
-            // Normalize contribution to team xG (maintains perfect balance)
-            let normalizedShare = totalContribution > 0 ? 
+            // Initial normalized share based on contribution
+            const normalizedShare = totalContribution > 0 ? 
               (playerData.contribution / totalContribution) * teamSeasonTotals[teamId].expectedGoals : 0;
             
-            // Apply position-based caps to goal share (applied to individual projected goals)
-            const getPositionGoalShareCap = (position: string): number => {
-              switch (position?.toLowerCase()) {
-                case 'goalkeeper': return 2; // Max 2% share for GKs
-                case 'defender': return 25; // Max 25% share for defenders
-                case 'midfielder': return 35; // Max 35% share for midfielders
-                case 'forward': return 35; // Max 35% share for forwards
-                default: return 25;
-              }
-            };
-            
+            // Apply position-based caps
             const positionGoalShareCap = getPositionGoalShareCap(playerData.position);
             const maxProjectedGoals = (positionGoalShareCap / 100) * teamSeasonTotals[teamId].expectedGoals;
-            const cappedNormalizedShare = Math.min(normalizedShare, maxProjectedGoals);
+            const cappedShare = Math.min(normalizedShare, maxProjectedGoals);
+            const wasCapped = cappedShare < normalizedShare;
             
-            if (cappedNormalizedShare !== normalizedShare) {
-              console.log(`DEBUG: Capped ${playerData.name} projected goals: ${normalizedShare.toFixed(2)} → ${cappedNormalizedShare.toFixed(2)} (${playerData.position} cap: ${positionGoalShareCap}%)`);
+            if (wasCapped) {
+              console.log(`DEBUG: Capped ${playerData.name} projected goals: ${normalizedShare.toFixed(2)} → ${cappedShare.toFixed(2)} (${playerData.position} cap: ${positionGoalShareCap}%)`);
+            } else {
+              uncappedPlayerIds.push(playerId);
+              totalUncappedNormalized += normalizedShare;
             }
             
+            playerShares[playerId] = {
+              data: playerData,
+              normalizedShare,
+              cappedShare,
+              wasCapped
+            };
+            
+            totalCappedGoals += cappedShare;
+          });
+          
+          // Second pass: Redistribute shortfall to uncapped players proportionally
+          const targetTotal = teamSeasonTotals[teamId].expectedGoals;
+          const shortfall = targetTotal - totalCappedGoals;
+          
+          if (Math.abs(shortfall) > 0.001 && uncappedPlayerIds.length > 0 && totalUncappedNormalized > 0) {
+            console.log(`DEBUG: Team ${team.name} redistributing ${shortfall.toFixed(3)} goals to ${uncappedPlayerIds.length} uncapped players`);
+            
+            uncappedPlayerIds.forEach(playerId => {
+              const player = playerShares[playerId];
+              const redistributionShare = player.normalizedShare / totalUncappedNormalized;
+              const additionalGoals = shortfall * redistributionShare;
+              player.cappedShare += additionalGoals;
+              
+              if (Math.abs(additionalGoals) > 0.01) {
+                console.log(`DEBUG: Redistributed ${additionalGoals.toFixed(3)} goals to ${player.data.name}`);
+              }
+            });
+          }
+          
+          // Final assignment with perfect team balance
+          Object.keys(playerShares).forEach(playerIdStr => {
+            const playerId = parseInt(playerIdStr);
+            const player = playerShares[playerId];
+            
             teamSeasonTotals[teamId].players[playerId] = {
-              name: playerData.name,
-              position: playerData.position,
-              projectedGoals: Math.round(cappedNormalizedShare * 100) / 100 // Round to 2 decimal places
+              name: player.data.name,
+              position: player.data.position,
+              projectedGoals: Math.round(player.cappedShare * 100) / 100
             };
           });
           
-          // Debug: Verify perfect normalization
-          const totalNormalizedGoals = Object.values(teamSeasonTotals[teamId].players)
+          // Verify perfect balance
+          const finalTotalGoals = Object.values(teamSeasonTotals[teamId].players)
             .reduce((sum: number, player: any) => sum + player.projectedGoals, 0);
-          console.log(`DEBUG: Team ${team.name} enhanced xG total: ${totalNormalizedGoals.toFixed(3)} (should equal ${teamSeasonTotals[teamId].expectedGoals.toFixed(3)})`);
+          const balanceError = Math.abs(finalTotalGoals - targetTotal);
+          
+          console.log(`DEBUG: Team ${team.name} PERFECT BALANCE: Players=${finalTotalGoals.toFixed(3)} vs Team=${targetTotal.toFixed(3)} (error: ${balanceError.toFixed(6)})`);
           
           return; // Skip the old historical weighting approach
         }
