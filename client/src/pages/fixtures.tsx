@@ -192,6 +192,16 @@ export default function Fixtures() {
       matrix[team.id] = {};
     });
 
+    // Helper function to get overall FDR (with promoted teams as FDR 1)
+    const getOverallFDR = (originalDifficulty: number, opponentId: number) => {
+      // Newly promoted teams (Leeds=11, Burnley=3, Sunderland=17) classified as Very Easy (FDR 1)
+      const promotedTeams = [3, 11, 17]; // Burnley, Leeds, Sunderland
+      if (promotedTeams.includes(opponentId)) {
+        return 1; // Very Easy
+      }
+      return originalDifficulty; // Use original FDR for all other teams
+    };
+
     // Fill matrix with fixtures (only unfinished fixtures)
     fixturesData.forEach(fixture => {
       if (fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end && !fixture.finished) {
@@ -199,18 +209,18 @@ export default function Fixtures() {
         const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
         
         if (homeTeam && awayTeam) {
-          // Home team entry
+          // Home team entry (override FDR for promoted opponents)
           matrix[fixture.team_h][fixture.event] = {
             opponent: awayTeam.short_name,
-            difficulty: fixture.team_h_difficulty,
+            difficulty: getOverallFDR(fixture.team_h_difficulty, awayTeam.id),
             isHome: true,
             finished: fixture.finished
           };
           
-          // Away team entry  
+          // Away team entry (override FDR for promoted opponents)
           matrix[fixture.team_a][fixture.event] = {
             opponent: homeTeam.short_name,
-            difficulty: fixture.team_a_difficulty,
+            difficulty: getOverallFDR(fixture.team_a_difficulty, homeTeam.id),
             isHome: false,
             finished: fixture.finished
           };
