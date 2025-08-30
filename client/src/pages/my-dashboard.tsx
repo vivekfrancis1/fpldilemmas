@@ -829,23 +829,6 @@ export default function MyDashboard() {
                                 </div>
                               </div>
                               <div className="text-right flex items-center gap-3">
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" className="text-xs">
-                                      <ExternalLink className="h-3 w-3 mr-1" />
-                                      View League
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                                    <DialogHeader>
-                                      <DialogTitle className="flex items-center gap-2">
-                                        <Trophy className="h-5 w-5" />
-                                        {league.name}
-                                      </DialogTitle>
-                                    </DialogHeader>
-                                    <LeagueAnalysis leagueId={league.id} managerId={managerId} />
-                                  </DialogContent>
-                                </Dialog>
                                 <div className="flex flex-col items-end space-y-1">
                                   <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
                                     #{league.entry_rank.toLocaleString()}
@@ -865,6 +848,23 @@ export default function MyDashboard() {
                                     </div>
                                   )}
                                 </div>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm" className="text-xs">
+                                      <ExternalLink className="h-3 w-3 mr-1" />
+                                      View League
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                                    <DialogHeader>
+                                      <DialogTitle className="flex items-center gap-2">
+                                        <Trophy className="h-5 w-5" />
+                                        {league.name}
+                                      </DialogTitle>
+                                    </DialogHeader>
+                                    <LeagueAnalysis leagueId={league.id} managerId={managerId} />
+                                  </DialogContent>
+                                </Dialog>
                               </div>
                             </div>
                           );
