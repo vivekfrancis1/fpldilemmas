@@ -1141,6 +1141,38 @@ export default function MyDashboard() {
             <TabsContent value="performance" className="space-y-6">
               {historyData && (
                 <>
+                  {/* Gameweek History */}
+                  {historyData?.current && historyData.current.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Activity className="h-5 w-5" />
+                          Gameweek History
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {historyData.current.slice().reverse().map((gw) => (
+                            <div key={gw.event} className="flex items-center justify-between p-3 rounded-lg border">
+                              <div>
+                                <div className="font-medium">Gameweek {gw.event}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {gw.event_transfers || 0} transfers • {formatPrice(gw.bank || 0)} bank
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-medium">{gw.points || 0} pts</div>
+                                <div className="text-sm text-muted-foreground">
+                                  Rank: {formatRank(gw.overall_rank || 0)}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {/* Season History */}
                   {historyData?.past && historyData.past.length > 0 && (
                     <Card>
@@ -1152,7 +1184,7 @@ export default function MyDashboard() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          {historyData.past.map((season, index) => (
+                          {historyData.past.slice().reverse().map((season, index) => (
                             <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
                               <div className="font-medium">{season.season_name}</div>
                               <div className="flex items-center gap-4">
@@ -1190,38 +1222,6 @@ export default function MyDashboard() {
                                 </div>
                               </div>
                               <Badge variant="outline">Used</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Recent Gameweeks */}
-                  {historyData?.current && historyData.current.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Activity className="h-5 w-5" />
-                          Recent Gameweeks
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {historyData.current.slice(-5).reverse().map((gw) => (
-                            <div key={gw.event} className="flex items-center justify-between p-3 rounded-lg border">
-                              <div>
-                                <div className="font-medium">Gameweek {gw.event}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {gw.event_transfers || 0} transfers • {formatPrice(gw.bank || 0)} bank
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="font-medium">{gw.points || 0} pts</div>
-                                <div className="text-sm text-muted-foreground">
-                                  Rank: {formatRank(gw.overall_rank || 0)}
-                                </div>
-                              </div>
                             </div>
                           ))}
                         </div>
