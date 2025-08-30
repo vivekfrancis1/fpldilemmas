@@ -4151,51 +4151,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Assist Projections endpoint - converts assist share data to individual player projections using gameweek-specific team projections
+  // Player Assist Projections endpoint - hybrid calculation with actual FPL API data for completed gameweeks
   app.get("/api/player-assist-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Assist Projections API called - generating from assist share data with gameweek-specific team projections");
+      console.log("DEBUG: Player Assist Projections API called - using hybrid calculation with actual FPL data for completed gameweeks");
       
-      // Fetch both assist share season data and team assist projections
-      const [assistShareResponse, teamAssistResponse] = await Promise.all([
+      // Fetch assist share season data, team assist projections, bootstrap data, and fixtures
+      const [assistShareResponse, teamAssistResponse, bootstrapResponse, fixturesResponse] = await Promise.all([
         fetch("http://localhost:5000/api/assist-share-season"),
-        fetch("http://localhost:5000/api/team-assist-projections")
+        fetch("http://localhost:5000/api/team-assist-projections"),
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
       ]);
       
-      if (!assistShareResponse.ok || !teamAssistResponse.ok) {
+      if (!assistShareResponse.ok || !teamAssistResponse.ok || !bootstrapResponse.ok || !fixturesResponse.ok) {
         throw new Error("Failed to fetch required data");
       }
       
       const assistShareData = await assistShareResponse.json();
       const teamAssistProjections = await teamAssistResponse.json();
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
       
-      // Convert assist share data to individual player projections using team gameweek projections
+      // Get current gameweek from bootstrap data
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      console.log(`DEBUG: Current gameweek: ${currentGameweek}`);
+      
+      // Convert assist share data to individual player projections using hybrid methodology
       const allPlayerProjections: any[] = [];
       
-      assistShareData.forEach((teamData: any) => {
+      for (const teamData of assistShareData) {
         if (teamData.players && teamData.players.length > 0) {
           // Find corresponding team assist projections
           const teamProjections = teamAssistProjections.find((team: any) => team.teamShort === teamData.teamShort);
           
           if (!teamProjections) {
             console.warn(`DEBUG: No team projections found for ${teamData.teamShort}`);
-            return;
+            continue;
           }
           
-          teamData.players.forEach((playerData: any) => {
+          for (const playerData of teamData.players) {
             if (playerData && playerData.assistShare && playerData.assistShare > 0) {
               const gameweekProjections: { [gameweek: number]: number } = {};
               let totalProjectedAssists = 0;
               
-              // Distribute player's assist share across each gameweek based on team's gameweek projections
-              Object.entries(teamProjections.gameweekProjections).forEach(([gw, teamAssists]: [string, any]) => {
+              // For each gameweek, calculate assists using hybrid approach
+              for (const [gw, teamAssists] of Object.entries(teamProjections.gameweekProjections)) {
                 const gameweek = parseInt(gw);
-                const playerAssistsForGW = (typeof teamAssists === 'number') ? 
-                  (teamAssists * (playerData.assistShare / 100)) : 0;
+                
+                // Check if this gameweek has started/finished
+                const gameweekEvent = bootstrapData.events.find((e: any) => e.id === gameweek);
+                const gameweekFinished = gameweekEvent && gameweekEvent.finished;
+                const gameweekStarted = gameweekEvent && gameweekEvent.is_current;
+                
+                let playerAssistsForGW = 0;
+                
+                if (gameweekFinished) {
+                  // For completely finished gameweeks, use actual assists
+                  try {
+                    const elementResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${playerData.id}/`);
+                    if (elementResponse.ok) {
+                      const elementData = await elementResponse.json();
+                      const gameweekHistory = elementData.history.find((h: any) => h.round === gameweek);
+                      
+                      if (gameweekHistory) {
+                        playerAssistsForGW = gameweekHistory.assists || 0;
+                        console.log(`DEBUG: Assists - GW${gameweek} ACTUAL - ${playerData.name}: ${playerAssistsForGW} assists (from FPL API)`);
+                      } else {
+                        throw new Error(`No gameweek ${gameweek} data found for player ${playerData.id}`);
+                      }
+                    } else {
+                      throw new Error(`Failed to fetch element-summary for player ${playerData.id}`);
+                    }
+                  } catch (error) {
+                    console.log(`Using fallback for player ${playerData.id} GW${gameweek}: ${error}`);
+                    // Fallback to team assists distribution
+                    const projectedTeamAssists = (typeof teamAssists === 'number') ? teamAssists : 0;
+                    playerAssistsForGW = projectedTeamAssists * (playerData.assistShare / 100);
+                  }
+                } else if (gameweekStarted) {
+                  // For current gameweek, check individual fixture completion status
+                  const teamFixtures = fixturesData.filter((fixture: any) => 
+                    fixture.event === gameweek && 
+                    (fixture.team_h === teamData.teamId || fixture.team_a === teamData.teamId)
+                  );
+                  
+                  let actualPlayerAssists = 0;
+                  let projectedPlayerAssists = 0;
+                  let hasCompletedFixtures = false;
+                  let hasUncompletedFixtures = false;
+                  
+                  for (const fixture of teamFixtures) {
+                    if (fixture.finished) {
+                      // Use actual assists for this completed fixture
+                      hasCompletedFixtures = true;
+                      try {
+                        const elementResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${playerData.id}/`);
+                        if (elementResponse.ok) {
+                          const elementData = await elementResponse.json();
+                          const gameweekHistory = elementData.history.find((h: any) => h.round === gameweek);
+                          
+                          if (gameweekHistory) {
+                            // For current GW with multiple fixtures, we use the total assists for the gameweek
+                            actualPlayerAssists += gameweekHistory.assists || 0;
+                          }
+                        }
+                      } catch (error) {
+                        // Fallback: use projected team assists for this fixture
+                        const projectedTeamAssists = (typeof teamAssists === 'number') ? teamAssists / teamFixtures.length : 0;
+                        actualPlayerAssists += projectedTeamAssists * (playerData.assistShare / 100);
+                      }
+                    } else {
+                      // Use projections for uncompleted fixtures
+                      hasUncompletedFixtures = true;
+                      const projectedTeamAssists = (typeof teamAssists === 'number') ? teamAssists / teamFixtures.length : 0;
+                      projectedPlayerAssists += projectedTeamAssists * (playerData.assistShare / 100);
+                    }
+                  }
+                  
+                  // Combine actual and projected assists for the gameweek
+                  if (hasCompletedFixtures && !hasUncompletedFixtures) {
+                    playerAssistsForGW = actualPlayerAssists;
+                    console.log(`DEBUG: Assists - GW${gameweek} ACTUAL - ${playerData.name}: ${playerAssistsForGW} assists (completed)`);
+                  } else if (!hasCompletedFixtures && hasUncompletedFixtures) {
+                    playerAssistsForGW = projectedPlayerAssists;
+                    console.log(`DEBUG: Assists - GW${gameweek} PROJECTION - ${playerData.name}: ${playerAssistsForGW.toFixed(2)} assists (all pending)`);
+                  } else {
+                    playerAssistsForGW = actualPlayerAssists + projectedPlayerAssists;
+                    console.log(`DEBUG: Assists - GW${gameweek} HYBRID - ${playerData.name}: ${actualPlayerAssists} actual + ${projectedPlayerAssists.toFixed(2)} projected = ${playerAssistsForGW.toFixed(2)} total`);
+                  }
+                } else {
+                  // For future gameweeks, use projections
+                  const projectedTeamAssists = (typeof teamAssists === 'number') ? teamAssists : 0;
+                  playerAssistsForGW = projectedTeamAssists * (playerData.assistShare / 100);
+                  console.log(`DEBUG: Assists - GW${gameweek} PROJECTION - ${teamData.teamShort} projected: ${projectedTeamAssists.toFixed(2)} assists, ${playerData.name}: ${playerAssistsForGW.toFixed(2)}`);
+                }
                 
                 gameweekProjections[gameweek] = Math.round(playerAssistsForGW * 100) / 100;
                 totalProjectedAssists += playerAssistsForGW;
-              });
+              }
+              
+              // Calculate season total
+              const seasonTotal = Math.round(totalProjectedAssists * 100) / 100;
               
               allPlayerProjections.push({
                 playerId: playerData.id,
@@ -4203,18 +4300,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 teamShort: teamData.teamShort,
                 position: playerData.position,
                 gameweekProjections,
-                totalProjectedAssists: Math.round(totalProjectedAssists * 100) / 100,
+                totalProjectedAssists: seasonTotal,
                 assistShare: playerData.assistShare
               });
             }
-          });
+          }
         }
-      });
+      }
       
       // Sort by total projected assists (highest first)
       allPlayerProjections.sort((a, b) => b.totalProjectedAssists - a.totalProjectedAssists);
       
-      console.log(`DEBUG: Generated assist projections for ${allPlayerProjections.length} players using gameweek-specific team projections`);
+      console.log(`DEBUG: Generated hybrid assist projections for ${allPlayerProjections.length} players with actual+projected data`);
       res.json(allPlayerProjections);
     } catch (error) {
       console.error("Error generating player assist projections:", error);
