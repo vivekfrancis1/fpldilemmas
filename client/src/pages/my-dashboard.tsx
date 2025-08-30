@@ -638,22 +638,16 @@ export default function MyDashboard() {
                         })
                         .map((league, index: number) => {
                           let leagueTypeLabel = 'Classic League';
-                          let leagueIcon = null;
                           
                           if (league.id === 314) {
                             leagueTypeLabel = 'Overall League';
-                            leagueIcon = <Crown className="h-4 w-4 text-yellow-500" />;
                           } else if (league.name.toLowerCase().includes('india')) {
                             leagueTypeLabel = 'Country League';
-                            leagueIcon = <Medal className="h-4 w-4 text-blue-500" />;
-                          } else if (index === 2) {
-                            leagueIcon = <Award className="h-4 w-4 text-amber-600" />;
                           }
 
                           return (
                             <div key={league.id} className="flex items-center justify-between p-3 rounded-lg border">
                               <div className="flex items-center gap-3 flex-1 min-w-0">
-                                {leagueIcon}
                                 <div className="min-w-0 flex-1">
                                   <div className="font-medium truncate" title={league.name}>
                                     {league.name}
