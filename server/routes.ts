@@ -7068,98 +7068,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ OpenFPL Projection routes registered successfully");
 
-  // Player Total Points - Fast calculation using cached data only
+  // Player Total Points - Using authentic component API data
   app.get("/api/player-total-points", async (req, res) => {
     try {
       const { startGameweek = 4, endGameweek = 9 } = req.query;
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
       
-      console.log(`DEBUG: Player Total Points API called for GW${start}-${end} using fast cached data`);
+      console.log(`DEBUG: Player Total Points API called for GW${start}-${end} using authentic component data`);
       
-      // Fetch bootstrap data for basic player info
-      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      if (!bootstrapResponse.ok) {
-        throw new Error("Failed to fetch bootstrap data");
+      // Fetch all component data in parallel for maximum efficiency
+      const [goalsResponse, assistsResponse, cleanSheetsResponse, minutesResponse, defensiveResponse] = await Promise.all([
+        fetch(`http://localhost:5000/api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
+        fetch(`http://localhost:5000/api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
+        fetch(`http://localhost:5000/api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`),
+        fetch(`http://localhost:5000/api/player-minutes-projections?startGameweek=${start}&endGameweek=${end}`),
+        fetch(`http://localhost:5000/api/defensive-contribution-projections?startGameweek=${start}&endGameweek=${end}`)
+      ]);
+
+      if (!goalsResponse.ok || !assistsResponse.ok || !cleanSheetsResponse.ok || !minutesResponse.ok || !defensiveResponse.ok) {
+        throw new Error("Failed to fetch component projection data");
       }
-      const bootstrapData = await bootstrapResponse.json();
-      
-      console.log(`DEBUG: Fetched bootstrap data with ${bootstrapData.elements.length} players`);
-      
-      // Create simplified total points projections using basic estimates
+
+      const [goalsData, assistsData, cleanSheetsData, minutesData, defensiveData] = await Promise.all([
+        goalsResponse.json(),
+        assistsResponse.json(),
+        cleanSheetsResponse.json(),
+        minutesResponse.json(),
+        defensiveResponse.json()
+      ]);
+
+      console.log(`DEBUG: Fetched component data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Clean Sheets: ${cleanSheetsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveData.data?.length || 0}`);
+
+      // Create lookup maps for efficient data access
+      const assistsMap = new Map(assistsData.map((p: any) => [p.playerId, p]));
+      const cleanSheetsMap = new Map(cleanSheetsData.map((p: any) => [p.playerId, p]));
+      const minutesMap = new Map(minutesData.map((p: any) => [p.playerId, p]));
+      const defensiveMap = new Map((defensiveData.data || []).map((p: any) => [p.playerId, p]));
+
+      // FPL scoring system
+      const pointsSystem = {
+        goals: { GKP: 6, DEF: 6, MID: 5, FWD: 4 },
+        assists: { GKP: 3, DEF: 3, MID: 3, FWD: 3 },
+        defensiveContribution: 2, // 2 points when threshold met
+        minutes: 2 // Base appearance points
+      };
+
       const totalPointsProjections = [];
-      
-      for (const player of bootstrapData.elements) {
+
+      // Use goals data as the base since it has the most comprehensive player list
+      for (const player of goalsData) {
+        const assistPlayer = assistsMap.get(player.playerId);
+        const cleanSheetPlayer = cleanSheetsMap.get(player.playerId);
+        const minutesPlayer = minutesMap.get(player.playerId);
+        const defensivePlayer = defensiveMap.get(player.playerId);
+
         const gameweekProjections: { [key: string]: number } = {};
-        const gameweekData: { [key: string]: any } = {};
-        
-        // Simple position-based point estimates per gameweek
-        let basePointsPerGame = 2; // Appearance points
-        
-        // Position-specific adjustments
-        switch (player.element_type) {
-          case 1: // Goalkeeper
-            basePointsPerGame = 4; // More clean sheet potential
-            break;
-          case 2: // Defender  
-            basePointsPerGame = 3.5; // Some clean sheet and attack potential
-            break;
-          case 3: // Midfielder
-            basePointsPerGame = 3; // Balanced scoring
-            break;
-          case 4: // Forward
-            basePointsPerGame = 3.5; // Goal scoring potential
-            break;
-        }
-        
-        // Add some randomness based on form and price
-        const formAdjustment = (player.form - 3) * 0.3; // Form score impact
-        const priceAdjustment = (player.now_cost / 100) * 0.05; // Price impact
-        
-        const estimatedPointsPerGame = Math.max(1, basePointsPerGame + formAdjustment + priceAdjustment);
-        
         let totalExpectedPoints = 0;
-        let seasonTotalPoints = 0;
-        
-        // Calculate for each gameweek in range with variation
+
+        // Process each gameweek in the range
         for (let gw = start; gw <= end; gw++) {
-          // Add fixture difficulty variation (simulated)
-          const fixtureDifficultyVariation = (Math.sin(gw * player.id) * 0.3); // Creates variation based on gameweek and player
-          const gameweekMultiplier = 1 + fixtureDifficultyVariation;
+          let gwTotal = 0;
+
+          // Goals points
+          const goalsProjected = player.gameweekProjections?.[gw.toString()] || 0;
+          const goalPoints = goalsProjected * (pointsSystem.goals[player.position as keyof typeof pointsSystem.goals] || 4);
+          gwTotal += goalPoints;
           
-          const pointsForGW = Math.round((estimatedPointsPerGame * gameweekMultiplier) * 100) / 100;
-          gameweekProjections[`gw${gw}`] = Math.max(0.5, pointsForGW); // Minimum 0.5 points
-          
-          gameweekData[gw] = {
-            goals: Math.round((pointsForGW / 20) * 100) / 100, // Rough estimate
-            assists: Math.round((pointsForGW / 30) * 100) / 100,
-            cleanSheets: player.element_type <= 2 ? 0.3 : 0,
-            minutes: 75, // Estimated minutes
-            totalPoints: pointsForGW
-          };
-          
-          totalExpectedPoints += pointsForGW;
+          // Debug logging for first few players
+          if (player.playerId <= 5) {
+            console.log(`DEBUG: ${player.playerName} GW${gw} - Goals: ${goalsProjected}, Goal Points: ${goalPoints}, Position: ${player.position}`);
+          }
+
+          // Assists points
+          const assistsProjected = assistPlayer?.gameweekProjections?.[gw.toString()] || 0;
+          const assistPoints = assistsProjected * (pointsSystem.assists[player.position as keyof typeof pointsSystem.assists] || 3);
+          gwTotal += assistPoints;
+
+          // Clean sheet points (already calculated as points in the API)
+          const csPoints = cleanSheetPlayer?.gameweekProjections?.[`gw${gw}`] || 0;
+          gwTotal += csPoints;
+
+          // Minutes points (using average points from minutes API)
+          const minutesPoints = minutesPlayer?.pointsFromMinutes || 0;
+          gwTotal += minutesPoints;
+
+          // Defensive contribution points (2 points when threshold met)
+          if (defensivePlayer?.gameweekProjections) {
+            const defensiveContributions = defensivePlayer.gameweekProjections[gw.toString()] || 0;
+            let defensivePoints = 0;
+
+            // FPL defensive contribution scoring rules
+            if (player.position === 'Defender' && defensiveContributions >= 10) {
+              defensivePoints = 2;
+            } else if ((player.position === 'Midfielder' || player.position === 'Forward') && defensiveContributions >= 12) {
+              defensivePoints = 2;
+            }
+
+            gwTotal += defensivePoints;
+          }
+
+          gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;
+          totalExpectedPoints += gwTotal;
         }
-        
-        // Season total estimate (rough calculation)
-        seasonTotalPoints = Math.round(estimatedPointsPerGame * 38);
-        
-        totalPointsProjections.push({
-          playerId: player.id,
-          name: player.web_name,
-          fullName: `${player.first_name} ${player.second_name}`,
-          team: bootstrapData.teams.find((t: any) => t.id === player.team)?.short_name || 'UNK',
-          position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'UNK',
-          price: player.now_cost / 10,
-          gameweekProjections,
-          gameweekData,
-          totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
-          seasonTotalPoints,
-          averagePerGameweek: Math.round((totalExpectedPoints / (end - start + 1)) * 100) / 100
-        });
+
+        // Only add players with valid total points data
+        if (totalExpectedPoints > 0) {
+          // Season total calculation
+          const avgPerGameweek = totalExpectedPoints / (end - start + 1);
+          const seasonTotalPoints = Math.round(avgPerGameweek * 38);
+
+          totalPointsProjections.push({
+            playerId: player.playerId,
+            name: player.playerName,
+            fullName: player.playerName, // Use consistent naming
+            team: player.team,
+            position: player.position,
+            price: player.price,
+            ownership: player.ownership,
+            gameweekProjections,
+            totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
+            seasonTotalPoints,
+            averagePerGameweek: Math.round(avgPerGameweek * 100) / 100
+          });
+        }
       }
-      
-      console.log(`DEBUG: Generated fast total points projections for ${totalPointsProjections.length} players`);
+
+      // Sort by total expected points (descending)
+      totalPointsProjections.sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
+
+      console.log(`DEBUG: Generated authentic total points for ${totalPointsProjections.length} players using component APIs`);
       
       res.json(totalPointsProjections);
       
