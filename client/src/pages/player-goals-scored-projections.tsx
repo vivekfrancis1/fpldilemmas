@@ -467,9 +467,6 @@ export default function PlayerGoalsScoredProjections() {
                           <div className="font-semibold text-gray-900">
                             {player.playerName}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {player.goalShare.toFixed(1)}% share
-                          </div>
                         </td>
                         <td className="py-3 px-2 text-center">
                           <Badge variant="outline" className="text-xs font-medium">
