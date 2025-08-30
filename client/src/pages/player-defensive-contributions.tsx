@@ -5,7 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Shield, Download, Filter, Clock } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Shield, Download, Filter, Clock, Target } from "lucide-react";
 
 interface PlayerDefensiveData {
   playerId: number;
@@ -39,6 +40,7 @@ export default function PlayerDefensiveContributions() {
   const [sortBy, setSortBy] = useState<string>("total");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showOnlyTopPlayers, setShowOnlyTopPlayers] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<string>("defensive-contributions");
 
   // Fetch defensive contribution projections
   const { data: defensiveData, isLoading } = useQuery({
@@ -57,14 +59,35 @@ export default function PlayerDefensiveContributions() {
 
   // Calculate totals for each player
   const playersWithTotals = useMemo(() => {
-    return players.map(player => ({
-      ...player,
-      totalDC: player.gameweekProjections.reduce((sum, gw) => sum + gw.defensiveContribution, 0),
-      avgDC: player.gameweekProjections.reduce((sum, gw) => sum + gw.defensiveContribution, 0) / player.gameweekProjections.length,
-      totalTackles: player.gameweekProjections.reduce((sum, gw) => sum + gw.tackles, 0),
-      totalRecoveries: player.gameweekProjections.reduce((sum, gw) => sum + gw.recoveries, 0),
-      totalCBI: player.gameweekProjections.reduce((sum, gw) => sum + gw.cbi, 0)
-    }));
+    return players.map(player => {
+      // Calculate defensive contribution points for each gameweek
+      const gameweekPoints = player.gameweekProjections.map(gw => {
+        let dcPoints = 0;
+        const dc = gw.defensiveContribution;
+        
+        if (player.position === "Goalkeeper") {
+          dcPoints = 0; // Goalkeepers don't get DC points
+        } else if (player.position === "Defender") {
+          dcPoints = dc >= 10 ? 2 : 0; // Defenders need 10+ DC for 2 points
+        } else {
+          dcPoints = dc >= 12 ? 2 : 0; // Midfielders/Forwards need 12+ DC for 2 points
+        }
+        
+        return { ...gw, dcPoints };
+      });
+      
+      return {
+        ...player,
+        gameweekProjections: gameweekPoints,
+        totalDC: player.gameweekProjections.reduce((sum, gw) => sum + gw.defensiveContribution, 0),
+        avgDC: player.gameweekProjections.reduce((sum, gw) => sum + gw.defensiveContribution, 0) / player.gameweekProjections.length,
+        totalTackles: player.gameweekProjections.reduce((sum, gw) => sum + gw.tackles, 0),
+        totalRecoveries: player.gameweekProjections.reduce((sum, gw) => sum + gw.recoveries, 0),
+        totalCBI: player.gameweekProjections.reduce((sum, gw) => sum + gw.cbi, 0),
+        totalDCPoints: gameweekPoints.reduce((sum, gw) => sum + gw.dcPoints, 0),
+        avgDCPoints: gameweekPoints.reduce((sum, gw) => sum + gw.dcPoints, 0) / gameweekPoints.length
+      };
+    });
   }, [players]);
 
   // Filter and sort players
@@ -102,6 +125,10 @@ export default function PlayerDefensiveContributions() {
         case "current":
           aValue = a.currentSeasonStats.dcPer90;
           bValue = b.currentSeasonStats.dcPer90;
+          break;
+        case "points":
+          aValue = a.totalDCPoints;
+          bValue = b.totalDCPoints;
           break;
         case "name":
           return sortOrder === "desc" 
@@ -142,28 +169,53 @@ export default function PlayerDefensiveContributions() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Player', 'Position', 'Team', 'Current DC/90', ...gameweeks.map(gw => `GW${gw}`), 'Total', 'Average'];
-    const rows = filteredPlayers.map(player => [
-      player.playerName,
-      player.position,
-      player.teamName,
-      player.currentSeasonStats.dcPer90.toFixed(2),
-      ...player.gameweekProjections.map(gw => gw.defensiveContribution.toFixed(1)),
-      player.totalDC.toFixed(1),
-      player.avgDC.toFixed(1)
-    ]);
+    if (activeTab === "defensive-contributions") {
+      const headers = ['Player', 'Position', 'Team', 'Current DC/90', ...gameweeks.map(gw => `GW${gw}`), 'Total', 'Average'];
+      const rows = filteredPlayers.map(player => [
+        player.playerName,
+        player.position,
+        player.teamName,
+        player.currentSeasonStats.dcPer90.toFixed(2),
+        ...player.gameweekProjections.map(gw => gw.defensiveContribution.toFixed(1)),
+        player.totalDC.toFixed(1),
+        player.avgDC.toFixed(1)
+      ]);
 
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
-      .join('\n');
+      const csvContent = [headers, ...rows]
+        .map(row => row.map(cell => `"${cell}"`).join(','))
+        .join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'defensive-contributions.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'defensive-contributions.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const headers = ['Player', 'Position', 'Team', 'Current DC/90', ...gameweeks.map(gw => `GW${gw} Points`), 'Total Points', 'Average Points'];
+      const rows = filteredPlayers.map(player => [
+        player.playerName,
+        player.position,
+        player.teamName,
+        player.currentSeasonStats.dcPer90.toFixed(2),
+        ...player.gameweekProjections.map(gw => gw.dcPoints),
+        player.totalDCPoints,
+        player.avgDCPoints.toFixed(1)
+      ]);
+
+      const csvContent = [headers, ...rows]
+        .map(row => row.map(cell => `"${cell}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'defensive-contribution-points.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   if (isLoading) {
@@ -285,6 +337,7 @@ export default function PlayerDefensiveContributions() {
                 <SelectContent>
                   <SelectItem value="total">Total DC</SelectItem>
                   <SelectItem value="average">Average DC</SelectItem>
+                  <SelectItem value="points">Total DC Points</SelectItem>
                   <SelectItem value="current">Current DC/90</SelectItem>
                   <SelectItem value="name">Player Name</SelectItem>
                 </SelectContent>
@@ -306,7 +359,7 @@ export default function PlayerDefensiveContributions() {
         </CardContent>
       </Card>
 
-      {/* Main Table */}
+      {/* Main Content with Tabs */}
       <Card>
         <CardHeader>
           <CardTitle>Defensive Contributions by Gameweek</CardTitle>
@@ -315,6 +368,19 @@ export default function PlayerDefensiveContributions() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="defensive-contributions" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Defensive Contributions
+              </TabsTrigger>
+              <TabsTrigger value="points" className="flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Points from DC
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="defensive-contributions" className="mt-4">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -395,6 +461,91 @@ export default function PlayerDefensiveContributions() {
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+        
+        <TabsContent value="points" className="mt-4">
+          <div className="mb-4">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2">FPL Defensive Contribution Points Rules:</h4>
+              <ul className="text-sm space-y-1">
+                <li>• <strong>Defenders:</strong> 2 points for 10+ Defensive Contributions (CBI + Tackles)</li>
+                <li>• <strong>Midfielders/Forwards:</strong> 2 points for 12+ Defensive Contributions (CBI + Tackles + Recoveries)</li>
+                <li>• <strong>Goalkeepers:</strong> Do not receive Defensive Contribution points</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="cursor-pointer hover:bg-muted/50 sticky left-0 bg-background z-10 min-w-[150px]">
+                    Player
+                  </TableHead>
+                  <TableHead className="sticky left-[150px] bg-background z-10 min-w-[80px]">Pos</TableHead>
+                  <TableHead className="sticky left-[230px] bg-background z-10 min-w-[80px]">Team</TableHead>
+                  <TableHead className="sticky left-[310px] bg-background z-10 min-w-[100px]">
+                    Current/90
+                  </TableHead>
+                  {gameweeks.map(gw => (
+                    <TableHead key={gw} className="text-center min-w-[100px]">
+                      GW{gw}
+                    </TableHead>
+                  ))}
+                  <TableHead className="cursor-pointer hover:bg-muted/50 text-center min-w-[80px] font-bold">
+                    Total Pts
+                  </TableHead>
+                  <TableHead className="text-center min-w-[80px]">
+                    Avg Pts
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPlayers.map((player) => (
+                  <TableRow key={player.playerId}>
+                    <TableCell className="font-medium sticky left-0 bg-background z-10">
+                      {player.playerName}
+                    </TableCell>
+                    <TableCell className="sticky left-[150px] bg-background z-10">
+                      <Badge variant="outline" className="text-xs">
+                        {player.position.slice(0, 3).toUpperCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="sticky left-[230px] bg-background z-10">
+                      {player.teamName}
+                    </TableCell>
+                    <TableCell className="font-mono sticky left-[310px] bg-background z-10">
+                      {player.currentSeasonStats.dcPer90.toFixed(1)}
+                    </TableCell>
+                    {player.gameweekProjections.map((gw) => (
+                      <TableCell key={gw.gameweek} className="text-center">
+                        <div className={`p-2 rounded text-sm ${getOpponentColor(gw.opponentTier)}`}>
+                          <div className="font-bold text-lg">
+                            {gw.dcPoints}
+                          </div>
+                          <div className="text-xs">
+                            DC: {gw.defensiveContribution.toFixed(1)}
+                          </div>
+                          <div className="text-xs">
+                            vs {gw.opponent}
+                          </div>
+                        </div>
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-center font-bold text-lg">
+                      {player.totalDCPoints}
+                    </TableCell>
+                    <TableCell className="text-center font-mono">
+                      {player.avgDCPoints.toFixed(1)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+        
+        </Tabs>
         </CardContent>
       </Card>
 
