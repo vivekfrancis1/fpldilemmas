@@ -47,7 +47,7 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 ### Feature Specifications
 - **My Dashboard**: Comprehensive FPL overview combining My Live Rank, My Team, and My Leagues in a single tabbed interface. Features overview cards, detailed team analysis, league standings, and performance history with automatic manager ID caching. Now serves as the home page with professional header matching site design system.
 - **Player Projections**: AI-powered projection model for minutes, goals, assists, clean sheets, bonus points, and CBIT% for upcoming weeks. Goals and assists derived from Goal Share and Assist Share tools.
-- **Player Goals Scored Projections**: Individual player goal projections for next 6 gameweeks (GW3-GW8) with 2 decimal precision, showing both 6-gameweek and season totals. Uses same styling and functionality as Team Goals Scored with clickable column headers for sorting.
+- **Player Goals Scored Projections**: Individual player goal projections for next 6 gameweeks with hybrid calculation methodology. Uses actual goals scored from completed matches combined with projections for remaining fixtures. Includes penalty taker adjustments and synchronized with Goal Share tool calculations. Features professional UI redesign with interactive sorting, color-coded projections, and enhanced data presentation matching site design system.
 - **Match Projections**: Data aggregator displaying projected goals and clean sheet odds for each team by gameweek.
 - **Team Goal/Clean Sheet Projections**: Advanced team-level forecasting using 8-phase spread betting market analysis and statistical modeling.
 - **Goal/Assist Share**: Dedicated tools showing team expected goals/assists breakdown by player percentage share, extended to 6 gameweeks with historical data.
@@ -66,6 +66,7 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **TypeScript Configuration**: Strict TypeScript with path mapping.
 - **Shared Types**: Common types and schemas shared between client and server.
 - **Code Quality**: All TypeScript compilation errors resolved (81 fixes applied) - August 28, 2025.
+- **Data Synchronization**: Player Goals Scored Projections tool updated to use hybrid calculation methodology with penalty adjustments, ensuring consistency with Goal Share tool - August 30, 2025.
 
 ### Development Workflow
 - **Build System**: Vite for frontend, esbuild for server.

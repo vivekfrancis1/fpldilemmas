@@ -3415,29 +3415,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Goals Scored Projections endpoint - gameweek by gameweek breakdown
+  // Player Goals Scored Projections endpoint - gameweek by gameweek breakdown with hybrid calculations
   app.get("/api/player-goals-scored-projections", async (req, res) => {
     try {
       console.log(`DEBUG: Player Goals Scored Projections API called`);
       
-      // Fetch required data
-      const [bootstrapResponse, teamGoalProjectionsResponse, goalShareResponse] = await Promise.all([
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+      // Check if we have saved goal share data from the recent call
+      if (!savedGoalShareData || !savedGoalShareData.response || (Date.now() - savedGoalShareData.timestamp) > 300000) {
+        console.log(`DEBUG: No valid saved goal share data, fetching fresh data...`);
+        // Trigger goal share calculation to get fresh data
+        const goalShareResponse = await fetch("http://localhost:5000/api/goal-share-season");
+        if (!goalShareResponse.ok) {
+          throw new Error("Failed to fetch goal share data");
+        }
+        await goalShareResponse.json(); // This populates savedGoalShareData
+      }
+
+      // Fetch additional required data
+      const [teamGoalProjectionsResponse, fixturesResponse] = await Promise.all([
         fetch("http://localhost:5000/api/team-goal-projections"),
-        fetch("http://localhost:5000/api/goal-share-season")
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
       ]);
       
-      if (!bootstrapResponse.ok || !teamGoalProjectionsResponse.ok || !goalShareResponse.ok) {
+      if (!teamGoalProjectionsResponse.ok || !fixturesResponse.ok) {
         throw new Error("Failed to fetch required data");
       }
       
-      const bootstrapData = await bootstrapResponse.json();
       const teamGoalProjections = await teamGoalProjectionsResponse.json();
-      const goalShareData = await goalShareResponse.json();
+      const fixturesData = await fixturesResponse.json();
       
-      console.log(`DEBUG: Fetched data - ${goalShareData.length} teams with goal share data`);
+      const bootstrapData = savedGoalShareData.bootstrapData;
+      const goalShareData = savedGoalShareData.response;
       
-      // Create player projections by distributing team goals across gameweeks based on goal share
+      console.log(`DEBUG: Using saved data - ${goalShareData.length} teams with hybrid goal share data`);
+      
+      // Get current gameweek from bootstrap data
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      console.log(`DEBUG: Current gameweek: ${currentGameweek}`);
+      
+      // Create player projections using hybrid calculation methodology
       const playerProjections: any[] = [];
       
       goalShareData.forEach((teamData: any) => {
@@ -3456,15 +3472,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const gameweekProjections: { [gameweek: number]: number } = {};
           let totalProjectedGoals = 0;
           
-          // Distribute player's share across each gameweek based on team's gameweek projections
+          // For each gameweek, calculate goals using hybrid approach
           Object.entries(teamProjections.gameweekProjections).forEach(([gw, teamGoals]: [string, any]) => {
             const gameweek = parseInt(gw);
-            const playerGoalsForGW = (typeof teamGoals === 'number') ? 
-              (teamGoals * (player.goalShare / 100)) : 0;
+            
+            // Check if this gameweek has started/finished
+            const gameweekEvent = bootstrapData.events.find((e: any) => e.id === gameweek);
+            const gameweekFinished = gameweekEvent && gameweekEvent.finished;
+            const gameweekStarted = gameweekEvent && gameweekEvent.is_current;
+            
+            let playerGoalsForGW = 0;
+            
+            if (gameweekFinished || gameweekStarted) {
+              // For finished/started gameweeks, use actual goals scored
+              const teamFixtures = fixturesData.filter((fixture: any) => 
+                fixture.event === gameweek && 
+                (fixture.team_h === teamData.teamId || fixture.team_a === teamData.teamId)
+              );
+              
+              let actualTeamGoals = 0;
+              teamFixtures.forEach((fixture: any) => {
+                if (fixture.team_h === teamData.teamId) {
+                  actualTeamGoals += fixture.team_h_score || 0;
+                } else if (fixture.team_a === teamData.teamId) {
+                  actualTeamGoals += fixture.team_a_score || 0;
+                }
+              });
+              
+              // If we have actual team goals, distribute based on player's share
+              if (actualTeamGoals > 0) {
+                playerGoalsForGW = actualTeamGoals * (player.goalShare / 100);
+                console.log(`DEBUG: Goals Scored - GW${gameweek} ACTUAL - ${team.short_name} scored: ${actualTeamGoals} goals, ${player.name}: ${playerGoalsForGW.toFixed(2)}`);
+              }
+            } else {
+              // For future gameweeks, use projections
+              const projectedTeamGoals = (typeof teamGoals === 'number') ? teamGoals : 0;
+              playerGoalsForGW = projectedTeamGoals * (player.goalShare / 100);
+              console.log(`DEBUG: Goals Scored - GW${gameweek} PROJECTION - ${team.short_name} projected: ${projectedTeamGoals.toFixed(2)} goals, ${player.name}: ${playerGoalsForGW.toFixed(2)}`);
+            }
             
             gameweekProjections[gameweek] = Math.round(playerGoalsForGW * 100) / 100;
             totalProjectedGoals += playerGoalsForGW;
           });
+          
+          // Apply penalty taker adjustments to season total (already reflected in goal share)
+          const penaltyAdjustment = getPenaltyTakerAdjustment(player.name, player.id);
+          if (penaltyAdjustment > 0) {
+            console.log(`DEBUG: Penalty adjustment applied to season total for ${player.name}: +${penaltyAdjustment * 38 / 90} goals`);
+            totalProjectedGoals += penaltyAdjustment * 38 / 90; // Season-long penalty adjustment
+          }
           
           playerProjections.push({
             playerId: player.id,
@@ -3472,14 +3528,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamName: team.name,
             teamShort: team.short_name,
             position: player.position,
-            totalProjectedGoals: Math.round(totalProjectedGoals * 10) / 10,
+            totalProjectedGoals: Math.round(totalProjectedGoals * 100) / 100,
             gameweekProjections,
             goalShare: player.goalShare
           });
         });
       });
       
-      console.log(`DEBUG: Generated projections for ${playerProjections.length} players`);
+      console.log(`DEBUG: Generated hybrid projections for ${playerProjections.length} players with actual+projected data`);
       
       // Sort by total projected goals descending
       playerProjections.sort((a, b) => b.totalProjectedGoals - a.totalProjectedGoals);
