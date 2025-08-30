@@ -90,7 +90,25 @@ export default function Fixtures() {
 
   // Get attacking tier for a team
   const getAttackingTier = (teamId: number): string => {
-    if (!adminSettings) return 'average';
+    // Fallback classifications if adminSettings not available
+    const fallbackAttackTiers = {
+      // Elite attack: Arsenal, Man City, Liverpool, Newcastle
+      elite: [1, 3, 11, 14], 
+      // Strong attack: Chelsea, Spurs, Brighton, Aston Villa
+      strong: [4, 6, 8, 7],
+      // Weak attack: Crystal Palace, Everton, Fulham
+      weak: [9, 10, 13], 
+      // Promoted: Leicester, Ipswich, Southampton  
+      promoted: [12, 15, 18]
+    };
+    
+    if (!adminSettings) {
+      if (fallbackAttackTiers.elite.includes(teamId)) return 'elite';
+      if (fallbackAttackTiers.strong.includes(teamId)) return 'strong';
+      if (fallbackAttackTiers.weak.includes(teamId)) return 'weak';
+      if (fallbackAttackTiers.promoted.includes(teamId)) return 'promoted';
+      return 'average';
+    }
     
     const parseTeamArray = (teamData: any): number[] => {
       if (Array.isArray(teamData)) return teamData;
@@ -118,7 +136,25 @@ export default function Fixtures() {
 
   // Get defensive tier for a team
   const getDefensiveTier = (teamId: number): string => {
-    if (!adminSettings) return 'average';
+    // Fallback classifications if adminSettings not available
+    const fallbackDefenseTiers = {
+      // Elite defense: Liverpool, Arsenal, Man City
+      elite: [11, 1, 3],
+      // Strong defense: Chelsea, Newcastle, Aston Villa
+      strong: [8, 14, 7], 
+      // Weak defense: Bournemouth, Brentford, Wolves
+      weak: [2, 5, 20],
+      // Promoted: Leicester, Ipswich, Southampton
+      promoted: [12, 15, 18]
+    };
+    
+    if (!adminSettings) {
+      if (fallbackDefenseTiers.elite.includes(teamId)) return 'elite';
+      if (fallbackDefenseTiers.strong.includes(teamId)) return 'strong';
+      if (fallbackDefenseTiers.weak.includes(teamId)) return 'weak';
+      if (fallbackDefenseTiers.promoted.includes(teamId)) return 'promoted';
+      return 'average';
+    }
     
     const parseTeamArray = (teamData: any): number[] => {
       if (Array.isArray(teamData)) return teamData;
@@ -213,6 +249,8 @@ export default function Fixtures() {
     
     // Defence score = Venue factor ÷ Opponent's Attacking Tier Multiplier
     const defenceScore = venueFactor / opponentAttackMultiplier;
+    
+    // Now we always have tier classifications (either from admin or fallback), so calculate normally
     
     return {
       attackScore: parseFloat(attackScore.toFixed(2)),
