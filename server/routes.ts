@@ -5125,27 +5125,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Generate gameweek-by-gameweek projections (GW4-GW9)
         const gameweekProjections: { [gameweek: string]: number } = {};
         for (let gw = 4; gw <= 9; gw++) {
-          // Add some variance per gameweek based on player ID for deterministic results
+          // Start with expected minutes as baseline
+          let gwMinutes = expectedMinutesPerGame;
+          
+          // Add small variance per gameweek (more realistic range)
           const gwSeed = (player.id * gw * 7) % 100;
-          const gwVariance = 0.85 + (gwSeed / 100) * 0.3; // Variance between 0.85-1.15
+          const gwVariance = 0.95 + (gwSeed / 100) * 0.1; // Variance between 0.95-1.05 (much smaller)
+          gwMinutes *= gwVariance;
           
-          // Apply injury risk and rotation considerations
-          let gwMinutes = expectedMinutesPerGame * gwVariance;
-          
-          // Higher chance of reduced minutes for players with high current minutes (rotation risk)
-          if (currentMinutesPerGame > 80) {
-            const rotationRisk = ((player.id * gw) % 10) / 10; // 0-1 risk factor
-            if (rotationRisk > 0.7) {
-              gwMinutes *= 0.6; // Rotation game
+          // Only apply rotation risk for very high-minute players occasionally
+          if (currentMinutesPerGame > 85) {
+            const rotationRisk = ((player.id * gw * 11) % 100) / 100;
+            if (rotationRisk > 0.85) { // Only 15% chance for top players
+              gwMinutes *= 0.7; // Rest/rotation game
             }
           }
           
-          // Injury risk for any player
-          const injuryRisk = ((player.id * gw * 13) % 100) / 100; // 0-1 risk factor
-          if (injuryRisk > 0.95) {
+          // Reduce injury risk significantly - only major injuries
+          const injuryRisk = ((player.id * gw * 13) % 100) / 100;
+          if (injuryRisk > 0.98) { // Only 2% chance
             gwMinutes = 0; // Injured
-          } else if (injuryRisk > 0.90) {
-            gwMinutes *= 0.3; // Minor injury/doubt
+          } else if (injuryRisk > 0.96) { // Only 2% additional chance
+            gwMinutes *= 0.4; // Doubt/minor injury
           }
           
           gameweekProjections[gw.toString()] = Math.max(0, Math.min(90, Math.round(gwMinutes)));
