@@ -7096,6 +7096,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player Point Breakdowns API - Get specific point categories
+  app.get("/api/player-point-breakdowns", async (req, res) => {
+    try {
+      const { startGameweek = 4, endGameweek = 9, category = 'all' } = req.query;
+      const start = parseInt(startGameweek as string);
+      const end = parseInt(endGameweek as string);
+      
+      console.log(`DEBUG: Player Point Breakdowns API - category: ${category} for GW${start}-${end}`);
+      const startTime = Date.now();
+      
+      // Get projections with detailed breakdowns
+      const projections = await projectionService.getPlayerTotalPoints(start, end);
+      
+      // Filter based on requested category
+      let filteredData = projections;
+      if (category !== 'all') {
+        filteredData = projections.map(player => {
+          const baseData = {
+            playerId: player.playerId,
+            name: player.name,
+            team: player.team,
+            position: player.position,
+            price: player.price,
+            ownership: player.ownership
+          };
+          
+          switch (category) {
+            case 'goals':
+              return {
+                ...baseData,
+                pointsFromGoals: player.pointsFromGoals,
+                totalPointsFromGoals: player.totalPointsFromGoals,
+                gameweekProjections: player.pointsFromGoals
+              };
+            case 'assists':
+              return {
+                ...baseData,
+                pointsFromAssists: player.pointsFromAssists,
+                totalPointsFromAssists: player.totalPointsFromAssists,
+                gameweekProjections: player.pointsFromAssists
+              };
+            case 'clean_sheets':
+              return {
+                ...baseData,
+                pointsFromCleanSheets: player.pointsFromCleanSheets,
+                totalPointsFromCleanSheets: player.totalPointsFromCleanSheets,
+                gameweekProjections: player.pointsFromCleanSheets
+              };
+            case 'defensive':
+              return {
+                ...baseData,
+                pointsFromDefensiveContributions: player.pointsFromDefensiveContributions,
+                totalPointsFromDefensiveContributions: player.totalPointsFromDefensiveContributions,
+                gameweekProjections: player.pointsFromDefensiveContributions
+              };
+            case 'minutes':
+              return {
+                ...baseData,
+                pointsFromMinutes: player.pointsFromMinutes,
+                totalPointsFromMinutes: player.totalPointsFromMinutes,
+                gameweekProjections: player.pointsFromMinutes
+              };
+            case 'bonus':
+              return {
+                ...baseData,
+                pointsFromBonus: player.pointsFromBonus,
+                totalPointsFromBonus: player.totalPointsFromBonus,
+                gameweekProjections: player.pointsFromBonus
+              };
+            default:
+              return player;
+          }
+        }).filter(p => p.totalExpectedPoints > 0 || category === 'all');
+      }
+      
+      const duration = Date.now() - startTime;
+      console.log(`DEBUG: Served ${filteredData.length} ${category} point breakdowns in ${duration}ms`);
+      
+      res.json(filteredData);
+      
+    } catch (error) {
+      console.error("Error in player point breakdowns:", error);
+      res.status(500).json({ error: "Failed to get player point breakdowns" });
+    }
+  });
+
   // Current Players endpoint - get all current FPL players from bootstrap-static
   app.get("/api/current-players", async (req, res) => {
     try {

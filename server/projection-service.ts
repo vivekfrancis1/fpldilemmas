@@ -57,11 +57,11 @@ class ProjectionService {
         return [];
       }
 
-      // Transform database format to API format
+      // Transform database format to API format with detailed breakdowns
       return projections.rows.map((projection: any) => ({
         playerId: projection.player_id,
         name: projection.player_name,
-        fullName: projection.player_name, // Use same for now
+        fullName: projection.player_name,
         team: projection.team_name,
         position: ['', 'GKP', 'DEF', 'MID', 'FWD'][projection.element_type] || 'MID',
         price: projection.current_price / 10,
@@ -69,7 +69,20 @@ class ProjectionService {
         gameweekProjections: projection.total_points_projections,
         totalExpectedPoints: parseFloat(projection.total_points.toString()),
         seasonTotalPoints: projection.season_projected_points,
-        averagePerGameweek: parseFloat(projection.average_points_per_gameweek.toString())
+        averagePerGameweek: parseFloat(projection.average_points_per_gameweek.toString()),
+        // Detailed point breakdowns for granular analysis
+        pointsFromGoals: projection.points_from_goals || {},
+        pointsFromAssists: projection.points_from_assists || {},
+        pointsFromCleanSheets: projection.points_from_clean_sheets || {},
+        pointsFromDefensiveContributions: projection.points_from_defensive_contributions || {},
+        pointsFromMinutes: projection.points_from_minutes || {},
+        pointsFromBonus: projection.points_from_bonus || {},
+        totalPointsFromGoals: parseFloat(projection.total_points_from_goals || 0),
+        totalPointsFromAssists: parseFloat(projection.total_points_from_assists || 0),
+        totalPointsFromCleanSheets: parseFloat(projection.total_points_from_clean_sheets || 0),
+        totalPointsFromDefensiveContributions: parseFloat(projection.total_points_from_defensive_contributions || 0),
+        totalPointsFromMinutes: parseFloat(projection.total_points_from_minutes || 0),
+        totalPointsFromBonus: parseFloat(projection.total_points_from_bonus || 0)
       }));
 
     } catch (error) {
@@ -107,16 +120,69 @@ class ProjectionService {
         .slice(0, 150) // Limit to top 150 players for performance
         .map((fplPlayer: any) => {
           const team = bootstrapData.teams.find((t: any) => t.id === fplPlayer.team);
-          const gameweekProjections: { [key: string]: number } = {};
+          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][fplPlayer.element_type] || 'MID';
           
-          // Form-based simple projection
-          const basePoints = Math.max(parseFloat(fplPlayer.form || "0") * 1.1, 2.5);
+          // Enhanced projections with detailed point breakdowns
+          const gameweekProjections: { [key: string]: number } = {};
+          const pointsFromGoals: { [key: string]: number } = {};
+          const pointsFromAssists: { [key: string]: number } = {};
+          const pointsFromCleanSheets: { [key: string]: number } = {};
+          const pointsFromDefensiveContributions: { [key: string]: number } = {};
+          const pointsFromMinutes: { [key: string]: number } = {};
+          const pointsFromBonus: { [key: string]: number } = {};
+          
           let totalExpectedPoints = 0;
+          let totalGoalPoints = 0, totalAssistPoints = 0, totalCleanSheetPoints = 0;
+          let totalDefensivePoints = 0, totalMinutesPoints = 0, totalBonusPoints = 0;
+          
+          // FPL scoring system
+          const goalPoints = position === 'GKP' || position === 'DEF' ? 6 : position === 'MID' ? 5 : 4;
+          const assistPoints = 3;
+          const cleanSheetPoints = position === 'GKP' || position === 'DEF' ? 4 : position === 'MID' ? 1 : 0;
           
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            const gwPoints = basePoints + (Math.random() * 2 - 1); // Add slight variance
-            gameweekProjections[`gw${gw}`] = Math.max(Math.round(gwPoints * 100) / 100, 1.0);
-            totalExpectedPoints += gameweekProjections[`gw${gw}`];
+            // Enhanced form-based projections with realistic scoring breakdown
+            const form = parseFloat(fplPlayer.form || "0");
+            const baseMinutes = Math.min(90, Math.max(60, form * 15)); // 60-90 minutes based on form
+            
+            // Goals projection (based on form and position)
+            const goalProb = position === 'FWD' ? form * 0.15 : position === 'MID' ? form * 0.08 : form * 0.03;
+            const gwGoalPoints = goalProb * goalPoints;
+            pointsFromGoals[`gw${gw}`] = Math.round(gwGoalPoints * 100) / 100;
+            totalGoalPoints += gwGoalPoints;
+            
+            // Assists projection
+            const assistProb = position === 'MID' ? form * 0.12 : position === 'FWD' ? form * 0.08 : form * 0.04;
+            const gwAssistPoints = assistProb * assistPoints;
+            pointsFromAssists[`gw${gw}`] = Math.round(gwAssistPoints * 100) / 100;
+            totalAssistPoints += gwAssistPoints;
+            
+            // Clean sheet projection (defenders and goalkeepers)
+            const cleanSheetProb = position === 'GKP' ? 0.35 : position === 'DEF' ? 0.32 : position === 'MID' ? 0.28 : 0;
+            const gwCleanSheetPoints = cleanSheetProb * cleanSheetPoints;
+            pointsFromCleanSheets[`gw${gw}`] = Math.round(gwCleanSheetPoints * 100) / 100;
+            totalCleanSheetPoints += gwCleanSheetPoints;
+            
+            // Defensive contribution points (2025/26 season)
+            const defenseProb = position === 'DEF' ? 0.25 : position === 'MID' ? 0.15 : 0;
+            const gwDefensivePoints = defenseProb * 2; // 2 points for defensive contribution
+            pointsFromDefensiveContributions[`gw${gw}`] = Math.round(gwDefensivePoints * 100) / 100;
+            totalDefensivePoints += gwDefensivePoints;
+            
+            // Minutes points (1 for 1-59 mins, 2 for 60+ mins)
+            const minutesProb = baseMinutes >= 60 ? 2 : 1;
+            pointsFromMinutes[`gw${gw}`] = minutesProb;
+            totalMinutesPoints += minutesProb;
+            
+            // Bonus points (simplified)
+            const bonusProb = form * 0.3;
+            pointsFromBonus[`gw${gw}`] = Math.round(bonusProb * 100) / 100;
+            totalBonusPoints += bonusProb;
+            
+            // Total gameweek points
+            const gwTotal = gwGoalPoints + gwAssistPoints + gwCleanSheetPoints + gwDefensivePoints + minutesProb + bonusProb;
+            gameweekProjections[`gw${gw}`] = Math.max(Math.round(gwTotal * 100) / 100, 2.0);
+            totalExpectedPoints += gwTotal;
           }
           
           const avgPerGameweek = totalExpectedPoints / (endGameweek - startGameweek + 1);
@@ -127,14 +193,27 @@ class ProjectionService {
             playerName: fplPlayer.web_name,
             teamId: fplPlayer.team,
             teamName: team?.short_name || 'UNK',
-            position: ['', 'GKP', 'DEF', 'MID', 'FWD'][fplPlayer.element_type] || 'MID',
+            position,
             elementType: fplPlayer.element_type,
             currentPrice: fplPlayer.now_cost,
             ownership: parseFloat(fplPlayer.selected_by_percent),
             gameweekProjections,
             totalExpectedPoints,
             seasonTotalPoints,
-            averagePerGameweek: avgPerGameweek
+            averagePerGameweek: avgPerGameweek,
+            // Detailed breakdowns
+            pointsFromGoals,
+            pointsFromAssists,
+            pointsFromCleanSheets,
+            pointsFromDefensiveContributions,
+            pointsFromMinutes,
+            pointsFromBonus,
+            totalGoalPoints,
+            totalAssistPoints,
+            totalCleanSheetPoints,
+            totalDefensivePoints,
+            totalMinutesPoints,
+            totalBonusPoints
           };
         });
 
@@ -150,19 +229,28 @@ class ProjectionService {
               AND season = '2025/26'
           `);
 
-          // Insert new record
+          // Insert new record with detailed point breakdowns
           await db.execute(sql`
             INSERT INTO player_projections (
               player_id, player_name, team_id, team_name, position, element_type,
               current_price, ownership, total_points_projections, total_points,
               average_points_per_gameweek, season_projected_points, gameweek_range,
-              start_gameweek, end_gameweek, season
+              start_gameweek, end_gameweek, season,
+              points_from_goals, points_from_assists, points_from_clean_sheets,
+              points_from_defensive_contributions, points_from_minutes, points_from_bonus,
+              total_points_from_goals, total_points_from_assists, total_points_from_clean_sheets,
+              total_points_from_defensive_contributions, total_points_from_minutes, total_points_from_bonus
             ) VALUES (
               ${player.playerId}, ${player.playerName}, ${player.teamId}, ${player.teamName},
               ${player.position}, ${player.elementType}, ${player.currentPrice}, ${player.ownership},
               ${JSON.stringify(player.gameweekProjections)}, ${player.totalExpectedPoints},
               ${player.averagePerGameweek}, ${player.seasonTotalPoints}, ${`${startGameweek}-${endGameweek}`},
-              ${startGameweek}, ${endGameweek}, '2025/26'
+              ${startGameweek}, ${endGameweek}, '2025/26',
+              ${JSON.stringify(player.pointsFromGoals)}, ${JSON.stringify(player.pointsFromAssists)}, 
+              ${JSON.stringify(player.pointsFromCleanSheets)}, ${JSON.stringify(player.pointsFromDefensiveContributions)},
+              ${JSON.stringify(player.pointsFromMinutes)}, ${JSON.stringify(player.pointsFromBonus)},
+              ${player.totalGoalPoints}, ${player.totalAssistPoints}, ${player.totalCleanSheetPoints},
+              ${player.totalDefensivePoints}, ${player.totalMinutesPoints}, ${player.totalBonusPoints}
             )
           `);
         } catch (error) {
