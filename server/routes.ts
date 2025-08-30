@@ -5072,7 +5072,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Player Minutes Projections endpoint - estimates expected minutes and points per game
-  app.get("/api/player-minutes-projections", async (req, res) => {
+  app.get("/api/player-minutes-projections/:startGW?/:endGW?", async (req, res) => {
     try {
       // Fetch FPL bootstrap data
       const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
@@ -5087,6 +5087,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get current gameweek
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      // Get gameweek range from parameters (default to next 6 gameweeks)
+      const startGW = parseInt(req.params.startGW || '4');
+      const endGW = parseInt(req.params.endGW || '9');
       
       // Calculate player minutes projections
       const playerMinutesProjections = players.map((player: any) => {
@@ -5122,9 +5126,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const formAdjustment = Math.max(0.8, Math.min(1.2, 1 + (form - 5) / 20)); // Form adjustment between 0.8-1.2
         expectedMinutesPerGame *= formAdjustment;
         
-        // Generate gameweek-by-gameweek projections (GW4-GW9)
+        // Generate gameweek-by-gameweek projections for requested range
         const gameweekProjections: { [gameweek: string]: number } = {};
-        for (let gw = 4; gw <= 9; gw++) {
+        for (let gw = startGW; gw <= endGW; gw++) {
           // Start with expected minutes as baseline
           let gwMinutes = expectedMinutesPerGame;
           

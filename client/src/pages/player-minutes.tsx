@@ -29,15 +29,14 @@ export default function PlayerMinutes() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [startGameweek, setStartGameweek] = useState<number>(4); // Default to next gameweek
-  const [endGameweek, setEndGameweek] = useState<number>(9); // Default to 6 gameweeks ahead
+  const [endGameweek, setEndGameweek] = useState<number>(9); // Default to 6 gameweeks ahead (GW4-GW9)
   const [sortField, setSortField] = useState<SortField>('expectedMinutes');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [minMinutes, setMinMinutes] = useState<string>("30"); // Minimum minutes filter
-  const [selectedGameweek, setSelectedGameweek] = useState<number>(4); // Gameweek to display
 
   // Fetch player minutes projections data
   const { data: playerMinutesData, isLoading, error } = useQuery<PlayerMinutesProjection[]>({
-    queryKey: ["/api/player-minutes-projections"],
+    queryKey: [`/api/player-minutes-projections/${startGameweek}/${endGameweek}`],
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
@@ -300,18 +299,30 @@ export default function PlayerMinutes() {
 
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-blue-600" />
-                <label className="text-sm font-semibold text-gray-700">Gameweek:</label>
-                <Select value={selectedGameweek.toString()} onValueChange={(value) => setSelectedGameweek(parseInt(value))}>
-                  <SelectTrigger className="w-24 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                <label className="text-sm font-semibold text-gray-700">From GW:</label>
+                <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-20 border-2 border-gray-200 hover:border-blue-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="4">GW4</SelectItem>
-                    <SelectItem value="5">GW5</SelectItem>
-                    <SelectItem value="6">GW6</SelectItem>
-                    <SelectItem value="7">GW7</SelectItem>
-                    <SelectItem value="8">GW8</SelectItem>
-                    <SelectItem value="9">GW9</SelectItem>
+                    {Array.from({length: 35}, (_, i) => i + 4).map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Calendar className="h-5 w-5 text-blue-600" />
+                <label className="text-sm font-semibold text-gray-700">To GW:</label>
+                <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-20 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({length: 35}, (_, i) => i + 4).filter(gw => gw >= startGameweek).map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -377,42 +388,17 @@ export default function PlayerMinutes() {
                       <th className="px-6 py-4 text-center">
                         <Button
                           variant="ghost"
-                          onClick={() => handleSort('currentMinutes')}
-                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto"
-                        >
-                          Current Min/Game {getSortIcon('currentMinutes')}
-                        </Button>
-                      </th>
-                      <th className="px-6 py-4 text-center">
-                        <Button
-                          variant="ghost"
                           onClick={() => handleSort('expectedMinutes')}
                           className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto"
                         >
                           Expected Min/Game {getSortIcon('expectedMinutes')}
                         </Button>
                       </th>
-                      <th className="px-6 py-4 text-center">
-                        <span className="font-semibold text-gray-700">GW{selectedGameweek} Minutes</span>
-                      </th>
-                      <th className="px-6 py-4 text-center">
-                        <Button
-                          variant="ghost"
-                          onClick={() => handleSort('starts')}
-                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto"
-                        >
-                          Starts {getSortIcon('starts')}
-                        </Button>
-                      </th>
-                      <th className="px-6 py-4 text-center">
-                        <Button
-                          variant="ghost"
-                          onClick={() => handleSort('form')}
-                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto"
-                        >
-                          Form {getSortIcon('form')}
-                        </Button>
-                      </th>
+                      {Array.from({length: endGameweek - startGameweek + 1}, (_, i) => startGameweek + i).map(gw => (
+                        <th key={gw} className="px-4 py-4 text-center">
+                          <span className="font-semibold text-gray-700">GW{gw}</span>
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -442,14 +428,6 @@ export default function PlayerMinutes() {
                           </Badge>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className={`font-semibold ${getMinutesColor(player.currentMinutesPerGame)}`}>
-                            {Math.round(player.currentMinutesPerGame)}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {Math.round((player.currentMinutesPerGame / 90) * 100)}%
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
                           <div className={`font-bold text-lg ${getMinutesColor(player.expectedMinutesPerGame)}`}>
                             {Math.round(player.expectedMinutesPerGame)}
                           </div>
@@ -457,21 +435,13 @@ export default function PlayerMinutes() {
                             {Math.round((player.expectedMinutesPerGame / 90) * 100)}%
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className={`font-semibold ${getMinutesColor(player.gameweekProjections?.[selectedGameweek] || 0)}`}>
-                            {Math.round(player.gameweekProjections?.[selectedGameweek] || 0)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="font-semibold text-blue-600">
-                            {player.starts}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="font-semibold text-purple-600">
-                            {player.form.toFixed(1)}
-                          </div>
-                        </td>
+                        {Array.from({length: endGameweek - startGameweek + 1}, (_, i) => startGameweek + i).map(gw => (
+                          <td key={gw} className="px-4 py-4 text-center">
+                            <div className={`font-semibold ${getMinutesColor(player.gameweekProjections?.[gw] || 0)}`}>
+                              {Math.round(player.gameweekProjections?.[gw] || 0)}
+                            </div>
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
