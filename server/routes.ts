@@ -4052,22 +4052,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const finalAssistShare = playerData.totalWeight > 0 ? 
               playerData.totalWeightedShare / playerData.totalWeight : 0;
             
-            // Apply realistic caps based on position
-            const getPositionCap = (position: string): number => {
+            // Apply realistic caps based on position to assist share percentage
+            const getPositionShareCap = (position: string): number => {
               switch (position.toLowerCase()) {
-                case 'goalkeeper': return 3; // Max 3% for GKs
-                case 'defender': return 20; // Max 20% for defenders
-                case 'midfielder': return 40; // Max 40% for midfielders
-                case 'forward': return 30; // Max 30% for forwards
-                default: return 25;
+                case 'goalkeeper': return 3; // Max 3% share for GKs
+                case 'defender': return 25; // Max 25% share for defenders
+                case 'midfielder': return 45; // Max 45% share for midfielders
+                case 'forward': return 35; // Max 35% share for forwards
+                default: return 30;
               }
             };
             
-            const positionCap = getPositionCap(playerData.position);
-            const cappedAssistShare = Math.min(finalAssistShare, positionCap);
+            const positionShareCap = getPositionShareCap(playerData.position);
+            const cappedAssistShare = Math.min(finalAssistShare, positionShareCap);
             
             if (cappedAssistShare !== finalAssistShare) {
-              console.log(`DEBUG: Capped ${playerData.name} assist share: ${finalAssistShare.toFixed(1)}% → ${cappedAssistShare.toFixed(1)}% (${playerData.position} cap: ${positionCap}%)`);
+              console.log(`DEBUG: Capped ${playerData.name} assist share: ${finalAssistShare.toFixed(1)}% → ${cappedAssistShare.toFixed(1)}% (${playerData.position} cap: ${positionShareCap}%)`);
             }
             
             if (cappedAssistShare > 0) {
