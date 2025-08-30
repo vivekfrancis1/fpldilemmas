@@ -25,8 +25,8 @@ interface Team {
 
 export default function Fixtures() {
   const [gameweekRange, setGameweekRange] = useState(() => {
-    // Show next 6 gameweeks: GW3 to GW8
-    return { start: 3, end: 8 };
+    // Show next 6 gameweeks: GW4 to GW9
+    return { start: 4, end: 9 };
   });
   const [sortBy, setSortBy] = useState<'team' | 'fdr-asc' | 'fdr-desc' | string>('fdr-asc');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -56,21 +56,21 @@ export default function Fixtures() {
     const firstUnfinished = bootstrapData.events.find(event => !event.finished);
     const current = firstUnfinished ? firstUnfinished.id : 1;
     
-    // Show all gameweeks from 3 to 38 for user selection
+    // Show all gameweeks from 4 to 38 for user selection
     const available = bootstrapData.events
-      .filter(event => event.id >= 3 && event.id <= 38)
+      .filter(event => event.id >= 4 && event.id <= 38)
       .map(event => event.id)
       .sort((a, b) => a - b);
     
     return { currentGameweek: current, availableGameweeks: available };
   }, [bootstrapData]);
 
-  // Update gameweek range when current gameweek changes - show next 10 gameweeks (GW3-GW12)
+  // Update gameweek range when current gameweek changes - show next 6 gameweeks (GW4-GW9)
   useEffect(() => {
-    if (availableGameweeks.length > 0 && gameweekRange.start !== 3) {
-      // Start from GW3 and show next 6 gameweeks (GW3-GW8)
-      const startGW = 3;
-      const endGW = 8;
+    if (availableGameweeks.length > 0 && gameweekRange.start !== 4) {
+      // Start from GW4 and show next 6 gameweeks (GW4-GW9)
+      const startGW = 4;
+      const endGW = 9;
       setGameweekRange({
         start: startGW,
         end: endGW
