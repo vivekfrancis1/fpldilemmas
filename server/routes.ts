@@ -46,6 +46,25 @@ const MASTER_TEAM_DEFAULTS = {
   weakDefenseMultiplier: 1.15,
   promotedDefenseMultiplier: 1.3,
   
+  // Penalty Taker Adjustments (add goals per 90 that xG methodology misses)
+  penaltyTakerAdjustments: {
+    // Primary penalty takers - proven track record
+    'Mohamed Salah': 0.12,           // ~4-5 penalty goals per season
+    'Erling Haaland': 0.08,          // ~3 penalty goals per season  
+    'Harry Kane': 0.10,              // ~4 penalty goals per season
+    'Bruno Fernandes': 0.15,         // ~5-6 penalty goals per season
+    'Alexander Isak': 0.06,          // ~2-3 penalty goals per season
+    'Ivan Toney': 0.08,              // ~3 penalty goals per season
+    'Ollie Watkins': 0.05,           // ~2 penalty goals per season
+    'Cole Palmer': 0.10,             // ~4 penalty goals per season
+    'Bukayo Saka': 0.08,             // ~3 penalty goals per season
+    // Secondary penalty takers
+    'Son Heung-min': 0.04,           // ~1-2 penalty goals per season
+    'James Ward-Prowse': 0.06,       // ~2-3 penalty goals per season
+    'Pascal Groß': 0.05,             // ~2 penalty goals per season
+    'Luka Milivojevic': 0.08,        // ~3 penalty goals per season
+  },
+
   // Context Multipliers
   derbyGoalsMultiplier: 0.87,
   topSixGoalsMultiplier: 1.12,
@@ -77,6 +96,29 @@ const MASTER_TEAM_DEFAULTS = {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Function to get penalty taker adjustment
+  function getPenaltyTakerAdjustment(playerName: string, playerId: number): number {
+    const adjustments = MASTER_TEAM_DEFAULTS.penaltyTakerAdjustments;
+    
+    // Check by exact name match first
+    if (adjustments[playerName as keyof typeof adjustments]) {
+      console.log(`DEBUG: Penalty adjustment for ${playerName}: +${adjustments[playerName as keyof typeof adjustments]} xG per 90`);
+      return adjustments[playerName as keyof typeof adjustments];
+    }
+    
+    // Check by partial name match for different name formats
+    const playerNameLower = playerName.toLowerCase();
+    for (const [key, value] of Object.entries(adjustments)) {
+      const keyLower = key.toLowerCase();
+      if (playerNameLower.includes(keyLower.split(' ')[0]) && playerNameLower.includes(keyLower.split(' ')[1])) {
+        console.log(`DEBUG: Penalty adjustment for ${playerName} (matched ${key}): +${value} xG per 90`);
+        return value;
+      }
+    }
+    
+    return 0; // No penalty adjustment for this player
+  }
+
   // Player data routes
   app.get("/api/bootstrap-static", async (req, res) => {
     try {
@@ -3217,7 +3259,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const positionAvg = player.element_type === 1 ? 0.02 : 
                               player.element_type === 2 ? 0.08 : 
                               player.element_type === 3 ? 0.15 : 0.35;
-            const adjustedXGPer90 = adjustForSampleSize(player, positionAvg);
+            let adjustedXGPer90 = adjustForSampleSize(player, positionAvg);
+            
+            // PENALTY TAKER ADJUSTMENT - Add penalty goals that xG excludes
+            const penaltyAdjustment = getPenaltyTakerAdjustment(player.name, player.id);
+            adjustedXGPer90 += penaltyAdjustment;
             
             // Calculate expected minutes with realistic projections
             const expectedMinutes = calculateExpectedMinutes(player, playersWithXG);
