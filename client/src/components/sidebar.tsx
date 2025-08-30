@@ -42,11 +42,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Most Popular",
       items: [
-        { path: "/content-creators", label: "FPL Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false, new: true },
         { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
         { path: "/fixtures", label: "Fixture Difficulty Rating", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
         { path: "/recent-price-changes", label: "Recent Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
-        { path: "/predicted-price-changes", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false }
+        { path: "/predicted-price-changes", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false },
+        { path: "/content-creators", label: "FPL Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false, new: true }
       ]
     },
     // {
