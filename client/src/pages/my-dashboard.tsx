@@ -296,12 +296,7 @@ export default function MyDashboard() {
     return previous.overall_rank - current.overall_rank;
   };
 
-  const getTopLeagues = () => {
-    if (!managerData?.leagues?.classic) return [];
-    return managerData.leagues.classic
-      .sort((a, b) => a.rank - b.rank)
-      .slice(0, 3);
-  };
+
 
   const getCurrentGameweek = () => {
     if (!bootstrapData?.events) return null;
@@ -613,30 +608,54 @@ export default function MyDashboard() {
                 </Card>
               </div>
 
-              {/* Top Leagues Preview */}
-              {getTopLeagues().length > 0 && (
+              {/* My Leagues */}
+              {leaguesData && leaguesData.classic && leaguesData.classic.filter(league => league.entry_rank > 0).length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Trophy className="h-5 w-5" />
-                      Top League Positions
+                      My Leagues
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {getTopLeagues().map((league, index: number) => (
-                        <div key={league.id} className="flex items-center justify-between p-3 rounded-lg border">
-                          <div className="flex items-center gap-3">
-                            {index === 0 && <Crown className="h-4 w-4 text-yellow-500" />}
-                            {index === 1 && <Medal className="h-4 w-4 text-gray-400" />}
-                            {index === 2 && <Award className="h-4 w-4 text-amber-600" />}
-                            <span className="font-medium">{league.name}</span>
+                      {leaguesData.classic
+                        .filter(league => league.entry_rank > 0)
+                        .slice(0, 6) // Show top 6 leagues to avoid overcrowding
+                        .map((league, index: number) => (
+                          <div key={league.id} className="flex items-center justify-between p-3 rounded-lg border">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              {index === 0 && <Crown className="h-4 w-4 text-yellow-500" />}
+                              {index === 1 && <Medal className="h-4 w-4 text-gray-400" />}
+                              {index === 2 && <Award className="h-4 w-4 text-amber-600" />}
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium truncate" title={league.name}>
+                                  {league.name}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {league.league_type === 'x' ? 'Classic League' : 'System League'} • {league.rank_count?.toLocaleString()} entries
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Badge variant="secondary" className="mb-1">
+                                #{league.entry_rank.toLocaleString()}
+                              </Badge>
+                              {league.entry_rank !== league.entry_last_rank && (
+                                <div className={`text-xs flex items-center justify-end ${
+                                  league.entry_rank < league.entry_last_rank ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {league.entry_rank < league.entry_last_rank ? (
+                                    <ChevronUp className="h-3 w-3" />
+                                  ) : (
+                                    <ChevronDown className="h-3 w-3" />
+                                  )}
+                                  {Math.abs(league.entry_rank - league.entry_last_rank)}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <Badge variant="secondary">
-                            #{league.rank}
-                          </Badge>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </CardContent>
                 </Card>
