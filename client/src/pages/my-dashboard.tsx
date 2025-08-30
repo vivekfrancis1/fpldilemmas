@@ -499,7 +499,7 @@ export default function MyDashboard() {
 
             {/* Team Tab */}
             <TabsContent value="team" className="space-y-6">
-              {teamData && (
+              {teamData && teamData.transfers && (
                 <>
                   {/* Team Stats */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -520,7 +520,7 @@ export default function MyDashboard() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-muted-foreground">In the Bank</p>
-                            <p className="text-2xl font-bold">£{(teamData.transfers.bank / 10).toFixed(1)}m</p>
+                            <p className="text-2xl font-bold">£{((teamData.transfers?.bank || 0) / 10).toFixed(1)}m</p>
                           </div>
                           <Target className="h-8 w-8 text-blue-500" />
                         </div>
@@ -532,7 +532,7 @@ export default function MyDashboard() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-muted-foreground">Transfers Made</p>
-                            <p className="text-2xl font-bold">{teamData.transfers.made}/{teamData.transfers.limit}</p>
+                            <p className="text-2xl font-bold">{teamData.transfers?.made || 0}/{teamData.transfers?.limit || 0}</p>
                           </div>
                           <Users className="h-8 w-8 text-purple-500" />
                         </div>
@@ -602,6 +602,12 @@ export default function MyDashboard() {
                     </CardContent>
                   </Card>
                 </>
+              )}
+              
+              {!teamData && searchedId && (
+                <div className="text-center py-8">
+                  <div className="text-lg">Loading team data...</div>
+                </div>
               )}
             </TabsContent>
 
@@ -752,13 +758,13 @@ export default function MyDashboard() {
                               <div>
                                 <div className="font-medium">Gameweek {gw.event}</div>
                                 <div className="text-sm text-muted-foreground">
-                                  {gw.event_transfers} transfers • {formatPrice(gw.bank)} bank
+                                  {gw.event_transfers || 0} transfers • {formatPrice(gw.bank || 0)} bank
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="font-medium">{gw.points} pts</div>
+                                <div className="font-medium">{gw.points || 0} pts</div>
                                 <div className="text-sm text-muted-foreground">
-                                  Rank: {formatRank(gw.overall_rank)}
+                                  Rank: {formatRank(gw.overall_rank || 0)}
                                 </div>
                               </div>
                             </div>
