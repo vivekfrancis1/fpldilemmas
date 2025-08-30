@@ -7167,7 +7167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const combinedData = [];
       
       // Use goals data as the base since it has the most comprehensive player list
-      goalsData.forEach((player: any) => {
+      for (const player of goalsData) {
         const assistPlayer = assistsMap.get(player.playerId);
         const cleanSheetPlayer = cleanSheetsMap.get(player.playerId);
         const minutesPlayer = minutesMap.get(player.playerId);
@@ -7191,11 +7191,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const isGameweekCurrent = gwEvent?.is_current || false;
           
           if (isGameweekFinished && fplPlayer) {
-            // For completely finished gameweeks, use actual total points
-            // This would be implemented with individual player data fetch in production
-            gwTotal = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, defensivePlayer, pointsSystem);
-            actualGameweeks++;
-            console.log(`DEBUG: GW${gw} FINISHED - ${player.playerName}: ${gwTotal.toFixed(2)} points (actual data framework)`);
+            // For completely finished gameweeks, use actual total_points from FPL API
+            try {
+              const elementResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
+              if (elementResponse.ok) {
+                const elementData = await elementResponse.json();
+                const gameweekHistory = elementData.history.find((h: any) => h.round === gw);
+                
+                if (gameweekHistory) {
+                  gwTotal = gameweekHistory.total_points || 0; // Use actual total_points from FPL API
+                  actualGameweeks++;
+                  console.log(`DEBUG: GW${gw} ACTUAL - ${player.playerName}: ${gwTotal} total points (from FPL API)`);
+                } else {
+                  throw new Error(`No gameweek ${gw} data found for player ${player.playerId}`);
+                }
+              } else {
+                throw new Error(`Failed to fetch element-summary for player ${player.playerId}`);
+              }
+            } catch (error) {
+              console.log(`Using fallback calculation for player ${player.playerId} GW${gw}: ${error}`);
+              // Fallback to projection calculation if API fails
+              gwTotal = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, defensivePlayer, pointsSystem);
+              actualGameweeks++;
+            }
             
           } else if (isGameweekCurrent && fplPlayer) {
             // For ongoing gameweek, use projections for now (fixture-level analysis framework in place)
@@ -7231,7 +7249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           seasonTotalPoints: Math.round(seasonTotalPoints * 100) / 100,
           avgPointsPerGameweek: Math.round(avgPerGameweek * 100) / 100
         });
-      });
+      }
       
       // Sort by total expected points (descending)
       combinedData.sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
