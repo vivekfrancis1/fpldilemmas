@@ -229,6 +229,7 @@ import {
   boolean,
   decimal,
   json,
+  jsonb,
   varchar,
   index,
   date,
@@ -721,3 +722,67 @@ export type InsertFplCreatorTracking = typeof fplCreatorTracking.$inferInsert;
 
 export const insertFplCreatorTrackingSchema = createInsertSchema(fplCreatorTracking);
 export type InsertUnifiedProjectionSettings = typeof unifiedProjectionSettings.$inferInsert;
+
+// Gameweek Data Cache Tables - Store actual FPL data when gameweeks complete
+export const gameweekPlayerDataTable = pgTable("gameweek_player_data", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  gameweek: integer("gameweek").notNull(),
+  season: text("season").notNull().default("2025/26"), // e.g., "2025/26"
+  
+  // Core FPL stats from element-summary API
+  minutes: integer("minutes").default(0),
+  goals_scored: integer("goals_scored").default(0),
+  assists: integer("assists").default(0),
+  clean_sheets: integer("clean_sheets").default(0),
+  goals_conceded: integer("goals_conceded").default(0),
+  own_goals: integer("own_goals").default(0),
+  penalties_saved: integer("penalties_saved").default(0),
+  penalties_missed: integer("penalties_missed").default(0),
+  yellow_cards: integer("yellow_cards").default(0),
+  red_cards: integer("red_cards").default(0),
+  saves: integer("saves").default(0),
+  bonus: integer("bonus").default(0),
+  bps: integer("bps").default(0),
+  total_points: integer("total_points").default(0),
+  
+  // Defensive stats (if available)
+  defensive_contribution: integer("defensive_contribution").default(0),
+  tackles: integer("tackles").default(0),
+  recoveries: integer("recoveries").default(0),
+  clearances_blocks_interceptions: integer("clearances_blocks_interceptions").default(0),
+  starts: integer("starts").default(0),
+  
+  // Metadata
+  wasHome: boolean("was_home").default(false),
+  opponentTeam: integer("opponent_team"),
+  fixtureId: integer("fixture_id"),
+  kickoffTime: timestamp("kickoff_time"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+}, (table) => [
+  index("idx_gameweek_player_data_player_gw").on(table.playerId, table.gameweek),
+  index("idx_gameweek_player_data_season_gw").on(table.season, table.gameweek),
+]);
+
+export const gameweekUpdateLogTable = pgTable("gameweek_update_log", {
+  id: serial("id").primaryKey(),
+  gameweek: integer("gameweek").notNull(),
+  season: text("season").notNull().default("2025/26"),
+  updateType: text("update_type").notNull(), // "completed", "partial", "failed"
+  playersUpdated: integer("players_updated").default(0),
+  errors: jsonb("errors"), // Store any errors that occurred
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  duration: integer("duration_ms"), // milliseconds
+});
+
+// Export schemas for the new tables
+export const insertGameweekPlayerDataSchema = createInsertSchema(gameweekPlayerDataTable);
+export type InsertGameweekPlayerData = z.infer<typeof insertGameweekPlayerDataSchema>;
+export type GameweekPlayerData = typeof gameweekPlayerDataTable.$inferSelect;
+
+export const insertGameweekUpdateLogSchema = createInsertSchema(gameweekUpdateLogTable);
+export type InsertGameweekUpdateLog = z.infer<typeof insertGameweekUpdateLogSchema>;
+export type GameweekUpdateLog = typeof gameweekUpdateLogTable.$inferSelect;

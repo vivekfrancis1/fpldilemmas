@@ -8805,6 +8805,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ Historical Player Stats API routes registered successfully");
 
+  // Import gameweek caching service
+  const { gameweekCacheService } = await import("./gameweek-cache-service");
+
+  // Gameweek Data Caching API routes
+  app.get("/api/gameweek-cache/status", async (req, res) => {
+    try {
+      const cachedGameweeks = await gameweekCacheService.getCachedGameweeks();
+      const updateLogs = await gameweekCacheService.getUpdateLogs(5);
+      
+      res.json({
+        cachedGameweeks,
+        recentUpdates: updateLogs,
+        totalCached: cachedGameweeks.length
+      });
+    } catch (error) {
+      console.error("Error getting cache status:", error);
+      res.status(500).json({ error: "Failed to get cache status" });
+    }
+  });
+
+  app.post("/api/gameweek-cache/cache/:gameweek", async (req, res) => {
+    try {
+      const gameweek = parseInt(req.params.gameweek);
+      if (isNaN(gameweek) || gameweek < 1 || gameweek > 38) {
+        return res.status(400).json({ error: "Invalid gameweek number" });
+      }
+
+      console.log(`🔄 Manual cache request for gameweek ${gameweek}`);
+      const result = await gameweekCacheService.cacheGameweekData(gameweek);
+      
+      res.json({
+        success: true,
+        gameweek,
+        result,
+        message: `Gameweek ${gameweek} caching ${result.updateType}`
+      });
+    } catch (error) {
+      console.error("Error caching gameweek:", error);
+      res.status(500).json({ error: "Failed to cache gameweek data" });
+    }
+  });
+
+  app.post("/api/gameweek-cache/auto-cache", async (req, res) => {
+    try {
+      console.log("🔄 Manual auto-cache request");
+      await gameweekCacheService.autoCacheCompletedGameweeks();
+      
+      const cachedGameweeks = await gameweekCacheService.getCachedGameweeks();
+      res.json({
+        success: true,
+        message: "Auto-cache completed",
+        totalCached: cachedGameweeks.length,
+        cachedGameweeks
+      });
+    } catch (error) {
+      console.error("Error in auto-cache:", error);
+      res.status(500).json({ error: "Failed to auto-cache data" });
+    }
+  });
+
+  app.get("/api/gameweek-cache/player-data/:playerId/:gameweek", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.playerId);
+      const gameweek = parseInt(req.params.gameweek);
+      
+      if (isNaN(playerId) || isNaN(gameweek)) {
+        return res.status(400).json({ error: "Invalid player ID or gameweek" });
+      }
+
+      const playerData = await gameweekCacheService.getCachedPlayerData([playerId], gameweek);
+      
+      res.json({
+        playerId,
+        gameweek,
+        data: playerData[0] || null,
+        cached: playerData.length > 0
+      });
+    } catch (error) {
+      console.error("Error getting cached player data:", error);
+      res.status(500).json({ error: "Failed to get cached player data" });
+    }
+  });
+
+  console.log("✓ Gameweek Cache API routes registered successfully");
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -46,6 +46,7 @@ import AdminGoalProjections from "./pages/admin-goal-projections";
 import AdminUpsetConfig from "./pages/admin-upset-config";
 import Admin from "./pages/admin";
 import AdminDataPopulation from "./pages/admin-data-population";
+import AdminGameweekCache from "./pages/admin-gameweek-cache";
 import DefensiveContributionProjections from "./pages/defensive-contribution-projections";
 import PlayerDefensiveContributions from "./pages/player-defensive-contributions";
 
@@ -96,6 +97,7 @@ function Router() {
       <Route path="/admin-upset-config" component={AdminUpsetConfig} />
       <Route path="/admin-content-creators" component={Admin} />
       <Route path="/admin-data-population" component={AdminDataPopulation} />
+      <Route path="/admin-gameweek-cache" component={AdminGameweekCache} />
       <Route path="/content-creators" component={ContentCreators} />
       <Route path="/content-creators/:id/team" component={CreatorTeam} />
 

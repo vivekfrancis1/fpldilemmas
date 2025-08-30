@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { priceScheduler } from "./price-scheduler";
+import { gameweekCacheScheduler } from "./gameweek-cache-scheduler";
 import { priceSplitWorker } from "./price-split-worker";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedContentCreators } from "./seed-database";
@@ -85,6 +86,25 @@ app.use((req, res, next) => {
       reusePort: true,
     }, () => {
       log(`serving on port ${port}`);
+      
+      // Start schedulers after server is running
+      console.log("🚀 Starting schedulers...");
+      
+      // Start price scheduler if it has a start method
+      if (typeof priceScheduler.start === 'function') {
+        priceScheduler.start();
+        console.log("✓ Price scheduler started");
+      }
+      
+      // Start price split worker if it has a start method
+      if (typeof priceSplitWorker.start === 'function') {
+        priceSplitWorker.start();
+        console.log("✓ Price split worker started");
+      }
+      
+      // Start gameweek cache scheduler
+      gameweekCacheScheduler.start();
+      console.log("✓ Gameweek cache scheduler started");
     });
 
     // Handle server startup errors
