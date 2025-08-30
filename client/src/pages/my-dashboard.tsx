@@ -609,7 +609,7 @@ export default function MyDashboard() {
               </div>
 
               {/* My Leagues */}
-              {leaguesData && leaguesData.classic && leaguesData.classic.filter(league => league.entry_rank > 0).length > 0 && (
+              {leaguesData && leaguesData.classic && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -620,42 +620,69 @@ export default function MyDashboard() {
                   <CardContent>
                     <div className="space-y-3">
                       {leaguesData.classic
+                        .filter(league => {
+                          // Show only: Overall League (id=314), Country leagues (India), and classic leagues
+                          if (league.id === 314) return true; // Overall League
+                          if (league.name.toLowerCase().includes('india')) return true; // India leagues
+                          if (league.league_type === 'x' && league.id > 1000) return true; // Classic leagues (private leagues have id > 1000)
+                          return false;
+                        })
                         .filter(league => league.entry_rank > 0)
-                        .slice(0, 6) // Show top 6 leagues to avoid overcrowding
-                        .map((league, index: number) => (
-                          <div key={league.id} className="flex items-center justify-between p-3 rounded-lg border">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              {index === 0 && <Crown className="h-4 w-4 text-yellow-500" />}
-                              {index === 1 && <Medal className="h-4 w-4 text-gray-400" />}
-                              {index === 2 && <Award className="h-4 w-4 text-amber-600" />}
-                              <div className="min-w-0 flex-1">
-                                <div className="font-medium truncate" title={league.name}>
-                                  {league.name}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {league.league_type === 'x' ? 'Classic League' : 'System League'} • {league.rank_count?.toLocaleString()} entries
+                        .sort((a, b) => {
+                          // Sort by priority: Overall first, then India, then classic leagues by rank
+                          if (a.id === 314) return -1;
+                          if (b.id === 314) return 1;
+                          if (a.name.toLowerCase().includes('india') && !b.name.toLowerCase().includes('india')) return -1;
+                          if (b.name.toLowerCase().includes('india') && !a.name.toLowerCase().includes('india')) return 1;
+                          return a.entry_rank - b.entry_rank;
+                        })
+                        .map((league, index: number) => {
+                          let leagueTypeLabel = 'Classic League';
+                          let leagueIcon = null;
+                          
+                          if (league.id === 314) {
+                            leagueTypeLabel = 'Overall League';
+                            leagueIcon = <Crown className="h-4 w-4 text-yellow-500" />;
+                          } else if (league.name.toLowerCase().includes('india')) {
+                            leagueTypeLabel = 'Country League';
+                            leagueIcon = <Medal className="h-4 w-4 text-blue-500" />;
+                          } else if (index === 2) {
+                            leagueIcon = <Award className="h-4 w-4 text-amber-600" />;
+                          }
+
+                          return (
+                            <div key={league.id} className="flex items-center justify-between p-3 rounded-lg border">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                {leagueIcon}
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium truncate" title={league.name}>
+                                    {league.name}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {leagueTypeLabel} • {league.rank_count?.toLocaleString()} entries
+                                  </div>
                                 </div>
                               </div>
+                              <div className="text-right">
+                                <Badge variant="secondary" className="mb-1">
+                                  #{league.entry_rank.toLocaleString()}
+                                </Badge>
+                                {league.entry_rank !== league.entry_last_rank && (
+                                  <div className={`text-xs flex items-center justify-end ${
+                                    league.entry_rank < league.entry_last_rank ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    {league.entry_rank < league.entry_last_rank ? (
+                                      <ChevronUp className="h-3 w-3" />
+                                    ) : (
+                                      <ChevronDown className="h-3 w-3" />
+                                    )}
+                                    {Math.abs(league.entry_rank - league.entry_last_rank)}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <Badge variant="secondary" className="mb-1">
-                                #{league.entry_rank.toLocaleString()}
-                              </Badge>
-                              {league.entry_rank !== league.entry_last_rank && (
-                                <div className={`text-xs flex items-center justify-end ${
-                                  league.entry_rank < league.entry_last_rank ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                  {league.entry_rank < league.entry_last_rank ? (
-                                    <ChevronUp className="h-3 w-3" />
-                                  ) : (
-                                    <ChevronDown className="h-3 w-3" />
-                                  )}
-                                  {Math.abs(league.entry_rank - league.entry_last_rank)}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                     </div>
                   </CardContent>
                 </Card>
