@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Zap, TrendingUp, Users, Calendar, ArrowUpDown } from "lucide-react";
+import { Zap, TrendingUp, Users, Calendar, ArrowUpDown, Target } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -17,13 +17,13 @@ interface PlayerAssistProjection {
   assistShare: number;
 }
 
-type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'gw4' | 'gw5' | 'gw6' | 'gw7' | 'gw8' | 'gw9';
+type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'sixGwTotal' | 'seasonTotal' | 'gw4' | 'gw5' | 'gw6' | 'gw7' | 'gw8' | 'gw9' | 'assistShare';
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerAssistProjections() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [sortField, setSortField] = useState<SortField>('totalAssists');
+  const [sortField, setSortField] = useState<SortField>('sixGwTotal');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   // Fetch player assist projections data
@@ -35,13 +35,13 @@ export default function PlayerAssistProjections() {
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
     if (!playerAssistData) return [];
-    const uniqueTeams = [...new Set(playerAssistData.map(p => p.teamShort))];
+    const uniqueTeams = Array.from(new Set(playerAssistData.map(p => p.teamShort)));
     return uniqueTeams.sort();
   }, [playerAssistData]);
 
   const positions = useMemo(() => {
     if (!playerAssistData) return [];
-    const uniquePositions = [...new Set(playerAssistData.map(p => p.position))];
+    const uniquePositions = Array.from(new Set(playerAssistData.map(p => p.position)));
     return uniquePositions.sort();
   }, [playerAssistData]);
 
@@ -75,6 +75,18 @@ export default function PlayerAssistProjections() {
         case 'totalAssists':
           aValue = a.totalProjectedAssists;
           bValue = b.totalProjectedAssists;
+          break;
+        case 'sixGwTotal':
+          aValue = [4, 5, 6, 7, 8, 9].reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
+          bValue = [4, 5, 6, 7, 8, 9].reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+          break;
+        case 'seasonTotal':
+          aValue = a.totalProjectedAssists;
+          bValue = b.totalProjectedAssists;
+          break;
+        case 'assistShare':
+          aValue = a.assistShare;
+          bValue = b.assistShare;
           break;
         case 'gw4':
           aValue = a.gameweekProjections[4] || 0;
@@ -225,7 +237,7 @@ export default function PlayerAssistProjections() {
           <Tabs defaultValue="assists" className="space-y-6">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="assists">Assists</TabsTrigger>
-              <TabsTrigger value="share">Assist Share</TabsTrigger>
+              <TabsTrigger value="points">Points from Assists</TabsTrigger>
             </TabsList>
 
             <TabsContent value="assists">
@@ -257,8 +269,13 @@ export default function PlayerAssistProjections() {
                             </Button>
                           </th>
                           <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('totalAssists')} className="hover:bg-green-50">
-                              Total {getSortIcon('totalAssists')}
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="hover:bg-green-50">
+                              6GW {getSortIcon('sixGwTotal')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
+                              Season {getSortIcon('seasonTotal')}
                             </Button>
                           </th>
                           <th className="text-center py-2 px-1">
@@ -294,7 +311,9 @@ export default function PlayerAssistProjections() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredAndSortedData.map((player, index) => (
+                        {filteredAndSortedData.map((player, index) => {
+                          const sixGwTotal = [4, 5, 6, 7, 8, 9].reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
+                          return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
                             <td className="py-3 px-1">
                               <div className="flex flex-col">
@@ -310,6 +329,9 @@ export default function PlayerAssistProjections() {
                               <Badge variant="secondary" className="text-xs">
                                 {player.position.charAt(0)}
                               </Badge>
+                            </td>
+                            <td className="text-center py-3 px-1 font-semibold text-green-700">
+                              {sixGwTotal.toFixed(2)}
                             </td>
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
                               {player.totalProjectedAssists}
@@ -345,7 +367,8 @@ export default function PlayerAssistProjections() {
                               </span>
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -353,12 +376,12 @@ export default function PlayerAssistProjections() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="share">
+            <TabsContent value="points">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
-                    Team Assist Share Analysis
+                    <Target className="h-5 w-5 text-green-600" />
+                    Points from Assists
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -366,17 +389,44 @@ export default function PlayerAssistProjections() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left py-2 px-1">Player</th>
-                          <th className="text-center py-2 px-1">Team</th>
-                          <th className="text-center py-2 px-1">Position</th>
-                          <th className="text-center py-2 px-1">Assist Share %</th>
-                          <th className="text-center py-2 px-1">Season Total</th>
+                          <th className="text-left py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="hover:bg-green-50">
+                              Player {getSortIcon('name')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('team')} className="hover:bg-green-50">
+                              Team {getSortIcon('team')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('position')} className="hover:bg-green-50">
+                              Pos {getSortIcon('position')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('assistShare')} className="hover:bg-green-50">
+                              Assist Share % {getSortIcon('assistShare')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="hover:bg-green-50">
+                              6GW Points {getSortIcon('sixGwTotal')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
+                              Season Points {getSortIcon('seasonTotal')}
+                            </Button>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredAndSortedData
-                          .sort((a, b) => b.assistShare - a.assistShare)
-                          .map((player, index) => (
+                        {filteredAndSortedData.map((player, index) => {
+                          const sixGwTotal = [4, 5, 6, 7, 8, 9].reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
+                          const sixGwPoints = Math.round(sixGwTotal * 3 * 10) / 10; // 3 points per assist
+                          const seasonPoints = Math.round(player.totalProjectedAssists * 3 * 10) / 10;
+                          return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
                             <td className="py-3 px-1">
                               <div className="flex flex-col">
@@ -396,11 +446,15 @@ export default function PlayerAssistProjections() {
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
                               {player.assistShare.toFixed(1)}%
                             </td>
-                            <td className="text-center py-3 px-1">
-                              {player.totalProjectedAssists}
+                            <td className="text-center py-3 px-1 font-semibold text-green-700">
+                              {sixGwPoints}
+                            </td>
+                            <td className="text-center py-3 px-1 font-semibold text-green-700">
+                              {seasonPoints}
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
