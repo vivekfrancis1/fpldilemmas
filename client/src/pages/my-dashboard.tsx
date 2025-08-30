@@ -571,159 +571,203 @@ export default function MyDashboard() {
   const error = managerError || historyError || teamError || leaguesError;
 
   return (
-    <div className="container mx-auto py-8 px-4 space-y-6">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">My FPL Dashboard</h1>
-          <p className="text-muted-foreground">
-            Complete overview of your Fantasy Premier League performance
+    <div className="fpl-page-wrapper">
+      <div className="fpl-container fpl-content-area">
+        {/* Page Header */}
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="fpl-heading-hero mb-3 sm:mb-4">My FPL Dashboard</h1>
+          <p className="fpl-text-body max-w-2xl mx-auto">
+            Complete overview of your Fantasy Premier League performance with detailed team analysis, league standings, and performance tracking
           </p>
         </div>
 
-        {/* Search Input */}
-        <div className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto">
-          <Input
-            type="text"
-            placeholder="Enter Manager ID (e.g., 123456)"
-            value={managerId}
-            onChange={(e) => setManagerId(e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="flex-1"
-            data-testid="input-manager-id"
-          />
-          <Button 
-            onClick={handleSearch} 
-            disabled={!managerId.trim()}
-            data-testid="button-search-manager"
-          >
-            <Search className="h-4 w-4 mr-2" />
-            Search
-          </Button>
-        </div>
-      </div>
+        {/* Manager Search Section */}
+        <Card className="mb-8 border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center max-w-2xl mx-auto">
+              <div className="flex-1 w-full">
+                <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
+                  Manager ID
+                </label>
+                <Input
+                  id="manager-id"
+                  type="text"
+                  placeholder="Enter your FPL Manager ID (e.g., 123456)"
+                  value={managerId}
+                  onChange={(e) => setManagerId(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                  data-testid="input-manager-id"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Find your ID in the FPL app under "Points" → "Gameweek History"
+                </p>
+              </div>
+              <Button 
+                onClick={handleSearch} 
+                disabled={!managerId.trim()}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200 whitespace-nowrap"
+                data-testid="button-search-manager"
+              >
+                <Search className="h-4 w-4 mr-2" />
+                Search Manager
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Error State */}
-      {error && (
-        <Alert className="max-w-2xl mx-auto">
-          <AlertDescription>
-            {error instanceof Error 
-              ? error.message 
-              : "Failed to load manager data. Please check the Manager ID and try again."
-            }
-          </AlertDescription>
-        </Alert>
-      )}
+        {/* Error State */}
+        {error && (
+          <Alert className="max-w-2xl mx-auto mb-8 border-red-200 bg-red-50">
+            <AlertDescription className="text-red-700">
+              {error instanceof Error 
+                ? error.message 
+                : "Failed to load manager data. Please check the Manager ID and try again."
+              }
+            </AlertDescription>
+          </Alert>
+        )}
 
-      {/* Loading State */}
-      {isLoading && searchedId && (
-        <div className="text-center py-8">
-          <div className="text-lg">Loading manager data...</div>
-        </div>
-      )}
+        {/* Loading State */}
+        {isLoading && searchedId && (
+          <div className="text-center py-12">
+            <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-purple-500 bg-white transition ease-in-out duration-150">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Loading manager data...
+            </div>
+          </div>
+        )}
 
-      {/* Dashboard Content */}
-      {managerData && !isLoading && (
-        <div className="space-y-6">
-          {/* Manager Overview */}
-          <Card>
-            <CardHeader className="text-center">
-              <CardTitle className="text-xl">
-                {managerData.player_first_name} {managerData.player_last_name}
-              </CardTitle>
-              <CardDescription>
-                {managerData.player_region_name} • Manager ID: {managerData.id}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+        {/* Dashboard Content */}
+        {managerData && !isLoading && (
+          <div className="fpl-section-spacing">
+            {/* Manager Overview */}
+            <Card className="border-0 bg-gradient-to-r from-purple-50 to-indigo-50 shadow-lg">
+              <CardHeader className="text-center pb-6">
+                <CardTitle className="fpl-heading-section text-gradient bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                  {managerData.player_first_name} {managerData.player_last_name}
+                </CardTitle>
+                <CardDescription className="fpl-text-body text-lg">
+                  {managerData.player_region_name} • Manager ID: {managerData.id}
+                </CardDescription>
+              </CardHeader>
+            </Card>
 
-          {/* Main Dashboard Tabs */}
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="team">Team</TabsTrigger>
-              <TabsTrigger value="performance">Performance</TabsTrigger>
-            </TabsList>
+            {/* Main Dashboard Tabs */}
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+                <TabsTrigger 
+                  value="overview" 
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200"
+                >
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="team" 
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200"
+                >
+                  Team
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="performance" 
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200"
+                >
+                  Performance
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Total Points */}
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Total Points</p>
-                        <p className="text-2xl font-bold">{managerData.summary_overall_points.toLocaleString()}</p>
+              {/* Overview Tab */}
+              <TabsContent value="overview" className="fpl-section-spacing mt-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Total Points */}
+                  <Card className="border-0 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-blue-600 mb-2">Total Points</p>
+                          <p className="text-3xl font-bold text-blue-900">{managerData.summary_overall_points.toLocaleString()}</p>
+                        </div>
+                        <div className="p-3 bg-blue-100 rounded-full">
+                          <Target className="h-8 w-8 text-blue-600" />
+                        </div>
                       </div>
-                      <Target className="h-8 w-8 text-blue-500" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                {/* Overall Rank */}
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Overall Rank</p>
-                        <p className="text-2xl font-bold">{formatRank(managerData.summary_overall_rank)}</p>
-                        {getRankChange() !== null && (
-                          <div className={`flex items-center text-sm ${getRankChange()! > 0 ? 'text-green-600' : getRankChange()! < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                            {getRankChange()! > 0 ? (
-                              <TrendingUp className="h-3 w-3 mr-1" />
-                            ) : getRankChange()! < 0 ? (
-                              <TrendingDown className="h-3 w-3 mr-1" />
-                            ) : null}
-                            {getRankChange()! > 0 ? '+' : ''}{formatRank(getRankChange()!)}
-                          </div>
-                        )}
+                  {/* Overall Rank */}
+                  <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-amber-600 mb-2">Overall Rank</p>
+                          <p className="text-3xl font-bold text-amber-900">{formatRank(managerData.summary_overall_rank)}</p>
+                          {getRankChange() !== null && (
+                            <div className={`flex items-center text-sm mt-2 ${getRankChange()! > 0 ? 'text-green-600' : getRankChange()! < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                              {getRankChange()! > 0 ? (
+                                <TrendingUp className="h-3 w-3 mr-1" />
+                              ) : getRankChange()! < 0 ? (
+                                <TrendingDown className="h-3 w-3 mr-1" />
+                              ) : null}
+                              {getRankChange()! > 0 ? '+' : ''}{formatRank(getRankChange()!)}
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-3 bg-amber-100 rounded-full">
+                          <Trophy className="h-8 w-8 text-amber-600" />
+                        </div>
                       </div>
-                      <Trophy className="h-8 w-8 text-amber-500" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                {/* Gameweek Points */}
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">GW Points</p>
-                        <p className="text-2xl font-bold">{managerData.summary_event_points}</p>
-                        <p className="text-sm text-muted-foreground">
-                          GW{managerData.current_event}
-                        </p>
+                  {/* Gameweek Points */}
+                  <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-green-600 mb-2">GW Points</p>
+                          <p className="text-3xl font-bold text-green-900">{managerData.summary_event_points}</p>
+                          <p className="text-sm text-green-600 font-medium mt-1">
+                            GW{managerData.current_event}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-green-100 rounded-full">
+                          <Activity className="h-8 w-8 text-green-600" />
+                        </div>
                       </div>
-                      <Activity className="h-8 w-8 text-green-500" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                {/* Gameweek Rank */}
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">GW Rank</p>
-                        <p className="text-2xl font-bold">{formatRank(managerData.summary_event_rank)}</p>
+                  {/* Gameweek Rank */}
+                  <Card className="border-0 bg-gradient-to-br from-purple-50 to-violet-50 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-purple-600 mb-2">GW Rank</p>
+                          <p className="text-3xl font-bold text-purple-900">{formatRank(managerData.summary_event_rank)}</p>
+                        </div>
+                        <div className="p-3 bg-purple-100 rounded-full">
+                          <Calendar className="h-8 w-8 text-purple-600" />
+                        </div>
                       </div>
-                      <Calendar className="h-8 w-8 text-purple-500" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
               </div>
 
-              {/* My Leagues */}
-              {leaguesData && leaguesData.classic && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Trophy className="h-5 w-5" />
-                      My Leagues
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                {/* My Leagues */}
+                {leaguesData && leaguesData.classic && (
+                  <Card className="border-0 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="fpl-heading-card flex items-center gap-2 text-indigo-800">
+                        <div className="p-2 bg-indigo-100 rounded-lg">
+                          <Trophy className="h-5 w-5 text-indigo-600" />
+                        </div>
+                        My Leagues
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
                     <div className="space-y-3">
                       {leaguesData.classic
                         .filter(league => {
@@ -752,13 +796,13 @@ export default function MyDashboard() {
                           }
 
                           return (
-                            <div key={league.id} className="flex items-center justify-between p-3 rounded-lg border">
+                            <div key={league.id} className="flex items-center justify-between p-4 rounded-xl bg-white/70 border-0 shadow-sm hover:shadow-md transition-all duration-200">
                               <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <div className="min-w-0 flex-1">
-                                  <div className="font-medium truncate" title={league.name}>
+                                  <div className="font-semibold text-gray-800 truncate" title={league.name}>
                                     {league.name}
                                   </div>
-                                  <div className="text-sm text-muted-foreground">
+                                  <div className="text-sm text-gray-600">
                                     {leagueTypeLabel} • {league.rank_count?.toLocaleString()} managers
                                     {league.rank_count && league.entry_rank && (
                                       <span> • {(() => {
@@ -1137,70 +1181,74 @@ export default function MyDashboard() {
 
 
 
-            {/* Performance Tab */}
-            <TabsContent value="performance" className="space-y-6">
-              {historyData && (
-                <>
-                  {/* Gameweek History */}
-                  {historyData?.current && historyData.current.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Activity className="h-5 w-5" />
-                          Gameweek History
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {historyData.current.slice().reverse().map((gw) => (
-                            <div key={gw.event} className="flex items-center justify-between p-3 rounded-lg border">
-                              <div>
-                                <div className="font-medium">Gameweek {gw.event}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {gw.event_transfers || 0} transfers • {formatPrice(gw.bank || 0)} bank
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="font-medium">{gw.points || 0} pts</div>
-                                <div className="text-sm text-muted-foreground">
-                                  Rank: {formatRank(gw.overall_rank || 0)}
-                                </div>
-                              </div>
+              {/* Performance Tab */}
+              <TabsContent value="performance" className="fpl-section-spacing mt-8">
+                {historyData && (
+                  <>
+                    {/* Gameweek History */}
+                    {historyData?.current && historyData.current.length > 0 && (
+                      <Card className="border-0 bg-gradient-to-br from-emerald-50 to-green-50 shadow-lg">
+                        <CardHeader>
+                          <CardTitle className="fpl-heading-card flex items-center gap-2 text-emerald-800">
+                            <div className="p-2 bg-emerald-100 rounded-lg">
+                              <Activity className="h-5 w-5 text-emerald-600" />
                             </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Season History */}
-                  {historyData?.past && historyData.past.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <BarChart3 className="h-5 w-5" />
-                          Season History
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {historyData.past.slice().reverse().map((season, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
-                              <div className="font-medium">{season.season_name}</div>
-                              <div className="flex items-center gap-4">
+                            Gameweek History
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3 max-h-80 overflow-y-auto">
+                            {historyData.current.slice().reverse().map((gw) => (
+                              <div key={gw.event} className="flex items-center justify-between p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200">
+                                <div>
+                                  <div className="text-lg font-semibold text-gray-800">Gameweek {gw.event}</div>
+                                  <div className="text-sm text-gray-600">
+                                    {gw.event_transfers || 0} transfers • {formatPrice(gw.bank || 0)} bank
+                                  </div>
+                                </div>
                                 <div className="text-right">
-                                  <div className="font-medium">{season.total_points.toLocaleString()} pts</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    Rank: {formatRank(season.rank)}
+                                  <div className="text-xl font-bold text-emerald-700">{gw.points || 0} pts</div>
+                                  <div className="text-sm text-gray-600">
+                                    Rank: {formatRank(gw.overall_rank || 0)}
                                   </div>
                                 </div>
                               </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Season History */}
+                    {historyData?.past && historyData.past.length > 0 && (
+                      <Card className="border-0 bg-gradient-to-br from-indigo-50 to-blue-50 shadow-lg">
+                        <CardHeader>
+                          <CardTitle className="fpl-heading-card flex items-center gap-2 text-indigo-800">
+                            <div className="p-2 bg-indigo-100 rounded-lg">
+                              <BarChart3 className="h-5 w-5 text-indigo-600" />
                             </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                            Season History
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {historyData.past.slice().reverse().map((season, index) => (
+                              <div key={index} className="flex items-center justify-between p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200">
+                                <div className="text-lg font-semibold text-gray-800">{season.season_name}</div>
+                                <div className="flex items-center gap-4">
+                                  <div className="text-right">
+                                    <div className="text-xl font-bold text-indigo-700">{season.total_points.toLocaleString()} pts</div>
+                                    <div className="text-sm text-gray-600">
+                                      Rank: {formatRank(season.rank)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
 
                   {/* Chips Used */}
                   {historyData?.chips && historyData.chips.length > 0 && (
@@ -1231,22 +1279,25 @@ export default function MyDashboard() {
                 </>
               )}
             </TabsContent>
-          </Tabs>
-        </div>
-      )}
+            </Tabs>
+          </div>
+        )}
 
-      {/* Initial State */}
-      {!searchedId && (
-        <Card className="max-w-2xl mx-auto">
-          <CardContent className="text-center py-12">
-            <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Enter Your Manager ID</h2>
-            <p className="text-muted-foreground mb-4">
-              Find your Manager ID in the FPL app under "Points" → "Gameweek History" or in your team URL.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+        {/* Initial State */}
+        {!searchedId && (
+          <Card className="max-w-2xl mx-auto border-0 bg-white/80 backdrop-blur-sm shadow-lg">
+            <CardContent className="text-center py-12">
+              <div className="p-4 bg-purple-100 rounded-full w-fit mx-auto mb-6">
+                <Trophy className="h-12 w-12 text-purple-600" />
+              </div>
+              <h2 className="fpl-heading-card mb-4">Enter Your Manager ID</h2>
+              <p className="fpl-text-body mb-4">
+                Find your Manager ID in the FPL app under "Points" → "Gameweek History" or in your team URL.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
