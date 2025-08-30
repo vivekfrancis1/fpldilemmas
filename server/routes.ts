@@ -3515,12 +3515,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalProjectedGoals += playerGoalsForGW;
           });
           
-          // Apply penalty taker adjustments to season total (already reflected in goal share)
-          const penaltyAdjustment = getPenaltyTakerAdjustment(player.name, player.id);
-          if (penaltyAdjustment > 0) {
-            console.log(`DEBUG: Penalty adjustment applied to season total for ${player.name}: +${penaltyAdjustment * 38 / 90} goals`);
-            totalProjectedGoals += penaltyAdjustment * 38 / 90; // Season-long penalty adjustment
-          }
+          // Don't apply penalty adjustments here - they're already included in the goal share data
+          // The goal share calculation already includes penalty taker adjustments
+          
+          // Use the pre-calculated season total from goal share data
+          const seasonTotal = player.projectedGoals;
           
           playerProjections.push({
             playerId: player.id,
@@ -3528,7 +3527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamName: team.name,
             teamShort: team.short_name,
             position: player.position,
-            totalProjectedGoals: Math.round(totalProjectedGoals * 100) / 100,
+            totalProjectedGoals: seasonTotal,
             gameweekProjections,
             goalShare: player.goalShare
           });
