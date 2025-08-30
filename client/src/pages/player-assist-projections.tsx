@@ -325,16 +325,6 @@ export default function PlayerAssistProjections() {
                             </Button>
                           </th>
                           <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="hover:bg-green-50">
-                              6GW {getSortIcon('sixGwTotal')}
-                            </Button>
-                          </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
-                              Season {getSortIcon('seasonTotal')}
-                            </Button>
-                          </th>
-                          <th className="text-center py-2 px-1">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('gw4')} className="hover:bg-green-50">
                               GW4 {getSortIcon('gw4')}
                             </Button>
@@ -364,6 +354,16 @@ export default function PlayerAssistProjections() {
                               GW9 {getSortIcon('gw9')}
                             </Button>
                           </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="hover:bg-green-50">
+                              GW{startGameweek}-{endGameweek} {getSortIcon('sixGwTotal')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
+                              Season {getSortIcon('seasonTotal')}
+                            </Button>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -384,12 +384,6 @@ export default function PlayerAssistProjections() {
                               <Badge variant="secondary" className="text-xs">
                                 {player.position.charAt(0)}
                               </Badge>
-                            </td>
-                            <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {getFilteredTotal(player).toFixed(2)}
-                            </td>
-                            <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {player.totalProjectedAssists}
                             </td>
                             <td className="text-center py-3 px-1">
                               <span className={`${(player.gameweekProjections[4] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
@@ -420,6 +414,12 @@ export default function PlayerAssistProjections() {
                               <span className={`${(player.gameweekProjections[9] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
                                 {(player.gameweekProjections[9] || 0).toFixed(2)}
                               </span>
+                            </td>
+                            <td className="text-center py-3 px-1 font-semibold text-green-700">
+                              {getFilteredTotal(player).toFixed(2)}
+                            </td>
+                            <td className="text-center py-3 px-1 font-semibold text-green-700">
+                              {player.totalProjectedAssists}
                             </td>
                           </tr>
                           );
@@ -460,16 +460,6 @@ export default function PlayerAssistProjections() {
                             </Button>
                           </th>
                           <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="hover:bg-green-50">
-                              6GW {getSortIcon('sixGwTotal')}
-                            </Button>
-                          </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
-                              Season {getSortIcon('seasonTotal')}
-                            </Button>
-                          </th>
-                          <th className="text-center py-2 px-1">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('gw4')} className="hover:bg-green-50">
                               GW4 {getSortIcon('gw4')}
                             </Button>
@@ -499,12 +489,21 @@ export default function PlayerAssistProjections() {
                               GW9 {getSortIcon('gw9')}
                             </Button>
                           </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="hover:bg-green-50">
+                              GW{startGameweek}-{endGameweek} {getSortIcon('sixGwTotal')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
+                              Season {getSortIcon('seasonTotal')}
+                            </Button>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredAndSortedData.map((player, index) => {
-                          const sixGwTotal = [4, 5, 6, 7, 8, 9].reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
-                          const sixGwPoints = Math.round(sixGwTotal * 3 * 10) / 10; // 3 points per assist
+                          const filteredGwPoints = Math.round(getFilteredTotal(player) * 3 * 10) / 10; // 3 points per assist
                           const seasonPoints = Math.round(player.totalProjectedAssists * 3 * 10) / 10;
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
@@ -522,12 +521,6 @@ export default function PlayerAssistProjections() {
                               <Badge variant="secondary" className="text-xs">
                                 {player.position.charAt(0)}
                               </Badge>
-                            </td>
-                            <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {sixGwPoints}
-                            </td>
-                            <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {seasonPoints}
                             </td>
                             <td className="text-center py-3 px-1">
                               <span className={`${(player.gameweekProjections[4] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
@@ -558,6 +551,12 @@ export default function PlayerAssistProjections() {
                               <span className={`${(player.gameweekProjections[9] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
                                 {((player.gameweekProjections[9] || 0) * 3).toFixed(1)}
                               </span>
+                            </td>
+                            <td className="text-center py-3 px-1 font-semibold text-green-700">
+                              {filteredGwPoints}
+                            </td>
+                            <td className="text-center py-3 px-1 font-semibold text-green-700">
+                              {seasonPoints}
                             </td>
                           </tr>
                           );
