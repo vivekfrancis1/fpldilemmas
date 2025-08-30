@@ -258,12 +258,12 @@ export default function MyDashboard() {
     
     return (
       <div className="space-y-6">
-        {/* Top 50 Standings */}
+        {/* League Standings */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              Top {topEntries.length} Managers
+              League Standings
             </CardTitle>
           </CardHeader>
           <CardContent>
