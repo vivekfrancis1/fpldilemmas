@@ -8,8 +8,98 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-// Point Breakdown Tooltip Component
-function PointBreakdownTooltip({ player }: { player: PlayerTotalPointsData }) {
+// Gameweek Point Breakdown Tooltip Component
+function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTotalPointsData, gameweek: number }) {
+  const hasBreakdownData = player.pointsFromGoals !== undefined;
+  const gwKey = `gw${gameweek}`;
+  const gwPoints = player.gameweekProjections?.[gwKey];
+  
+  if (!hasBreakdownData || !gwPoints) {
+    return (
+      <span className={`font-medium ${gwPoints >= 6 ? 'text-green-700' : gwPoints >= 4 ? 'text-blue-700' : 'text-gray-600'}`}>
+        {gwPoints ? gwPoints.toFixed(1) : '0.0'}
+      </span>
+    );
+  }
+
+  return (
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild>
+        <button className={`font-medium cursor-help hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 ${
+          gwPoints >= 6 ? 'text-green-700' : gwPoints >= 4 ? 'text-blue-700' : 'text-gray-600'
+        }`}>
+          {gwPoints.toFixed(1)}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
+        <div className="space-y-2">
+          <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
+            {player.name} - GW{gameweek} Breakdown
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">⚽ Goals:</span>
+              <span className="font-medium text-green-700">
+                {player.pointsFromGoals?.[gwKey]?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">🎯 Assists:</span>
+              <span className="font-medium text-blue-700">
+                {player.pointsFromAssists?.[gwKey]?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">🛡️ Clean Sheets:</span>
+              <span className="font-medium text-yellow-700">
+                {player.pointsFromCleanSheets?.[gwKey]?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">⚔️ Defensive:</span>
+              <span className="font-medium text-orange-700">
+                {player.pointsFromDefensiveContributions?.[gwKey]?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">⏱️ Minutes:</span>
+              <span className="font-medium text-purple-700">
+                {player.pointsFromMinutes?.[gwKey]?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">✨ Bonus:</span>
+              <span className="font-medium text-pink-700">
+                {player.pointsFromBonus?.[gwKey]?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+          </div>
+          <div className="border-t pt-2 mt-3">
+            <div className="flex justify-between items-center font-semibold">
+              <span className="text-gray-800">GW{gameweek} Total:</span>
+              <span className="text-green-800">
+                {gwPoints.toFixed(1)}
+              </span>
+            </div>
+            <div className="mt-2 text-xs text-gray-500">
+              Sum: {(
+                (player.pointsFromGoals?.[gwKey] || 0) +
+                (player.pointsFromAssists?.[gwKey] || 0) +
+                (player.pointsFromCleanSheets?.[gwKey] || 0) +
+                (player.pointsFromDefensiveContributions?.[gwKey] || 0) +
+                (player.pointsFromMinutes?.[gwKey] || 0) +
+                (player.pointsFromBonus?.[gwKey] || 0)
+              ).toFixed(1)}
+            </div>
+          </div>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// Range Total Point Breakdown Tooltip Component
+function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData }) {
   const hasBreakdownData = player.totalPointsFromGoals !== undefined;
   
   if (!hasBreakdownData) {
@@ -23,14 +113,14 @@ function PointBreakdownTooltip({ player }: { player: PlayerTotalPointsData }) {
   return (
     <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
-        <button className="font-bold text-green-800 cursor-help hover:text-green-900 transition-colors border-b border-dashed border-green-400 bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+        <button className="font-bold text-green-800 cursor-help hover:text-green-900 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
           {player.totalExpectedPoints?.toFixed(1) || '0.0'}
         </button>
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
         <div className="space-y-2">
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
-            {player.name} - Point Breakdown
+            {player.name} - Range Total Breakdown
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between items-center">
@@ -72,7 +162,7 @@ function PointBreakdownTooltip({ player }: { player: PlayerTotalPointsData }) {
           </div>
           <div className="border-t pt-2 mt-3">
             <div className="flex justify-between items-center font-semibold">
-              <span className="text-gray-800">Total:</span>
+              <span className="text-gray-800">Range Total:</span>
               <span className="text-green-800">
                 {player.totalExpectedPoints?.toFixed(1) || '0.0'}
               </span>
@@ -81,7 +171,7 @@ function PointBreakdownTooltip({ player }: { player: PlayerTotalPointsData }) {
               Sum: {(
                 (player.totalPointsFromGoals || 0) +
                 (player.totalPointsFromAssists || 0) +
-                (player.totalPointsFromCleanSheets || 0) +
+                (player.pointsFromCleanSheets || 0) +
                 (player.totalPointsFromDefensiveContributions || 0) +
                 (player.totalPointsFromMinutes || 0) +
                 (player.totalPointsFromBonus || 0)
@@ -462,16 +552,14 @@ export default function PlayerTotalPoints() {
                           const points = player.gameweekProjections[`gw${gw}`];
                           return (
                             <td key={gw} className="px-3 py-4 text-center bg-blue-50/30 border-x">
-                              <span className={`font-medium ${points >= 6 ? 'text-green-700' : points >= 4 ? 'text-blue-700' : 'text-gray-600'}`}>
-                                {points ? points.toFixed(1) : '0.0'}
-                              </span>
+                              <GameweekPointBreakdownTooltip player={player} gameweek={gw} />
                             </td>
                           );
                         })}
                         
                         {/* Range Total with Breakdown Tooltip */}
                         <td className="px-4 py-4 text-center bg-gradient-to-r from-green-50 to-emerald-50">
-                          <PointBreakdownTooltip player={player} />
+                          <RangeTotalBreakdownTooltip player={player} />
                         </td>
                         
                         {/* Season Total */}
