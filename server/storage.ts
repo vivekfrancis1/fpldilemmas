@@ -1047,7 +1047,8 @@ export class DatabaseStorage implements IStorage {
     transfersOut: number; 
     transfersInGw: number; 
     transfersOutGw: number; 
-    totalSeasonChange: number 
+    totalSeasonChange: number;
+    costChangeEvent?: number;
   }>): Promise<InsertPriceChange[]> {
     try {
       console.log(`🔍 Detecting actual price changes for ${currentPrices.length} players...`);
@@ -1122,12 +1123,17 @@ export class DatabaseStorage implements IStorage {
       
       // Regular price change detection for subsequent runs
       for (const playerData of currentPrices) {
-        // Get the player's last recorded price from our price_changes table
-        const latestRecordedPrice = await this.getLatestPlayerPrice(playerData.playerId);
-        
-        // Only track if we have previous data in our table AND the price has actually changed
-        if (latestRecordedPrice && latestRecordedPrice.price !== playerData.price) {
-          const actualPriceChange = playerData.price - latestRecordedPrice.price;
+        // Check if FPL API indicates a price change happened today
+        if (playerData.costChangeEvent && playerData.costChangeEvent !== 0) {
+          // Get the player's last recorded price from our price_changes table
+          const latestRecordedPrice = await this.getLatestPlayerPrice(playerData.playerId);
+          
+          // Calculate what the previous price should have been
+          const previousPrice = playerData.price - playerData.costChangeEvent;
+          
+          // Use our recorded price if available, otherwise use calculated previous price
+          const oldPrice = latestRecordedPrice?.price || previousPrice;
+          const actualPriceChange = playerData.price - oldPrice;
           
           // Only record if there's an actual price change (rise or fall)
           if (actualPriceChange !== 0) {
@@ -1137,7 +1143,7 @@ export class DatabaseStorage implements IStorage {
               teamId: playerData.teamId || null,
               teamName: playerData.teamName || null,
               position: playerData.position || null,
-              oldPrice: latestRecordedPrice.price,
+              oldPrice: oldPrice,
               newPrice: playerData.price,
               priceChange: actualPriceChange,
               changeDate: today,
@@ -1152,7 +1158,7 @@ export class DatabaseStorage implements IStorage {
             // Split 0.2 changes into two 0.1 changes
             if (Math.abs(actualPriceChange) === 2) {
               const direction = actualPriceChange > 0 ? 1 : -1;
-              const midPrice = latestRecordedPrice.price + direction;
+              const midPrice = oldPrice + direction;
               
               // First 0.1 change
               const firstChange: InsertPriceChange = {
@@ -1171,11 +1177,11 @@ export class DatabaseStorage implements IStorage {
               priceChangesToAdd.push(secondChange);
               
               const changeType = actualPriceChange > 0 ? "RISE" : "FALL";
-              console.log(`💰 ${changeType} (SPLIT): ${playerData.playerName} (${latestRecordedPrice.price} → ${midPrice} → ${playerData.price}) = 2x${direction > 0 ? '+' : ''}0.1`);
+              console.log(`💰 ${changeType} (SPLIT): ${playerData.playerName} (${oldPrice} → ${midPrice} → ${playerData.price}) = 2x${direction > 0 ? '+' : ''}0.1`);
             } else {
               priceChangesToAdd.push(priceChange);
               const changeType = actualPriceChange > 0 ? "RISE" : "FALL";
-              console.log(`💰 ${changeType}: ${playerData.playerName} (table: ${latestRecordedPrice.price} → current: ${playerData.price}) = ${actualPriceChange > 0 ? '+' : ''}${actualPriceChange}`);
+              console.log(`💰 ${changeType}: ${playerData.playerName} (${oldPrice} → ${playerData.price}) = ${actualPriceChange > 0 ? '+' : ''}${actualPriceChange}`);
             }
           }
         }

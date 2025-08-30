@@ -126,7 +126,8 @@ export class PriceScheduler {
           transfersOut: player.transfers_out || 0, // Season total transfers
           transfersInGw: player.transfers_in_event || 0, // Gameweek transfers
           transfersOutGw: player.transfers_out_event || 0, // Gameweek transfers
-          totalSeasonChange: player.cost_change_start || 0
+          totalSeasonChange: player.cost_change_start || 0,
+          costChangeEvent: player.cost_change_event || 0 // Today's price change
         });
       }
       
