@@ -140,94 +140,112 @@ class ProjectionService {
           const cleanSheetPoints = position === 'GKP' || position === 'DEF' ? 4 : position === 'MID' ? 1 : 0;
           
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Gameweek-specific calculations with fixture variance
+            // Get gameweek-specific opponent strength and fixture context
             const form = parseFloat(fplPlayer.form || "0");
-            const transfersIn = parseFloat(fplPlayer.transfers_in_event || "0");
+            const totalPoints = parseFloat(fplPlayer.total_points || "0");
             const selectedBy = parseFloat(fplPlayer.selected_by_percent || "1");
+            const minutes = parseFloat(fplPlayer.minutes || "0");
             
-            // Create significant gameweek-specific variance (0.5x to 1.5x multiplier based on GW)
-            const gwVariance = 0.75 + (Math.sin(gw * 0.8) * 0.35) + ((gw % 3) * 0.15) + (fplPlayer.id % 7) * 0.05;
-            const baseForm = Math.max(form, 1.0); // Minimum form of 1.0
-            const adjustedForm = baseForm * gwVariance;
+            // Fixture difficulty based on team ID and gameweek (simulates opponent strength)
+            const teamId = fplPlayer.team;
+            const opponentStrengthSeed = ((teamId * 7) + (gw * 3)) % 20; // 0-19 range
+            const isHomeFixture = (teamId + gw) % 2 === 0; // Alternating home/away
             
-            // Minutes projection with gameweek variance
-            const baseMinutes = Math.min(90, Math.max(45, adjustedForm * 12));
-            const minutesProb = baseMinutes >= 60 ? 2 : baseMinutes >= 1 ? 1 : 0;
-            pointsFromMinutes[`gw${gw}`] = minutesProb;
-            totalMinutesPoints += minutesProb;
-            
-            // Goals projection with position and form variance
-            let goalProb;
-            if (position === 'FWD') {
-              goalProb = (adjustedForm * 0.18) + (selectedBy / 1000); // Higher for popular forwards
-            } else if (position === 'MID') {
-              goalProb = (adjustedForm * 0.09) + (transfersIn / 10000);
-            } else if (position === 'DEF') {
-              goalProb = adjustedForm * 0.025;
+            // Opponent difficulty: Elite (0-4), Strong (5-9), Average (10-14), Weak (15-19)
+            let difficultyMultiplier;
+            if (opponentStrengthSeed <= 4) {
+              difficultyMultiplier = isHomeFixture ? 0.75 : 0.65; // vs Elite teams
+            } else if (opponentStrengthSeed <= 9) {
+              difficultyMultiplier = isHomeFixture ? 0.90 : 0.80; // vs Strong teams
+            } else if (opponentStrengthSeed <= 14) {
+              difficultyMultiplier = isHomeFixture ? 1.10 : 1.00; // vs Average teams
             } else {
-              goalProb = adjustedForm * 0.01; // Goalkeepers
+              difficultyMultiplier = isHomeFixture ? 1.35 : 1.25; // vs Weak teams
             }
             
-            const fixtureMultiplier = 0.7 + (gw * 0.08) + ((fplPlayer.id + gw) % 11) * 0.05; // Fixture difficulty simulation
-            const gwGoalPoints = goalProb * goalPoints * fixtureMultiplier;
+            // Base form with season performance weighting
+            const seasonPerformance = totalPoints / Math.max(minutes / 90, 1); // Points per 90 minutes
+            const adjustedForm = Math.max(form * 0.7 + seasonPerformance * 0.3, 1.0);
+            
+            // 1. MINUTES CALCULATION
+            const injuryRisk = (fplPlayer.chance_of_playing_next_round || 100) / 100;
+            const rotationRisk = selectedBy > 30 ? 0.95 : selectedBy > 10 ? 0.85 : 0.75; // Popular players less rotated
+            const expectedMinutes = Math.min(90, adjustedForm * 15) * injuryRisk * rotationRisk;
+            const minutesPoints = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
+            pointsFromMinutes[`gw${gw}`] = minutesPoints;
+            totalMinutesPoints += minutesPoints;
+            
+            // 2. GOALS CALCULATION (per 90 minutes, scaled by expected minutes)
+            let goalsExpected;
+            if (position === 'FWD') {
+              goalsExpected = (adjustedForm * 0.12 + seasonPerformance * 0.05) * difficultyMultiplier * (expectedMinutes / 90);
+            } else if (position === 'MID') {
+              goalsExpected = (adjustedForm * 0.06 + seasonPerformance * 0.03) * difficultyMultiplier * (expectedMinutes / 90);
+            } else if (position === 'DEF') {
+              goalsExpected = (adjustedForm * 0.02 + seasonPerformance * 0.01) * difficultyMultiplier * (expectedMinutes / 90);
+            } else {
+              goalsExpected = adjustedForm * 0.005 * difficultyMultiplier * (expectedMinutes / 90); // GKP
+            }
+            
+            const gwGoalPoints = goalsExpected * goalPoints;
             pointsFromGoals[`gw${gw}`] = Math.round(gwGoalPoints * 100) / 100;
             totalGoalPoints += gwGoalPoints;
             
-            // Assists projection with gameweek-specific variance
-            let assistProb;
+            // 3. ASSISTS CALCULATION
+            let assistsExpected;
             if (position === 'MID') {
-              assistProb = (adjustedForm * 0.14) + (selectedBy / 2000);
+              assistsExpected = (adjustedForm * 0.08 + seasonPerformance * 0.04) * difficultyMultiplier * (expectedMinutes / 90);
             } else if (position === 'FWD') {
-              assistProb = adjustedForm * 0.07;
+              assistsExpected = (adjustedForm * 0.04 + seasonPerformance * 0.02) * difficultyMultiplier * (expectedMinutes / 90);
             } else if (position === 'DEF') {
-              assistProb = adjustedForm * 0.03;
+              assistsExpected = (adjustedForm * 0.025 + seasonPerformance * 0.01) * difficultyMultiplier * (expectedMinutes / 90);
             } else {
-              assistProb = adjustedForm * 0.005; // Goalkeepers
+              assistsExpected = adjustedForm * 0.003 * difficultyMultiplier * (expectedMinutes / 90); // GKP
             }
             
-            const assistMultiplier = 0.8 + (gw * 0.06) + ((fplPlayer.id * 2 + gw) % 13) * 0.04;
-            const gwAssistPoints = assistProb * assistPoints * assistMultiplier;
+            const gwAssistPoints = assistsExpected * assistPoints;
             pointsFromAssists[`gw${gw}`] = Math.round(gwAssistPoints * 100) / 100;
             totalAssistPoints += gwAssistPoints;
             
-            // Clean sheet projection with defensive variance
-            let cleanSheetProb;
-            if (position === 'GKP') {
-              cleanSheetProb = 0.30 + (adjustedForm * 0.02) + (Math.sin(gw * 2) * 0.05);
-            } else if (position === 'DEF') {
-              cleanSheetProb = 0.28 + (adjustedForm * 0.015) + (Math.sin(gw * 2) * 0.04);
-            } else if (position === 'MID') {
-              cleanSheetProb = 0.25 + (Math.sin(gw * 2) * 0.03);
-            } else {
-              cleanSheetProb = 0; // Forwards don't get clean sheet points
+            // 4. CLEAN SHEET CALCULATION (defensive strength vs opponent attack)
+            let cleanSheetProb = 0;
+            if (position === 'GKP' || position === 'DEF' || position === 'MID') {
+              // Team defensive strength based on form and opponent weakness
+              const teamDefensiveStrength = (adjustedForm * 0.05) + 0.25; // Base 25% + form
+              const opponentAttackStrength = opponentStrengthSeed <= 4 ? 0.85 : 
+                                           opponentStrengthSeed <= 9 ? 0.65 : 
+                                           opponentStrengthSeed <= 14 ? 0.45 : 0.25;
+              
+              cleanSheetProb = Math.max(0, teamDefensiveStrength - opponentAttackStrength);
+              if (position === 'MID') cleanSheetProb *= 0.8; // Midfielders get reduced CS probability
+              if (!isHomeFixture) cleanSheetProb *= 0.9; // Away fixtures slightly harder
             }
             
             const gwCleanSheetPoints = cleanSheetProb * cleanSheetPoints;
             pointsFromCleanSheets[`gw${gw}`] = Math.round(gwCleanSheetPoints * 100) / 100;
             totalCleanSheetPoints += gwCleanSheetPoints;
             
-            // Defensive contribution points with gameweek variance
-            let defenseProb;
+            // 5. DEFENSIVE CONTRIBUTIONS (2025/26 season)
+            let defensiveContributions = 0;
             if (position === 'DEF') {
-              defenseProb = 0.22 + (adjustedForm * 0.01) + (Math.cos(gw) * 0.03);
+              defensiveContributions = (adjustedForm * 0.15 + seasonPerformance * 0.05) * (expectedMinutes / 90);
             } else if (position === 'MID') {
-              defenseProb = 0.12 + (adjustedForm * 0.005);
-            } else {
-              defenseProb = 0;
+              defensiveContributions = (adjustedForm * 0.08 + seasonPerformance * 0.03) * (expectedMinutes / 90);
             }
             
-            const gwDefensivePoints = defenseProb * 2;
+            const gwDefensivePoints = defensiveContributions * 2; // 2 points per DC
             pointsFromDefensiveContributions[`gw${gw}`] = Math.round(gwDefensivePoints * 100) / 100;
             totalDefensivePoints += gwDefensivePoints;
             
-            // Bonus points with enhanced variance
-            const bonusProb = (adjustedForm * 0.25) + (selectedBy / 1000) + (Math.sin(gw * 1.5) * 0.15);
-            pointsFromBonus[`gw${gw}`] = Math.round(bonusProb * 100) / 100;
-            totalBonusPoints += bonusProb;
+            // 6. BONUS POINTS (based on overall performance)
+            const performanceIndex = (goalsExpected + assistsExpected + defensiveContributions) * adjustedForm;
+            const bonusExpected = Math.min(performanceIndex * 0.3, 3.0); // Max 3 bonus points
+            pointsFromBonus[`gw${gw}`] = Math.round(bonusExpected * 100) / 100;
+            totalBonusPoints += bonusExpected;
             
-            // Total gameweek points with realistic minimum
-            const gwTotal = gwGoalPoints + gwAssistPoints + gwCleanSheetPoints + gwDefensivePoints + minutesProb + bonusProb;
-            gameweekProjections[`gw${gw}`] = Math.max(Math.round(gwTotal * 100) / 100, 1.0);
+            // 7. TOTAL GAMEWEEK POINTS (sum all components)
+            const gwTotal = gwGoalPoints + gwAssistPoints + gwCleanSheetPoints + gwDefensivePoints + minutesPoints + bonusExpected;
+            gameweekProjections[`gw${gw}`] = Math.max(Math.round(gwTotal * 100) / 100, 0.0);
             totalExpectedPoints += gwTotal;
           }
           
