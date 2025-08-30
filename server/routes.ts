@@ -4584,8 +4584,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const priceBoost = player.now_cost >= 90 ? 1.2 : player.now_cost >= 70 ? 1.1 : player.now_cost >= 50 ? 1.05 : 1.0;
       baseShare *= priceBoost;
       
-      // Final calculation with realistic bounds
-      const finalShare = Math.max(0.1, Math.min(45.0, baseShare)); // Realistic assist share range
+      // Apply position-based caps to assist share percentage
+      const getPositionShareCap = (position: string): number => {
+        switch (position?.toLowerCase()) {
+          case 'goalkeeper': return 2; // Max 2% share for GKs
+          case 'defender': return 15; // Max 15% share for defenders
+          case 'midfielder': return 35; // Max 35% share for midfielders
+          case 'forward': return 25; // Max 25% share for forwards
+          default: return 20;
+        }
+      };
+      
+      const positionShareCap = getPositionShareCap(positionName);
+      const finalShare = Math.max(0.1, Math.min(positionShareCap, baseShare));
       
       playerShares.push({
         id: player.id,
@@ -4815,14 +4826,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate final raw share
       const rawShare = baseShare * performanceMultiplier * availabilityMultiplier;
       
+      // Apply position-based caps to assist share percentage
+      const getPositionShareCap = (position: string): number => {
+        switch (position?.toLowerCase()) {
+          case 'goalkeeper': return 2; // Max 2% share for GKs
+          case 'defender': return 15; // Max 15% share for defenders
+          case 'midfielder': return 35; // Max 35% share for midfielders
+          case 'forward': return 25; // Max 25% share for forwards
+          default: return 20;
+        }
+      };
+      
+      const positionShareCap = getPositionShareCap(positionName);
+      const cappedRawShare = Math.min(rawShare, positionShareCap);
+      
+      if (cappedRawShare !== rawShare) {
+        console.log(`DEBUG: Capped ${playerName} assist share: ${rawShare.toFixed(1)}% → ${cappedRawShare.toFixed(1)}% (${positionName} cap: ${positionShareCap}%)`);
+      }
+      
       playerShares.push({
         id: player.id,
         name: playerName,
         position: position?.singular_name_short || 'UNK',
-        rawShare: rawShare
+        rawShare: cappedRawShare
       });
       
-      totalShare += rawShare;
+      totalShare += cappedRawShare;
     });
 
     // Normalize to 100% with one decimal place
