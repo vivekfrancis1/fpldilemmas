@@ -17,6 +17,10 @@ interface PlayerMinutesProjection {
   projectedMinutes: number;
   pointsPerGame: number;
   totalProjectedPoints: number;
+  projectedGoals?: number;
+  projectedAssists?: number;
+  pointsFromGoals?: number;
+  pointsFromAssists?: number;
   form: number;
   selectedByPercent: number;
   nowCost: number;
