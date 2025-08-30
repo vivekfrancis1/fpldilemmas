@@ -209,7 +209,7 @@ export default function Fixtures() {
         const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
         
         if (homeTeam && awayTeam) {
-          // Home team entry (override FDR for promoted opponents)
+          // Home team entry (override FDR for promoted opponents in Overall FDR only)
           matrix[fixture.team_h][fixture.event] = {
             opponent: awayTeam.short_name,
             difficulty: getOverallFDR(fixture.team_h_difficulty, awayTeam.id),
@@ -217,7 +217,7 @@ export default function Fixtures() {
             finished: fixture.finished
           };
           
-          // Away team entry (override FDR for promoted opponents)
+          // Away team entry (override FDR for promoted opponents in Overall FDR only)
           matrix[fixture.team_a][fixture.event] = {
             opponent: homeTeam.short_name,
             difficulty: getOverallFDR(fixture.team_a_difficulty, homeTeam.id),
