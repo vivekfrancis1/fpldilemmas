@@ -36,7 +36,7 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Primary Storage**: In-memory storage (Map and object caching).
 - **Database Configuration**: Drizzle ORM for PostgreSQL (Neon Database) for historical data and daily price tracking.
 - **Data Persistence**: Automated daily collection of player prices, ownership, and transfer data.
-- **Data Consistency**: All projection tools use deterministic calculations based on team ID and gameweek seeds. MASTER_TEAM_DEFAULTS serves as the central configuration source for all projection multipliers.
+- **Data Consistency**: All projection tools use deterministic calculations based on team ID and gameweek seeds. MASTER_TEAM_DEFAULTS serves as the central configuration source for all projection multipliers. Average attack multiplier updated from 1.00 to 1.15 (August 30, 2025).
 
 ### API Integration
 - **External API**: Official Fantasy Premier League API (`https://fantasy.premierleague.com/api`).

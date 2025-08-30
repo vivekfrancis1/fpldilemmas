@@ -28,7 +28,7 @@ const MASTER_TEAM_DEFAULTS = {
   // Attack Multipliers
   eliteAttackMultiplier: 1.4,
   strongAttackMultiplier: 1.1,
-  averageAttackMultiplier: 1,
+  averageAttackMultiplier: 1.15,
   weakAttackMultiplier: 0.85,
   promotedAttackMultiplier: 0.7,
   
@@ -1590,7 +1590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weatherConditionsMultiplier: parseFloat(settings.weatherConditionsMultiplier || "0.96"),
         eliteAttackMultiplier: parseFloat(settings.eliteAttackMultiplier || "1.15"),
         strongAttackMultiplier: parseFloat(settings.strongAttackMultiplier || "1.10"),
-        averageAttackMultiplier: parseFloat(settings.averageAttackMultiplier || "1.00"),
+        averageAttackMultiplier: parseFloat(settings.averageAttackMultiplier || "1.15"),
         weakAttackMultiplier: parseFloat(settings.weakAttackMultiplier || "0.90"),
         promotedAttackMultiplier: parseFloat(settings.promotedAttackMultiplier || "0.85"),
         offensiveVarianceEnabled: settings.offensiveVarianceEnabled,

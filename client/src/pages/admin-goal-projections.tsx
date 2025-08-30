@@ -432,7 +432,7 @@ export default function AdminGoalProjections() {
     attackMultipliers: {
       eliteAttackMultiplier: 1.4,
       strongAttackMultiplier: 1.1,
-      averageAttackMultiplier: 1.00,
+      averageAttackMultiplier: 1.15,
       weakAttackMultiplier: 0.85,
       promotedAttackMultiplier: 0.7,
     },
@@ -733,7 +733,7 @@ export default function AdminGoalProjections() {
                       <p className="text-sm text-muted-foreground">
                         <strong>Elite:</strong> × <span className="font-mono text-orange-600">{formData.eliteAttackMultiplier || 1.4}</span><br/>
                         <strong>Strong:</strong> × <span className="font-mono text-orange-600">{formData.strongAttackMultiplier || 1.1}</span><br/>
-                        <strong>Average:</strong> × <span className="font-mono text-orange-600">{formData.averageAttackMultiplier || 1.0}</span><br/>
+                        <strong>Average:</strong> × <span className="font-mono text-orange-600">{formData.averageAttackMultiplier || 1.15}</span><br/>
                         <strong>Weak:</strong> × <span className="font-mono text-orange-600">{formData.weakAttackMultiplier || 0.85}</span><br/>
                         <strong>Promoted:</strong> × <span className="font-mono text-orange-600">{formData.promotedAttackMultiplier || 0.7}</span>
                       </p>
@@ -987,7 +987,7 @@ export default function AdminGoalProjections() {
                     {[
                       { key: 'eliteAttackMultiplier', name: 'Elite Attack', default: 1.4, min: 1.0, max: 2.0, description: 'Premier League elite attacking teams' },
                       { key: 'strongAttackMultiplier', name: 'Strong Attack', default: 1.1, min: 1.0, max: 1.5, description: 'Teams with strong attacking potential' },
-                      { key: 'averageAttackMultiplier', name: 'Average Attack', default: 1.0, min: 0.8, max: 1.2, description: 'Mid-table teams (baseline)' },
+                      { key: 'averageAttackMultiplier', name: 'Average Attack', default: 1.15, min: 0.8, max: 1.2, description: 'Mid-table teams (baseline)' },
                       { key: 'weakAttackMultiplier', name: 'Weak Attack', default: 0.85, min: 0.5, max: 1.0, description: 'Teams with attacking struggles' },
                       { key: 'promotedAttackMultiplier', name: 'Promoted Attack', default: 0.7, min: 0.3, max: 1.0, description: 'Newly promoted teams' }
                     ].map((setting) => {
