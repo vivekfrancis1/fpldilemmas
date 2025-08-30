@@ -532,10 +532,9 @@ export default function MyDashboard() {
 
           {/* Main Dashboard Tabs */}
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="team">Team</TabsTrigger>
-              <TabsTrigger value="leagues">Leagues</TabsTrigger>
               <TabsTrigger value="performance">Performance</TabsTrigger>
             </TabsList>
 
@@ -1009,67 +1008,7 @@ export default function MyDashboard() {
               )}
             </TabsContent>
 
-            {/* Leagues Tab */}
-            <TabsContent value="leagues" className="space-y-6">
-              {leaguesData && leaguesData.classic && leaguesData.classic.length > 0 ? (
-                <div className="space-y-6">
-                  {leaguesData.classic.filter(league => league.entry_rank > 0).map((league) => (
-                    <Card key={league.id}>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Trophy className="h-5 w-5" />
-                          {league.name}
-                        </CardTitle>
-                        <CardDescription>
-                          {league.league_type === 'x' ? 'Classic League' : 'System League'} • {league.rank_count?.toLocaleString()} entries
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between p-3 rounded-lg border bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-                            <div className="flex items-center gap-3">
-                              <Badge variant="default">
-                                #{league.entry_rank.toLocaleString()}
-                              </Badge>
-                              <div>
-                                <div className="font-medium">
-                                  Your Position
-                                  <span className="text-blue-600 ml-2 text-sm">(You)</span>
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {league.entry_percentile_rank}th percentile
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-medium">{managerData?.summary_overall_points.toLocaleString()} pts</div>
-                              {league.entry_rank !== league.entry_last_rank && (
-                                <div className={`flex items-center text-xs ${
-                                  league.entry_rank < league.entry_last_rank ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                  {league.entry_rank < league.entry_last_rank ? (
-                                    <ChevronUp className="h-3 w-3" />
-                                  ) : (
-                                    <ChevronDown className="h-3 w-3" />
-                                  )}
-                                  {Math.abs(league.entry_rank - league.entry_last_rank)}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <p className="text-muted-foreground">No leagues found for this manager.</p>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
+
 
             {/* Performance Tab */}
             <TabsContent value="performance" className="space-y-6">
