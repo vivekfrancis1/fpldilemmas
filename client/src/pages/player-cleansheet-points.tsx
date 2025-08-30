@@ -33,9 +33,17 @@ export default function PlayerCleanSheetPoints() {
   // Fetch player clean sheet points data
   const { data: cleanSheetData, isLoading, error } = useQuery<PlayerCleanSheetData[]>({
     queryKey: ["/api/player-cleansheet-points", startGameweek, endGameweek],
-    queryFn: () => fetch(`/api/player-cleansheet-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).then(res => res.json()),
+    queryFn: async () => {
+      const response = await fetch(`/api/player-cleansheet-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      if (!response.ok) {
+        throw new Error(`Failed to load clean sheet points: ${response.status} ${response.statusText}`);
+      }
+      return response.json();
+    },
     staleTime: 10 * 60 * 1000,
     enabled: startGameweek <= endGameweek,
+    retry: 3,
+    retryDelay: 1000,
   });
 
   // Generate gameweek range for table headers
@@ -75,7 +83,7 @@ export default function PlayerCleanSheetPoints() {
       let aValue = a[sortField];
       let bValue = b[sortField];
       
-      if (typeof aValue === 'string') {
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
       }
