@@ -174,7 +174,7 @@ export default function PlayerCleanSheetPoints() {
             Player Clean Sheet Points
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-            Expected clean sheet points per player per gameweek, calculated using team CS probability × playing time probability × 4 points
+            Expected clean sheet points for defenders and goalkeepers per gameweek, calculated using team CS probability × playing time probability × 4 points
           </p>
         </div>
 
@@ -227,9 +227,9 @@ export default function PlayerCleanSheetPoints() {
               <div className="flex items-center">
                 <TrendingUp className="h-8 w-8 mb-2" />
                 <div className="ml-4">
-                  <p className="text-orange-100 text-sm">Defenders & GKs</p>
+                  <p className="text-orange-100 text-sm">Only DEF & GK</p>
                   <p className="text-2xl font-bold">
-                    {filteredAndSortedData.filter(p => p.position === 'Defender' || p.position === 'Goalkeeper').length}
+                    100%
                   </p>
                 </div>
               </div>

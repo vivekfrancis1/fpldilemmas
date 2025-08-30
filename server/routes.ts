@@ -5194,6 +5194,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!team || !position || !playerMinutes) return;
         
+        // Only calculate clean sheet points for Defenders and Goalkeepers
+        if (position.singular_name !== 'Defender' && position.singular_name !== 'Goalkeeper') {
+          return;
+        }
+        
         // Find team's clean sheet projection for the target gameweek
         const teamCSProjection = teamCSData.find((tcs: any) => tcs.id === team.id);
         if (!teamCSProjection || !teamCSProjection.gameweekProjections[targetGameweek.toString()]) return;
