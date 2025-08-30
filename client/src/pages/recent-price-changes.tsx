@@ -131,7 +131,17 @@ export default function RecentPriceChanges() {
       if (aPriceChange > 0 && bPriceChange < 0) return -1;
       if (aPriceChange < 0 && bPriceChange > 0) return 1;
       
-      // If both are rises or both are falls, apply user-selected sorting
+      // If both are rises or both are falls, sort by ownership (higher ownership first)
+      if ((aPriceChange > 0 && bPriceChange > 0) || (aPriceChange < 0 && bPriceChange < 0)) {
+        const aOwnership = parseFloat(a.ownership || "0");
+        const bOwnership = parseFloat(b.ownership || "0");
+        const ownershipComparison = bOwnership - aOwnership; // Higher ownership first
+        if (ownershipComparison !== 0) {
+          return ownershipComparison;
+        }
+      }
+      
+      // If ownership is the same, apply user-selected sorting
       let aValue = a[sortField];
       let bValue = b[sortField];
       
