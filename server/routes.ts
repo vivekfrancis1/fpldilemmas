@@ -7283,64 +7283,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let totalPointsFromMinutes = 0;
         let totalPointsFromBonus = 0;
         
-        // Calculate points for each gameweek in range
+        // Get current gameweek to determine which are completed
+        const currentGameweek = bootstrapData.events.find((e: any) => e.is_current)?.id || 4;
+        
+        // Calculate points for each gameweek in range using hybrid approach
         for (let gw = start; gw <= end; gw++) {
-          // Goals points (using individual tool data)
-          let goalPoints = 0;
-          if (goalsPlayer && goalsPlayer.gameweekProjections && goalsPlayer.gameweekProjections[gw]) {
-            const goals = goalsPlayer.gameweekProjections[gw];
-            const pointsPerGoal = position === 'FWD' ? 4 : position === 'MID' ? 5 : 6;
-            goalPoints = goals * pointsPerGoal;
+          const gameweekEvent = bootstrapData.events.find((e: any) => e.id === gw);
+          const isCompleted = gameweekEvent && gameweekEvent.finished;
+          
+          let goalPoints = 0, assistPoints = 0, minutesPoints = 0;
+          let cleanSheetPoints = 0, defensivePoints = 0, bonusPoints = 0;
+          
+          if (isCompleted) {
+            // For completed gameweeks, fetch actual FPL data
+            try {
+              const elementResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${fplPlayer.id}/`);
+              if (elementResponse.ok) {
+                const elementData = await elementResponse.json();
+                const gameweekHistory = elementData.history.find((h: any) => h.round === gw);
+                
+                if (gameweekHistory) {
+                  // Use actual total points from FPL API
+                  const actualTotalPoints = gameweekHistory.total_points || 0;
+                  
+                  // Break down into components for detailed analysis
+                  const actualGoals = gameweekHistory.goals_scored || 0;
+                  const actualAssists = gameweekHistory.assists || 0;
+                  const actualMinutes = gameweekHistory.minutes || 0;
+                  const actualCleanSheets = gameweekHistory.clean_sheets || 0;
+                  const actualDefensive = gameweekHistory.defensive_contribution || 0;
+                  const actualBonus = gameweekHistory.bonus || 0;
+                  
+                  // Calculate component points
+                  const pointsPerGoal = position === 'FWD' ? 4 : position === 'MID' ? 5 : 6;
+                  goalPoints = actualGoals * pointsPerGoal;
+                  assistPoints = actualAssists * 3;
+                  minutesPoints = actualMinutes >= 60 ? 2 : actualMinutes >= 1 ? 1 : 0;
+                  cleanSheetPoints = actualCleanSheets * (position === 'GKP' ? 4 : position === 'DEF' ? 4 : 0);
+                  defensivePoints = actualDefensive * 2;
+                  bonusPoints = actualBonus;
+                  
+                  // Use actual total (more accurate than component sum due to other scoring)
+                  gameweekProjections[`gw${gw}`] = actualTotalPoints;
+                  totalExpectedPoints += actualTotalPoints;
+                } else {
+                  // No data for this gameweek, skip
+                  gameweekProjections[`gw${gw}`] = 0;
+                }
+              } else {
+                // API error, use projection fallback
+                if (goalsPlayer && goalsPlayer.gameweekProjections && goalsPlayer.gameweekProjections[gw]) {
+                  const goals = goalsPlayer.gameweekProjections[gw];
+                  const pointsPerGoal = position === 'FWD' ? 4 : position === 'MID' ? 5 : 6;
+                  goalPoints = goals * pointsPerGoal;
+                }
+                if (assistsPlayer && assistsPlayer.gameweekProjections && assistsPlayer.gameweekProjections[gw]) {
+                  const assists = assistsPlayer.gameweekProjections[gw];
+                  assistPoints = assists * 3;
+                }
+                const gwTotal = goalPoints + assistPoints + 3; // Basic estimate
+                gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;
+                totalExpectedPoints += gwTotal;
+              }
+            } catch (error) {
+              console.log(`Error fetching actual data for player ${fplPlayer.id} GW${gw}, using projection fallback`);
+              // Use projection fallback for error cases
+              gameweekProjections[`gw${gw}`] = 0;
+            }
+          } else {
+            // For current/future gameweeks, use projections from individual tools
+            if (goalsPlayer && goalsPlayer.gameweekProjections && goalsPlayer.gameweekProjections[gw]) {
+              const goals = goalsPlayer.gameweekProjections[gw];
+              const pointsPerGoal = position === 'FWD' ? 4 : position === 'MID' ? 5 : 6;
+              goalPoints = goals * pointsPerGoal;
+            }
+            
+            if (assistsPlayer && assistsPlayer.gameweekProjections && assistsPlayer.gameweekProjections[gw]) {
+              const assists = assistsPlayer.gameweekProjections[gw];
+              assistPoints = assists * 3;
+            }
+            
+            // Project other components
+            if (fplPlayer.minutes > 0) {
+              const expectedMinutes = Math.min(90, fplPlayer.minutes / 3);
+              minutesPoints = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
+            }
+            
+            if (position === 'GKP' || position === 'DEF') {
+              const csProb = position === 'GKP' ? 0.25 : 0.22;
+              cleanSheetPoints = csProb * (position === 'GKP' ? 4 : 4);
+            }
+            
+            if (position === 'DEF' || position === 'MID') {
+              const dcEstimate = position === 'DEF' ? 1.2 : 0.6;
+              defensivePoints = dcEstimate * 2;
+            }
+            
+            bonusPoints = (goalPoints + assistPoints) * 0.1;
+            
+            const gwTotal = goalPoints + assistPoints + minutesPoints + cleanSheetPoints + defensivePoints + bonusPoints;
+            gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;
+            totalExpectedPoints += gwTotal;
           }
+          
+          // Track component totals regardless of source
           pointsFromGoals[`gw${gw}`] = Math.round(goalPoints * 100) / 100;
-          totalPointsFromGoals += goalPoints;
-          
-          // Assist points (using individual tool data)
-          let assistPoints = 0;
-          if (assistsPlayer && assistsPlayer.gameweekProjections && assistsPlayer.gameweekProjections[gw]) {
-            const assists = assistsPlayer.gameweekProjections[gw];
-            assistPoints = assists * 3; // All positions get 3 points per assist
-          }
           pointsFromAssists[`gw${gw}`] = Math.round(assistPoints * 100) / 100;
-          totalPointsFromAssists += assistPoints;
-          
-          // Minutes points (basic logic - 2 for 60+, 1 for 1-59, 0 for 0)
-          let minutesPoints = 0;
-          if (fplPlayer.minutes > 0) {
-            const expectedMinutes = Math.min(90, fplPlayer.minutes / 3); // Rough estimate based on season avg
-            minutesPoints = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
-          }
           pointsFromMinutes[`gw${gw}`] = minutesPoints;
-          totalPointsFromMinutes += minutesPoints;
-          
-          // Clean sheet points (DEF/GKP only)
-          let cleanSheetPoints = 0;
-          if (position === 'GKP' || position === 'DEF') {
-            // Basic clean sheet probability (simplified)
-            const csProb = position === 'GKP' ? 0.25 : 0.22; // Rough estimates
-            cleanSheetPoints = csProb * (position === 'GKP' ? 4 : 4);
-          }
           pointsFromCleanSheets[`gw${gw}`] = Math.round(cleanSheetPoints * 100) / 100;
-          totalPointsFromCleanSheets += cleanSheetPoints;
-          
-          // Defensive contribution points (basic estimation)
-          let defensivePoints = 0;
-          if (position === 'DEF' || position === 'MID') {
-            const dcEstimate = position === 'DEF' ? 1.2 : 0.6; // Basic estimates
-            defensivePoints = dcEstimate * 2; // 2 points per DC
-          }
           pointsFromDefensiveContributions[`gw${gw}`] = Math.round(defensivePoints * 100) / 100;
-          totalPointsFromDefensiveContributions += defensivePoints;
-          
-          // Bonus points (basic estimation)
-          const bonusPoints = (goalPoints + assistPoints) * 0.1; // Very basic estimation
           pointsFromBonus[`gw${gw}`] = Math.round(bonusPoints * 100) / 100;
-          totalPointsFromBonus += bonusPoints;
           
-          // Total for this gameweek
-          const gwTotal = goalPoints + assistPoints + minutesPoints + cleanSheetPoints + defensivePoints + bonusPoints;
-          gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;
-          totalExpectedPoints += gwTotal;
+          totalPointsFromGoals += goalPoints;
+          totalPointsFromAssists += assistPoints;
+          totalPointsFromMinutes += minutesPoints;
+          totalPointsFromCleanSheets += cleanSheetPoints;
+          totalPointsFromDefensiveContributions += defensivePoints;
+          totalPointsFromBonus += bonusPoints;
         }
         
         // Only include players with some projection data
