@@ -7090,8 +7090,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalPointsProjections = [];
       
       for (const player of bootstrapData.elements) {
-        const gameweekProjections: { [key: number]: number } = {};
-        const gameweekData: { [key: number]: any } = {};
+        const gameweekProjections: { [key: string]: number } = {};
+        const gameweekData: { [key: string]: any } = {};
         
         // Simple position-based point estimates per gameweek
         let basePointsPerGame = 2; // Appearance points
@@ -7124,7 +7124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate for each gameweek in range
         for (let gw = start; gw <= end; gw++) {
           const pointsForGW = Math.round(estimatedPointsPerGame * 100) / 100;
-          gameweekProjections[gw] = pointsForGW;
+          gameweekProjections[`gw${gw}`] = pointsForGW;
           
           gameweekData[gw] = {
             goals: Math.round((pointsForGW / 20) * 100) / 100, // Rough estimate
