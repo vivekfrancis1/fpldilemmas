@@ -248,12 +248,12 @@ export default function MyDashboard() {
       );
     }
 
-    const currentManagerEntry = leagueData.standings?.results?.find(
+    const currentManagerEntry = (leagueData as any).standings?.results?.find(
       (entry: any) => entry.entry.toString() === managerId
     );
 
     // Show top 50 or all entries if less than 50
-    const allEntries = leagueData.standings?.results || [];
+    const allEntries = (leagueData as any).standings?.results || [];
     const topEntries = allEntries.length > 50 ? allEntries.slice(0, 50) : allEntries;
     
     return (
@@ -385,7 +385,8 @@ export default function MyDashboard() {
   };
 
   // Helper functions
-  const formatRank = (rank: number) => {
+  const formatRank = (rank: number | null | undefined) => {
+    if (rank === null || rank === undefined) return 'N/A';
     return rank.toLocaleString();
   };
 
