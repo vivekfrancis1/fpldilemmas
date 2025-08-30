@@ -655,7 +655,14 @@ export default function MyDashboard() {
                                   <div className="text-sm text-muted-foreground">
                                     {leagueTypeLabel} • {league.rank_count?.toLocaleString()} managers
                                     {league.rank_count && league.entry_rank && (
-                                      <span> • {Math.round(((league.rank_count - league.entry_rank) / league.rank_count) * 100)}th percentile</span>
+                                      <span> • {(() => {
+                                        const percentile = Math.round(((league.rank_count - league.entry_rank) / league.rank_count) * 100);
+                                        const suffix = percentile % 100 >= 11 && percentile % 100 <= 13 ? 'th' : 
+                                                      percentile % 10 === 1 ? 'st' : 
+                                                      percentile % 10 === 2 ? 'nd' : 
+                                                      percentile % 10 === 3 ? 'rd' : 'th';
+                                        return `${percentile}${suffix}`;
+                                      })()} percentile</span>
                                     )}
                                   </div>
                                 </div>
