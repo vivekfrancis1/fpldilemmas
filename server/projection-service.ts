@@ -225,18 +225,18 @@ class ProjectionService {
             pointsFromCleanSheets[`gw${gw}`] = Math.round(gwCleanSheetPoints * 100) / 100;
             totalCleanSheetPoints += gwCleanSheetPoints;
             
-            // 5. DEFENSIVE CONTRIBUTIONS (2025/26 season)
-            let defensiveContributions = 0;
-            if (position === 'DEF') {
-              defensiveContributions = (adjustedForm * 0.15 + seasonPerformance * 0.05) * (expectedMinutes / 90);
-            } else if (position === 'MID') {
-              defensiveContributions = (adjustedForm * 0.08 + seasonPerformance * 0.03) * (expectedMinutes / 90);
+            // 5. DEFENSIVE CONTRIBUTIONS (2025/26 season) - Use same logic as individual DC tool
+            let gwDefensivePoints = 0;
+            if (position === 'DEF' || position === 'MID') {
+              // Estimate DC value based on form and minutes
+              const estimatedDC = position === 'DEF' ? 
+                (adjustedForm * 0.8 + seasonPerformance * 0.3) * (expectedMinutes / 90) : 
+                (adjustedForm * 0.4 + seasonPerformance * 0.2) * (expectedMinutes / 90);
+              
+              // Apply FPL threshold rule: 2 points if DC >= 10 for DEF, >= 12 for MID/FWD
+              const dcThreshold = position === 'DEF' ? 10 : 12;
+              gwDefensivePoints = estimatedDC >= dcThreshold ? 2 : 0; // Binary: either 0 or 2 points
             }
-            
-            // FPL Defensive Contribution Points: 2 points if DC >= threshold (DEF: 10, MID/FWD: 12)
-            const dcThreshold = position === 'DEF' ? 10 : 12;
-            const thresholdProb = Math.min(defensiveContributions / dcThreshold, 0.6); // Max 60% chance
-            const gwDefensivePoints = thresholdProb * 2; // 2 points if threshold reached
             pointsFromDefensiveContributions[`gw${gw}`] = Math.round(gwDefensivePoints * 100) / 100;
             totalDefensivePoints += gwDefensivePoints;
             
