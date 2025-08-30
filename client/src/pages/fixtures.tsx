@@ -630,32 +630,35 @@ export default function Fixtures() {
                                   );
                                 }
 
-                                const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
-                                const opponentDefenseTier = opponentId ? getDefensiveTier(opponentId) : 'average';
+                                // Get opponent tier for color coding
+                                const attackOpponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
+                                const attackOpponentDefenseTier = attackOpponentId ? getDefensiveTier(attackOpponentId) : 'average';
                                 
-                                // Color by opponent's defensive tier (exact same colors as Balanced FDR)
-                                const getOpponentDefenseColor = (defenseTier: string) => {
+                                // Color by opponent's defensive tier (same as FDR system)
+                                const getAttackOpponentDefenseColor = (defenseTier: string) => {
                                   switch (defenseTier) {
-                                    case 'elite': return 'bg-red-300 text-red-800'; // Very Hard (FDR 5) - light red
-                                    case 'strong': return 'bg-red-100 text-red-800'; // Hard (FDR 4)
-                                    case 'average': return 'bg-gray-100 text-gray-800'; // Medium (FDR 3)
-                                    case 'weak': return 'bg-green-100 text-green-800'; // Easy (FDR 2)
-                                    case 'promoted': return 'bg-green-300 text-green-800'; // Very Easy (FDR 1) - light green
+                                    case 'elite': return 'bg-red-300 text-red-800'; // Very Hard - Elite defense means hard to score
+                                    case 'strong': return 'bg-red-100 text-red-800'; // Hard 
+                                    case 'average': return 'bg-gray-100 text-gray-800'; // Medium
+                                    case 'weak': return 'bg-green-100 text-green-800'; // Easy - Weak defense means easy to score
+                                    case 'promoted': return 'bg-green-300 text-green-800'; // Very Easy
                                     default: return 'bg-gray-300 text-gray-900';
                                   }
                                 };
-                                
+
                                 return (
                                   <td key={gw} className={`px-1 py-1 text-center ${
                                     gw === currentGameweek ? 'bg-blue-50' : ''
                                   }`}>
                                     <div 
-                                      className="px-1 py-1 rounded text-xs bg-orange-50 border border-orange-200"
-                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Attack: ${fixture.attackScore}`}
+                                      className={`px-1 py-1 rounded text-xs font-medium ${getAttackOpponentDefenseColor(attackOpponentDefenseTier)} ${
+                                        fixture.finished ? 'opacity-50' : ''
+                                      }`}
+                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Attack: ${fixture.attackScore} (${attackOpponentDefenseTier} defense)`}
                                       data-testid={`attack-fixture-${team.id}-${gw}`}
                                     >
-                                      <div className="font-semibold text-orange-700">{fixture.attackScore}</div>
-                                      <div className="text-xs text-gray-600">{fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                      <div className="font-bold">{fixture.attackScore}</div>
+                                      <div className="text-xs">{fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
                                     </div>
                                   </td>
                                 );
@@ -738,17 +741,35 @@ export default function Fixtures() {
                                   }
                                 };
                                 
+                                // Get opponent tier for color coding  
+                                const defenceOpponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
+                                const defenceOpponentAttackTier = defenceOpponentId ? getAttackingTier(defenceOpponentId) : 'average';
+                                
+                                // Color by opponent's attacking tier (same as FDR system)
+                                const getDefenceOpponentAttackColor = (attackTier: string) => {
+                                  switch (attackTier) {
+                                    case 'elite': return 'bg-red-300 text-red-800'; // Very Hard - Elite attack means hard to defend
+                                    case 'strong': return 'bg-red-100 text-red-800'; // Hard
+                                    case 'average': return 'bg-gray-100 text-gray-800'; // Medium
+                                    case 'weak': return 'bg-green-100 text-green-800'; // Easy - Weak attack means easy to defend
+                                    case 'promoted': return 'bg-green-300 text-green-800'; // Very Easy
+                                    default: return 'bg-gray-300 text-gray-900';
+                                  }
+                                };
+
                                 return (
                                   <td key={gw} className={`px-1 py-1 text-center ${
                                     gw === currentGameweek ? 'bg-blue-50' : ''
                                   }`}>
                                     <div 
-                                      className="px-1 py-1 rounded text-xs bg-blue-50 border border-blue-200"
-                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Defence: ${fixture.defenceScore}`}
+                                      className={`px-1 py-1 rounded text-xs font-medium ${getDefenceOpponentAttackColor(defenceOpponentAttackTier)} ${
+                                        fixture.finished ? 'opacity-50' : ''
+                                      }`}
+                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Defence: ${fixture.defenceScore} (${defenceOpponentAttackTier} attack)`}
                                       data-testid={`defense-fixture-${team.id}-${gw}`}
                                     >
-                                      <div className="font-semibold text-blue-700">{fixture.defenceScore}</div>
-                                      <div className="text-xs text-gray-600">{fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                      <div className="font-bold">{fixture.defenceScore}</div>
+                                      <div className="text-xs">{fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
                                     </div>
                                   </td>
                                 );
