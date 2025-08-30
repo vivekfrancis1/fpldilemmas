@@ -158,7 +158,26 @@ export default function RecentPriceChanges() {
     };
   };
 
+  // Calculate today's price change statistics
+  const getTodayStats = () => {
+    if (!Array.isArray(priceChanges)) {
+      return { todayRises: 0, todayFalls: 0, todayChanges: 0 };
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const todayChanges = priceChanges.filter((c: PriceChange) => c.change_date === today);
+    const todayRises = todayChanges.filter((c: PriceChange) => c.price_change > 0);
+    const todayFalls = todayChanges.filter((c: PriceChange) => c.price_change < 0);
+
+    return {
+      todayRises: todayRises.length,
+      todayFalls: todayFalls.length,
+      todayChanges: todayChanges.length
+    };
+  };
+
   const seasonStats = getSeasonStats();
+  const todayStats = getTodayStats();
 
   const formatPrice = (price: number | string | undefined | null) => {
     if (price === null || price === undefined) {
@@ -188,7 +207,58 @@ export default function RecentPriceChanges() {
       </div>
 
       <div className="fpl-section-spacing">
-        {/* Info Cards */}
+        {/* Today's Statistics */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 px-1">
+          <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <div className="p-3 bg-green-200 rounded-full mr-3">
+                  <TrendingUp className="h-6 w-6 text-green-700" />
+                </div>
+                <div>
+                  <p className="text-xl sm:text-2xl font-bold text-green-700" data-testid="text-today-rises">
+                    {todayStats.todayRises}
+                  </p>
+                  <p className="text-xs sm:text-sm text-green-600 font-medium">Price Rises Today</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-red-50 to-red-100 border-red-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <div className="p-3 bg-red-200 rounded-full mr-3">
+                  <TrendingDown className="h-6 w-6 text-red-700" />
+                </div>
+                <div>
+                  <p className="text-xl sm:text-2xl font-bold text-red-700" data-testid="text-today-falls">
+                    {todayStats.todayFalls}
+                  </p>
+                  <p className="text-xs sm:text-sm text-red-600 font-medium">Price Falls Today</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <div className="p-3 bg-blue-200 rounded-full mr-3">
+                  <Calendar className="h-6 w-6 text-blue-700" />
+                </div>
+                <div>
+                  <p className="text-xl sm:text-2xl font-bold text-blue-700" data-testid="text-today-changes">
+                    {todayStats.todayChanges}
+                  </p>
+                  <p className="text-xs sm:text-sm text-blue-600 font-medium">Total Changes Today</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Season Statistics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8 px-1">
           <Card className="bg-white shadow-sm border border-gray-100">
             <CardContent className="pt-6">
