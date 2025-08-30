@@ -171,7 +171,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               Sum: {(
                 (player.totalPointsFromGoals || 0) +
                 (player.totalPointsFromAssists || 0) +
-                (player.pointsFromCleanSheets || 0) +
+                (player.totalPointsFromCleanSheets || 0) +
                 (player.totalPointsFromDefensiveContributions || 0) +
                 (player.totalPointsFromMinutes || 0) +
                 (player.totalPointsFromBonus || 0)
