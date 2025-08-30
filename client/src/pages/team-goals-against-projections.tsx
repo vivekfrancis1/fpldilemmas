@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
-interface TeamGoalsAgainstProjection {
+interface TeamGoalsConcededProjection {
   id: number;
   team: string;
   teamShort: string;
@@ -14,13 +14,13 @@ interface TeamGoalsAgainstProjection {
   gameweekProjections: {
     [gameweek: number]: number;
   };
-  totalProjectedGoalsAgainst: number;
-  averageGoalsAgainstPerGame: number;
+  totalProjectedGoalsConceded: number;
+  averageGoalsConcededPerGame: number;
   confidence: 'High' | 'Medium' | 'Low';
   position: number;
 }
 
-export default function TeamGoalsAgainstProjections() {
+export default function TeamGoalsConcededProjections() {
   const [startGameweek, setStartGameweek] = useState<string>("3");
   const [endGameweek, setEndGameweek] = useState<string>("8");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
@@ -32,7 +32,7 @@ export default function TeamGoalsAgainstProjections() {
 
   const { data: combinedData, isLoading: projectionsLoading } = useQuery<{
     goalsScored: any[];
-    goalsAgainst: TeamGoalsAgainstProjection[];
+    goalsAgainst: TeamGoalsConcededProjection[];
     totalGoalsScored: number;
     totalGoalsAgainst: number;
     perfectBalance: boolean;
@@ -68,10 +68,10 @@ export default function TeamGoalsAgainstProjections() {
               .reduce((sum, gw) => sum + (b.gameweekProjections[parseInt(gw)] || 0), 0);
             return aPeriodTotal - bPeriodTotal;
           }
-          case "season": return a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst; // Lower is better
-          case "average": return a.averageGoalsAgainstPerGame - b.averageGoalsAgainstPerGame; // Lower is better
+          case "season": return a.totalProjectedGoalsConceded - b.totalProjectedGoalsConceded; // Lower is better
+          case "average": return a.averageGoalsConcededPerGame - b.averageGoalsConcededPerGame; // Lower is better
           case "position": return a.position - b.position;
-          default: return a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst;
+          default: return a.totalProjectedGoalsConceded - b.totalProjectedGoalsConceded;
         }
       });
   }, [projectionsData, selectedTeam, sortBy]);
@@ -143,7 +143,7 @@ export default function TeamGoalsAgainstProjections() {
               <Shield className="h-8 w-8 text-blue-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              Team Goals Against Projections
+              Team Goals Conceded Projections
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
               Goals conceded by each team across all 38 gameweeks - defensive analysis based on opponent expected goals
@@ -213,7 +213,7 @@ export default function TeamGoalsAgainstProjections() {
                     <SelectContent>
                       <SelectItem value="total">Period Total</SelectItem>
                       <SelectItem value="season">Season Total</SelectItem>
-                      <SelectItem value="average">Goals Against/Game</SelectItem>
+                      <SelectItem value="average">Goals Conceded/Game</SelectItem>
                       <SelectItem value="position">Defensive Ranking</SelectItem>
                       {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
                         const gwNumber = parseInt(startGameweek) + i;
@@ -228,12 +228,12 @@ export default function TeamGoalsAgainstProjections() {
             </CardContent>
           </Card>
 
-          {/* Team Goals Against Projections Table */}
+          {/* Team Goals Conceded Projections Table */}
           <Card className="overflow-hidden">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                {`Team Goals Against Projections: GW${startGameweek}-GW${endGameweek}`}
+                {`Team Goals Conceded Projections: GW${startGameweek}-GW${endGameweek}`}
                 <Badge variant="outline" className="ml-2">
                   {filteredProjections.length} teams
                 </Badge>
@@ -296,7 +296,7 @@ export default function TeamGoalsAgainstProjections() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredProjections.map((team, index) => (
-                      <tr key={team.id} className="hover:bg-gray-50" data-testid={`team-goals-against-row-${team.id}`}>
+                      <tr key={team.id} className="hover:bg-gray-50" data-testid={`team-goals-conceded-row-${team.id}`}>
                         <td className="px-4 py-4 text-center text-sm font-medium text-gray-500 sticky left-0 bg-white">
                           {index + 1}
                         </td>
@@ -335,12 +335,12 @@ export default function TeamGoalsAgainstProjections() {
                         
                         <td className="px-4 py-4 text-center bg-orange-50">
                           <span className="text-lg font-bold text-orange-900">
-                            {team.totalProjectedGoalsAgainst.toFixed(2)}
+                            {team.totalProjectedGoalsConceded.toFixed(2)}
                           </span>
                         </td>
                         
                         <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
-                          {team.averageGoalsAgainstPerGame.toFixed(2)}
+                          {team.averageGoalsConcededPerGame.toFixed(2)}
                         </td>
                         
                       </tr>
@@ -399,7 +399,7 @@ export default function TeamGoalsAgainstProjections() {
           {/* Info Panel */}
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle className="text-lg">About Team Goals Against Projections</CardTitle>
+              <CardTitle className="text-lg">About Team Goals Conceded Projections</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

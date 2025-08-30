@@ -2721,7 +2721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [bootstrapResponse, fixturesResponse, goalsAgainstResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
         fetch("https://fantasy.premierleague.com/api/fixtures/"),
-        fetch(`http://localhost:5000/api/team-goals-against-projections`)
+        fetch(`http://localhost:5000/api/team-goals-conceded-projections`)
       ]);
       
       if (!bootstrapResponse.ok || !fixturesResponse.ok || !goalsAgainstResponse.ok) {
@@ -5095,7 +5095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Team Goals Against Projections endpoint - PERFECT MIRROR IMAGE
-  app.get("/api/team-goals-against-projections", async (req, res) => {
+  app.get("/api/team-goals-conceded-projections", async (req, res) => {
     try {
       console.log(`DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping`);
       
