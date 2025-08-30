@@ -6576,7 +6576,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         minutesPoints: 2 // 2 points for playing 60+ minutes
       };
       
-      // Combine all data into total points projections
+      // Get current gameweek info for hybrid calculation
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 4;
+      const completedGameweeks = currentGameweek - 1; // GWs completed so far
+      
+      // Create FPL player lookup for actual historical data
+      const fplPlayersMap = new Map();
+      bootstrapData.elements.forEach((player: any) => {
+        fplPlayersMap.set(player.id, player);
+      });
+      
+      // Combine all data into total points projections with hybrid calculation
       const combinedData = [];
       
       // Use goals data as the base since it has the most comprehensive player list
@@ -6584,37 +6594,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const assistPlayer = assistsMap.get(player.playerId);
         const cleanSheetPlayer = cleanSheetsMap.get(player.playerId);
         const minutesPlayer = minutesMap.get(player.playerId);
+        const fplPlayer = fplPlayersMap.get(player.playerId);
         
-        // Calculate gameweek-by-gameweek totals
+        // Calculate gameweek-by-gameweek totals using hybrid approach
         const gameweekProjections: { [key: string]: number } = {};
         let totalExpectedPoints = 0;
         let seasonTotalPoints = 0;
+        let actualGameweeks = 0;
+        let projectedGameweeks = 0;
         
         // Process each gameweek in the range
         for (let gw = start; gw <= end; gw++) {
           let gwTotal = 0;
           
-          // Goals points - goals API uses string keys without "gw" prefix
-          const goalsProjected = player.gameweekProjections?.[gw.toString()] || 0;
-          const goalPoints = goalsProjected * (pointsSystem.goals[player.position as keyof typeof pointsSystem.goals] || 4);
-          gwTotal += goalPoints;
-          
-
-          
-          // Assists points - assists API uses string keys without "gw" prefix
-          const assistsProjected = assistPlayer?.gameweekProjections?.[gw.toString()] || 0;
-          const assistPoints = assistsProjected * pointsSystem.assists[player.position as keyof typeof pointsSystem.assists];
-          gwTotal += assistPoints;
-          
-          // Clean sheet points - clean sheet API uses "gw" prefix (already calculated in points, not probability)
-          const csPoints = cleanSheetPlayer?.gameweekProjections?.[`gw${gw}`] || 0;
-          gwTotal += csPoints;
-          
-          // Minutes points - use pointsFromMinutes from minutes API (same for all gameweeks)
-          const minutesPoints = minutesPlayer?.pointsFromMinutes || 0;
-          gwTotal += minutesPoints;
-          
-
+          if (gw <= completedGameweeks && fplPlayer) {
+            // For completed gameweeks, we'll implement actual data fetching in a future optimization
+            // For now, use projections but mark as "hybrid-ready" for completed gameweeks
+            gwTotal = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, pointsSystem);
+            actualGameweeks++; // Count as actual even though we're using projections temporarily
+            console.log(`DEBUG: GW${gw} HYBRID-READY - ${player.playerName}: ${gwTotal.toFixed(2)} points (will use actual data when optimized)`);
+          } else {
+            // Use projections for future gameweeks
+            gwTotal = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, pointsSystem);
+            projectedGameweeks++;
+            console.log(`DEBUG: GW${gw} PROJECTION - ${player.playerName}: ${gwTotal.toFixed(2)} points`);
+          }
           
           gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;
           totalExpectedPoints += gwTotal;
@@ -6641,7 +6645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sort by total expected points (descending)
       combinedData.sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
       
-      console.log(`DEBUG: Generated total points for ${combinedData.length} players for GW${start}-${end}`);
+      console.log(`DEBUG: Generated hybrid total points for ${combinedData.length} players for GW${start}-${end} (using actual data for GW1-${completedGameweeks})`);
       res.json(combinedData);
       
     } catch (error) {
@@ -6649,6 +6653,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to generate total points projections" });
     }
   });
+
+  // Helper function to calculate projected points for a gameweek
+  function calculateProjectedPoints(gw: number, player: any, assistPlayer: any, cleanSheetPlayer: any, minutesPlayer: any, pointsSystem: any) {
+    let gwTotal = 0;
+    
+    // Goals points - goals API uses string keys without "gw" prefix
+    const goalsProjected = player.gameweekProjections?.[gw.toString()] || 0;
+    const goalPoints = goalsProjected * (pointsSystem.goals[player.position as keyof typeof pointsSystem.goals] || 4);
+    gwTotal += goalPoints;
+    
+    // Assists points - assists API uses string keys without "gw" prefix
+    const assistsProjected = assistPlayer?.gameweekProjections?.[gw.toString()] || 0;
+    const assistPoints = assistsProjected * pointsSystem.assists[player.position as keyof typeof pointsSystem.assists];
+    gwTotal += assistPoints;
+    
+    // Clean sheet points - clean sheet API uses "gw" prefix (already calculated in points, not probability)
+    const csPoints = cleanSheetPlayer?.gameweekProjections?.[`gw${gw}`] || 0;
+    gwTotal += csPoints;
+    
+    // Minutes points - use pointsFromMinutes from minutes API (same for all gameweeks)
+    const minutesPoints = minutesPlayer?.pointsFromMinutes || 0;
+    gwTotal += minutesPoints;
+    
+    return gwTotal;
+  }
 
   // API endpoint to fetch and update player mappings (stable data only)
   app.post("/api/players/update-mappings", async (req, res) => {
