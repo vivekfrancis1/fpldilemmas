@@ -11,9 +11,9 @@ import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/d
 // Master Default Team Configuration - Single Source of Truth
 const MASTER_TEAM_DEFAULTS = {
   // Base Settings
-  averageBaseXGPerTeamPerGame: 1.85, // Increased from 1.5 to give more realistic season totals
+  averageBaseXGPerTeamPerGame: 1.5,
   defaultTeamVariance: 0.45,
-  defaultExpectedGoalsPerGame: 1.6, // Increased from 1.3 to align with higher base
+  defaultExpectedGoalsPerGame: 1.3,
   globalTierMultiplier: 1.25,
   homeAdvantageGoalsMultiplier: 1.16,
   awayFactorGoalsMultiplier: 0.84,
