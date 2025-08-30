@@ -21,13 +21,13 @@ function PointBreakdownTooltip({ player }: { player: PlayerTotalPointsData }) {
   }
 
   return (
-    <Tooltip>
+    <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
-        <span className="font-bold text-green-800 cursor-help hover:text-green-900 transition-colors border-b border-dashed border-green-400">
+        <button className="font-bold text-green-800 cursor-help hover:text-green-900 transition-colors border-b border-dashed border-green-400 bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
           {player.totalExpectedPoints?.toFixed(1) || '0.0'}
-        </span>
+        </button>
       </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200">
+      <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
         <div className="space-y-2">
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
             {player.name} - Point Breakdown
@@ -76,6 +76,16 @@ function PointBreakdownTooltip({ player }: { player: PlayerTotalPointsData }) {
               <span className="text-green-800">
                 {player.totalExpectedPoints?.toFixed(1) || '0.0'}
               </span>
+            </div>
+            <div className="mt-2 text-xs text-gray-500">
+              Sum: {(
+                (player.totalPointsFromGoals || 0) +
+                (player.totalPointsFromAssists || 0) +
+                (player.totalPointsFromCleanSheets || 0) +
+                (player.totalPointsFromDefensiveContributions || 0) +
+                (player.totalPointsFromMinutes || 0) +
+                (player.totalPointsFromBonus || 0)
+              ).toFixed(1)}
             </div>
           </div>
         </div>
@@ -225,7 +235,7 @@ export default function PlayerTotalPoints() {
   }
 
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={100} skipDelayDuration={0}>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
         <div className="container mx-auto px-6 py-8">
         {/* Professional Header */}
