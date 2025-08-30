@@ -39,6 +39,9 @@ interface DefensiveProjection {
     recoveries: number;
     cbi: number;
     minutes: number;
+    opponent: string;
+    opponentTier: string;
+    fixtureMultiplier: number;
   }>;
 }
 
@@ -138,8 +141,11 @@ export default function DefensiveContributionProjections() {
           Defensive Contribution Projections
         </h1>
         <p className="text-muted-foreground mt-2">
-          AI-powered defensive projections based on historical performance and current form
+          Fixture-aware defensive projections with up to 50% variance based on opponent attacking strength
         </p>
+        <div className="mt-3 text-sm text-muted-foreground">
+          Uses position-specific calculations: Defenders (CBI + Tackles), Midfielders/Forwards (CBI + Tackles + Recoveries)
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -328,8 +334,33 @@ export default function DefensiveContributionProjections() {
             <CardHeader>
               <CardTitle>Next 6 Gameweeks Projections</CardTitle>
               <CardDescription>
-                Defensive contribution projections for upcoming gameweeks
+                Fixture-aware defensive projections with up to 50% variance based on opponent attacking strength
               </CardDescription>
+              <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                <h4 className="text-sm font-medium mb-2">Opponent Difficulty Legend:</h4>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-red-100 dark:bg-red-900/20 border border-red-200 rounded"></div>
+                    <span>Elite (1.5x)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-orange-100 dark:bg-orange-900/20 border border-orange-200 rounded"></div>
+                    <span>Strong (1.3x)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-muted border-border border rounded"></div>
+                    <span>Average (1.0x)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-blue-100 dark:bg-blue-900/20 border border-blue-200 rounded"></div>
+                    <span>Weak (0.8x)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-green-100 dark:bg-green-900/20 border border-green-200 rounded"></div>
+                    <span>Promoted (0.5x)</span>
+                  </div>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -347,14 +378,28 @@ export default function DefensiveContributionProjections() {
                       </Badge>
                     </div>
                     <div className="grid grid-cols-6 gap-2">
-                      {player.gameweekProjections.map((gw) => (
-                        <div key={gw.gameweek} className="text-center p-2 bg-muted rounded">
-                          <div className="text-xs font-medium">GW{gw.gameweek}</div>
-                          <div className="text-sm font-bold">
-                            {gw.defensiveContribution.toFixed(1)}
+                      {player.gameweekProjections.map((gw) => {
+                        const tierColor = gw.opponentTier === 'elite' ? 'bg-red-100 dark:bg-red-900/20 border-red-200' :
+                                        gw.opponentTier === 'strong' ? 'bg-orange-100 dark:bg-orange-900/20 border-orange-200' :
+                                        gw.opponentTier === 'average' ? 'bg-muted border-border' :
+                                        gw.opponentTier === 'weak' ? 'bg-blue-100 dark:bg-blue-900/20 border-blue-200' :
+                                        'bg-green-100 dark:bg-green-900/20 border-green-200';
+                        
+                        return (
+                          <div key={gw.gameweek} className={`text-center p-2 rounded border ${tierColor}`}>
+                            <div className="text-xs font-medium">GW{gw.gameweek}</div>
+                            <div className="text-sm font-bold">
+                              {gw.defensiveContribution.toFixed(1)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              vs {gw.opponent}
+                            </div>
+                            <div className="text-xs font-medium">
+                              {gw.fixtureMultiplier}x
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

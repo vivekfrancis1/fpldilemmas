@@ -8209,6 +8209,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Found ${currentSeasonDefensiveData.size} players with current defensive data`);
       
+      // Get fixtures for next 6 gameweeks to calculate fixture-based variance
+      const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+      if (!fixturesResponse.ok) {
+        throw new Error("Failed to fetch fixtures");
+      }
+      const allFixtures = await fixturesResponse.json();
+      
+      // Get current gameweek
+      const currentGW = currentData.events.find((event: any) => event.is_current)?.id || 1;
+      const nextSixGameweeks = [currentGW + 1, currentGW + 2, currentGW + 3, currentGW + 4, currentGW + 5, currentGW + 6];
+      
+      // Filter fixtures for next 6 gameweeks
+      const upcomingFixtures = allFixtures.filter((fixture: any) => 
+        nextSixGameweeks.includes(fixture.event) && 
+        fixture.finished === false
+      );
+      
+      // Calculate team attacking strength based on current season goals scored
+      const teamAttackStrength = new Map();
+      currentData.teams.forEach((team: any) => {
+        // Use team strength rating and current performance
+        const strengthAttack = team.strength_attack_home + team.strength_attack_away;
+        const avgStrength = strengthAttack / 2;
+        
+        // Classify teams into attack tiers
+        let attackTier = 'average';
+        let attackMultiplier = 1.0;
+        
+        if (avgStrength >= 1300) {
+          attackTier = 'elite';
+          attackMultiplier = 1.5; // 50% more defensive contribution needed
+        } else if (avgStrength >= 1150) {
+          attackTier = 'strong';
+          attackMultiplier = 1.3; // 30% more defensive contribution
+        } else if (avgStrength >= 1000) {
+          attackTier = 'average';
+          attackMultiplier = 1.0; // Baseline
+        } else if (avgStrength >= 850) {
+          attackTier = 'weak';
+          attackMultiplier = 0.8; // 20% less defensive contribution
+        } else {
+          attackTier = 'promoted';
+          attackMultiplier = 0.5; // 50% less defensive contribution
+        }
+        
+        teamAttackStrength.set(team.id, {
+          tier: attackTier,
+          multiplier: attackMultiplier,
+          strength: avgStrength
+        });
+      });
+      
+      console.log(`DEBUG: Calculated attack strength for ${teamAttackStrength.size} teams`);
+      
       // Group historical minutes data by player
       const playerHistoricalMinutes = historicalMinutesData.reduce((acc, record) => {
         if (!acc[record.playerId]) {
@@ -8272,22 +8326,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const confidence = (minutesConfidence * 0.5 + historyConfidence * 0.3 + consistencyConfidence * 0.2);
         
-        // Generate gameweek projections
+        // Generate fixture-aware gameweek projections
         const gameweekProjections = Array.from({ length: 6 }, (_, i) => {
-          const gameweek = i + 4; // Start from GW4
+          const gameweek = nextSixGameweeks[i];
           const minutesThisGW = estimatedMinutesPerGW;
-          const projectedDC = currentDCPer90 * formFactor * minutesThisGW / 90;
-          const projectedTackles = currentTacklesPer90 * formFactor * minutesThisGW / 90;
-          const projectedRecoveries = currentRecoveriesPer90 * formFactor * minutesThisGW / 90;
-          const projectedCBI = currentCBIPer90 * formFactor * minutesThisGW / 90;
+          
+          // Find fixture for this team in this gameweek
+          const teamFixture = upcomingFixtures.find((fixture: any) => 
+            fixture.event === gameweek && 
+            (fixture.team_h === player.team || fixture.team_a === player.team)
+          );
+          
+          let fixtureMultiplier = 1.0;
+          let opponentInfo = { name: 'Unknown', tier: 'average' };
+          
+          if (teamFixture) {
+            // Determine opponent
+            const opponentTeamId = teamFixture.team_h === player.team ? teamFixture.team_a : teamFixture.team_h;
+            const opponentStrength = teamAttackStrength.get(opponentTeamId);
+            const opponentTeam = currentData.teams.find((t: any) => t.id === opponentTeamId);
+            
+            if (opponentStrength && opponentTeam) {
+              fixtureMultiplier = opponentStrength.multiplier;
+              opponentInfo = {
+                name: opponentTeam.short_name,
+                tier: opponentStrength.tier
+              };
+            }
+          }
+          
+          // Apply fixture variance to defensive projections
+          const baseDC = currentDCPer90 * formFactor * minutesThisGW / 90;
+          const baseTackles = currentTacklesPer90 * formFactor * minutesThisGW / 90;
+          const baseRecoveries = currentRecoveriesPer90 * formFactor * minutesThisGW / 90;
+          const baseCBI = currentCBIPer90 * formFactor * minutesThisGW / 90;
           
           return {
             gameweek,
-            defensiveContribution: Math.round(projectedDC * 100) / 100,
-            tackles: Math.round(projectedTackles * 100) / 100,
-            recoveries: Math.round(projectedRecoveries * 100) / 100,
-            cbi: Math.round(projectedCBI * 100) / 100,
-            minutes: minutesThisGW
+            defensiveContribution: Math.round(baseDC * fixtureMultiplier * 100) / 100,
+            tackles: Math.round(baseTackles * fixtureMultiplier * 100) / 100,
+            recoveries: Math.round(baseRecoveries * fixtureMultiplier * 100) / 100,
+            cbi: Math.round(baseCBI * fixtureMultiplier * 100) / 100,
+            minutes: minutesThisGW,
+            opponent: opponentInfo.name,
+            opponentTier: opponentInfo.tier,
+            fixtureMultiplier: Math.round(fixtureMultiplier * 100) / 100
           };
         });
         
