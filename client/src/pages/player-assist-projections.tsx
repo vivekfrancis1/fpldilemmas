@@ -23,6 +23,8 @@ type SortDirection = 'asc' | 'desc';
 export default function PlayerAssistProjections() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [startGameweek, setStartGameweek] = useState<number>(4); // Default to next gameweek
+  const [endGameweek, setEndGameweek] = useState<number>(9); // Default to 6 gameweeks ahead
   const [sortField, setSortField] = useState<SortField>('sixGwTotal');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -44,6 +46,30 @@ export default function PlayerAssistProjections() {
     const uniquePositions = Array.from(new Set(playerAssistData.map(p => p.position)));
     return uniquePositions.sort();
   }, [playerAssistData]);
+
+  // Get available gameweeks for filtering
+  const availableGameweeks = useMemo(() => {
+    if (!playerAssistData || playerAssistData.length === 0) return [];
+    const gameweeks = new Set<number>();
+    playerAssistData.forEach(player => {
+      Object.keys(player.gameweekProjections).forEach(gw => {
+        const gwNum = parseInt(gw);
+        if (gwNum >= 4) { // Only show from gameweek 4 onwards
+          gameweeks.add(gwNum);
+        }
+      });
+    });
+    return Array.from(gameweeks).sort((a, b) => a - b);
+  }, [playerAssistData]);
+
+  // Calculate dynamic totals based on selected gameweek range
+  const getFilteredTotal = (player: PlayerAssistProjection) => {
+    let total = 0;
+    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+      total += player.gameweekProjections[gw] || 0;
+    }
+    return total;
+  };
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
@@ -77,8 +103,8 @@ export default function PlayerAssistProjections() {
           bValue = b.totalProjectedAssists;
           break;
         case 'sixGwTotal':
-          aValue = [4, 5, 6, 7, 8, 9].reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
-          bValue = [4, 5, 6, 7, 8, 9].reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+          aValue = getFilteredTotal(a);
+          bValue = getFilteredTotal(b);
           break;
         case 'seasonTotal':
           aValue = a.totalProjectedAssists;
@@ -125,7 +151,7 @@ export default function PlayerAssistProjections() {
     });
 
     return filtered;
-  }, [playerAssistData, selectedPosition, selectedTeam, sortField, sortDirection]);
+  }, [playerAssistData, selectedPosition, selectedTeam, startGameweek, endGameweek, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -212,6 +238,36 @@ export default function PlayerAssistProjections() {
                     <SelectItem value="all">All</SelectItem>
                     {teams.map(team => (
                       <SelectItem key={team} value={team}>{team}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Target className="h-5 w-5 text-green-600" />
+                <label className="text-sm font-semibold text-gray-700">From GW:</label>
+                <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-20 border-2 border-gray-200 hover:border-green-400 transition-colors">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableGameweeks.map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Target className="h-5 w-5 text-green-600" />
+                <label className="text-sm font-semibold text-gray-700">To GW:</label>
+                <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-20 border-2 border-gray-200 hover:border-green-400 transition-colors">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableGameweeks.filter(gw => gw >= startGameweek).map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -312,7 +368,6 @@ export default function PlayerAssistProjections() {
                       </thead>
                       <tbody>
                         {filteredAndSortedData.map((player, index) => {
-                          const sixGwTotal = [4, 5, 6, 7, 8, 9].reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
                             <td className="py-3 px-1">
@@ -331,7 +386,7 @@ export default function PlayerAssistProjections() {
                               </Badge>
                             </td>
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {sixGwTotal.toFixed(2)}
+                              {getFilteredTotal(player).toFixed(2)}
                             </td>
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
                               {player.totalProjectedAssists}
