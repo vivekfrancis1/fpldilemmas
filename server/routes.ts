@@ -3475,13 +3475,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const playerData = playerContributions[playerId];
             
             // Normalize contribution to team xG (maintains perfect balance)
-            const normalizedShare = totalContribution > 0 ? 
+            let normalizedShare = totalContribution > 0 ? 
               (playerData.contribution / totalContribution) * teamSeasonTotals[teamId].expectedGoals : 0;
+            
+            // Apply position-based caps to goal share (applied to individual projected goals)
+            const getPositionGoalShareCap = (position: string): number => {
+              switch (position?.toLowerCase()) {
+                case 'goalkeeper': return 2; // Max 2% share for GKs
+                case 'defender': return 25; // Max 25% share for defenders
+                case 'midfielder': return 35; // Max 35% share for midfielders
+                case 'forward': return 35; // Max 35% share for forwards
+                default: return 25;
+              }
+            };
+            
+            const positionGoalShareCap = getPositionGoalShareCap(playerData.position);
+            const maxProjectedGoals = (positionGoalShareCap / 100) * teamSeasonTotals[teamId].expectedGoals;
+            const cappedNormalizedShare = Math.min(normalizedShare, maxProjectedGoals);
+            
+            if (cappedNormalizedShare !== normalizedShare) {
+              console.log(`DEBUG: Capped ${playerData.name} projected goals: ${normalizedShare.toFixed(2)} → ${cappedNormalizedShare.toFixed(2)} (${playerData.position} cap: ${positionGoalShareCap}%)`);
+            }
             
             teamSeasonTotals[teamId].players[playerId] = {
               name: playerData.name,
               position: playerData.position,
-              projectedGoals: Math.round(normalizedShare * 100) / 100 // Round to 2 decimal places
+              projectedGoals: Math.round(cappedNormalizedShare * 100) / 100 // Round to 2 decimal places
             };
           });
           
@@ -4380,14 +4399,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const adjustedShare = baseShare * performanceMultiplier;
       
+      // Apply position-based caps to goal share percentage
+      const getPositionGoalShareCap = (position: string): number => {
+        switch (position?.toLowerCase()) {
+          case 'goalkeeper': return 2; // Max 2% share for GKs
+          case 'defender': return 25; // Max 25% share for defenders
+          case 'midfielder': return 35; // Max 35% share for midfielders
+          case 'forward': return 35; // Max 35% share for forwards
+          default: return 25;
+        }
+      };
+      
+      const positionGoalShareCap = getPositionGoalShareCap(positionName);
+      const cappedAdjustedShare = Math.min(adjustedShare, positionGoalShareCap);
+      
+      if (cappedAdjustedShare !== adjustedShare) {
+        console.log(`DEBUG: Capped ${player.first_name} ${player.second_name} goal share: ${adjustedShare.toFixed(1)}% → ${cappedAdjustedShare.toFixed(1)}% (${positionName} cap: ${positionGoalShareCap}%)`);
+      }
+      
       playerShares.push({
         id: player.id,
         name: `${player.first_name} ${player.second_name}`,
         position: position?.singular_name_short || '',
-        rawShare: adjustedShare
+        rawShare: cappedAdjustedShare
       });
       
-      totalShare += adjustedShare;
+      totalShare += cappedAdjustedShare;
     });
 
     // Normalize to 100% and add projected goals calculation
