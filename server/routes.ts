@@ -7077,25 +7077,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Player Total Points API called for GW${start}-${end} using authentic component data`);
       
-      // Fetch all component data in parallel for maximum efficiency
-      const [goalsResponse, assistsResponse, cleanSheetsResponse, minutesResponse, defensiveResponse] = await Promise.all([
+      // Fetch all component data and bootstrap data in parallel for maximum efficiency
+      const [goalsResponse, assistsResponse, cleanSheetsResponse, minutesResponse, defensiveResponse, bootstrapResponse] = await Promise.all([
         fetch(`http://localhost:5000/api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
         fetch(`http://localhost:5000/api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
         fetch(`http://localhost:5000/api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`),
         fetch(`http://localhost:5000/api/player-minutes-projections?startGameweek=${start}&endGameweek=${end}`),
-        fetch(`http://localhost:5000/api/defensive-contribution-projections?startGameweek=${start}&endGameweek=${end}`)
+        fetch(`http://localhost:5000/api/defensive-contribution-projections?startGameweek=${start}&endGameweek=${end}`),
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
       ]);
 
-      if (!goalsResponse.ok || !assistsResponse.ok || !cleanSheetsResponse.ok || !minutesResponse.ok || !defensiveResponse.ok) {
-        throw new Error("Failed to fetch component projection data");
+      if (!goalsResponse.ok || !assistsResponse.ok || !cleanSheetsResponse.ok || !minutesResponse.ok || !defensiveResponse.ok || !bootstrapResponse.ok) {
+        throw new Error("Failed to fetch component projection data or bootstrap data");
       }
 
-      const [goalsData, assistsData, cleanSheetsData, minutesData, defensiveData] = await Promise.all([
+      const [goalsData, assistsData, cleanSheetsData, minutesData, defensiveData, bootstrapData] = await Promise.all([
         goalsResponse.json(),
         assistsResponse.json(),
         cleanSheetsResponse.json(),
         minutesResponse.json(),
-        defensiveResponse.json()
+        defensiveResponse.json(),
+        bootstrapResponse.json()
       ]);
 
       console.log(`DEBUG: Fetched component data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Clean Sheets: ${cleanSheetsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveData.data?.length || 0}`);
@@ -7105,6 +7107,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cleanSheetsMap = new Map(cleanSheetsData.map((p: any) => [p.playerId, p]));
       const minutesMap = new Map(minutesData.map((p: any) => [p.playerId, p]));
       const defensiveMap = new Map((defensiveData.data || []).map((p: any) => [p.playerId, p]));
+      
+      // Create FPL player and team lookup maps for names and team data
+      const fplPlayersMap = new Map(bootstrapData.elements.map((p: any) => [p.id, p]));
+      const fplTeamsMap = new Map(bootstrapData.teams.map((t: any) => [t.id, t]));
 
       // FPL scoring system
       const pointsSystem = {
@@ -7174,18 +7180,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Only add players with valid total points data
         if (totalExpectedPoints > 0) {
+          // Get FPL player data for accurate names, team, price, and ownership
+          const fplPlayer = fplPlayersMap.get(player.playerId);
+          const fplTeam = fplPlayer ? fplTeamsMap.get(fplPlayer.team) : null;
+          
           // Season total calculation
           const avgPerGameweek = totalExpectedPoints / (end - start + 1);
           const seasonTotalPoints = Math.round(avgPerGameweek * 38);
 
           totalPointsProjections.push({
             playerId: player.playerId,
-            name: player.playerName,
-            fullName: player.playerName, // Use consistent naming
-            team: player.team,
-            position: player.position,
-            price: player.price,
-            ownership: player.ownership,
+            name: fplPlayer ? fplPlayer.web_name : player.playerName,
+            fullName: fplPlayer ? `${fplPlayer.first_name} ${fplPlayer.second_name}` : player.playerName,
+            team: fplTeam ? fplTeam.short_name : player.team,
+            position: fplPlayer ? ['', 'GKP', 'DEF', 'MID', 'FWD'][fplPlayer.element_type] : player.position,
+            price: fplPlayer ? fplPlayer.now_cost / 10 : (player.price || 0),
+            ownership: fplPlayer ? parseFloat(fplPlayer.selected_by_percent) : (player.ownership || 0),
             gameweekProjections,
             totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
             seasonTotalPoints,
