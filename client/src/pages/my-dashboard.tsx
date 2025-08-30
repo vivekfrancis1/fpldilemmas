@@ -219,17 +219,6 @@ export default function MyDashboard() {
       enabled: !!leagueId
     });
 
-    // Fetch additional pages to find current manager if not in first page
-    const { data: page2Data } = useQuery({
-      queryKey: [`/api/leagues-classic/${leagueId}/standings?page=2`],
-      enabled: !!leagueId && leagueData && !leagueData.standings?.results?.some((entry: any) => entry.entry.toString() === managerId)
-    });
-
-    const { data: page3Data } = useQuery({
-      queryKey: [`/api/leagues-classic/${leagueId}/standings?page=3`],
-      enabled: !!leagueId && page2Data && !page2Data.standings?.results?.some((entry: any) => entry.entry.toString() === managerId)
-    });
-
     const { data: leagueAnalysisData } = useQuery({
       queryKey: [`/api/leagues/${leagueId}/analyze`],
       enabled: !!leagueId
@@ -259,47 +248,22 @@ export default function MyDashboard() {
       );
     }
 
-    // Combine all available data to search for current manager
-    const allPages = [leagueData, page2Data, page3Data].filter(Boolean);
-    let allPossibleEntries: any[] = [];
-    let currentManagerEntry: any = null;
+    const currentManagerEntry = leagueData.standings?.results?.find(
+      (entry: any) => entry.entry.toString() === managerId
+    );
 
-    for (const pageData of allPages) {
-      const entries = pageData?.standings?.results || [];
-      allPossibleEntries.push(...entries);
-      
-      if (!currentManagerEntry) {
-        currentManagerEntry = entries.find((entry: any) => entry.entry.toString() === managerId);
-      }
-    }
-
-    // Show top 50 plus current manager if not already included
+    // Show top 50 or all entries if less than 50
     const allEntries = leagueData.standings?.results || [];
-    let topEntries = allEntries.length > 50 ? allEntries.slice(0, 50) : allEntries;
-    
-    // Always add current manager if not in top 50 and exists in any page
-    const currentManagerInTop50 = topEntries.some((entry: any) => entry.entry.toString() === managerId);
-    if (!currentManagerInTop50 && currentManagerEntry) {
-      topEntries = [...topEntries, currentManagerEntry];
-    }
-    
-    console.log('Debug League Analysis:', {
-      managerId,
-      currentManagerEntry: currentManagerEntry ? { rank: currentManagerEntry.rank, name: currentManagerEntry.player_name } : null,
-      currentManagerInTop50,
-      allEntriesLength: allEntries.length,
-      topEntriesLength: topEntries.length,
-      pagesSearched: allPages.length
-    });
+    const topEntries = allEntries.length > 50 ? allEntries.slice(0, 50) : allEntries;
     
     return (
       <div className="space-y-6">
-        {/* League Standings */}
+        {/* Top 50 Standings */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              League Standings
+              Top {topEntries.length} Managers
             </CardTitle>
           </CardHeader>
           <CardContent>
