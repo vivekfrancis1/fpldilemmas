@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 
 interface PlayerTotalPointsData {
   playerId: number;
-  playerName: string;
+  name: string;
+  fullName: string;
   team: string;
   position: string;
   price: number;
@@ -17,10 +18,10 @@ interface PlayerTotalPointsData {
   gameweekProjections: { [key: string]: number };
   totalExpectedPoints: number;
   seasonTotalPoints: number;
-  avgPointsPerGameweek: number;
+  averagePerGameweek: number;
 }
 
-type SortField = 'playerName' | 'position' | 'team' | 'totalExpectedPoints' | 'seasonTotalPoints' | 'avgPointsPerGameweek' | string;
+type SortField = 'name' | 'position' | 'team' | 'totalExpectedPoints' | 'seasonTotalPoints' | 'averagePerGameweek' | string;
 
 export default function PlayerTotalPoints() {
   const [startGameweek, setStartGameweek] = useState(4);
@@ -74,7 +75,7 @@ export default function PlayerTotalPoints() {
     let filtered = totalPointsData.filter(player => {
       if (selectedPosition !== "all" && player.position !== selectedPosition) return false;
       if (selectedTeam !== "all" && player.team !== selectedTeam) return false;
-      if (searchTerm && !player.playerName.toLowerCase().includes(searchTerm.toLowerCase()) && 
+      if (searchTerm && !player.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
           !player.team.toLowerCase().includes(searchTerm.toLowerCase())) return false;
       return true;
     });
@@ -275,10 +276,10 @@ export default function PlayerTotalPoints() {
                     <tr>
                       <th 
                         className="px-4 py-3 text-left font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => handleSort('playerName')}
+                        onClick={() => handleSort('name')}
                       >
                         <div className="flex items-center gap-1">
-                          Player {getSortIcon('playerName')}
+                          Player {getSortIcon('name')}
                         </div>
                       </th>
                       <th 
@@ -331,10 +332,10 @@ export default function PlayerTotalPoints() {
                       
                       <th 
                         className="px-4 py-3 text-center font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors bg-gradient-to-r from-orange-50 to-amber-50"
-                        onClick={() => handleSort('avgPointsPerGameweek')}
+                        onClick={() => handleSort('averagePerGameweek')}
                       >
                         <div className="flex items-center justify-center gap-1">
-                          Avg/GW {getSortIcon('avgPointsPerGameweek')}
+                          Avg/GW {getSortIcon('averagePerGameweek')}
                         </div>
                       </th>
                     </tr>
@@ -344,7 +345,7 @@ export default function PlayerTotalPoints() {
                       <tr key={player.playerId} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                         <td className="px-4 py-4">
                           <div>
-                            <div className="font-semibold text-gray-900">{player.playerName}</div>
+                            <div className="font-semibold text-gray-900">{player.name}</div>
                             <div className="text-xs text-gray-500">£{player.price ? (player.price / 10).toFixed(1) : '0.0'}m • {player.ownership ? player.ownership.toFixed(1) : '0.0'}%</div>
                           </div>
                         </td>
@@ -384,7 +385,7 @@ export default function PlayerTotalPoints() {
                         {/* Average per GW */}
                         <td className="px-4 py-4 text-center bg-gradient-to-r from-orange-50 to-amber-50">
                           <span className="font-bold text-orange-800">
-                            {player.avgPointsPerGameweek?.toFixed(1) || '0.0'}
+                            {player.averagePerGameweek?.toFixed(1) || '0.0'}
                           </span>
                         </td>
                       </tr>
