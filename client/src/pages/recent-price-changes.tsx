@@ -499,28 +499,7 @@ export default function RecentPriceChanges() {
                           )}
                         </div>
                       </th>
-                      <th 
-                        className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
-                        onClick={() => handleSort('transfers_in_gw')}
-                      >
-                        <div className="flex items-center justify-end gap-1">
-                          Net Transfers (GW)
-                          {sortField === 'transfers_in_gw' && (
-                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
-                        onClick={() => handleSort('transfers_in')}
-                      >
-                        <div className="flex items-center justify-end gap-1">
-                          Net Transfers (Season)
-                          {sortField === 'transfers_in' && (
-                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                          )}
-                        </div>
-                      </th>
+
                     </tr>
                   </thead>
                   <tbody>
@@ -566,25 +545,7 @@ export default function RecentPriceChanges() {
                         <td className="p-3 text-right font-medium">
                           {formatPrice(change.current_price)}
                         </td>
-                        <td className="p-3 text-right">
-                          <div className="text-xs font-medium">
-                            {(() => {
-                              const gwNet = (change.transfers_in_gw || 0) - (change.transfers_out_gw || 0);
-                              const sign = gwNet > 0 ? '+' : '';
-                              const formatted = Math.abs(gwNet) >= 1000 ? `${(gwNet/1000).toFixed(0)}k` : gwNet.toString();
-                              return `${sign}${formatted}`;
-                            })()}
-                          </div>
-                        </td>
-                        <td className="p-3 text-right">
-                          <div className="text-xs font-medium">
-                            {(() => {
-                              const seasonNet = (change.transfers_in || 0) - (change.transfers_out || 0);
-                              const sign = seasonNet > 0 ? '+' : '';
-                              return `${sign}${(seasonNet/1000).toFixed(0)}k`;
-                            })()}
-                          </div>
-                        </td>
+
                       </tr>
                     ))}
                   </tbody>
