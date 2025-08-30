@@ -45,6 +45,8 @@ export default function PlayerDefensiveContributions() {
   const [activeTab, setActiveTab] = useState<string>("defensive-contributions");
   const [startGameweek, setStartGameweek] = useState<number>(0); // Will be set to current + 1
   const [endGameweek, setEndGameweek] = useState<number>(0); // Will be set to current + 6
+  const [gameweekSortColumn, setGameweekSortColumn] = useState<number | null>(null);
+  const [gameweekSortOrder, setGameweekSortOrder] = useState<"asc" | "desc">("desc");
 
   // Fetch defensive contribution projections
   const { data: defensiveData, isLoading } = useQuery({
@@ -160,19 +162,51 @@ export default function PlayerDefensiveContributions() {
       return sortOrder === "desc" ? bValue - aValue : aValue - bValue;
     });
 
+    // Sort by gameweek column if specified
+    if (gameweekSortColumn !== null) {
+      filtered.sort((a, b) => {
+        const aGameweek = a.gameweekProjections.find(gw => gw.gameweek === gameweekSortColumn);
+        const bGameweek = b.gameweekProjections.find(gw => gw.gameweek === gameweekSortColumn);
+        
+        const aValue = activeTab === "points" 
+          ? (aGameweek?.dcPoints || 0)
+          : (aGameweek?.defensiveContribution || 0);
+        const bValue = activeTab === "points"
+          ? (bGameweek?.dcPoints || 0) 
+          : (bGameweek?.defensiveContribution || 0);
+        
+        return gameweekSortOrder === "desc" ? bValue - aValue : aValue - bValue;
+      });
+    }
+
     return filtered;
-  }, [playersWithTotals, selectedPosition, selectedTeam, sortBy, sortOrder, showOnlyTopPlayers]);
+  }, [playersWithTotals, selectedPosition, selectedTeam, sortBy, sortOrder, showOnlyTopPlayers, gameweekSortColumn, gameweekSortOrder, activeTab]);
 
   // Get unique values for filters
   const positions = Array.from(new Set(players.map(p => p.position)));
   const teams = Array.from(new Set(players.map(p => p.teamName))).sort();
 
   const handleSort = (column: string) => {
+    // Clear gameweek sorting when sorting by other columns
+    setGameweekSortColumn(null);
+    
     if (sortBy === column) {
       setSortOrder(sortOrder === "desc" ? "asc" : "desc");
     } else {
       setSortBy(column);
       setSortOrder("desc");
+    }
+  };
+
+  const handleGameweekSort = (gameweek: number) => {
+    // Clear general sorting when sorting by gameweek
+    setSortBy("");
+    
+    if (gameweekSortColumn === gameweek) {
+      setGameweekSortOrder(gameweekSortOrder === "desc" ? "asc" : "desc");
+    } else {
+      setGameweekSortColumn(gameweek);
+      setGameweekSortOrder("desc");
     }
   };
 
@@ -476,8 +510,19 @@ export default function PlayerDefensiveContributions() {
                     Current/90
                   </TableHead>
                   {gameweeks.map(gw => (
-                    <TableHead key={gw} className="text-center min-w-[100px]">
-                      GW{gw}
+                    <TableHead 
+                      key={gw} 
+                      className="text-center min-w-[100px] cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleGameweekSort(gw)}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        GW{gw}
+                        {gameweekSortColumn === gw && (
+                          <span className="text-xs">
+                            {gameweekSortOrder === "desc" ? "↓" : "↑"}
+                          </span>
+                        )}
+                      </div>
                     </TableHead>
                   ))}
                   <TableHead 
@@ -565,8 +610,19 @@ export default function PlayerDefensiveContributions() {
                     Current/90
                   </TableHead>
                   {gameweeks.map(gw => (
-                    <TableHead key={gw} className="text-center min-w-[100px]">
-                      GW{gw}
+                    <TableHead 
+                      key={gw} 
+                      className="text-center min-w-[100px] cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleGameweekSort(gw)}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        GW{gw}
+                        {gameweekSortColumn === gw && (
+                          <span className="text-xs">
+                            {gameweekSortOrder === "desc" ? "↓" : "↑"}
+                          </span>
+                        )}
+                      </div>
                     </TableHead>
                   ))}
                   <TableHead className="cursor-pointer hover:bg-muted/50 text-center min-w-[80px] font-bold">
