@@ -20,7 +20,7 @@ interface PlayerTotalPointsData {
   avgPointsPerGameweek: number;
 }
 
-type SortField = 'playerName' | 'position' | 'team' | 'totalExpectedPoints' | 'seasonTotalPoints' | 'avgPointsPerGameweek';
+type SortField = 'playerName' | 'position' | 'team' | 'totalExpectedPoints' | 'seasonTotalPoints' | 'avgPointsPerGameweek' | string;
 
 export default function PlayerTotalPoints() {
   const [startGameweek, setStartGameweek] = useState(4);
@@ -81,8 +81,16 @@ export default function PlayerTotalPoints() {
 
     // Sort data
     filtered.sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
+      let aValue, bValue;
+      
+      // Handle gameweek-specific sorting
+      if (sortField.startsWith('gw')) {
+        aValue = a.gameweekProjections?.[sortField] || 0;
+        bValue = b.gameweekProjections?.[sortField] || 0;
+      } else {
+        aValue = a[sortField];
+        bValue = b[sortField];
+      }
       
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         aValue = aValue.toLowerCase();
@@ -292,8 +300,14 @@ export default function PlayerTotalPoints() {
                       
                       {/* Gameweek columns */}
                       {gameweekRange.map(gw => (
-                        <th key={gw} className="px-3 py-3 text-center font-medium text-gray-700 bg-blue-50 border-x">
-                          GW{gw}
+                        <th 
+                          key={gw} 
+                          className="px-3 py-3 text-center font-medium text-gray-700 bg-blue-50 border-x cursor-pointer hover:bg-blue-100 transition-colors"
+                          onClick={() => handleSort(`gw${gw}`)}
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            GW{gw} {getSortIcon(`gw${gw}`)}
+                          </div>
                         </th>
                       ))}
                       
