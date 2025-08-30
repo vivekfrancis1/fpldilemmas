@@ -6610,10 +6610,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const csPoints = cleanSheetPlayer?.gameweekProjections?.[`gw${gw}`] || 0;
           gwTotal += csPoints;
           
-          // Minutes points - minutes API uses "gw" prefix (2 points if expected minutes >= 60)
-          const expectedMinutes = minutesPlayer?.gameweekProjections?.[`gw${gw}`] || 0;
-          const minutesPoints = expectedMinutes >= 60 ? pointsSystem.minutesPoints : (expectedMinutes >= 1 ? 1 : 0);
+          // Minutes points - use pointsFromMinutes from minutes API (same for all gameweeks)
+          const minutesPoints = minutesPlayer?.pointsFromMinutes || 0;
           gwTotal += minutesPoints;
+          
+
           
           gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;
           totalExpectedPoints += gwTotal;
