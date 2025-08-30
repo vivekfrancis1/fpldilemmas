@@ -3950,8 +3950,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             let playerGoalsForGW = 0;
             
-            if (gameweekFinished || gameweekStarted) {
-              // For finished/started gameweeks, fetch actual player goals from FPL API
+            if (gameweekFinished) {
+              // For completely finished gameweeks, use actual goals
               try {
                 const elementResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
                 if (elementResponse.ok) {
@@ -3959,27 +3959,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   const gameweekHistory = elementData.history.find((h: any) => h.round === gameweek);
                   
                   if (gameweekHistory) {
-                    // Use actual goals scored by this specific player
                     playerGoalsForGW = gameweekHistory.goals_scored || 0;
                     console.log(`DEBUG: Goals Scored - GW${gameweek} ACTUAL - ${player.name}: ${playerGoalsForGW} goals (from FPL API)`);
                   } else {
-                    // Fallback to team goals distribution if no individual data
-                    const teamFixtures = fixturesData.filter((fixture: any) => 
-                      fixture.event === gameweek && 
-                      (fixture.team_h === teamData.teamId || fixture.team_a === teamData.teamId)
-                    );
-                    
-                    let actualTeamGoals = 0;
-                    teamFixtures.forEach((fixture: any) => {
-                      if (fixture.team_h === teamData.teamId) {
-                        actualTeamGoals += fixture.team_h_score || 0;
-                      } else if (fixture.team_a === teamData.teamId) {
-                        actualTeamGoals += fixture.team_a_score || 0;
-                      }
-                    });
-                    
-                    playerGoalsForGW = actualTeamGoals * (player.goalShare / 100);
-                    console.log(`DEBUG: Goals Scored - GW${gameweek} FALLBACK - ${team.short_name} scored: ${actualTeamGoals} goals, ${player.name}: ${playerGoalsForGW.toFixed(2)}`);
+                    throw new Error(`No gameweek ${gameweek} data found for player ${player.id}`);
                   }
                 } else {
                   throw new Error(`Failed to fetch element-summary for player ${player.id}`);
@@ -4002,6 +3985,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
                 
                 playerGoalsForGW = actualTeamGoals * (player.goalShare / 100);
+              }
+            } else if (gameweekStarted) {
+              // For current gameweek, check individual fixture completion status
+              const teamFixtures = fixturesData.filter((fixture: any) => 
+                fixture.event === gameweek && 
+                (fixture.team_h === teamData.teamId || fixture.team_a === teamData.teamId)
+              );
+              
+              let actualPlayerGoals = 0;
+              let projectedPlayerGoals = 0;
+              let hasCompletedFixtures = false;
+              let hasUncompletedFixtures = false;
+              
+              for (const fixture of teamFixtures) {
+                if (fixture.finished) {
+                  // Use actual goals for this completed fixture
+                  hasCompletedFixtures = true;
+                  try {
+                    const elementResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+                    if (elementResponse.ok) {
+                      const elementData = await elementResponse.json();
+                      const gameweekHistory = elementData.history.find((h: any) => h.round === gameweek);
+                      
+                      if (gameweekHistory) {
+                        // For current GW with multiple fixtures, we need to extract fixture-specific goals
+                        // Since API doesn't provide per-fixture breakdown, we'll use the total for the gameweek
+                        actualPlayerGoals += gameweekHistory.goals_scored || 0;
+                      }
+                    }
+                  } catch (error) {
+                    // Fallback: distribute actual team goals for this fixture
+                    const actualTeamGoals = fixture.team_h === teamData.teamId ? 
+                      (fixture.team_h_score || 0) : (fixture.team_a_score || 0);
+                    actualPlayerGoals += actualTeamGoals * (player.goalShare / 100);
+                  }
+                } else {
+                  // Use projections for uncompleted fixtures
+                  hasUncompletedFixtures = true;
+                  const projectedTeamGoals = (typeof teamGoals === 'number') ? teamGoals / teamFixtures.length : 0;
+                  projectedPlayerGoals += projectedTeamGoals * (player.goalShare / 100);
+                }
+              }
+              
+              // Combine actual and projected goals for the gameweek
+              if (hasCompletedFixtures && !hasUncompletedFixtures) {
+                playerGoalsForGW = actualPlayerGoals;
+                console.log(`DEBUG: Goals Scored - GW${gameweek} ACTUAL - ${player.name}: ${playerGoalsForGW} goals (completed)`);
+              } else if (!hasCompletedFixtures && hasUncompletedFixtures) {
+                playerGoalsForGW = projectedPlayerGoals;
+                console.log(`DEBUG: Goals Scored - GW${gameweek} PROJECTION - ${player.name}: ${playerGoalsForGW.toFixed(2)} goals (all pending)`);
+              } else {
+                playerGoalsForGW = actualPlayerGoals + projectedPlayerGoals;
+                console.log(`DEBUG: Goals Scored - GW${gameweek} HYBRID - ${player.name}: ${actualPlayerGoals} actual + ${projectedPlayerGoals.toFixed(2)} projected = ${playerGoalsForGW.toFixed(2)} total`);
               }
             } else {
               // For future gameweeks, use projections
