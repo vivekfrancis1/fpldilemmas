@@ -54,7 +54,7 @@ export default function PlayerAssistProjections() {
     playerAssistData.forEach(player => {
       Object.keys(player.gameweekProjections).forEach(gw => {
         const gwNum = parseInt(gw);
-        if (gwNum >= 4) { // Only show from gameweek 4 onwards
+        if (gwNum >= 1) { // Show from gameweek 1 onwards
           gameweeks.add(gwNum);
         }
       });

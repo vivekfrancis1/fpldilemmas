@@ -321,7 +321,7 @@ export default function PlayerGoalsScoredProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 38 - nextGameweek + 1 }, (_, i) => nextGameweek + i).map(gw => (
+                    {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
                       <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
@@ -335,7 +335,7 @@ export default function PlayerGoalsScoredProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 39 - startGameweek }, (_, i) => i + startGameweek).filter(gw => gw >= nextGameweek).map(gw => (
+                    {Array.from({ length: 38 }, (_, i) => i + 1).filter(gw => gw >= startGameweek).map(gw => (
                       <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
