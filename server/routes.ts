@@ -328,6 +328,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Historical Assist Share endpoint - based on actual assists provided in previous seasons
+  app.get("/api/assist-share-historical/:season", async (req, res) => {
+    try {
+      const season = req.params.season;
+      console.log(`DEBUG: Historical Assist Share API called for season ${season}`);
+      
+      // Fetch historical player data for the specified season
+      const historicalPlayers = await storage.getHistoricalPlayers(season);
+      
+      if (!historicalPlayers || historicalPlayers.length === 0) {
+        return res.status(404).json({ 
+          error: "No historical data found", 
+          season: season,
+          message: `No player data available for the ${season} season` 
+        });
+      }
+      
+      console.log(`DEBUG: Found ${historicalPlayers.length} historical players for ${season}`);
+      
+      // Group players by team and calculate assist shares based on actual assists provided
+      const teamAssistShares: { [teamName: string]: { 
+        teamName: string, 
+        teamShort: string, 
+        totalAssists: number, 
+        players: any[] 
+      } } = {};
+      
+      // Process each player and group by team
+      historicalPlayers.forEach(player => {
+        // Skip departed players only when analyzing historical data that affects current projections
+        const playerFullName = `${player.firstName} ${player.secondName}`;
+        const playerWebName = player.webName || '';
+        
+        // Check if player name contains any departed player names (flexible matching)
+        const shouldExclude = Array.from(DEPARTED_PLAYER_NAMES).some(departedName => 
+          playerFullName.includes(departedName) || 
+          playerWebName.includes(departedName) || 
+          player.secondName?.includes(departedName) ||
+          departedName.includes(player.secondName || '') ||
+          departedName.includes(player.firstName || '')
+        );
+        
+        if (shouldExclude) {
+          console.log(`DEBUG: Excluding departed player ${playerFullName} from ${season} assist share data`);
+          return; // Skip this player
+        }
+        
+        const teamName = player.teamName || 'Unknown Team';
+        const teamShort = player.teamShortName || 'UNK';
+        const assists = player.assists || 0;
+        
+        if (!teamAssistShares[teamName]) {
+          teamAssistShares[teamName] = {
+            teamName: teamName,
+            teamShort: teamShort,
+            totalAssists: 0,
+            players: []
+          };
+        }
+        
+        // Add player's assists to team total
+        teamAssistShares[teamName].totalAssists += assists;
+        
+        // Store player info
+        teamAssistShares[teamName].players.push({
+          id: player.id,
+          name: playerFullName,
+          position: player.position || 'Unknown',
+          assists: assists,
+          minutes: player.minutes || 0,
+          totalPoints: player.totalPoints || 0
+        });
+      });
+      
+      // Generate final assist share data
+      const historicalAssistShareData: any[] = [];
+      
+      Object.values(teamAssistShares).forEach(team => {
+        if (team.totalAssists > 0) {
+          // Calculate assist share for each player
+          const playersWithShares = team.players
+            .map(player => ({
+              id: player.id,
+              name: player.name,
+              position: player.position,
+              assistShare: Math.round((player.assists / team.totalAssists) * 1000) / 10, // Round to 1 decimal
+              projectedAssists: player.assists, // Use actual assists for historical data
+              xaPer90: player.minutes > 0 ? Math.round((player.assists / player.minutes * 90) * 100) / 100 : 0
+            }))
+            .filter(player => player.assistShare > 0) // Only include players with assists
+            .sort((a, b) => b.assistShare - a.assistShare); // Sort by assist share descending
+          
+          if (playersWithShares.length > 0) {
+            historicalAssistShareData.push({
+              gameweek: 0, // Season-long data
+              teamId: 0, // Historical data doesn't have current team IDs
+              teamName: team.teamName,
+              teamShort: team.teamShort,
+              expectedAssists: team.totalAssists, // Use actual assists for historical seasons
+              players: playersWithShares
+            });
+          }
+        }
+      });
+      
+      // Sort teams by total assists descending
+      historicalAssistShareData.sort((a, b) => b.expectedAssists - a.expectedAssists);
+      
+      console.log(`DEBUG: Generated historical assist share data for ${historicalAssistShareData.length} teams in ${season}`);
+      
+      // Log sample entries for debugging
+      if (historicalAssistShareData.length > 0) {
+        historicalAssistShareData.slice(0, 3).forEach(team => {
+          team.players.slice(0, 2).forEach((player: any) => {
+            console.log(`HISTORICAL_ASSIST_SHARE ${season} ${player.name}: assistShare=${player.assistShare}%, actualAssists=${player.projectedAssists}, teamAssists=${team.expectedAssists}`);
+          });
+        });
+      }
+      
+      res.json(historicalAssistShareData);
+    } catch (error) {
+      console.error(`Error generating historical assist share data for ${req.params.season}:`, error);
+      res.status(500).json({ 
+        error: "Failed to generate historical assist share data",
+        season: req.params.season,
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Individual player detailed data
   app.get("/api/element-summary/:playerId", async (req, res) => {
     try {

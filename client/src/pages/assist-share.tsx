@@ -18,6 +18,7 @@ interface SeasonAssistShareData {
     position: string;
     assistShare: number; // Percentage of team's season assists
     projectedAssists: number; // Season total projected assists
+    xaPer90?: number; // xA per 90 minutes (enhanced methodology)
   }[];
 }
 
@@ -36,7 +37,7 @@ export default function AssistShare() {
     staleTime: 15 * 60 * 1000,
   });
 
-  // Fetch assist share data based on selected season
+  // Fetch assist share data based on selected season - use Team Assist Projections for current season
   const { data: assistShareData, isLoading: assistShareLoading } = useQuery<SeasonAssistShareData[]>({
     queryKey: selectedSeason === "current" ? ["/api/assist-share-season"] : ["/api/assist-share-historical", selectedSeason],
     enabled: selectedSeason === "current" || (selectedSeason !== "current" && !!selectedSeason),
