@@ -69,6 +69,7 @@ function Router() {
       <Route path="/projected-standings" component={ProjectedStandings} />
       <Route path="/predicted-scores" component={PredictedScores} />
       <Route path="/results-projections" component={ResultsProjections} />
+      <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
       <Route path="/team-goals-against-projections" component={TeamGoalsAgainstProjections} />
       <Route path="/team-assist-projections" component={TeamAssistProjections} />
