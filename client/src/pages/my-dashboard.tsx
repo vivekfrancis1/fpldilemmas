@@ -252,7 +252,9 @@ export default function MyDashboard() {
       (entry: any) => entry.entry.toString() === managerId
     );
 
-    const topEntries = leagueData.standings?.results?.slice(0, 10) || [];
+    // Show top 50 or all entries if less than 50
+    const allEntries = leagueData.standings?.results || [];
+    const topEntries = allEntries.length > 50 ? allEntries.slice(0, 50) : allEntries;
     
     return (
       <div className="space-y-6">
@@ -264,7 +266,9 @@ export default function MyDashboard() {
                 <Users className="h-4 w-4 text-blue-600" />
                 <span className="text-sm font-medium">Total Managers</span>
               </div>
-              <p className="text-2xl font-bold">{leagueData.league?.rank_count?.toLocaleString()}</p>
+              <p className="text-2xl font-bold">
+                {(leagueData.league?.rank_count || leagueData.standings?.results?.length || 0).toLocaleString()}
+              </p>
             </CardContent>
           </Card>
           
@@ -274,7 +278,9 @@ export default function MyDashboard() {
                 <Trophy className="h-4 w-4 text-yellow-600" />
                 <span className="text-sm font-medium">Your Rank</span>
               </div>
-              <p className="text-2xl font-bold">#{currentManagerEntry?.rank?.toLocaleString()}</p>
+              <p className="text-2xl font-bold">
+                #{currentManagerEntry?.rank?.toLocaleString() || 'N/A'}
+              </p>
             </CardContent>
           </Card>
           
@@ -284,17 +290,19 @@ export default function MyDashboard() {
                 <Target className="h-4 w-4 text-green-600" />
                 <span className="text-sm font-medium">Your Points</span>
               </div>
-              <p className="text-2xl font-bold">{currentManagerEntry?.total?.toLocaleString()}</p>
+              <p className="text-2xl font-bold">
+                {currentManagerEntry?.total?.toLocaleString() || 'N/A'}
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Top 10 Standings */}
+        {/* Top 50 Standings */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              Top 10 Managers
+              Top {topEntries.length} Managers
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -339,7 +347,7 @@ export default function MyDashboard() {
         </Card>
 
         {/* Performance Analysis */}
-        {leagueAnalysisData && (
+        {(leagueAnalysisData || allEntries.length > 0) && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -351,11 +359,19 @@ export default function MyDashboard() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <p className="text-sm font-medium mb-2">League Average</p>
-                  <p className="text-lg font-semibold">{leagueAnalysisData.averagePoints?.toLocaleString()} pts</p>
+                  <p className="text-lg font-semibold">
+                    {leagueAnalysisData?.averagePoints?.toLocaleString() || 
+                     (allEntries.length > 0 ? 
+                      Math.round(allEntries.reduce((sum: number, entry: any) => sum + (entry.total || 0), 0) / allEntries.length).toLocaleString() : 
+                      'N/A')} pts
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium mb-2">Top Manager</p>
-                  <p className="text-lg font-semibold">{leagueAnalysisData.topScore?.toLocaleString()} pts</p>
+                  <p className="text-lg font-semibold">
+                    {leagueAnalysisData?.topScore?.toLocaleString() || 
+                     (allEntries.length > 0 ? allEntries[0]?.total?.toLocaleString() : 'N/A')} pts
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -855,12 +871,15 @@ export default function MyDashboard() {
                                       View League
                                     </Button>
                                   </DialogTrigger>
-                                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" aria-describedby="league-analysis-description">
                                     <DialogHeader>
                                       <DialogTitle className="flex items-center gap-2">
                                         <Trophy className="h-5 w-5" />
                                         {league.name}
                                       </DialogTitle>
+                                      <p id="league-analysis-description" className="text-sm text-muted-foreground sr-only">
+                                        Detailed analysis and standings for {league.name}
+                                      </p>
                                     </DialogHeader>
                                     <LeagueAnalysis leagueId={league.id} managerId={managerId} />
                                   </DialogContent>
