@@ -1,11 +1,88 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target } from "lucide-react";
+import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Point Breakdown Tooltip Component
+function PointBreakdownTooltip({ player }: { player: PlayerTotalPointsData }) {
+  const hasBreakdownData = player.totalPointsFromGoals !== undefined;
+  
+  if (!hasBreakdownData) {
+    return (
+      <span className="font-bold text-green-800">
+        {player.totalExpectedPoints?.toFixed(1) || '0.0'}
+      </span>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="font-bold text-green-800 cursor-help hover:text-green-900 transition-colors border-b border-dashed border-green-400">
+          {player.totalExpectedPoints?.toFixed(1) || '0.0'}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200">
+        <div className="space-y-2">
+          <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
+            {player.name} - Point Breakdown
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">⚽ Goals:</span>
+              <span className="font-medium text-green-700">
+                {player.totalPointsFromGoals?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">🎯 Assists:</span>
+              <span className="font-medium text-blue-700">
+                {player.totalPointsFromAssists?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">🛡️ Clean Sheets:</span>
+              <span className="font-medium text-yellow-700">
+                {player.totalPointsFromCleanSheets?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">⚔️ Defensive:</span>
+              <span className="font-medium text-orange-700">
+                {player.totalPointsFromDefensiveContributions?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">⏱️ Minutes:</span>
+              <span className="font-medium text-purple-700">
+                {player.totalPointsFromMinutes?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">✨ Bonus:</span>
+              <span className="font-medium text-pink-700">
+                {player.totalPointsFromBonus?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+          </div>
+          <div className="border-t pt-2 mt-3">
+            <div className="flex justify-between items-center font-semibold">
+              <span className="text-gray-800">Total:</span>
+              <span className="text-green-800">
+                {player.totalExpectedPoints?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 interface PlayerTotalPointsData {
   playerId: number;
@@ -19,6 +96,19 @@ interface PlayerTotalPointsData {
   totalExpectedPoints: number;
   seasonTotalPoints: number;
   averagePerGameweek: number;
+  // Detailed point breakdowns
+  pointsFromGoals?: { [key: string]: number };
+  pointsFromAssists?: { [key: string]: number };
+  pointsFromCleanSheets?: { [key: string]: number };
+  pointsFromDefensiveContributions?: { [key: string]: number };
+  pointsFromMinutes?: { [key: string]: number };
+  pointsFromBonus?: { [key: string]: number };
+  totalPointsFromGoals?: number;
+  totalPointsFromAssists?: number;
+  totalPointsFromCleanSheets?: number;
+  totalPointsFromDefensiveContributions?: number;
+  totalPointsFromMinutes?: number;
+  totalPointsFromBonus?: number;
 }
 
 type SortField = 'name' | 'position' | 'team' | 'totalExpectedPoints' | 'seasonTotalPoints' | 'averagePerGameweek' | string;
@@ -135,8 +225,9 @@ export default function PlayerTotalPoints() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
-      <div className="container mx-auto px-6 py-8">
+    <TooltipProvider>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+        <div className="container mx-auto px-6 py-8">
         {/* Professional Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center items-center gap-3 mb-4">
@@ -368,11 +459,9 @@ export default function PlayerTotalPoints() {
                           );
                         })}
                         
-                        {/* Range Total */}
+                        {/* Range Total with Breakdown Tooltip */}
                         <td className="px-4 py-4 text-center bg-gradient-to-r from-green-50 to-emerald-50">
-                          <span className="font-bold text-green-800">
-                            {player.totalExpectedPoints?.toFixed(1) || '0.0'}
-                          </span>
+                          <PointBreakdownTooltip player={player} />
                         </td>
                         
                         {/* Season Total */}
@@ -396,7 +485,8 @@ export default function PlayerTotalPoints() {
             </CardContent>
           </Card>
         )}
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
