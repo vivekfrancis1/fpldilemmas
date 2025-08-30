@@ -8226,39 +8226,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fixture.finished === false
       );
       
-      // Calculate team attacking strength based on current season goals scored
+      // Use existing attacking tier system from MASTER_TEAM_DEFAULTS
       const teamAttackStrength = new Map();
-      currentData.teams.forEach((team: any) => {
-        // Use team strength rating and current performance
-        const strengthAttack = team.strength_attack_home + team.strength_attack_away;
-        const avgStrength = strengthAttack / 2;
-        
-        // Classify teams into attack tiers based on actual FPL strength ratings (1105-1200 range)
-        let attackTier = 'average';
-        let attackMultiplier = 1.0;
-        
-        if (avgStrength >= 1180) {
-          attackTier = 'elite';
-          attackMultiplier = 1.5; // 50% more defensive contribution needed
-        } else if (avgStrength >= 1150) {
-          attackTier = 'strong';
-          attackMultiplier = 1.3; // 30% more defensive contribution
-        } else if (avgStrength >= 1130) {
-          attackTier = 'average';
-          attackMultiplier = 1.0; // Baseline
-        } else if (avgStrength >= 1115) {
-          attackTier = 'weak';
-          attackMultiplier = 0.8; // 20% less defensive contribution
+      
+      // Helper function to get attacking tier for a team
+      const getAttackingTier = (teamId: number) => {
+        if (MASTER_TEAM_DEFAULTS.eliteAttackTeams.includes(teamId)) {
+          return { tier: 'elite', multiplier: 1.5 }; // 50% more defensive contribution needed
+        } else if (MASTER_TEAM_DEFAULTS.strongAttackTeams.includes(teamId)) {
+          return { tier: 'strong', multiplier: 1.3 }; // 30% more defensive contribution
+        } else if (MASTER_TEAM_DEFAULTS.averageAttackTeams.includes(teamId)) {
+          return { tier: 'average', multiplier: 1.0 }; // Baseline
+        } else if (MASTER_TEAM_DEFAULTS.weakAttackTeams.includes(teamId)) {
+          return { tier: 'weak', multiplier: 0.8 }; // 20% less defensive contribution
+        } else if (MASTER_TEAM_DEFAULTS.promotedAttackTeams.includes(teamId)) {
+          return { tier: 'promoted', multiplier: 0.5 }; // 50% less defensive contribution
         } else {
-          attackTier = 'promoted';
-          attackMultiplier = 0.5; // 50% less defensive contribution
+          return { tier: 'average', multiplier: 1.0 }; // Default to average
         }
-        
-        teamAttackStrength.set(team.id, {
-          tier: attackTier,
-          multiplier: attackMultiplier,
-          strength: avgStrength
-        });
+      };
+      
+      // Map all teams to their attacking tiers
+      currentData.teams.forEach((team: any) => {
+        const attackInfo = getAttackingTier(team.id);
+        teamAttackStrength.set(team.id, attackInfo);
       });
       
       console.log(`DEBUG: Calculated attack strength for ${teamAttackStrength.size} teams`);
