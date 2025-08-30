@@ -15,14 +15,11 @@ interface PlayerMinutesProjection {
   currentMinutes: number;
   currentMinutesPerGame: number;
   expectedMinutesPerGame: number;
-  gameweekProjections: { [gameweek: string]: number };
-  form: number;
   selectedByPercent: number;
-  starts: number;
   benchAppearances: number;
 }
 
-type SortField = 'name' | 'team' | 'position' | 'currentMinutes' | 'expectedMinutes' | 'form' | 'starts';
+type SortField = 'name' | 'team' | 'position' | 'currentMinutes' | 'expectedMinutes';
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerMinutes() {
@@ -33,7 +30,7 @@ export default function PlayerMinutes() {
   const [sortField, setSortField] = useState<SortField>('expectedMinutes');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [minMinutes, setMinMinutes] = useState<string>("30"); // Minimum minutes filter
-  const [selectedGameweek, setSelectedGameweek] = useState<number>(4); // Gameweek to display
+
 
   // Fetch player minutes projections data
   const { data: playerMinutesData, isLoading, error } = useQuery<PlayerMinutesProjection[]>({
@@ -90,14 +87,7 @@ export default function PlayerMinutes() {
           aValue = a.currentMinutesPerGame;
           bValue = b.currentMinutesPerGame;
           break;
-        case 'form':
-          aValue = a.form;
-          bValue = b.form;
-          break;
-        case 'starts':
-          aValue = a.starts;
-          bValue = b.starts;
-          break;
+
         default:
           aValue = a.expectedMinutesPerGame;
           bValue = b.expectedMinutesPerGame;
@@ -235,9 +225,9 @@ export default function PlayerMinutes() {
               <div className="flex items-center">
                 <TrendingUp className="h-8 w-8 mb-2" />
                 <div className="ml-4">
-                  <p className="text-orange-100 text-sm">Regular Starters</p>
+                  <p className="text-orange-100 text-sm">Expected 60+ Min</p>
                   <p className="text-2xl font-bold">
-                    {filteredAndSortedData.filter(p => p.starts >= 2).length}
+                    {filteredAndSortedData.filter(p => p.expectedMinutesPerGame >= 60).length}
                   </p>
                 </div>
               </div>
@@ -298,23 +288,7 @@ export default function PlayerMinutes() {
                 </Select>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-blue-600" />
-                <label className="text-sm font-semibold text-gray-700">Gameweek:</label>
-                <Select value={selectedGameweek.toString()} onValueChange={(value) => setSelectedGameweek(parseInt(value))}>
-                  <SelectTrigger className="w-24 border-2 border-gray-200 hover:border-blue-400 transition-colors">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="4">GW4</SelectItem>
-                    <SelectItem value="5">GW5</SelectItem>
-                    <SelectItem value="6">GW6</SelectItem>
-                    <SelectItem value="7">GW7</SelectItem>
-                    <SelectItem value="8">GW8</SelectItem>
-                    <SelectItem value="9">GW9</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
 
               <div className="ml-auto flex items-center gap-2 text-sm text-gray-600">
                 <TrendingUp className="h-4 w-4" />
@@ -393,25 +367,7 @@ export default function PlayerMinutes() {
                         </Button>
                       </th>
                       <th className="px-6 py-4 text-center">
-                        <span className="font-semibold text-gray-700">GW{selectedGameweek} Minutes</span>
-                      </th>
-                      <th className="px-6 py-4 text-center">
-                        <Button
-                          variant="ghost"
-                          onClick={() => handleSort('starts')}
-                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto"
-                        >
-                          Starts {getSortIcon('starts')}
-                        </Button>
-                      </th>
-                      <th className="px-6 py-4 text-center">
-                        <Button
-                          variant="ghost"
-                          onClick={() => handleSort('form')}
-                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto"
-                        >
-                          Form {getSortIcon('form')}
-                        </Button>
+                        <span className="font-semibold text-gray-700">Ownership %</span>
                       </th>
                     </tr>
                   </thead>
@@ -427,7 +383,7 @@ export default function PlayerMinutes() {
                           <div className="flex items-center">
                             <div>
                               <div className="font-medium text-gray-900">{player.playerName}</div>
-                              <div className="text-sm text-gray-500">Form: {player.form}</div>
+                              <div className="text-sm text-gray-500">Total: {player.currentMinutes} min</div>
                             </div>
                           </div>
                         </td>
@@ -458,18 +414,8 @@ export default function PlayerMinutes() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className={`font-semibold ${getMinutesColor(player.gameweekProjections?.[selectedGameweek] || 0)}`}>
-                            {Math.round(player.gameweekProjections?.[selectedGameweek] || 0)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="font-semibold text-blue-600">
-                            {player.starts}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
                           <div className="font-semibold text-purple-600">
-                            {player.form.toFixed(1)}
+                            {player.selectedByPercent.toFixed(1)}%
                           </div>
                         </td>
                       </tr>

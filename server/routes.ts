@@ -5122,34 +5122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const formAdjustment = Math.max(0.8, Math.min(1.2, 1 + (form - 5) / 20)); // Form adjustment between 0.8-1.2
         expectedMinutesPerGame *= formAdjustment;
         
-        // Generate gameweek-by-gameweek projections (GW4-GW9)
-        const gameweekProjections: { [gameweek: string]: number } = {};
-        for (let gw = 4; gw <= 9; gw++) {
-          // Add some variance per gameweek based on player ID for deterministic results
-          const gwSeed = (player.id * gw * 7) % 100;
-          const gwVariance = 0.85 + (gwSeed / 100) * 0.3; // Variance between 0.85-1.15
-          
-          // Apply injury risk and rotation considerations
-          let gwMinutes = expectedMinutesPerGame * gwVariance;
-          
-          // Higher chance of reduced minutes for players with high current minutes (rotation risk)
-          if (currentMinutesPerGame > 80) {
-            const rotationRisk = ((player.id * gw) % 10) / 10; // 0-1 risk factor
-            if (rotationRisk > 0.7) {
-              gwMinutes *= 0.6; // Rotation game
-            }
-          }
-          
-          // Injury risk for any player
-          const injuryRisk = ((player.id * gw * 13) % 100) / 100; // 0-1 risk factor
-          if (injuryRisk > 0.95) {
-            gwMinutes = 0; // Injured
-          } else if (injuryRisk > 0.90) {
-            gwMinutes *= 0.3; // Minor injury/doubt
-          }
-          
-          gameweekProjections[gw.toString()] = Math.max(0, Math.min(90, Math.round(gwMinutes)));
-        }
+
         
         return {
           playerId: player.id,
@@ -5159,10 +5132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentMinutes: totalMinutes,
           currentMinutesPerGame: Math.round(currentMinutesPerGame * 10) / 10,
           expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
-          gameweekProjections: gameweekProjections,
-          form: form,
           selectedByPercent: parseFloat(player.selected_by_percent) || 0,
-          starts: player.starts || 0,
           benchAppearances: Math.max(0, (player.total_points > 0 ? totalGames - (player.starts || 0) : 0))
         };
       })
