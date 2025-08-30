@@ -381,7 +381,7 @@ export default function PlayerAssistProjections() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Target className="h-5 w-5 text-green-600" />
-                    Points from Assists
+                    Points from Assists (3 pts per assist)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -405,18 +405,43 @@ export default function PlayerAssistProjections() {
                             </Button>
                           </th>
                           <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('assistShare')} className="hover:bg-green-50">
-                              Assist Share % {getSortIcon('assistShare')}
-                            </Button>
-                          </th>
-                          <th className="text-center py-2 px-1">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="hover:bg-green-50">
-                              6GW Points {getSortIcon('sixGwTotal')}
+                              6GW {getSortIcon('sixGwTotal')}
                             </Button>
                           </th>
                           <th className="text-center py-2 px-1">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
-                              Season Points {getSortIcon('seasonTotal')}
+                              Season {getSortIcon('seasonTotal')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw4')} className="hover:bg-green-50">
+                              GW4 {getSortIcon('gw4')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw5')} className="hover:bg-green-50">
+                              GW5 {getSortIcon('gw5')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw6')} className="hover:bg-green-50">
+                              GW6 {getSortIcon('gw6')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw7')} className="hover:bg-green-50">
+                              GW7 {getSortIcon('gw7')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw8')} className="hover:bg-green-50">
+                              GW8 {getSortIcon('gw8')}
+                            </Button>
+                          </th>
+                          <th className="text-center py-2 px-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw9')} className="hover:bg-green-50">
+                              GW9 {getSortIcon('gw9')}
                             </Button>
                           </th>
                         </tr>
@@ -444,13 +469,40 @@ export default function PlayerAssistProjections() {
                               </Badge>
                             </td>
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {player.assistShare.toFixed(1)}%
-                            </td>
-                            <td className="text-center py-3 px-1 font-semibold text-green-700">
                               {sixGwPoints}
                             </td>
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
                               {seasonPoints}
+                            </td>
+                            <td className="text-center py-3 px-1">
+                              <span className={`${(player.gameweekProjections[4] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
+                                {((player.gameweekProjections[4] || 0) * 3).toFixed(1)}
+                              </span>
+                            </td>
+                            <td className="text-center py-3 px-1">
+                              <span className={`${(player.gameweekProjections[5] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
+                                {((player.gameweekProjections[5] || 0) * 3).toFixed(1)}
+                              </span>
+                            </td>
+                            <td className="text-center py-3 px-1">
+                              <span className={`${(player.gameweekProjections[6] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
+                                {((player.gameweekProjections[6] || 0) * 3).toFixed(1)}
+                              </span>
+                            </td>
+                            <td className="text-center py-3 px-1">
+                              <span className={`${(player.gameweekProjections[7] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
+                                {((player.gameweekProjections[7] || 0) * 3).toFixed(1)}
+                              </span>
+                            </td>
+                            <td className="text-center py-3 px-1">
+                              <span className={`${(player.gameweekProjections[8] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
+                                {((player.gameweekProjections[8] || 0) * 3).toFixed(1)}
+                              </span>
+                            </td>
+                            <td className="text-center py-3 px-1">
+                              <span className={`${(player.gameweekProjections[9] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
+                                {((player.gameweekProjections[9] || 0) * 3).toFixed(1)}
+                              </span>
                             </td>
                           </tr>
                           );
