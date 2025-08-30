@@ -6510,9 +6510,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch all component data from existing endpoints
       const [goalsResponse, assistsResponse, cleanSheetsResponse, minutesResponse, bootstrapResponse] = await Promise.all([
         fetch(`http://localhost:5000/api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
-        fetch(`http://localhost:5000/api/player-assist-projections`),
+        fetch(`http://localhost:5000/api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
         fetch(`http://localhost:5000/api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`),
-        fetch(`http://localhost:5000/api/player-minutes-projections`),
+        fetch(`http://localhost:5000/api/player-minutes-projections?startGameweek=${start}&endGameweek=${end}`),
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
       ]);
       
@@ -6527,6 +6527,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         minutesResponse.json(),
         bootstrapResponse.json()
       ]);
+      
+
       
       // Create player lookup maps for efficient merging
       const goalsMap = new Map();
@@ -6592,21 +6594,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (let gw = start; gw <= end; gw++) {
           let gwTotal = 0;
           
-          // Goals points
-          const goalsProjected = player.gameweekProjections?.[`gw${gw}`] || 0;
+          // Goals points - goals API uses string keys without "gw" prefix
+          const goalsProjected = player.gameweekProjections?.[gw.toString()] || 0;
           const goalPoints = goalsProjected * (pointsSystem.goals[player.position as keyof typeof pointsSystem.goals] || 4);
           gwTotal += goalPoints;
           
-          // Assists points
+
+          
+          // Assists points - assists API uses "gw" prefix
           const assistsProjected = assistPlayer?.gameweekProjections?.[`gw${gw}`] || 0;
           const assistPoints = assistsProjected * pointsSystem.assists[player.position as keyof typeof pointsSystem.assists];
           gwTotal += assistPoints;
           
-          // Clean sheet points (already calculated in points, not probability)
+          // Clean sheet points - clean sheet API uses "gw" prefix (already calculated in points, not probability)
           const csPoints = cleanSheetPlayer?.gameweekProjections?.[`gw${gw}`] || 0;
           gwTotal += csPoints;
           
-          // Minutes points (2 points if expected minutes >= 60)
+          // Minutes points - minutes API uses "gw" prefix (2 points if expected minutes >= 60)
           const expectedMinutes = minutesPlayer?.gameweekProjections?.[`gw${gw}`] || 0;
           const minutesPoints = expectedMinutes >= 60 ? pointsSystem.minutesPoints : (expectedMinutes >= 1 ? 1 : 0);
           gwTotal += minutesPoints;
