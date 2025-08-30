@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, TrendingUp, TrendingDown, ArrowRight, Sword, Shield } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { BootstrapData, Fixture } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -17,71 +17,6 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [sortBy, setSortBy] = useState("easiest");
   const [viewMode, setViewMode] = useState<"teams" | "gameweeks">("teams");
-
-  // Team tier configurations (matching server/routes.ts MASTER_TEAM_DEFAULTS)
-  const TEAM_TIERS = {
-    // Attack Teams
-    eliteAttackTeams: [12, 13], // Liverpool, Manchester City
-    strongAttackTeams: [1, 7, 15, 18, 2], // Arsenal, Chelsea, Newcastle, Tottenham, Aston Villa
-    averageAttackTeams: [6, 14, 4, 5, 10, 8], // Brighton, Manchester United, Bournemouth, Brentford, Fulham, Crystal Palace
-    weakAttackTeams: [9, 16, 19, 20], // Everton, Nottingham Forest, West Ham, Wolves
-    promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
-    
-    // Defense Teams
-    eliteDefenseTeams: [1], // Arsenal
-    strongDefenseTeams: [12, 13, 7, 15, 16], // Liverpool, Man City, Chelsea, Newcastle, Nottingham Forest
-    averageDefenseTeams: [2, 9, 14, 18, 8, 10], // Aston Villa, Everton, Manchester United, Tottenham, Crystal Palace, Fulham
-    weakDefenseTeams: [4, 5, 6, 19, 20], // Bournemouth, Brentford, Brighton, West Ham, Wolves
-    promotedDefenseTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
-  };
-
-  // Tier multipliers (matching server/routes.ts MASTER_TEAM_DEFAULTS)
-  const MULTIPLIERS = {
-    attack: {
-      elite: 1.35,
-      strong: 1.15,
-      average: 1.00,
-      weak: 0.85,
-      promoted: 0.7,
-    },
-    defense: {
-      elite: 0.7,
-      strong: 0.85,
-      average: 1.0,
-      weak: 1.15,
-      promoted: 1.3,
-    },
-    venue: {
-      home: 1.16,
-      away: 0.84,
-    }
-  };
-
-  // Helper functions to get team tiers
-  const getAttackTier = (teamId: number): string => {
-    if (TEAM_TIERS.eliteAttackTeams.includes(teamId)) return 'elite';
-    if (TEAM_TIERS.strongAttackTeams.includes(teamId)) return 'strong';
-    if (TEAM_TIERS.weakAttackTeams.includes(teamId)) return 'weak';
-    if (TEAM_TIERS.promotedAttackTeams.includes(teamId)) return 'promoted';
-    return 'average';
-  };
-
-  const getDefenseTier = (teamId: number): string => {
-    if (TEAM_TIERS.eliteDefenseTeams.includes(teamId)) return 'elite';
-    if (TEAM_TIERS.strongDefenseTeams.includes(teamId)) return 'strong';
-    if (TEAM_TIERS.weakDefenseTeams.includes(teamId)) return 'weak';
-    if (TEAM_TIERS.promotedDefenseTeams.includes(teamId)) return 'promoted';
-    return 'average';
-  };
-
-  // Helper functions to get tier multipliers
-  const getAttackMultiplier = (tier: string): number => {
-    return MULTIPLIERS.attack[tier as keyof typeof MULTIPLIERS.attack] || MULTIPLIERS.attack.average;
-  };
-
-  const getDefenseMultiplier = (tier: string): number => {
-    return MULTIPLIERS.defense[tier as keyof typeof MULTIPLIERS.defense] || MULTIPLIERS.defense.average;
-  };
 
   const { data: fixtures, isLoading: fixturesLoading } = useQuery<Fixture[]>({
     queryKey: ["/api/fixtures"],
@@ -103,29 +38,12 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
           const opponent = data.teams.find(t => t.id === opponentId);
           const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
           
-          // Calculate Attack and Defence scores
-          const venueFactor = isHome ? MULTIPLIERS.venue.home : MULTIPLIERS.venue.away;
-          const opponentDefenseTier = getDefenseTier(opponentId);
-          const opponentAttackTier = getAttackTier(opponentId);
-          const opponentDefenseMultiplier = getDefenseMultiplier(opponentDefenseTier);
-          const opponentAttackMultiplier = getAttackMultiplier(opponentAttackTier);
-          
-          // Attack score = Venue factor × Opponent's Defensive Tier Multiplier
-          const attackScore = venueFactor * opponentDefenseMultiplier;
-          
-          // Defence score = Venue factor ÷ Opponent's Attacking Tier Multiplier
-          const defenceScore = venueFactor / opponentAttackMultiplier;
-          
           return {
             ...fixture,
             isHome,
             opponent: opponent?.short_name || "",
             difficulty,
-            gameweek: fixture.event || 0,
-            attackScore: parseFloat(attackScore.toFixed(2)),
-            defenceScore: parseFloat(defenceScore.toFixed(2)),
-            opponentDefenseTier,
-            opponentAttackTier
+            gameweek: fixture.event || 0
           };
         });
 
@@ -133,20 +51,10 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
         ? teamUpcomingFixtures.reduce((sum, f) => sum + f.difficulty, 0) / teamUpcomingFixtures.length
         : 0;
 
-      const avgAttackScore = teamUpcomingFixtures.length > 0 
-        ? teamUpcomingFixtures.reduce((sum, f) => sum + f.attackScore, 0) / teamUpcomingFixtures.length
-        : 0;
-
-      const avgDefenceScore = teamUpcomingFixtures.length > 0 
-        ? teamUpcomingFixtures.reduce((sum, f) => sum + f.defenceScore, 0) / teamUpcomingFixtures.length
-        : 0;
-
       return {
         team,
         fixtures: teamUpcomingFixtures,
-        avgDifficulty: parseFloat(avgDifficulty.toFixed(2)),
-        avgAttackScore: parseFloat(avgAttackScore.toFixed(2)),
-        avgDefenceScore: parseFloat(avgDefenceScore.toFixed(2))
+        avgDifficulty: parseFloat(avgDifficulty.toFixed(2))
       };
     });
   }, [data, fixtures, selectedGameweeks]);
@@ -163,14 +71,6 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
           return a.avgDifficulty - b.avgDifficulty;
         case "hardest":
           return b.avgDifficulty - a.avgDifficulty;
-        case "best-attack":
-          return b.avgAttackScore - a.avgAttackScore; // Higher is better for attack
-        case "worst-attack":
-          return a.avgAttackScore - b.avgAttackScore; // Lower is worse for attack
-        case "best-defence":
-          return b.avgDefenceScore - a.avgDefenceScore; // Higher is better for defence
-        case "worst-defence":
-          return a.avgDefenceScore - b.avgDefenceScore; // Lower is worse for defence
         case "alphabetical":
           return a.team.name.localeCompare(b.team.name);
         default:
@@ -383,10 +283,6 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
               <SelectContent>
                 <SelectItem value="easiest">Easiest Fixtures First</SelectItem>
                 <SelectItem value="hardest">Hardest Fixtures First</SelectItem>
-                <SelectItem value="best-attack">Best Attack Opportunities</SelectItem>
-                <SelectItem value="worst-attack">Worst Attack Opportunities</SelectItem>
-                <SelectItem value="best-defence">Best Defence Opportunities</SelectItem>
-                <SelectItem value="worst-defence">Worst Defence Opportunities</SelectItem>
                 <SelectItem value="alphabetical">Team Name (A-Z)</SelectItem>
               </SelectContent>
             </Select>
@@ -428,46 +324,24 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
               {teamFixture.fixtures.map((fixture, index) => (
                 <div 
                   key={fixture.id} 
-                  className="py-2 px-3 bg-gray-50 rounded-lg space-y-2"
+                  className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg"
                   data-testid={`fixture-${fixture.id}`}
                 >
-                  {/* Fixture header with opponent and FPL difficulty */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs text-gray-500 w-8">
-                        GW{fixture.gameweek}
-                      </span>
-                      <span className="text-sm font-medium">
-                        {fixture.isHome ? "vs" : "@"} {fixture.opponent}
-                      </span>
-                    </div>
-                    <Badge 
-                      variant="outline" 
-                      className={getDifficultyColor(fixture.difficulty)}
-                      data-testid={`badge-difficulty-${fixture.id}`}
-                    >
-                      {fixture.difficulty}
-                    </Badge>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-gray-500 w-8">
+                      GW{fixture.gameweek}
+                    </span>
+                    <span className="text-sm font-medium">
+                      {fixture.isHome ? "vs" : "@"} {fixture.opponent}
+                    </span>
                   </div>
-                  
-                  {/* Attack and Defence scores */}
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center space-x-1">
-                        <Sword className="h-3 w-3 text-orange-600" />
-                        <span className="text-gray-600">Attack:</span>
-                        <span className="font-medium text-orange-700">{fixture.attackScore}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Shield className="h-3 w-3 text-blue-600" />
-                        <span className="text-gray-600">Defence:</span>
-                        <span className="font-medium text-blue-700">{fixture.defenceScore}</span>
-                      </div>
-                    </div>
-                    <div className="text-gray-500">
-                      vs {fixture.opponentAttackTier.charAt(0).toUpperCase() + fixture.opponentAttackTier.slice(1)} ATT | {fixture.opponentDefenseTier.charAt(0).toUpperCase() + fixture.opponentDefenseTier.slice(1)} DEF
-                    </div>
-                  </div>
+                  <Badge 
+                    variant="outline" 
+                    className={getDifficultyColor(fixture.difficulty)}
+                    data-testid={`badge-difficulty-${fixture.id}`}
+                  >
+                    {fixture.difficulty}
+                  </Badge>
                 </div>
               ))}
               
@@ -481,7 +355,7 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
 
             {/* Summary */}
             {teamFixture.fixtures.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
+              <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Average Difficulty:</span>
                   <Badge 
@@ -491,20 +365,6 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
                   >
                     {getDifficultyText(teamFixture.avgDifficulty)} ({teamFixture.avgDifficulty})
                   </Badge>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-1">
-                      <Sword className="h-3 w-3 text-orange-600" />
-                      <span className="text-gray-600">Avg Attack:</span>
-                      <span className="font-medium text-orange-700">{teamFixture.avgAttackScore}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Shield className="h-3 w-3 text-blue-600" />
-                      <span className="text-gray-600">Avg Defence:</span>
-                      <span className="font-medium text-blue-700">{teamFixture.avgDefenceScore}</span>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}

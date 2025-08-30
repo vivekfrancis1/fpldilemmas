@@ -28,7 +28,7 @@ export default function Fixtures() {
     // Show next 6 gameweeks: GW3 to GW8
     return { start: 3, end: 8 };
   });
-  const [sortBy, setSortBy] = useState<string>('fdr-asc');
+  const [sortBy, setSortBy] = useState<'team' | 'fdr-asc' | 'fdr-desc'>('fdr-asc');
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -90,25 +90,7 @@ export default function Fixtures() {
 
   // Get attacking tier for a team
   const getAttackingTier = (teamId: number): string => {
-    // Fallback classifications if adminSettings not available
-    const fallbackAttackTiers = {
-      // Elite attack: Arsenal, Man City, Liverpool, Newcastle
-      elite: [1, 3, 11, 14], 
-      // Strong attack: Chelsea, Spurs, Brighton, Aston Villa
-      strong: [4, 6, 8, 7],
-      // Weak attack: Crystal Palace, Everton, Fulham
-      weak: [9, 10, 13], 
-      // Promoted: Leicester, Ipswich, Southampton  
-      promoted: [12, 15, 18]
-    };
-    
-    if (!adminSettings) {
-      if (fallbackAttackTiers.elite.includes(teamId)) return 'elite';
-      if (fallbackAttackTiers.strong.includes(teamId)) return 'strong';
-      if (fallbackAttackTiers.weak.includes(teamId)) return 'weak';
-      if (fallbackAttackTiers.promoted.includes(teamId)) return 'promoted';
-      return 'average';
-    }
+    if (!adminSettings) return 'average';
     
     const parseTeamArray = (teamData: any): number[] => {
       if (Array.isArray(teamData)) return teamData;
@@ -136,25 +118,7 @@ export default function Fixtures() {
 
   // Get defensive tier for a team
   const getDefensiveTier = (teamId: number): string => {
-    // Fallback classifications if adminSettings not available
-    const fallbackDefenseTiers = {
-      // Elite defense: Liverpool, Arsenal, Man City
-      elite: [11, 1, 3],
-      // Strong defense: Chelsea, Newcastle, Aston Villa
-      strong: [8, 14, 7], 
-      // Weak defense: Bournemouth, Brentford, Wolves
-      weak: [2, 5, 20],
-      // Promoted: Leicester, Ipswich, Southampton
-      promoted: [12, 15, 18]
-    };
-    
-    if (!adminSettings) {
-      if (fallbackDefenseTiers.elite.includes(teamId)) return 'elite';
-      if (fallbackDefenseTiers.strong.includes(teamId)) return 'strong';
-      if (fallbackDefenseTiers.weak.includes(teamId)) return 'weak';
-      if (fallbackDefenseTiers.promoted.includes(teamId)) return 'promoted';
-      return 'average';
-    }
+    if (!adminSettings) return 'average';
     
     const parseTeamArray = (teamData: any): number[] => {
       if (Array.isArray(teamData)) return teamData;
@@ -204,71 +168,15 @@ export default function Fixtures() {
     }
   };
 
-  // Tier multipliers (matching server configuration)
-  const MULTIPLIERS = {
-    attack: {
-      elite: 1.35,
-      strong: 1.15,
-      average: 1.00,
-      weak: 0.85,
-      promoted: 0.7,
-    },
-    defense: {
-      elite: 0.7,
-      strong: 0.85,
-      average: 1.0,
-      weak: 1.15,
-      promoted: 1.3,
-    },
-    venue: {
-      home: 1.16,
-      away: 0.84,
-    }
-  };
-
-  // Get multiplier for attack tier
-  const getAttackMultiplier = (tier: string): number => {
-    return MULTIPLIERS.attack[tier as keyof typeof MULTIPLIERS.attack] || MULTIPLIERS.attack.average;
-  };
-
-  // Get multiplier for defense tier
-  const getDefenseMultiplier = (tier: string): number => {
-    return MULTIPLIERS.defense[tier as keyof typeof MULTIPLIERS.defense] || MULTIPLIERS.defense.average;
-  };
-
-  // Calculate Attack and Defence FDR scores for a fixture
-  const calculateScores = (teamId: number, opponentId: number, isHome: boolean) => {
-    const venueFactor = isHome ? MULTIPLIERS.venue.home : MULTIPLIERS.venue.away;
-    const opponentDefenseTier = getDefensiveTier(opponentId);
-    const opponentAttackTier = getAttackingTier(opponentId);
-    const opponentDefenseMultiplier = getDefenseMultiplier(opponentDefenseTier);
-    const opponentAttackMultiplier = getAttackMultiplier(opponentAttackTier);
-    
-    // Attack FDR score = 3 / (Defensive Tier multiplier of opponent × Venue Factor)
-    const attackScore = 3 / (opponentDefenseMultiplier * venueFactor);
-    
-    // Defence FDR score = (3 × Attacking Tier of opponent) / Venue Factor
-    const defenceScore = (3 * opponentAttackMultiplier) / venueFactor;
-    
-    return {
-      attackScore: parseFloat(attackScore.toFixed(2)),
-      defenceScore: parseFloat(defenceScore.toFixed(2)),
-      opponentAttackTier,
-      opponentDefenseTier
-    };
-  };
-
-  // Build fixture matrix with average FDR calculation and Attack/Defence scores
-  const { fixtureMatrix, teamAverageFDR, teamAverageAttack, teamAverageDefence } = useMemo(() => {
-    if (!fixturesData || !bootstrapData?.events) return { fixtureMatrix: {}, teamAverageFDR: {}, teamAverageAttack: {}, teamAverageDefence: {} };
+  // Build fixture matrix with average FDR calculation
+  const { fixtureMatrix, teamAverageFDR } = useMemo(() => {
+    if (!fixturesData || !bootstrapData?.events) return { fixtureMatrix: {}, teamAverageFDR: {} };
     
     // Use hardcoded teams for better performance
     const teams = PREMIER_LEAGUE_TEAMS;
 
-    const matrix: Record<number, Record<number, { opponent: string, difficulty: number, isHome: boolean, finished: boolean, attackScore: number, defenceScore: number }>> = {};
+    const matrix: Record<number, Record<number, { opponent: string, difficulty: number, isHome: boolean, finished: boolean }>> = {};
     const avgFDR: Record<number, number> = {};
-    const avgAttack: Record<number, number> = {};
-    const avgDefence: Record<number, number> = {};
     
     // Initialize matrix
     bootstrapData.teams.forEach(team => {
@@ -282,19 +190,12 @@ export default function Fixtures() {
         const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
         
         if (homeTeam && awayTeam) {
-          // Calculate scores for home team
-          const homeScores = calculateScores(fixture.team_h, fixture.team_a, true);
-          // Calculate scores for away team
-          const awayScores = calculateScores(fixture.team_a, fixture.team_h, false);
-          
           // Home team entry
           matrix[fixture.team_h][fixture.event] = {
             opponent: awayTeam.short_name,
             difficulty: fixture.team_h_difficulty,
             isHome: true,
-            finished: fixture.finished,
-            attackScore: homeScores.attackScore,
-            defenceScore: homeScores.defenceScore
+            finished: fixture.finished
           };
           
           // Away team entry  
@@ -302,33 +203,24 @@ export default function Fixtures() {
             opponent: homeTeam.short_name,
             difficulty: fixture.team_a_difficulty,
             isHome: false,
-            finished: fixture.finished,
-            attackScore: awayScores.attackScore,
-            defenceScore: awayScores.defenceScore
+            finished: fixture.finished
           };
         }
       }
     });
 
-    // Calculate averages for each team
+    // Calculate average FDR for each team
     bootstrapData.teams.forEach(team => {
       const teamFixtures = Object.values(matrix[team.id] || {});
       if (teamFixtures.length > 0) {
         const totalDifficulty = teamFixtures.reduce((sum, fixture) => sum + fixture.difficulty, 0);
-        const totalAttack = teamFixtures.reduce((sum, fixture) => sum + fixture.attackScore, 0);
-        const totalDefence = teamFixtures.reduce((sum, fixture) => sum + fixture.defenceScore, 0);
-        
         avgFDR[team.id] = parseFloat((totalDifficulty / teamFixtures.length).toFixed(2));
-        avgAttack[team.id] = parseFloat((totalAttack / teamFixtures.length).toFixed(2));
-        avgDefence[team.id] = parseFloat((totalDefence / teamFixtures.length).toFixed(2));
       } else {
         avgFDR[team.id] = 0;
-        avgAttack[team.id] = 0;
-        avgDefence[team.id] = 0;
       }
     });
 
-    return { fixtureMatrix: matrix, teamAverageFDR: avgFDR, teamAverageAttack: avgAttack, teamAverageDefence: avgDefence };
+    return { fixtureMatrix: matrix, teamAverageFDR: avgFDR };
   }, [bootstrapData, fixturesData, gameweekRange]);
 
   const gameweeks = useMemo(() => {
@@ -344,51 +236,15 @@ export default function Fixtures() {
     // Use hardcoded teams for better performance
     const teams = [...PREMIER_LEAGUE_TEAMS];
     
-    // Handle gameweek-specific sorting for attack scores
-    if (sortBy.startsWith('attack-gw')) {
-      const gwMatch = sortBy.match(/attack-gw(\d+)-(asc|desc)/);
-      if (gwMatch) {
-        const gw = parseInt(gwMatch[1]);
-        const direction = gwMatch[2];
-        return teams.sort((a, b) => {
-          const scoreA = fixtureMatrix[a.id]?.[gw]?.attackScore || 0;
-          const scoreB = fixtureMatrix[b.id]?.[gw]?.attackScore || 0;
-          return direction === 'asc' ? scoreA - scoreB : scoreB - scoreA;
-        });
-      }
-    }
-    
-    // Handle gameweek-specific sorting for defence scores
-    if (sortBy.startsWith('defence-gw')) {
-      const gwMatch = sortBy.match(/defence-gw(\d+)-(asc|desc)/);
-      if (gwMatch) {
-        const gw = parseInt(gwMatch[1]);
-        const direction = gwMatch[2];
-        return teams.sort((a, b) => {
-          const scoreA = fixtureMatrix[a.id]?.[gw]?.defenceScore || 0;
-          const scoreB = fixtureMatrix[b.id]?.[gw]?.defenceScore || 0;
-          return direction === 'asc' ? scoreA - scoreB : scoreB - scoreA;
-        });
-      }
-    }
-    
     switch (sortBy) {
       case 'fdr-asc':
         return teams.sort((a, b) => (teamAverageFDR[a.id] || 0) - (teamAverageFDR[b.id] || 0));
       case 'fdr-desc':
         return teams.sort((a, b) => (teamAverageFDR[b.id] || 0) - (teamAverageFDR[a.id] || 0));
-      case 'attack-asc':
-        return teams.sort((a, b) => (teamAverageAttack[a.id] || 0) - (teamAverageAttack[b.id] || 0));
-      case 'attack-desc':
-        return teams.sort((a, b) => (teamAverageAttack[b.id] || 0) - (teamAverageAttack[a.id] || 0));
-      case 'defence-asc':
-        return teams.sort((a, b) => (teamAverageDefence[a.id] || 0) - (teamAverageDefence[b.id] || 0));
-      case 'defence-desc':
-        return teams.sort((a, b) => (teamAverageDefence[b.id] || 0) - (teamAverageDefence[a.id] || 0));
       default:
         return teams.sort((a, b) => a.short_name.localeCompare(b.short_name));
     }
-  }, [bootstrapData?.teams, teamAverageFDR, teamAverageAttack, teamAverageDefence, fixtureMatrix, sortBy]);
+  }, [bootstrapData?.teams, teamAverageFDR, sortBy]);
 
   if (error) {
     return (
@@ -466,17 +322,13 @@ export default function Fixtures() {
                   <label className="text-sm font-medium text-gray-700">Sort by:</label>
                   <select 
                     value={sortBy} 
-                    onChange={(e) => setSortBy(e.target.value as 'team' | 'fdr-asc' | 'fdr-desc' | 'attack-asc' | 'attack-desc' | 'defence-asc' | 'defence-desc')}
+                    onChange={(e) => setSortBy(e.target.value as 'team' | 'fdr-asc' | 'fdr-desc')}
                     className="px-3 py-1 border border-gray-300 rounded text-sm"
                     data-testid="select-sort-by"
                   >
                     <option value="team">Team Name</option>
                     <option value="fdr-asc">FDR (Easiest First)</option>
                     <option value="fdr-desc">FDR (Hardest First)</option>
-                    <option value="attack-asc">Attack Score (Lowest First)</option>
-                    <option value="attack-desc">Attack Score (Highest First)</option>
-                    <option value="defence-asc">Defence Score (Lowest First)</option>
-                    <option value="defence-desc">Defence Score (Highest First)</option>
                   </select>
                 </div>
               </div>
@@ -492,11 +344,11 @@ export default function Fixtures() {
               </TabsTrigger>
               <TabsTrigger value="attacking" className="flex items-center gap-2">
                 <Sword className="h-4 w-4" />
-                Attack FDR
+                FDR for Attackers
               </TabsTrigger>
               <TabsTrigger value="defensive" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                Defence FDR
+                FDR for Defenders
               </TabsTrigger>
             </TabsList>
 
@@ -538,18 +390,8 @@ export default function Fixtures() {
                     <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th 
-                            className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24 cursor-pointer hover:bg-gray-100"
-                            onClick={() => setSortBy('team')}
-                          >
-                            Team {sortBy === 'team' && '↑'}
-                          </th>
-                          <th 
-                            className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l cursor-pointer hover:bg-gray-100"
-                            onClick={() => setSortBy(sortBy === 'fdr-asc' ? 'fdr-desc' : 'fdr-asc')}
-                          >
-                            Avg FDR {sortBy === 'fdr-asc' ? '↑' : sortBy === 'fdr-desc' ? '↓' : ''}
-                          </th>
+                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
+                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Avg FDR</th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
@@ -613,15 +455,31 @@ export default function Fixtures() {
               )}
             </TabsContent>
 
-            {/* Attack FDR Analysis Tab */}
+            {/* Attacking Analysis Tab */}
             <TabsContent value="attacking" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <Sword className="h-3 w-3 text-orange-600" />
-                  <span className="text-gray-700">Attack FDR = 3 ÷ (Opponent's Defence Multiplier × Venue Factor)</span>
+                  <div className="w-3 h-3 bg-green-300 rounded"></div>
+                  <span>1 Very Easy</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
+                  <span>2 Easy</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
+                  <span>3 Medium</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
+                  <span>4 Hard</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-300 rounded"></div>
+                  <span>5 Very Hard</span>
                 </div>
                 <div className="text-xs text-gray-600">
-                  Lower scores indicate better attacking opportunities. Home: ×1.16, Away: ×0.84
+                  Attacking difficulty based on opponent's defensive strength
                 </div>
               </div>
 
@@ -635,27 +493,12 @@ export default function Fixtures() {
                     <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th 
-                            className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24 cursor-pointer hover:bg-gray-100"
-                            onClick={() => setSortBy('team')}
-                          >
-                            Team {sortBy === 'team' && '↑'}
-                          </th>
-                          <th 
-                            className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l cursor-pointer hover:bg-gray-100"
-                            onClick={() => setSortBy(sortBy === 'attack-asc' ? 'attack-desc' : 'attack-asc')}
-                          >
-                            Avg Attack FDR {sortBy === 'attack-asc' ? '↑' : sortBy === 'attack-desc' ? '↓' : ''}
-                          </th>
+                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
                           {gameweeks.map(gw => (
-                            <th 
-                              key={gw} 
-                              className={`px-2 py-2 text-center font-semibold min-w-16 cursor-pointer hover:bg-gray-100 ${
-                                gw === currentGameweek ? 'bg-blue-100 text-blue-900 hover:bg-blue-200' : ''
-                              }`}
-                              onClick={() => setSortBy(sortBy === `attack-gw${gw}-asc` ? `attack-gw${gw}-desc` : `attack-gw${gw}-asc`)}
-                            >
-                              GW{gw} {sortBy === `attack-gw${gw}-asc` ? '↑' : sortBy === `attack-gw${gw}-desc` ? '↓' : ''}
+                            <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
+                              gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
+                            }`}>
+                              GW{gw}
                             </th>
                           ))}
                         </tr>
@@ -667,11 +510,6 @@ export default function Fixtures() {
                               <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">{team.short_name}</span>
-                                </div>
-                              </td>
-                              <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
-                                <div className="inline-block px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-800">
-                                  {teamAverageAttack[team.id] > 0 ? teamAverageAttack[team.id] : '-'}
                                 </div>
                               </td>
                               {gameweeks.map(gw => {
@@ -686,28 +524,35 @@ export default function Fixtures() {
                                   );
                                 }
 
-                                // Color by Attack FDR score (lower is better)
-                                const getAttackFDRColor = (attackScore: number) => {
-                                  if (attackScore <= 2) return 'bg-green-300 text-green-800'; // Very Easy (FDR 1-2)
-                                  if (attackScore <= 2.5) return 'bg-green-100 text-green-800'; // Easy (FDR 2-2.5)
-                                  if (attackScore <= 3.5) return 'bg-gray-100 text-gray-800'; // Medium (FDR 2.5-3.5)
-                                  if (attackScore <= 4) return 'bg-red-100 text-red-800'; // Hard (FDR 3.5-4)
-                                  return 'bg-red-300 text-red-800'; // Very Hard (FDR 4+)
+                                const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
+                                const opponentDefenseTier = opponentId ? getDefensiveTier(opponentId) : 'average';
+                                
+                                // Color by opponent's defensive tier (exact same colors as Balanced FDR)
+                                const getOpponentDefenseColor = (defenseTier: string) => {
+                                  switch (defenseTier) {
+                                    case 'elite': return 'bg-red-300 text-red-800'; // Very Hard (FDR 5) - light red
+                                    case 'strong': return 'bg-red-100 text-red-800'; // Hard (FDR 4)
+                                    case 'average': return 'bg-gray-100 text-gray-800'; // Medium (FDR 3)
+                                    case 'weak': return 'bg-green-100 text-green-800'; // Easy (FDR 2)
+                                    case 'promoted': return 'bg-green-300 text-green-800'; // Very Easy (FDR 1) - light green
+                                    default: return 'bg-gray-300 text-gray-900';
+                                  }
                                 };
-
+                                
                                 return (
                                   <td key={gw} className={`px-1 py-1 text-center ${
                                     gw === currentGameweek ? 'bg-blue-50' : ''
                                   }`}>
                                     <div 
-                                      className={`px-1 py-1 rounded text-xs font-medium ${getAttackFDRColor(fixture.attackScore)} ${
+                                      className={`px-1 py-1 rounded text-xs font-medium ${getOpponentDefenseColor(opponentDefenseTier)} ${
                                         fixture.finished ? 'opacity-50' : ''
                                       }`}
-                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Attack FDR: ${fixture.attackScore} (lower is better)`}
+                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - ${opponentDefenseTier} defense`}
                                       data-testid={`attack-fixture-${team.id}-${gw}`}
                                     >
-                                      <div className="font-bold">{fixture.attackScore}</div>
-                                      <div className="text-xs">{fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                      <span className="truncate text-xs font-medium whitespace-nowrap">
+                                        {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})
+                                      </span>
                                     </div>
                                   </td>
                                 );
@@ -722,15 +567,31 @@ export default function Fixtures() {
               )}
             </TabsContent>
 
-            {/* Defence FDR Analysis Tab */}
+            {/* Defensive Analysis Tab */}
             <TabsContent value="defensive" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <Shield className="h-3 w-3 text-blue-600" />
-                  <span className="text-gray-700">Defence FDR = (3 × Opponent's Attack Multiplier) ÷ Venue Factor</span>
+                  <div className="w-3 h-3 bg-green-300 rounded"></div>
+                  <span>1 Very Easy</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
+                  <span>2 Easy</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
+                  <span>3 Medium</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
+                  <span>4 Hard</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-300 rounded"></div>
+                  <span>5 Very Hard</span>
                 </div>
                 <div className="text-xs text-gray-600">
-                  Lower scores indicate better defensive opportunities. Home: ×1.16, Away: ×0.84
+                  Defensive difficulty based on opponent's attacking strength
                 </div>
               </div>
 
@@ -744,27 +605,12 @@ export default function Fixtures() {
                     <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th 
-                            className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24 cursor-pointer hover:bg-gray-100"
-                            onClick={() => setSortBy('team')}
-                          >
-                            Team {sortBy === 'team' && '↑'}
-                          </th>
-                          <th 
-                            className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l cursor-pointer hover:bg-gray-100"
-                            onClick={() => setSortBy(sortBy === 'defence-asc' ? 'defence-desc' : 'defence-asc')}
-                          >
-                            Avg Defence FDR {sortBy === 'defence-asc' ? '↑' : sortBy === 'defence-desc' ? '↓' : ''}
-                          </th>
+                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
                           {gameweeks.map(gw => (
-                            <th 
-                              key={gw} 
-                              className={`px-2 py-2 text-center font-semibold min-w-16 cursor-pointer hover:bg-gray-100 ${
-                                gw === currentGameweek ? 'bg-blue-100 text-blue-900 hover:bg-blue-200' : ''
-                              }`}
-                              onClick={() => setSortBy(sortBy === `defence-gw${gw}-asc` ? `defence-gw${gw}-desc` : `defence-gw${gw}-asc`)}
-                            >
-                              GW{gw} {sortBy === `defence-gw${gw}-asc` ? '↑' : sortBy === `defence-gw${gw}-desc` ? '↓' : ''}
+                            <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
+                              gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
+                            }`}>
+                              GW{gw}
                             </th>
                           ))}
                         </tr>
@@ -776,11 +622,6 @@ export default function Fixtures() {
                               <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">{team.short_name}</span>
-                                </div>
-                              </td>
-                              <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
-                                <div className="inline-block px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
-                                  {teamAverageDefence[team.id] > 0 ? teamAverageDefence[team.id] : '-'}
                                 </div>
                               </td>
                               {gameweeks.map(gw => {
@@ -795,30 +636,35 @@ export default function Fixtures() {
                                   );
                                 }
 
-
+                                const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
+                                const opponentAttackTier = opponentId ? getAttackingTier(opponentId) : 'average';
                                 
-                                // Color by Defence FDR score (lower is better)
-                                const getDefenceFDRColor = (defenceScore: number) => {
-                                  if (defenceScore <= 2) return 'bg-green-300 text-green-800'; // Very Easy (FDR 1-2)
-                                  if (defenceScore <= 2.5) return 'bg-green-100 text-green-800'; // Easy (FDR 2-2.5)
-                                  if (defenceScore <= 3.5) return 'bg-gray-100 text-gray-800'; // Medium (FDR 2.5-3.5)
-                                  if (defenceScore <= 4) return 'bg-red-100 text-red-800'; // Hard (FDR 3.5-4)
-                                  return 'bg-red-300 text-red-800'; // Very Hard (FDR 4+)
+                                // Color by opponent's attacking tier (exact same colors as Balanced FDR)
+                                const getOpponentAttackColor = (attackTier: string) => {
+                                  switch (attackTier) {
+                                    case 'elite': return 'bg-red-300 text-red-800'; // Very Hard (FDR 5) - light red
+                                    case 'strong': return 'bg-red-100 text-red-800'; // Hard (FDR 4)
+                                    case 'average': return 'bg-gray-100 text-gray-800'; // Medium (FDR 3)
+                                    case 'weak': return 'bg-green-100 text-green-800'; // Easy (FDR 2)
+                                    case 'promoted': return 'bg-green-300 text-green-800'; // Very Easy (FDR 1) - light green
+                                    default: return 'bg-gray-300 text-gray-900';
+                                  }
                                 };
-
+                                
                                 return (
                                   <td key={gw} className={`px-1 py-1 text-center ${
                                     gw === currentGameweek ? 'bg-blue-50' : ''
                                   }`}>
                                     <div 
-                                      className={`px-1 py-1 rounded text-xs font-medium ${getDefenceFDRColor(fixture.defenceScore)} ${
+                                      className={`px-1 py-1 rounded text-xs font-medium ${getOpponentAttackColor(opponentAttackTier)} ${
                                         fixture.finished ? 'opacity-50' : ''
                                       }`}
-                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Defence FDR: ${fixture.defenceScore} (lower is better)`}
+                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - ${opponentAttackTier} attack`}
                                       data-testid={`defense-fixture-${team.id}-${gw}`}
                                     >
-                                      <div className="font-bold">{fixture.defenceScore}</div>
-                                      <div className="text-xs">{fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                      <span className="truncate text-xs font-medium whitespace-nowrap">
+                                        {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})
+                                      </span>
                                     </div>
                                   </td>
                                 );
