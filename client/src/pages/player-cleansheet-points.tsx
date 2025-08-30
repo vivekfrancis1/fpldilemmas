@@ -31,6 +31,7 @@ export default function PlayerCleanSheetPoints() {
   // Fetch player clean sheet points data
   const { data: cleanSheetData, isLoading, error } = useQuery<PlayerCleanSheetProjection[]>({
     queryKey: ["/api/player-cleansheet-points", selectedGameweek],
+    queryFn: () => fetch(`/api/player-cleansheet-points?gameweek=${selectedGameweek}`).then(res => res.json()),
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
