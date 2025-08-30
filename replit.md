@@ -61,6 +61,10 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Goal Range Compression**: Implemented realistic Premier League goal distributions by compressing team season totals (30-85 goal range).
 - **Clean Sheet Formula**: Updated to exponential decay calculation (CS = 100 × e^(-1.1 × xGA)).
 - **Enhanced Context Multipliers**: Integrated weather, referee influence, post-international break, and travel distance fatigue multipliers.
+- **Position-Based Share Caps**: Implemented realistic caps for both goal and assist share calculations to prevent unrealistic individual projections:
+  - Goal Share caps: GK (2%), DEF (25%), MID (35%), FWD (35%)
+  - Assist Share caps: GK (2%), DEF (15%), MID (35%), FWD (25%)
+  - Applied consistently across all projection tools and gameweek-specific calculations - August 30, 2025.
 
 ### Type Safety & Validation
 - **Schema Validation**: Zod schemas in `shared/schema.ts` for API responses.
