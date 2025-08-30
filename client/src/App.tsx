@@ -18,6 +18,7 @@ import PlayerGoalsScoredProjections from "./pages/player-goals-scored-projection
 import PlayerAssistProjections from "./pages/player-assist-projections";
 import PlayerMinutes from "./pages/player-minutes";
 import PlayerCleanSheetPoints from "./pages/player-cleansheet-points";
+import PlayerTotalPoints from "./pages/player-total-points";
 import Watchlist from "./pages/watchlist";
 import LiveRank from "./pages/live-rank";
 import MyTeam from "./pages/my-team";
@@ -74,6 +75,7 @@ function Router() {
       <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
       <Route path="/player-minutes" component={PlayerMinutes} />
       <Route path="/player-cleansheet-points" component={PlayerCleanSheetPoints} />
+      <Route path="/player-total-points" component={PlayerTotalPoints} />
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
       <Route path="/team-goals-against-projections" component={TeamGoalsAgainstProjections} />
       <Route path="/team-assist-projections" component={TeamAssistProjections} />

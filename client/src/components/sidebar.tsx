@@ -52,6 +52,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Player Projections", 
       items: [
+        { path: "/player-total-points", label: "Player Total Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: true },
         { path: "/player-goals-scored-projections", label: "Player Goals Scored", icon: Trophy, description: "Individual player goal projections", popular: false },
         { path: "/player-assist-projections", label: "Player Assists", icon: Zap, description: "Individual player assist projections", popular: false },
         { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
