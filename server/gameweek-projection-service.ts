@@ -42,9 +42,8 @@ class GameweekProjectionService {
         WHERE gameweek = ${gameweek} AND season = '2025/26'
       `);
       
-      // Process all available players (including injured but selectable)
+      // Process ALL players in FPL database (no filtering)
       const players = bootstrapData.elements
-        .filter((p: any) => p.status !== 'u') // Exclude only unavailable players
         .sort((a: any, b: any) => parseFloat(b.total_points) - parseFloat(a.total_points)); // Sort by total points
       
       const playerPromises = players.map(async (fplPlayer: any) => {

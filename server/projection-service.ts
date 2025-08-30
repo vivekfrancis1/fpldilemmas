@@ -114,9 +114,8 @@ class ProjectionService {
       }
       const bootstrapData = await bootstrapResponse.json();
 
-      // Include all players who are available for selection (status 'a' = available, 'i' = injured but still selectable)
+      // Include ALL players in the FPL database (no filtering)
       const players = bootstrapData.elements
-        .filter((p: any) => p.status !== 'u') // Exclude only unavailable players (transfers, suspended permanently)
         .sort((a: any, b: any) => parseFloat(b.total_points) - parseFloat(a.total_points)) // Sort by total points
         .map((fplPlayer: any) => {
           const team = bootstrapData.teams.find((t: any) => t.id === fplPlayer.team);
