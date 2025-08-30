@@ -250,6 +250,12 @@ export default function MyDashboard() {
     enabled: !!searchedId,
   });
 
+  // Get fixtures for teams
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    enabled: !!bootstrapData && !!teamData,
+  });
+
   const { data: leaguesData, isLoading: isLoadingLeagues, error: leaguesError } = useQuery<LeagueResponse>({
     queryKey: ["/api/manager", searchedId, "leagues"],
     enabled: !!searchedId,
@@ -279,15 +285,7 @@ export default function MyDashboard() {
     return `£${(price / 10).toFixed(1)}m`;
   };
 
-  const getPositionName = (positionId: number): string => {
-    const positions = {
-      1: "Goalkeeper",
-      2: "Defender", 
-      3: "Midfielder",
-      4: "Forward"
-    };
-    return positions[positionId as keyof typeof positions] || "Unknown";
-  };
+
 
   const getRankChange = () => {
     if (!historyData?.current || historyData.current.length < 2) return null;
@@ -330,6 +328,136 @@ export default function MyDashboard() {
         return { ...pick, player };
       })
       .sort((a, b) => a.position - b.position);
+  };
+
+  // Team helper functions (copied from My Team page)
+  const getPlayerById = (id: number): Player | undefined => {
+    return bootstrapData?.elements.find(p => p.id === id);
+  };
+
+  const getPositionName = (elementType: number): string => {
+    const position = bootstrapData?.element_types.find(t => t.id === elementType);
+    return position?.singular_name || "Unknown";
+  };
+
+  const getTeamById = (teamId: number) => {
+    return bootstrapData?.teams.find(t => t.id === teamId);
+  };
+
+  const getTeamName = (player: Player): string => {
+    const teamId = (player as any).team || player.team_name;
+    const team = bootstrapData?.teams.find(t => t.id === teamId);
+    return team?.short_name || 'Unknown';
+  };
+
+  const getPlayerTeam = (player: Player) => {
+    const teamId = (player as any).team || player.team_name;
+    return bootstrapData?.teams.find(t => t.id === teamId);
+  };
+
+  const getNextFixtures = (teamId: number, count: number = 5) => {
+    if (!fixturesData || !Array.isArray(fixturesData)) {
+      return [];
+    }
+    
+    const currentGW = getCurrentGameweekDashboard();
+    
+    return fixturesData
+      .filter((fixture: any) => {
+        const isTeamInFixture = fixture.team_h === teamId || fixture.team_a === teamId;
+        const isUpcoming = !fixture.finished && fixture.event >= currentGW;
+        return isTeamInFixture && isUpcoming;
+      })
+      .sort((a: any, b: any) => a.event - b.event)
+      .slice(0, count)
+      .map((fixture: any) => {
+        const isHome = fixture.team_h === teamId;
+        const opponentId = isHome ? fixture.team_a : fixture.team_h;
+        const opponent = getTeamById(opponentId);
+        const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+        
+        return {
+          opponent: opponent?.short_name || 'TBD',
+          isHome,
+          difficulty: difficulty || 3,
+          gameweek: fixture.event
+        };
+      });
+  };
+
+  const getDifficultyColor = (difficulty: number): string => {
+    if (difficulty === 1) return "bg-green-600 text-white";
+    if (difficulty === 2) return "bg-green-100 text-green-800";
+    if (difficulty === 3) return "bg-gray-100 text-gray-800";
+    if (difficulty === 4) return "bg-red-100 text-red-800";
+    return "bg-red-600 text-white";
+  };
+
+  const getCurrentGameweekDashboard = (): number => {
+    const currentEvent = bootstrapData?.events.find(e => e.is_current);
+    return currentEvent?.id || 1;
+  };
+
+  const getFormationCounts = () => {
+    if (!teamData?.picks || !bootstrapData) return { gk: 0, def: 0, mid: 0, fwd: 0 };
+    
+    const startingEleven = teamData.picks.filter(pick => pick.position <= 11);
+    const counts = { gk: 0, def: 0, mid: 0, fwd: 0 };
+    
+    startingEleven.forEach(pick => {
+      const player = getPlayerById(pick.element);
+      if (player) {
+        switch (player.element_type) {
+          case 1: counts.gk++; break;
+          case 2: counts.def++; break;
+          case 3: counts.mid++; break;
+          case 4: counts.fwd++; break;
+        }
+      }
+    });
+    
+    return counts;
+  };
+
+  const getFormationString = () => {
+    const counts = getFormationCounts();
+    return `${counts.def}-${counts.mid}-${counts.fwd}`;
+  };
+
+  const getTotalTeamValue = (): number => {
+    if (!teamData?.picks || !bootstrapData) return 0;
+    
+    return teamData.picks.reduce((total, pick) => {
+      const player = getPlayerById(pick.element);
+      return total + (player?.now_cost || 0);
+    }, 0);
+  };
+
+  const getCurrentGameweekPoints = (): number | null => {
+    if (!historyData || !Array.isArray(historyData?.current)) return null;
+    const currentGW = getCurrentGameweekDashboard();
+    const currentGWData = historyData.current.find((gw: any) => gw.event === currentGW);
+    return currentGWData?.points || null;
+  };
+
+  const getTotalPoints = (): number => {
+    if (!historyData || !Array.isArray(historyData?.current)) return 0;
+    return historyData.current.reduce((total: number, gw: any) => total + (gw.points || 0), 0);
+  };
+
+  const sortPlayersByPosition = (picks: TeamPick[]) => {
+    return picks.sort((a, b) => {
+      const playerA = getPlayerById(a.element);
+      const playerB = getPlayerById(b.element);
+      
+      if (!playerA || !playerB) return 0;
+      
+      if (playerA.element_type !== playerB.element_type) {
+        return playerA.element_type - playerB.element_type;
+      }
+      
+      return a.position - b.position;
+    });
   };
 
   const getTeamValue = () => {
@@ -517,108 +645,306 @@ export default function MyDashboard() {
 
             {/* Team Tab */}
             <TabsContent value="team" className="space-y-6">
-              {teamData && teamData.entry_history && (
+              {teamData && (
                 <>
-                  {/* Team Stats */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Team Value</p>
-                            <p className="text-2xl font-bold">£{getTeamValue().toFixed(1)}m</p>
+                  {/* Team Overview Cards */}
+                  <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
+                    <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-emerald-700 mb-1 truncate">Formation</p>
+                            <p className="text-xl sm:text-2xl font-bold text-emerald-900 truncate">
+                              {getFormationString()}
+                            </p>
                           </div>
-                          <DollarSign className="h-8 w-8 text-green-500" />
+                          <div className="p-1.5 sm:p-2 bg-emerald-200 rounded-full flex-shrink-0">
+                            <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-700" />
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
 
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">In the Bank</p>
-                            <p className="text-2xl font-bold">£{((teamData.entry_history?.bank || 0) / 10).toFixed(1)}m</p>
+                    <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Squad Value</p>
+                            <p className="text-xl sm:text-2xl font-bold text-green-900 truncate">
+                              {formatPrice(getTotalTeamValue())}
+                            </p>
+                            <p className="text-xs text-green-600 mt-1 truncate">
+                              Bank: {formatPrice(teamData.entry_history?.bank || 0)}
+                            </p>
                           </div>
-                          <Target className="h-8 w-8 text-blue-500" />
+                          <div className="p-1.5 sm:p-2 bg-green-200 rounded-full flex-shrink-0">
+                            <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-700" />
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
 
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Transfers Made</p>
-                            <p className="text-2xl font-bold">{teamData.entry_history?.event_transfers || 0}/1</p>
+                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Transfers</p>
+                            <p className="text-xl sm:text-2xl font-bold text-blue-900 truncate">
+                              {teamData.entry_history?.event_transfers || 0}/1
+                            </p>
+                            {teamData.entry_history?.event_transfers_cost && teamData.entry_history.event_transfers_cost > 0 && (
+                              <p className="text-xs text-red-600 mt-1 truncate">
+                                Cost: -{teamData.entry_history.event_transfers_cost} pts
+                              </p>
+                            )}
                           </div>
-                          <Users className="h-8 w-8 text-purple-500" />
+                          <div className="p-1.5 sm:p-2 bg-blue-200 rounded-full flex-shrink-0">
+                            <Star className="h-4 w-4 sm:h-5 sm:w-5 text-blue-700" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Current GW Points</p>
+                            <p className="text-xl sm:text-2xl font-bold text-orange-900 truncate">
+                              {getCurrentGameweekPoints() !== null ? getCurrentGameweekPoints() : '-'}
+                            </p>
+                            <p className="text-xs text-orange-600 mt-1 truncate">GW {getCurrentGameweekDashboard()}</p>
+                          </div>
+                          <div className="p-1.5 sm:p-2 bg-orange-200 rounded-full flex-shrink-0">
+                            <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-orange-700" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 shadow-sm">
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-indigo-700 mb-1 truncate">Total Points</p>
+                            <p className="text-xl sm:text-2xl font-bold text-indigo-900 truncate">
+                              {getTotalPoints()}
+                            </p>
+                            <p className="text-xs text-indigo-600 mt-1 truncate">All gameweeks</p>
+                          </div>
+                          <div className="p-1.5 sm:p-2 bg-indigo-200 rounded-full flex-shrink-0">
+                            <Star className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-700" />
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
                   </div>
 
-                  {/* Starting XI */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
-                        Starting XI
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-3">
-                        {getStartingEleven().map((pick) => (
-                          <div key={pick.element} className="flex items-center justify-between p-3 rounded-lg border">
-                            <div className="flex items-center gap-3">
-                              {pick.is_captain && <Crown className="h-4 w-4 text-yellow-500" />}
-                              {pick.is_vice_captain && <Star className="h-4 w-4 text-gray-400" />}
-                              <div>
-                                <div className="font-medium">{pick.player?.web_name}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {pick.player?.team_name} • {getPositionName(pick.player?.element_type || 0)}
-                                </div>
-                              </div>
+                  {/* Legend */}
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-blue-900 mb-2">Fixture Difficulty Legend:</h4>
+                        <div className="flex gap-2 items-center">
+                          {[1, 2, 3, 4, 5].map(diff => (
+                            <div key={diff} className="flex items-center gap-1">
+                              <div className={`w-3 h-3 rounded ${getDifficultyColor(diff)}`}></div>
+                              <span className="text-xs font-medium text-gray-700">{diff}</span>
                             </div>
-                            <div className="text-right">
-                              <div className="font-medium">{formatPrice(pick.player?.now_cost || 0)}</div>
-                              <div className="text-sm text-muted-foreground">{pick.player?.total_points} pts</div>
-                            </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
+                      <p className="text-sm text-blue-700">
+                        Each fixture shows opponent team (H for Home, A for Away) with difficulty rating from 1 (easiest) to 5 (hardest)
+                      </p>
                     </CardContent>
                   </Card>
 
-                  {/* Bench */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
-                        Bench
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-3">
-                        {getBench().map((pick) => (
-                          <div key={pick.element} className="flex items-center justify-between p-3 rounded-lg border opacity-75">
-                            <div className="flex items-center gap-3">
-                              <div>
-                                <div className="font-medium">{pick.player?.web_name}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {pick.player?.team_name} • {getPositionName(pick.player?.element_type || 0)}
+                  {/* Starting XI and Bench */}
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    {/* Starting XI */}
+                    <Card className="bg-white shadow-lg border border-gray-200">
+                      <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-t-lg">
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="h-5 w-5" />
+                          Starting XI
+                        </CardTitle>
+                        <CardDescription className="text-emerald-50">
+                          Your team for Gameweek {getCurrentGameweekDashboard()}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <div className="space-y-0">
+                          {[1, 2, 3, 4].map(positionType => {
+                            const playersInPosition = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
+                              .filter(pick => {
+                                const player = getPlayerById(pick.element);
+                                return player?.element_type === positionType;
+                              });
+                            
+                            if (playersInPosition.length === 0) return null;
+
+                            const positionName = getPositionName(positionType);
+                            const positionColors = {
+                              1: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+                              2: 'bg-blue-50 border-blue-200 text-blue-800',
+                              3: 'bg-green-50 border-green-200 text-green-800',
+                              4: 'bg-red-50 border-red-200 text-red-800'
+                            };
+
+                            return (
+                              <div key={positionType} className="border-b border-gray-100 last:border-b-0">
+                                <div className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide ${positionColors[positionType as keyof typeof positionColors]} border-l-4`}>
+                                  {positionName}s ({playersInPosition.length})
+                                </div>
+                                {playersInPosition.map((pick, index) => {
+                                  const player = getPlayerById(pick.element);
+                                  if (!player) return null;
+
+                                  return (
+                                    <div 
+                                      key={pick.element} 
+                                      className={`flex items-center justify-between p-4 border-l-4 hover:bg-gray-50 transition-colors ${
+                                        pick.is_captain ? 'bg-amber-50 border-amber-400' : 
+                                        pick.is_vice_captain ? 'bg-blue-50 border-blue-400' : 
+                                        'border-gray-200 hover:border-gray-300'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-3 flex-1">
+                                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
+                                          {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                        </div>
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-semibold text-gray-900">{player.web_name}</span>
+                                            {pick.is_captain && (
+                                              <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2 py-1">C</Badge>
+                                            )}
+                                            {pick.is_vice_captain && (
+                                              <Badge variant="outline" className="border-blue-300 text-blue-700 text-xs px-2 py-1">VC</Badge>
+                                            )}
+                                          </div>
+                                          <div className="space-y-2 mt-2">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-sm font-medium text-gray-700">{getTeamName(player)}</span>
+                                              <span className="text-xs text-gray-500">Form: {player.form}</span>
+                                            </div>
+                                            
+                                            {/* Next 3 fixtures */}
+                                            <div className="space-y-1">
+                                              <div className="text-xs font-medium text-gray-600">Next 3 fixtures:</div>
+                                              <div className="flex gap-1 flex-wrap">
+                                                {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
+                                                  <div 
+                                                    key={idx}
+                                                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
+                                                    title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
+                                                  >
+                                                    <span className="truncate max-w-[40px]">{fixture.opponent}</span>
+                                                    <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
+                                                  </div>
+                                                ))}
+                                                {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
+                                                  <span className="text-xs text-gray-400">No upcoming fixtures</span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-right space-y-1">
+                                        <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
+                                        <p className="text-sm text-gray-600">{player.total_points} pts</p>
+                                        <div className="text-xs text-gray-500">
+                                          <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Bench */}
+                    <Card className="bg-white shadow-lg border border-gray-200">
+                      <CardHeader className="bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-t-lg">
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="h-5 w-5" />
+                          Bench
+                        </CardTitle>
+                        <CardDescription className="text-gray-100">
+                          Substitute players
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <div className="space-y-0">
+                          {sortPlayersByPosition(teamData.picks.filter(pick => pick.position > 11)).map((pick, index) => {
+                            const player = getPlayerById(pick.element);
+                            if (!player) return null;
+
+                            return (
+                              <div 
+                                key={pick.element} 
+                                className="flex items-center justify-between p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+                              >
+                                <div className="flex items-center gap-3 flex-1">
+                                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
+                                    {pick.position - 11}
+                                  </div>
+                                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
+                                    {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold text-gray-800">{player.web_name}</span>
+                                      <Badge variant="outline" className="text-xs px-2 py-1">{getPositionName(player.element_type)}</Badge>
+                                    </div>
+                                    <div className="space-y-2 mt-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-gray-700">{getTeamName(player)}</span>
+                                        <span className="text-xs text-gray-500">Form: {player.form}</span>
+                                      </div>
+                                      
+                                      {/* Next 3 fixtures */}
+                                      <div className="space-y-1">
+                                        <div className="text-xs font-medium text-gray-600">Next 3 fixtures:</div>
+                                        <div className="flex gap-1 flex-wrap">
+                                          {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
+                                            <div 
+                                              key={idx}
+                                              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
+                                              title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
+                                            >
+                                              <span className="truncate max-w-[40px]">{fixture.opponent}</span>
+                                              <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
+                                            </div>
+                                          ))}
+                                          {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
+                                            <span className="text-xs text-gray-400">No upcoming fixtures</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right space-y-1">
+                                  <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
+                                  <p className="text-sm text-gray-600">{player.total_points} pts</p>
+                                  <div className="text-xs text-gray-500">
+                                    <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-medium">{formatPrice(pick.player?.now_cost || 0)}</div>
-                              <div className="text-sm text-muted-foreground">{pick.player?.total_points} pts</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </>
               )}
               
