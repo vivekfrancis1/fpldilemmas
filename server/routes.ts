@@ -7223,19 +7223,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
       
-      console.log(`DEBUG: Player Total Points API - using database service for GW${start}-${end}`);
+      console.log(`DEBUG: Player Total Points API - using consistent calculation logic for GW${start}-${end}`);
       const startTime = Date.now();
       
-      // Use projection service for ultra-fast database lookup
-      const projections = await projectionService.getPlayerTotalPoints(start, end);
+      // Fetch data from the same sources as individual projection tools
+      const [goalsResponse, assistsResponse, bootstrapResponse] = await Promise.all([
+        fetch(`http://localhost:5000/api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
+        fetch(`http://localhost:5000/api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
+      ]);
+      
+      if (!goalsResponse.ok || !assistsResponse.ok || !bootstrapResponse.ok) {
+        throw new Error("Failed to fetch required data");
+      }
+      
+      const goalsData = await goalsResponse.json();
+      const assistsData = await assistsResponse.json();
+      const bootstrapData = await bootstrapResponse.json();
+      
+      // Create a map for quick lookups
+      const goalsMap = new Map();
+      const assistsMap = new Map();
+      
+      goalsData.forEach((player: any) => {
+        goalsMap.set(player.playerId, player);
+      });
+      
+      assistsData.forEach((player: any) => {
+        assistsMap.set(player.playerId, player);
+      });
+      
+      // Generate consistent total points using the same logic as individual tools
+      const allPlayers = bootstrapData.elements;
+      const playerProjections = [];
+      
+      for (const fplPlayer of allPlayers) {
+        const playerId = fplPlayer.id;
+        const team = bootstrapData.teams.find((t: any) => t.id === fplPlayer.team);
+        const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][fplPlayer.element_type] || 'MID';
+        
+        // Get player data from individual tools
+        const goalsPlayer = goalsMap.get(playerId);
+        const assistsPlayer = assistsMap.get(playerId);
+        
+        // Initialize point tracking
+        const gameweekProjections: { [key: string]: number } = {};
+        const pointsFromGoals: { [key: string]: number } = {};
+        const pointsFromAssists: { [key: string]: number } = {};
+        const pointsFromCleanSheets: { [key: string]: number } = {};
+        const pointsFromDefensiveContributions: { [key: string]: number } = {};
+        const pointsFromMinutes: { [key: string]: number } = {};
+        const pointsFromBonus: { [key: string]: number } = {};
+        
+        let totalExpectedPoints = 0;
+        let totalPointsFromGoals = 0;
+        let totalPointsFromAssists = 0;
+        let totalPointsFromCleanSheets = 0;
+        let totalPointsFromDefensiveContributions = 0;
+        let totalPointsFromMinutes = 0;
+        let totalPointsFromBonus = 0;
+        
+        // Calculate points for each gameweek in range
+        for (let gw = start; gw <= end; gw++) {
+          // Goals points (using individual tool data)
+          let goalPoints = 0;
+          if (goalsPlayer && goalsPlayer.gameweekProjections && goalsPlayer.gameweekProjections[gw]) {
+            const goals = goalsPlayer.gameweekProjections[gw];
+            const pointsPerGoal = position === 'FWD' ? 4 : position === 'MID' ? 5 : 6;
+            goalPoints = goals * pointsPerGoal;
+          }
+          pointsFromGoals[`gw${gw}`] = Math.round(goalPoints * 100) / 100;
+          totalPointsFromGoals += goalPoints;
+          
+          // Assist points (using individual tool data)
+          let assistPoints = 0;
+          if (assistsPlayer && assistsPlayer.gameweekProjections && assistsPlayer.gameweekProjections[gw]) {
+            const assists = assistsPlayer.gameweekProjections[gw];
+            assistPoints = assists * 3; // All positions get 3 points per assist
+          }
+          pointsFromAssists[`gw${gw}`] = Math.round(assistPoints * 100) / 100;
+          totalPointsFromAssists += assistPoints;
+          
+          // Minutes points (basic logic - 2 for 60+, 1 for 1-59, 0 for 0)
+          let minutesPoints = 0;
+          if (fplPlayer.minutes > 0) {
+            const expectedMinutes = Math.min(90, fplPlayer.minutes / 3); // Rough estimate based on season avg
+            minutesPoints = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
+          }
+          pointsFromMinutes[`gw${gw}`] = minutesPoints;
+          totalPointsFromMinutes += minutesPoints;
+          
+          // Clean sheet points (DEF/GKP only)
+          let cleanSheetPoints = 0;
+          if (position === 'GKP' || position === 'DEF') {
+            // Basic clean sheet probability (simplified)
+            const csProb = position === 'GKP' ? 0.25 : 0.22; // Rough estimates
+            cleanSheetPoints = csProb * (position === 'GKP' ? 4 : 4);
+          }
+          pointsFromCleanSheets[`gw${gw}`] = Math.round(cleanSheetPoints * 100) / 100;
+          totalPointsFromCleanSheets += cleanSheetPoints;
+          
+          // Defensive contribution points (basic estimation)
+          let defensivePoints = 0;
+          if (position === 'DEF' || position === 'MID') {
+            const dcEstimate = position === 'DEF' ? 1.2 : 0.6; // Basic estimates
+            defensivePoints = dcEstimate * 2; // 2 points per DC
+          }
+          pointsFromDefensiveContributions[`gw${gw}`] = Math.round(defensivePoints * 100) / 100;
+          totalPointsFromDefensiveContributions += defensivePoints;
+          
+          // Bonus points (basic estimation)
+          const bonusPoints = (goalPoints + assistPoints) * 0.1; // Very basic estimation
+          pointsFromBonus[`gw${gw}`] = Math.round(bonusPoints * 100) / 100;
+          totalPointsFromBonus += bonusPoints;
+          
+          // Total for this gameweek
+          const gwTotal = goalPoints + assistPoints + minutesPoints + cleanSheetPoints + defensivePoints + bonusPoints;
+          gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;
+          totalExpectedPoints += gwTotal;
+        }
+        
+        // Only include players with some projection data
+        if (totalExpectedPoints > 0) {
+          playerProjections.push({
+            playerId: fplPlayer.id,
+            name: `${fplPlayer.first_name} ${fplPlayer.second_name}`,
+            fullName: fplPlayer.web_name,
+            team: team?.short_name || 'Unknown',
+            position: position,
+            price: fplPlayer.now_cost,
+            ownership: parseFloat(fplPlayer.selected_by_percent || "0"),
+            gameweekProjections,
+            totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
+            seasonTotalPoints: Math.round(totalExpectedPoints * 6.3 * 100) / 100, // Rough season projection
+            averagePerGameweek: Math.round((totalExpectedPoints / (end - start + 1)) * 100) / 100,
+            // Component totals
+            totalPointsFromGoals: Math.round(totalPointsFromGoals * 100) / 100,
+            totalPointsFromAssists: Math.round(totalPointsFromAssists * 100) / 100,
+            totalPointsFromCleanSheets: Math.round(totalPointsFromCleanSheets * 100) / 100,
+            totalPointsFromDefensiveContributions: Math.round(totalPointsFromDefensiveContributions * 100) / 100,
+            totalPointsFromMinutes: Math.round(totalPointsFromMinutes * 100) / 100,
+            totalPointsFromBonus: Math.round(totalPointsFromBonus * 100) / 100,
+            // Component breakdowns
+            pointsFromGoals,
+            pointsFromAssists,
+            pointsFromCleanSheets,
+            pointsFromDefensiveContributions,
+            pointsFromMinutes,
+            pointsFromBonus
+          });
+        }
+      }
+      
+      // Sort by total expected points
+      playerProjections.sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
       
       const duration = Date.now() - startTime;
-      console.log(`DEBUG: Served ${projections.length} player projections in ${duration}ms`);
+      console.log(`DEBUG: Generated consistent player projections for ${playerProjections.length} players in ${duration}ms`);
       
-      res.json(projections);
+      res.json(playerProjections);
       
     } catch (error) {
-      console.error("Error in database-backed player total points:", error);
+      console.error("Error in consistent player total points:", error);
       res.status(500).json({ error: "Failed to get player total points projections" });
     }
   });
