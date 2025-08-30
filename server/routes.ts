@@ -8218,11 +8218,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get current gameweek
       const currentGW = currentData.events.find((event: any) => event.is_current)?.id || 1;
-      const nextSixGameweeks = [currentGW + 1, currentGW + 2, currentGW + 3, currentGW + 4, currentGW + 5, currentGW + 6];
+      const allRemainingGameweeks = [];
+      for (let i = currentGW; i <= 38; i++) {
+        allRemainingGameweeks.push(i);
+      }
       
-      // Filter fixtures for next 6 gameweeks
+      // Filter fixtures for all remaining gameweeks
       const upcomingFixtures = allFixtures.filter((fixture: any) => 
-        nextSixGameweeks.includes(fixture.event) && 
+        allRemainingGameweeks.includes(fixture.event) && 
         fixture.finished === false
       );
       
@@ -8317,9 +8320,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const confidence = (minutesConfidence * 0.5 + historyConfidence * 0.3 + consistencyConfidence * 0.2);
         
-        // Generate fixture-aware gameweek projections
-        const gameweekProjections = Array.from({ length: 6 }, (_, i) => {
-          const gameweek = nextSixGameweeks[i];
+        // Generate fixture-aware gameweek projections for all remaining gameweeks
+        const gameweekProjections = allRemainingGameweeks.map(gameweek => {
           const minutesThisGW = estimatedMinutesPerGW;
           
           // Find fixture for this team in this gameweek

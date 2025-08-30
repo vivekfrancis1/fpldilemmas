@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,6 +41,8 @@ export default function PlayerDefensiveContributions() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showOnlyTopPlayers, setShowOnlyTopPlayers] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>("defensive-contributions");
+  const [startGameweek, setStartGameweek] = useState<number>(0); // Will be set to current + 1
+  const [endGameweek, setEndGameweek] = useState<number>(0); // Will be set to current + 6
 
   // Fetch defensive contribution projections
   const { data: defensiveData, isLoading } = useQuery({
@@ -55,7 +57,18 @@ export default function PlayerDefensiveContributions() {
   const players: PlayerDefensiveData[] = defensiveData?.data || [];
 
   // Get all gameweeks from the first player's projections
-  const gameweeks = players.length > 0 ? players[0].gameweekProjections.map(gw => gw.gameweek) : [];
+  const allGameweeks = players.length > 0 ? players[0].gameweekProjections.map(gw => gw.gameweek) : [];
+  
+  // Set default gameweek range (next 6 gameweeks) on first load
+  React.useEffect(() => {
+    if (allGameweeks.length > 0 && startGameweek === 0) {
+      setStartGameweek(allGameweeks[0]);
+      setEndGameweek(Math.min(allGameweeks[0] + 5, allGameweeks[allGameweeks.length - 1]));
+    }
+  }, [allGameweeks, startGameweek]);
+  
+  // Filter gameweeks based on selected range
+  const gameweeks = allGameweeks.filter(gw => gw >= startGameweek && gw <= endGameweek);
 
   // Calculate totals for each player
   const playersWithTotals = useMemo(() => {
@@ -76,19 +89,22 @@ export default function PlayerDefensiveContributions() {
         return { ...gw, dcPoints };
       });
       
+      // Filter projections to selected gameweek range
+      const filteredProjections = gameweekPoints.filter(gw => gw.gameweek >= startGameweek && gw.gameweek <= endGameweek);
+      
       return {
         ...player,
-        gameweekProjections: gameweekPoints,
-        totalDC: player.gameweekProjections.reduce((sum, gw) => sum + gw.defensiveContribution, 0),
-        avgDC: player.gameweekProjections.reduce((sum, gw) => sum + gw.defensiveContribution, 0) / player.gameweekProjections.length,
-        totalTackles: player.gameweekProjections.reduce((sum, gw) => sum + gw.tackles, 0),
-        totalRecoveries: player.gameweekProjections.reduce((sum, gw) => sum + gw.recoveries, 0),
-        totalCBI: player.gameweekProjections.reduce((sum, gw) => sum + gw.cbi, 0),
-        totalDCPoints: gameweekPoints.reduce((sum, gw) => sum + gw.dcPoints, 0),
-        avgDCPoints: gameweekPoints.reduce((sum, gw) => sum + gw.dcPoints, 0) / gameweekPoints.length
+        gameweekProjections: filteredProjections,
+        totalDC: filteredProjections.reduce((sum, gw) => sum + gw.defensiveContribution, 0),
+        avgDC: filteredProjections.length > 0 ? filteredProjections.reduce((sum, gw) => sum + gw.defensiveContribution, 0) / filteredProjections.length : 0,
+        totalTackles: filteredProjections.reduce((sum, gw) => sum + gw.tackles, 0),
+        totalRecoveries: filteredProjections.reduce((sum, gw) => sum + gw.recoveries, 0),
+        totalCBI: filteredProjections.reduce((sum, gw) => sum + gw.cbi, 0),
+        totalDCPoints: filteredProjections.reduce((sum, gw) => sum + gw.dcPoints, 0),
+        avgDCPoints: filteredProjections.length > 0 ? filteredProjections.reduce((sum, gw) => sum + gw.dcPoints, 0) / filteredProjections.length : 0
       };
     });
-  }, [players]);
+  }, [players, startGameweek, endGameweek]);
 
   // Filter and sort players
   const filteredPlayers = useMemo(() => {
@@ -282,7 +298,7 @@ export default function PlayerDefensiveContributions() {
           <CardContent>
             <div className="text-2xl font-bold">{gameweeks.length}</div>
             <div className="text-sm text-muted-foreground">
-              GW{gameweeks[0]} - GW{gameweeks[gameweeks.length - 1]}
+              {gameweeks.length > 0 ? `GW${gameweeks[0]} - GW${gameweeks[gameweeks.length - 1]}` : "Select range"}
             </div>
           </CardContent>
         </Card>
@@ -329,6 +345,34 @@ export default function PlayerDefensiveContributions() {
             </div>
 
             <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">Start GW</label>
+              <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {allGameweeks.map(gw => (
+                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">End GW</label>
+              <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {allGameweeks.filter(gw => gw >= startGameweek).map(gw => (
+                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Sort By</label>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-40">
@@ -342,6 +386,36 @@ export default function PlayerDefensiveContributions() {
                   <SelectItem value="name">Player Name</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">Quick Select</label>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (allGameweeks.length > 0) {
+                      setStartGameweek(allGameweeks[0]);
+                      setEndGameweek(Math.min(allGameweeks[0] + 5, allGameweeks[allGameweeks.length - 1]));
+                    }
+                  }}
+                >
+                  Next 6 GWs
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (allGameweeks.length > 0) {
+                      setStartGameweek(allGameweeks[0]);
+                      setEndGameweek(allGameweeks[allGameweeks.length - 1]);
+                    }
+                  }}
+                >
+                  All Season
+                </Button>
+              </div>
             </div>
 
             <Button
