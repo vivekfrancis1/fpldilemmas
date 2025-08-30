@@ -7067,6 +7067,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Gameweek-Level Projections API - Get detailed breakdown by individual gameweek
+  app.get("/api/gameweek-projections", async (req, res) => {
+    try {
+      const { gameweek, playerId, teamId } = req.query;
+      
+      if (!gameweek) {
+        return res.status(400).json({ error: "Gameweek parameter required" });
+      }
+      
+      const gw = parseInt(gameweek as string);
+      console.log(`DEBUG: Gameweek Projections API - GW${gw}, Player: ${playerId || 'all'}, Team: ${teamId || 'all'}`);
+      
+      // Build query conditions
+      let whereConditions = `gameweek = ${gw} AND season = '2025/26'`;
+      if (playerId) {
+        whereConditions += ` AND player_id = ${parseInt(playerId as string)}`;
+      }
+      if (teamId) {
+        whereConditions += ` AND team_id = ${parseInt(teamId as string)}`;
+      }
+      
+      // Get gameweek-specific data
+      const projections = await db.execute(sql`
+        SELECT * FROM gameweek_projections 
+        WHERE ${sql.raw(whereConditions)}
+        ORDER BY total_gameweek_points DESC
+      `);
+      
+      // Also get team-level data for context
+      const teamData = await db.execute(sql`
+        SELECT * FROM gameweek_team_projections 
+        WHERE gameweek = ${gw} AND season = '2025/26'
+        ${teamId ? sql`AND team_id = ${parseInt(teamId as string)}` : sql``}
+        ORDER BY projected_goals_for DESC
+      `);
+      
+      const response = {
+        gameweek: gw,
+        players: projections.rows.map((p: any) => ({
+          playerId: p.player_id,
+          playerName: p.player_name,
+          teamId: p.team_id,
+          teamName: p.team_name,
+          position: p.position,
+          isCompleted: p.is_completed,
+          isCurrent: p.is_current,
+          projections: {
+            goals: parseFloat(p.projected_goals || 0),
+            assists: parseFloat(p.projected_assists || 0),
+            cleanSheets: parseFloat(p.projected_clean_sheets || 0),
+            defensiveContributions: parseFloat(p.projected_defensive_contributions || 0),
+            minutes: parseFloat(p.projected_minutes || 0),
+            bonus: parseFloat(p.projected_bonus || 0)
+          },
+          pointsBreakdown: {
+            fromGoals: parseFloat(p.points_from_goals || 0),
+            fromAssists: parseFloat(p.points_from_assists || 0),
+            fromCleanSheets: parseFloat(p.points_from_clean_sheets || 0),
+            fromDefensiveContributions: parseFloat(p.points_from_defensive_contributions || 0),
+            fromMinutes: parseFloat(p.points_from_minutes || 0),
+            fromBonus: parseFloat(p.points_from_bonus || 0),
+            total: parseFloat(p.total_gameweek_points || 0)
+          },
+          actual: p.is_completed ? {
+            goals: p.actual_goals,
+            assists: p.actual_assists,
+            cleanSheets: p.actual_clean_sheets,
+            defensiveContributions: p.actual_defensive_contributions,
+            minutes: p.actual_minutes,
+            bonus: p.actual_bonus,
+            totalPoints: p.actual_total_points
+          } : null
+        })),
+        teams: teamData.rows.map((t: any) => ({
+          teamId: t.team_id,
+          teamName: t.team_name,
+          isCompleted: t.is_completed,
+          isCurrent: t.is_current,
+          projections: {
+            goalsFor: parseFloat(t.projected_goals_for || 0),
+            goalsAgainst: parseFloat(t.projected_goals_against || 0),
+            cleanSheetProbability: parseFloat(t.projected_clean_sheet_probability || 0),
+            assists: parseFloat(t.projected_assists || 0)
+          },
+          actual: t.is_completed ? {
+            goalsFor: t.actual_goals_for,
+            goalsAgainst: t.actual_goals_against,
+            cleanSheet: t.actual_clean_sheet,
+            assists: t.actual_assists
+          } : null
+        }))
+      };
+      
+      res.json(response);
+      
+    } catch (error) {
+      console.error("Error in gameweek projections:", error);
+      res.status(500).json({ error: "Failed to get gameweek projections" });
+    }
+  });
+
+  // Gameweek Population API - Admin endpoint to populate gameweek data
+  app.post("/api/populate-gameweek", async (req, res) => {
+    try {
+      const { gameweek, startGameweek, endGameweek } = req.body;
+      
+      // Import the service dynamically
+      const { gameweekProjectionService } = await import('./gameweek-projection-service');
+      
+      if (gameweek) {
+        // Single gameweek
+        const gw = parseInt(gameweek);
+        console.log(`DEBUG: Populating single gameweek ${gw}`);
+        await gameweekProjectionService.populateGameweekProjections(gw);
+        res.json({ 
+          success: true, 
+          message: `Gameweek ${gw} projections populated successfully`,
+          gameweeksPopulated: [gw]
+        });
+      } else if (startGameweek && endGameweek) {
+        // Range of gameweeks
+        const start = parseInt(startGameweek);
+        const end = parseInt(endGameweek);
+        console.log(`DEBUG: Populating gameweek range ${start}-${end}`);
+        await gameweekProjectionService.populateGameweekRange(start, end);
+        const gameweeksPopulated = Array.from({length: end - start + 1}, (_, i) => start + i);
+        res.json({ 
+          success: true, 
+          message: `Gameweeks ${start} to ${end} populated successfully`,
+          gameweeksPopulated
+        });
+      } else {
+        res.status(400).json({ error: "Either 'gameweek' or both 'startGameweek' and 'endGameweek' required" });
+      }
+      
+    } catch (error) {
+      console.error("Error populating gameweek projections:", error);
+      res.status(500).json({ 
+        error: "Failed to populate gameweek projections",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   console.log("✓ OpenFPL Projection routes registered successfully");
 
   // Player Total Points - Optimized with intelligent caching
