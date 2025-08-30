@@ -252,18 +252,24 @@ export default function MyDashboard() {
       (entry: any) => entry.entry.toString() === managerId
     );
 
-    // Show top 50 or all entries if less than 50
+    // Show top 50 plus current manager if not already included
     const allEntries = leagueData.standings?.results || [];
-    const topEntries = allEntries.length > 50 ? allEntries.slice(0, 50) : allEntries;
+    let topEntries = allEntries.length > 50 ? allEntries.slice(0, 50) : allEntries;
+    
+    // Add current manager if not in top 50
+    const currentManagerInTop50 = topEntries.some((entry: any) => entry.entry.toString() === managerId);
+    if (!currentManagerInTop50 && currentManagerEntry && allEntries.length > 50) {
+      topEntries = [...topEntries, currentManagerEntry];
+    }
     
     return (
       <div className="space-y-6">
-        {/* Top 50 Standings */}
+        {/* League Standings */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              Top {topEntries.length} Managers
+              League Standings
             </CardTitle>
           </CardHeader>
           <CardContent>
