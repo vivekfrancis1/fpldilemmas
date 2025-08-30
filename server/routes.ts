@@ -8233,20 +8233,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const strengthAttack = team.strength_attack_home + team.strength_attack_away;
         const avgStrength = strengthAttack / 2;
         
-        // Classify teams into attack tiers
+        // Classify teams into attack tiers based on actual FPL strength ratings (1105-1200 range)
         let attackTier = 'average';
         let attackMultiplier = 1.0;
         
-        if (avgStrength >= 1300) {
+        if (avgStrength >= 1180) {
           attackTier = 'elite';
           attackMultiplier = 1.5; // 50% more defensive contribution needed
         } else if (avgStrength >= 1150) {
           attackTier = 'strong';
           attackMultiplier = 1.3; // 30% more defensive contribution
-        } else if (avgStrength >= 1000) {
+        } else if (avgStrength >= 1130) {
           attackTier = 'average';
           attackMultiplier = 1.0; // Baseline
-        } else if (avgStrength >= 850) {
+        } else if (avgStrength >= 1115) {
           attackTier = 'weak';
           attackMultiplier = 0.8; // 20% less defensive contribution
         } else {

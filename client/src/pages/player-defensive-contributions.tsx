@@ -119,8 +119,8 @@ export default function PlayerDefensiveContributions() {
   }, [playersWithTotals, selectedPosition, selectedTeam, sortBy, sortOrder, showOnlyTopPlayers]);
 
   // Get unique values for filters
-  const positions = [...new Set(players.map(p => p.position))];
-  const teams = [...new Set(players.map(p => p.teamName))].sort();
+  const positions = Array.from(new Set(players.map(p => p.position)));
+  const teams = Array.from(new Set(players.map(p => p.teamName))).sort();
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
