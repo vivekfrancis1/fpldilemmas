@@ -5621,53 +5621,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Clean Sheet Points endpoint - Multi-gameweek table format
+  // Player Clean Sheet Points endpoint - hybrid calculation with actual FPL API data for completed gameweeks
   app.get("/api/player-cleansheet-points", async (req, res) => {
     try {
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || Math.min(startGameweek + 5, 38); // Default to 6 gameweeks
       
-      // Fetch required data
-      console.log(`DEBUG: Fetching data for clean sheet points for GW${startGameweek}-${endGameweek}`);
-      const [bootstrapResponse, teamCSResponse, playerMinutesResponse] = await Promise.all([
+      // Fetch required data including fixtures for completed gameweek detection
+      console.log(`DEBUG: Fetching data for clean sheet points for GW${startGameweek}-${endGameweek} with hybrid calculation`);
+      const [bootstrapResponse, teamCSResponse, playerMinutesResponse, fixturesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
         fetch("http://localhost:5000/api/team-cs-projections"),
-        fetch("http://localhost:5000/api/player-minutes-projections")
+        fetch("http://localhost:5000/api/player-minutes-projections"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
       ]);
       
       console.log(`DEBUG: Response status - Bootstrap: ${bootstrapResponse.ok}, Team CS: ${teamCSResponse.ok}, Player Minutes: ${playerMinutesResponse.ok}`);
       
-      if (!bootstrapResponse.ok || !teamCSResponse.ok || !playerMinutesResponse.ok) {
+      if (!bootstrapResponse.ok || !teamCSResponse.ok || !playerMinutesResponse.ok || !fixturesResponse.ok) {
         throw new Error("Failed to fetch required data");
       }
       
       const bootstrapData = await bootstrapResponse.json();
       const teamCSData = await teamCSResponse.json();
       const playerMinutesData = await playerMinutesResponse.json();
+      const fixturesData = await fixturesResponse.json();
       
       const players = bootstrapData.elements;
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
       
+      // Get current gameweek from bootstrap data
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      console.log(`DEBUG: Current gameweek: ${currentGameweek}`);
+      
       // Create player clean sheet points projections
       const playerCleanSheetProjections: any[] = [];
       
-      players.forEach((player: any) => {
+      for (const player of players) {
         const team = teams.find((t: any) => t.id === player.team);
         const position = positions.find((p: any) => p.id === player.element_type);
         const playerMinutes = playerMinutesData.find((pm: any) => pm.playerId === player.id);
         
-        if (!team || !position || !playerMinutes) return;
+        if (!team || !position || !playerMinutes) continue;
         
         // Only calculate clean sheet points for Defenders, Goalkeepers, and Midfielders (Forwards get 0 points)
         if (position.singular_name === 'Forward') {
-          return; // Forwards don't get clean sheet points
+          continue; // Forwards don't get clean sheet points
         }
 
         const teamCSProjection = teamCSData.find((tcs: any) => tcs.id === team.id);
-        if (!teamCSProjection) return;
+        if (!teamCSProjection) continue;
 
-        // Calculate clean sheet points for each gameweek in the range
+        // Calculate clean sheet points for each gameweek in the range using hybrid methodology
         const gameweekProjections: { [key: string]: number } = {};
         let totalExpectedPoints = 0;
         let seasonTotalPoints = 0;
@@ -5693,18 +5699,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Position-based clean sheet points: Defenders/GK = 4, Midfielders = 1
         const cleanSheetPoints = (position.singular_name === 'Midfielder') ? 1 : 4;
 
-        // Calculate for selected gameweek range
+        // Calculate for selected gameweek range using hybrid approach
         for (let gw = startGameweek; gw <= endGameweek; gw++) {
-          const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
+          // Check if this gameweek has started/finished
+          const gameweekEvent = bootstrapData.events.find((e: any) => e.id === gw);
+          const gameweekFinished = gameweekEvent && gameweekEvent.finished;
+          const gameweekStarted = gameweekEvent && gameweekEvent.is_current;
           
-          if (teamCleanSheetPercent === undefined) {
-            gameweekProjections[gw.toString()] = 0;
-            continue;
+          let cleanSheetPointsForGW = 0;
+          
+          if (gameweekFinished) {
+            // For completely finished gameweeks, use actual clean sheet data
+            try {
+              const elementResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+              if (elementResponse.ok) {
+                const elementData = await elementResponse.json();
+                const gameweekHistory = elementData.history.find((h: any) => h.round === gw);
+                
+                if (gameweekHistory) {
+                  // Check if player played 60+ minutes and got clean sheet points
+                  const minutesPlayed = gameweekHistory.minutes || 0;
+                  const actualCleanSheetPoints = gameweekHistory.clean_sheets || 0;
+                  
+                  if (minutesPlayed >= 60 && actualCleanSheetPoints > 0) {
+                    cleanSheetPointsForGW = cleanSheetPoints; // Full clean sheet points
+                  } else {
+                    cleanSheetPointsForGW = 0; // No clean sheet or didn't play 60+ minutes
+                  }
+                  
+                  console.log(`DEBUG: Clean Sheet - GW${gw} ACTUAL - ${player.web_name}: ${cleanSheetPointsForGW} points (${minutesPlayed} mins, ${actualCleanSheetPoints} CS)`);
+                } else {
+                  throw new Error(`No gameweek ${gw} data found for player ${player.id}`);
+                }
+              } else {
+                throw new Error(`Failed to fetch element-summary for player ${player.id}`);
+              }
+            } catch (error) {
+              console.log(`Using fallback for player ${player.id} GW${gw}: ${error}`);
+              // Fallback to projection
+              const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
+              cleanSheetPointsForGW = (teamCleanSheetPercent / 100) * probabilityPlays60Plus * cleanSheetPoints;
+            }
+          } else if (gameweekStarted) {
+            // For current gameweek, check individual fixture completion status
+            const teamFixtures = fixturesData.filter((fixture: any) => 
+              fixture.event === gw && 
+              (fixture.team_h === team.id || fixture.team_a === team.id)
+            );
+            
+            let actualCleanSheetPoints = 0;
+            let projectedCleanSheetPoints = 0;
+            let hasCompletedFixtures = false;
+            let hasUncompletedFixtures = false;
+            
+            for (const fixture of teamFixtures) {
+              if (fixture.finished) {
+                // Use actual clean sheet data for this completed fixture
+                hasCompletedFixtures = true;
+                try {
+                  const elementResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+                  if (elementResponse.ok) {
+                    const elementData = await elementResponse.json();
+                    const gameweekHistory = elementData.history.find((h: any) => h.round === gw);
+                    
+                    if (gameweekHistory) {
+                      const minutesPlayed = gameweekHistory.minutes || 0;
+                      const actualCS = gameweekHistory.clean_sheets || 0;
+                      
+                      if (minutesPlayed >= 60 && actualCS > 0) {
+                        actualCleanSheetPoints += cleanSheetPoints; // Per completed fixture
+                      }
+                    }
+                  }
+                } catch (error) {
+                  // Fallback: use fixture-specific projection
+                  const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
+                  const fixtureCleanSheetPoints = (teamCleanSheetPercent / 100) * probabilityPlays60Plus * cleanSheetPoints / teamFixtures.length;
+                  actualCleanSheetPoints += fixtureCleanSheetPoints;
+                }
+              } else {
+                // Use projections for uncompleted fixtures
+                hasUncompletedFixtures = true;
+                const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
+                const fixtureCleanSheetPoints = (teamCleanSheetPercent / 100) * probabilityPlays60Plus * cleanSheetPoints / teamFixtures.length;
+                projectedCleanSheetPoints += fixtureCleanSheetPoints;
+              }
+            }
+            
+            // Combine actual and projected clean sheet points for the gameweek
+            if (hasCompletedFixtures && !hasUncompletedFixtures) {
+              cleanSheetPointsForGW = actualCleanSheetPoints;
+              console.log(`DEBUG: Clean Sheet - GW${gw} ACTUAL - ${player.web_name}: ${cleanSheetPointsForGW} points (completed)`);
+            } else if (!hasCompletedFixtures && hasUncompletedFixtures) {
+              cleanSheetPointsForGW = projectedCleanSheetPoints;
+              console.log(`DEBUG: Clean Sheet - GW${gw} PROJECTION - ${player.web_name}: ${cleanSheetPointsForGW.toFixed(2)} points (all pending)`);
+            } else {
+              cleanSheetPointsForGW = actualCleanSheetPoints + projectedCleanSheetPoints;
+              console.log(`DEBUG: Clean Sheet - GW${gw} HYBRID - ${player.web_name}: ${actualCleanSheetPoints} actual + ${projectedCleanSheetPoints.toFixed(2)} projected = ${cleanSheetPointsForGW.toFixed(2)} total`);
+            }
+          } else {
+            // For future gameweeks, use projections
+            const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
+            if (teamCleanSheetPercent !== undefined) {
+              cleanSheetPointsForGW = (teamCleanSheetPercent / 100) * probabilityPlays60Plus * cleanSheetPoints;
+              console.log(`DEBUG: Clean Sheet - GW${gw} PROJECTION - ${team.short_name} CS%: ${teamCleanSheetPercent.toFixed(1)}%, ${player.web_name}: ${cleanSheetPointsForGW.toFixed(2)} points`);
+            } else {
+              cleanSheetPointsForGW = 0;
+            }
           }
-
-          const expectedCleanSheetPoints = (teamCleanSheetPercent / 100) * probabilityPlays60Plus * cleanSheetPoints;
-          gameweekProjections[gw.toString()] = Math.round(expectedCleanSheetPoints * 100) / 100;
-          totalExpectedPoints += expectedCleanSheetPoints;
+          
+          gameweekProjections[gw.toString()] = Math.round(cleanSheetPointsForGW * 100) / 100;
+          totalExpectedPoints += cleanSheetPointsForGW;
         }
 
         // Calculate season total (GW4 to GW38)
@@ -5728,7 +5833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
           seasonTotalPoints: Math.round(seasonTotalPoints * 100) / 100
         });
-      });
+      }
 
       // Sort by total expected points descending
       playerCleanSheetProjections.sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
