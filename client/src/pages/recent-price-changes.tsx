@@ -271,11 +271,6 @@ export default function RecentPriceChanges() {
                     {seasonStats.totalRises}
                   </p>
                   <p className="text-xs sm:text-sm text-gray-600">Price rises this season</p>
-                  {seasonStats.avgRiseAmount > 0 && (
-                    <p className="text-xs text-green-500 mt-1">
-                      Avg: +£{(seasonStats.avgRiseAmount / 10).toFixed(1)}m
-                    </p>
-                  )}
                 </div>
               </div>
             </CardContent>
@@ -292,11 +287,6 @@ export default function RecentPriceChanges() {
                     {seasonStats.totalFalls}
                   </p>
                   <p className="text-xs sm:text-sm text-gray-600">Price falls this season</p>
-                  {seasonStats.avgFallAmount > 0 && (
-                    <p className="text-xs text-red-500 mt-1">
-                      Avg: -£{(seasonStats.avgFallAmount / 10).toFixed(1)}m
-                    </p>
-                  )}
                 </div>
               </div>
             </CardContent>
@@ -313,9 +303,6 @@ export default function RecentPriceChanges() {
                     {seasonStats.totalChanges}
                   </p>
                   <p className="text-xs sm:text-sm text-gray-600">Total price changes this season</p>
-                  <p className="text-xs text-blue-500 mt-1">
-                    {seasonStats.totalRises}↗ {seasonStats.totalFalls}↘
-                  </p>
                 </div>
               </div>
             </CardContent>
