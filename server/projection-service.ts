@@ -175,32 +175,32 @@ class ProjectionService {
             pointsFromMinutes[`gw${gw}`] = minutesPoints;
             totalMinutesPoints += minutesPoints;
             
-            // 2. GOALS CALCULATION (per 90 minutes, scaled by expected minutes)
+            // 2. GOALS CALCULATION (realistic FPL rates per gameweek)
             let goalsExpected;
             if (position === 'FWD') {
-              goalsExpected = (adjustedForm * 0.12 + seasonPerformance * 0.05) * difficultyMultiplier * (expectedMinutes / 90);
+              goalsExpected = (adjustedForm * 0.015 + seasonPerformance * 0.005) * difficultyMultiplier * (expectedMinutes / 90);
             } else if (position === 'MID') {
-              goalsExpected = (adjustedForm * 0.06 + seasonPerformance * 0.03) * difficultyMultiplier * (expectedMinutes / 90);
+              goalsExpected = (adjustedForm * 0.008 + seasonPerformance * 0.003) * difficultyMultiplier * (expectedMinutes / 90);
             } else if (position === 'DEF') {
-              goalsExpected = (adjustedForm * 0.02 + seasonPerformance * 0.01) * difficultyMultiplier * (expectedMinutes / 90);
+              goalsExpected = (adjustedForm * 0.002 + seasonPerformance * 0.001) * difficultyMultiplier * (expectedMinutes / 90);
             } else {
-              goalsExpected = adjustedForm * 0.005 * difficultyMultiplier * (expectedMinutes / 90); // GKP
+              goalsExpected = adjustedForm * 0.0005 * difficultyMultiplier * (expectedMinutes / 90); // GKP
             }
             
             const gwGoalPoints = goalsExpected * goalPoints;
             pointsFromGoals[`gw${gw}`] = Math.round(gwGoalPoints * 100) / 100;
             totalGoalPoints += gwGoalPoints;
             
-            // 3. ASSISTS CALCULATION
+            // 3. ASSISTS CALCULATION (realistic FPL rates)
             let assistsExpected;
             if (position === 'MID') {
-              assistsExpected = (adjustedForm * 0.08 + seasonPerformance * 0.04) * difficultyMultiplier * (expectedMinutes / 90);
+              assistsExpected = (adjustedForm * 0.01 + seasonPerformance * 0.004) * difficultyMultiplier * (expectedMinutes / 90);
             } else if (position === 'FWD') {
-              assistsExpected = (adjustedForm * 0.04 + seasonPerformance * 0.02) * difficultyMultiplier * (expectedMinutes / 90);
+              assistsExpected = (adjustedForm * 0.005 + seasonPerformance * 0.002) * difficultyMultiplier * (expectedMinutes / 90);
             } else if (position === 'DEF') {
-              assistsExpected = (adjustedForm * 0.025 + seasonPerformance * 0.01) * difficultyMultiplier * (expectedMinutes / 90);
+              assistsExpected = (adjustedForm * 0.003 + seasonPerformance * 0.001) * difficultyMultiplier * (expectedMinutes / 90);
             } else {
-              assistsExpected = adjustedForm * 0.003 * difficultyMultiplier * (expectedMinutes / 90); // GKP
+              assistsExpected = adjustedForm * 0.0003 * difficultyMultiplier * (expectedMinutes / 90); // GKP
             }
             
             const gwAssistPoints = assistsExpected * assistPoints;
@@ -225,21 +225,21 @@ class ProjectionService {
             pointsFromCleanSheets[`gw${gw}`] = Math.round(gwCleanSheetPoints * 100) / 100;
             totalCleanSheetPoints += gwCleanSheetPoints;
             
-            // 5. DEFENSIVE CONTRIBUTIONS (2025/26 season)
+            // 5. DEFENSIVE CONTRIBUTIONS (2025/26 season) 
             let defensiveContributions = 0;
             if (position === 'DEF') {
-              defensiveContributions = (adjustedForm * 0.15 + seasonPerformance * 0.05) * (expectedMinutes / 90);
+              defensiveContributions = (adjustedForm * 0.02 + seasonPerformance * 0.008) * (expectedMinutes / 90);
             } else if (position === 'MID') {
-              defensiveContributions = (adjustedForm * 0.08 + seasonPerformance * 0.03) * (expectedMinutes / 90);
+              defensiveContributions = (adjustedForm * 0.01 + seasonPerformance * 0.004) * (expectedMinutes / 90);
             }
             
             const gwDefensivePoints = defensiveContributions * 2; // 2 points per DC
             pointsFromDefensiveContributions[`gw${gw}`] = Math.round(gwDefensivePoints * 100) / 100;
             totalDefensivePoints += gwDefensivePoints;
             
-            // 6. BONUS POINTS (based on overall performance)
-            const performanceIndex = (goalsExpected + assistsExpected + defensiveContributions) * adjustedForm;
-            const bonusExpected = Math.min(performanceIndex * 0.3, 3.0); // Max 3 bonus points
+            // 6. BONUS POINTS (realistic FPL bonus rates)
+            const performanceIndex = (goalsExpected + assistsExpected + defensiveContributions) * adjustedForm * 0.1;
+            const bonusExpected = Math.min(performanceIndex * 0.8, 2.0); // Max 2 bonus points per GW
             pointsFromBonus[`gw${gw}`] = Math.round(bonusExpected * 100) / 100;
             totalBonusPoints += bonusExpected;
             
