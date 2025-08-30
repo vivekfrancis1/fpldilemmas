@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Home, Plane, Info, Sword, Shield } from "lucide-react";
+import { Calendar, Home, Plane, Info, Sword, Shield, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { BootstrapData, PREMIER_LEAGUE_TEAMS } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,8 @@ export default function Fixtures() {
     // Show next 6 gameweeks: GW3 to GW8
     return { start: 3, end: 8 };
   });
-  const [sortBy, setSortBy] = useState<'team' | 'fdr-asc' | 'fdr-desc'>('fdr-asc');
+  const [sortBy, setSortBy] = useState<'team' | 'fdr-asc' | 'fdr-desc' | string>('fdr-asc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -231,20 +232,56 @@ export default function Fixtures() {
     return gws;
   }, [gameweekRange]);
 
+  // Handle column header click for sorting
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      // If clicking the same column, toggle direction
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // If clicking a new column, set it and default to ascending
+      setSortBy(column);
+      setSortDirection('asc');
+    }
+  };
+
   // Sort teams based on selected sort option
   const sortedTeams = useMemo(() => {
     // Use hardcoded teams for better performance
     const teams = [...PREMIER_LEAGUE_TEAMS];
     
     switch (sortBy) {
+      case 'team':
+        return teams.sort((a, b) => 
+          sortDirection === 'asc' 
+            ? a.short_name.localeCompare(b.short_name)
+            : b.short_name.localeCompare(a.short_name)
+        );
+      case 'fdr-avg':
+        return teams.sort((a, b) => 
+          sortDirection === 'asc' 
+            ? (teamAverageFDR[a.id] || 0) - (teamAverageFDR[b.id] || 0)
+            : (teamAverageFDR[b.id] || 0) - (teamAverageFDR[a.id] || 0)
+        );
       case 'fdr-asc':
         return teams.sort((a, b) => (teamAverageFDR[a.id] || 0) - (teamAverageFDR[b.id] || 0));
       case 'fdr-desc':
         return teams.sort((a, b) => (teamAverageFDR[b.id] || 0) - (teamAverageFDR[a.id] || 0));
       default:
+        // Check if sorting by gameweek (format: 'gw-X')
+        if (sortBy.startsWith('gw-')) {
+          const gw = parseInt(sortBy.replace('gw-', ''));
+          return teams.sort((a, b) => {
+            const fixtureA = fixtureMatrix[a.id]?.[gw];
+            const fixtureB = fixtureMatrix[b.id]?.[gw];
+            const diffA = fixtureA?.difficulty || 0;
+            const diffB = fixtureB?.difficulty || 0;
+            
+            return sortDirection === 'asc' ? diffA - diffB : diffB - diffA;
+          });
+        }
         return teams.sort((a, b) => a.short_name.localeCompare(b.short_name));
     }
-  }, [bootstrapData?.teams, teamAverageFDR, sortBy]);
+  }, [fixtureMatrix, teamAverageFDR, sortBy, sortDirection]);
 
   if (error) {
     return (
@@ -322,7 +359,16 @@ export default function Fixtures() {
                   <label className="text-sm font-medium text-gray-700">Sort by:</label>
                   <select 
                     value={sortBy} 
-                    onChange={(e) => setSortBy(e.target.value as 'team' | 'fdr-asc' | 'fdr-desc')}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === 'fdr-asc' || value === 'fdr-desc') {
+                        setSortBy('fdr-avg');
+                        setSortDirection(value === 'fdr-asc' ? 'asc' : 'desc');
+                      } else {
+                        setSortBy(value);
+                        setSortDirection('asc');
+                      }
+                    }}
                     className="px-3 py-1 border border-gray-300 rounded text-sm"
                     data-testid="select-sort-by"
                   >
@@ -390,13 +436,47 @@ export default function Fixtures() {
                     <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
-                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Avg FDR</th>
+                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">
+                            <button
+                              onClick={() => handleSort('team')}
+                              className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+                              data-testid="sort-team"
+                            >
+                              Team
+                              {sortBy === 'team' && (
+                                sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                              )}
+                              {sortBy !== 'team' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                            </button>
+                          </th>
+                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">
+                            <button
+                              onClick={() => handleSort('fdr-avg')}
+                              className="flex items-center gap-1 hover:text-blue-600 transition-colors mx-auto"
+                              data-testid="sort-avg-fdr"
+                            >
+                              Avg FDR
+                              {sortBy === 'fdr-avg' && (
+                                sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                              )}
+                              {sortBy !== 'fdr-avg' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                            </button>
+                          </th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
                             }`}>
-                              GW{gw}
+                              <button
+                                onClick={() => handleSort(`gw-${gw}`)}
+                                className="flex items-center gap-1 hover:text-blue-600 transition-colors mx-auto"
+                                data-testid={`sort-gw-${gw}`}
+                              >
+                                GW{gw}
+                                {sortBy === `gw-${gw}` && (
+                                  sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                )}
+                                {sortBy !== `gw-${gw}` && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                              </button>
                             </th>
                           ))}
                         </tr>
@@ -493,12 +573,34 @@ export default function Fixtures() {
                     <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
+                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">
+                            <button
+                              onClick={() => handleSort('team')}
+                              className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+                              data-testid="sort-team-attacking"
+                            >
+                              Team
+                              {sortBy === 'team' && (
+                                sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                              )}
+                              {sortBy !== 'team' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                            </button>
+                          </th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
                             }`}>
-                              GW{gw}
+                              <button
+                                onClick={() => handleSort(`gw-${gw}`)}
+                                className="flex items-center gap-1 hover:text-blue-600 transition-colors mx-auto"
+                                data-testid={`sort-gw-${gw}-attacking`}
+                              >
+                                GW{gw}
+                                {sortBy === `gw-${gw}` && (
+                                  sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                )}
+                                {sortBy !== `gw-${gw}` && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                              </button>
                             </th>
                           ))}
                         </tr>
@@ -605,12 +707,34 @@ export default function Fixtures() {
                     <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
+                          <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">
+                            <button
+                              onClick={() => handleSort('team')}
+                              className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+                              data-testid="sort-team-defensive"
+                            >
+                              Team
+                              {sortBy === 'team' && (
+                                sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                              )}
+                              {sortBy !== 'team' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                            </button>
+                          </th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
                             }`}>
-                              GW{gw}
+                              <button
+                                onClick={() => handleSort(`gw-${gw}`)}
+                                className="flex items-center gap-1 hover:text-blue-600 transition-colors mx-auto"
+                                data-testid={`sort-gw-${gw}-defensive`}
+                              >
+                                GW{gw}
+                                {sortBy === `gw-${gw}` && (
+                                  sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                )}
+                                {sortBy !== `gw-${gw}` && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                              </button>
                             </th>
                           ))}
                         </tr>
