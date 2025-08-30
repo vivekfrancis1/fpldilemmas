@@ -28,7 +28,7 @@ export default function Fixtures() {
     // Show next 6 gameweeks: GW3 to GW8
     return { start: 3, end: 8 };
   });
-  const [sortBy, setSortBy] = useState<'team' | 'fdr-asc' | 'fdr-desc' | 'attack-asc' | 'attack-desc' | 'defence-asc' | 'defence-desc'>('fdr-asc');
+  const [sortBy, setSortBy] = useState<string>('fdr-asc');
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -236,7 +236,7 @@ export default function Fixtures() {
     return MULTIPLIERS.defense[tier as keyof typeof MULTIPLIERS.defense] || MULTIPLIERS.defense.average;
   };
 
-  // Calculate Attack and Defence scores for a fixture
+  // Calculate Attack and Defence FDR scores for a fixture
   const calculateScores = (teamId: number, opponentId: number, isHome: boolean) => {
     const venueFactor = isHome ? MULTIPLIERS.venue.home : MULTIPLIERS.venue.away;
     const opponentDefenseTier = getDefensiveTier(opponentId);
@@ -244,13 +244,11 @@ export default function Fixtures() {
     const opponentDefenseMultiplier = getDefenseMultiplier(opponentDefenseTier);
     const opponentAttackMultiplier = getAttackMultiplier(opponentAttackTier);
     
-    // Attack score = Venue factor × Opponent's Defensive Tier Multiplier
-    const attackScore = venueFactor * opponentDefenseMultiplier;
+    // Attack FDR score = 3 / (Defensive Tier multiplier of opponent × Venue Factor)
+    const attackScore = 3 / (opponentDefenseMultiplier * venueFactor);
     
-    // Defence score = Venue factor ÷ Opponent's Attacking Tier Multiplier
-    const defenceScore = venueFactor / opponentAttackMultiplier;
-    
-    // Now we always have tier classifications (either from admin or fallback), so calculate normally
+    // Defence FDR score = (3 × Attacking Tier of opponent) / Venue Factor
+    const defenceScore = (3 * opponentAttackMultiplier) / venueFactor;
     
     return {
       attackScore: parseFloat(attackScore.toFixed(2)),
@@ -494,11 +492,11 @@ export default function Fixtures() {
               </TabsTrigger>
               <TabsTrigger value="attacking" className="flex items-center gap-2">
                 <Sword className="h-4 w-4" />
-                Attack Scores
+                Attack FDR
               </TabsTrigger>
               <TabsTrigger value="defensive" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                Defence Scores
+                Defence FDR
               </TabsTrigger>
             </TabsList>
 
@@ -615,15 +613,15 @@ export default function Fixtures() {
               )}
             </TabsContent>
 
-            {/* Attack Score Analysis Tab */}
+            {/* Attack FDR Analysis Tab */}
             <TabsContent value="attacking" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
                   <Sword className="h-3 w-3 text-orange-600" />
-                  <span className="text-gray-700">Attack Score = Venue Factor × Opponent's Defence Multiplier</span>
+                  <span className="text-gray-700">Attack FDR = 3 ÷ (Opponent's Defence Multiplier × Venue Factor)</span>
                 </div>
                 <div className="text-xs text-gray-600">
-                  Higher scores indicate better attacking opportunities. Home: ×1.16, Away: ×0.84
+                  Lower scores indicate better attacking opportunities. Home: ×1.16, Away: ×0.84
                 </div>
               </div>
 
@@ -647,7 +645,7 @@ export default function Fixtures() {
                             className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l cursor-pointer hover:bg-gray-100"
                             onClick={() => setSortBy(sortBy === 'attack-asc' ? 'attack-desc' : 'attack-asc')}
                           >
-                            Avg Attack {sortBy === 'attack-asc' ? '↑' : sortBy === 'attack-desc' ? '↓' : ''}
+                            Avg Attack FDR {sortBy === 'attack-asc' ? '↑' : sortBy === 'attack-desc' ? '↓' : ''}
                           </th>
                           {gameweeks.map(gw => (
                             <th 
@@ -688,20 +686,13 @@ export default function Fixtures() {
                                   );
                                 }
 
-                                // Get opponent tier for color coding
-                                const attackOpponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
-                                const attackOpponentDefenseTier = attackOpponentId ? getDefensiveTier(attackOpponentId) : 'average';
-                                
-                                // Color by opponent's defensive tier (same as FDR system)
-                                const getAttackOpponentDefenseColor = (defenseTier: string) => {
-                                  switch (defenseTier) {
-                                    case 'elite': return 'bg-red-300 text-red-800'; // Very Hard - Elite defense means hard to score
-                                    case 'strong': return 'bg-red-100 text-red-800'; // Hard 
-                                    case 'average': return 'bg-gray-100 text-gray-800'; // Medium
-                                    case 'weak': return 'bg-green-100 text-green-800'; // Easy - Weak defense means easy to score
-                                    case 'promoted': return 'bg-green-300 text-green-800'; // Very Easy
-                                    default: return 'bg-gray-300 text-gray-900';
-                                  }
+                                // Color by Attack FDR score (lower is better)
+                                const getAttackFDRColor = (attackScore: number) => {
+                                  if (attackScore <= 2) return 'bg-green-300 text-green-800'; // Very Easy (FDR 1-2)
+                                  if (attackScore <= 2.5) return 'bg-green-100 text-green-800'; // Easy (FDR 2-2.5)
+                                  if (attackScore <= 3.5) return 'bg-gray-100 text-gray-800'; // Medium (FDR 2.5-3.5)
+                                  if (attackScore <= 4) return 'bg-red-100 text-red-800'; // Hard (FDR 3.5-4)
+                                  return 'bg-red-300 text-red-800'; // Very Hard (FDR 4+)
                                 };
 
                                 return (
@@ -709,10 +700,10 @@ export default function Fixtures() {
                                     gw === currentGameweek ? 'bg-blue-50' : ''
                                   }`}>
                                     <div 
-                                      className={`px-1 py-1 rounded text-xs font-medium ${getAttackOpponentDefenseColor(attackOpponentDefenseTier)} ${
+                                      className={`px-1 py-1 rounded text-xs font-medium ${getAttackFDRColor(fixture.attackScore)} ${
                                         fixture.finished ? 'opacity-50' : ''
                                       }`}
-                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Attack: ${fixture.attackScore} (${attackOpponentDefenseTier} defense)`}
+                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Attack FDR: ${fixture.attackScore} (lower is better)`}
                                       data-testid={`attack-fixture-${team.id}-${gw}`}
                                     >
                                       <div className="font-bold">{fixture.attackScore}</div>
@@ -731,15 +722,15 @@ export default function Fixtures() {
               )}
             </TabsContent>
 
-            {/* Defence Score Analysis Tab */}
+            {/* Defence FDR Analysis Tab */}
             <TabsContent value="defensive" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
                   <Shield className="h-3 w-3 text-blue-600" />
-                  <span className="text-gray-700">Defence Score = Venue Factor ÷ Opponent's Attack Multiplier</span>
+                  <span className="text-gray-700">Defence FDR = (3 × Opponent's Attack Multiplier) ÷ Venue Factor</span>
                 </div>
                 <div className="text-xs text-gray-600">
-                  Higher scores indicate better defensive opportunities. Home: ×1.16, Away: ×0.84
+                  Lower scores indicate better defensive opportunities. Home: ×1.16, Away: ×0.84
                 </div>
               </div>
 
@@ -763,7 +754,7 @@ export default function Fixtures() {
                             className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l cursor-pointer hover:bg-gray-100"
                             onClick={() => setSortBy(sortBy === 'defence-asc' ? 'defence-desc' : 'defence-asc')}
                           >
-                            Avg Defence {sortBy === 'defence-asc' ? '↑' : sortBy === 'defence-desc' ? '↓' : ''}
+                            Avg Defence FDR {sortBy === 'defence-asc' ? '↑' : sortBy === 'defence-desc' ? '↓' : ''}
                           </th>
                           {gameweeks.map(gw => (
                             <th 
@@ -804,35 +795,15 @@ export default function Fixtures() {
                                   );
                                 }
 
-                                const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
-                                const opponentAttackTier = opponentId ? getAttackingTier(opponentId) : 'average';
+
                                 
-                                // Color by opponent's attacking tier (exact same colors as Balanced FDR)
-                                const getOpponentAttackColor = (attackTier: string) => {
-                                  switch (attackTier) {
-                                    case 'elite': return 'bg-red-300 text-red-800'; // Very Hard (FDR 5) - light red
-                                    case 'strong': return 'bg-red-100 text-red-800'; // Hard (FDR 4)
-                                    case 'average': return 'bg-gray-100 text-gray-800'; // Medium (FDR 3)
-                                    case 'weak': return 'bg-green-100 text-green-800'; // Easy (FDR 2)
-                                    case 'promoted': return 'bg-green-300 text-green-800'; // Very Easy (FDR 1) - light green
-                                    default: return 'bg-gray-300 text-gray-900';
-                                  }
-                                };
-                                
-                                // Get opponent tier for color coding  
-                                const defenceOpponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
-                                const defenceOpponentAttackTier = defenceOpponentId ? getAttackingTier(defenceOpponentId) : 'average';
-                                
-                                // Color by opponent's attacking tier (same as FDR system)
-                                const getDefenceOpponentAttackColor = (attackTier: string) => {
-                                  switch (attackTier) {
-                                    case 'elite': return 'bg-red-300 text-red-800'; // Very Hard - Elite attack means hard to defend
-                                    case 'strong': return 'bg-red-100 text-red-800'; // Hard
-                                    case 'average': return 'bg-gray-100 text-gray-800'; // Medium
-                                    case 'weak': return 'bg-green-100 text-green-800'; // Easy - Weak attack means easy to defend
-                                    case 'promoted': return 'bg-green-300 text-green-800'; // Very Easy
-                                    default: return 'bg-gray-300 text-gray-900';
-                                  }
+                                // Color by Defence FDR score (lower is better)
+                                const getDefenceFDRColor = (defenceScore: number) => {
+                                  if (defenceScore <= 2) return 'bg-green-300 text-green-800'; // Very Easy (FDR 1-2)
+                                  if (defenceScore <= 2.5) return 'bg-green-100 text-green-800'; // Easy (FDR 2-2.5)
+                                  if (defenceScore <= 3.5) return 'bg-gray-100 text-gray-800'; // Medium (FDR 2.5-3.5)
+                                  if (defenceScore <= 4) return 'bg-red-100 text-red-800'; // Hard (FDR 3.5-4)
+                                  return 'bg-red-300 text-red-800'; // Very Hard (FDR 4+)
                                 };
 
                                 return (
@@ -840,10 +811,10 @@ export default function Fixtures() {
                                     gw === currentGameweek ? 'bg-blue-50' : ''
                                   }`}>
                                     <div 
-                                      className={`px-1 py-1 rounded text-xs font-medium ${getDefenceOpponentAttackColor(defenceOpponentAttackTier)} ${
+                                      className={`px-1 py-1 rounded text-xs font-medium ${getDefenceFDRColor(fixture.defenceScore)} ${
                                         fixture.finished ? 'opacity-50' : ''
                                       }`}
-                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Defence: ${fixture.defenceScore} (${defenceOpponentAttackTier} attack)`}
+                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Defence FDR: ${fixture.defenceScore} (lower is better)`}
                                       data-testid={`defense-fixture-${team.id}-${gw}`}
                                     >
                                       <div className="font-bold">{fixture.defenceScore}</div>
