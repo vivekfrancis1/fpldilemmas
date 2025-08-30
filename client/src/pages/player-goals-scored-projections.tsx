@@ -34,8 +34,9 @@ export default function PlayerGoalsScoredProjections() {
 
   // FPL points from goals based on position
   const getPointsFromGoals = (goals: number, position: string): number => {
-    const multiplier = position === 'Defender' || position === 'DEF' ? 6 : 
-                      position === 'Midfielder' || position === 'MID' ? 5 : 4; // Defenders: 6pts, Midfielders: 5pts, Forwards: 4pts, Goalkeepers: 4pts
+    const multiplier = position === 'Goalkeeper' || position === 'GKP' ? 10 :
+                      position === 'Defender' || position === 'DEF' ? 6 : 
+                      position === 'Midfielder' || position === 'MID' ? 5 : 4; // Goalkeepers: 10pts, Defenders: 6pts, Midfielders: 5pts, Forwards: 4pts
     return goals * multiplier;
   };
 
