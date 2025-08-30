@@ -346,6 +346,34 @@ export default function Fixtures() {
     // Use hardcoded teams for better performance
     const teams = [...PREMIER_LEAGUE_TEAMS];
     
+    // Handle gameweek-specific sorting for attack scores
+    if (sortBy.startsWith('attack-gw')) {
+      const gwMatch = sortBy.match(/attack-gw(\d+)-(asc|desc)/);
+      if (gwMatch) {
+        const gw = parseInt(gwMatch[1]);
+        const direction = gwMatch[2];
+        return teams.sort((a, b) => {
+          const scoreA = fixtureMatrix[a.id]?.[gw]?.attackScore || 0;
+          const scoreB = fixtureMatrix[b.id]?.[gw]?.attackScore || 0;
+          return direction === 'asc' ? scoreA - scoreB : scoreB - scoreA;
+        });
+      }
+    }
+    
+    // Handle gameweek-specific sorting for defence scores
+    if (sortBy.startsWith('defence-gw')) {
+      const gwMatch = sortBy.match(/defence-gw(\d+)-(asc|desc)/);
+      if (gwMatch) {
+        const gw = parseInt(gwMatch[1]);
+        const direction = gwMatch[2];
+        return teams.sort((a, b) => {
+          const scoreA = fixtureMatrix[a.id]?.[gw]?.defenceScore || 0;
+          const scoreB = fixtureMatrix[b.id]?.[gw]?.defenceScore || 0;
+          return direction === 'asc' ? scoreA - scoreB : scoreB - scoreA;
+        });
+      }
+    }
+    
     switch (sortBy) {
       case 'fdr-asc':
         return teams.sort((a, b) => (teamAverageFDR[a.id] || 0) - (teamAverageFDR[b.id] || 0));
@@ -362,7 +390,7 @@ export default function Fixtures() {
       default:
         return teams.sort((a, b) => a.short_name.localeCompare(b.short_name));
     }
-  }, [bootstrapData?.teams, teamAverageFDR, teamAverageAttack, teamAverageDefence, sortBy]);
+  }, [bootstrapData?.teams, teamAverageFDR, teamAverageAttack, teamAverageDefence, fixtureMatrix, sortBy]);
 
   if (error) {
     return (
@@ -622,10 +650,14 @@ export default function Fixtures() {
                             Avg Attack {sortBy === 'attack-asc' ? '↑' : sortBy === 'attack-desc' ? '↓' : ''}
                           </th>
                           {gameweeks.map(gw => (
-                            <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
-                              gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
-                            }`}>
-                              GW{gw}
+                            <th 
+                              key={gw} 
+                              className={`px-2 py-2 text-center font-semibold min-w-16 cursor-pointer hover:bg-gray-100 ${
+                                gw === currentGameweek ? 'bg-blue-100 text-blue-900 hover:bg-blue-200' : ''
+                              }`}
+                              onClick={() => setSortBy(sortBy === `attack-gw${gw}-asc` ? `attack-gw${gw}-desc` : `attack-gw${gw}-asc`)}
+                            >
+                              GW{gw} {sortBy === `attack-gw${gw}-asc` ? '↑' : sortBy === `attack-gw${gw}-desc` ? '↓' : ''}
                             </th>
                           ))}
                         </tr>
@@ -734,10 +766,14 @@ export default function Fixtures() {
                             Avg Defence {sortBy === 'defence-asc' ? '↑' : sortBy === 'defence-desc' ? '↓' : ''}
                           </th>
                           {gameweeks.map(gw => (
-                            <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
-                              gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
-                            }`}>
-                              GW{gw}
+                            <th 
+                              key={gw} 
+                              className={`px-2 py-2 text-center font-semibold min-w-16 cursor-pointer hover:bg-gray-100 ${
+                                gw === currentGameweek ? 'bg-blue-100 text-blue-900 hover:bg-blue-200' : ''
+                              }`}
+                              onClick={() => setSortBy(sortBy === `defence-gw${gw}-asc` ? `defence-gw${gw}-desc` : `defence-gw${gw}-asc`)}
+                            >
+                              GW{gw} {sortBy === `defence-gw${gw}-asc` ? '↑' : sortBy === `defence-gw${gw}-desc` ? '↓' : ''}
                             </th>
                           ))}
                         </tr>
