@@ -157,7 +157,7 @@ export default function PlayerTotalPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 35 }, (_, i) => i + 4).map(gw => (
+                  {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
@@ -171,7 +171,7 @@ export default function PlayerTotalPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 35 }, (_, i) => i + 4).map(gw => (
+                  {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
