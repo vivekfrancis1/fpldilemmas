@@ -26,9 +26,9 @@ const MASTER_TEAM_DEFAULTS = {
   promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
   
   // Attack Multipliers
-  eliteAttackMultiplier: 1.4,
-  strongAttackMultiplier: 1.1,
-  averageAttackMultiplier: 1.15,
+  eliteAttackMultiplier: 1.35,
+  strongAttackMultiplier: 1.15,
+  averageAttackMultiplier: 1.00,
   weakAttackMultiplier: 0.85,
   promotedAttackMultiplier: 0.7,
   
@@ -1588,9 +1588,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         seasonFinaleMultiplier: parseFloat(settings.seasonFinaleMultiplier || "1.05"),
         newManagerBounceMultiplier: parseFloat(settings.newManagerBounceMultiplier || "1.08"),
         weatherConditionsMultiplier: parseFloat(settings.weatherConditionsMultiplier || "0.96"),
-        eliteAttackMultiplier: parseFloat(settings.eliteAttackMultiplier || "1.15"),
-        strongAttackMultiplier: parseFloat(settings.strongAttackMultiplier || "1.10"),
-        averageAttackMultiplier: parseFloat(settings.averageAttackMultiplier || "1.15"),
+        eliteAttackMultiplier: parseFloat(settings.eliteAttackMultiplier || "1.35"),
+        strongAttackMultiplier: parseFloat(settings.strongAttackMultiplier || "1.15"),
+        averageAttackMultiplier: parseFloat(settings.averageAttackMultiplier || "1.00"),
         weakAttackMultiplier: parseFloat(settings.weakAttackMultiplier || "0.90"),
         promotedAttackMultiplier: parseFloat(settings.promotedAttackMultiplier || "0.85"),
         offensiveVarianceEnabled: settings.offensiveVarianceEnabled,
