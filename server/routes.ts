@@ -5194,10 +5194,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!team || !position || !playerMinutes) return;
         
-        // Only calculate clean sheet points for Defenders and Goalkeepers
-        if (position.singular_name !== 'Defender' && position.singular_name !== 'Goalkeeper') {
-          return;
+        // Only calculate clean sheet points for Defenders, Goalkeepers, and Midfielders (Forwards get 0 points)
+        if (position.singular_name === 'Forward') {
+          return; // Forwards don't get clean sheet points
         }
+        
+
         
         // Find team's clean sheet projection for the target gameweek
         const teamCSProjection = teamCSData.find((tcs: any) => tcs.id === team.id);
@@ -5227,9 +5229,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           probabilityPlays60Plus = 0.02; // Rarely plays
         }
         
-        // Calculate expected clean sheet points
-        // CS% × Probability plays 60+ mins × 4 points
-        const expectedCleanSheetPoints = (teamCleanSheetPercent / 100) * probabilityPlays60Plus * 4;
+        // Calculate expected clean sheet points based on position
+        // Defenders and Goalkeepers: 4 points, Midfielders: 1 point
+        const cleanSheetPoints = (position.singular_name === 'Midfielder') ? 1 : 4;
+        const expectedCleanSheetPoints = (teamCleanSheetPercent / 100) * probabilityPlays60Plus * cleanSheetPoints;
         
         playerCleanSheetProjections.push({
           playerId: player.id,
