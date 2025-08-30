@@ -600,6 +600,7 @@ export default function Fixtures() {
                       <thead>
                         <tr className="border-b bg-gray-50">
                           <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
+                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Avg Attack</th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
@@ -616,6 +617,11 @@ export default function Fixtures() {
                               <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">{team.short_name}</span>
+                                </div>
+                              </td>
+                              <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
+                                <div className="inline-block px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-800">
+                                  {teamAverageAttack[team.id] > 0 ? teamAverageAttack[team.id] : '-'}
                                 </div>
                               </td>
                               {gameweeks.map(gw => {
@@ -696,6 +702,7 @@ export default function Fixtures() {
                       <thead>
                         <tr className="border-b bg-gray-50">
                           <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">Team</th>
+                          <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">Avg Defence</th>
                           {gameweeks.map(gw => (
                             <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
                               gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
@@ -712,6 +719,11 @@ export default function Fixtures() {
                               <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">{team.short_name}</span>
+                                </div>
+                              </td>
+                              <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
+                                <div className="inline-block px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
+                                  {teamAverageDefence[team.id] > 0 ? teamAverageDefence[team.id] : '-'}
                                 </div>
                               </td>
                               {gameweeks.map(gw => {
