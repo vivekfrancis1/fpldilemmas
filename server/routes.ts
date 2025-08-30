@@ -2,9 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, type UpsetConfig } from "./storage";
 import { priceScheduler } from "./price-scheduler";
-import { insertPriceAlertSchema, unifiedProjectionSettings as unifiedProjectionSettingsTable } from "@shared/schema";
+import { insertPriceAlertSchema, unifiedProjectionSettings as unifiedProjectionSettingsTable, historicalPlayerStats } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 
@@ -3565,6 +3565,260 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // LEGACY CODE DISABLED - xG methodology now used exclusively
       
       console.log("DEBUG: All goal share calculations completed using xG per 90 methodology");
+
+  // Helper function to calculate defensive contribution based on position
+  function calculateDefensiveContribution(elementType: number, cbi: number, tackles: number, recoveries: number): number {
+    // Defenders: DC = CBI + T
+    if (elementType === 2) {
+      return cbi + tackles;
+    }
+    // Midfielders and Forwards: DC = CBI + T + R
+    else if (elementType === 3 || elementType === 4) {
+      return cbi + tackles + recoveries;
+    }
+    // Goalkeepers: DC = CBI + T (same as defenders)
+    else {
+      return cbi + tackles;
+    }
+  }
+
+  // Helper function to calculate per-90 stats
+  function calculatePer90(value: number, minutes: number): number {
+    if (minutes === 0) return 0;
+    return Math.round((value * 90 / minutes) * 100) / 100;
+  }
+
+  // Historical Player Stats Storage API - populates database with previous seasons data
+  app.post("/api/historical-player-stats/populate", async (req, res) => {
+    try {
+      const { season } = req.body;
+      
+      if (!season) {
+        return res.status(400).json({ error: "Season parameter required (format: '2023/24')" });
+      }
+
+      console.log(`DEBUG: Starting historical stats population for ${season}`);
+
+      // Fetch historical season data from FPL API
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch current bootstrap data");
+      }
+      const currentBootstrap = await bootstrapResponse.json();
+
+      let playersPopulated = 0;
+      let errors = 0;
+      const results: any[] = [];
+
+      // Process players in batches to avoid overwhelming the API
+      const playerBatches = [];
+      for (let i = 0; i < currentBootstrap.elements.length; i += 10) {
+        playerBatches.push(currentBootstrap.elements.slice(i, i + 10));
+      }
+
+      for (const batch of playerBatches) {
+        const batchPromises = batch.map(async (player: any) => {
+          try {
+            // Fetch player's historical data
+            const playerResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+            if (!playerResponse.ok) {
+              console.log(`DEBUG: Failed to fetch data for player ${player.id}: ${player.web_name}`);
+              return null;
+            }
+            
+            const playerData = await playerResponse.json();
+            const historicalSeasons = playerData.history_past || [];
+            
+            // Find the requested season in historical data
+            const seasonData = historicalSeasons.find((h: any) => {
+              const seasonString = `${h.season_name}/${(h.season_name + 1).toString().slice(-2)}`;
+              return seasonString === season;
+            });
+
+            if (!seasonData) {
+              return null; // Player didn't play in this season
+            }
+
+            const team = currentBootstrap.teams.find((t: any) => t.id === player.team);
+            const position = currentBootstrap.element_types.find((et: any) => et.id === player.element_type);
+
+            // Calculate defensive contribution based on position
+            const cbi = seasonData.clearances_blocks_interceptions || 0;
+            const tackles = seasonData.tackles || 0;
+            const recoveries = seasonData.recoveries || 0;
+            const defensiveContribution = calculateDefensiveContribution(player.element_type, cbi, tackles, recoveries);
+
+            // Prepare historical stats record
+            const historicalRecord = {
+              playerId: player.id,
+              playerName: player.web_name,
+              season: season,
+              teamId: player.team,
+              teamName: team?.name || 'Unknown',
+              position: position?.singular_name || 'Unknown',
+              elementType: player.element_type,
+              
+              // Core stats
+              goalsScored: seasonData.goals_scored || 0,
+              assists: seasonData.assists || 0,
+              clearancesBlocksInterceptions: cbi,
+              tackles: tackles,
+              recoveries: recoveries,
+              defensiveContribution: defensiveContribution,
+              cleanSheets: seasonData.clean_sheets || 0,
+              goalsConceded: seasonData.goals_conceded || 0,
+              saves: seasonData.saves || 0,
+              penaltiesSaved: seasonData.penalties_saved || 0,
+              yellowCards: seasonData.yellow_cards || 0,
+              redCards: seasonData.red_cards || 0,
+              minutes: seasonData.minutes || 0,
+              starts: seasonData.starts || 0,
+              totalPoints: seasonData.total_points || 0,
+              bonus: seasonData.bonus || 0,
+              bps: seasonData.bps || 0,
+              
+              // Expected stats (if available)
+              expectedGoals: seasonData.expected_goals ? parseFloat(seasonData.expected_goals) : null,
+              expectedAssists: seasonData.expected_assists ? parseFloat(seasonData.expected_assists) : null,
+              expectedGoalsConceded: seasonData.expected_goals_conceded ? parseFloat(seasonData.expected_goals_conceded) : null,
+              
+              // ICT components (if available)
+              influence: seasonData.influence ? parseFloat(seasonData.influence) : null,
+              creativity: seasonData.creativity ? parseFloat(seasonData.creativity) : null,
+              threat: seasonData.threat ? parseFloat(seasonData.threat) : null,
+              ictIndex: seasonData.ict_index ? parseFloat(seasonData.ict_index) : null,
+              
+              // Per-90 calculations
+              goalsPer90: calculatePer90(seasonData.goals_scored || 0, seasonData.minutes || 0),
+              assistsPer90: calculatePer90(seasonData.assists || 0, seasonData.minutes || 0),
+              defensiveContributionPer90: calculatePer90(defensiveContribution, seasonData.minutes || 0),
+              tacklesPer90: calculatePer90(tackles, seasonData.minutes || 0),
+              recoveriesPer90: calculatePer90(recoveries, seasonData.minutes || 0),
+              cbiPer90: calculatePer90(cbi, seasonData.minutes || 0),
+              cleanSheetsPer90: calculatePer90(seasonData.clean_sheets || 0, seasonData.minutes || 0),
+            };
+
+            return historicalRecord;
+          } catch (error) {
+            console.error(`Error processing player ${player.web_name}:`, error);
+            return null;
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        const validResults = batchResults.filter(result => result !== null);
+        
+        if (validResults.length > 0) {
+          results.push(...validResults);
+          playersPopulated += validResults.length;
+        }
+        
+        // Add small delay between batches to be respectful to FPL API
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      console.log(`DEBUG: Collected historical stats for ${results.length} players from ${season}`);
+
+      // Store results in database using raw SQL for better performance
+      if (results.length > 0) {
+        const insertQuery = `
+          INSERT INTO historical_player_stats (
+            player_id, player_name, season, team_id, team_name, position, element_type,
+            goals_scored, assists, clearances_blocks_interceptions, tackles, recoveries, 
+            defensive_contribution, clean_sheets, goals_conceded, saves, penalties_saved,
+            yellow_cards, red_cards, minutes, starts, total_points, bonus, bps,
+            expected_goals, expected_assists, expected_goals_conceded,
+            influence, creativity, threat, ict_index,
+            goals_per_90, assists_per_90, defensive_contribution_per_90, 
+            tackles_per_90, recoveries_per_90, cbi_per_90, clean_sheets_per_90
+          ) VALUES `;
+
+        const values = results.map(record => `(
+          ${record.playerId}, '${record.playerName.replace(/'/g, "''")}', '${record.season}', 
+          ${record.teamId}, '${record.teamName.replace(/'/g, "''")}', '${record.position}', ${record.elementType},
+          ${record.goalsScored}, ${record.assists}, ${record.clearancesBlocksInterceptions}, 
+          ${record.tackles}, ${record.recoveries}, ${record.defensiveContribution}, 
+          ${record.cleanSheets}, ${record.goalsConceded}, ${record.saves}, ${record.penaltiesSaved},
+          ${record.yellowCards}, ${record.redCards}, ${record.minutes}, ${record.starts}, 
+          ${record.totalPoints}, ${record.bonus}, ${record.bps},
+          ${record.expectedGoals || 'NULL'}, ${record.expectedAssists || 'NULL'}, 
+          ${record.expectedGoalsConceded || 'NULL'},
+          ${record.influence || 'NULL'}, ${record.creativity || 'NULL'}, 
+          ${record.threat || 'NULL'}, ${record.ictIndex || 'NULL'},
+          ${record.goalsPer90}, ${record.assistsPer90}, ${record.defensiveContributionPer90},
+          ${record.tacklesPer90}, ${record.recoveriesPer90}, ${record.cbiPer90}, ${record.cleanSheetsPer90}
+        )`).join(',');
+
+        const fullQuery = insertQuery + values + ' ON CONFLICT (player_id, season) DO NOTHING';
+        
+        try {
+          // Insert records using Drizzle ORM for better type safety
+          await db.insert(historicalPlayerStats).values(results).onConflictDoNothing();
+          console.log(`DEBUG: Successfully inserted ${results.length} historical records for ${season}`);
+          console.log(`DEBUG: Sample record - ${results[0].playerName}: ${results[0].goalsScored}G, ${results[0].assists}A, ${results[0].defensiveContribution}DC`);
+        } catch (dbError) {
+          console.error("Database insertion failed:", dbError);
+          throw dbError;
+        }
+      }
+
+      res.json({
+        success: true,
+        season: season,
+        playersProcessed: currentBootstrap.elements.length,
+        playersWithHistoricalData: results.length,
+        message: `Successfully collected historical stats for ${results.length} players from ${season}`,
+        sampleData: results.slice(0, 5) // Return first 5 records as sample
+      });
+      
+    } catch (error) {
+      console.error("Error populating historical player stats:", error);
+      res.status(500).json({ error: "Failed to populate historical player stats" });
+    }
+  });
+
+  // Query historical player stats API
+  app.get("/api/historical-player-stats", async (req, res) => {
+    try {
+      const { season, position, playerId } = req.query;
+      
+      let whereConditions = [];
+      if (season) whereConditions.push(`season = '${season}'`);
+      if (position) whereConditions.push(`element_type = ${position}`);
+      if (playerId) whereConditions.push(`player_id = ${playerId}`);
+      
+      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+      
+      const query = `
+        SELECT * FROM historical_player_stats 
+        ${whereClause}
+        ORDER BY total_points DESC, goals_scored DESC, assists DESC
+        LIMIT 500
+      `;
+      
+      // Execute query using database connection
+      const historicalData = await db.select().from(historicalPlayerStats)
+        .where(
+          whereConditions.length > 0 
+            ? sql`${sql.raw(whereConditions.join(' AND '))}` 
+            : undefined
+        )
+        .orderBy(desc(historicalPlayerStats.totalPoints), desc(historicalPlayerStats.goalsScored), desc(historicalPlayerStats.assists))
+        .limit(500);
+      
+      console.log(`DEBUG: Retrieved ${historicalData.length} historical records with conditions: ${whereClause || 'none'}`);
+      
+      res.json({
+        success: true,
+        data: historicalData,
+        count: historicalData.length
+      });
+      
+    } catch (error) {
+      console.error("Error querying historical player stats:", error);
+      res.status(500).json({ error: "Failed to query historical player stats" });
+    }
+  });
       
       const response = Object.keys(teamSeasonTotals).map(teamIdStr => {
         const teamId = parseInt(teamIdStr);
@@ -7482,6 +7736,408 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   console.log("✓ Content Creators API routes registered successfully");
+
+  // Helper function to calculate defensive contribution based on position
+  function calculateDefensiveContribution(elementType: number, cbi: number, tackles: number, recoveries: number): number {
+    // Defenders: DC = CBI + T
+    if (elementType === 2) {
+      return cbi + tackles;
+    }
+    // Midfielders and Forwards: DC = CBI + T + R
+    else if (elementType === 3 || elementType === 4) {
+      return cbi + tackles + recoveries;
+    }
+    // Goalkeepers: DC = CBI + T (same as defenders)
+    else {
+      return cbi + tackles;
+    }
+  }
+
+  // Helper function to calculate per-90 stats
+  function calculatePer90(value: number, minutes: number): number {
+    if (minutes === 0) return 0;
+    return Math.round((value * 90 / minutes) * 100) / 100;
+  }
+
+  // Historical Player Stats Storage API - populates database with previous seasons data
+  app.post("/api/historical-player-stats/populate", async (req, res) => {
+    try {
+      const { season } = req.body;
+      
+      if (!season) {
+        return res.status(400).json({ error: "Season parameter required (format: '2023/24')" });
+      }
+
+      console.log(`DEBUG: Starting historical stats population for ${season}`);
+
+      // Fetch historical season data from FPL API
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch current bootstrap data");
+      }
+      const currentBootstrap = await bootstrapResponse.json();
+
+      let playersPopulated = 0;
+      let errors = 0;
+      const results: any[] = [];
+
+      // Process players in batches to avoid overwhelming the API
+      const playerBatches = [];
+      for (let i = 0; i < currentBootstrap.elements.length; i += 10) {
+        playerBatches.push(currentBootstrap.elements.slice(i, i + 10));
+      }
+
+      for (const batch of playerBatches) {
+        const batchPromises = batch.map(async (player: any) => {
+          try {
+            // Fetch player's historical data
+            const playerResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+            if (!playerResponse.ok) {
+              console.log(`DEBUG: Failed to fetch data for player ${player.id}: ${player.web_name}`);
+              return null;
+            }
+            
+            const playerData = await playerResponse.json();
+            const historicalSeasons = playerData.history_past || [];
+            
+            // Find the requested season in historical data
+            const seasonData = historicalSeasons.find((h: any) => {
+              const seasonString = `${h.season_name}/${(h.season_name + 1).toString().slice(-2)}`;
+              return seasonString === season;
+            });
+
+            if (!seasonData) {
+              return null; // Player didn't play in this season
+            }
+
+            const team = currentBootstrap.teams.find((t: any) => t.id === player.team);
+            const position = currentBootstrap.element_types.find((et: any) => et.id === player.element_type);
+
+            // Calculate defensive contribution based on position
+            const cbi = seasonData.clearances_blocks_interceptions || 0;
+            const tackles = seasonData.tackles || 0;
+            const recoveries = seasonData.recoveries || 0;
+            const defensiveContribution = calculateDefensiveContribution(player.element_type, cbi, tackles, recoveries);
+
+            // Prepare historical stats record
+            const historicalRecord = {
+              playerId: player.id,
+              playerName: player.web_name,
+              season: season,
+              teamId: player.team,
+              teamName: team?.name || 'Unknown',
+              position: position?.singular_name || 'Unknown',
+              elementType: player.element_type,
+              
+              // Core stats
+              goalsScored: seasonData.goals_scored || 0,
+              assists: seasonData.assists || 0,
+              clearancesBlocksInterceptions: cbi,
+              tackles: tackles,
+              recoveries: recoveries,
+              defensiveContribution: defensiveContribution,
+              cleanSheets: seasonData.clean_sheets || 0,
+              goalsConceded: seasonData.goals_conceded || 0,
+              saves: seasonData.saves || 0,
+              penaltiesSaved: seasonData.penalties_saved || 0,
+              yellowCards: seasonData.yellow_cards || 0,
+              redCards: seasonData.red_cards || 0,
+              minutes: seasonData.minutes || 0,
+              starts: seasonData.starts || 0,
+              totalPoints: seasonData.total_points || 0,
+              bonus: seasonData.bonus || 0,
+              bps: seasonData.bps || 0,
+              
+              // Expected stats (if available)
+              expectedGoals: seasonData.expected_goals ? parseFloat(seasonData.expected_goals) : null,
+              expectedAssists: seasonData.expected_assists ? parseFloat(seasonData.expected_assists) : null,
+              expectedGoalsConceded: seasonData.expected_goals_conceded ? parseFloat(seasonData.expected_goals_conceded) : null,
+              
+              // ICT components (if available)
+              influence: seasonData.influence ? parseFloat(seasonData.influence) : null,
+              creativity: seasonData.creativity ? parseFloat(seasonData.creativity) : null,
+              threat: seasonData.threat ? parseFloat(seasonData.threat) : null,
+              ictIndex: seasonData.ict_index ? parseFloat(seasonData.ict_index) : null,
+              
+              // Per-90 calculations
+              goalsPer90: calculatePer90(seasonData.goals_scored || 0, seasonData.minutes || 0),
+              assistsPer90: calculatePer90(seasonData.assists || 0, seasonData.minutes || 0),
+              defensiveContributionPer90: calculatePer90(defensiveContribution, seasonData.minutes || 0),
+              tacklesPer90: calculatePer90(tackles, seasonData.minutes || 0),
+              recoveriesPer90: calculatePer90(recoveries, seasonData.minutes || 0),
+              cbiPer90: calculatePer90(cbi, seasonData.minutes || 0),
+              cleanSheetsPer90: calculatePer90(seasonData.clean_sheets || 0, seasonData.minutes || 0),
+            };
+
+            return historicalRecord;
+          } catch (error) {
+            console.error(`Error processing player ${player.web_name}:`, error);
+            return null;
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        const validResults = batchResults.filter(result => result !== null);
+        
+        if (validResults.length > 0) {
+          results.push(...validResults);
+          playersPopulated += validResults.length;
+        }
+        
+        // Add small delay between batches to be respectful to FPL API
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      console.log(`DEBUG: Collected historical stats for ${results.length} players from ${season}`);
+
+      // Store results in database using Drizzle ORM
+      if (results.length > 0) {
+        try {
+          // Insert records using Drizzle ORM for better type safety
+          await db.insert(historicalPlayerStats).values(results).onConflictDoNothing();
+          console.log(`DEBUG: Successfully inserted ${results.length} historical records for ${season}`);
+          console.log(`DEBUG: Sample record - ${results[0].playerName}: ${results[0].goalsScored}G, ${results[0].assists}A, ${results[0].defensiveContribution}DC`);
+        } catch (dbError) {
+          console.error("Database insertion failed:", dbError);
+          throw dbError;
+        }
+      }
+
+      res.json({
+        success: true,
+        season: season,
+        playersProcessed: currentBootstrap.elements.length,
+        playersWithHistoricalData: results.length,
+        message: `Successfully collected and stored historical stats for ${results.length} players from ${season}`,
+        sampleData: results.slice(0, 5) // Return first 5 records as sample
+      });
+      
+    } catch (error) {
+      console.error("Error populating historical player stats:", error);
+      res.status(500).json({ error: "Failed to populate historical player stats" });
+    }
+  });
+
+  // Query historical player stats API - simplified version
+  app.get("/api/historical-player-stats", async (req, res) => {
+    try {
+      const { season, position, playerId } = req.query;
+      
+      // Use raw SQL for better control over the query
+      let sqlQuery = "SELECT * FROM historical_player_stats";
+      const conditions = [];
+      
+      if (season && typeof season === 'string') {
+        conditions.push(`season = '${season}'`);
+      }
+      if (position && typeof position === 'string') {
+        conditions.push(`element_type = ${parseInt(position)}`);
+      }
+      if (playerId && typeof playerId === 'string') {
+        conditions.push(`player_id = ${parseInt(playerId)}`);
+      }
+      
+      if (conditions.length > 0) {
+        sqlQuery += ` WHERE ${conditions.join(' AND ')}`;
+      }
+      
+      sqlQuery += " ORDER BY total_points DESC, goals_scored DESC, assists DESC LIMIT 500";
+      
+      const historicalData = await db.execute(sql`${sql.raw(sqlQuery)}`);
+      
+      console.log(`DEBUG: Retrieved ${historicalData.rows?.length || 0} historical records`);
+      
+      res.json({
+        success: true,
+        data: historicalData.rows || [],
+        count: historicalData.rows?.length || 0
+      });
+      
+    } catch (error) {
+      console.error("Error querying historical player stats:", error);
+      res.status(500).json({ error: "Failed to query historical player stats" });
+    }
+  });
+
+  // Fixed historical data population endpoint
+  app.post("/api/historical-player-stats/populate-fixed", async (req, res) => {
+    try {
+      const { season } = req.body;
+      
+      if (!season) {
+        return res.status(400).json({ error: "Season parameter required (format: '2022/23')" });
+      }
+
+      console.log(`DEBUG: Starting FIXED historical stats population for ${season}`);
+
+      // Fetch current season data to get player list
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch current bootstrap data");
+      }
+      const currentBootstrap = await bootstrapResponse.json();
+
+      const results: any[] = [];
+      let processedCount = 0;
+      let foundDataCount = 0;
+
+      // Process first 20 players for testing
+      const testPlayers = currentBootstrap.elements.slice(0, 20);
+      
+      for (const player of testPlayers) {
+        try {
+          processedCount++;
+          
+          // Fetch player's historical data
+          const playerResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+          if (!playerResponse.ok) {
+            console.log(`DEBUG: Failed to fetch data for player ${player.id}: ${player.web_name}`);
+            continue;
+          }
+          
+          const playerData = await playerResponse.json();
+          const historicalSeasons = playerData.history_past || [];
+          
+          // Find the requested season - direct match
+          const seasonData = historicalSeasons.find((h: any) => h.season_name === season);
+
+          if (!seasonData) {
+            console.log(`DEBUG: No data for ${player.web_name} in ${season}`);
+            continue;
+          }
+
+          foundDataCount++;
+          const team = currentBootstrap.teams.find((t: any) => t.id === player.team);
+          const position = currentBootstrap.element_types.find((et: any) => et.id === player.element_type);
+
+          // Calculate defensive contribution based on position
+          const cbi = seasonData.clearances_blocks_interceptions || 0;
+          const tackles = seasonData.tackles || 0;
+          const recoveries = seasonData.recoveries || 0;
+          const defensiveContribution = calculateDefensiveContribution(player.element_type, cbi, tackles, recoveries);
+
+          // Create historical record
+          const historicalRecord = {
+            playerId: player.id,
+            playerName: player.web_name,
+            season: season,
+            teamId: player.team,
+            teamName: team?.name || 'Unknown',
+            position: position?.singular_name || 'Unknown',
+            elementType: player.element_type,
+            
+            // Core stats
+            goalsScored: seasonData.goals_scored || 0,
+            assists: seasonData.assists || 0,
+            clearancesBlocksInterceptions: cbi,
+            tackles: tackles,
+            recoveries: recoveries,
+            defensiveContribution: defensiveContribution,
+            cleanSheets: seasonData.clean_sheets || 0,
+            goalsConceded: seasonData.goals_conceded || 0,
+            saves: seasonData.saves || 0,
+            penaltiesSaved: seasonData.penalties_saved || 0,
+            yellowCards: seasonData.yellow_cards || 0,
+            redCards: seasonData.red_cards || 0,
+            minutes: seasonData.minutes || 0,
+            starts: seasonData.starts || 0,
+            totalPoints: seasonData.total_points || 0,
+            bonus: seasonData.bonus || 0,
+            bps: seasonData.bps || 0,
+            
+            // Expected stats (if available)
+            expectedGoals: seasonData.expected_goals ? parseFloat(seasonData.expected_goals) : null,
+            expectedAssists: seasonData.expected_assists ? parseFloat(seasonData.expected_assists) : null,
+            expectedGoalsConceded: seasonData.expected_goals_conceded ? parseFloat(seasonData.expected_goals_conceded) : null,
+            
+            // ICT components (if available)
+            influence: seasonData.influence ? parseFloat(seasonData.influence) : null,
+            creativity: seasonData.creativity ? parseFloat(seasonData.creativity) : null,
+            threat: seasonData.threat ? parseFloat(seasonData.threat) : null,
+            ictIndex: seasonData.ict_index ? parseFloat(seasonData.ict_index) : null,
+            
+            // Per-90 calculations
+            goalsPer90: calculatePer90(seasonData.goals_scored || 0, seasonData.minutes || 0),
+            assistsPer90: calculatePer90(seasonData.assists || 0, seasonData.minutes || 0),
+            defensiveContributionPer90: calculatePer90(defensiveContribution, seasonData.minutes || 0),
+            tacklesPer90: calculatePer90(tackles, seasonData.minutes || 0),
+            recoveriesPer90: calculatePer90(recoveries, seasonData.minutes || 0),
+            cbiPer90: calculatePer90(cbi, seasonData.minutes || 0),
+            cleanSheetsPer90: calculatePer90(seasonData.clean_sheets || 0, seasonData.minutes || 0),
+          };
+
+          results.push(historicalRecord);
+          console.log(`DEBUG: Added ${player.web_name} from ${season}: ${seasonData.total_points} pts, ${seasonData.goals_scored} goals, ${seasonData.assists} assists`);
+          
+        } catch (error) {
+          console.error(`Error processing player ${player.web_name}:`, error);
+        }
+      }
+
+      // Store results in database
+      if (results.length > 0) {
+        try {
+          await db.insert(historicalPlayerStats).values(results).onConflictDoNothing();
+          console.log(`DEBUG: Successfully inserted ${results.length} historical records for ${season}`);
+        } catch (dbError) {
+          console.error("Database insertion failed:", dbError);
+        }
+      }
+
+      res.json({
+        success: true,
+        season: season,
+        playersProcessed: processedCount,
+        playersWithHistoricalData: foundDataCount,
+        recordsInserted: results.length,
+        message: `Successfully processed ${processedCount} players, found ${foundDataCount} with data, inserted ${results.length} records for ${season}`,
+        sampleData: results.slice(0, 3)
+      });
+      
+    } catch (error) {
+      console.error("Error in fixed historical player stats population:", error);
+      res.status(500).json({ error: "Failed to populate historical player stats" });
+    }
+  });
+
+  // Debug endpoint for historical data
+  app.get("/api/historical-player-stats/debug/:playerId", async (req, res) => {
+    try {
+      const { playerId } = req.params;
+      const { season } = req.query;
+      
+      // Fetch individual player data for debugging
+      const playerResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${playerId}/`);
+      if (!playerResponse.ok) {
+        return res.status(404).json({ error: "Player not found" });
+      }
+      
+      const playerData = await playerResponse.json();
+      const historicalSeasons = playerData.history_past || [];
+      
+      const availableSeasons = historicalSeasons.map((h: any) => h.season_name);
+      
+      let matchedSeason = null;
+      if (season) {
+        matchedSeason = historicalSeasons.find((h: any) => h.season_name === season);
+      }
+      
+      res.json({
+        playerId: parseInt(playerId),
+        availableSeasons,
+        requestedSeason: season || "none",
+        matchedSeason: matchedSeason || null,
+        totalHistoricalSeasons: historicalSeasons.length,
+        sampleData: historicalSeasons[0] || null
+      });
+      
+    } catch (error) {
+      console.error("Debug endpoint error:", error);
+      res.status(500).json({ error: "Debug endpoint failed" });
+    }
+  });
+
+  console.log("✓ Historical Player Stats API routes registered successfully");
 
   const httpServer = createServer(app);
   return httpServer;

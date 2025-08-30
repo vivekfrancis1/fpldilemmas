@@ -211,6 +211,10 @@ export type Fixture = z.infer<typeof fixtureSchema>;
 export type BootstrapData = z.infer<typeof bootstrapDataSchema>;
 export type PlayerSummary = z.infer<typeof playerSummarySchema>;
 
+// Historical player stats types
+export type HistoricalPlayerStats = typeof historicalPlayerStats.$inferSelect;
+export type InsertHistoricalPlayerStats = typeof historicalPlayerStats.$inferInsert;
+
 // Re-export watchlist types
 export * from "./watchlist-schema";
 
@@ -272,6 +276,74 @@ export const dailyPlayerPrices = pgTable("daily_player_prices", {
 }, (table) => [
   index("idx_daily_prices_player_date").on(table.playerId, table.recordDate),
   index("idx_daily_prices_date").on(table.recordDate),
+]);
+
+// Comprehensive historical player stats table for storing all previous seasons' metrics
+export const historicalPlayerStats = pgTable("historical_player_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name").notNull(),
+  season: varchar("season").notNull(), // Format: "2023/24", "2022/23", etc.
+  teamId: integer("team_id").notNull(),
+  teamName: varchar("team_name").notNull(),
+  position: varchar("position").notNull(), // "Goalkeeper", "Defender", "Midfielder", "Forward"
+  elementType: integer("element_type").notNull(), // 1=GK, 2=DEF, 3=MID, 4=FWD
+  
+  // Core attacking metrics
+  goalsScored: integer("goals_scored").notNull().default(0),
+  assists: integer("assists").notNull().default(0),
+  
+  // Core defensive metrics
+  clearancesBlocksInterceptions: integer("clearances_blocks_interceptions").notNull().default(0), // CBI
+  tackles: integer("tackles").notNull().default(0), // T
+  recoveries: integer("recoveries").notNull().default(0), // R
+  defensiveContribution: integer("defensive_contribution").notNull().default(0), // DC (calculated based on position)
+  cleanSheets: integer("clean_sheets").notNull().default(0),
+  goalsConceded: integer("goals_conceded").notNull().default(0),
+  
+  // Goalkeeping specific
+  saves: integer("saves").notNull().default(0),
+  penaltiesSaved: integer("penalties_saved").notNull().default(0),
+  
+  // Disciplinary
+  yellowCards: integer("yellow_cards").notNull().default(0),
+  redCards: integer("red_cards").notNull().default(0),
+  
+  // Performance metrics
+  minutes: integer("minutes").notNull().default(0),
+  starts: integer("starts").notNull().default(0),
+  totalPoints: integer("total_points").notNull().default(0),
+  bonus: integer("bonus").notNull().default(0),
+  bps: integer("bps").notNull().default(0),
+  
+  // Expected metrics (if available in historical data)
+  expectedGoals: decimal("expected_goals", { precision: 5, scale: 2 }),
+  expectedAssists: decimal("expected_assists", { precision: 5, scale: 2 }),
+  expectedGoalsConceded: decimal("expected_goals_conceded", { precision: 5, scale: 2 }),
+  
+  // ICT Index components
+  influence: decimal("influence", { precision: 5, scale: 1 }),
+  creativity: decimal("creativity", { precision: 5, scale: 1 }),
+  threat: decimal("threat", { precision: 5, scale: 1 }),
+  ictIndex: decimal("ict_index", { precision: 5, scale: 1 }),
+  
+  // Per-90 minute rates for normalized comparison
+  goalsPer90: decimal("goals_per_90", { precision: 5, scale: 2 }),
+  assistsPer90: decimal("assists_per_90", { precision: 5, scale: 2 }),
+  defensiveContributionPer90: decimal("defensive_contribution_per_90", { precision: 5, scale: 2 }),
+  tacklesPer90: decimal("tackles_per_90", { precision: 5, scale: 2 }),
+  recoveriesPer90: decimal("recoveries_per_90", { precision: 5, scale: 2 }),
+  cbiPer90: decimal("cbi_per_90", { precision: 5, scale: 2 }),
+  cleanSheetsPer90: decimal("clean_sheets_per_90", { precision: 5, scale: 2 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_historical_player_season").on(table.playerId, table.season),
+  index("idx_historical_season").on(table.season),
+  index("idx_historical_position").on(table.elementType),
+  index("idx_historical_team").on(table.teamId),
+  index("idx_historical_player_team_season").on(table.playerId, table.teamId, table.season),
 ]);
 
 // Price changes table for tracking actual price movements
