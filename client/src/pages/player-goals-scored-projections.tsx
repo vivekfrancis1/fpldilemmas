@@ -26,8 +26,8 @@ export default function PlayerGoalsScoredProjections() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("total");
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
-  const [startGameweek, setStartGameweek] = useState<number>(3);
-  const [endGameweek, setEndGameweek] = useState<number>(8);
+  const [startGameweek, setStartGameweek] = useState<number>(4);
+  const [endGameweek, setEndGameweek] = useState<number>(9);
   const [activeTab, setActiveTab] = useState<string>("goals");
   
   const queryClient = useQueryClient();
@@ -48,7 +48,11 @@ export default function PlayerGoalsScoredProjections() {
     refetchOnMount: true,
   });
 
-  // Dynamic gameweek range based on user selection (default: GW3-GW8)
+  // Get current gameweek from bootstrap data
+  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 3;
+  const nextGameweek = currentGameweek + 1;
+
+  // Dynamic gameweek range based on user selection (default: starts from next gameweek)
   const selectedGameweeks = useMemo(() => {
     const gameweeks = [];
     for (let gw = startGameweek; gw <= endGameweek; gw++) {
@@ -315,7 +319,7 @@ export default function PlayerGoalsScoredProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 36 }, (_, i) => i + 3).map(gw => (
+                    {Array.from({ length: 38 - nextGameweek + 1 }, (_, i) => nextGameweek + i).map(gw => (
                       <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
@@ -329,7 +333,7 @@ export default function PlayerGoalsScoredProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 39 - startGameweek }, (_, i) => i + startGameweek).map(gw => (
+                    {Array.from({ length: 39 - startGameweek }, (_, i) => i + startGameweek).filter(gw => gw >= nextGameweek).map(gw => (
                       <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
