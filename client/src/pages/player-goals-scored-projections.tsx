@@ -386,25 +386,7 @@ export default function PlayerGoalsScoredProjections() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-gray-500" />
-                <label className="text-sm font-medium text-gray-700">Sort by:</label>
-                <Select value={sortBy} onValueChange={(value) => setSortBy(value)}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="total">{selectedGameweeks.length} GW Total</SelectItem>
-                    <SelectItem value="season">Season Total</SelectItem>
-                    <SelectItem value="name">Player Name</SelectItem>
-                    <SelectItem value="team">Team</SelectItem>
-                    <SelectItem value="position">Position</SelectItem>
-                    {selectedGameweeks.map(gw => (
-                      <SelectItem key={gw} value={`gw${gw}`}>GW{gw}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+
 
 
             </div>
