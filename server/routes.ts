@@ -3377,8 +3377,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get all players for this team with xG data
           const teamPlayersWithXG = playersWithXG.filter((p: any) => p.team === teamId);
           
-          // Filter out players with insufficient data (minimum 45 minutes - adjust for early season)
-          const qualifiedPlayers = teamPlayersWithXG.filter(p => p.totalMinutes >= 45);
+          // Filter out departed players and players with insufficient data
+          const qualifiedPlayers = teamPlayersWithXG.filter(p => {
+            // Check if player is departed by name or ID
+            const playerFullName = p.name || '';
+            const shouldExclude = Array.from(DEPARTED_PLAYER_NAMES).some(departedName => 
+              playerFullName.includes(departedName) || 
+              playerFullName.toLowerCase().includes(departedName.toLowerCase())
+            );
+            
+            if (shouldExclude) {
+              console.log(`DEBUG: Excluding departed player ${playerFullName} from goal share calculations`);
+              return false;
+            }
+            
+            return p.totalMinutes >= 45; // Minimum minutes requirement
+          });
           
           console.log(`DEBUG: Team ${team.name} - ${qualifiedPlayers.length}/${teamPlayersWithXG.length} players qualify (≥45 mins)`);
           
@@ -3913,10 +3927,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Calculate weighted assist shares using equal weighting (33.33% each year)
           const weightedPlayerShares: { [playerId: number]: { name: string, position: string, totalWeightedShare: number, totalWeight: number } } = {};
           
-          // Initialize all current players
+          // Initialize all current players (excluding departed players)
           teamPlayers.forEach((player: any) => {
+            const playerFullName = `${player.first_name} ${player.second_name}`;
+            
+            // Check if player is departed by name or ID
+            const shouldExclude = Array.from(DEPARTED_PLAYER_NAMES).some(departedName => 
+              playerFullName.includes(departedName) || 
+              playerFullName.toLowerCase().includes(departedName.toLowerCase())
+            );
+            
+            if (shouldExclude) {
+              console.log(`DEBUG: Excluding departed player ${playerFullName} from assist share calculations`);
+              return; // Skip this player
+            }
+            
             weightedPlayerShares[player.id] = {
-              name: `${player.first_name} ${player.second_name}`,
+              name: playerFullName,
               position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
               totalWeightedShare: 0,
               totalWeight: 0
