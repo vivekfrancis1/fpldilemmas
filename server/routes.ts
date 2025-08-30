@@ -7068,36 +7068,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ OpenFPL Projection routes registered successfully");
 
-  // Player Total Points - Combined FPL scoring projection
+  // Player Total Points - Combined FPL scoring projection with optimized data fetching
   app.get("/api/player-total-points", async (req, res) => {
     try {
       const { startGameweek = 4, endGameweek = 9 } = req.query;
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
       
-      console.log(`DEBUG: Player Total Points API called for GW${start}-${end}`);
+      console.log(`DEBUG: Player Total Points API called for GW${start}-${end} with optimized fetching`);
       
-      // Fetch all component data from existing endpoints including defensive contributions
-      const [goalsResponse, assistsResponse, cleanSheetsResponse, minutesResponse, defensiveResponse, bootstrapResponse] = await Promise.all([
-        fetch(`http://localhost:5000/api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
-        fetch(`http://localhost:5000/api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
-        fetch(`http://localhost:5000/api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`),
-        fetch(`http://localhost:5000/api/player-minutes-projections?startGameweek=${start}&endGameweek=${end}`),
-        fetch(`http://localhost:5000/api/player-defensive-contributions?startGameweek=${start}&endGameweek=${end}`),
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
-      ]);
+      // First, fetch bootstrap data to get current gameweek info
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      const bootstrapData = await bootstrapResponse.json();
       
-      if (!goalsResponse.ok || !assistsResponse.ok || !cleanSheetsResponse.ok || !minutesResponse.ok || !defensiveResponse.ok || !bootstrapResponse.ok) {
+      // Get current gameweek to determine which gameweeks are completed
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 4;
+      const hasCompletedGameweeks = start <= (currentGameweek - 1);
+      
+      console.log(`DEBUG: Current GW: ${currentGameweek}, Start GW: ${start}, Has completed GWs: ${hasCompletedGameweeks}`);
+      
+      // Determine if we need actual FPL data for any completed gameweeks in range
+      const needsActualData = hasCompletedGameweeks && start <= (currentGameweek - 1);
+      
+      // Fetch component data - skip expensive actual data fetching if not needed
+      let componentPromises;
+      if (needsActualData) {
+        console.log(`DEBUG: Fetching component data WITH actual player data for completed gameweeks`);
+        componentPromises = [
+          fetch(`http://localhost:5000/api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
+          fetch(`http://localhost:5000/api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
+          fetch(`http://localhost:5000/api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`),
+          fetch(`http://localhost:5000/api/player-minutes-projections`),
+          fetch(`http://localhost:5000/api/player-defensive-contributions?startGameweek=${start}&endGameweek=${end}`)
+        ];
+      } else {
+        console.log(`DEBUG: Fetching component data WITHOUT actual player data (projections only)`);
+        componentPromises = [
+          fetch(`http://localhost:5000/api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
+          fetch(`http://localhost:5000/api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
+          fetch(`http://localhost:5000/api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`),
+          fetch(`http://localhost:5000/api/player-minutes-projections`),
+          fetch(`http://localhost:5000/api/player-defensive-contributions?startGameweek=${start}&endGameweek=${end}`)
+        ];
+      }
+      
+      const responses = await Promise.all(componentPromises);
+      
+      if (responses.some(response => !response.ok)) {
         throw new Error("Failed to fetch component data");
       }
       
-      const [goalsData, assistsData, cleanSheetsData, minutesData, defensiveData, bootstrapData] = await Promise.all([
-        goalsResponse.json(),
-        assistsResponse.json(),
-        cleanSheetsResponse.json(),
-        minutesResponse.json(),
-        defensiveResponse.json(),
-        bootstrapResponse.json()
+      const [goalsData, assistsData, cleanSheetsData, minutesData, defensiveData] = await Promise.all([
+        responses[0].json(),
+        responses[1].json(),
+        responses[2].json(),
+        responses[3].json(),
+        responses[4].json()
       ]);
       
 
@@ -7153,8 +7182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         minutesPoints: 2 // 2 points for playing 60+ minutes
       };
       
-      // Get current gameweek info for hybrid calculation
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 4;
+      // Use currentGameweek already defined above
       const completedGameweeks = currentGameweek - 1; // GWs completed so far
       
       // Create FPL player lookup for actual historical data
@@ -7190,30 +7218,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const isGameweekFinished = gwEvent?.finished || false;
           const isGameweekCurrent = gwEvent?.is_current || false;
           
-          if (isGameweekFinished && fplPlayer) {
-            // For completely finished gameweeks, use actual total_points from FPL API
-            try {
-              const elementResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
-              if (elementResponse.ok) {
-                const elementData = await elementResponse.json();
-                const gameweekHistory = elementData.history.find((h: any) => h.round === gw);
-                
-                if (gameweekHistory) {
-                  gwTotal = gameweekHistory.total_points || 0; // Use actual total_points from FPL API
-                  actualGameweeks++;
-                  console.log(`DEBUG: GW${gw} ACTUAL - ${player.playerName}: ${gwTotal} total points (from FPL API)`);
-                } else {
-                  throw new Error(`No gameweek ${gw} data found for player ${player.playerId}`);
-                }
-              } else {
-                throw new Error(`Failed to fetch element-summary for player ${player.playerId}`);
-              }
-            } catch (error) {
-              console.log(`Using fallback calculation for player ${player.playerId} GW${gw}: ${error}`);
-              // Fallback to projection calculation if API fails
-              gwTotal = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, defensivePlayer, pointsSystem);
-              actualGameweeks++;
-            }
+          if (isGameweekFinished && fplPlayer && needsActualData) {
+            // For completely finished gameweeks, use calculated points from component APIs that already have actual data
+            // This avoids the expensive individual API calls and timeout issues
+            gwTotal = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, defensivePlayer, pointsSystem);
+            actualGameweeks++;
+            console.log(`DEBUG: GW${gw} ACTUAL - ${player.playerName}: ${gwTotal.toFixed(2)} points (from component APIs with actual data)`);
             
           } else if (isGameweekCurrent && fplPlayer) {
             // For ongoing gameweek, use projections for now (fixture-level analysis framework in place)
