@@ -331,7 +331,7 @@ export default function PlayerTotalPoints() {
                         <td className="px-4 py-4">
                           <div>
                             <div className="font-semibold text-gray-900">{player.playerName}</div>
-                            <div className="text-xs text-gray-500">£{(player.price / 10).toFixed(1)}m • {player.ownership.toFixed(1)}%</div>
+                            <div className="text-xs text-gray-500">£{player.price ? (player.price / 10).toFixed(1) : '0.0'}m • {player.ownership ? player.ownership.toFixed(1) : '0.0'}%</div>
                           </div>
                         </td>
                         <td className="px-4 py-4">
