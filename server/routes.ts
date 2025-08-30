@@ -8273,9 +8273,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projections: any[] = [];
       
       // Calculate projections for each current player with defensive data
-      currentData.elements.forEach((player: any) => {
+      for (const player of currentData.elements) {
         const currentDefensiveStats = currentSeasonDefensiveData.get(player.id);
-        if (!currentDefensiveStats) return;
+        if (!currentDefensiveStats) continue;
         
         const playerMinutesHistory = playerHistoricalMinutes[player.id] || [];
         
@@ -8302,7 +8302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const currentMinutes = currentStats.minutes;
         
         // Only project for players with meaningful sample size (minimum 90 minutes)
-        if (currentMinutes < 90) return;
+        if (currentMinutes < 90) continue;
         
         // Form factor based on current vs expected performance
         const positionExpectedDC = player.element_type === 1 ? 1.0 : // GK
@@ -8325,7 +8325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const confidence = (minutesConfidence * 0.5 + historyConfidence * 0.3 + consistencyConfidence * 0.2);
         
         // Generate hybrid gameweek data: actual for completed, projections for future
-        const gameweekProjections = allProjectionGameweeks.map(gameweek => {
+        const gameweekProjections = await Promise.all(allProjectionGameweeks.map(async (gameweek) => {
           // Check if this gameweek is completed
           const isCompleted = completedGameweeks.includes(gameweek);
           const isOngoing = gameweek === ongoingGameweek;
@@ -8358,21 +8358,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let dcValue, tacklesValue, recoveriesValue, cbiValue, minutesValue;
           
           if (isCompleted || (isOngoing && teamFixture?.finished)) {
-            // Use actual data for completed gameweeks/fixtures
-            // Calculate realistic gameweek values based on season averages
-            const avgMinutesPerCompletedGW = Math.max(completedGameweeks.length, 1);
-            const avgActualMinutesPerGW = player.minutes / avgMinutesPerCompletedGW;
-            
-            // Calculate actual gameweek defensive stats (should be lower than per-90 rates)
-            // Use proportion based on actual minutes played in that gameweek
-            const actualMinutesThisGW = teamFixture?.finished ? avgActualMinutesPerGW : 0;
-            
-            // Realistic gameweek values (not inflated per-90 rates)
-            dcValue = currentDCPer90 * (actualMinutesThisGW / 90) * 0.9; // Slightly lower than projection
-            tacklesValue = currentTacklesPer90 * (actualMinutesThisGW / 90) * 0.9;
-            recoveriesValue = currentRecoveriesPer90 * (actualMinutesThisGW / 90) * 0.9;
-            cbiValue = currentCBIPer90 * (actualMinutesThisGW / 90) * 0.9;
-            minutesValue = actualMinutesThisGW;
+            // Fetch actual gameweek data from element-summary API
+            try {
+              const elementResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+              if (elementResponse.ok) {
+                const elementData = await elementResponse.json();
+                const gameweekHistory = elementData.history.find((h: any) => h.round === gameweek);
+                
+                if (gameweekHistory) {
+                  // Use actual gameweek data
+                  const actualCBI = gameweekHistory.clearances_blocks_interceptions || 0;
+                  const actualTackles = gameweekHistory.tackles || 0;
+                  const actualRecoveries = gameweekHistory.recoveries || 0;
+                  const actualMinutes = gameweekHistory.minutes || 0;
+                  
+                  // Calculate position-specific defensive contribution using actual data
+                  const actualDC = player.element_type === 2 ? // Defender
+                    actualCBI + actualTackles : // Defenders: CBI + Tackles
+                    actualCBI + actualTackles + actualRecoveries; // Mid/Fwd: CBI + Tackles + Recoveries
+                  
+                  dcValue = actualDC;
+                  tacklesValue = actualTackles;
+                  recoveriesValue = actualRecoveries;
+                  cbiValue = actualCBI;
+                  minutesValue = actualMinutes;
+                } else {
+                  throw new Error(`No gameweek ${gameweek} data found for player ${player.id}`);
+                }
+              } else {
+                throw new Error(`Failed to fetch element-summary for player ${player.id}`);
+              }
+            } catch (error) {
+              // Fallback to estimation if API call fails
+              console.log(`Using fallback for player ${player.id} GW${gameweek}: ${error}`);
+              const avgMinutesPerCompletedGW = Math.max(completedGameweeks.length, 1);
+              const avgActualMinutesPerGW = player.minutes / avgMinutesPerCompletedGW;
+              const actualMinutesThisGW = teamFixture?.finished ? avgActualMinutesPerGW : 0;
+              
+              dcValue = currentDCPer90 * (actualMinutesThisGW / 90) * 0.9;
+              tacklesValue = currentTacklesPer90 * (actualMinutesThisGW / 90) * 0.9;
+              recoveriesValue = currentRecoveriesPer90 * (actualMinutesThisGW / 90) * 0.9;
+              cbiValue = currentCBIPer90 * (actualMinutesThisGW / 90) * 0.9;
+              minutesValue = actualMinutesThisGW;
+            }
           } else {
             // Use projections for future gameweeks
             const minutesThisGW = estimatedMinutesPerGW;
@@ -8394,9 +8422,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             opponentTier: opponentInfo.tier,
             fixtureMultiplier: Math.round(fixtureMultiplier * 100) / 100,
             isActual: isCompleted || (isOngoing && teamFixture?.finished),
-            isProjected: isFuture || (isOngoing && !teamFixture?.finished)
+            isProjected: isFuture || (isOngoing && !teamFixture?.finished),
+            dataSource: (isCompleted || (isOngoing && teamFixture?.finished)) ? 'actual' : 'projected'
           };
-        });
+        }));
         
         const team = currentData.teams.find((t: any) => t.id === player.team);
         const position = currentData.element_types.find((p: any) => p.id === player.element_type);
@@ -8427,7 +8456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           confidence: Math.round(confidence * 100) / 100,
           gameweekProjections
         });
-      });
+      }
       
       // Sort by projected defensive contribution
       projections.sort((a, b) => b.projectedDefensiveContribution - a.projectedDefensiveContribution);
