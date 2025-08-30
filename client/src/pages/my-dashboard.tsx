@@ -256,11 +256,19 @@ export default function MyDashboard() {
     const allEntries = leagueData.standings?.results || [];
     let topEntries = allEntries.length > 50 ? allEntries.slice(0, 50) : allEntries;
     
-    // Add current manager if not in top 50
+    // Always add current manager if not in top 50 and exists in the league
     const currentManagerInTop50 = topEntries.some((entry: any) => entry.entry.toString() === managerId);
-    if (!currentManagerInTop50 && currentManagerEntry && allEntries.length > 50) {
+    if (!currentManagerInTop50 && currentManagerEntry) {
       topEntries = [...topEntries, currentManagerEntry];
     }
+    
+    console.log('Debug League Analysis:', {
+      managerId,
+      currentManagerEntry,
+      currentManagerInTop50,
+      allEntriesLength: allEntries.length,
+      topEntriesLength: topEntries.length
+    });
     
     return (
       <div className="space-y-6">
