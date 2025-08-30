@@ -825,24 +825,8 @@ export default function MyDashboard() {
                                 </div>
                               </div>
                               <div className="text-right flex items-center gap-3">
-                                <div className="flex flex-col items-end space-y-1">
-                                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
-                                    #{league.entry_rank.toLocaleString()}
-                                  </div>
-                                  {league.entry_rank !== league.entry_last_rank && (
-                                    <div className={`flex items-center text-xs px-2 py-1 rounded-full ${
-                                      league.entry_rank < league.entry_last_rank 
-                                        ? 'bg-green-100 text-green-700 border border-green-200' 
-                                        : 'bg-red-100 text-red-700 border border-red-200'
-                                    }`}>
-                                      {league.entry_rank < league.entry_last_rank ? (
-                                        <ChevronUp className="h-3 w-3 mr-1" />
-                                      ) : (
-                                        <ChevronDown className="h-3 w-3 mr-1" />
-                                      )}
-                                      {Math.abs(league.entry_rank - league.entry_last_rank)}
-                                    </div>
-                                  )}
+                                <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
+                                  #{league.entry_rank.toLocaleString()}
                                 </div>
                                 <Dialog>
                                   <DialogTrigger asChild>
