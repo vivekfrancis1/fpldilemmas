@@ -5205,7 +5205,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate clean sheet points for each gameweek in the range
         const gameweekProjections: { [key: string]: number } = {};
         let totalExpectedPoints = 0;
+        let seasonTotalPoints = 0;
 
+        // Calculate probability of playing 60+ minutes (same for all gameweeks)
+        let probabilityPlays60Plus = 0;
+        const expectedMinutes = playerMinutes.expectedMinutesPerGame;
+        
+        if (expectedMinutes >= 75) {
+          probabilityPlays60Plus = 0.95; // Very likely starter
+        } else if (expectedMinutes >= 60) {
+          probabilityPlays60Plus = 0.85; // Likely starter
+        } else if (expectedMinutes >= 45) {
+          probabilityPlays60Plus = 0.60; // Rotation player
+        } else if (expectedMinutes >= 30) {
+          probabilityPlays60Plus = 0.30; // Squad player
+        } else if (expectedMinutes >= 15) {
+          probabilityPlays60Plus = 0.10; // Fringe player
+        } else {
+          probabilityPlays60Plus = 0.02; // Rarely plays
+        }
+
+        // Position-based clean sheet points: Defenders/GK = 4, Midfielders = 1
+        const cleanSheetPoints = (position.singular_name === 'Midfielder') ? 1 : 4;
+
+        // Calculate for selected gameweek range
         for (let gw = startGameweek; gw <= endGameweek; gw++) {
           const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
           
@@ -5214,30 +5237,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
-          // Calculate probability of playing 60+ minutes
-          let probabilityPlays60Plus = 0;
-          const expectedMinutes = playerMinutes.expectedMinutesPerGame;
-          
-          if (expectedMinutes >= 75) {
-            probabilityPlays60Plus = 0.95; // Very likely starter
-          } else if (expectedMinutes >= 60) {
-            probabilityPlays60Plus = 0.85; // Likely starter
-          } else if (expectedMinutes >= 45) {
-            probabilityPlays60Plus = 0.60; // Rotation player
-          } else if (expectedMinutes >= 30) {
-            probabilityPlays60Plus = 0.30; // Squad player
-          } else if (expectedMinutes >= 15) {
-            probabilityPlays60Plus = 0.10; // Fringe player
-          } else {
-            probabilityPlays60Plus = 0.02; // Rarely plays
-          }
-          
-          // Position-based clean sheet points: Defenders/GK = 4, Midfielders = 1
-          const cleanSheetPoints = (position.singular_name === 'Midfielder') ? 1 : 4;
           const expectedCleanSheetPoints = (teamCleanSheetPercent / 100) * probabilityPlays60Plus * cleanSheetPoints;
-          
           gameweekProjections[gw.toString()] = Math.round(expectedCleanSheetPoints * 100) / 100;
           totalExpectedPoints += expectedCleanSheetPoints;
+        }
+
+        // Calculate season total (GW4 to GW38)
+        for (let gw = 4; gw <= 38; gw++) {
+          const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
+          
+          if (teamCleanSheetPercent !== undefined) {
+            const expectedCleanSheetPoints = (teamCleanSheetPercent / 100) * probabilityPlays60Plus * cleanSheetPoints;
+            seasonTotalPoints += expectedCleanSheetPoints;
+          }
         }
         
         playerCleanSheetProjections.push({
@@ -5248,7 +5260,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: player.now_cost / 10,
           ownership: parseFloat(player.selected_by_percent),
           gameweekProjections,
-          totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100
+          totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
+          seasonTotalPoints: Math.round(seasonTotalPoints * 100) / 100
         });
       });
 
