@@ -233,18 +233,20 @@ class ProjectionService {
               defensiveContributions = (adjustedForm * 0.08 + seasonPerformance * 0.03) * (expectedMinutes / 90);
             }
             
-            const gwDefensivePoints = defensiveContributions * 2; // 2 points per DC
+            // FPL Defensive Contribution Points: 2 points if DC >= threshold (DEF: 10, MID/FWD: 12)
+            const dcThreshold = position === 'DEF' ? 10 : 12;
+            const thresholdProb = Math.min(defensiveContributions / dcThreshold, 0.6); // Max 60% chance
+            const gwDefensivePoints = thresholdProb * 2; // 2 points if threshold reached
             pointsFromDefensiveContributions[`gw${gw}`] = Math.round(gwDefensivePoints * 100) / 100;
             totalDefensivePoints += gwDefensivePoints;
             
-            // 6. BONUS POINTS (based on overall performance)
-            const performanceIndex = (goalsExpected + assistsExpected + defensiveContributions) * adjustedForm;
-            const bonusExpected = Math.min(performanceIndex * 0.3, 3.0); // Max 3 bonus points
-            pointsFromBonus[`gw${gw}`] = Math.round(bonusExpected * 100) / 100;
-            totalBonusPoints += bonusExpected;
+            // 6. BONUS POINTS - Only use actual data, no projections (we don't have a dedicated bonus tool)
+            const bonusExpected = 0; // No bonus projections since we lack individual bonus projection tool
+            pointsFromBonus[`gw${gw}`] = 0;
+            totalBonusPoints += 0;
             
-            // 7. TOTAL GAMEWEEK POINTS (sum all components)
-            const gwTotal = gwGoalPoints + gwAssistPoints + gwCleanSheetPoints + gwDefensivePoints + minutesPoints + bonusExpected;
+            // 7. TOTAL GAMEWEEK POINTS (sum all components - excluding bonus projections)
+            const gwTotal = gwGoalPoints + gwAssistPoints + gwCleanSheetPoints + gwDefensivePoints + minutesPoints;
             gameweekProjections[`gw${gw}`] = Math.max(Math.round(gwTotal * 100) / 100, 0.0);
             totalExpectedPoints += gwTotal;
           }
