@@ -648,6 +648,19 @@ export default function MyDashboard() {
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Total Points */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Total Points</p>
+                        <p className="text-2xl font-bold">{managerData.summary_overall_points.toLocaleString()}</p>
+                      </div>
+                      <Target className="h-8 w-8 text-blue-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* Overall Rank */}
                 <Card>
                   <CardContent className="p-6">
@@ -667,19 +680,6 @@ export default function MyDashboard() {
                         )}
                       </div>
                       <Trophy className="h-8 w-8 text-amber-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Total Points */}
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Total Points</p>
-                        <p className="text-2xl font-bold">{managerData.summary_overall_points.toLocaleString()}</p>
-                      </div>
-                      <Target className="h-8 w-8 text-blue-500" />
                     </div>
                   </CardContent>
                 </Card>
