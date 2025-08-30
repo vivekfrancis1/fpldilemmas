@@ -4039,10 +4039,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const playerData = weightedPlayerShares[playerId];
             const currentPlayer = teamPlayers.find(p => p.id === playerId);
             
-            // Skip players with very low expected minutes (likely not starters)
+            // Skip players with very low expected minutes (likely not regular players)
             if (currentPlayer) {
               const expectedMinutes = calculateExpectedMinutes(currentPlayer, teamPlayers);
-              if (expectedMinutes < 800) {
+              if (expectedMinutes < 400) {
                 console.log(`DEBUG: Skipping ${playerData.name} - too few expected minutes (${expectedMinutes})`);
                 return;
               }
@@ -4055,11 +4055,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Apply realistic caps based on position
             const getPositionCap = (position: string): number => {
               switch (position.toLowerCase()) {
-                case 'goalkeeper': return 2; // Max 2% for GKs
-                case 'defender': return 15; // Max 15% for defenders
-                case 'midfielder': return 35; // Max 35% for midfielders
-                case 'forward': return 25; // Max 25% for forwards
-                default: return 20;
+                case 'goalkeeper': return 3; // Max 3% for GKs
+                case 'defender': return 20; // Max 20% for defenders
+                case 'midfielder': return 40; // Max 40% for midfielders
+                case 'forward': return 30; // Max 30% for forwards
+                default: return 25;
               }
             };
             
