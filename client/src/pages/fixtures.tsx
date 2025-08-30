@@ -30,6 +30,7 @@ export default function Fixtures() {
   });
   const [sortBy, setSortBy] = useState<'team' | 'fdr-asc' | 'fdr-desc' | string>('fdr-asc');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [activeTab, setActiveTab] = useState<'difficulty' | 'attacking' | 'defensive'>('difficulty');
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -244,6 +245,48 @@ export default function Fixtures() {
     }
   };
 
+  // Helper function to get attacking difficulty (opponent defensive tier value)
+  const getAttackingDifficulty = (teamId: number, gw: number) => {
+    const fixture = fixtureMatrix[teamId]?.[gw];
+    if (!fixture) return 0;
+    
+    const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
+    if (!opponentId) return 0;
+    
+    const opponentDefenseTier = getDefensiveTier(opponentId);
+    
+    // Convert defensive tier to attacking difficulty (reverse mapping)
+    switch (opponentDefenseTier) {
+      case 'elite': return 5; // Very Hard for attackers
+      case 'strong': return 4; // Hard for attackers  
+      case 'average': return 3; // Medium for attackers
+      case 'weak': return 2; // Easy for attackers
+      case 'promoted': return 1; // Very Easy for attackers
+      default: return 3;
+    }
+  };
+
+  // Helper function to get defensive difficulty (opponent attacking tier value)
+  const getDefensiveDifficulty = (teamId: number, gw: number) => {
+    const fixture = fixtureMatrix[teamId]?.[gw];
+    if (!fixture) return 0;
+    
+    const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
+    if (!opponentId) return 0;
+    
+    const opponentAttackTier = getAttackingTier(opponentId);
+    
+    // Convert attacking tier to defensive difficulty
+    switch (opponentAttackTier) {
+      case 'elite': return 5; // Very Hard for defenders
+      case 'strong': return 4; // Hard for defenders
+      case 'average': return 3; // Medium for defenders
+      case 'weak': return 2; // Easy for defenders
+      case 'promoted': return 1; // Very Easy for defenders
+      default: return 3;
+    }
+  };
+
   // Sort teams based on selected sort option
   const sortedTeams = useMemo(() => {
     // Use hardcoded teams for better performance
@@ -271,17 +314,30 @@ export default function Fixtures() {
         if (sortBy.startsWith('gw-')) {
           const gw = parseInt(sortBy.replace('gw-', ''));
           return teams.sort((a, b) => {
-            const fixtureA = fixtureMatrix[a.id]?.[gw];
-            const fixtureB = fixtureMatrix[b.id]?.[gw];
-            const diffA = fixtureA?.difficulty || 0;
-            const diffB = fixtureB?.difficulty || 0;
+            let diffA: number, diffB: number;
+            
+            if (activeTab === 'attacking') {
+              // For attacking analysis, sort by opponent's defensive strength
+              diffA = getAttackingDifficulty(a.id, gw);
+              diffB = getAttackingDifficulty(b.id, gw);
+            } else if (activeTab === 'defensive') {
+              // For defensive analysis, sort by opponent's attacking strength  
+              diffA = getDefensiveDifficulty(a.id, gw);
+              diffB = getDefensiveDifficulty(b.id, gw);
+            } else {
+              // For overall difficulty, use original FDR values
+              const fixtureA = fixtureMatrix[a.id]?.[gw];
+              const fixtureB = fixtureMatrix[b.id]?.[gw];
+              diffA = fixtureA?.difficulty || 0;
+              diffB = fixtureB?.difficulty || 0;
+            }
             
             return sortDirection === 'asc' ? diffA - diffB : diffB - diffA;
           });
         }
         return teams.sort((a, b) => a.short_name.localeCompare(b.short_name));
     }
-  }, [fixtureMatrix, teamAverageFDR, sortBy, sortDirection]);
+  }, [fixtureMatrix, teamAverageFDR, sortBy, sortDirection, bootstrapData, activeTab]);
 
   if (error) {
     return (
@@ -382,7 +438,7 @@ export default function Fixtures() {
           </div>
 
           {/* Tabs for Different Analysis Views */}
-          <Tabs defaultValue="difficulty" className="space-y-6">
+          <Tabs defaultValue="difficulty" className="space-y-6" onValueChange={(value) => setActiveTab(value as 'difficulty' | 'attacking' | 'defensive')}>
             <TabsList className="grid grid-cols-3 w-full">
               <TabsTrigger value="difficulty" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
