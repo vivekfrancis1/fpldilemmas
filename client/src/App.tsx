@@ -45,6 +45,7 @@ import SeasonProjections from "./pages/season-projections";
 import AdminGoalProjections from "./pages/admin-goal-projections";
 import AdminUpsetConfig from "./pages/admin-upset-config";
 import Admin from "./pages/admin";
+import AdminDataPopulation from "./pages/admin-data-population";
 
 
 function Router() {
@@ -90,6 +91,7 @@ function Router() {
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
       <Route path="/admin-upset-config" component={AdminUpsetConfig} />
       <Route path="/admin-content-creators" component={Admin} />
+      <Route path="/admin-data-population" component={AdminDataPopulation} />
       <Route path="/content-creators" component={ContentCreators} />
       <Route path="/content-creators/:id/team" component={CreatorTeam} />
 
