@@ -567,7 +567,7 @@ export default function PlayerDefensiveContributions() {
                             vs {gw.opponent}
                           </div>
                           <div className="text-xs font-medium">
-                            {gw.isActual ? 'Actual' : `${gw.fixtureMultiplier}x`}
+                            {gw.isActual ? 'Actual' : 'Projected'}
                           </div>
                         </div>
                       </TableCell>
@@ -695,23 +695,23 @@ export default function PlayerDefensiveContributions() {
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-red-50 dark:bg-red-900/10 border border-red-200 rounded"></div>
-                  <span>Elite Attack (1.5x multiplier)</span>
+                  <span>Elite Attack Teams</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 rounded"></div>
-                  <span>Strong Attack (1.3x multiplier)</span>
+                  <span>Strong Attack Teams</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-gray-50 dark:bg-gray-900/10 border border-gray-200 rounded"></div>
-                  <span>Average Attack (1.0x multiplier)</span>
+                  <span>Average Attack Teams</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 rounded"></div>
-                  <span>Weak Attack (0.8x multiplier)</span>
+                  <span>Weak Attack Teams</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-green-50 dark:bg-green-900/10 border border-green-200 rounded"></div>
-                  <span>Promoted Team (0.5x multiplier)</span>
+                  <span>Promoted Teams</span>
                 </div>
               </div>
             </div>
