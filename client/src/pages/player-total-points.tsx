@@ -18,7 +18,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
   if (!hasBreakdownData || !gwPoints) {
     return (
       <span className={`font-medium ${gwPoints >= 6 ? 'text-green-700' : gwPoints >= 4 ? 'text-blue-700' : 'text-gray-600'}`}>
-{gwPoints ? (gameweek <= 3 ? Math.round(gwPoints).toString() : gwPoints.toFixed(1)) : '0.0'}
+        {gwPoints ? gwPoints.toFixed(1) : '0.0'}
       </span>
     );
   }
@@ -29,7 +29,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
         <button className={`font-medium cursor-help hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 ${
           gwPoints >= 6 ? 'text-green-700' : gwPoints >= 4 ? 'text-blue-700' : 'text-gray-600'
         }`}>
-{gameweek <= 3 ? Math.round(gwPoints).toString() : gwPoints.toFixed(1)}
+          {gwPoints.toFixed(1)}
         </button>
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
@@ -44,32 +44,32 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⚽ Goals:</span>
               <span className="font-medium text-green-700">
-                {player.pointsFromGoals?.[gwKey] ? (gameweek <= 3 ? Math.round(player.pointsFromGoals[gwKey]).toString() : player.pointsFromGoals[gwKey].toFixed(1)) : '0'}
+                {player.pointsFromGoals?.[gwKey]?.toFixed(1) || '0.0'}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🎯 Assists:</span>
               <span className="font-medium text-blue-700">
-                {player.pointsFromAssists?.[gwKey] ? (gameweek <= 3 ? Math.round(player.pointsFromAssists[gwKey]).toString() : player.pointsFromAssists[gwKey].toFixed(1)) : '0'}
+                {player.pointsFromAssists?.[gwKey]?.toFixed(1) || '0.0'}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🛡️ Clean Sheets:</span>
               <span className="font-medium text-yellow-700">
-                {player.pointsFromCleanSheets?.[gwKey] ? (gameweek <= 3 ? Math.round(player.pointsFromCleanSheets[gwKey]).toString() : player.pointsFromCleanSheets[gwKey].toFixed(1)) : '0'}
+                {player.pointsFromCleanSheets?.[gwKey]?.toFixed(1) || '0.0'}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⚔️ Defensive:</span>
               <span className="font-medium text-orange-700">
-                {player.pointsFromDefensiveContributions?.[gwKey] ? (gameweek <= 3 ? Math.round(player.pointsFromDefensiveContributions[gwKey]).toString() : player.pointsFromDefensiveContributions[gwKey].toFixed(1)) : '0'}
+                {player.pointsFromDefensiveContributions?.[gwKey]?.toFixed(1) || '0.0'}
               </span>
               <span className="text-xs text-gray-400 ml-1">(2 if DC≥10/12)</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⏱️ Minutes:</span>
               <span className="font-medium text-purple-700">
-                {player.pointsFromMinutes?.[gwKey] ? Math.round(player.pointsFromMinutes[gwKey]).toString() : '0'}
+                {player.pointsFromMinutes?.[gwKey]?.toFixed(1) || '0.0'}
               </span>
             </div>
             <div className="flex justify-between items-center">
@@ -349,8 +349,7 @@ function ComponentTable({
                       <GameweekPointBreakdownTooltip player={player} gameweek={gw} />
                     ) : (
                       <span className={`font-medium ${getValueColor(value)}`}>
-                        {component === 'minutes' ? value.toFixed(0) : 
-                         (gw <= 3 ? Math.round(value).toString() : value.toFixed(1))}
+                        {component === 'minutes' ? value.toFixed(0) : value.toFixed(1)}
                       </span>
                     )}
                   </td>

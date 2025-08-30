@@ -77,7 +77,6 @@ class ProjectionService {
         pointsFromDefensiveContributions: projection.points_from_defensive_contributions || {},
         pointsFromMinutes: projection.points_from_minutes || {},
         pointsFromBonus: projection.points_from_bonus || {},
-        // Component totals
         totalPointsFromGoals: parseFloat(projection.total_points_from_goals || 0),
         totalPointsFromAssists: parseFloat(projection.total_points_from_assists || 0),
         totalPointsFromCleanSheets: parseFloat(projection.total_points_from_clean_sheets || 0),
@@ -117,7 +116,7 @@ class ProjectionService {
 
       // Include ALL players in the FPL database (no filtering)
       const players = bootstrapData.elements
-        .sort((a: any, b: any) => parseFloat(b.total_points) - parseFloat(a.total_points))
+        .sort((a: any, b: any) => parseFloat(b.total_points) - parseFloat(a.total_points)) // Sort by total points
         .map((fplPlayer: any) => {
           const team = bootstrapData.teams.find((t: any) => t.id === fplPlayer.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][fplPlayer.element_type] || 'MID';
@@ -139,9 +138,9 @@ class ProjectionService {
           const goalPoints = position === 'GKP' || position === 'DEF' ? 6 : position === 'MID' ? 5 : 4;
           const assistPoints = 3;
           const cleanSheetPoints = position === 'GKP' || position === 'DEF' ? 4 : position === 'MID' ? 1 : 0;
-
+          
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Use projection calculations for all gameweeks (simplified version)
+            // Get gameweek-specific opponent strength and fixture context
             const form = parseFloat(fplPlayer.form || "0");
             const totalPoints = parseFloat(fplPlayer.total_points || "0");
             const selectedBy = parseFloat(fplPlayer.selected_by_percent || "1");
@@ -149,32 +148,34 @@ class ProjectionService {
             
             // Fixture difficulty based on team ID and gameweek (simulates opponent strength)
             const teamId = fplPlayer.team;
-            const opponentStrengthSeed = ((teamId * 7) + (gw * 3)) % 20;
-            const isHomeFixture = (teamId + gw) % 2 === 0;
+            const opponentStrengthSeed = ((teamId * 7) + (gw * 3)) % 20; // 0-19 range
+            const isHomeFixture = (teamId + gw) % 2 === 0; // Alternating home/away
             
+            // Opponent difficulty: Elite (0-4), Strong (5-9), Average (10-14), Weak (15-19)
             let difficultyMultiplier;
             if (opponentStrengthSeed <= 4) {
-              difficultyMultiplier = isHomeFixture ? 0.75 : 0.65;
+              difficultyMultiplier = isHomeFixture ? 0.75 : 0.65; // vs Elite teams
             } else if (opponentStrengthSeed <= 9) {
-              difficultyMultiplier = isHomeFixture ? 0.90 : 0.80;
+              difficultyMultiplier = isHomeFixture ? 0.90 : 0.80; // vs Strong teams
             } else if (opponentStrengthSeed <= 14) {
-              difficultyMultiplier = isHomeFixture ? 1.10 : 1.00;
+              difficultyMultiplier = isHomeFixture ? 1.10 : 1.00; // vs Average teams
             } else {
-              difficultyMultiplier = isHomeFixture ? 1.35 : 1.25;
+              difficultyMultiplier = isHomeFixture ? 1.35 : 1.25; // vs Weak teams
             }
             
-            const seasonPerformance = totalPoints / Math.max(minutes / 90, 1);
+            // Base form with season performance weighting
+            const seasonPerformance = totalPoints / Math.max(minutes / 90, 1); // Points per 90 minutes
             const adjustedForm = Math.max(form * 0.7 + seasonPerformance * 0.3, 1.0);
             
             // 1. MINUTES CALCULATION
             const injuryRisk = (fplPlayer.chance_of_playing_next_round || 100) / 100;
-            const rotationRisk = selectedBy > 30 ? 0.95 : selectedBy > 10 ? 0.85 : 0.75;
+            const rotationRisk = selectedBy > 30 ? 0.95 : selectedBy > 10 ? 0.85 : 0.75; // Popular players less rotated
             const expectedMinutes = Math.min(90, adjustedForm * 15) * injuryRisk * rotationRisk;
             const minutesPoints = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
             pointsFromMinutes[`gw${gw}`] = minutesPoints;
             totalMinutesPoints += minutesPoints;
             
-            // 2. GOALS CALCULATION
+            // 2. GOALS CALCULATION (per 90 minutes, scaled by expected minutes)
             let goalsExpected;
             if (position === 'FWD') {
               goalsExpected = (adjustedForm * 0.12 + seasonPerformance * 0.05) * difficultyMultiplier * (expectedMinutes / 90);
@@ -183,7 +184,7 @@ class ProjectionService {
             } else if (position === 'DEF') {
               goalsExpected = (adjustedForm * 0.02 + seasonPerformance * 0.01) * difficultyMultiplier * (expectedMinutes / 90);
             } else {
-              goalsExpected = adjustedForm * 0.005 * difficultyMultiplier * (expectedMinutes / 90);
+              goalsExpected = adjustedForm * 0.005 * difficultyMultiplier * (expectedMinutes / 90); // GKP
             }
             
             const gwGoalPoints = goalsExpected * goalPoints;
@@ -199,47 +200,52 @@ class ProjectionService {
             } else if (position === 'DEF') {
               assistsExpected = (adjustedForm * 0.025 + seasonPerformance * 0.01) * difficultyMultiplier * (expectedMinutes / 90);
             } else {
-              assistsExpected = adjustedForm * 0.003 * difficultyMultiplier * (expectedMinutes / 90);
+              assistsExpected = adjustedForm * 0.003 * difficultyMultiplier * (expectedMinutes / 90); // GKP
             }
             
             const gwAssistPoints = assistsExpected * assistPoints;
             pointsFromAssists[`gw${gw}`] = Math.round(gwAssistPoints * 100) / 100;
             totalAssistPoints += gwAssistPoints;
             
-            // 4. CLEAN SHEET CALCULATION
+            // 4. CLEAN SHEET CALCULATION (defensive strength vs opponent attack)
             let cleanSheetProb = 0;
             if (position === 'GKP' || position === 'DEF' || position === 'MID') {
-              const teamDefensiveStrength = (adjustedForm * 0.05) + 0.25;
+              // Team defensive strength based on form and opponent weakness
+              const teamDefensiveStrength = (adjustedForm * 0.05) + 0.25; // Base 25% + form
               const opponentAttackStrength = opponentStrengthSeed <= 4 ? 0.85 : 
                                            opponentStrengthSeed <= 9 ? 0.65 : 
                                            opponentStrengthSeed <= 14 ? 0.45 : 0.25;
               
               cleanSheetProb = Math.max(0, teamDefensiveStrength - opponentAttackStrength);
-              if (position === 'MID') cleanSheetProb *= 0.8;
-              if (!isHomeFixture) cleanSheetProb *= 0.9;
+              if (position === 'MID') cleanSheetProb *= 0.8; // Midfielders get reduced CS probability
+              if (!isHomeFixture) cleanSheetProb *= 0.9; // Away fixtures slightly harder
             }
             
             const gwCleanSheetPoints = cleanSheetProb * cleanSheetPoints;
             pointsFromCleanSheets[`gw${gw}`] = Math.round(gwCleanSheetPoints * 100) / 100;
             totalCleanSheetPoints += gwCleanSheetPoints;
             
-            // 5. DEFENSIVE CONTRIBUTIONS
+            // 5. DEFENSIVE CONTRIBUTIONS (2025/26 season) - Use same logic as individual DC tool
             let gwDefensivePoints = 0;
             if (position === 'DEF' || position === 'MID') {
+              // Estimate DC value based on form and minutes
               const estimatedDC = position === 'DEF' ? 
                 (adjustedForm * 0.8 + seasonPerformance * 0.3) * (expectedMinutes / 90) : 
                 (adjustedForm * 0.4 + seasonPerformance * 0.2) * (expectedMinutes / 90);
               
+              // Apply FPL threshold rule: 2 points if DC >= 10 for DEF, >= 12 for MID/FWD
               const dcThreshold = position === 'DEF' ? 10 : 12;
-              gwDefensivePoints = estimatedDC >= dcThreshold ? 2 : 0;
+              gwDefensivePoints = estimatedDC >= dcThreshold ? 2 : 0; // Binary: either 0 or 2 points
             }
-            pointsFromDefensiveContributions[`gw${gw}`] = gwDefensivePoints;
+            pointsFromDefensiveContributions[`gw${gw}`] = Math.round(gwDefensivePoints * 100) / 100;
             totalDefensivePoints += gwDefensivePoints;
             
-            // 6. BONUS POINTS (no projections)
+            // 6. BONUS POINTS - Only use actual data, no projections (we don't have a dedicated bonus tool)
+            const bonusExpected = 0; // No bonus projections since we lack individual bonus projection tool
             pointsFromBonus[`gw${gw}`] = 0;
+            totalBonusPoints += 0;
             
-            // 7. TOTAL GAMEWEEK POINTS
+            // 7. TOTAL GAMEWEEK POINTS (sum all components - excluding bonus projections)
             const gwTotal = gwGoalPoints + gwAssistPoints + gwCleanSheetPoints + gwDefensivePoints + minutesPoints;
             gameweekProjections[`gw${gw}`] = Math.max(Math.round(gwTotal * 100) / 100, 0.0);
             totalExpectedPoints += gwTotal;
@@ -261,24 +267,26 @@ class ProjectionService {
             totalExpectedPoints,
             seasonTotalPoints,
             averagePerGameweek: avgPerGameweek,
+            // Detailed breakdowns
             pointsFromGoals,
             pointsFromAssists,
             pointsFromCleanSheets,
             pointsFromDefensiveContributions,
             pointsFromMinutes,
             pointsFromBonus,
-            totalPointsFromGoals: totalGoalPoints,
-            totalPointsFromAssists: totalAssistPoints,
-            totalPointsFromCleanSheets: totalCleanSheetPoints,
-            totalPointsFromDefensiveContributions: totalDefensivePoints,
-            totalPointsFromMinutes: totalMinutesPoints,
-            totalPointsFromBonus: totalBonusPoints
+            totalGoalPoints,
+            totalAssistPoints,
+            totalCleanSheetPoints,
+            totalDefensivePoints,
+            totalMinutesPoints,
+            totalBonusPoints
           };
         });
 
       // Cache in database using direct SQL
       const cachePromises = players.map(async (player) => {
         try {
+          // Delete existing record if any
           await db.execute(sql`
             DELETE FROM player_projections 
             WHERE player_id = ${player.playerId} 
@@ -287,6 +295,7 @@ class ProjectionService {
               AND season = '2025/26'
           `);
 
+          // Insert new record with detailed point breakdowns
           await db.execute(sql`
             INSERT INTO player_projections (
               player_id, player_name, team_id, team_name, position, element_type,
@@ -306,8 +315,8 @@ class ProjectionService {
               ${JSON.stringify(player.pointsFromGoals)}, ${JSON.stringify(player.pointsFromAssists)}, 
               ${JSON.stringify(player.pointsFromCleanSheets)}, ${JSON.stringify(player.pointsFromDefensiveContributions)},
               ${JSON.stringify(player.pointsFromMinutes)}, ${JSON.stringify(player.pointsFromBonus)},
-              ${player.totalPointsFromGoals}, ${player.totalPointsFromAssists}, ${player.totalPointsFromCleanSheets},
-              ${player.totalPointsFromDefensiveContributions}, ${player.totalPointsFromMinutes}, ${player.totalPointsFromBonus}
+              ${player.totalGoalPoints}, ${player.totalAssistPoints}, ${player.totalCleanSheetPoints},
+              ${player.totalDefensivePoints}, ${player.totalMinutesPoints}, ${player.totalBonusPoints}
             )
           `);
         } catch (error) {
@@ -319,26 +328,89 @@ class ProjectionService {
 
       const duration = Date.now() - startTime;
       
+      // Update log with success using direct SQL
       await db.execute(sql`
         UPDATE projection_update_log 
-        SET status = 'completed', duration = ${duration}, ended_at = NOW() 
+        SET status = 'success', players_updated = ${players.length}, duration = ${duration}, completed_at = NOW()
         WHERE id = ${updateId}
       `);
 
-      console.log(`DEBUG: Calculated and cached ${players.length} player projections in ${duration}ms`);
-      return players;
+      console.log(`DEBUG: Cached ${players.length} player projections in ${duration}ms`);
+
+      // Return in API format with detailed breakdowns
+      return players.map(player => ({
+        playerId: player.playerId,
+        name: player.playerName,
+        fullName: player.playerName,
+        team: player.teamName,
+        position: player.position,
+        price: player.currentPrice / 10,
+        ownership: player.ownership,
+        gameweekProjections: player.gameweekProjections,
+        totalExpectedPoints: player.totalExpectedPoints,
+        seasonTotalPoints: player.seasonTotalPoints,
+        averagePerGameweek: player.averagePerGameweek,
+        // Include detailed point breakdowns for tooltip functionality
+        pointsFromGoals: player.pointsFromGoals,
+        pointsFromAssists: player.pointsFromAssists,
+        pointsFromCleanSheets: player.pointsFromCleanSheets,
+        pointsFromDefensiveContributions: player.pointsFromDefensiveContributions,
+        pointsFromMinutes: player.pointsFromMinutes,
+        pointsFromBonus: player.pointsFromBonus,
+        totalPointsFromGoals: player.totalGoalPoints,
+        totalPointsFromAssists: player.totalAssistPoints,
+        totalPointsFromCleanSheets: player.totalCleanSheetPoints,
+        totalPointsFromDefensiveContributions: player.totalDefensivePoints,
+        totalPointsFromMinutes: player.totalMinutesPoints,
+        totalPointsFromBonus: player.totalBonusPoints
+      })).sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
 
     } catch (error) {
-      console.error("Error calculating projections:", error);
+      const duration = Date.now() - startTime;
       
+      // Update log with failure using direct SQL
       await db.execute(sql`
         UPDATE projection_update_log 
-        SET status = 'failed', ended_at = NOW() 
+        SET status = 'failed', duration = ${duration}, 
+            error_details = ${JSON.stringify({ error: error instanceof Error ? error.message : String(error) })}, 
+            completed_at = NOW()
         WHERE id = ${updateId}
       `);
-      
+
+      console.error("Error calculating projections:", error);
       throw error;
     }
+  }
+
+  /**
+   * Force refresh of projections (admin function)
+   */
+  async refreshProjections(startGameweek: number, endGameweek: number): Promise<void> {
+    console.log(`DEBUG: Force refreshing projections for GW${startGameweek}-${endGameweek}`);
+    
+    // Delete existing cached data using direct SQL
+    await db.execute(sql`
+      DELETE FROM player_projections 
+      WHERE start_gameweek = ${startGameweek} 
+        AND end_gameweek = ${endGameweek} 
+        AND season = '2025/26'
+    `);
+
+    // Recalculate
+    await this.calculateAndCacheProjections(startGameweek, endGameweek);
+  }
+
+  /**
+   * Get projection update status
+   */
+  async getUpdateStatus(): Promise<any[]> {
+    const recentUpdates = await db.execute(sql`
+      SELECT * FROM projection_update_log 
+      ORDER BY completed_at DESC 
+      LIMIT 10
+    `);
+
+    return recentUpdates.rows;
   }
 }
 
