@@ -4055,11 +4055,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Apply realistic caps based on position to assist share percentage
             const getPositionShareCap = (position: string): number => {
               switch (position.toLowerCase()) {
-                case 'goalkeeper': return 3; // Max 3% share for GKs
-                case 'defender': return 25; // Max 25% share for defenders
-                case 'midfielder': return 45; // Max 45% share for midfielders
-                case 'forward': return 35; // Max 35% share for forwards
-                default: return 30;
+                case 'goalkeeper': return 2; // Max 2% share for GKs
+                case 'defender': return 15; // Max 15% share for defenders
+                case 'midfielder': return 35; // Max 35% share for midfielders
+                case 'forward': return 25; // Max 25% share for forwards
+                default: return 20;
               }
             };
             
