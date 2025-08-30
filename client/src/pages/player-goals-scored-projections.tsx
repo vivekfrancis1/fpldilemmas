@@ -4,6 +4,7 @@ import { Target, Filter, BarChart3, Trophy, Search, ArrowUpDown, ArrowUp, ArrowD
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,8 +28,15 @@ export default function PlayerGoalsScoredProjections() {
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
   const [startGameweek, setStartGameweek] = useState<number>(3);
   const [endGameweek, setEndGameweek] = useState<number>(8);
+  const [activeTab, setActiveTab] = useState<string>("goals");
   
   const queryClient = useQueryClient();
+
+  // FPL points from goals based on position
+  const getPointsFromGoals = (goals: number, position: string): number => {
+    const multiplier = position === 'DEF' ? 6 : position === 'MID' ? 5 : 4; // Defenders: 6pts, Midfielders: 5pts, Forwards: 4pts
+    return goals * multiplier;
+  };
 
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -72,47 +80,111 @@ export default function PlayerGoalsScoredProjections() {
         
         switch (sortBy) {
           case "total": {
-            // Calculate selected gameweeks total for sorting
-            const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
-            const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
-            return (bPeriodTotal - aPeriodTotal) * multiplier;
+            // Calculate selected gameweeks total for sorting (goals or points based on active tab)
+            if (activeTab === "points") {
+              const aPointsTotal = selectedGameweeks.reduce((sum, gw) => {
+                const goals = a.gameweekProjections[gw] || 0;
+                return sum + getPointsFromGoals(goals, a.position);
+              }, 0);
+              const bPointsTotal = selectedGameweeks.reduce((sum, gw) => {
+                const goals = b.gameweekProjections[gw] || 0;
+                return sum + getPointsFromGoals(goals, b.position);
+              }, 0);
+              return (bPointsTotal - aPointsTotal) * multiplier;
+            } else {
+              const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
+              const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+              return (bPeriodTotal - aPeriodTotal) * multiplier;
+            }
           }
-          case "season": return (b.totalProjectedGoals - a.totalProjectedGoals) * multiplier;
+          case "season": {
+            if (activeTab === "points") {
+              const aSeasonPoints = getPointsFromGoals(a.totalProjectedGoals, a.position);
+              const bSeasonPoints = getPointsFromGoals(b.totalProjectedGoals, b.position);
+              return (bSeasonPoints - aSeasonPoints) * multiplier;
+            } else {
+              return (b.totalProjectedGoals - a.totalProjectedGoals) * multiplier;
+            }
+          }
           case "name": return a.playerName.localeCompare(b.playerName) * multiplier;
           case "team": return a.teamName.localeCompare(b.teamName) * multiplier;
           case "position": return a.position.localeCompare(b.position) * multiplier;
           default: {
-            const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
-            const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
-            return (bPeriodTotal - aPeriodTotal) * multiplier;
+            if (activeTab === "points") {
+              const aPointsTotal = selectedGameweeks.reduce((sum, gw) => {
+                const goals = a.gameweekProjections[gw] || 0;
+                return sum + getPointsFromGoals(goals, a.position);
+              }, 0);
+              const bPointsTotal = selectedGameweeks.reduce((sum, gw) => {
+                const goals = b.gameweekProjections[gw] || 0;
+                return sum + getPointsFromGoals(goals, b.position);
+              }, 0);
+              return (bPointsTotal - aPointsTotal) * multiplier;
+            } else {
+              const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
+              const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+              return (bPeriodTotal - aPeriodTotal) * multiplier;
+            }
           }
         }
       });
-  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy, sortDirection, selectedGameweeks]);
+  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy, sortDirection, selectedGameweeks, activeTab]);
 
   const totalGoals = useMemo(() => {
-    if (!filteredProjections.length) return { gameweekTotals: {}, overallTotal: 0, seasonTotal: 0, averagePerGame: 0 };
+    if (!filteredProjections.length) return { 
+      gameweekTotals: {}, 
+      overallTotal: 0, 
+      seasonTotal: 0, 
+      averagePerGame: 0,
+      pointsGameweekTotals: {},
+      pointsOverallTotal: 0,
+      pointsSeasonTotal: 0,
+      pointsAveragePerGame: 0
+    };
     
     const gameweekTotals: { [gameweek: number]: number } = {};
+    const pointsGameweekTotals: { [gameweek: number]: number } = {};
     let overallTotal = 0;
     let seasonTotal = 0;
+    let pointsOverallTotal = 0;
+    let pointsSeasonTotal = 0;
     
     const totalWeeks = selectedGameweeks.length;
     
     // Calculate totals for selected gameweeks
     selectedGameweeks.forEach(gwNumber => {
       const gwTotal = filteredProjections.reduce((sum, player) => sum + (player.gameweekProjections[gwNumber] || 0), 0);
+      const gwPointsTotal = filteredProjections.reduce((sum, player) => {
+        const goals = player.gameweekProjections[gwNumber] || 0;
+        return sum + getPointsFromGoals(goals, player.position);
+      }, 0);
+      
       gameweekTotals[gwNumber] = gwTotal;
+      pointsGameweekTotals[gwNumber] = gwPointsTotal;
       overallTotal += gwTotal;
+      pointsOverallTotal += gwPointsTotal;
     });
     
-    // Calculate season total
+    // Calculate season totals
     seasonTotal = filteredProjections.reduce((sum, player) => sum + player.totalProjectedGoals, 0);
+    pointsSeasonTotal = filteredProjections.reduce((sum, player) => {
+      return sum + getPointsFromGoals(player.totalProjectedGoals, player.position);
+    }, 0);
     
     const averagePerGame = overallTotal / totalWeeks;
+    const pointsAveragePerGame = pointsOverallTotal / totalWeeks;
     
-    return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
-  }, [filteredProjections, selectedGameweeks]);
+    return { 
+      gameweekTotals, 
+      overallTotal, 
+      seasonTotal, 
+      averagePerGame,
+      pointsGameweekTotals,
+      pointsOverallTotal,
+      pointsSeasonTotal,
+      pointsAveragePerGame
+    };
+  }, [filteredProjections, selectedGameweeks, getPointsFromGoals]);
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
@@ -151,6 +223,14 @@ export default function PlayerGoalsScoredProjections() {
     if (goals >= 2.0) return 'bg-blue-50 text-blue-800 font-medium';
     if (goals >= 1.5) return 'bg-yellow-50 text-yellow-800';
     if (goals >= 1.0) return 'bg-orange-50 text-orange-800';
+    return 'bg-red-50 text-red-800';
+  };
+
+  const getPointsColor = (points: number) => {
+    if (points >= 15) return 'bg-green-50 text-green-800 font-semibold';
+    if (points >= 12) return 'bg-blue-50 text-blue-800 font-medium';
+    if (points >= 8) return 'bg-yellow-50 text-yellow-800';
+    if (points >= 5) return 'bg-orange-50 text-orange-800';
     return 'bg-red-50 text-red-800';
   };
 
@@ -341,8 +421,10 @@ export default function PlayerGoalsScoredProjections() {
           <Card>
             <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-blue-600">{totalGoals.overallTotal.toFixed(2)}</p>
-                <p className="text-sm text-gray-600">{selectedGameweeks.length} GW Total</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {activeTab === "points" ? totalGoals.pointsOverallTotal.toFixed(1) : totalGoals.overallTotal.toFixed(2)}
+                </p>
+                <p className="text-sm text-gray-600">{selectedGameweeks.length} GW {activeTab === "points" ? "Points" : "Goals"}</p>
               </div>
             </CardContent>
           </Card>
@@ -350,8 +432,10 @@ export default function PlayerGoalsScoredProjections() {
           <Card>
             <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">{totalGoals.seasonTotal.toFixed(2)}</p>
-                <p className="text-sm text-gray-600">Season Total</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {activeTab === "points" ? totalGoals.pointsSeasonTotal.toFixed(1) : totalGoals.seasonTotal.toFixed(2)}
+                </p>
+                <p className="text-sm text-gray-600">Season {activeTab === "points" ? "Points" : "Goals"}</p>
               </div>
             </CardContent>
           </Card>
@@ -359,71 +443,86 @@ export default function PlayerGoalsScoredProjections() {
           <Card>
             <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-purple-600">{totalGoals.averagePerGame.toFixed(2)}</p>
-                <p className="text-sm text-gray-600">Avg Per GW (GW{startGameweek}-{endGameweek})</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {activeTab === "points" ? totalGoals.pointsAveragePerGame.toFixed(1) : totalGoals.averagePerGame.toFixed(2)}
+                </p>
+                <p className="text-sm text-gray-600">Avg {activeTab === "points" ? "Points" : "Goals"} Per GW (GW{startGameweek}-{endGameweek})</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Player Goals Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5" />
-              Player Goals - Next 6 Gameweeks ({filteredProjections.length} players)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 sticky left-0 bg-white border-r border-gray-200 z-10">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
-                        onClick={() => handleSort("name")}
-                        data-testid="sort-player-name"
-                      >
-                        Player
-                        {sortBy === "name" && (
-                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
-                        )}
-                        {sortBy !== "name" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                      </Button>
-                    </th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
-                        onClick={() => handleSort("team")}
-                        data-testid="sort-team"
-                      >
-                        Team
-                        {sortBy === "team" && (
-                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
-                        )}
-                        {sortBy !== "team" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                      </Button>
-                    </th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
-                        onClick={() => handleSort("position")}
-                        data-testid="sort-position"
-                      >
-                        Pos
-                        {sortBy === "position" && (
-                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
-                        )}
-                        {sortBy !== "position" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                      </Button>
-                    </th>
+        {/* Tab Navigation and Content */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="goals" className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Goals Scored
+            </TabsTrigger>
+            <TabsTrigger value="points" className="flex items-center gap-2">
+              <Trophy className="h-4 w-4" />
+              Points from Goals
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="goals">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Player Goals - {selectedGameweeks.length} Gameweeks ({filteredProjections.length} players)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 sticky left-0 bg-white border-r border-gray-200 z-10">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                            onClick={() => handleSort("name")}
+                            data-testid="sort-player-name"
+                          >
+                            Player
+                            {sortBy === "name" && (
+                              sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                            )}
+                            {sortBy !== "name" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                          </Button>
+                        </th>
+                        <th className="text-center py-3 px-2 font-semibold text-gray-900">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                            onClick={() => handleSort("team")}
+                            data-testid="sort-team"
+                          >
+                            Team
+                            {sortBy === "team" && (
+                              sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                            )}
+                            {sortBy !== "team" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                          </Button>
+                        </th>
+                        <th className="text-center py-3 px-2 font-semibold text-gray-900">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                            onClick={() => handleSort("position")}
+                            data-testid="sort-position"
+                          >
+                            Pos
+                            {sortBy === "position" && (
+                              sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                            )}
+                            {sortBy !== "position" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                          </Button>
+                        </th>
                     {selectedGameweeks.map(gw => (
                       <th key={gw} className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[70px]">
                         <Button
@@ -554,6 +653,132 @@ export default function PlayerGoalsScoredProjections() {
             </div>
           </CardContent>
         </Card>
+      </TabsContent>
+      
+      <TabsContent value="points">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5" />
+              Points from Goals - {selectedGameweeks.length} Gameweeks ({filteredProjections.length} players)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 sticky left-0 bg-white border-r border-gray-200 z-10">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                        onClick={() => handleSort("name")}
+                        data-testid="sort-player-name-points"
+                      >
+                        Player
+                        {sortBy === "name" && (
+                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                        )}
+                        {sortBy !== "name" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
+                      </Button>
+                    </th>
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">Team</th>
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">Pos</th>
+                    {selectedGameweeks.map(gw => (
+                      <th key={gw} className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[70px]">GW{gw}</th>
+                    ))}
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900 border-l border-gray-200">{selectedGameweeks.length} GW Pts</th>
+                    <th className="text-center py-3 px-2 font-semibold text-gray-900">Season Pts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProjections.map((player, index) => {
+                    const selectedTotal = selectedGameweeks.reduce((sum, gw) => {
+                      const goals = player.gameweekProjections[gw] || 0;
+                      return sum + getPointsFromGoals(goals, player.position);
+                    }, 0);
+                    
+                    return (
+                      <tr key={`${player.playerId}-points`} className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                        <td className="py-3 px-4 sticky left-0 bg-white border-r border-gray-200 z-10">
+                          <div className="font-semibold text-gray-900">
+                            {player.playerName}
+                          </div>
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <Badge variant="outline" className="text-xs font-medium">
+                            {player.teamShort}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-2 text-center text-sm text-gray-600">
+                          {player.position}
+                        </td>
+                        {selectedGameweeks.map(gw => {
+                          const goals = player.gameweekProjections[gw] || 0;
+                          const points = getPointsFromGoals(goals, player.position);
+                          return (
+                            <td key={gw} className="py-3 px-2 text-center">
+                              <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getPointsColor(points)}`}>
+                                {points.toFixed(1)}
+                              </span>
+                            </td>
+                          );
+                        })}
+                        <td className="py-3 px-2 text-center border-l border-gray-200">
+                          <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-sm">
+                            {selectedTotal.toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <span className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-sm font-medium">
+                            {getPointsFromGoals(player.totalProjectedGoals, player.position).toFixed(1)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-gray-200 bg-blue-50">
+                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-blue-50 border-r border-gray-200 z-10" colSpan={3}>
+                      {selectedGameweeks.length} GW TOTAL
+                    </td>
+                    {selectedGameweeks.map(gw => (
+                      <td key={gw} className="py-3 px-2 text-center font-bold text-blue-600">
+                        {(totalGoals.pointsGameweekTotals[gw] || 0).toFixed(1)}
+                      </td>
+                    ))}
+                    <td className="py-3 px-2 text-center font-bold text-blue-600">
+                      {totalGoals.pointsOverallTotal.toFixed(1)}
+                    </td>
+                    <td className="py-3 px-2 text-center font-bold text-gray-600">
+                      -
+                    </td>
+                  </tr>
+                  <tr className="border-t border-gray-200 bg-green-50">
+                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-green-50 border-r border-gray-200 z-10" colSpan={3}>
+                      SEASON TOTAL
+                    </td>
+                    {selectedGameweeks.map(gw => (
+                      <td key={gw} className="py-3 px-2 text-center font-bold text-gray-600">
+                        -
+                      </td>
+                    ))}
+                    <td className="py-3 px-2 text-center font-bold text-gray-600">
+                      -
+                    </td>
+                    <td className="py-3 px-2 text-center font-bold text-green-600">
+                      {totalGoals.pointsSeasonTotal.toFixed(1)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
       </div>
     </div>
   );
