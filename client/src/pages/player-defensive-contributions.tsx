@@ -283,63 +283,82 @@ export default function PlayerDefensiveContributions() {
   }
 
   return (
-    <div className="p-6 max-w-full mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Shield className="h-8 w-8" />
-          Player Defensive Contributions
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Gameweek-by-gameweek defensive contribution projections in table format
-        </p>
+    <div className="fpl-page-container">
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Shield className="h-8 w-8" />
+            <h1>Player Defensive Contributions</h1>
+          </div>
+          <p className="fpl-page-subtitle">
+            Comprehensive defensive stats and FPL points projections with fixture-aware analysis
+          </p>
+        </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Total Players</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredPlayers.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Top Performer</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold">
-              {filteredPlayers[0]?.playerName || "N/A"}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {filteredPlayers[0]?.totalDC.toFixed(1) || "0"} total DC
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Average Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {filteredPlayers.length > 0 ? 
-                (filteredPlayers.reduce((sum, p) => sum + p.totalDC, 0) / filteredPlayers.length).toFixed(1) : "0"}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Gameweeks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{gameweeks.length}</div>
-            <div className="text-sm text-muted-foreground">
-              {gameweeks.length > 0 ? `GW${gameweeks[0]} - GW${gameweeks[gameweeks.length - 1]}` : "Select range"}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <div className="fpl-section-spacing">
+        {/* Quick Stats Overview */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Target className="h-8 w-8 text-blue-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-blue-900">Players Analyzed</p>
+                  <p className="text-2xl font-bold text-blue-700">{filteredPlayers.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Shield className="h-8 w-8 text-green-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-green-900">Top Performer</p>
+                  <p className="text-lg font-bold text-green-700">
+                    {filteredPlayers.length > 0 ? filteredPlayers[0].playerName.split(' ').slice(-1)[0] : "None"}
+                  </p>
+                  <p className="text-sm text-green-600">
+                    {filteredPlayers.length > 0 ? filteredPlayers[0].totalDC.toFixed(1) + " DC" : ""}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Filter className="h-8 w-8 text-purple-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-purple-900">Average DC</p>
+                  <p className="text-2xl font-bold text-purple-700">
+                    {filteredPlayers.length > 0 ? 
+                      (filteredPlayers.reduce((sum, p) => sum + p.totalDC, 0) / filteredPlayers.length).toFixed(1) : "0"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Clock className="h-8 w-8 text-orange-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-orange-900">Gameweeks</p>
+                  <p className="text-2xl font-bold text-orange-700">{gameweeks.length}</p>
+                  <p className="text-sm text-orange-600">
+                    {gameweeks.length > 0 ? `GW${gameweeks[0]} - GW${gameweeks[gameweeks.length - 1]}` : "Select range"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
       {/* Filters and Controls */}
       <Card className="mb-6">
@@ -733,6 +752,7 @@ export default function PlayerDefensiveContributions() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
