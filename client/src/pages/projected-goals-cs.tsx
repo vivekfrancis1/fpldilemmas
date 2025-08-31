@@ -131,23 +131,21 @@ export default function ProjectedGoalsCS() {
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
 
   return (
-    
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
-        <div className="w-full max-w-7xl mx-auto px-2 py-2">
-          {/* Header - Compact */}
-          <div className="text-center mb-3">
-            <div className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full mb-1">
-              <Target className="h-4 w-4 text-blue-600" />
-            </div>
-            <h1 className="text-xl font-bold text-gray-900 mb-1" data-testid="text-page-title">
-              {startGameweek === endGameweek ? 
-                `PL GW${startGameweek}: Match Projections` : 
-                `PL GW${startGameweek}-${endGameweek}: Match Projections`}
-            </h1>
-            <p className="text-xs text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Goals and clean sheets for gameweeks {startGameweek} to {endGameweek}
-            </p>
+    <div className="fpl-page-container">
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Target className="h-8 w-8" />
+            <h1>Match Projections</h1>
           </div>
+          <p className="fpl-page-subtitle">
+            Projected goals and clean sheet odds for each match across selected gameweeks with confidence analysis
+          </p>
+        </div>
+      </div>
+
+      <div className="fpl-section-spacing">
 
           {/* Controls - Compact */}
           <Card className="mb-3 shadow-sm border-0">
