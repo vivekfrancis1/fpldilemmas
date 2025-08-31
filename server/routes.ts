@@ -10573,6 +10573,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function for BPS-based bonus point calculation  
+  function calculateBonusPointsFromBPS(player: any, position: string): number {
+    const form = parseFloat(player.form || "0");
+    const totalPoints = parseFloat(player.total_points || "0");
+    const playerValue = parseFloat(player.now_cost || "50") / 10;
+    const goalsScored = parseFloat(player.goals_scored || "0");
+    const assists = parseFloat(player.assists || "0");
+    const bps = parseFloat(player.bps || "0"); // Historic BPS data
+    
+    // Calculate projected BPS based on historic performance and current form
+    let projectedBPS = 0;
+    
+    if (bps > 0) {
+      // Use historic BPS as baseline, adjusted for form
+      const formMultiplier = Math.max(0.5, Math.min(1.8, 1 + (form - 5) * 0.1));
+      projectedBPS = bps * formMultiplier;
+    } else {
+      // For players without BPS history, estimate based on goals/assists and position
+      let baseBPS = 0;
+      if (position === 'FWD') {
+        baseBPS = (goalsScored * 24) + (assists * 18) + (form * 2); // Goals worth 24 BPS, assists 18
+      } else if (position === 'MID') {
+        baseBPS = (goalsScored * 18) + (assists * 12) + (form * 2); // Different scoring for mids
+      } else if (position === 'DEF') {
+        baseBPS = (goalsScored * 24) + (assists * 12) + (form * 1.5); // Defenders get full goal BPS
+      } else if (position === 'GKP') {
+        baseBPS = (goalsScored * 24) + (form * 1); // Rare but valuable GK goals
+      }
+      
+      projectedBPS = Math.max(5, baseBPS); // Minimum 5 BPS for playing
+    }
+    
+    // Convert BPS to bonus point probability
+    // Typically need 25+ BPS for 1 point, 30+ for 2 points, 35+ for 3 points
+    let bonusPointsProbability = 0;
+    
+    if (projectedBPS >= 35) {
+      bonusPointsProbability = 3.0; // Very high BPS = 3 points likely
+    } else if (projectedBPS >= 30) {
+      bonusPointsProbability = 2.0; // Good BPS = 2 points likely
+    } else if (projectedBPS >= 25) {
+      bonusPointsProbability = 1.0; // Decent BPS = 1 point likely
+    } else if (projectedBPS >= 20) {
+      bonusPointsProbability = 0.5; // Moderate BPS = 50% chance of 1 point
+    } else {
+      bonusPointsProbability = 0.0; // Low BPS = no bonus
+    }
+    
+    // Apply the 1.5x multiplier as suggested and cap at reasonable levels
+    return Math.min(3.0, bonusPointsProbability * 1.5);
+  }
+
   // Player Bonus Points Projections - Hybrid methodology: actual + projected + current gameweek hybrid
   app.get("/api/player-bonus-points-projections", async (req, res) => {
     try {
@@ -10614,36 +10666,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               } catch (error) {
                 console.log(`Using projection fallback for player ${player.id} GW${gw}: ${error}`);
-                // Realistic fallback for completed gameweeks
+                // BPS-based fallback for completed gameweeks
                 const willPlay = await estimatePlayerWillPlay(player, gw, position);
                 
                 if (willPlay) {
-                  const form = parseFloat(player.form || "0");
-                  const totalPoints = parseFloat(player.total_points || "0");
-                  const playerValue = parseFloat(player.now_cost || "50") / 10;
-                  
-                  const qualityScore = (form * 0.4) + (totalPoints * 0.001) + (playerValue * 0.1);
-                  
-                  let bonusChance = 0;
-                  if (qualityScore > 2.5) {
-                    bonusChance = 0.15;
-                  } else if (qualityScore > 1.8) {
-                    bonusChance = 0.08;
-                  } else if (qualityScore > 1.2) {
-                    bonusChance = 0.03;
-                  } else {
-                    bonusChance = 0.01;
-                  }
-                  
-                  if (Math.random() < bonusChance) {
-                    const rand = Math.random();
-                    if (rand < 0.1) gwBonusPoints = 3;
-                    else if (rand < 0.3) gwBonusPoints = 2;  
-                    else gwBonusPoints = 1;
-                  } else {
-                    gwBonusPoints = 0;
-                  }
-                  
+                  gwBonusPoints = calculateBonusPointsFromBPS(player, position);
                   gwPoints = gwBonusPoints;
                 } else {
                   gwBonusPoints = 0;
@@ -10662,37 +10689,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   gwBonusPoints = gameweekData.bonus || 0;
                   gwPoints = gwBonusPoints;
                 } else {
-                  // Player hasn't played yet - use realistic bonus distribution
+                  // Player hasn't played yet - use BPS-based calculation
                   const willPlay = await estimatePlayerWillPlay(player, gw, position);
                   
                   if (willPlay) {
-                    // Calculate realistic bonus probability based on player quality and form
-                    const form = parseFloat(player.form || "0");
-                    const totalPoints = parseFloat(player.total_points || "0");
-                    const playerValue = parseFloat(player.now_cost || "50") / 10;
-                    
-                    const qualityScore = (form * 0.4) + (totalPoints * 0.001) + (playerValue * 0.1);
-                    
-                    let bonusChance = 0;
-                    if (qualityScore > 2.5) {
-                      bonusChance = 0.15; // 15% chance for elite players
-                    } else if (qualityScore > 1.8) {
-                      bonusChance = 0.08; // 8% chance for good players
-                    } else if (qualityScore > 1.2) {
-                      bonusChance = 0.03; // 3% chance for average players
-                    } else {
-                      bonusChance = 0.01; // 1% chance for below-average players
-                    }
-                    
-                    if (Math.random() < bonusChance) {
-                      const rand = Math.random();
-                      if (rand < 0.1) gwBonusPoints = 3;
-                      else if (rand < 0.3) gwBonusPoints = 2;  
-                      else gwBonusPoints = 1;
-                    } else {
-                      gwBonusPoints = 0;
-                    }
-                    
+                    gwBonusPoints = calculateBonusPointsFromBPS(player, position);
                     gwPoints = gwBonusPoints;
                   } else {
                     gwBonusPoints = 0;
@@ -10700,36 +10701,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }
                 }
               } catch (error) {
-                // Fallback to realistic bonus distribution
+                // Fallback to BPS-based calculation
                 const willPlay = await estimatePlayerWillPlay(player, gw, position);
                 
                 if (willPlay) {
-                  const form = parseFloat(player.form || "0");
-                  const totalPoints = parseFloat(player.total_points || "0");
-                  const playerValue = parseFloat(player.now_cost || "50") / 10;
-                  
-                  const qualityScore = (form * 0.4) + (totalPoints * 0.001) + (playerValue * 0.1);
-                  
-                  let bonusChance = 0;
-                  if (qualityScore > 2.5) {
-                    bonusChance = 0.15;
-                  } else if (qualityScore > 1.8) {
-                    bonusChance = 0.08;
-                  } else if (qualityScore > 1.2) {
-                    bonusChance = 0.03;
-                  } else {
-                    bonusChance = 0.01;
-                  }
-                  
-                  if (Math.random() < bonusChance) {
-                    const rand = Math.random();
-                    if (rand < 0.1) gwBonusPoints = 3;
-                    else if (rand < 0.3) gwBonusPoints = 2;  
-                    else gwBonusPoints = 1;
-                  } else {
-                    gwBonusPoints = 0;
-                  }
-                  
+                  gwBonusPoints = calculateBonusPointsFromBPS(player, position);
                   gwPoints = gwBonusPoints;
                 } else {
                   gwBonusPoints = 0;
@@ -10741,37 +10717,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const willPlay = await estimatePlayerWillPlay(player, gw, position);
               
               if (willPlay) {
-                // Calculate realistic bonus probability based on player quality and form
-                const form = parseFloat(player.form || "0");
-                const totalPoints = parseFloat(player.total_points || "0");
-                const playerValue = parseFloat(player.now_cost || "50") / 10; // Convert to £m
-                
-                // Quality score combines form, total points, and value
-                const qualityScore = (form * 0.4) + (totalPoints * 0.001) + (playerValue * 0.1);
-                
-                // Only top-performing players in good form have meaningful bonus chance
-                // Realistic distribution: ~15% chance for top players, much lower for others
-                let bonusChance = 0;
-                if (qualityScore > 2.5) {
-                  bonusChance = 0.15; // 15% chance for elite players
-                } else if (qualityScore > 1.8) {
-                  bonusChance = 0.08; // 8% chance for good players
-                } else if (qualityScore > 1.2) {
-                  bonusChance = 0.03; // 3% chance for average players
-                } else {
-                  bonusChance = 0.01; // 1% chance for below-average players
-                }
-                
-                // Apply bonus with realistic points distribution (3, 2, or 1 point)
-                if (Math.random() < bonusChance) {
-                  const rand = Math.random();
-                  if (rand < 0.1) gwBonusPoints = 3; // 10% chance for 3 points
-                  else if (rand < 0.3) gwBonusPoints = 2; // 20% chance for 2 points  
-                  else gwBonusPoints = 1; // 70% chance for 1 point
-                } else {
-                  gwBonusPoints = 0;
-                }
-                
+                // Use BPS-based calculation for future gameweeks
+                gwBonusPoints = calculateBonusPointsFromBPS(player, position);
                 gwPoints = gwBonusPoints;
               } else {
                 // Player unlikely to play - 0 bonus points
