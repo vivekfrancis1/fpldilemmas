@@ -9981,10 +9981,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Goals Conceded Projections - Hybrid methodology: actual + projected + current gameweek hybrid
+  // Player Goals Conceded Projections - Derived from Team Goals Conceded data
   app.get("/api/player-goals-conceded-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Goals Conceded Projections API called - using hybrid calculation");
+      console.log("DEBUG: Player Goals Conceded Projections API called - deriving from team data");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -9993,6 +9993,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       const fplData = await fplResponse.json();
       const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      // Get team goals conceded projections as the source of truth
+      const teamProjectionsResponse = await fetch(`http://localhost:5000/api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      const teamProjections = await teamProjectionsResponse.json();
       
       // Filter to only GKP and DEF (affected by goals conceded)
       const affectedPlayers = fplData.elements.filter((player: any) => 
@@ -10008,7 +10012,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalGoalsConceded = 0;
           let totalPoints = 0;
           
-          // Process each gameweek with hybrid methodology
+          // Find team's projected goals conceded data
+          const teamGoalData = teamProjections.find((tp: any) => tp.teamName === team?.short_name);
+          
+          // Process each gameweek using team data as base
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
             let gwGoalsConceded = 0;
             let gwPoints = 0;
@@ -10025,10 +10032,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   gwPoints = -(Math.floor(gwGoalsConceded / 2)); // -1 point per 2 goals conceded
                 }
               } catch (error) {
-                console.log(`Using projection fallback for player ${player.id} GW${gw}: ${error}`);
-                // Simple projection fallback for completed gameweeks
-                gwGoalsConceded = Math.max(0, parseFloat((Math.random() * 2.5).toFixed(1))); // 0-2.5 goals
-                gwPoints = -(Math.floor(gwGoalsConceded / 2));
+                // Fallback to team projection data
+                if (teamGoalData && teamGoalData.goalsAgainst && teamGoalData.goalsAgainst[`gw${gw}`]) {
+                  gwGoalsConceded = parseFloat(teamGoalData.goalsAgainst[`gw${gw}`].toFixed(1));
+                  gwPoints = -(Math.floor(gwGoalsConceded / 2));
+                }
               }
             } else if (gw === currentGameweek) {
               // CURRENT GAMEWEEK: Hybrid based on match progress
@@ -10042,21 +10050,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   gwGoalsConceded = gameweekData.goals_conceded || 0;
                   gwPoints = -(Math.floor(gwGoalsConceded / 2));
                 } else {
-                  // Player hasn't played yet - use projection
-                  gwGoalsConceded = Math.max(0, parseFloat((Math.random() * 2.5).toFixed(1)));
-                  gwPoints = -(Math.floor(gwGoalsConceded / 2));
+                  // Player hasn't played yet - use team projection
+                  if (teamGoalData && teamGoalData.goalsAgainst && teamGoalData.goalsAgainst[`gw${gw}`]) {
+                    gwGoalsConceded = parseFloat(teamGoalData.goalsAgainst[`gw${gw}`].toFixed(1));
+                    gwPoints = -(Math.floor(gwGoalsConceded / 2));
+                  }
                 }
               } catch (error) {
-                // Fallback to projection
-                gwGoalsConceded = Math.max(0, parseFloat((Math.random() * 2.5).toFixed(1)));
-                gwPoints = -(Math.floor(gwGoalsConceded / 2));
+                // Fallback to team projection
+                if (teamGoalData && teamGoalData.goalsAgainst && teamGoalData.goalsAgainst[`gw${gw}`]) {
+                  gwGoalsConceded = parseFloat(teamGoalData.goalsAgainst[`gw${gw}`].toFixed(1));
+                  gwPoints = -(Math.floor(gwGoalsConceded / 2));
+                }
               }
             } else {
-              // FUTURE GAMEWEEKS: Use team-based projections
-              const teamStrength = team?.strength_defence || 1200;
-              const strengthMultiplier = Math.max(0.5, Math.min(1.8, (1400 - teamStrength) / 400));
-              gwGoalsConceded = Math.max(0, parseFloat((Math.random() * 2.0 * strengthMultiplier).toFixed(1)));
-              gwPoints = -(Math.floor(gwGoalsConceded / 2));
+              // FUTURE GAMEWEEKS: Use team goals against projections directly
+              if (teamGoalData && teamGoalData.goalsAgainst && teamGoalData.goalsAgainst[`gw${gw}`]) {
+                gwGoalsConceded = parseFloat(teamGoalData.goalsAgainst[`gw${gw}`].toFixed(1));
+                gwPoints = -(Math.floor(gwGoalsConceded / 2));
+              }
             }
             
             goalsConceded[`gw${gw}`] = parseFloat(gwGoalsConceded.toFixed(1));
@@ -10079,7 +10091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-      console.log(`DEBUG: Generated hybrid goals conceded projections for ${goalsConcededProjections.length} players (GKP/DEF)`);
+      console.log(`DEBUG: Generated team-derived goals conceded projections for ${goalsConcededProjections.length} players (GKP/DEF)`);
       res.json(goalsConcededProjections);
     } catch (error) {
       console.error("Error in player goals conceded projections:", error);
