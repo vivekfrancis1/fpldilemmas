@@ -7512,7 +7512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Total gameweek points
             const gwTotal = gwGoalPoints + gwAssistPoints + gwCleanSheetPoints + minutesPoints;
-            gameweekProjections[gw] = Math.round(gwTotal * 100) / 100;
+            gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;
             totalExpectedPoints += gwTotal;
           }
           
