@@ -7413,7 +7413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      console.log(`DEBUG: Player Total Points API - using authentic goals projections for GW${start}-${end}`);
+      console.log(`DEBUG: Player Total Points API - using cache-first projection endpoints for GW${start}-${end}`);
       const startTime = Date.now();
       
       // Get bootstrap data for player info
@@ -7423,19 +7423,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const bootstrapData = await bootstrapResponse.json();
 
-      // Get data directly from Goals Scored Projections API (fast cached response)
-      const goalsResponse = await fetch(`http://localhost:5000/api/player-goals-scored-projections`);
-      if (!goalsResponse.ok) {
-        throw new Error("Failed to fetch goals projections");
-      }
-      const goalsData = await goalsResponse.json();
-      console.log(`DEBUG: Retrieved ${goalsData.length} goal projections from API`);
+      // Fetch all individual projections in parallel using cache-first endpoints
+      const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse] = await Promise.all([
+        fetch(`http://localhost:5000/api/player-goals-projections-cached`),
+        fetch(`http://localhost:5000/api/player-assists-projections-cached`),
+        fetch(`http://localhost:5000/api/player-minutes-projections-cached`),
+        fetch(`http://localhost:5000/api/defensive-contribution-projections-cached`),
+        fetch(`http://localhost:5000/api/team-cs-projections-cached`)
+      ]);
+
+      // Check all responses
+      if (!goalsResponse.ok) throw new Error("Failed to fetch cached goals projections");
+      if (!assistsResponse.ok) throw new Error("Failed to fetch cached assists projections");
+      if (!minutesResponse.ok) throw new Error("Failed to fetch cached minutes projections");
+      if (!defensiveResponse.ok) throw new Error("Failed to fetch cached defensive projections");
+      if (!cleanSheetsResponse.ok) throw new Error("Failed to fetch cached clean sheets projections");
+
+      // Parse all projection data
+      const [goalsData, assistsData, minutesData, defensiveData, cleanSheetsData] = await Promise.all([
+        goalsResponse.json(),
+        assistsResponse.json(),
+        minutesResponse.json(),
+        defensiveResponse.json(),
+        cleanSheetsResponse.json()
+      ]);
+
+      console.log(`DEBUG: Retrieved cached data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveData.length}, Clean Sheets: ${cleanSheetsData.length}`);
       
-      // Convert to lookup map for fast access
+      // Convert to lookup maps for fast access
       const goalsProjections: Record<number, Record<number, number>> = {};
+      const assistsProjections: Record<number, Record<number, number>> = {};
+      const minutesProjections: Record<number, Record<number, number>> = {};
+      const defensiveProjections: Record<number, Record<number, { dc: number, points: number }>> = {};
+      const teamCleanSheetProjections: Record<number, Record<number, number>> = {};
+
       goalsData.forEach((player: any) => {
         if (player.gameweekProjections) {
           goalsProjections[player.playerId] = player.gameweekProjections;
+        }
+      });
+
+      assistsData.forEach((player: any) => {
+        if (player.gameweekProjections) {
+          assistsProjections[player.playerId] = player.gameweekProjections;
+        }
+      });
+
+      minutesData.forEach((player: any) => {
+        if (player.gameweekProjections) {
+          minutesProjections[player.playerId] = player.gameweekProjections;
+        }
+      });
+
+      defensiveData.forEach((player: any) => {
+        if (player.gameweekProjections && player.pointsProjections) {
+          defensiveProjections[player.playerId] = {};
+          Object.keys(player.gameweekProjections).forEach(gw => {
+            defensiveProjections[player.playerId][parseInt(gw)] = {
+              dc: player.gameweekProjections[gw],
+              points: player.pointsProjections[gw] || 0
+            };
+          });
+        }
+      });
+
+      cleanSheetsData.forEach((team: any) => {
+        if (team.gameweekProjections) {
+          teamCleanSheetProjections[team.teamId] = team.gameweekProjections;
         }
       });
 
@@ -7452,43 +7506,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pointsFromAssists: { [key: string]: number } = {};
         const pointsFromCleanSheets: { [key: string]: number } = {};
         const pointsFromMinutes: { [key: string]: number } = {};
+        const pointsFromDefensiveContributions: { [key: string]: number } = {};
         
         let totalExpectedPoints = 0;
-        let totalGoalPoints = 0, totalAssistPoints = 0, totalCleanSheetPoints = 0, totalMinutesPoints = 0;
+        let totalGoalPoints = 0, totalAssistPoints = 0, totalCleanSheetPoints = 0, totalMinutesPoints = 0, totalDefensivePoints = 0;
         
-        // Get authentic goals data from projection service
+        // Get all cached projection data for this player
         const playerGoals = goalsProjections[fplPlayer.id] || {};
+        const playerAssists = assistsProjections[fplPlayer.id] || {};
+        const playerMinutes = minutesProjections[fplPlayer.id] || {};
+        const playerDefensive = defensiveProjections[fplPlayer.id] || {};
+        const teamCleanSheets = teamCleanSheetProjections[fplPlayer.team] || {};
+        
+        // Position-specific clean sheet points
+        const csPoints = position === 'GKP' || position === 'DEF' ? 4 : position === 'MID' ? 1 : 0;
         
         for (let gw = start; gw <= end; gw++) {
-          // Goals from authentic Goals Scored Projections tool
+          // Goals from cached Goals Projections API
           const goals = playerGoals[gw] || 0;
           const gwGoalPoints = goals * goalPoints;
           pointsFromGoals[`gw${gw}`] = Math.round(gwGoalPoints * 100) / 100;
           totalGoalPoints += gwGoalPoints;
           
-          // Assists (simplified ratio for now)
-          const assists = goals * 0.3;
+          // Assists from cached Assists Projections API
+          const assists = playerAssists[gw] || 0;
           const gwAssistPoints = assists * 3;
           pointsFromAssists[`gw${gw}`] = Math.round(gwAssistPoints * 100) / 100;
           totalAssistPoints += gwAssistPoints;
           
-          // Clean sheets (position-based)
+          // Clean sheets from cached Team Clean Sheet Projections API
           let cleanSheetPoints = 0;
-          if (position === 'GKP' || position === 'DEF') {
-            cleanSheetPoints = 1.5; // Average CS probability * 4 points
-          } else if (position === 'MID') {
-            cleanSheetPoints = 0.3; // Average CS probability * 1 point
+          if (csPoints > 0) {
+            const teamCSProb = teamCleanSheets[gw] || 0;
+            cleanSheetPoints = teamCSProb * csPoints;
           }
           pointsFromCleanSheets[`gw${gw}`] = Math.round(cleanSheetPoints * 100) / 100;
           totalCleanSheetPoints += cleanSheetPoints;
           
-          // Minutes (standard 2 points for playing)
-          const minutesPoints = 2;
+          // Minutes from cached Minutes Projections API (convert to FPL points)
+          const projectedMinutes = playerMinutes[gw] || 0;
+          const minutesPoints = projectedMinutes >= 60 ? 2 : projectedMinutes > 0 ? 1 : 0;
           pointsFromMinutes[`gw${gw}`] = minutesPoints;
           totalMinutesPoints += minutesPoints;
           
-          // Total gameweek points
-          const gwTotal = gwGoalPoints + gwAssistPoints + cleanSheetPoints + minutesPoints;
+          // Defensive contributions from cached Defensive Projections API
+          const defensiveData = playerDefensive[gw];
+          const defensivePoints = defensiveData ? defensiveData.points : 0;
+          pointsFromDefensiveContributions[`gw${gw}`] = Math.round(defensivePoints * 100) / 100;
+          totalDefensivePoints += defensivePoints;
+          
+          // Total gameweek points using all cached projection components
+          const gwTotal = gwGoalPoints + gwAssistPoints + cleanSheetPoints + minutesPoints + defensivePoints;
           gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;
           totalExpectedPoints += gwTotal;
         }
@@ -7514,11 +7582,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromAssists,
           pointsFromCleanSheets,
           pointsFromMinutes,
+          pointsFromDefensiveContributions,
           pointsFromBonus: {},
           totalPointsFromGoals: Math.round(totalGoalPoints * 100) / 100,
           totalPointsFromAssists: Math.round(totalAssistPoints * 100) / 100,
           totalPointsFromCleanSheets: Math.round(totalCleanSheetPoints * 100) / 100,
-          totalPointsFromMinutes: totalMinutesPoints,
+          totalPointsFromMinutes: Math.round(totalMinutesPoints * 100) / 100,
+          totalPointsFromDefensiveContributions: Math.round(totalDefensivePoints * 100) / 100,
           totalPointsFromBonus: 0
         };
       })
@@ -7526,7 +7596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .sort((a: any, b: any) => b.totalExpectedPoints - a.totalExpectedPoints);
 
       const duration = Date.now() - startTime;
-      console.log(`DEBUG: Served ${projections.length} player projections in ${duration}ms with authentic goals data`);
+      console.log(`DEBUG: Served ${projections.length} comprehensive player projections in ${duration}ms using cache-first individual projection APIs (Goals, Assists, Minutes, Defensive, Clean Sheets)`);
       
       // Cache the result for 15 minutes
       totalPointsCache.set(cacheKey, {
@@ -9175,6 +9245,536 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   console.log("✓ Historical Player Stats API routes registered successfully");
+
+  // ===============================
+  // CACHE-FIRST PROJECTION ENDPOINTS  
+  // ===============================
+
+  // Cache-first Player Goals Projections
+  app.get("/api/player-goals-projections-cached", async (req, res) => {
+    try {
+      console.log("DEBUG: Cache-first goals projections requested");
+      
+      // Check if we have recent cached data
+      const cachedGoals = await db.select()
+        .from(playerGoalsProjections)
+        .where(eq(playerGoalsProjections.season, "2025/26"))
+        .limit(10);
+      
+      if (cachedGoals.length > 0) {
+        // Check if cache is recent (less than 12 hours old)
+        const cacheAge = Date.now() - new Date(cachedGoals[0].calculatedAt).getTime();
+        const cacheHours = cacheAge / (1000 * 60 * 60);
+        
+        if (cacheHours < 24) { // Extended to 24 hours for testing
+          console.log(`DEBUG: Using cached goals data (${cachedGoals.length} records, ${cacheHours.toFixed(1)}h old)`);
+          
+          // Transform cached data to match expected format
+          const goalProjectionsMap: { [playerId: number]: { [gameweek: number]: number } } = {};
+          
+          cachedGoals.forEach(record => {
+            if (!goalProjectionsMap[record.playerId]) {
+              goalProjectionsMap[record.playerId] = {};
+            }
+            goalProjectionsMap[record.playerId][record.gameweek] = record.goals;
+          });
+          
+          // Get player details from bootstrap data
+          const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+          const bootstrapData = await bootstrapResponse.json();
+          
+          // Build response format
+          const formattedResponse = Object.keys(goalProjectionsMap).map(playerIdStr => {
+            const playerId = parseInt(playerIdStr);
+            const player = bootstrapData.elements.find((p: any) => p.id === playerId);
+            const team = bootstrapData.teams.find((t: any) => t.id === player?.team);
+            const position = bootstrapData.element_types.find((pos: any) => pos.id === player?.element_type);
+            
+            if (!player) return null;
+            
+            const gameweekProjections = goalProjectionsMap[playerId];
+            const totalProjectedGoals = Object.values(gameweekProjections).reduce((sum: number, goals: any) => sum + goals, 0);
+            
+            return {
+              playerId: playerId,
+              playerName: `${player.first_name} ${player.second_name}`,
+              teamShort: team?.short_name || 'UNK',
+              position: position?.singular_name_short || 'UNK',
+              gameweekProjections,
+              totalProjectedGoals: Math.round(totalProjectedGoals * 100) / 100,
+              averageGoalsPerGame: Math.round((totalProjectedGoals / 38) * 100) / 100
+            };
+          }).filter(Boolean);
+          
+          return res.json(formattedResponse);
+        }
+      }
+      
+      console.log("DEBUG: No recent cached data, falling back to live API call");
+      
+      // Fallback to live API call
+      const liveResponse = await fetch("http://localhost:5000/api/player-goals-scored-projections");
+      if (!liveResponse.ok) {
+        throw new Error("Failed to fetch live goals projections");
+      }
+      
+      const liveData = await liveResponse.json();
+      
+      // Cache the results for future requests
+      console.log("DEBUG: Caching fresh goals data for future requests");
+      
+      // Clear existing cache
+      await db.delete(playerGoalsProjections)
+        .where(eq(playerGoalsProjections.season, "2025/26"));
+      
+      // Insert new cache data
+      const cacheInserts = [];
+      for (const playerData of liveData) {
+        for (const [gameweekStr, goals] of Object.entries(playerData.gameweekProjections)) {
+          const gameweek = parseInt(gameweekStr);
+          if (gameweek >= 1 && gameweek <= 38) {
+            cacheInserts.push({
+              playerId: playerData.playerId,
+              gameweek: gameweek,
+              goals: goals as number,
+              season: "2025/26"
+            });
+          }
+        }
+      }
+      
+      // Insert in batches
+      for (let i = 0; i < cacheInserts.length; i += 100) {
+        const batch = cacheInserts.slice(i, i + 100);
+        await db.insert(playerGoalsProjections).values(batch);
+      }
+      
+      console.log(`DEBUG: Cached ${cacheInserts.length} goal projection records`);
+      
+      res.json(liveData);
+      
+    } catch (error) {
+      console.error("Error in cache-first goals projections:", error);
+      res.status(500).json({ error: "Failed to get goals projections" });
+    }
+  });
+
+  // Cache-first Player Assist Projections  
+  app.get("/api/player-assists-projections-cached", async (req, res) => {
+    try {
+      console.log("DEBUG: Cache-first assist projections requested");
+      
+      // Check cached data
+      const cachedAssists = await db.select()
+        .from(playerAssistProjections)
+        .where(eq(playerAssistProjections.season, "2025/26"));
+      
+      if (cachedAssists.length > 0) {
+        const cacheAge = Date.now() - new Date(cachedAssists[0].calculatedAt).getTime();
+        const cacheHours = cacheAge / (1000 * 60 * 60);
+        
+        if (cacheHours < 12) {
+          console.log(`DEBUG: Using cached assist data (${cachedAssists.length} records, ${cacheHours.toFixed(1)}h old)`);
+          
+          // Transform and return cached data
+          const assistProjectionsMap: { [playerId: number]: { [gameweek: number]: number } } = {};
+          
+          cachedAssists.forEach(record => {
+            if (!assistProjectionsMap[record.playerId]) {
+              assistProjectionsMap[record.playerId] = {};
+            }
+            assistProjectionsMap[record.playerId][record.gameweek] = record.assists;
+          });
+          
+          // Get player details and format response
+          const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+          const bootstrapData = await bootstrapResponse.json();
+          
+          const formattedResponse = Object.keys(assistProjectionsMap).map(playerIdStr => {
+            const playerId = parseInt(playerIdStr);
+            const player = bootstrapData.elements.find((p: any) => p.id === playerId);
+            const team = bootstrapData.teams.find((t: any) => t.id === player?.team);
+            const position = bootstrapData.element_types.find((pos: any) => pos.id === player?.element_type);
+            
+            if (!player) return null;
+            
+            const gameweekProjections = assistProjectionsMap[playerId];
+            const totalProjectedAssists = Object.values(gameweekProjections).reduce((sum: number, assists: any) => sum + assists, 0);
+            
+            return {
+              playerId: playerId,
+              playerName: `${player.first_name} ${player.second_name}`,
+              teamShort: team?.short_name || 'UNK',
+              position: position?.singular_name_short || 'UNK',
+              gameweekProjections,
+              totalProjectedAssists: Math.round(totalProjectedAssists * 100) / 100,
+              assistShare: 0 // Will be calculated properly in the assist-specific logic
+            };
+          }).filter(Boolean);
+          
+          return res.json(formattedResponse);
+        }
+      }
+      
+      console.log("DEBUG: No recent cached data, falling back to live API call");
+      
+      // Fallback to live API
+      const liveResponse = await fetch("http://localhost:5000/api/player-assist-projections");
+      if (!liveResponse.ok) {
+        throw new Error("Failed to fetch live assist projections");
+      }
+      
+      const liveData = await liveResponse.json();
+      
+      // Cache the results
+      await db.delete(playerAssistProjections)
+        .where(eq(playerAssistProjections.season, "2025/26"));
+      
+      const cacheInserts = [];
+      for (const playerData of liveData) {
+        for (const [gameweekStr, assists] of Object.entries(playerData.gameweekProjections)) {
+          const gameweek = parseInt(gameweekStr);
+          if (gameweek >= 1 && gameweek <= 38) {
+            cacheInserts.push({
+              playerId: playerData.playerId,
+              gameweek: gameweek,
+              assists: assists as number,
+              season: "2025/26"
+            });
+          }
+        }
+      }
+      
+      // Insert in batches
+      for (let i = 0; i < cacheInserts.length; i += 100) {
+        const batch = cacheInserts.slice(i, i + 100);
+        await db.insert(playerAssistProjections).values(batch);
+      }
+      
+      console.log(`DEBUG: Cached ${cacheInserts.length} assist projection records`);
+      
+      res.json(liveData);
+      
+    } catch (error) {
+      console.error("Error in cache-first assist projections:", error);
+      res.status(500).json({ error: "Failed to get assist projections" });
+    }
+  });
+
+  // Cache-first Player Minutes Projections
+  app.get("/api/player-minutes-projections-cached", async (req, res) => {
+    try {
+      console.log("DEBUG: Cache-first minutes projections requested");
+      
+      // Check cached data
+      const cachedMinutes = await db.select()
+        .from(playerMinutesProjections)
+        .where(eq(playerMinutesProjections.season, "2025/26"));
+      
+      if (cachedMinutes.length > 0) {
+        const cacheAge = Date.now() - new Date(cachedMinutes[0].calculatedAt).getTime();
+        const cacheHours = cacheAge / (1000 * 60 * 60);
+        
+        if (cacheHours < 12) {
+          console.log(`DEBUG: Using cached minutes data (${cachedMinutes.length} records, ${cacheHours.toFixed(1)}h old)`);
+          
+          // Transform cached data
+          const minutesProjectionsMap: { [playerId: number]: { [gameweek: number]: number } } = {};
+          
+          cachedMinutes.forEach(record => {
+            if (!minutesProjectionsMap[record.playerId]) {
+              minutesProjectionsMap[record.playerId] = {};
+            }
+            minutesProjectionsMap[record.playerId][record.gameweek] = record.minutes;
+          });
+          
+          // Get player details and format response
+          const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+          const bootstrapData = await bootstrapResponse.json();
+          
+          const formattedResponse = Object.keys(minutesProjectionsMap).map(playerIdStr => {
+            const playerId = parseInt(playerIdStr);
+            const player = bootstrapData.elements.find((p: any) => p.id === playerId);
+            const team = bootstrapData.teams.find((t: any) => t.id === player?.team);
+            const position = bootstrapData.element_types.find((pos: any) => pos.id === player?.element_type);
+            
+            if (!player) return null;
+            
+            const gameweekProjections = minutesProjectionsMap[playerId];
+            const totalProjectedMinutes = Object.values(gameweekProjections).reduce((sum: number, minutes: any) => sum + minutes, 0);
+            
+            return {
+              playerId: playerId,
+              playerName: `${player.first_name} ${player.second_name}`,
+              teamShort: team?.short_name || 'UNK',
+              position: position?.singular_name_short || 'UNK',
+              gameweekProjections,
+              totalProjectedMinutes: Math.round(totalProjectedMinutes),
+              averageMinutesPerGame: Math.round(totalProjectedMinutes / 38)
+            };
+          }).filter(Boolean);
+          
+          return res.json(formattedResponse);
+        }
+      }
+      
+      console.log("DEBUG: No recent cached data, falling back to live API call");
+      
+      // Fallback to live API
+      const liveResponse = await fetch("http://localhost:5000/api/player-minutes-projections");
+      if (!liveResponse.ok) {
+        throw new Error("Failed to fetch live minutes projections");
+      }
+      
+      const liveData = await liveResponse.json();
+      
+      // Cache the results
+      await db.delete(playerMinutesProjections)
+        .where(eq(playerMinutesProjections.season, "2025/26"));
+      
+      const cacheInserts = [];
+      for (const playerData of liveData) {
+        for (let gw = 1; gw <= 38; gw++) {
+          // Calculate projected minutes for each gameweek
+          const minutesPerGame = playerData.projectedMinutesPerGameweek || 0;
+          cacheInserts.push({
+            playerId: playerData.playerId,
+            gameweek: gw,
+            minutes: minutesPerGame,
+            season: "2025/26"
+          });
+        }
+      }
+      
+      // Insert in batches
+      for (let i = 0; i < cacheInserts.length; i += 100) {
+        const batch = cacheInserts.slice(i, i + 100);
+        await db.insert(playerMinutesProjections).values(batch);
+      }
+      
+      console.log(`DEBUG: Cached ${cacheInserts.length} minutes projection records`);
+      
+      res.json(liveData);
+      
+    } catch (error) {
+      console.error("Error in cache-first minutes projections:", error);
+      res.status(500).json({ error: "Failed to get minutes projections" });
+    }
+  });
+
+  // Cache-first Player Defensive Contributions Projections
+  app.get("/api/defensive-contribution-projections-cached", async (req, res) => {
+    try {
+      console.log("DEBUG: Cache-first defensive projections requested");
+      
+      // Check cached data
+      const cachedDefensive = await db.select()
+        .from(playerDefensiveProjections)
+        .where(eq(playerDefensiveProjections.season, "2025/26"));
+      
+      if (cachedDefensive.length > 0) {
+        const cacheAge = Date.now() - new Date(cachedDefensive[0].calculatedAt).getTime();
+        const cacheHours = cacheAge / (1000 * 60 * 60);
+        
+        if (cacheHours < 12) {
+          console.log(`DEBUG: Using cached defensive data (${cachedDefensive.length} records, ${cacheHours.toFixed(1)}h old)`);
+          
+          // Transform cached data
+          const defensiveProjectionsMap: { [playerId: number]: { [gameweek: number]: { dc: number, points: number } } } = {};
+          
+          cachedDefensive.forEach(record => {
+            if (!defensiveProjectionsMap[record.playerId]) {
+              defensiveProjectionsMap[record.playerId] = {};
+            }
+            defensiveProjectionsMap[record.playerId][record.gameweek] = {
+              dc: record.defensiveContribution,
+              points: record.points
+            };
+          });
+          
+          // Get player details and format response
+          const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+          const bootstrapData = await bootstrapResponse.json();
+          
+          const formattedResponse = Object.keys(defensiveProjectionsMap).map(playerIdStr => {
+            const playerId = parseInt(playerIdStr);
+            const player = bootstrapData.elements.find((p: any) => p.id === playerId);
+            const team = bootstrapData.teams.find((t: any) => t.id === player?.team);
+            const position = bootstrapData.element_types.find((pos: any) => pos.id === player?.element_type);
+            
+            if (!player) return null;
+            
+            const gameweekProjections = defensiveProjectionsMap[playerId];
+            const totalProjectedDC = Object.values(gameweekProjections).reduce((sum: number, data: any) => sum + data.dc, 0);
+            const totalProjectedPoints = Object.values(gameweekProjections).reduce((sum: number, data: any) => sum + data.points, 0);
+            
+            return {
+              playerId: playerId,
+              playerName: `${player.first_name} ${player.second_name}`,
+              teamShort: team?.short_name || 'UNK',
+              position: position?.singular_name_short || 'UNK',
+              gameweekProjections: Object.fromEntries(
+                Object.entries(gameweekProjections).map(([gw, data]: [string, any]) => [gw, data.dc])
+              ),
+              pointsProjections: Object.fromEntries(
+                Object.entries(gameweekProjections).map(([gw, data]: [string, any]) => [gw, data.points])
+              ),
+              totalProjectedDefensiveContribution: Math.round(totalProjectedDC * 100) / 100,
+              totalProjectedPoints: Math.round(totalProjectedPoints * 100) / 100
+            };
+          }).filter(Boolean);
+          
+          return res.json(formattedResponse);
+        }
+      }
+      
+      console.log("DEBUG: No recent cached data, falling back to live API call");
+      
+      // Fallback to live API
+      const liveResponse = await fetch("http://localhost:5000/api/defensive-contribution-projections");
+      if (!liveResponse.ok) {
+        throw new Error("Failed to fetch live defensive projections");
+      }
+      
+      const liveData = await liveResponse.json();
+      
+      // Cache the results
+      await db.delete(playerDefensiveProjections)
+        .where(eq(playerDefensiveProjections.season, "2025/26"));
+      
+      const cacheInserts = [];
+      for (const playerData of liveData) {
+        for (const [gameweekStr, dcValue] of Object.entries(playerData.gameweekProjections || {})) {
+          const gameweek = parseInt(gameweekStr);
+          if (gameweek >= 1 && gameweek <= 38) {
+            const pointsValue = playerData.pointsProjections?.[gameweekStr] || 0;
+            cacheInserts.push({
+              playerId: playerData.playerId,
+              gameweek: gameweek,
+              defensiveContribution: dcValue as number,
+              points: pointsValue as number,
+              season: "2025/26"
+            });
+          }
+        }
+      }
+      
+      // Insert in batches
+      for (let i = 0; i < cacheInserts.length; i += 100) {
+        const batch = cacheInserts.slice(i, i + 100);
+        await db.insert(playerDefensiveProjections).values(batch);
+      }
+      
+      console.log(`DEBUG: Cached ${cacheInserts.length} defensive projection records`);
+      
+      res.json(liveData);
+      
+    } catch (error) {
+      console.error("Error in cache-first defensive projections:", error);
+      res.status(500).json({ error: "Failed to get defensive projections" });
+    }
+  });
+
+  // Cache-first Team Clean Sheet Projections
+  app.get("/api/team-cs-projections-cached", async (req, res) => {
+    try {
+      console.log("DEBUG: Cache-first team clean sheet projections requested");
+      
+      // Check cached data
+      const cachedCS = await db.select()
+        .from(teamCleanSheetProjections)
+        .where(eq(teamCleanSheetProjections.season, "2025/26"));
+      
+      if (cachedCS.length > 0) {
+        const cacheAge = Date.now() - new Date(cachedCS[0].calculatedAt).getTime();
+        const cacheHours = cacheAge / (1000 * 60 * 60);
+        
+        if (cacheHours < 12) {
+          console.log(`DEBUG: Using cached clean sheet data (${cachedCS.length} records, ${cacheHours.toFixed(1)}h old)`);
+          
+          // Transform cached data
+          const csProjectionsMap: { [teamId: number]: { [gameweek: number]: number } } = {};
+          
+          cachedCS.forEach(record => {
+            if (!csProjectionsMap[record.teamId]) {
+              csProjectionsMap[record.teamId] = {};
+            }
+            csProjectionsMap[record.teamId][record.gameweek] = record.cleanSheetProbability;
+          });
+          
+          // Get team details and format response
+          const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+          const bootstrapData = await bootstrapResponse.json();
+          
+          const formattedResponse = Object.keys(csProjectionsMap).map(teamIdStr => {
+            const teamId = parseInt(teamIdStr);
+            const team = bootstrapData.teams.find((t: any) => t.id === teamId);
+            
+            if (!team) return null;
+            
+            const gameweekProjections = csProjectionsMap[teamId];
+            const totalProjectedCS = Object.values(gameweekProjections).reduce((sum: number, prob: any) => sum + prob, 0);
+            
+            return {
+              teamId: teamId,
+              teamName: team.name,
+              teamShort: team.short_name,
+              gameweekProjections,
+              totalProjectedCleanSheets: Math.round(totalProjectedCS * 100) / 100,
+              averageCleanSheetProbability: Math.round((totalProjectedCS / 38) * 10000) / 100
+            };
+          }).filter(Boolean);
+          
+          return res.json(formattedResponse);
+        }
+      }
+      
+      console.log("DEBUG: No recent cached data, falling back to live API call");
+      
+      // Fallback to live API
+      const liveResponse = await fetch("http://localhost:5000/api/team-cs-projections");
+      if (!liveResponse.ok) {
+        throw new Error("Failed to fetch live clean sheet projections");
+      }
+      
+      const liveData = await liveResponse.json();
+      
+      // Cache the results
+      await db.delete(teamCleanSheetProjections)
+        .where(eq(teamCleanSheetProjections.season, "2025/26"));
+      
+      const cacheInserts = [];
+      for (const teamData of liveData) {
+        for (const [gameweekStr, probability] of Object.entries(teamData.gameweekProjections || {})) {
+          const gameweek = parseInt(gameweekStr);
+          if (gameweek >= 1 && gameweek <= 38) {
+            cacheInserts.push({
+              teamId: teamData.teamId,
+              gameweek: gameweek,
+              cleanSheetProbability: probability as number,
+              season: "2025/26"
+            });
+          }
+        }
+      }
+      
+      // Insert in batches
+      for (let i = 0; i < cacheInserts.length; i += 100) {
+        const batch = cacheInserts.slice(i, i + 100);
+        await db.insert(teamCleanSheetProjections).values(batch);
+      }
+      
+      console.log(`DEBUG: Cached ${cacheInserts.length} clean sheet projection records`);
+      
+      res.json(liveData);
+      
+    } catch (error) {
+      console.error("Error in cache-first clean sheet projections:", error);
+      res.status(500).json({ error: "Failed to get clean sheet projections" });
+    }
+  });
+
+  console.log("✓ Cache-first projection endpoints registered successfully");
 
   // Import gameweek caching service
   const { gameweekCacheService } = await import("./gameweek-cache-service");

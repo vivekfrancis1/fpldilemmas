@@ -45,9 +45,9 @@ export default function PlayerGoalsScoredProjections() {
   });
 
   const { data: playerGoalData, isLoading: playerGoalLoading, error } = useQuery<PlayerGoalProjection[]>({
-    queryKey: ["/api/player-goals-scored-projections"],
-    staleTime: 0, // Force fresh data to show updated hybrid calculations
-    refetchOnMount: true,
+    queryKey: ["/api/player-goals-projections-cached"],
+    staleTime: 10 * 60 * 1000, // 10 minutes cache since we have database cache
+    refetchOnMount: false, // Use cache when available
   });
 
   // Get current gameweek from bootstrap data

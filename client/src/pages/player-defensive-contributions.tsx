@@ -48,14 +48,15 @@ export default function PlayerDefensiveContributions() {
   const [gameweekSortColumn, setGameweekSortColumn] = useState<number | null>(null);
   const [gameweekSortOrder, setGameweekSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Fetch defensive contribution projections
+  // Fetch defensive contribution projections using cache-first approach
   const { data: defensiveData, isLoading } = useQuery({
-    queryKey: ["/api/defensive-contribution-projections"],
+    queryKey: ["/api/defensive-contribution-projections-cached"],
     queryFn: async () => {
-      const response = await fetch("/api/defensive-contribution-projections");
+      const response = await fetch("/api/defensive-contribution-projections-cached");
       if (!response.ok) throw new Error("Failed to fetch defensive projections");
       return response.json();
-    }
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
   const players: PlayerDefensiveData[] = defensiveData?.data || [];

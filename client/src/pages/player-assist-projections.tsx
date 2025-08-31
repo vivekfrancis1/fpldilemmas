@@ -28,9 +28,9 @@ export default function PlayerAssistProjections() {
   const [sortField, setSortField] = useState<SortField>('sixGwTotal');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
-  // Fetch player assist projections data
+  // Fetch player assist projections data using cache-first approach
   const { data: playerAssistData, isLoading, error } = useQuery<PlayerAssistProjection[]>({
-    queryKey: ["/api/player-assist-projections"],
+    queryKey: ["/api/player-assists-projections-cached"],
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 

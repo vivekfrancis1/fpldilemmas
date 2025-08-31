@@ -422,7 +422,7 @@ export default function PlayerTotalPoints() {
       }
       return response.json();
     },
-    staleTime: 10 * 60 * 1000,
+    staleTime: 15 * 60 * 1000, // 15 minutes to align with backend cache
     enabled: startGameweek <= endGameweek,
     retry: 3,
     retryDelay: 1000,

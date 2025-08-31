@@ -32,9 +32,9 @@ export default function PlayerMinutes() {
   const [minMinutes, setMinMinutes] = useState<string>("30"); // Minimum minutes filter
 
 
-  // Fetch player minutes projections data
+  // Fetch player minutes projections data using cache-first approach
   const { data: playerMinutesData, isLoading, error } = useQuery<PlayerMinutesProjection[]>({
-    queryKey: ["/api/player-minutes-projections"],
+    queryKey: ["/api/player-minutes-projections-cached"],
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
