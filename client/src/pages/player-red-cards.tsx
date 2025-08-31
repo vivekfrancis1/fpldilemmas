@@ -36,10 +36,10 @@ export default function PlayerRedCards() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Real API call for red card projections using position-specific probabilities
+  // Cached API call for red card projections - faster response from database
   const { data: redCardProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-red-cards-projections?startGameweek=4&endGameweek=9"],
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["/api/cached/player-red-cards-projections"],
+    staleTime: 30 * 60 * 1000, // Cache for 30 minutes since data is updated twice daily
   });
 
   const teams = bootstrapData?.teams?.map(team => ({

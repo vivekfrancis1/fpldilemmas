@@ -4,6 +4,7 @@ import { priceScheduler } from "./price-scheduler";
 import { gameweekCacheScheduler } from "./gameweek-cache-scheduler";
 import { priceSplitWorker } from "./price-split-worker";
 import { projectionCacheScheduler } from "./projection-cache-scheduler";
+import { fplScoringCacheScheduler } from "./fpl-scoring-cache-scheduler";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedContentCreators } from "./seed-database";
 
@@ -110,6 +111,10 @@ app.use((req, res, next) => {
       // Start projection cache scheduler (runs at 7 AM and 7 PM daily)
       projectionCacheScheduler.start();
       console.log("✓ Projection cache scheduler started");
+      
+      // Start FPL scoring cache scheduler (runs twice daily)
+      fplScoringCacheScheduler.start();
+      console.log("✓ FPL scoring cache scheduler started");
     });
 
     // Handle server startup errors

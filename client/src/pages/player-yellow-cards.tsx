@@ -36,10 +36,10 @@ export default function PlayerYellowCards() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Real API call for yellow card projections using position-specific probabilities
+  // Cached API call for yellow card projections - faster response from database
   const { data: yellowCardProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-yellow-cards-projections?startGameweek=4&endGameweek=9"],
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["/api/cached/player-yellow-cards-projections"],
+    staleTime: 30 * 60 * 1000, // Cache for 30 minutes since data is updated twice daily
   });
 
   const teams = bootstrapData?.teams?.map(team => ({

@@ -10431,6 +10431,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ FPL Scoring Component API routes registered successfully");
 
+  // Import FPL Scoring Cache Service
+  const { fplScoringCacheService } = await import("./fpl-scoring-cache-service");
+
+  // Cached FPL Scoring Component Endpoints - Serve data from database
+  app.get("/api/cached/player-saves-projections", async (req, res) => {
+    try {
+      console.log("📊 Serving cached player saves data");
+      const cachedData = await fplScoringCacheService.getCachedPlayerSaves();
+      res.json(cachedData);
+    } catch (error) {
+      console.error("Error fetching cached player saves:", error);
+      // Fallback to real-time data if cache fails
+      res.redirect(307, "/api/player-saves-projections");
+    }
+  });
+
+  app.get("/api/cached/player-goals-conceded-projections", async (req, res) => {
+    try {
+      console.log("📊 Serving cached player goals conceded data");
+      const cachedData = await fplScoringCacheService.getCachedPlayerGoalsConceded();
+      res.json(cachedData);
+    } catch (error) {
+      console.error("Error fetching cached player goals conceded:", error);
+      // Fallback to real-time data if cache fails
+      res.redirect(307, "/api/player-goals-conceded-projections");
+    }
+  });
+
+  app.get("/api/cached/player-yellow-cards-projections", async (req, res) => {
+    try {
+      console.log("📊 Serving cached player yellow cards data");
+      const cachedData = await fplScoringCacheService.getCachedPlayerYellowCards();
+      res.json(cachedData);
+    } catch (error) {
+      console.error("Error fetching cached player yellow cards:", error);
+      // Fallback to real-time data if cache fails
+      res.redirect(307, "/api/player-yellow-cards-projections");
+    }
+  });
+
+  app.get("/api/cached/player-red-cards-projections", async (req, res) => {
+    try {
+      console.log("📊 Serving cached player red cards data");
+      const cachedData = await fplScoringCacheService.getCachedPlayerRedCards();
+      res.json(cachedData);
+    } catch (error) {
+      console.error("Error fetching cached player red cards:", error);
+      // Fallback to real-time data if cache fails
+      res.redirect(307, "/api/player-red-cards-projections");
+    }
+  });
+
+  app.get("/api/cached/player-bonus-points-projections", async (req, res) => {
+    try {
+      console.log("📊 Serving cached player bonus points data");
+      const cachedData = await fplScoringCacheService.getCachedPlayerBonusPoints();
+      res.json(cachedData);
+    } catch (error) {
+      console.error("Error fetching cached player bonus points:", error);
+      // Fallback to real-time data if cache fails
+      res.redirect(307, "/api/player-bonus-points-projections");
+    }
+  });
+
+  // Cache management endpoints
+  app.post("/api/fpl-scoring-cache/update", async (req, res) => {
+    try {
+      console.log("🚀 Manual FPL scoring cache update triggered");
+      await fplScoringCacheService.updateAllScoringData();
+      res.json({ 
+        success: true, 
+        message: "FPL scoring data cache updated successfully",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error updating FPL scoring cache:", error);
+      res.status(500).json({ 
+        error: "Failed to update FPL scoring cache",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  console.log("✓ FPL Scoring Cache API routes registered successfully");
+
   const httpServer = createServer(app);
   return httpServer;
 }

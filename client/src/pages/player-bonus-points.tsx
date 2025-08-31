@@ -36,10 +36,10 @@ export default function PlayerBonusPoints() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Real API call for bonus points projections using BPS system simulation
+  // Cached API call for bonus points projections - faster response from database
   const { data: bonusPointsProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-bonus-points-projections?startGameweek=4&endGameweek=9"],
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["/api/cached/player-bonus-points-projections"],
+    staleTime: 30 * 60 * 1000, // Cache for 30 minutes since data is updated twice daily
   });
 
   const teams = bootstrapData?.teams?.map(team => ({

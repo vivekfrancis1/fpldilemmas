@@ -36,10 +36,10 @@ export default function PlayerGoalsConceded() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Real API call for goals conceded projections using probability calculations
+  // Cached API call for goals conceded projections - faster response from database
   const { data: goalsConcededProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-goals-conceded-projections?startGameweek=4&endGameweek=9"],
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["/api/cached/player-goals-conceded-projections"],
+    staleTime: 30 * 60 * 1000, // Cache for 30 minutes since data is updated twice daily
   });
 
   const teams = bootstrapData?.teams?.map(team => ({

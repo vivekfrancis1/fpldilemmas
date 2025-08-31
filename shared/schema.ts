@@ -995,3 +995,105 @@ export type GameweekPlayerData = typeof gameweekPlayerDataTable.$inferSelect;
 export const insertGameweekUpdateLogSchema = createInsertSchema(gameweekUpdateLogTable);
 export type InsertGameweekUpdateLog = z.infer<typeof insertGameweekUpdateLogSchema>;
 export type GameweekUpdateLog = typeof gameweekUpdateLogTable.$inferSelect;
+
+// FPL Scoring Component Cache Tables
+export const cachedPlayerSaves = pgTable("cached_player_saves", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamName: text("team_name").notNull(),
+  position: text("position").notNull(),
+  gameweekData: jsonb("gameweek_data").notNull(), // saves per gameweek
+  pointsData: jsonb("points_data").notNull(), // points per gameweek
+  totalValue: real("total_value").notNull().default(0),
+  totalPoints: real("total_points").notNull().default(0),
+  averagePerGameweek: real("average_per_gameweek").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  index("idx_cached_saves_player_id").on(table.playerId),
+  index("idx_cached_saves_total_value").on(table.totalValue),
+]);
+
+export const cachedPlayerGoalsConceded = pgTable("cached_player_goals_conceded", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamName: text("team_name").notNull(),
+  position: text("position").notNull(),
+  gameweekData: jsonb("gameweek_data").notNull(), // goals conceded per gameweek
+  pointsData: jsonb("points_data").notNull(), // points per gameweek
+  totalValue: real("total_value").notNull().default(0),
+  totalPoints: real("total_points").notNull().default(0),
+  averagePerGameweek: real("average_per_gameweek").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  index("idx_cached_goals_conceded_player_id").on(table.playerId),
+  index("idx_cached_goals_conceded_total_value").on(table.totalValue),
+]);
+
+export const cachedPlayerYellowCards = pgTable("cached_player_yellow_cards", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamName: text("team_name").notNull(),
+  position: text("position").notNull(),
+  gameweekData: jsonb("gameweek_data").notNull(), // yellow cards per gameweek
+  pointsData: jsonb("points_data").notNull(), // points per gameweek
+  totalValue: real("total_value").notNull().default(0),
+  totalPoints: real("total_points").notNull().default(0),
+  averagePerGameweek: real("average_per_gameweek").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  index("idx_cached_yellow_cards_player_id").on(table.playerId),
+  index("idx_cached_yellow_cards_total_value").on(table.totalValue),
+]);
+
+export const cachedPlayerRedCards = pgTable("cached_player_red_cards", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamName: text("team_name").notNull(),
+  position: text("position").notNull(),
+  gameweekData: jsonb("gameweek_data").notNull(), // red cards per gameweek
+  pointsData: jsonb("points_data").notNull(), // points per gameweek
+  totalValue: real("total_value").notNull().default(0),
+  totalPoints: real("total_points").notNull().default(0),
+  averagePerGameweek: real("average_per_gameweek").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  index("idx_cached_red_cards_player_id").on(table.playerId),
+  index("idx_cached_red_cards_total_value").on(table.totalValue),
+]);
+
+export const cachedPlayerBonusPoints = pgTable("cached_player_bonus_points", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamName: text("team_name").notNull(),
+  position: text("position").notNull(),
+  gameweekData: jsonb("gameweek_data").notNull(), // bonus points per gameweek
+  pointsData: jsonb("points_data").notNull(), // points per gameweek
+  totalValue: real("total_value").notNull().default(0),
+  totalPoints: real("total_points").notNull().default(0),
+  averagePerGameweek: real("average_per_gameweek").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  index("idx_cached_bonus_points_player_id").on(table.playerId),
+  index("idx_cached_bonus_points_total_value").on(table.totalValue),
+]);
+
+// Types for cached scoring component tables
+export type CachedPlayerSaves = typeof cachedPlayerSaves.$inferSelect;
+export type InsertCachedPlayerSaves = typeof cachedPlayerSaves.$inferInsert;
+
+export type CachedPlayerGoalsConceded = typeof cachedPlayerGoalsConceded.$inferSelect;
+export type InsertCachedPlayerGoalsConceded = typeof cachedPlayerGoalsConceded.$inferInsert;
+
+export type CachedPlayerYellowCards = typeof cachedPlayerYellowCards.$inferSelect;
+export type InsertCachedPlayerYellowCards = typeof cachedPlayerYellowCards.$inferInsert;
+
+export type CachedPlayerRedCards = typeof cachedPlayerRedCards.$inferSelect;
+export type InsertCachedPlayerRedCards = typeof cachedPlayerRedCards.$inferInsert;
+
+export type CachedPlayerBonusPoints = typeof cachedPlayerBonusPoints.$inferSelect;
+export type InsertCachedPlayerBonusPoints = typeof cachedPlayerBonusPoints.$inferInsert;

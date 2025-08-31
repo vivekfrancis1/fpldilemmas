@@ -35,10 +35,10 @@ export default function PlayerSaves() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Real API call for saves projections using probability calculations
+  // Cached API call for saves projections - faster response from database
   const { data: savesProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-saves-projections?startGameweek=4&endGameweek=9"],
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["/api/cached/player-saves-projections"],
+    staleTime: 30 * 60 * 1000, // Cache for 30 minutes since data is updated twice daily
   });
 
   const teams = bootstrapData?.teams?.map(team => ({
