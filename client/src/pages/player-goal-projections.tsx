@@ -5,9 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
+import { Target, Search, Filter, Trophy } from "lucide-react";
 
 type PlayerProjection = {
   id: number;
@@ -22,6 +21,98 @@ type PlayerProjection = {
 
 type SortField = "name" | "team" | "position" | "projectedGoals" | "goalShare" | "currentPrice" | "valuePerGoal";
 type SortDirection = "asc" | "desc";
+
+// Create columns configuration for the enhanced table
+function createGoalProjectionsColumns(): TableColumn<PlayerProjection>[] {
+  return [
+    {
+      key: 'name',
+      header: 'Player',
+      sortable: true,
+      className: 'min-w-[180px]',
+      render: (_, player) => (
+        <div>
+          <PlayerNameCell name={player.name} />
+          <div className="text-xs text-gray-500 mt-1">
+            {player.teamShort} • {player.position}
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'team',
+      header: 'Team',
+      sortable: true,
+      align: 'center',
+      render: (team) => <TeamBadge team={team} />
+    },
+    {
+      key: 'position',
+      header: 'Position',
+      sortable: true,
+      align: 'center',
+      render: (position) => <PositionBadge position={position} />
+    },
+    {
+      key: 'projectedGoals',
+      header: 'Projected Goals',
+      sortable: true,
+      align: 'right',
+      render: (value) => (
+        <ValueCell 
+          value={value} 
+          format="number" 
+          decimals={2}
+          className="font-semibold text-green-700"
+        />
+      )
+    },
+    {
+      key: 'goalShare',
+      header: 'Team Share %',
+      sortable: true,
+      align: 'right',
+      render: (value) => (
+        <ValueCell 
+          value={value} 
+          format="percentage" 
+          decimals={1}
+          colorScheme="percentage"
+        />
+      )
+    },
+    {
+      key: 'currentPrice',
+      header: 'Price £',
+      sortable: true,
+      align: 'right',
+      render: (value) => (
+        <ValueCell 
+          value={value / 10} 
+          format="currency" 
+          decimals={1}
+        />
+      )
+    },
+    {
+      key: 'valuePerGoal',
+      header: '£/Goal',
+      sortable: true,
+      align: 'right',
+      render: (_, player) => {
+        const valuePerGoal = player.projectedGoals > 0 ? (player.currentPrice / 10) / player.projectedGoals : 0;
+        return (
+          <ValueCell 
+            value={valuePerGoal} 
+            format="currency" 
+            decimals={1}
+            className="text-blue-700"
+          />
+        );
+      }
+    }
+  ];
+}
 
 export default function PlayerGoalProjections() {
   const [searchFilter, setSearchFilter] = useState("");
@@ -213,129 +304,33 @@ export default function PlayerGoalProjections() {
       </Card>
 
       {/* Results Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Player Goal Projections</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {sortedPlayers.length === 0 ? (
-            <p className="text-center text-gray-600 py-8">No players found matching your filters.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[180px]">
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleSort("name")}
-                        className="h-auto p-0 font-semibold text-left justify-start"
-                        data-testid="sort-name"
-                      >
-                        Player {getSortIcon("name")}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleSort("team")}
-                        className="h-auto p-0 font-semibold"
-                        data-testid="sort-team"
-                      >
-                        Team {getSortIcon("team")}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleSort("position")}
-                        className="h-auto p-0 font-semibold"
-                        data-testid="sort-position"
-                      >
-                        Position {getSortIcon("position")}
-                      </Button>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleSort("projectedGoals")}
-                        className="h-auto p-0 font-semibold"
-                        data-testid="sort-projected-goals"
-                      >
-                        Projected Goals {getSortIcon("projectedGoals")}
-                      </Button>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleSort("goalShare")}
-                        className="h-auto p-0 font-semibold"
-                        data-testid="sort-goal-share"
-                      >
-                        Team Share % {getSortIcon("goalShare")}
-                      </Button>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleSort("currentPrice")}
-                        className="h-auto p-0 font-semibold"
-                        data-testid="sort-price"
-                      >
-                        Price £ {getSortIcon("currentPrice")}
-                      </Button>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleSort("valuePerGoal")}
-                        className="h-auto p-0 font-semibold"
-                        data-testid="sort-value-per-goal"
-                      >
-                        £/Goal {getSortIcon("valuePerGoal")}
-                      </Button>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedPlayers.map((player: PlayerProjection) => (
-                    <TableRow key={player.id} className="hover:bg-gray-50" data-testid={`row-player-${player.id}`}>
-                      <TableCell className="font-medium">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-gray-900">{player.name}</span>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                              {player.teamShort}
-                            </Badge>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{player.team}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={`text-xs ${getPositionBadgeColor(player.position)}`}>
-                          {player.position}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-green-700" data-testid={`text-projected-goals-${player.id}`}>
-                        {player.projectedGoals.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {player.goalShare.toFixed(1)}%
-                      </TableCell>
-                      <TableCell className="text-right">
-                        £{player.currentPrice.toFixed(1)}m
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {player.projectedGoals > 0 ? `£${(player.currentPrice / player.projectedGoals).toFixed(2)}` : "N/A"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+      <div className="fpl-card">
+        <div className="fpl-card-header">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-green-600" />
+              <h2 className="fpl-card-title">Player Goal Projections</h2>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <Badge className="bg-green-100 text-green-700">
+              {sortedPlayers.length} players
+            </Badge>
+          </div>
+        </div>
+        <div className="fpl-card-content p-0">
+          <EnhancedTable
+            data={sortedPlayers}
+            columns={createGoalProjectionsColumns()}
+            onSort={handleSort}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            loading={isLoading}
+            emptyMessage="No players found matching your criteria"
+            stickyHeader={true}
+            maxHeight="70vh"
+            className="shadow-sm"
+          />
+        </div>
+      </div>
 
       {/* Summary Stats */}
       {sortedPlayers.length > 0 && (
