@@ -348,7 +348,7 @@ export default function RecentPriceChanges() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              Recent Price Changes ({Array.isArray(priceChanges) ? priceChanges.length : 0} changes)
+              Recent Price Changes
             </CardTitle>
             <CardDescription>
               All season price changes ordered by recency and significance
