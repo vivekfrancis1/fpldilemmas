@@ -10021,9 +10021,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               } catch (error) {
                 console.log(`Using projection fallback for player ${player.id} GW${gw}: ${error}`);
-                // Simple projection fallback for completed gameweeks
-                gwSaves = Math.max(0, Math.floor(Math.random() * 6) + 2); // 2-7 saves
-                gwPoints = Math.floor(gwSaves / 3);
+                // Minutes-based fallback for completed gameweeks
+                const willPlay = await estimatePlayerWillPlay(player, gw, 'GKP');
+                
+                if (willPlay) {
+                  // Expected to have played - use reasonable projection
+                  gwSaves = Math.max(0, Math.floor(Math.random() * 6) + 2); // 2-7 saves
+                  gwPoints = Math.floor(gwSaves / 3);
+                } else {
+                  // Unlikely to have played - 0 saves
+                  gwSaves = 0;
+                  gwPoints = 0;
+                }
               }
             } else if (gw === currentGameweek) {
               // CURRENT GAMEWEEK: Hybrid based on match progress
@@ -10037,21 +10046,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   gwSaves = gameweekData.saves || 0;
                   gwPoints = Math.floor(gwSaves / 3);
                 } else {
-                  // Player hasn't played yet - use projection
-                  gwSaves = Math.max(0, Math.floor(Math.random() * 6) + 3); // 3-8 saves
-                  gwPoints = Math.floor(gwSaves / 3);
+                  // Player hasn't played yet - check playing likelihood
+                  const willPlay = await estimatePlayerWillPlay(player, gw, 'GKP');
+                  
+                  if (willPlay) {
+                    // Expected to play - use projection
+                    const form = parseFloat(player.form || "0");
+                    const formMultiplier = Math.max(0.5, Math.min(1.5, form / 5));
+                    const baseSaves = Math.random() * 6 + 3; // 3-8 saves
+                    gwSaves = Math.max(0, Math.floor(baseSaves * formMultiplier));
+                    gwPoints = Math.floor(gwSaves / 3);
+                  } else {
+                    // Unlikely to play - 0 saves
+                    gwSaves = 0;
+                    gwPoints = 0;
+                  }
                 }
               } catch (error) {
-                // Fallback to projection
-                gwSaves = Math.max(0, Math.floor(Math.random() * 6) + 3);
-                gwPoints = Math.floor(gwSaves / 3);
+                // Minutes-based fallback for current gameweek
+                const willPlay = await estimatePlayerWillPlay(player, gw, 'GKP');
+                
+                if (willPlay) {
+                  // Expected to play - use projection
+                  const form = parseFloat(player.form || "0");
+                  const formMultiplier = Math.max(0.5, Math.min(1.5, form / 5));
+                  gwSaves = Math.max(0, Math.floor((Math.random() * 6 + 3) * formMultiplier));
+                  gwPoints = Math.floor(gwSaves / 3);
+                } else {
+                  // Unlikely to play - 0 saves
+                  gwSaves = 0;
+                  gwPoints = 0;
+                }
               }
             } else {
-              // FUTURE GAMEWEEKS: Use probability-based projections
-              const form = parseFloat(player.form || "0");
-              const formMultiplier = Math.max(0.5, Math.min(1.5, form / 5));
-              gwSaves = Math.max(0, Math.floor((Math.random() * 6 + 3) * formMultiplier));
-              gwPoints = Math.floor(gwSaves / 3);
+              // FUTURE GAMEWEEKS: Use minutes-based likelihood for playing probability
+              const willPlay = await estimatePlayerWillPlay(player, gw, 'GKP');
+              
+              if (willPlay) {
+                // Player expected to play - calculate realistic saves based on form and opposition
+                const form = parseFloat(player.form || "0");
+                const formMultiplier = Math.max(0.5, Math.min(1.5, form / 5));
+                
+                // Base saves expectation: 3-8 saves for a playing goalkeeper
+                const baseSaves = Math.random() * 6 + 3;
+                gwSaves = Math.max(0, Math.floor(baseSaves * formMultiplier));
+                gwPoints = Math.floor(gwSaves / 3);
+              } else {
+                // Player unlikely to play - gets 0 saves
+                gwSaves = 0;
+                gwPoints = 0;
+              }
             }
             
             saves[`gw${gw}`] = parseFloat(gwSaves.toFixed(1));
