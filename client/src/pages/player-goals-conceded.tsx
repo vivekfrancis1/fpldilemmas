@@ -28,8 +28,8 @@ export default function PlayerGoalsConceded() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"totalGoalsConceded" | "totalPoints">("totalGoalsConceded");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortBy, setSortBy] = useState<string>("totalGoalsConceded");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -62,21 +62,55 @@ export default function PlayerGoalsConceded() {
     
     return matchesSearch && matchesPosition && matchesTeam;
   }).sort((a: GoalsConcededProjection, b: GoalsConcededProjection) => {
-    const aValue = a[sortBy];
-    const bValue = b[sortBy];
-    return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+    let aValue: any;
+    let bValue: any;
+    
+    // Handle different sort columns
+    if (sortBy === "playerName") {
+      aValue = a.playerName.toLowerCase();
+      bValue = b.playerName.toLowerCase();
+      return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    } else if (sortBy === "teamName") {
+      aValue = a.teamName.toLowerCase();
+      bValue = b.teamName.toLowerCase();
+      return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    } else if (sortBy === "position") {
+      aValue = a.position;
+      bValue = b.position;
+      return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    } else if (sortBy.startsWith("gw")) {
+      // Handle gameweek sorting
+      aValue = a.goalsConceded[sortBy] || 0;
+      bValue = b.goalsConceded[sortBy] || 0;
+    } else if (sortBy.startsWith("pts_gw")) {
+      // Handle points gameweek sorting
+      const gw = sortBy.replace("pts_", "");
+      aValue = a.pointsFromGoalsConceded[gw] || 0;
+      bValue = b.pointsFromGoalsConceded[gw] || 0;
+    } else {
+      // Handle numeric columns (totalGoalsConceded, totalPoints, averagePerGameweek)
+      aValue = a[sortBy as keyof GoalsConcededProjection] || 0;
+      bValue = b[sortBy as keyof GoalsConcededProjection] || 0;
+    }
+    
+    return sortDirection === "asc" ? Number(aValue) - Number(bValue) : Number(bValue) - Number(aValue);
   });
 
-  const handleSort = (column: "totalGoalsConceded" | "totalPoints") => {
+  const handleSort = (column: string) => {
     if (sortBy === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortBy(column);
-      setSortDirection(column === "totalGoalsConceded" ? "asc" : "desc");
+      // Default sort direction based on column type
+      if (column === "playerName" || column === "teamName" || column === "position") {
+        setSortDirection("asc");
+      } else {
+        setSortDirection("desc"); // Numeric columns default to desc (high to low)
+      }
     }
   };
 
-  const getSortIcon = (column: "totalGoalsConceded" | "totalPoints") => {
+  const getSortIcon = (column: string) => {
     if (sortBy !== column) return <ArrowUpDown className="h-4 w-4" />;
     return sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
   };
@@ -190,21 +224,61 @@ export default function PlayerGoalsConceded() {
                   <table className="fpl-table">
                     <thead>
                       <tr>
-                        <th className="text-left">Player</th>
-                        <th className="text-center">Pos</th>
-                        <th className="text-center">Team</th>
-                        <th className="text-center">GW4</th>
-                        <th className="text-center">GW5</th>
-                        <th className="text-center">GW6</th>
-                        <th className="text-center">GW7</th>
-                        <th className="text-center">GW8</th>
-                        <th className="text-center">GW9</th>
+                        <th className="text-left cursor-pointer" onClick={() => handleSort("playerName")}>
+                          <div className="flex items-center gap-1">
+                            Player {getSortIcon("playerName")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("position")}>
+                          <div className="flex items-center justify-center gap-1">
+                            Pos {getSortIcon("position")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("teamName")}>
+                          <div className="flex items-center justify-center gap-1">
+                            Team {getSortIcon("teamName")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("gw4")}>
+                          <div className="flex items-center justify-center gap-1">
+                            GW4 {getSortIcon("gw4")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("gw5")}>
+                          <div className="flex items-center justify-center gap-1">
+                            GW5 {getSortIcon("gw5")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("gw6")}>
+                          <div className="flex items-center justify-center gap-1">
+                            GW6 {getSortIcon("gw6")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("gw7")}>
+                          <div className="flex items-center justify-center gap-1">
+                            GW7 {getSortIcon("gw7")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("gw8")}>
+                          <div className="flex items-center justify-center gap-1">
+                            GW8 {getSortIcon("gw8")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("gw9")}>
+                          <div className="flex items-center justify-center gap-1">
+                            GW9 {getSortIcon("gw9")}
+                          </div>
+                        </th>
                         <th className="text-center cursor-pointer" onClick={() => handleSort("totalGoalsConceded")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalGoalsConceded")}
                           </div>
                         </th>
-                        <th className="text-center">Avg/GW</th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("averagePerGameweek")}>
+                          <div className="flex items-center justify-center gap-1">
+                            Avg/GW {getSortIcon("averagePerGameweek")}
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -247,15 +321,51 @@ export default function PlayerGoalsConceded() {
                   <table className="fpl-table">
                     <thead>
                       <tr>
-                        <th className="text-left">Player</th>
-                        <th className="text-center">Pos</th>
-                        <th className="text-center">Team</th>
-                        <th className="text-center">GW4</th>
-                        <th className="text-center">GW5</th>
-                        <th className="text-center">GW6</th>
-                        <th className="text-center">GW7</th>
-                        <th className="text-center">GW8</th>
-                        <th className="text-center">GW9</th>
+                        <th className="text-left cursor-pointer" onClick={() => handleSort("playerName")}>
+                          <div className="flex items-center gap-1">
+                            Player {getSortIcon("playerName")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("position")}>
+                          <div className="flex items-center justify-center gap-1">
+                            Pos {getSortIcon("position")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("teamName")}>
+                          <div className="flex items-center justify-center gap-1">
+                            Team {getSortIcon("teamName")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("pts_gw4")}>
+                          <div className="flex items-center justify-center gap-1">
+                            GW4 {getSortIcon("pts_gw4")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("pts_gw5")}>
+                          <div className="flex items-center justify-center gap-1">
+                            GW5 {getSortIcon("pts_gw5")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("pts_gw6")}>
+                          <div className="flex items-center justify-center gap-1">
+                            GW6 {getSortIcon("pts_gw6")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("pts_gw7")}>
+                          <div className="flex items-center justify-center gap-1">
+                            GW7 {getSortIcon("pts_gw7")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("pts_gw8")}>
+                          <div className="flex items-center justify-center gap-1">
+                            GW8 {getSortIcon("pts_gw8")}
+                          </div>
+                        </th>
+                        <th className="text-center cursor-pointer" onClick={() => handleSort("pts_gw9")}>
+                          <div className="flex items-center justify-center gap-1">
+                            GW9 {getSortIcon("pts_gw9")}
+                          </div>
+                        </th>
                         <th className="text-center cursor-pointer" onClick={() => handleSort("totalPoints")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalPoints")}
