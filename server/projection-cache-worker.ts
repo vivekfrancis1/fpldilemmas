@@ -169,15 +169,15 @@ class ProjectionCacheWorker {
     try {
       console.log(`📊 Caching team clean sheet projections...`);
       
-      // Get team projections from Team Goal/CS Projections API
-      const response = await fetch('http://localhost:5000/api/team-projections?startGameweek=4&endGameweek=9');
+      // Use Team CS Projections API directly
+      const response = await fetch('http://localhost:5000/api/team-cs-projections?startGameweek=4&endGameweek=9');
       if (!response.ok) {
-        console.log(`Team projections API not available, using bootstrap data for basic clean sheet estimates`);
+        console.log(`Team CS projections API returned ${response.status}, skipping clean sheet cache`);
         return;
       }
       
       const teamData = await response.json();
-      console.log(`📥 Retrieved ${teamData.length} team projections`);
+      console.log(`📥 Retrieved ${teamData.length} team CS projections`);
       
       // Clear existing data for this season
       await db.delete(teamCleanSheetProjections)
@@ -186,12 +186,13 @@ class ProjectionCacheWorker {
       // Prepare records for batch insert
       const records = [];
       for (const team of teamData) {
-        if (team.cleanSheetProjections) {
+        if (team.gameweekProjections) {
           for (let gw = 4; gw <= 9; gw++) {
-            const cleanSheetProbability = team.cleanSheetProjections[`gw${gw}`] || 0;
+            // Team CS API uses string keys for gameweeks
+            const cleanSheetProbability = team.gameweekProjections[gw.toString()] || 0;
             if (cleanSheetProbability > 0) {
               records.push({
-                teamId: team.teamId,
+                teamId: team.id || team.teamId,
                 gameweek: gw,
                 season: '2025/26',
                 cleanSheetProbability: Number(cleanSheetProbability),
@@ -203,9 +204,11 @@ class ProjectionCacheWorker {
       }
       
       // Insert in batches
-      for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
-        const batch = records.slice(i, i + this.BATCH_SIZE);
-        await db.insert(teamCleanSheetProjections).values(batch);
+      if (records.length > 0) {
+        for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
+          const batch = records.slice(i, i + this.BATCH_SIZE);
+          await db.insert(teamCleanSheetProjections).values(batch);
+        }
       }
       
       console.log(`✅ Team clean sheet projections cached successfully (${records.length} records)`);
@@ -217,37 +220,41 @@ class ProjectionCacheWorker {
   }
   
   /**
-   * Cache minutes projections from Player Projections API
+   * Cache minutes projections from bootstrap data (estimated)
    */
   private async cacheMinutesProjections(): Promise<void> {
     try {
       console.log(`📊 Caching minutes projections...`);
-      const response = await fetch('http://localhost:5000/api/player-projections?startGameweek=4&endGameweek=9');
       
+      // Get bootstrap data for player list
+      const response = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
       if (!response.ok) {
-        throw new Error(`Player Projections API returned ${response.status}`);
+        throw new Error(`Bootstrap API returned ${response.status}`);
       }
       
-      const data: any[] = await response.json();
-      console.log(`📥 Retrieved ${data.length} player projections`);
+      const bootstrapData = await response.json();
+      const players = bootstrapData.elements;
+      
+      console.log(`📥 Retrieved ${players.length} players from bootstrap`);
       
       // Clear existing data for this season
       await db.delete(playerMinutesProjections)
         .where(eq(playerMinutesProjections.season, '2025/26'));
       
-      // Prepare records for batch insert
+      // Prepare records for batch insert based on recent performance
       const records = [];
-      for (const player of data) {
-        if (player.projections) {
+      for (const player of players) {
+        if (player.minutes > 0) { // Only players who have played
+          const avgMinutesPerGame = player.minutes / Math.max(1, player.starts || 1);
+          const expectedMinutes = Math.min(90, avgMinutesPerGame * 0.9); // Slight regression
+          
           for (let gw = 4; gw <= 9; gw++) {
-            const gwData = player.projections[`gw${gw}`];
-            const minutes = gwData?.minutes || 0;
-            if (minutes > 0) {
+            if (expectedMinutes > 0) {
               records.push({
-                playerId: player.playerId,
+                playerId: player.id,
                 gameweek: gw,
                 season: '2025/26',
-                minutes: Number(minutes),
+                minutes: Number(expectedMinutes.toFixed(1)),
                 calculatedAt: new Date()
               });
             }
@@ -256,10 +263,12 @@ class ProjectionCacheWorker {
       }
       
       // Insert in batches
-      for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
-        const batch = records.slice(i, i + this.BATCH_SIZE);
-        await db.insert(playerMinutesProjections).values(batch);
-        console.log(`📊 Inserted minutes batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(records.length / this.BATCH_SIZE)}`);
+      if (records.length > 0) {
+        for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
+          const batch = records.slice(i, i + this.BATCH_SIZE);
+          await db.insert(playerMinutesProjections).values(batch);
+          console.log(`📊 Inserted minutes batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(records.length / this.BATCH_SIZE)}`);
+        }
       }
       
       console.log(`✅ Minutes projections cached successfully (${records.length} records)`);
@@ -282,8 +291,17 @@ class ProjectionCacheWorker {
         throw new Error(`Defensive API returned ${response.status}`);
       }
       
-      const data: ProjectionData[] = await response.json();
-      console.log(`📥 Retrieved ${data.length} defensive projections`);
+      const responseData = await response.json();
+      console.log(`📥 Retrieved defensive projections response with ${responseData.count} players`);
+      
+      // Extract the data array from the response
+      const data = responseData.data;
+      if (!Array.isArray(data)) {
+        console.log(`📥 No valid defensive projection data array found`);
+        return;
+      }
+      
+      console.log(`📥 Processing ${data.length} defensive projections`);
       
       // Clear existing data for this season
       await db.delete(playerDefensiveProjections)
@@ -292,18 +310,17 @@ class ProjectionCacheWorker {
       // Prepare records for batch insert
       const records = [];
       for (const player of data) {
-        if (player.gameweekProjections || player.pointsProjections) {
+        if (player && player.gameweekProjections) {
           for (let gw = 4; gw <= 9; gw++) {
-            const defensiveContribution = player.gameweekProjections?.[gw] || player.gameweekProjections?.[`gw${gw}`] || 0;
-            const points = player.pointsProjections?.[`gw${gw}`] || 0;
-            
-            if (defensiveContribution > 0 || points > 0) {
+            // Defensive API uses numeric array indices (gameweek 4 = index 4)
+            const gwData = player.gameweekProjections[gw];
+            if (gwData && gwData.defensiveContribution > 0) {
               records.push({
                 playerId: player.playerId,
                 gameweek: gw,
                 season: '2025/26',
-                defensiveContribution: Number(defensiveContribution),
-                points: Number(points),
+                defensiveContribution: Number(gwData.defensiveContribution),
+                points: Number(gwData.points || 0),
                 calculatedAt: new Date()
               });
             }
@@ -312,10 +329,12 @@ class ProjectionCacheWorker {
       }
       
       // Insert in batches
-      for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
-        const batch = records.slice(i, i + this.BATCH_SIZE);
-        await db.insert(playerDefensiveProjections).values(batch);
-        console.log(`📊 Inserted defensive batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(records.length / this.BATCH_SIZE)}`);
+      if (records.length > 0) {
+        for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
+          const batch = records.slice(i, i + this.BATCH_SIZE);
+          await db.insert(playerDefensiveProjections).values(batch);
+          console.log(`📊 Inserted defensive batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(records.length / this.BATCH_SIZE)}`);
+        }
       }
       
       console.log(`✅ Defensive projections cached successfully (${records.length} records)`);
