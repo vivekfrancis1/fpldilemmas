@@ -6504,7 +6504,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Use actual data for complete gameweeks only
               homeTeamAgainst.gameweekProjections[fixture.event] = fixture.team_a_score || 0;
               awayTeamAgainst.gameweekProjections[fixture.event] = fixture.team_h_score || 0;
-
             } else {
               // For incomplete gameweeks, use projections for ALL fixtures (even finished ones)
               const homeTeamScored = teamGoalProjections.find((t: any) => t.id === fixture.team_h);
@@ -6512,15 +6511,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               if (homeTeamScored && awayTeamScored) {
                 // Direct mirror: home concedes what away scores, away concedes what home scores
-                // Convert fixture.event to string for object key lookup
-                const gameweekKey = fixture.event.toString();
-                const awayGoals = awayTeamScored.gameweekProjections[gameweekKey];
-                const homeGoals = homeTeamScored.gameweekProjections[gameweekKey];
-                
-
-                
-                homeTeamAgainst.gameweekProjections[fixture.event] = (awayGoals !== null && awayGoals !== undefined) ? awayGoals : 0;
-                awayTeamAgainst.gameweekProjections[fixture.event] = (homeGoals !== null && homeGoals !== undefined) ? homeGoals : 0;
+                homeTeamAgainst.gameweekProjections[fixture.event] = awayTeamScored.gameweekProjections[fixture.event] || 0;
+                awayTeamAgainst.gameweekProjections[fixture.event] = homeTeamScored.gameweekProjections[fixture.event] || 0;
               }
             }
           }
