@@ -62,23 +62,23 @@ const MASTER_TEAM_DEFAULTS = {
   weakDefenseMultiplier: 1.15,
   promotedDefenseMultiplier: 1.3,
   
-  // Penalty Taker Adjustments (add goals per 90 that xG methodology misses)
+  // Penalty Taker Adjustments (SIGNIFICANTLY INCREASED weightage for Goal Share tool)
   penaltyTakerAdjustments: {
-    // Primary penalty takers - proven track record
-    'Mohamed Salah': 0.12,           // ~4-5 penalty goals per season
-    'Erling Haaland': 0.08,          // ~3 penalty goals per season  
-    'Harry Kane': 0.10,              // ~4 penalty goals per season
-    'Bruno Fernandes': 0.15,         // ~5-6 penalty goals per season
-    'Alexander Isak': 0.06,          // ~2-3 penalty goals per season
-    'Ivan Toney': 0.08,              // ~3 penalty goals per season
-    'Ollie Watkins': 0.05,           // ~2 penalty goals per season
-    'Cole Palmer': 0.10,             // ~4 penalty goals per season
-    'Bukayo Saka': 0.08,             // ~3 penalty goals per season
-    // Secondary penalty takers
-    'Son Heung-min': 0.04,           // ~1-2 penalty goals per season
-    'James Ward-Prowse': 0.06,       // ~2-3 penalty goals per season
-    'Pascal Groß': 0.05,             // ~2 penalty goals per season
-    'Luka Milivojevic': 0.08,        // ~3 penalty goals per season
+    // Primary penalty takers - MAJOR boost for goal share calculations
+    'Mohamed Salah': 0.45,           // High penalty weighting for goal share
+    'Erling Haaland': 0.40,          // High penalty weighting for goal share
+    'Harry Kane': 0.42,              // High penalty weighting for goal share
+    'Bruno Fernandes': 0.50,         // Highest penalty weighting for goal share
+    'Alexander Isak': 0.30,          // Medium-high penalty weighting for goal share
+    'Ivan Toney': 0.38,              // High penalty weighting for goal share
+    'Ollie Watkins': 0.25,           // Medium penalty weighting for goal share
+    'Cole Palmer': 0.42,             // High penalty weighting for goal share
+    'Bukayo Saka': 0.38,             // High penalty weighting for goal share
+    // Secondary penalty takers - MODERATE boost
+    'Son Heung-min': 0.20,           // Medium penalty weighting for goal share
+    'James Ward-Prowse': 0.28,       // Medium penalty weighting for goal share
+    'Pascal Groß': 0.25,             // Medium penalty weighting for goal share
+    'Luka Milivojevic': 0.35,        // Medium-high penalty weighting for goal share
   },
 
   // Context Multipliers
