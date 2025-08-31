@@ -68,7 +68,7 @@ export default function PlayerBonusPoints() {
   });
 
   const { data: bonusPointsProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/cached/player-bonus-points-projections"],
+    queryKey: ["/api/player-bonus-points-simple"],
     staleTime: 30 * 60 * 1000,
   });
 

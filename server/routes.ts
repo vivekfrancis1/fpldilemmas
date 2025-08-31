@@ -10848,10 +10848,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.min(3.0, bonusPointsProbability * 1.5);
   }
 
-  // Player Bonus Points Projections - Hybrid methodology: actual + projected + current gameweek hybrid
+  // Player Bonus Points Projections - Step 3: Final bonus points = probability × 1
   app.get("/api/player-bonus-points-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Bonus Points Projections API called - using hybrid calculation");
+      console.log("DEBUG: Player Bonus Points Projections API called - step 3: probability × 1 calculation");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -11029,6 +11029,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching cached player red cards:", error);
       // Fallback to real-time data if cache fails
       res.redirect(307, "/api/player-red-cards-projections");
+    }
+  });
+
+  // NEW SIMPLIFIED API: Final bonus points = probability × 1 
+  app.get("/api/player-bonus-points-simple", async (req, res) => {
+    try {
+      console.log("DEBUG: Simple Bonus Points API called - probability × 1 formula");
+      
+      const { startGameweek = 4, endGameweek = 9 } = req.query;
+      
+      // Get bonus probabilities from our probability API
+      const probabilitiesResponse = await fetch(`http://localhost:5000/api/player-bonus-probabilities?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      const probabilitiesData = await probabilitiesResponse.json();
+      
+      // Convert probabilities to final bonus points: Probability × 1
+      const bonusPointsProjections = probabilitiesData.map((playerData: any) => {
+        const bonusPoints: { [key: string]: number } = {};
+        const pointsFromBonus: { [key: string]: number } = {};
+        let totalBonusPoints = 0;
+        let totalPoints = 0;
+        
+        // Apply simple formula: Bonus Points = Bonus Probability × 1.0
+        Object.keys(playerData.bonusProbabilities).forEach(gwKey => {
+          const probability = playerData.bonusProbabilities[gwKey];
+          const bonusPointsValue = probability * 1.0; // Exact 1:1 multiplication
+          
+          bonusPoints[gwKey] = parseFloat(bonusPointsValue.toFixed(3));
+          pointsFromBonus[gwKey] = parseFloat(bonusPointsValue.toFixed(3));
+          totalBonusPoints += bonusPointsValue;
+          totalPoints += bonusPointsValue;
+        });
+        
+        const numGameweeks = parseInt(endGameweek as string) - parseInt(startGameweek as string) + 1;
+        
+        return {
+          playerId: playerData.playerId,
+          playerName: playerData.playerName,
+          teamName: playerData.teamName,
+          position: playerData.position,
+          bonusPoints,
+          pointsFromBonus,
+          totalBonusPoints: parseFloat(totalBonusPoints.toFixed(3)),
+          totalPoints: parseFloat(totalPoints.toFixed(3)),
+          averageBonusPerGameweek: parseFloat((totalBonusPoints / numGameweeks).toFixed(3)),
+          averagePointsPerGameweek: parseFloat((totalPoints / numGameweeks).toFixed(3))
+        };
+      });
+
+      console.log(`DEBUG: Generated ${bonusPointsProjections.length} bonus point projections using probability × 1 formula`);
+      res.json(bonusPointsProjections);
+    } catch (error) {
+      console.error("Error in simple bonus points calculation:", error);
+      res.status(500).json({ error: "Failed to calculate bonus points from probabilities" });
     }
   });
 
