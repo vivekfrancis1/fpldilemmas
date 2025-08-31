@@ -28,10 +28,10 @@ export default function PlayerAssistProjections() {
   const [sortField, setSortField] = useState<SortField>('sixGwTotal');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
-  // Fetch player assist projections data using cache-first approach
+  // Fetch player assist projections data
   const { data: playerAssistData, isLoading, error } = useQuery<PlayerAssistProjection[]>({
-    queryKey: ["/api/player-assists-projections-cached"],
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    queryKey: ["/api/player-assist-projections"],
+    staleTime: 15 * 60 * 1000, // 15 minutes
   });
 
   // Get unique teams and positions for filters

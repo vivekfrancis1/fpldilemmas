@@ -2,9 +2,19 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, type UpsetConfig } from "./storage";
 import { priceScheduler } from "./price-scheduler";
-import { insertPriceAlertSchema, unifiedProjectionSettings as unifiedProjectionSettingsTable, historicalPlayerStats, priceChanges } from "@shared/schema";
+import { 
+  insertPriceAlertSchema, 
+  unifiedProjectionSettings as unifiedProjectionSettingsTable, 
+  historicalPlayerStats, 
+  priceChanges,
+  playerGoalsProjections,
+  playerAssistProjections,
+  teamCleanSheetProjections,
+  playerMinutesProjections,
+  playerDefensiveProjections
+} from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
 import { projectionService } from "./projection-service";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
@@ -7413,7 +7423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      console.log(`DEBUG: Player Total Points API - using cache-first projection endpoints for GW${start}-${end}`);
+      console.log(`DEBUG: Player Total Points API - using comprehensive projection endpoints for GW${start}-${end}`);
       const startTime = Date.now();
       
       // Get bootstrap data for player info
@@ -7423,21 +7433,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const bootstrapData = await bootstrapResponse.json();
 
-      // Fetch all individual projections in parallel using cache-first endpoints
+      // Fetch all individual projections in parallel using working endpoints
       const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse] = await Promise.all([
-        fetch(`http://localhost:5000/api/player-goals-projections-cached`),
-        fetch(`http://localhost:5000/api/player-assists-projections-cached`),
-        fetch(`http://localhost:5000/api/player-minutes-projections-cached`),
-        fetch(`http://localhost:5000/api/defensive-contribution-projections-cached`),
-        fetch(`http://localhost:5000/api/team-cs-projections-cached`)
+        fetch(`http://localhost:5000/api/player-goals-scored-projections`),
+        fetch(`http://localhost:5000/api/player-assist-projections`),
+        fetch(`http://localhost:5000/api/player-minutes-projections`),
+        fetch(`http://localhost:5000/api/defensive-contribution-projections`),
+        fetch(`http://localhost:5000/api/team-cs-projections`)
       ]);
 
       // Check all responses
-      if (!goalsResponse.ok) throw new Error("Failed to fetch cached goals projections");
-      if (!assistsResponse.ok) throw new Error("Failed to fetch cached assists projections");
-      if (!minutesResponse.ok) throw new Error("Failed to fetch cached minutes projections");
-      if (!defensiveResponse.ok) throw new Error("Failed to fetch cached defensive projections");
-      if (!cleanSheetsResponse.ok) throw new Error("Failed to fetch cached clean sheets projections");
+      if (!goalsResponse.ok) throw new Error("Failed to fetch goals projections");
+      if (!assistsResponse.ok) throw new Error("Failed to fetch assists projections");
+      if (!minutesResponse.ok) throw new Error("Failed to fetch minutes projections");
+      if (!defensiveResponse.ok) throw new Error("Failed to fetch defensive projections");
+      if (!cleanSheetsResponse.ok) throw new Error("Failed to fetch clean sheets projections");
 
       // Parse all projection data
       const [goalsData, assistsData, minutesData, defensiveData, cleanSheetsData] = await Promise.all([
@@ -7448,7 +7458,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cleanSheetsResponse.json()
       ]);
 
-      console.log(`DEBUG: Retrieved cached data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveData.length}, Clean Sheets: ${cleanSheetsData.length}`);
+      // Handle defensive data structure (it returns an object with data property)
+      const defensiveDataArray = defensiveData.data || [];
+      console.log(`DEBUG: Retrieved projection data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveDataArray.length}, Clean Sheets: ${cleanSheetsData.length}`);
       
       // Convert to lookup maps for fast access
       const goalsProjections: Record<number, Record<number, number>> = {};
@@ -7475,14 +7487,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      defensiveData.forEach((player: any) => {
-        if (player.gameweekProjections && player.pointsProjections) {
+      defensiveDataArray.forEach((player: any) => {
+        if (player.gameweekProjections) {
           defensiveProjections[player.playerId] = {};
-          Object.keys(player.gameweekProjections).forEach(gw => {
-            defensiveProjections[player.playerId][parseInt(gw)] = {
-              dc: player.gameweekProjections[gw],
-              points: player.pointsProjections[gw] || 0
-            };
+          player.gameweekProjections.forEach((gwData: any) => {
+            const gw = gwData.gameweek;
+            if (gw >= start && gw <= end) {
+              defensiveProjections[player.playerId][gw] = {
+                dc: gwData.defensiveContribution || 0,
+                points: gwData.points || 0
+              };
+            }
           });
         }
       });
