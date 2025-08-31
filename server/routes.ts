@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, type UpsetConfig } from "./storage";
 import { priceScheduler } from "./price-scheduler";
-import { insertPriceAlertSchema, unifiedProjectionSettings as unifiedProjectionSettingsTable, historicalPlayerStats } from "@shared/schema";
+import { insertPriceAlertSchema, unifiedProjectionSettings as unifiedProjectionSettingsTable, historicalPlayerStats, priceChanges } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
 import { projectionService } from "./projection-service";
