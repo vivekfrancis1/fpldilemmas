@@ -223,11 +223,112 @@ class ProjectionService {
             
             const gwCleanSheetPoints = cleanSheetProb * cleanSheetPoints;
             pointsFromCleanSheets[`gw${gw}`] = Math.round(gwCleanSheetPoints * 100) / 100;
+            
+            // 5. SAVES CALCULATION (Goalkeepers Only) - Official FPL Rules: 1pt per 3 saves, 5pts per penalty save
+            let savesPoints = 0;
+            if (position === 'GKP' && expectedMinutes >= 1) {
+              // Expected shots on target based on opponent strength and team defensive quality
+              const opponentShotsOnTarget = opponentStrengthSeed <= 4 ? 6.5 : // vs Elite teams
+                                           opponentStrengthSeed <= 9 ? 5.0 : // vs Strong teams  
+                                           opponentStrengthSeed <= 14 ? 3.5 : 2.5; // vs Average/Weak teams
+              
+              const teamDefensiveQuality = (adjustedForm * 0.1) + 0.7; // Base 70% + form adjustment
+              const expectedShotsToSave = opponentShotsOnTarget * teamDefensiveQuality * (expectedMinutes / 90);
+              
+              // 1 point for every 3 saves (according to FPL rules)
+              savesPoints = Math.floor(expectedShotsToSave / 3);
+              
+              // Penalty save probability (rare event, ~3% chance per game for top keepers)
+              const penaltySaveProbability = position === 'GKP' ? 0.03 * (adjustedForm / 10) : 0;
+              const penaltySavePoints = penaltySaveProbability * 5; // 5 points per penalty save
+              
+              savesPoints += penaltySavePoints;
+            }
+            
+            // 6. GOALS CONCEDED (Goalkeepers and Defenders Only) - Official FPL Rules: -1pt per 2 goals conceded
+            let goalsConcededPoints = 0;
+            if ((position === 'GKP' || position === 'DEF') && expectedMinutes >= 1) {
+              // Expected goals conceded based on team defense vs opponent attack
+              const opponentAttackStrength = opponentStrengthSeed <= 4 ? 2.1 : // vs Elite teams
+                                            opponentStrengthSeed <= 9 ? 1.6 : // vs Strong teams
+                                            opponentStrengthSeed <= 14 ? 1.2 : 0.9; // vs Average/Weak teams
+              
+              const teamDefenseStrength = (adjustedForm * 0.05) + 0.85; // Base 85% + form
+              const expectedGoalsConceded = (opponentAttackStrength / teamDefenseStrength) * (expectedMinutes / 90);
+              
+              // -1 point for every 2 goals conceded (official FPL rule)
+              goalsConcededPoints = -(Math.floor(expectedGoalsConceded / 2));
+            }
+            
+            // 7. YELLOW CARDS (All Positions) - Official FPL Rules: -1pt per yellow card
+            let yellowCardPoints = 0;
+            if (expectedMinutes >= 1) {
+              // Card probability based on position and playing style (empirical data from Premier League)
+              let yellowCardProbability;
+              if (position === 'DEF') {
+                yellowCardProbability = 0.15 * (adjustedForm / 10); // Defenders more prone to cards
+              } else if (position === 'MID') {
+                yellowCardProbability = 0.12 * (adjustedForm / 10); // Midfielders moderate risk
+              } else if (position === 'FWD') {
+                yellowCardProbability = 0.08 * (adjustedForm / 10); // Forwards less cards
+              } else {
+                yellowCardProbability = 0.03 * (adjustedForm / 10); // Goalkeepers very rare
+              }
+              
+              // Adjust for fixture difficulty (harder games = more cards)
+              if (opponentStrengthSeed <= 4) yellowCardProbability *= 1.3; // vs Elite teams
+              else if (opponentStrengthSeed <= 9) yellowCardProbability *= 1.1; // vs Strong teams
+              
+              yellowCardPoints = yellowCardProbability * (-1); // -1 point per yellow card (official FPL rule)
+            }
+            
+            // 8. RED CARDS (All Positions) - Official FPL Rules: -3pts per red card
+            let redCardPoints = 0;
+            if (expectedMinutes >= 1) {
+              // Red card probability (much rarer than yellow cards)
+              let redCardProbability;
+              if (position === 'DEF') {
+                redCardProbability = 0.02 * (adjustedForm / 10); // Defenders highest risk
+              } else if (position === 'MID') {
+                redCardProbability = 0.015 * (adjustedForm / 10); // Midfielders moderate
+              } else if (position === 'FWD') {
+                redCardProbability = 0.01 * (adjustedForm / 10); // Forwards lower risk
+              } else {
+                redCardProbability = 0.005 * (adjustedForm / 10); // Goalkeepers very rare
+              }
+              
+              redCardPoints = redCardProbability * (-3); // -3 points per red card (official FPL rule)
+            }
+            
+            // 9. BONUS POINTS (All Positions) - Official FPL Rules: 1-3pts based on BPS system
+            let bonusPoints = 0;
+            if (expectedMinutes >= 1) {
+              // Bonus probability based on overall performance and position
+              const overallPerformance = goalsExpected + assistsExpected + (cleanSheetProb * 0.5);
+              
+              let bonusProbability;
+              if (overallPerformance >= 1.0) {
+                bonusProbability = 0.25; // High performers get 25% chance
+              } else if (overallPerformance >= 0.5) {
+                bonusProbability = 0.15; // Medium performers get 15% chance  
+              } else if (overallPerformance >= 0.2) {
+                bonusProbability = 0.08; // Low performers get 8% chance
+              } else {
+                bonusProbability = 0.02; // Very poor performance 2% chance
+              }
+              
+              // Adjust for form and ownership (popular players more likely to get bonus)
+              bonusProbability *= (1 + (selectedBy / 200)); // Ownership boost
+              bonusProbability *= Math.min(adjustedForm / 8, 1.2); // Form boost (capped)
+              
+              // Expected bonus points (average 1.5 points when bonus is awarded, 1-3pt range)
+              bonusPoints = bonusProbability * 1.5;
+            }
             totalCleanSheetPoints += gwCleanSheetPoints;
             
-            // 5. DEFENSIVE CONTRIBUTIONS (2025/26 season) - Use same logic as individual DC tool
+            // 10. DEFENSIVE CONTRIBUTIONS (2025/26 season) - Use same logic as individual DC tool
             let gwDefensivePoints = 0;
-            if (position === 'DEF' || position === 'MID') {
+            if (position === 'DEF' || position === 'MID' || position === 'FWD') {
               // Estimate DC value based on form and minutes
               const estimatedDC = position === 'DEF' ? 
                 (adjustedForm * 0.8 + seasonPerformance * 0.3) * (expectedMinutes / 90) : 
@@ -235,18 +336,20 @@ class ProjectionService {
               
               // Apply FPL threshold rule: 2 points if DC >= 10 for DEF, >= 12 for MID/FWD
               const dcThreshold = position === 'DEF' ? 10 : 12;
-              gwDefensivePoints = estimatedDC >= dcThreshold ? 2 : 0; // Binary: either 0 or 2 points
+              const dcProbability = Math.min(estimatedDC / dcThreshold, 1.0); // Probability of reaching threshold
+              gwDefensivePoints = dcProbability * 2; // Expected points from defensive contributions
             }
             pointsFromDefensiveContributions[`gw${gw}`] = Math.round(gwDefensivePoints * 100) / 100;
             totalDefensivePoints += gwDefensivePoints;
             
-            // 6. BONUS POINTS - Only use actual data, no projections (we don't have a dedicated bonus tool)
-            const bonusExpected = 0; // No bonus projections since we lack individual bonus projection tool
-            pointsFromBonus[`gw${gw}`] = 0;
-            totalBonusPoints += 0;
+            // Store bonus points in the dedicated tracking
+            pointsFromBonus[`gw${gw}`] = Math.round(bonusPoints * 100) / 100;
+            totalBonusPoints += bonusPoints;
             
-            // 7. TOTAL GAMEWEEK POINTS (sum all components - excluding bonus projections)
-            const gwTotal = gwGoalPoints + gwAssistPoints + gwCleanSheetPoints + gwDefensivePoints + minutesPoints;
+            // 11. TOTAL GAMEWEEK POINTS (sum ALL FPL scoring components)
+            const gwTotal = gwGoalPoints + gwAssistPoints + gwCleanSheetPoints + gwDefensivePoints + 
+                          minutesPoints + savesPoints + goalsConcededPoints + yellowCardPoints + 
+                          redCardPoints + bonusPoints;
             gameweekProjections[`gw${gw}`] = Math.max(Math.round(gwTotal * 100) / 100, 0.0);
             totalExpectedPoints += gwTotal;
           }

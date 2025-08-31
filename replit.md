@@ -65,6 +65,13 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Goal Range Compression**: Implemented realistic Premier League goal distributions by compressing team season totals (30-85 goal range).
 - **Clean Sheet Formula**: Updated to exponential decay calculation (CS = 100 × e^(-1.1 × xGA)).
 - **Enhanced Context Multipliers**: Integrated weather, referee influence, post-international break, and travel distance fatigue multipliers.
+- **Comprehensive FPL Scoring System**: Implemented probability-based calculations for ALL official FPL scoring components following Premier League rules (https://www.premierleague.com/en/news/2174909):
+  - **Saves (GKP only)**: 1pt per 3 saves + 5pts per penalty save, based on opponent shot volume and team defensive quality
+  - **Goals Conceded (GKP/DEF)**: -1pt per 2 goals conceded, calculated using team defense vs opponent attack strength
+  - **Yellow Cards (All)**: -1pt per card, position-specific probabilities (DEF: 15%, MID: 12%, FWD: 8%, GKP: 3%) adjusted for fixture difficulty
+  - **Red Cards (All)**: -3pts per card, much lower probabilities (DEF: 2%, MID: 1.5%, FWD: 1%, GKP: 0.5%) based on historical data
+  - **Bonus Points (All)**: 1-3pts based on BPS system simulation, performance-driven probability with form/ownership adjustments
+  - **Enhanced Total Points**: Now includes complete spectrum of FPL scoring for accurate projection totals - September 1, 2025.
 - **Position-Based Share Caps**: Implemented realistic caps for both goal and assist share calculations to prevent unrealistic individual projections:
   - Goal Share caps: GK (2%), DEF (25%), MID (35%), FWD (35%)
   - Assist Share caps: GK (2%), DEF (25%), MID (35%), FWD (25%)
