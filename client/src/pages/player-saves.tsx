@@ -37,7 +37,7 @@ export default function PlayerSaves() {
 
   // Real API call for saves projections using probability calculations
   const { data: savesProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-saves-projections", { startGameweek: 4, endGameweek: 9 }],
+    queryKey: ["/api/player-saves-projections?startGameweek=4&endGameweek=9"],
     staleTime: 5 * 60 * 1000,
   });
 

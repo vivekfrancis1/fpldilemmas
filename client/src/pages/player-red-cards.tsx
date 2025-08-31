@@ -38,7 +38,7 @@ export default function PlayerRedCards() {
 
   // Real API call for red card projections using position-specific probabilities
   const { data: redCardProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-red-cards-projections", { startGameweek: 4, endGameweek: 9 }],
+    queryKey: ["/api/player-red-cards-projections?startGameweek=4&endGameweek=9"],
     staleTime: 5 * 60 * 1000,
   });
 

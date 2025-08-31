@@ -38,7 +38,7 @@ export default function PlayerGoalsConceded() {
 
   // Real API call for goals conceded projections using probability calculations
   const { data: goalsConcededProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-goals-conceded-projections", { startGameweek: 4, endGameweek: 9 }],
+    queryKey: ["/api/player-goals-conceded-projections?startGameweek=4&endGameweek=9"],
     staleTime: 5 * 60 * 1000,
   });
 

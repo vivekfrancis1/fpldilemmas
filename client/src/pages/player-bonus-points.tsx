@@ -38,7 +38,7 @@ export default function PlayerBonusPoints() {
 
   // Real API call for bonus points projections using BPS system simulation
   const { data: bonusPointsProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-bonus-points-projections", { startGameweek: 4, endGameweek: 9 }],
+    queryKey: ["/api/player-bonus-points-projections?startGameweek=4&endGameweek=9"],
     staleTime: 5 * 60 * 1000,
   });
 

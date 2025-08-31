@@ -38,7 +38,7 @@ export default function PlayerYellowCards() {
 
   // Real API call for yellow card projections using position-specific probabilities
   const { data: yellowCardProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-yellow-cards-projections", { startGameweek: 4, endGameweek: 9 }],
+    queryKey: ["/api/player-yellow-cards-projections?startGameweek=4&endGameweek=9"],
     staleTime: 5 * 60 * 1000,
   });
 
