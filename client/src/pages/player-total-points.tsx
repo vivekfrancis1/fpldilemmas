@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer } from "lucide-react";
+import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -294,28 +294,39 @@ function ComponentTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 border-b">
+      <table className="w-full text-sm bg-white">
+        <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
           <tr>
-            <th className="px-4 py-3 text-left font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('name')}>
-              <div className="flex items-center gap-1">Player {getSortIcon('name')}</div>
+            <th className="sticky left-0 bg-gradient-to-r from-gray-50 to-gray-100 z-10 px-3 md:px-4 py-3 text-left font-semibold text-gray-800 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => handleSort('name')}>
+              <div className="flex items-center gap-1 min-w-[120px]">
+                <Users className="h-4 w-4 text-gray-600" />
+                Player {getSortIcon('name')}
+              </div>
             </th>
-            <th className="px-4 py-3 text-left font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('position')}>
-              <div className="flex items-center gap-1">Pos {getSortIcon('position')}</div>
+            <th className="px-2 md:px-3 py-3 text-center font-semibold text-gray-800 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => handleSort('position')}>
+              <div className="flex items-center justify-center gap-1">Pos {getSortIcon('position')}</div>
             </th>
-            <th className="px-4 py-3 text-left font-medium text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('team')}>
-              <div className="flex items-center gap-1">Team {getSortIcon('team')}</div>
+            <th className="px-2 md:px-3 py-3 text-center font-semibold text-gray-800 cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => handleSort('team')}>
+              <div className="flex items-center justify-center gap-1">Team {getSortIcon('team')}</div>
             </th>
             {gameweekRange.map(gw => (
-              <th key={gw} className={`px-3 py-3 text-center font-medium text-gray-700 ${colorScheme.bg} border-x cursor-pointer hover:bg-gray-100 transition-colors`} onClick={() => handleSort(component === 'total' ? `gw${gw}` : `${colorScheme.pointsField}.gw${gw}`)}>
+              <th 
+                key={gw} 
+                className={`px-2 md:px-3 py-3 text-center font-semibold text-gray-800 ${colorScheme.bg}/50 border-x border-gray-300 cursor-pointer hover:bg-gray-200 transition-colors min-w-[60px]`} 
+                onClick={() => handleSort(component === 'total' ? `gw${gw}` : `${colorScheme.pointsField}.gw${gw}`)}
+              >
                 <div className="flex items-center justify-center gap-1">
-                  GW{gw} {getSortIcon(component === 'total' ? `gw${gw}` : `${colorScheme.pointsField}.gw${gw}`)}
+                  <span className="text-xs md:text-sm">GW{gw}</span> 
+                  {getSortIcon(component === 'total' ? `gw${gw}` : `${colorScheme.pointsField}.gw${gw}`)}
                 </div>
               </th>
             ))}
-            <th className={`px-4 py-3 text-center font-medium text-gray-700 ${colorScheme.totalBg} cursor-pointer hover:bg-gray-100 transition-colors`} onClick={() => handleSort(colorScheme.totalField)}>
+            <th className={`px-3 md:px-4 py-3 text-center font-bold text-gray-900 ${colorScheme.totalBg} border-l-2 border-gray-400 cursor-pointer hover:bg-gray-200 transition-colors min-w-[100px]`} onClick={() => handleSort(colorScheme.totalField)}>
               <div className="flex items-center justify-center gap-1">
-                Range Total {getSortIcon(colorScheme.totalField)}
+                <Trophy className="h-4 w-4 text-gray-700" />
+                <span className="hidden sm:inline">Range Total</span>
+                <span className="sm:hidden">Total</span>
+                {getSortIcon(colorScheme.totalField)}
               </div>
             </th>
             {component === 'total' && (
@@ -332,47 +343,53 @@ function ComponentTable({
         </thead>
         <tbody className="divide-y divide-gray-200">
           {filteredAndSortedData.map((player, index) => (
-            <tr key={player.playerId} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-              <td className="px-4 py-4">
-                <div>
-                  <div className="font-semibold text-gray-900">{player.name}</div>
-                  <div className="text-xs text-gray-500">£{player.price ? (player.price / 10).toFixed(1) : '0.0'}m • {player.ownership ? player.ownership.toFixed(1) : '0.0'}%</div>
+            <tr key={player.playerId} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/30 transition-colors`}>
+              <td className="sticky left-0 bg-white px-3 md:px-4 py-3 border-r border-gray-200">
+                <div className="min-w-[120px]">
+                  <div className="font-semibold text-gray-900 text-sm leading-tight">{player.name}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    <span className="font-medium">£{player.price ? (player.price / 10).toFixed(1) : '0.0'}m</span>
+                    <span className="mx-1">•</span>
+                    <span>{player.ownership ? player.ownership.toFixed(1) : '0.0'}%</span>
+                  </div>
                 </div>
               </td>
-              <td className="px-4 py-4"><Badge variant="outline" className="text-xs">{player.position}</Badge></td>
-              <td className="px-4 py-4 font-medium text-gray-700">{player.team}</td>
+              <td className="px-2 md:px-3 py-3 text-center">
+                <Badge variant="outline" className="text-xs font-semibold px-2 py-1">{player.position}</Badge>
+              </td>
+              <td className="px-2 md:px-3 py-3 text-center font-medium text-gray-700 text-sm">{player.team}</td>
               {gameweekRange.map(gw => {
                 const value = getComponentValue(player, gw);
                 return (
-                  <td key={gw} className={`px-3 py-4 text-center ${colorScheme.bg}/30 border-x`}>
+                  <td key={gw} className={`px-2 md:px-3 py-3 text-center ${colorScheme.bg}/30 border-x border-gray-200`}>
                     {component === 'total' ? (
                       <GameweekPointBreakdownTooltip player={player} gameweek={gw} />
                     ) : (
-                      <span className={`font-medium ${getValueColor(value)}`}>
+                      <span className={`font-semibold text-sm ${getValueColor(value)}`}>
                         {component === 'minutes' ? value.toFixed(0) : value.toFixed(1)}
                       </span>
                     )}
                   </td>
                 );
               })}
-              <td className={`px-4 py-4 text-center ${colorScheme.totalBg}`}>
+              <td className={`px-3 md:px-4 py-3 text-center ${colorScheme.totalBg} border-l-2 border-gray-400`}>
                 {component === 'total' ? (
                   <RangeTotalBreakdownTooltip player={player} />
                 ) : (
-                  <span className={`font-bold ${colorScheme.textColor}`}>
+                  <span className={`font-bold text-lg ${colorScheme.textColor}`}>
                     {component === 'minutes' ? getTotalValue(player).toFixed(0) : getTotalValue(player).toFixed(1)}
                   </span>
                 )}
               </td>
               {component === 'total' && (
                 <>
-                  <td className="px-4 py-4 text-center bg-gradient-to-r from-purple-50 to-violet-50">
-                    <span className="font-bold text-purple-800">
+                  <td className="px-3 md:px-4 py-3 text-center bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300">
+                    <span className="font-bold text-purple-800 text-lg">
                       {player.seasonTotalPoints?.toFixed(1) || '0.0'}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-center bg-gradient-to-r from-orange-50 to-amber-50">
-                    <span className="font-bold text-orange-800">
+                  <td className="px-3 md:px-4 py-3 text-center bg-gradient-to-r from-orange-50 to-amber-50 border-l border-gray-300">
+                    <span className="font-bold text-orange-800 text-lg">
                       {player.averagePerGameweek?.toFixed(1) || '0.0'}
                     </span>
                   </td>
@@ -506,30 +523,32 @@ export default function PlayerTotalPoints() {
   }
 
   return (
-    <TooltipProvider delayDuration={100} skipDelayDuration={0}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
-        <div className="container mx-auto px-6 py-8">
-        {/* Professional Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center items-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-              <Trophy className="h-8 w-8 text-white" />
-            </div>
-            <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg">
-              <Target className="h-8 w-8 text-white" />
+    <div className="fpl-page-wrapper">
+      <div className="fpl-container fpl-content-area fpl-section-spacing">
+        <TooltipProvider delayDuration={100} skipDelayDuration={0}>
+          {/* Page Header */}
+          <div className="fpl-page-header">
+            <div className="fpl-page-header-content">
+              <div className="fpl-page-title">
+                <Target className="h-8 w-8" />
+                <h1>Player Total Points</h1>
+              </div>
+              <p className="fpl-page-subtitle">
+                Complete FPL points projection combining goals, assists, clean sheets, and expected minutes performance
+              </p>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-            Player Total Points Projections
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-            Complete FPL points projection combining goals, assists, clean sheets, and expected minutes performance
-          </p>
-        </div>
 
-        {/* Filters and Controls */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-8 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          {/* Filters and Controls */}
+          <div className="fpl-card mb-6">
+            <div className="fpl-card-header">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-indigo-600" />
+                <h2 className="fpl-card-title">Filters & Controls</h2>
+              </div>
+            </div>
+            <div className="fpl-card-content">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Gameweek Range */}
             <div className="space-y-2">
               <Label htmlFor="start-gameweek" className="text-sm font-medium">Start GW</Label>
@@ -619,56 +638,67 @@ export default function PlayerTotalPoints() {
                 Clear Filters
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Data Tabs */}
-        {isLoading ? (
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <span className="ml-4 text-lg text-gray-600">Loading player total points...</span>
+              </div>
             </div>
           </div>
-        ) : (
-          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-            <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-xl">
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                Player Total Points (GW{startGameweek}-{endGameweek})
-                <Badge variant="secondary" className="ml-auto bg-white/20 text-white border-white/30">
-                  {filteredAndSortedData.length} players
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Tabs defaultValue="total" className="w-full">
-                <TabsList className="grid w-full grid-cols-6 bg-gray-50 p-1 m-4 mb-0">
-                  <TabsTrigger value="total" className="flex items-center gap-2">
-                    <Trophy className="h-4 w-4" />
-                    Total Points
-                  </TabsTrigger>
-                  <TabsTrigger value="goals" className="flex items-center gap-2">
-                    <Target className="h-4 w-4" />
-                    Goal Points
-                  </TabsTrigger>
-                  <TabsTrigger value="assists" className="flex items-center gap-2">
-                    <Zap className="h-4 w-4" />
-                    Assist Points
-                  </TabsTrigger>
-                  <TabsTrigger value="cleansheets" className="flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    CS Points
-                  </TabsTrigger>
-                  <TabsTrigger value="defensive" className="flex items-center gap-2">
-                    <Swords className="h-4 w-4" />
-                    DC Points
-                  </TabsTrigger>
-                  <TabsTrigger value="minutes" className="flex items-center gap-2">
-                    <Timer className="h-4 w-4" />
-                    Mins Points
-                  </TabsTrigger>
-                </TabsList>
+
+          {/* Data Tabs */}
+          {isLoading ? (
+            <div className="fpl-card">
+              <div className="fpl-card-content">
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                  <span className="ml-4 text-lg text-gray-600">Loading player total points...</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="fpl-card">
+              <div className="fpl-card-header">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-indigo-600" />
+                    <h2 className="fpl-card-title">Player Total Points (GW{startGameweek}-{endGameweek})</h2>
+                  </div>
+                  <Badge className="bg-indigo-100 text-indigo-700">
+                    {filteredAndSortedData.length} players
+                  </Badge>
+                </div>
+              </div>
+              <div className="fpl-card-content p-0">
+                <Tabs defaultValue="total" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 bg-gray-50 p-1 m-4 mb-0 rounded-lg gap-1">
+                    <TabsTrigger value="total" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
+                      <Trophy className="h-3 w-3 md:h-4 md:w-4" />
+                      <span className="hidden sm:inline">Total</span>
+                      <span className="sm:hidden">Pts</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="goals" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
+                      <Target className="h-3 w-3 md:h-4 md:w-4" />
+                      <span className="hidden sm:inline">Goals</span>
+                      <span className="sm:hidden">G</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="assists" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
+                      <Zap className="h-3 w-3 md:h-4 md:w-4" />
+                      <span className="hidden sm:inline">Assists</span>
+                      <span className="sm:hidden">A</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="cleansheets" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
+                      <Shield className="h-3 w-3 md:h-4 md:w-4" />
+                      <span className="hidden sm:inline">CS</span>
+                      <span className="sm:hidden">CS</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="defensive" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
+                      <Swords className="h-3 w-3 md:h-4 md:w-4" />
+                      <span className="hidden sm:inline">Defense</span>
+                      <span className="sm:hidden">DC</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="minutes" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
+                      <Timer className="h-3 w-3 md:h-4 md:w-4" />
+                      <span className="hidden sm:inline">Minutes</span>
+                      <span className="sm:hidden">M</span>
+                    </TabsTrigger>
+                  </TabsList>
 
                 {/* Total Points Tab */}
                 <TabsContent value="total">
@@ -777,12 +807,12 @@ export default function PlayerTotalPoints() {
                     }}
                   />
                 </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        )}
-        </div>
+                </Tabs>
+              </div>
+            </div>
+          )}
+        </TooltipProvider>
       </div>
-    </TooltipProvider>
+    </div>
   );
 }
