@@ -10649,98 +10649,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bonus Probability API - Step 2: Calculate probabilities from BPS with match-level normalization
+  // Bonus Probability API - Step 2: Calculate probabilities from BPS with team-level normalization
   app.get("/api/player-bonus-probabilities", async (req, res) => {
     try {
       const { startGameweek = 4, endGameweek = 9 } = req.query;
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
 
-      console.log("DEBUG: Player Bonus Probabilities API called - step 2 with match-level normalization (100% total per match)");
+      console.log("DEBUG: Player Bonus Probabilities API called - step 2 with team-level normalization (100% total per team per gameweek)");
 
       const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       const data = await bootstrapResponse.json();
       const players = data.elements;
       const teams = data.teams;
 
-      // Optimized batch processing for match-level normalized probabilities
-      const bonusProbabilities = [];
-      const batchSize = 100; // Process 100 players at a time
+      // First pass: Calculate raw BPS for all players by team and gameweek
+      const teamGameweekBPS: Record<number, Record<number, { playerId: number, playerName: string, rawBPS: number, position: string }[]>> = {};
       
+      // Initialize team data structure
+      for (const team of teams) {
+        teamGameweekBPS[team.id] = {};
+        for (let gw = start; gw <= end; gw++) {
+          teamGameweekBPS[team.id][gw] = [];
+        }
+      }
+      
+      // Calculate raw BPS for all players
+      const batchSize = 100;
       for (let i = 0; i < players.length; i += batchSize) {
         const batch = players.slice(i, i + batchSize);
+        console.log(`DEBUG: Processed bonus probability batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(players.length/batchSize)}`);
         
-        const batchResults = await Promise.all(
+        await Promise.all(
           batch.map(async (player: any) => {
             try {
-              const team = teams.find((t: any) => t.id === player.team);
               const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
               
-              const bonusProbabilities: { [key: string]: number } = {};
-              let totalProbability = 0;
-
               for (let gw = start; gw <= end; gw++) {
                 const willPlay = await estimatePlayerWillPlay(player, gw, position);
                 
                 if (willPlay) {
-                  // Calculate BPS and convert to match-normalized probability
-                  const projectedBPS = calculateHistoricBPS(player, position) * calculateFormMultiplier(player);
+                  // Calculate raw BPS projection
+                  const rawBPS = calculateHistoricBPS(player, position) * calculateFormMultiplier(player);
                   
-                  // Simplified match probability calculation based on BPS thresholds
-                  let probability = 0;
-                  if (projectedBPS >= 40) {
-                    probability = 0.35; // Very high BPS - likely to get bonus
-                  } else if (projectedBPS >= 30) {
-                    probability = 0.25; // High BPS - good chance
-                  } else if (projectedBPS >= 20) {
-                    probability = 0.15; // Decent BPS - moderate chance
-                  } else if (projectedBPS >= 15) {
-                    probability = 0.08; // Low BPS - small chance
-                  } else if (projectedBPS >= 10) {
-                    probability = 0.03; // Very low BPS - tiny chance
-                  } else {
-                    probability = 0.01; // Minimal BPS - almost no chance
-                  }
-                  
-                  // Adjust for position (attackers more likely to get bonus)
+                  // Apply position multipliers to raw BPS
+                  let adjustedBPS = rawBPS;
                   if (position === 'FWD') {
-                    probability *= 1.15;
+                    adjustedBPS *= 1.15;
                   } else if (position === 'MID') {
-                    probability *= 1.05;
+                    adjustedBPS *= 1.05;
                   } else if (position === 'DEF') {
-                    probability *= 0.95;
+                    adjustedBPS *= 0.95;
                   } else if (position === 'GKP') {
-                    probability *= 0.90;
+                    adjustedBPS *= 0.90;
                   }
                   
-                  bonusProbabilities[`gw${gw}`] = parseFloat(probability.toFixed(3));
-                  totalProbability += probability;
-                } else {
-                  bonusProbabilities[`gw${gw}`] = 0;
+                  teamGameweekBPS[player.team][gw].push({
+                    playerId: player.id,
+                    playerName: player.web_name,
+                    rawBPS: adjustedBPS,
+                    position
+                  });
                 }
               }
-
-              return {
-                playerId: player.id,
-                playerName: player.web_name,
-                teamName: team?.short_name || 'UNK',
-                position,
-                bonusProbabilities,
-                averageProbability: parseFloat((totalProbability / (end - start + 1)).toFixed(3))
-              };
             } catch (error) {
-              console.log(`Error processing bonus probabilities for ${player.web_name}:`, error);
-              return null;
+              console.log(`Error processing player ${player.web_name}:`, error);
             }
           })
         );
+      }
+      
+      // Second pass: Normalize probabilities within each team per gameweek to sum to 100%
+      const bonusProbabilities = [];
+      
+      for (const player of players) {
+        const team = teams.find((t: any) => t.id === player.team);
+        const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
         
-        // Filter out null results and add to main array
-        bonusProbabilities.push(...batchResults.filter(result => result !== null));
-        console.log(`DEBUG: Processed bonus probability batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(players.length/batchSize)}`);
+        const playerBonusProbabilities: { [key: string]: number } = {};
+        let totalProbability = 0;
+
+        for (let gw = start; gw <= end; gw++) {
+          const teamPlayers = teamGameweekBPS[player.team][gw];
+          const playerData = teamPlayers.find(p => p.playerId === player.id);
+          
+          if (playerData && teamPlayers.length > 0) {
+            // Calculate total BPS for this team in this gameweek
+            const totalTeamBPS = teamPlayers.reduce((sum, p) => sum + p.rawBPS, 0);
+            
+            // Convert to probability as percentage of team's total BPS
+            let probability = totalTeamBPS > 0 ? (playerData.rawBPS / totalTeamBPS) : 0;
+            
+            playerBonusProbabilities[`gw${gw}`] = parseFloat(probability.toFixed(3));
+            totalProbability += probability;
+          } else {
+            playerBonusProbabilities[`gw${gw}`] = 0;
+          }
+        }
+
+        bonusProbabilities.push({
+          playerId: player.id,
+          playerName: player.web_name,
+          teamName: team?.short_name || 'UNK',
+          position,
+          bonusProbabilities: playerBonusProbabilities,
+          averageProbability: parseFloat((totalProbability / (end - start + 1)).toFixed(3))
+        });
       }
 
-      console.log(`DEBUG: Generated match-normalized bonus probabilities for ${bonusProbabilities.length} players`);
+      console.log(`DEBUG: Generated team-normalized bonus probabilities for ${bonusProbabilities.length} players`);
       res.json(bonusProbabilities);
     } catch (error) {
       console.error("Error in player bonus probabilities:", error);
