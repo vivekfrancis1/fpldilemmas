@@ -64,7 +64,7 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Goal Range Compression**: Implemented realistic Premier League goal distributions by compressing team season totals.
 - **Clean Sheet Formula**: Updated to exponential decay calculation.
 - **Enhanced Context Multipliers**: Integrated weather, referee influence, post-international break, and travel distance fatigue multipliers.
-- **Comprehensive FPL Scoring System**: Implemented probability-based calculations for all official FPL scoring components (saves, goals conceded, cards, bonus points) for accurate projection totals.
+- **Comprehensive FPL Scoring System**: Implemented probability-based calculations for all official FPL scoring components (saves, goals conceded, cards, bonus points) with hybrid methodology using actual data for completed gameweeks, projections for future gameweeks, and hybrid formulas for current gameweeks.
 - **Position-Based Share Caps**: Implemented realistic caps for goal and assist share calculations to prevent unrealistic individual projections.
 - **Perfect Mathematical Balance**: Enhanced normalization system with redistribution logic ensures team and player totals maintain perfect balance.
 

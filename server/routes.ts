@@ -9878,32 +9878,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== FPL SCORING COMPONENT ENDPOINTS ====================
   
-  // Player Saves Projections - Based on probability calculations in projection-service.ts
+  // Player Saves Projections - Hybrid methodology: actual + projected + current gameweek hybrid
   app.get("/api/player-saves-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Saves Projections API called");
+      console.log("DEBUG: Player Saves Projections API called - using hybrid calculation");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
       
-      // Get player projections which already include saves calculations
+      // Get FPL bootstrap data for current gameweek info
+      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const fplData = await fplResponse.json();
+      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      // Get player projections for probability-based calculations
       const playerProjections = await projectionService.getPlayerProjections(startGameweek, endGameweek);
       
-      // Filter to only goalkeepers and extract saves data
-      const savesProjections = playerProjections
-        .filter((player: any) => player.position === 'GKP')
-        .map((player: any) => ({
-          playerId: player.playerId,
-          playerName: player.playerName,
-          teamName: player.teamName,
-          position: player.position,
-          saves: {}, // Will be populated from probability calculations
-          pointsFromSaves: player.pointsFromSaves || {},
-          totalSaves: player.totalSavesExpected || 0,
-          totalPoints: player.totalSavesPoints || 0,
-          averagePerGameweek: (player.totalSavesExpected || 0) / (endGameweek - startGameweek + 1)
-        }));
+      // Filter to only goalkeepers and implement hybrid methodology
+      const savesProjections = await Promise.all(
+        playerProjections
+          .filter((player: any) => player.position === 'GKP')
+          .map(async (player: any) => {
+            const saves: { [key: string]: number } = {};
+            const pointsFromSaves: { [key: string]: number } = {};
+            let totalSaves = 0;
+            let totalPoints = 0;
+            
+            // Process each gameweek with hybrid methodology
+            for (let gw = startGameweek; gw <= endGameweek; gw++) {
+              let gwSaves = 0;
+              let gwPoints = 0;
+              
+              if (gw < currentGameweek) {
+                // COMPLETED GAMEWEEKS: Use actual FPL data
+                try {
+                  const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
+                  const playerDetail = await playerDetailResponse.json();
+                  const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
+                  
+                  if (gameweekData && gameweekData.minutes > 0) {
+                    gwSaves = gameweekData.saves || 0;
+                    gwPoints = Math.floor(gwSaves / 3); // 1 point per 3 saves (no penalty save data in API)
+                  }
+                } catch (error) {
+                  console.log(`Using projection fallback for player ${player.playerId} GW${gw}: ${error}`);
+                  // Fallback to projection if API fails
+                  gwSaves = (player.saves && player.saves[`gw${gw}`]) || 0;
+                  gwPoints = (player.pointsFromSaves && player.pointsFromSaves[`gw${gw}`]) || 0;
+                }
+              } else if (gw === currentGameweek) {
+                // CURRENT GAMEWEEK: Hybrid of actual + projected based on match progress
+                try {
+                  const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
+                  const playerDetail = await playerDetailResponse.json();
+                  const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
+                  
+                  if (gameweekData && gameweekData.minutes > 0) {
+                    // Player has played - use actual data
+                    gwSaves = gameweekData.saves || 0;
+                    gwPoints = Math.floor(gwSaves / 3);
+                  } else {
+                    // Player hasn't played yet - use projection
+                    gwSaves = (player.saves && player.saves[`gw${gw}`]) || 0;
+                    gwPoints = (player.pointsFromSaves && player.pointsFromSaves[`gw${gw}`]) || 0;
+                  }
+                } catch (error) {
+                  // Fallback to projection
+                  gwSaves = (player.saves && player.saves[`gw${gw}`]) || 0;
+                  gwPoints = (player.pointsFromSaves && player.pointsFromSaves[`gw${gw}`]) || 0;
+                }
+              } else {
+                // FUTURE GAMEWEEKS: Use probability-based projections
+                gwSaves = (player.saves && player.saves[`gw${gw}`]) || 0;
+                gwPoints = (player.pointsFromSaves && player.pointsFromSaves[`gw${gw}`]) || 0;
+              }
+              
+              saves[`gw${gw}`] = parseFloat(gwSaves.toFixed(1));
+              pointsFromSaves[`gw${gw}`] = parseFloat(gwPoints.toFixed(1));
+              totalSaves += gwSaves;
+              totalPoints += gwPoints;
+            }
+            
+            return {
+              playerId: player.playerId,
+              playerName: player.playerName,
+              teamName: player.teamName,
+              position: player.position,
+              saves,
+              pointsFromSaves,
+              totalSaves: parseFloat(totalSaves.toFixed(1)),
+              totalPoints: parseFloat(totalPoints.toFixed(1)),
+              averagePerGameweek: parseFloat((totalSaves / (endGameweek - startGameweek + 1)).toFixed(1))
+            };
+          })
+      );
       
+      console.log(`DEBUG: Generated hybrid saves projections for ${savesProjections.length} goalkeepers`);
       res.json(savesProjections);
     } catch (error) {
       console.error("Error in player saves projections:", error);
@@ -9911,32 +9981,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Goals Conceded Projections - Based on probability calculations
+  // Player Goals Conceded Projections - Hybrid methodology: actual + projected + current gameweek hybrid
   app.get("/api/player-goals-conceded-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Goals Conceded Projections API called");
+      console.log("DEBUG: Player Goals Conceded Projections API called - using hybrid calculation");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
       
-      // Get player projections which already include goals conceded calculations
+      // Get FPL bootstrap data for current gameweek info
+      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const fplData = await fplResponse.json();
+      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      // Get player projections for probability-based calculations
       const playerProjections = await projectionService.getPlayerProjections(startGameweek, endGameweek);
       
-      // Filter to only GKP and DEF (affected by goals conceded)
-      const goalsConcededProjections = playerProjections
-        .filter((player: any) => player.position === 'GKP' || player.position === 'DEF')
-        .map((player: any) => ({
-          playerId: player.playerId,
-          playerName: player.playerName,
-          teamName: player.teamName,
-          position: player.position,
-          goalsConceded: {}, // Will be populated from probability calculations
-          pointsFromGoalsConceded: player.pointsFromGoalsConceded || {},
-          totalGoalsConceded: player.totalGoalsConceded || 0,
-          totalPoints: player.totalGoalsConcededPoints || 0,
-          averagePerGameweek: (player.totalGoalsConceded || 0) / (endGameweek - startGameweek + 1)
-        }));
+      // Filter to only GKP and DEF and implement hybrid methodology
+      const goalsConcededProjections = await Promise.all(
+        playerProjections
+          .filter((player: any) => player.position === 'GKP' || player.position === 'DEF')
+          .map(async (player: any) => {
+            const goalsConceded: { [key: string]: number } = {};
+            const pointsFromGoalsConceded: { [key: string]: number } = {};
+            let totalGoalsConceded = 0;
+            let totalPoints = 0;
+            
+            // Process each gameweek with hybrid methodology
+            for (let gw = startGameweek; gw <= endGameweek; gw++) {
+              let gwGoalsConceded = 0;
+              let gwPoints = 0;
+              
+              if (gw < currentGameweek) {
+                // COMPLETED GAMEWEEKS: Use actual FPL data
+                try {
+                  const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
+                  const playerDetail = await playerDetailResponse.json();
+                  const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
+                  
+                  if (gameweekData && gameweekData.minutes > 0) {
+                    gwGoalsConceded = gameweekData.goals_conceded || 0;
+                    gwPoints = -(Math.floor(gwGoalsConceded / 2)); // -1 point per 2 goals conceded
+                  }
+                } catch (error) {
+                  console.log(`Using projection fallback for player ${player.playerId} GW${gw}: ${error}`);
+                  // Fallback to projection if API fails
+                  gwGoalsConceded = (player.goalsConceded && player.goalsConceded[`gw${gw}`]) || 0;
+                  gwPoints = (player.pointsFromGoalsConceded && player.pointsFromGoalsConceded[`gw${gw}`]) || 0;
+                }
+              } else if (gw === currentGameweek) {
+                // CURRENT GAMEWEEK: Hybrid of actual + projected based on match progress
+                try {
+                  const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
+                  const playerDetail = await playerDetailResponse.json();
+                  const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
+                  
+                  if (gameweekData && gameweekData.minutes > 0) {
+                    // Player has played - use actual data
+                    gwGoalsConceded = gameweekData.goals_conceded || 0;
+                    gwPoints = -(Math.floor(gwGoalsConceded / 2));
+                  } else {
+                    // Player hasn't played yet - use projection
+                    gwGoalsConceded = (player.goalsConceded && player.goalsConceded[`gw${gw}`]) || 0;
+                    gwPoints = (player.pointsFromGoalsConceded && player.pointsFromGoalsConceded[`gw${gw}`]) || 0;
+                  }
+                } catch (error) {
+                  // Fallback to projection
+                  gwGoalsConceded = (player.goalsConceded && player.goalsConceded[`gw${gw}`]) || 0;
+                  gwPoints = (player.pointsFromGoalsConceded && player.pointsFromGoalsConceded[`gw${gw}`]) || 0;
+                }
+              } else {
+                // FUTURE GAMEWEEKS: Use probability-based projections
+                gwGoalsConceded = (player.goalsConceded && player.goalsConceded[`gw${gw}`]) || 0;
+                gwPoints = (player.pointsFromGoalsConceded && player.pointsFromGoalsConceded[`gw${gw}`]) || 0;
+              }
+              
+              goalsConceded[`gw${gw}`] = parseFloat(gwGoalsConceded.toFixed(1));
+              pointsFromGoalsConceded[`gw${gw}`] = parseFloat(gwPoints.toFixed(1));
+              totalGoalsConceded += gwGoalsConceded;
+              totalPoints += gwPoints;
+            }
+            
+            return {
+              playerId: player.playerId,
+              playerName: player.playerName,
+              teamName: player.teamName,
+              position: player.position,
+              goalsConceded,
+              pointsFromGoalsConceded,
+              totalGoalsConceded: parseFloat(totalGoalsConceded.toFixed(1)),
+              totalPoints: parseFloat(totalPoints.toFixed(1)),
+              averagePerGameweek: parseFloat((totalGoalsConceded / (endGameweek - startGameweek + 1)).toFixed(1))
+            };
+          })
+      );
       
+      console.log(`DEBUG: Generated hybrid goals conceded projections for ${goalsConcededProjections.length} players (GKP/DEF)`);
       res.json(goalsConcededProjections);
     } catch (error) {
       console.error("Error in player goals conceded projections:", error);
@@ -9944,30 +10084,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Yellow Cards Projections - Based on position-specific probabilities
+  // Player Yellow Cards Projections - Hybrid methodology: actual + projected + current gameweek hybrid
   app.get("/api/player-yellow-cards-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Yellow Cards Projections API called");
+      console.log("DEBUG: Player Yellow Cards Projections API called - using hybrid calculation");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
       
-      // Get player projections which already include yellow card calculations
+      // Get FPL bootstrap data for current gameweek info
+      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const fplData = await fplResponse.json();
+      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      // Get player projections for probability-based calculations
       const playerProjections = await projectionService.getPlayerProjections(startGameweek, endGameweek);
       
-      // Extract yellow card data for all players
-      const yellowCardProjections = playerProjections.map((player: any) => ({
-        playerId: player.playerId,
-        playerName: player.playerName,
-        teamName: player.teamName,
-        position: player.position,
-        yellowCards: {}, // Will be populated from probability calculations
-        pointsFromYellowCards: player.pointsFromYellowCards || {},
-        totalYellowCards: player.totalYellowCards || 0,
-        totalPoints: player.totalYellowCardPoints || 0,
-        averagePerGameweek: (player.totalYellowCards || 0) / (endGameweek - startGameweek + 1)
-      }));
+      // Extract yellow card data for all players with hybrid methodology
+      const yellowCardProjections = await Promise.all(
+        playerProjections.map(async (player: any) => {
+          const yellowCards: { [key: string]: number } = {};
+          const pointsFromYellowCards: { [key: string]: number } = {};
+          let totalYellowCards = 0;
+          let totalPoints = 0;
+          
+          // Process each gameweek with hybrid methodology
+          for (let gw = startGameweek; gw <= endGameweek; gw++) {
+            let gwYellowCards = 0;
+            let gwPoints = 0;
+            
+            if (gw < currentGameweek) {
+              // COMPLETED GAMEWEEKS: Use actual FPL data
+              try {
+                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
+                const playerDetail = await playerDetailResponse.json();
+                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
+                
+                if (gameweekData && gameweekData.minutes > 0) {
+                  gwYellowCards = gameweekData.yellow_cards || 0;
+                  gwPoints = -(gwYellowCards); // -1 point per yellow card
+                }
+              } catch (error) {
+                console.log(`Using projection fallback for player ${player.playerId} GW${gw}: ${error}`);
+                // Fallback to projection if API fails
+                gwYellowCards = (player.yellowCards && player.yellowCards[`gw${gw}`]) || 0;
+                gwPoints = (player.pointsFromYellowCards && player.pointsFromYellowCards[`gw${gw}`]) || 0;
+              }
+            } else if (gw === currentGameweek) {
+              // CURRENT GAMEWEEK: Hybrid of actual + projected based on match progress
+              try {
+                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
+                const playerDetail = await playerDetailResponse.json();
+                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
+                
+                if (gameweekData && gameweekData.minutes > 0) {
+                  // Player has played - use actual data
+                  gwYellowCards = gameweekData.yellow_cards || 0;
+                  gwPoints = -(gwYellowCards);
+                } else {
+                  // Player hasn't played yet - use projection
+                  gwYellowCards = (player.yellowCards && player.yellowCards[`gw${gw}`]) || 0;
+                  gwPoints = (player.pointsFromYellowCards && player.pointsFromYellowCards[`gw${gw}`]) || 0;
+                }
+              } catch (error) {
+                // Fallback to projection
+                gwYellowCards = (player.yellowCards && player.yellowCards[`gw${gw}`]) || 0;
+                gwPoints = (player.pointsFromYellowCards && player.pointsFromYellowCards[`gw${gw}`]) || 0;
+              }
+            } else {
+              // FUTURE GAMEWEEKS: Use position-specific probability calculations
+              gwYellowCards = (player.yellowCards && player.yellowCards[`gw${gw}`]) || 0;
+              gwPoints = (player.pointsFromYellowCards && player.pointsFromYellowCards[`gw${gw}`]) || 0;
+            }
+            
+            yellowCards[`gw${gw}`] = parseFloat(gwYellowCards.toFixed(2));
+            pointsFromYellowCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(2));
+            totalYellowCards += gwYellowCards;
+            totalPoints += gwPoints;
+          }
+          
+          return {
+            playerId: player.playerId,
+            playerName: player.playerName,
+            teamName: player.teamName,
+            position: player.position,
+            yellowCards,
+            pointsFromYellowCards,
+            totalYellowCards: parseFloat(totalYellowCards.toFixed(2)),
+            totalPoints: parseFloat(totalPoints.toFixed(2)),
+            averagePerGameweek: parseFloat((totalYellowCards / (endGameweek - startGameweek + 1)).toFixed(3))
+          };
+        })
+      );
       
+      console.log(`DEBUG: Generated hybrid yellow card projections for ${yellowCardProjections.length} players`);
       res.json(yellowCardProjections);
     } catch (error) {
       console.error("Error in player yellow cards projections:", error);
@@ -9975,30 +10185,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Red Cards Projections - Based on position-specific probabilities
+  // Player Red Cards Projections - Hybrid methodology: actual + projected + current gameweek hybrid
   app.get("/api/player-red-cards-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Red Cards Projections API called");
+      console.log("DEBUG: Player Red Cards Projections API called - using hybrid calculation");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
       
-      // Get player projections which already include red card calculations
+      // Get FPL bootstrap data for current gameweek info
+      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const fplData = await fplResponse.json();
+      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      // Get player projections for probability-based calculations
       const playerProjections = await projectionService.getPlayerProjections(startGameweek, endGameweek);
       
-      // Extract red card data for all players
-      const redCardProjections = playerProjections.map((player: any) => ({
-        playerId: player.playerId,
-        playerName: player.playerName,
-        teamName: player.teamName,
-        position: player.position,
-        redCards: {}, // Will be populated from probability calculations
-        pointsFromRedCards: player.pointsFromRedCards || {},
-        totalRedCards: player.totalRedCards || 0,
-        totalPoints: player.totalRedCardPoints || 0,
-        averagePerGameweek: (player.totalRedCards || 0) / (endGameweek - startGameweek + 1)
-      }));
+      // Extract red card data for all players with hybrid methodology
+      const redCardProjections = await Promise.all(
+        playerProjections.map(async (player: any) => {
+          const redCards: { [key: string]: number } = {};
+          const pointsFromRedCards: { [key: string]: number } = {};
+          let totalRedCards = 0;
+          let totalPoints = 0;
+          
+          // Process each gameweek with hybrid methodology
+          for (let gw = startGameweek; gw <= endGameweek; gw++) {
+            let gwRedCards = 0;
+            let gwPoints = 0;
+            
+            if (gw < currentGameweek) {
+              // COMPLETED GAMEWEEKS: Use actual FPL data
+              try {
+                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
+                const playerDetail = await playerDetailResponse.json();
+                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
+                
+                if (gameweekData && gameweekData.minutes > 0) {
+                  gwRedCards = gameweekData.red_cards || 0;
+                  gwPoints = -(gwRedCards * 3); // -3 points per red card
+                }
+              } catch (error) {
+                console.log(`Using projection fallback for player ${player.playerId} GW${gw}: ${error}`);
+                // Fallback to projection if API fails
+                gwRedCards = (player.redCards && player.redCards[`gw${gw}`]) || 0;
+                gwPoints = (player.pointsFromRedCards && player.pointsFromRedCards[`gw${gw}`]) || 0;
+              }
+            } else if (gw === currentGameweek) {
+              // CURRENT GAMEWEEK: Hybrid of actual + projected based on match progress
+              try {
+                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
+                const playerDetail = await playerDetailResponse.json();
+                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
+                
+                if (gameweekData && gameweekData.minutes > 0) {
+                  // Player has played - use actual data
+                  gwRedCards = gameweekData.red_cards || 0;
+                  gwPoints = -(gwRedCards * 3);
+                } else {
+                  // Player hasn't played yet - use projection
+                  gwRedCards = (player.redCards && player.redCards[`gw${gw}`]) || 0;
+                  gwPoints = (player.pointsFromRedCards && player.pointsFromRedCards[`gw${gw}`]) || 0;
+                }
+              } catch (error) {
+                // Fallback to projection
+                gwRedCards = (player.redCards && player.redCards[`gw${gw}`]) || 0;
+                gwPoints = (player.pointsFromRedCards && player.pointsFromRedCards[`gw${gw}`]) || 0;
+              }
+            } else {
+              // FUTURE GAMEWEEKS: Use position-specific probability calculations
+              gwRedCards = (player.redCards && player.redCards[`gw${gw}`]) || 0;
+              gwPoints = (player.pointsFromRedCards && player.pointsFromRedCards[`gw${gw}`]) || 0;
+            }
+            
+            redCards[`gw${gw}`] = parseFloat(gwRedCards.toFixed(3));
+            pointsFromRedCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
+            totalRedCards += gwRedCards;
+            totalPoints += gwPoints;
+          }
+          
+          return {
+            playerId: player.playerId,
+            playerName: player.playerName,
+            teamName: player.teamName,
+            position: player.position,
+            redCards,
+            pointsFromRedCards,
+            totalRedCards: parseFloat(totalRedCards.toFixed(3)),
+            totalPoints: parseFloat(totalPoints.toFixed(3)),
+            averagePerGameweek: parseFloat((totalRedCards / (endGameweek - startGameweek + 1)).toFixed(4))
+          };
+        })
+      );
       
+      console.log(`DEBUG: Generated hybrid red card projections for ${redCardProjections.length} players`);
       res.json(redCardProjections);
     } catch (error) {
       console.error("Error in player red cards projections:", error);
@@ -10006,30 +10286,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Bonus Points Projections - Based on BPS system simulation
+  // Player Bonus Points Projections - Hybrid methodology: actual + projected + current gameweek hybrid
   app.get("/api/player-bonus-points-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Bonus Points Projections API called");
+      console.log("DEBUG: Player Bonus Points Projections API called - using hybrid calculation");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
       
-      // Get player projections which already include bonus point calculations
+      // Get FPL bootstrap data for current gameweek info
+      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const fplData = await fplResponse.json();
+      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      // Get player projections for BPS-based calculations
       const playerProjections = await projectionService.getPlayerProjections(startGameweek, endGameweek);
       
-      // Extract bonus points data for all players
-      const bonusPointsProjections = playerProjections.map((player: any) => ({
-        playerId: player.playerId,
-        playerName: player.playerName,
-        teamName: player.teamName,
-        position: player.position,
-        bonusPoints: player.pointsFromBonus || {},
-        pointsFromBonus: player.pointsFromBonus || {},
-        totalBonusPoints: player.totalBonusPoints || 0,
-        totalPoints: player.totalBonusPoints || 0,
-        averagePerGameweek: (player.totalBonusPoints || 0) / (endGameweek - startGameweek + 1)
-      }));
+      // Extract bonus points data for all players with hybrid methodology
+      const bonusPointsProjections = await Promise.all(
+        playerProjections.map(async (player: any) => {
+          const bonusPoints: { [key: string]: number } = {};
+          const pointsFromBonus: { [key: string]: number } = {};
+          let totalBonusPoints = 0;
+          let totalPoints = 0;
+          
+          // Process each gameweek with hybrid methodology
+          for (let gw = startGameweek; gw <= endGameweek; gw++) {
+            let gwBonusPoints = 0;
+            let gwPoints = 0;
+            
+            if (gw < currentGameweek) {
+              // COMPLETED GAMEWEEKS: Use actual FPL data
+              try {
+                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
+                const playerDetail = await playerDetailResponse.json();
+                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
+                
+                if (gameweekData && gameweekData.minutes > 0) {
+                  gwBonusPoints = gameweekData.bonus || 0;
+                  gwPoints = gwBonusPoints; // Bonus points are direct FPL points
+                }
+              } catch (error) {
+                console.log(`Using projection fallback for player ${player.playerId} GW${gw}: ${error}`);
+                // Fallback to projection if API fails
+                gwBonusPoints = (player.pointsFromBonus && player.pointsFromBonus[`gw${gw}`]) || 0;
+                gwPoints = gwBonusPoints;
+              }
+            } else if (gw === currentGameweek) {
+              // CURRENT GAMEWEEK: Hybrid of actual + projected based on match progress
+              try {
+                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
+                const playerDetail = await playerDetailResponse.json();
+                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
+                
+                if (gameweekData && gameweekData.minutes > 0) {
+                  // Player has played - use actual data
+                  gwBonusPoints = gameweekData.bonus || 0;
+                  gwPoints = gwBonusPoints;
+                } else {
+                  // Player hasn't played yet - use BPS projection
+                  gwBonusPoints = (player.pointsFromBonus && player.pointsFromBonus[`gw${gw}`]) || 0;
+                  gwPoints = gwBonusPoints;
+                }
+              } catch (error) {
+                // Fallback to projection
+                gwBonusPoints = (player.pointsFromBonus && player.pointsFromBonus[`gw${gw}`]) || 0;
+                gwPoints = gwBonusPoints;
+              }
+            } else {
+              // FUTURE GAMEWEEKS: Use BPS system simulation
+              gwBonusPoints = (player.pointsFromBonus && player.pointsFromBonus[`gw${gw}`]) || 0;
+              gwPoints = gwBonusPoints;
+            }
+            
+            bonusPoints[`gw${gw}`] = parseFloat(gwBonusPoints.toFixed(2));
+            pointsFromBonus[`gw${gw}`] = parseFloat(gwPoints.toFixed(2));
+            totalBonusPoints += gwBonusPoints;
+            totalPoints += gwPoints;
+          }
+          
+          return {
+            playerId: player.playerId,
+            playerName: player.playerName,
+            teamName: player.teamName,
+            position: player.position,
+            bonusPoints,
+            pointsFromBonus,
+            totalBonusPoints: parseFloat(totalBonusPoints.toFixed(2)),
+            totalPoints: parseFloat(totalPoints.toFixed(2)),
+            averagePerGameweek: parseFloat((totalBonusPoints / (endGameweek - startGameweek + 1)).toFixed(2))
+          };
+        })
+      );
       
+      console.log(`DEBUG: Generated hybrid bonus points projections for ${bonusPointsProjections.length} players`);
       res.json(bonusPointsProjections);
     } catch (error) {
       console.error("Error in player bonus points projections:", error);
