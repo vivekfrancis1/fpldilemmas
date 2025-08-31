@@ -7439,13 +7439,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
 
       // Query database tables directly for maximum performance
-      const [savesData, goalsConcededData, yellowCardsData, redCardsData, bonusPointsData] = await Promise.all([
+      const [savesData, goalsConcededData, yellowCardsData, redCardsData] = await Promise.all([
         db.select().from(cachedPlayerSaves),
         db.select().from(cachedPlayerGoalsConceded), 
         db.select().from(cachedPlayerYellowCards),
-        db.select().from(cachedPlayerRedCards),
-        db.select().from(cachedPlayerBonusPoints)
+        db.select().from(cachedPlayerRedCards)
       ]);
+
+      // Fetch bonus probabilities using the new simplified calculation API
+      const bonusProbabilitiesResponse = await fetch(`http://localhost:5000/api/player-bonus-probabilities`);
+      if (!bonusProbabilitiesResponse.ok) throw new Error("Failed to fetch bonus probabilities");
+      const bonusProbabilitiesData = await bonusProbabilitiesResponse.json();
 
       // Still fetch core projection data via API (until cached)
       const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse] = await Promise.all([
@@ -7474,7 +7478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Handle defensive data structure (it returns an object with data property)
       const defensiveDataArray = defensiveData.data || [];
-      console.log(`DEBUG: Retrieved projection data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveDataArray.length}, Clean Sheets: ${cleanSheetsData.length}, DB Saves: ${savesData.length}, DB Goals Conceded: ${goalsConcededData.length}, DB Yellow Cards: ${yellowCardsData.length}, DB Red Cards: ${redCardsData.length}, DB Bonus Points: ${bonusPointsData.length}`);
+      console.log(`DEBUG: Retrieved projection data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveDataArray.length}, Clean Sheets: ${cleanSheetsData.length}, DB Saves: ${savesData.length}, DB Goals Conceded: ${goalsConcededData.length}, DB Yellow Cards: ${yellowCardsData.length}, DB Red Cards: ${redCardsData.length}, Bonus Probabilities: ${bonusProbabilitiesData.length}`);
       
       // Convert to lookup maps for fast access
       const goalsProjections: Record<number, Record<number, number>> = {};
@@ -7490,8 +7494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const yellowCardsPointsProjections: Record<number, Record<string, number>> = {};
       const redCardsProjections: Record<number, Record<string, number>> = {};
       const redCardsPointsProjections: Record<number, Record<string, number>> = {};
-      const bonusPointsProjections: Record<number, Record<string, number>> = {};
-      const bonusPointsPointsProjections: Record<number, Record<string, number>> = {};
+      const bonusProbabilities: Record<number, Record<string, number>> = {};
 
       goalsData.forEach((player: any) => {
         if (player.gameweekProjections) {
@@ -7553,9 +7556,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         redCardsPointsProjections[player.playerId] = player.pointsData as Record<string, number>;
       });
 
-      bonusPointsData.forEach((player: any) => {
-        bonusPointsProjections[player.playerId] = player.gameweekData as Record<string, number>;
-        bonusPointsPointsProjections[player.playerId] = player.pointsData as Record<string, number>;
+      // Process bonus probabilities data with simplified calculation (Probability × 1)
+      bonusProbabilitiesData.forEach((player: any) => {
+        bonusProbabilities[player.playerId] = player.bonusProbabilities;
       });
 
       // Create projections using authentic goals data from projection service
@@ -7592,7 +7595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const playerGoalsConceded = goalsConcededPointsProjections[fplPlayer.id] || {};
         const playerYellowCards = yellowCardsPointsProjections[fplPlayer.id] || {};
         const playerRedCards = redCardsPointsProjections[fplPlayer.id] || {};
-        const playerBonus = bonusPointsPointsProjections[fplPlayer.id] || {};
+        const playerBonusProbs = bonusProbabilities[fplPlayer.id] || {};
         
         // Position-specific clean sheet points
         const csPoints = position === 'GKP' || position === 'DEF' ? 4 : position === 'MID' ? 1 : 0;
@@ -7653,8 +7656,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromRedCards[`gw${gw}`] = Math.round(redCardsPoints * 100) / 100;
           totalRedCardsPoints += redCardsPoints;
           
-          // Bonus points from cached FPL scoring API (already calculated as FPL points)
-          const bonusPoints = playerBonus[`gw${gw}`] || 0;
+          // Bonus points using new simplified calculation: Probability × 1
+          const bonusProbability = playerBonusProbs[`gw${gw}`] || 0;
+          const bonusPoints = bonusProbability; // Simplified formula: Probability × 1
           pointsFromBonus[`gw${gw}`] = Math.round(bonusPoints * 100) / 100;
           totalBonusPoints += bonusPoints;
           
