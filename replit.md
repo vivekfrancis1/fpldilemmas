@@ -50,7 +50,7 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Player Projections**: AI-powered projection model for minutes, goals, assists, clean sheets, bonus points, and CBIT% for upcoming weeks.
 - **Player Goals Scored Projections**: Individual player goal projections with advanced fixture-level hybrid calculation methodology, including penalty taker adjustments.
 - **Player Assist Projections**: Individual player assist projections with dual-tab interface and hybrid calculation methodology.
-- **Player Total Points Projections**: Comprehensive FPL points projection combining all scoring components into gameweek table format with advanced hybrid calculation methodology and authentic FPL scoring rules.
+- **Player Total Points Projections**: Comprehensive FPL points projection combining all 10 official FPL scoring components (goals, assists, clean sheets, minutes, defensive contributions, saves, goals conceded, yellow cards, red cards, bonus points) into gameweek table format with advanced hybrid calculation methodology, authentic FPL scoring rules, and cached endpoint optimization for fast performance.
 - **Match Projections**: Data aggregator displaying projected goals and clean sheet odds for each team by gameweek.
 - **Team Goal/Clean Sheet Projections**: Advanced team-level forecasting using 8-phase spread betting market analysis and statistical modeling.
 - **Goal/Assist Share**: Dedicated tools showing team expected goals/assists breakdown by player percentage share, extended to 6 gameweeks with historical data and proper sorting.

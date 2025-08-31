@@ -38,7 +38,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
             {player.name} - GW{gameweek} Breakdown
           </div>
           <div className="text-xs text-gray-500 mb-2">
-            Completed GWs use full FPL data • Future GWs use projection tools
+            Comprehensive FPL scoring: Completed GWs use actual data • Future GWs use projections
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between items-center">
@@ -156,7 +156,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
             {player.name} - Range Total Breakdown
           </div>
           <div className="text-xs text-gray-500 mb-2">
-            Combines actual FPL data + projection tools
+            Complete FPL scoring: Actual data + comprehensive projections
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between items-center">

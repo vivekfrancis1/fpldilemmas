@@ -7435,11 +7435,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch all individual projections in parallel using cached endpoints for optimal performance
       const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse, savesResponse, goalsConcededResponse, yellowCardsResponse, redCardsResponse, bonusPointsResponse] = await Promise.all([
-        fetch(`http://localhost:5000/api/player-goals-scored-projections`),
-        fetch(`http://localhost:5000/api/player-assist-projections`),
-        fetch(`http://localhost:5000/api/player-minutes-projections`),
-        fetch(`http://localhost:5000/api/defensive-contribution-projections`),
-        fetch(`http://localhost:5000/api/team-cs-projections`),
+        fetch(`http://localhost:5000/api/goals-projections-cached`),
+        fetch(`http://localhost:5000/api/assist-projections-cached`),
+        fetch(`http://localhost:5000/api/minutes-projections-cached`),
+        fetch(`http://localhost:5000/api/defensive-contribution-projections-cached`),
+        fetch(`http://localhost:5000/api/team-cs-projections-cached`),
         fetch(`http://localhost:5000/api/cached/player-saves-projections`),
         fetch(`http://localhost:5000/api/cached/player-goals-conceded-projections`),
         fetch(`http://localhost:5000/api/cached/player-yellow-cards-projections`),
