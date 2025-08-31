@@ -729,36 +729,11 @@ export default function PlayerTotalPoints() {
               </div>
               <div className="fpl-card-content p-0">
                 <Tabs defaultValue="total" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 bg-gray-50 p-1 m-4 mb-0 rounded-lg gap-1">
+                  <TabsList className="grid w-full grid-cols-1 bg-gray-50 p-1 m-4 mb-0 rounded-lg gap-1">
                     <TabsTrigger value="total" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
                       <Trophy className="h-3 w-3 md:h-4 md:w-4" />
-                      <span className="hidden sm:inline">Total</span>
+                      <span className="hidden sm:inline">Total Points</span>
                       <span className="sm:hidden">Pts</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="goals" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
-                      <Target className="h-3 w-3 md:h-4 md:w-4" />
-                      <span className="hidden sm:inline">Goals</span>
-                      <span className="sm:hidden">G</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="assists" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
-                      <Zap className="h-3 w-3 md:h-4 md:w-4" />
-                      <span className="hidden sm:inline">Assists</span>
-                      <span className="sm:hidden">A</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="cleansheets" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
-                      <Shield className="h-3 w-3 md:h-4 md:w-4" />
-                      <span className="hidden sm:inline">CS</span>
-                      <span className="sm:hidden">CS</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="defensive" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
-                      <Swords className="h-3 w-3 md:h-4 md:w-4" />
-                      <span className="hidden sm:inline">Defense</span>
-                      <span className="sm:hidden">DC</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="minutes" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
-                      <Timer className="h-3 w-3 md:h-4 md:w-4" />
-                      <span className="hidden sm:inline">Minutes</span>
-                      <span className="sm:hidden">M</span>
                     </TabsTrigger>
                   </TabsList>
 
@@ -780,95 +755,7 @@ export default function PlayerTotalPoints() {
                   />
                 </TabsContent>
 
-                {/* Goals Tab */}
-                <TabsContent value="goals">
-                  <ComponentTable
-                    component="goals"
-                    filteredAndSortedData={filteredAndSortedData}
-                    gameweekRange={gameweekRange}
-                    handleSort={handleSort}
-                    getSortIcon={getSortIcon}
-                    colorScheme={{
-                      bg: 'bg-green-50',
-                      totalBg: 'bg-gradient-to-r from-green-50 to-emerald-50',
-                      textColor: 'text-green-800',
-                      totalField: 'totalPointsFromGoals',
-                      pointsField: 'pointsFromGoals'
-                    }}
-                  />
-                </TabsContent>
 
-                {/* Assists Tab */}
-                <TabsContent value="assists">
-                  <ComponentTable
-                    component="assists"
-                    filteredAndSortedData={filteredAndSortedData}
-                    gameweekRange={gameweekRange}
-                    handleSort={handleSort}
-                    getSortIcon={getSortIcon}
-                    colorScheme={{
-                      bg: 'bg-blue-50',
-                      totalBg: 'bg-gradient-to-r from-blue-50 to-cyan-50',
-                      textColor: 'text-blue-800',
-                      totalField: 'totalPointsFromAssists',
-                      pointsField: 'pointsFromAssists'
-                    }}
-                  />
-                </TabsContent>
-
-                {/* Clean Sheets Tab */}
-                <TabsContent value="cleansheets">
-                  <ComponentTable
-                    component="cleansheets"
-                    filteredAndSortedData={filteredAndSortedData}
-                    gameweekRange={gameweekRange}
-                    handleSort={handleSort}
-                    getSortIcon={getSortIcon}
-                    colorScheme={{
-                      bg: 'bg-yellow-50',
-                      totalBg: 'bg-gradient-to-r from-yellow-50 to-orange-50',
-                      textColor: 'text-yellow-800',
-                      totalField: 'totalPointsFromCleanSheets',
-                      pointsField: 'pointsFromCleanSheets'
-                    }}
-                  />
-                </TabsContent>
-
-                {/* Defensive Tab */}
-                <TabsContent value="defensive">
-                  <ComponentTable
-                    component="defensive"
-                    filteredAndSortedData={filteredAndSortedData}
-                    gameweekRange={gameweekRange}
-                    handleSort={handleSort}
-                    getSortIcon={getSortIcon}
-                    colorScheme={{
-                      bg: 'bg-orange-50',
-                      totalBg: 'bg-gradient-to-r from-orange-50 to-red-50',
-                      textColor: 'text-orange-800',
-                      totalField: 'totalPointsFromDefensiveContributions',
-                      pointsField: 'pointsFromDefensiveContributions'
-                    }}
-                  />
-                </TabsContent>
-
-                {/* Minutes Tab */}
-                <TabsContent value="minutes">
-                  <ComponentTable
-                    component="minutes"
-                    filteredAndSortedData={filteredAndSortedData}
-                    gameweekRange={gameweekRange}
-                    handleSort={handleSort}
-                    getSortIcon={getSortIcon}
-                    colorScheme={{
-                      bg: 'bg-purple-50',
-                      totalBg: 'bg-gradient-to-r from-purple-50 to-violet-50',
-                      textColor: 'text-purple-800',
-                      totalField: 'totalPointsFromMinutes',
-                      pointsField: 'pointsFromMinutes'
-                    }}
-                  />
-                </TabsContent>
                 </Tabs>
               </div>
             </div>
