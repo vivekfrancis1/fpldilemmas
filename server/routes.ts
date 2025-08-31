@@ -9361,7 +9361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===============================
 
   // Cache-first Player Goals Projections
-  app.get("/api/player-goals-projections-cached", async (req, res) => {
+  app.get("/api/goals-projections-cached", async (req, res) => {
     try {
       console.log("DEBUG: Cache-first goals projections requested");
       
@@ -9470,7 +9470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cache-first Player Assist Projections  
-  app.get("/api/player-assists-projections-cached", async (req, res) => {
+  app.get("/api/assist-projections-cached", async (req, res) => {
     try {
       console.log("DEBUG: Cache-first assist projections requested");
       
@@ -9572,7 +9572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cache-first Player Minutes Projections
-  app.get("/api/player-minutes-projections-cached", async (req, res) => {
+  app.get("/api/minutes-projections-cached", async (req, res) => {
     try {
       console.log("DEBUG: Cache-first minutes projections requested");
       
