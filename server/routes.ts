@@ -9876,6 +9876,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ Gameweek Cache API routes registered successfully");
 
+  // ==================== FPL SCORING COMPONENT ENDPOINTS ====================
+  
+  // Player Saves Projections - Based on probability calculations in projection-service.ts
+  app.get("/api/player-saves-projections", async (req, res) => {
+    try {
+      console.log("DEBUG: Player Saves Projections API called");
+      
+      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
+      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
+      
+      // Get player projections which already include saves calculations
+      const playerProjections = await projectionService.getPlayerProjections(startGameweek, endGameweek);
+      
+      // Filter to only goalkeepers and extract saves data
+      const savesProjections = playerProjections
+        .filter((player: any) => player.position === 'GKP')
+        .map((player: any) => ({
+          playerId: player.playerId,
+          playerName: player.playerName,
+          teamName: player.teamName,
+          position: player.position,
+          saves: {}, // Will be populated from probability calculations
+          pointsFromSaves: player.pointsFromSaves || {},
+          totalSaves: player.totalSavesExpected || 0,
+          totalPoints: player.totalSavesPoints || 0,
+          averagePerGameweek: (player.totalSavesExpected || 0) / (endGameweek - startGameweek + 1)
+        }));
+      
+      res.json(savesProjections);
+    } catch (error) {
+      console.error("Error in player saves projections:", error);
+      res.status(500).json({ error: "Failed to get player saves projections" });
+    }
+  });
+
+  // Player Goals Conceded Projections - Based on probability calculations
+  app.get("/api/player-goals-conceded-projections", async (req, res) => {
+    try {
+      console.log("DEBUG: Player Goals Conceded Projections API called");
+      
+      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
+      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
+      
+      // Get player projections which already include goals conceded calculations
+      const playerProjections = await projectionService.getPlayerProjections(startGameweek, endGameweek);
+      
+      // Filter to only GKP and DEF (affected by goals conceded)
+      const goalsConcededProjections = playerProjections
+        .filter((player: any) => player.position === 'GKP' || player.position === 'DEF')
+        .map((player: any) => ({
+          playerId: player.playerId,
+          playerName: player.playerName,
+          teamName: player.teamName,
+          position: player.position,
+          goalsConceded: {}, // Will be populated from probability calculations
+          pointsFromGoalsConceded: player.pointsFromGoalsConceded || {},
+          totalGoalsConceded: player.totalGoalsConceded || 0,
+          totalPoints: player.totalGoalsConcededPoints || 0,
+          averagePerGameweek: (player.totalGoalsConceded || 0) / (endGameweek - startGameweek + 1)
+        }));
+      
+      res.json(goalsConcededProjections);
+    } catch (error) {
+      console.error("Error in player goals conceded projections:", error);
+      res.status(500).json({ error: "Failed to get player goals conceded projections" });
+    }
+  });
+
+  // Player Yellow Cards Projections - Based on position-specific probabilities
+  app.get("/api/player-yellow-cards-projections", async (req, res) => {
+    try {
+      console.log("DEBUG: Player Yellow Cards Projections API called");
+      
+      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
+      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
+      
+      // Get player projections which already include yellow card calculations
+      const playerProjections = await projectionService.getPlayerProjections(startGameweek, endGameweek);
+      
+      // Extract yellow card data for all players
+      const yellowCardProjections = playerProjections.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamName,
+        position: player.position,
+        yellowCards: {}, // Will be populated from probability calculations
+        pointsFromYellowCards: player.pointsFromYellowCards || {},
+        totalYellowCards: player.totalYellowCards || 0,
+        totalPoints: player.totalYellowCardPoints || 0,
+        averagePerGameweek: (player.totalYellowCards || 0) / (endGameweek - startGameweek + 1)
+      }));
+      
+      res.json(yellowCardProjections);
+    } catch (error) {
+      console.error("Error in player yellow cards projections:", error);
+      res.status(500).json({ error: "Failed to get player yellow cards projections" });
+    }
+  });
+
+  // Player Red Cards Projections - Based on position-specific probabilities
+  app.get("/api/player-red-cards-projections", async (req, res) => {
+    try {
+      console.log("DEBUG: Player Red Cards Projections API called");
+      
+      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
+      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
+      
+      // Get player projections which already include red card calculations
+      const playerProjections = await projectionService.getPlayerProjections(startGameweek, endGameweek);
+      
+      // Extract red card data for all players
+      const redCardProjections = playerProjections.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamName,
+        position: player.position,
+        redCards: {}, // Will be populated from probability calculations
+        pointsFromRedCards: player.pointsFromRedCards || {},
+        totalRedCards: player.totalRedCards || 0,
+        totalPoints: player.totalRedCardPoints || 0,
+        averagePerGameweek: (player.totalRedCards || 0) / (endGameweek - startGameweek + 1)
+      }));
+      
+      res.json(redCardProjections);
+    } catch (error) {
+      console.error("Error in player red cards projections:", error);
+      res.status(500).json({ error: "Failed to get player red cards projections" });
+    }
+  });
+
+  // Player Bonus Points Projections - Based on BPS system simulation
+  app.get("/api/player-bonus-points-projections", async (req, res) => {
+    try {
+      console.log("DEBUG: Player Bonus Points Projections API called");
+      
+      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
+      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
+      
+      // Get player projections which already include bonus point calculations
+      const playerProjections = await projectionService.getPlayerProjections(startGameweek, endGameweek);
+      
+      // Extract bonus points data for all players
+      const bonusPointsProjections = playerProjections.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamName,
+        position: player.position,
+        bonusPoints: player.pointsFromBonus || {},
+        pointsFromBonus: player.pointsFromBonus || {},
+        totalBonusPoints: player.totalBonusPoints || 0,
+        totalPoints: player.totalBonusPoints || 0,
+        averagePerGameweek: (player.totalBonusPoints || 0) / (endGameweek - startGameweek + 1)
+      }));
+      
+      res.json(bonusPointsProjections);
+    } catch (error) {
+      console.error("Error in player bonus points projections:", error);
+      res.status(500).json({ error: "Failed to get player bonus points projections" });
+    }
+  });
+
+  console.log("✓ FPL Scoring Component API routes registered successfully");
+
   const httpServer = createServer(app);
   return httpServer;
 }

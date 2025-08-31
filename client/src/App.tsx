@@ -50,6 +50,11 @@ import AdminGameweekCache from "./pages/admin-gameweek-cache";
 import DefensiveContributionProjections from "./pages/defensive-contribution-projections";
 import PlayerDefensiveContributions from "./pages/player-defensive-contributions";
 import ProjectionDocumentation from "./pages/projection-documentation";
+import PlayerSaves from "./pages/player-saves";
+import PlayerGoalsConceded from "./pages/player-goals-conceded";
+import PlayerYellowCards from "./pages/player-yellow-cards";
+import PlayerRedCards from "./pages/player-red-cards";
+import PlayerBonusPoints from "./pages/player-bonus-points";
 
 
 function Router() {
@@ -92,6 +97,11 @@ function Router() {
       <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
       <Route path="/defensive-contribution-projections" component={DefensiveContributionProjections} />
       <Route path="/player-defensive-contributions" component={PlayerDefensiveContributions} />
+      <Route path="/player-saves" component={PlayerSaves} />
+      <Route path="/player-goals-conceded" component={PlayerGoalsConceded} />
+      <Route path="/player-yellow-cards" component={PlayerYellowCards} />
+      <Route path="/player-red-cards" component={PlayerRedCards} />
+      <Route path="/player-bonus-points" component={PlayerBonusPoints} />
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
       <Route path="/season-projections" component={SeasonProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
