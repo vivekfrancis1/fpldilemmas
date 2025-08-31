@@ -451,8 +451,8 @@ export default function Fixtures() {
         {/* Unified Page Header */}
         <div className="fpl-page-header">
           <div className="fpl-page-title">
-            <Calendar className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
-            Fixture Analyzer
+            <Calendar className="h-8 w-8" />
+            <h1>Fixture Analyzer</h1>
           </div>
           <p className="fpl-page-subtitle">
             Analyze upcoming fixtures from difficulty, attacking, and defensive perspectives

@@ -201,8 +201,8 @@ export default function RecentPriceChanges() {
       {/* Unified Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-title">
-          <Calendar className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
-          Recent Price Changes
+          <Calendar className="h-8 w-8" />
+          <h1>Recent Price Changes</h1>
         </div>
         <p className="fpl-page-subtitle">
           All season price changes ordered by recency and significance

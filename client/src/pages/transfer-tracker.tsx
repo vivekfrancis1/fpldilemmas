@@ -217,8 +217,8 @@ export default function TransferTracker() {
       {/* Unified Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-title">
-          <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
-          Transfer Tracker
+          <BarChart3 className="h-8 w-8" />
+          <h1>Transfer Tracker</h1>
         </div>
         <p className="fpl-page-subtitle">
           Comprehensive transfer analysis and ownership tracking for all FPL players
