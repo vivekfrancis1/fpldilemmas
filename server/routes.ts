@@ -4721,7 +4721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Skip players with very low expected minutes (likely not regular players)
             if (currentPlayer) {
               const expectedMinutes = calculateExpectedMinutes(currentPlayer, teamPlayers);
-              if (expectedMinutes < 400) {
+              if (expectedMinutes < 100) {
                 console.log(`DEBUG: Skipping ${playerData.name} - too few expected minutes (${expectedMinutes})`);
                 return;
               }
