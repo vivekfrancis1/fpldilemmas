@@ -199,13 +199,15 @@ export default function OpenFPLProjections() {
       <div className="fpl-page-container">
         {/* Unified Page Header */}
         <div className="fpl-page-header">
-          <div className="fpl-page-title">
-            <Brain className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
-            Open FPL Projections
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Brain className="h-8 w-8" />
+              <h1>OpenFPL Projections</h1>
+            </div>
+            <p className="fpl-page-subtitle">
+              Advanced ML ensemble predictions using XGBoost + Random Forest models for comprehensive player analysis
+            </p>
           </div>
-          <p className="fpl-page-subtitle">
-            🤖 Advanced ML ensemble predictions using XGBoost + Random Forest models
-          </p>
         </div>
 
         <div className="fpl-section-spacing">
