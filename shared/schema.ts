@@ -234,6 +234,8 @@ import {
   index,
   uniqueIndex,
   date,
+  real,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 
 // Session storage table
@@ -861,6 +863,74 @@ export type InsertFplCreatorTracking = typeof fplCreatorTracking.$inferInsert;
 
 export const insertFplCreatorTrackingSchema = createInsertSchema(fplCreatorTracking);
 export type InsertUnifiedProjectionSettings = typeof unifiedProjectionSettings.$inferInsert;
+
+// Player Projection Cache Tables
+export const playerGoalsProjections = pgTable("player_goals_projections", {
+  playerId: integer("player_id").notNull(),
+  gameweek: integer("gameweek").notNull(),
+  season: text("season").notNull().default("2025/26"),
+  goals: real("goals").notNull().default(0),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.playerId, table.gameweek] }),
+}));
+
+export const playerAssistProjections = pgTable("player_assist_projections", {
+  playerId: integer("player_id").notNull(),
+  gameweek: integer("gameweek").notNull(),
+  season: text("season").notNull().default("2025/26"),
+  assists: real("assists").notNull().default(0),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.playerId, table.gameweek] }),
+}));
+
+export const teamCleanSheetProjections = pgTable("team_clean_sheet_projections", {
+  teamId: integer("team_id").notNull(),
+  gameweek: integer("gameweek").notNull(),
+  season: text("season").notNull().default("2025/26"),
+  cleanSheetProbability: real("clean_sheet_probability").notNull().default(0),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.teamId, table.gameweek] }),
+}));
+
+export const playerDefensiveProjections = pgTable("player_defensive_projections", {
+  playerId: integer("player_id").notNull(),
+  gameweek: integer("gameweek").notNull(),
+  season: text("season").notNull().default("2025/26"),
+  defensiveContribution: real("defensive_contribution").notNull().default(0),
+  points: real("points").notNull().default(0),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.playerId, table.gameweek] }),
+}));
+
+export const playerMinutesProjections = pgTable("player_minutes_projections", {
+  playerId: integer("player_id").notNull(),
+  gameweek: integer("gameweek").notNull(),
+  season: text("season").notNull().default("2025/26"),
+  minutes: real("minutes").notNull().default(0),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.playerId, table.gameweek] }),
+}));
+
+// Types for projection cache tables
+export type PlayerGoalsProjection = typeof playerGoalsProjections.$inferSelect;
+export type InsertPlayerGoalsProjection = typeof playerGoalsProjections.$inferInsert;
+
+export type PlayerAssistProjection = typeof playerAssistProjections.$inferSelect;
+export type InsertPlayerAssistProjection = typeof playerAssistProjections.$inferInsert;
+
+export type TeamCleanSheetProjection = typeof teamCleanSheetProjections.$inferSelect;
+export type InsertTeamCleanSheetProjection = typeof teamCleanSheetProjections.$inferInsert;
+
+export type PlayerDefensiveProjection = typeof playerDefensiveProjections.$inferSelect;
+export type InsertPlayerDefensiveProjection = typeof playerDefensiveProjections.$inferInsert;
+
+export type PlayerMinutesProjection = typeof playerMinutesProjections.$inferSelect;
+export type InsertPlayerMinutesProjection = typeof playerMinutesProjections.$inferInsert;
 
 // Gameweek Data Cache Tables - Store actual FPL data when gameweeks complete
 export const gameweekPlayerDataTable = pgTable("gameweek_player_data", {
