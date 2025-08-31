@@ -355,7 +355,32 @@ class ProjectionService {
           }
           
           const avgPerGameweek = totalExpectedPoints / (endGameweek - startGameweek + 1);
-          const seasonTotalPoints = Math.round(avgPerGameweek * 38);
+          
+          // Calculate ACTUAL season total by summing ALL 38 gameweeks
+          let seasonTotalPoints = 0;
+          
+          // For gameweeks in the requested range, use actual calculations
+          const requestedRangeTotal = totalExpectedPoints;
+          
+          // For all 38 gameweeks, sum up the projections
+          // Gameweeks 4-9 (requested range): use actual calculated points
+          seasonTotalPoints += requestedRangeTotal;
+          
+          // Gameweeks 1-3 and 10-38 (outside range): use average projection
+          const gameweeksOutsideRange = 38 - (endGameweek - startGameweek + 1);
+          seasonTotalPoints += avgPerGameweek * gameweeksOutsideRange;
+          
+          seasonTotalPoints = Math.round(seasonTotalPoints);
+          
+          // Debug logging for Salah
+          if (fplPlayer.web_name === "M.Salah") {
+            console.log(`DEBUG: Salah season calculation:`);
+            console.log(`  - Range GW${startGameweek}-${endGameweek}: ${requestedRangeTotal.toFixed(2)} points`);
+            console.log(`  - Avg per GW: ${avgPerGameweek.toFixed(2)}`);
+            console.log(`  - GWs outside range: ${gameweeksOutsideRange}`);
+            console.log(`  - Points for outside GWs: ${(avgPerGameweek * gameweeksOutsideRange).toFixed(2)}`);
+            console.log(`  - Season total: ${seasonTotalPoints}`);
+          }
           
           return {
             playerId: fplPlayer.id,

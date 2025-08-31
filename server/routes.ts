@@ -7684,7 +7684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ownership: parseFloat(fplPlayer.selected_by_percent),
           gameweekProjections,
           totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
-          seasonTotalPoints: Math.round(totalExpectedPoints * 100) / 100,
+          seasonTotalPoints: Math.round((totalExpectedPoints / (end - start + 1)) * 38 * 100) / 100,
           averagePerGameweek: Math.round((totalExpectedPoints / (end - start + 1)) * 100) / 100,
           pointsFromGoals,
           pointsFromAssists,
