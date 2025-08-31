@@ -7542,6 +7542,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Projection Cache Management API
+  app.get("/api/projection-cache/stats", async (req, res) => {
+    try {
+      const { projectionCacheWorker } = await import('./projection-cache-worker');
+      const stats = await projectionCacheWorker.getCacheStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error getting cache stats:", error);
+      res.status(500).json({ error: "Failed to get cache statistics" });
+    }
+  });
+
+  app.post("/api/projection-cache/update", async (req, res) => {
+    try {
+      const { projectionCacheScheduler } = await import('./projection-cache-scheduler');
+      const result = await projectionCacheScheduler.manualUpdate();
+      res.json(result);
+    } catch (error) {
+      console.error("Error updating cache:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Cache update failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      });
+    }
+  });
+
+  app.get("/api/projection-cache/schedule", async (req, res) => {
+    try {
+      const { projectionCacheScheduler } = await import('./projection-cache-scheduler');
+      const nextRun = projectionCacheScheduler.getNextScheduledRun();
+      res.json({
+        nextScheduledRun: nextRun.toISOString(),
+        scheduleTimes: ['07:00', '19:00']
+      });
+    } catch (error) {
+      console.error("Error getting schedule info:", error);
+      res.status(500).json({ error: "Failed to get schedule information" });
+    }
+  });
+
   // Player Point Breakdowns API - Get specific point categories
   app.get("/api/player-point-breakdowns", async (req, res) => {
     try {
