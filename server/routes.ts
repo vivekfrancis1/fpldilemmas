@@ -11,7 +11,12 @@ import {
   playerAssistProjections,
   teamCleanSheetProjections,
   playerMinutesProjections,
-  playerDefensiveProjections
+  playerDefensiveProjections,
+  cachedPlayerSaves,
+  cachedPlayerGoalsConceded,
+  cachedPlayerYellowCards,
+  cachedPlayerRedCards,
+  cachedPlayerBonusPoints
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
@@ -7433,49 +7438,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const bootstrapData = await bootstrapResponse.json();
 
-      // Fetch all individual projections in parallel using cached endpoints for optimal performance
-      const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse, savesResponse, goalsConcededResponse, yellowCardsResponse, redCardsResponse, bonusPointsResponse] = await Promise.all([
+      // Query database tables directly for maximum performance
+      const [savesData, goalsConcededData, yellowCardsData, redCardsData, bonusPointsData] = await Promise.all([
+        db.select().from(cachedPlayerSaves),
+        db.select().from(cachedPlayerGoalsConceded), 
+        db.select().from(cachedPlayerYellowCards),
+        db.select().from(cachedPlayerRedCards),
+        db.select().from(cachedPlayerBonusPoints)
+      ]);
+
+      // Still fetch core projection data via API (until cached)
+      const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse] = await Promise.all([
         fetch(`http://localhost:5000/api/goals-projections-cached`),
         fetch(`http://localhost:5000/api/assist-projections-cached`),
         fetch(`http://localhost:5000/api/minutes-projections-cached`),
         fetch(`http://localhost:5000/api/defensive-contribution-projections-cached`),
-        fetch(`http://localhost:5000/api/team-cs-projections-cached`),
-        fetch(`http://localhost:5000/api/cached/player-saves-projections`),
-        fetch(`http://localhost:5000/api/cached/player-goals-conceded-projections`),
-        fetch(`http://localhost:5000/api/cached/player-yellow-cards-projections`),
-        fetch(`http://localhost:5000/api/cached/player-red-cards-projections`),
-        fetch(`http://localhost:5000/api/cached/player-bonus-points-projections`)
+        fetch(`http://localhost:5000/api/team-cs-projections-cached`)
       ]);
 
-      // Check all responses
+      // Check API responses
       if (!goalsResponse.ok) throw new Error("Failed to fetch goals projections");
       if (!assistsResponse.ok) throw new Error("Failed to fetch assists projections");
       if (!minutesResponse.ok) throw new Error("Failed to fetch minutes projections");
       if (!defensiveResponse.ok) throw new Error("Failed to fetch defensive projections");
       if (!cleanSheetsResponse.ok) throw new Error("Failed to fetch clean sheets projections");
-      if (!savesResponse.ok) throw new Error("Failed to fetch saves projections");
-      if (!goalsConcededResponse.ok) throw new Error("Failed to fetch goals conceded projections");
-      if (!yellowCardsResponse.ok) throw new Error("Failed to fetch yellow cards projections");
-      if (!redCardsResponse.ok) throw new Error("Failed to fetch red cards projections");
-      if (!bonusPointsResponse.ok) throw new Error("Failed to fetch bonus points projections");
 
-      // Parse all projection data
-      const [goalsData, assistsData, minutesData, defensiveData, cleanSheetsData, savesData, goalsConcededData, yellowCardsData, redCardsData, bonusPointsData] = await Promise.all([
+      // Parse API data (goals, assists, minutes, defensive, clean sheets)
+      const [goalsData, assistsData, minutesData, defensiveData, cleanSheetsData] = await Promise.all([
         goalsResponse.json(),
         assistsResponse.json(),
         minutesResponse.json(),
         defensiveResponse.json(),
-        cleanSheetsResponse.json(),
-        savesResponse.json(),
-        goalsConcededResponse.json(),
-        yellowCardsResponse.json(),
-        redCardsResponse.json(),
-        bonusPointsResponse.json()
+        cleanSheetsResponse.json()
       ]);
 
       // Handle defensive data structure (it returns an object with data property)
       const defensiveDataArray = defensiveData.data || [];
-      console.log(`DEBUG: Retrieved projection data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveDataArray.length}, Clean Sheets: ${cleanSheetsData.length}, Saves: ${savesData.length}, Goals Conceded: ${goalsConcededData.length}, Yellow Cards: ${yellowCardsData.length}, Red Cards: ${redCardsData.length}, Bonus Points: ${bonusPointsData.length}`);
+      console.log(`DEBUG: Retrieved projection data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveDataArray.length}, Clean Sheets: ${cleanSheetsData.length}, DB Saves: ${savesData.length}, DB Goals Conceded: ${goalsConcededData.length}, DB Yellow Cards: ${yellowCardsData.length}, DB Red Cards: ${redCardsData.length}, DB Bonus Points: ${bonusPointsData.length}`);
       
       // Convert to lookup maps for fast access
       const goalsProjections: Record<number, Record<number, number>> = {};
@@ -7484,10 +7483,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const defensiveProjections: Record<number, Record<number, { dc: number, points: number }>> = {};
       const teamCleanSheetProjections: Record<number, Record<number, number>> = {};
       const savesProjections: Record<number, Record<string, number>> = {};
+      const savesPointsProjections: Record<number, Record<string, number>> = {};
       const goalsConcededProjections: Record<number, Record<string, number>> = {};
+      const goalsConcededPointsProjections: Record<number, Record<string, number>> = {};
       const yellowCardsProjections: Record<number, Record<string, number>> = {};
+      const yellowCardsPointsProjections: Record<number, Record<string, number>> = {};
       const redCardsProjections: Record<number, Record<string, number>> = {};
+      const redCardsPointsProjections: Record<number, Record<string, number>> = {};
       const bonusPointsProjections: Record<number, Record<string, number>> = {};
+      const bonusPointsPointsProjections: Record<number, Record<string, number>> = {};
 
       goalsData.forEach((player: any) => {
         if (player.gameweekProjections) {
@@ -7528,35 +7532,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Populate FPL scoring component projections from cached data
+      // Populate FPL scoring component projections from database cache data
       savesData.forEach((player: any) => {
-        if (player.pointsFromSaves) {
-          savesProjections[player.playerId] = player.pointsFromSaves;
-        }
+        savesProjections[player.playerId] = player.gameweekData as Record<string, number>;
+        savesPointsProjections[player.playerId] = player.pointsData as Record<string, number>;
       });
 
       goalsConcededData.forEach((player: any) => {
-        if (player.pointsFromGoalsConceded) {
-          goalsConcededProjections[player.playerId] = player.pointsFromGoalsConceded;
-        }
+        goalsConcededProjections[player.playerId] = player.gameweekData as Record<string, number>;
+        goalsConcededPointsProjections[player.playerId] = player.pointsData as Record<string, number>;
       });
 
       yellowCardsData.forEach((player: any) => {
-        if (player.pointsFromYellowCards) {
-          yellowCardsProjections[player.playerId] = player.pointsFromYellowCards;
-        }
+        yellowCardsProjections[player.playerId] = player.gameweekData as Record<string, number>;
+        yellowCardsPointsProjections[player.playerId] = player.pointsData as Record<string, number>;
       });
 
       redCardsData.forEach((player: any) => {
-        if (player.pointsFromRedCards) {
-          redCardsProjections[player.playerId] = player.pointsFromRedCards;
-        }
+        redCardsProjections[player.playerId] = player.gameweekData as Record<string, number>;
+        redCardsPointsProjections[player.playerId] = player.pointsData as Record<string, number>;
       });
 
       bonusPointsData.forEach((player: any) => {
-        if (player.pointsFromBonus) {
-          bonusPointsProjections[player.playerId] = player.pointsFromBonus;
-        }
+        bonusPointsProjections[player.playerId] = player.gameweekData as Record<string, number>;
+        bonusPointsPointsProjections[player.playerId] = player.pointsData as Record<string, number>;
       });
 
       // Create projections using authentic goals data from projection service
@@ -7589,11 +7588,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const playerMinutes = minutesProjections[fplPlayer.id] || {};
         const playerDefensive = defensiveProjections[fplPlayer.id] || {};
         const teamCleanSheets = teamCleanSheetProjections[fplPlayer.team] || {};
-        const playerSaves = savesProjections[fplPlayer.id] || {};
-        const playerGoalsConceded = goalsConcededProjections[fplPlayer.id] || {};
-        const playerYellowCards = yellowCardsProjections[fplPlayer.id] || {};
-        const playerRedCards = redCardsProjections[fplPlayer.id] || {};
-        const playerBonus = bonusPointsProjections[fplPlayer.id] || {};
+        const playerSaves = savesPointsProjections[fplPlayer.id] || {};
+        const playerGoalsConceded = goalsConcededPointsProjections[fplPlayer.id] || {};
+        const playerYellowCards = yellowCardsPointsProjections[fplPlayer.id] || {};
+        const playerRedCards = redCardsPointsProjections[fplPlayer.id] || {};
+        const playerBonus = bonusPointsPointsProjections[fplPlayer.id] || {};
         
         // Position-specific clean sheet points
         const csPoints = position === 'GKP' || position === 'DEF' ? 4 : position === 'MID' ? 1 : 0;
