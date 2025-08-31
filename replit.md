@@ -24,21 +24,20 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Styling**: Tailwind CSS with a custom FPL-themed design system.
 - **Navigation**: Side navigation bar.
 - **Component Structure**: Modular components with reusable UI elements.
-- **UI/UX Decisions**: Enhanced UI design for My Team section; color-coded defensive metrics in Player Statistics (orange for Defensive Contribution, blue for Tackles, green for Recoveries, purple for CBI); streamlined interfaces for Transfer Tracker and Open FPL Projections. Complete header standardization across all application pages using unified fpl-page-header system with consistent typography (text-2xl sm:text-3xl lg:text-4xl), proper h1 tags, and standardized icon sizing (h-8 w-8) - August 31, 2025.
+- **UI/UX Decisions**: Enhanced UI design for My Team section; color-coded defensive metrics in Player Statistics; streamlined interfaces for Transfer Tracker and Open FPL Projections. Complete header standardization across all application pages using unified fpl-page-header system with consistent typography and icon sizing.
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js.
 - **API Design**: RESTful API endpoints prefixed with `/api/`.
 - **Data Fetching**: Proxy server for official FPL API data.
 - **Caching Strategy**: Database-backed projection caching with PostgreSQL for ultra-fast response times (sub-second after initial calculation).
-- **Performance Optimization**: Dedicated ProjectionService with intelligent caching - first request calculates and stores projections (~4s), subsequent requests serve from database cache (~0.2s, 95% faster).
-- **Development Setup**: Vite integration for hot module replacement.
+- **Performance Optimization**: Dedicated ProjectionService with intelligent caching for faster subsequent requests.
 
 ### Data Storage Solutions
 - **Primary Storage**: In-memory storage (Map and object caching).
 - **Database Configuration**: Drizzle ORM for PostgreSQL (Neon Database) for historical data and daily price tracking.
 - **Data Persistence**: Automated daily collection of player prices, ownership, and transfer data.
-- **Data Consistency**: All projection tools use deterministic calculations based on team ID and gameweek seeds. MASTER_TEAM_DEFAULTS serves as the central configuration source for all projection multipliers. Attack multiplier updates: Elite 1.40→1.35, Strong 1.10→1.15, Average remains 1.00 (August 30, 2025).
+- **Data Consistency**: All projection tools use deterministic calculations based on team ID and gameweek seeds. MASTER_TEAM_DEFAULTS serves as the central configuration source for all projection multipliers.
 
 ### API Integration
 - **External API**: Official Fantasy Premier League API (`https://fantasy.premierleague.com/api`).
@@ -47,43 +46,33 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Historical Data**: Fetches previous seasons' data from `history_past` field.
 
 ### Feature Specifications
-- **My Dashboard**: Comprehensive FPL overview combining My Live Rank, My Team, and My Leagues in a single tabbed interface. Features overview cards, detailed team analysis, league standings, and performance history with automatic manager ID caching. Now serves as the home page with professional header matching site design system.
-- **Player Projections**: AI-powered projection model for minutes, goals, assists, clean sheets, bonus points, and CBIT% for upcoming weeks. Goals and assists derived from Goal Share and Assist Share tools.
-- **Player Goals Scored Projections**: Individual player goal projections for next 6 gameweeks with advanced fixture-level hybrid calculation methodology. Uses actual goals scored from completed matches, fixture-by-fixture analysis for ongoing gameweeks (actual data for completed games, projections for pending games), and projections for remaining fixtures. Includes penalty taker adjustments and synchronized with Goal Share tool calculations. Features professional UI redesign with interactive sorting, color-coded projections, and enhanced data presentation matching site design system.
-- **Player Assist Projections**: Individual player assist projections for gameweeks 4-9 with dual-tab interface (Assists and Points from Assists) and hybrid calculation methodology. Uses actual assist data for completed gameweeks and projections for future gameweeks. Features expected minutes weighting to prevent backup players from dominating rankings, full table sorting, position/team filtering, and 6GW/season totals. Uses weighted historical assist share data with proper minutes factoring.
-- **Player Total Points Projections**: Comprehensive FPL points projection combining all scoring components into gameweek table format with advanced hybrid calculation methodology. Uses complete FPL API data for completed gameweeks (goals, assists, clean sheets, defensive contributions, saves, bonus, cards, penalties, etc.) and projection tools for future gameweeks. Applies authentic position-specific FPL scoring rules including saves for goalkeepers, card penalties, goals conceded penalties, and penalty miss penalties. Provides Range Total, Season Total, and Average per Gameweek columns with per-gameweek component breakdown tooltips. Featured tool under "Player Projections" section offering complete fantasy points analysis with perfect data integrity - August 31, 2025.
+- **My Dashboard**: Comprehensive FPL overview combining My Live Rank, My Team, and My Leagues in a single tabbed interface, serving as the home page.
+- **Player Projections**: AI-powered projection model for minutes, goals, assists, clean sheets, bonus points, and CBIT% for upcoming weeks.
+- **Player Goals Scored Projections**: Individual player goal projections with advanced fixture-level hybrid calculation methodology, including penalty taker adjustments.
+- **Player Assist Projections**: Individual player assist projections with dual-tab interface and hybrid calculation methodology.
+- **Player Total Points Projections**: Comprehensive FPL points projection combining all scoring components into gameweek table format with advanced hybrid calculation methodology and authentic FPL scoring rules.
 - **Match Projections**: Data aggregator displaying projected goals and clean sheet odds for each team by gameweek.
 - **Team Goal/Clean Sheet Projections**: Advanced team-level forecasting using 8-phase spread betting market analysis and statistical modeling.
-- **Goal/Assist Share**: Dedicated tools showing team expected goals/assists breakdown by player percentage share, extended to 6 gameweeks with historical data. Both tools display seasons in descending order (2025/26, 2024/25, 2023/24) with consistent departed player filtering.
-- **Captain Selector**: Enhanced with historical captaincy performance data (2016-2024), 6-factor scoring algorithm, and ownership analysis.
-- **Transfer Tracker**: Authentic transfer data analysis (transfers in/out, net transfers, ownership percentages) using real FPL API data.
-- **Open FPL Projections**: Advanced machine learning projection tool using position-specific ensemble models, multi-horizon forecasting, and hourly updates.
-- **Price Tracker**: Complete FPL API-based system tracking actual price changes only. Replaced LiveFPL dependency with authentic FPL bootstrap data. Features intelligent initialization - on first run with empty database, automatically populates with all season-to-date price changes from FPL API. Subsequently tracks only actual daily price rises/falls. Manual refresh button allows immediate data updates without waiting for scheduled 7:30 AM fetch. Automated price change splitting system converts any 0.2 changes into two sequential 0.1 changes for proper granularity, with daily worker at 8:30 AM IST checking database for missed splits.
+- **Goal/Assist Share**: Dedicated tools showing team expected goals/assists breakdown by player percentage share, extended to 6 gameweeks with historical data and proper sorting.
+- **Captain Selector**: Enhanced with historical captaincy performance data, 6-factor scoring algorithm, and ownership analysis.
+- **Transfer Tracker**: Authentic transfer data analysis using real FPL API data.
+- **Open FPL Projections**: Advanced machine learning projection tool with position-specific ensemble models, multi-horizon forecasting, and hourly updates.
+- **Price Tracker**: Complete FPL API-based system tracking actual price changes with intelligent initialization and automated splitting for granularity.
 - **Historical Data**: Year selection functionality for player statistics from 2016/17 season onwards.
-- **Defensive Contribution Analytics**: Integration of new FPL API defensive data points (Defensive Contribution, Tackles, Recoveries, CBI, Starts) for 2025/26 season. Defensive Contribution formulas verified: Defenders (DC = CBI + T), Midfielders/Forwards (DC = CBI + T + R). Features comprehensive projection model using existing MASTER_TEAM_DEFAULTS attacking tier system for fixture-aware variance calculations (0.5x-1.5x multiplier range based on opponent strength). Implements hybrid calculation methodology: actual data for completed gameweeks/fixtures, projections for future gameweeks, and mixed data for ongoing gameweeks. Two interfaces: detailed projections page and table view with gameweek range filters (default next 6, customizable 1-38). Includes FPL points calculation tab showing 2-point defensive contribution bonuses based on position-specific thresholds - August 30, 2025.
-- **Historical Player Stats Database**: Created comprehensive PostgreSQL table with complete historical data for ALL 500+ players per season across 9 seasons (2016/17-2024/25). Successfully populated over 2,800 authentic historical records using comprehensive API population system. Includes complete stats (goals, assists, defensive metrics, FPL points, minutes, etc.) with position-specific defensive contribution calculations and per-90 statistics. API endpoints created for populating and querying historical data with season/position/player filtering. Population system processes all 709 current players across 15 batches per season, finding historical data for 100-500+ players per season depending on era - August 30, 2025.
-- **Goal Range Compression**: Implemented realistic Premier League goal distributions by compressing team season totals (30-85 goal range).
-- **Clean Sheet Formula**: Updated to exponential decay calculation (CS = 100 × e^(-1.1 × xGA)).
+- **Defensive Contribution Analytics**: Integration of new FPL API defensive data points and comprehensive projection model using attacking tier system for fixture-aware variance calculations.
+- **Historical Player Stats Database**: Comprehensive PostgreSQL table with complete historical data for all players across 9 seasons (2016/17-2024/25), including all stats and per-90 statistics.
+- **Goal Range Compression**: Implemented realistic Premier League goal distributions by compressing team season totals.
+- **Clean Sheet Formula**: Updated to exponential decay calculation.
 - **Enhanced Context Multipliers**: Integrated weather, referee influence, post-international break, and travel distance fatigue multipliers.
-- **Comprehensive FPL Scoring System**: Implemented probability-based calculations for ALL official FPL scoring components following Premier League rules (https://www.premierleague.com/en/news/2174909):
-  - **Saves (GKP only)**: 1pt per 3 saves + 5pts per penalty save, based on opponent shot volume and team defensive quality
-  - **Goals Conceded (GKP/DEF)**: -1pt per 2 goals conceded, calculated using team defense vs opponent attack strength
-  - **Yellow Cards (All)**: -1pt per card, position-specific probabilities (DEF: 15%, MID: 12%, FWD: 8%, GKP: 3%) adjusted for fixture difficulty
-  - **Red Cards (All)**: -3pts per card, much lower probabilities (DEF: 2%, MID: 1.5%, FWD: 1%, GKP: 0.5%) based on historical data
-  - **Bonus Points (All)**: 1-3pts based on BPS system simulation, performance-driven probability with form/ownership adjustments
-  - **Enhanced Total Points**: Now includes complete spectrum of FPL scoring for accurate projection totals - September 1, 2025.
-- **Position-Based Share Caps**: Implemented realistic caps for both goal and assist share calculations to prevent unrealistic individual projections:
-  - Goal Share caps: GK (2%), DEF (25%), MID (35%), FWD (35%)
-  - Assist Share caps: GK (2%), DEF (25%), MID (35%), FWD (25%)
-  - Applied consistently across all projection tools and gameweek-specific calculations - August 30, 2025.
-- **Perfect Mathematical Balance**: Enhanced normalization system with redistribution logic ensures team and player totals maintain perfect balance. Successfully reduced goal projection discrepancy from 104+ goals to only 0.29 goals (99.975% accuracy). Uses two-pass algorithm: first applies position caps, then redistributes excess goals proportionally to uncapped players - August 30, 2025.
+- **Comprehensive FPL Scoring System**: Implemented probability-based calculations for all official FPL scoring components (saves, goals conceded, cards, bonus points) for accurate projection totals.
+- **Position-Based Share Caps**: Implemented realistic caps for goal and assist share calculations to prevent unrealistic individual projections.
+- **Perfect Mathematical Balance**: Enhanced normalization system with redistribution logic ensures team and player totals maintain perfect balance.
 
 ### Type Safety & Validation
-- **Schema Validation**: Zod schemas in `shared/schema.ts` for API responses.
+- **Schema Validation**: Zod schemas for API responses.
 - **TypeScript Configuration**: Strict TypeScript with path mapping.
 - **Shared Types**: Common types and schemas shared between client and server.
-- **Code Quality**: All TypeScript compilation errors resolved (81 fixes applied) - August 28, 2025.
-- **Data Synchronization**: Player Goals Scored Projections tool updated to use hybrid calculation methodology with penalty adjustments, ensuring consistency with Goal Share tool - August 30, 2025.
+- **Data Synchronization**: Player Goals Scored Projections tool updated to use hybrid calculation methodology with penalty adjustments, ensuring consistency with Goal Share tool.
 
 ### Development Workflow
 - **Build System**: Vite for frontend, esbuild for server.
