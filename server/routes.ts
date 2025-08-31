@@ -7614,7 +7614,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let cleanSheetPoints = 0;
           if (csPoints > 0) {
             const teamCSProb = teamCleanSheets[gw] || 0;
-            cleanSheetPoints = teamCSProb * csPoints;
+            // Convert percentage to decimal probability (API returns percentages like 24.5, need 0.245)
+            const csDecimalProb = teamCSProb / 100;
+            cleanSheetPoints = csDecimalProb * csPoints;
           }
           pointsFromCleanSheets[`gw${gw}`] = Math.round(cleanSheetPoints * 100) / 100;
           totalCleanSheetPoints += cleanSheetPoints;
