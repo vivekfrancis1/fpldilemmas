@@ -51,6 +51,17 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       ]
     },
     {
+      section: "Team Projections", 
+      items: [
+        { path: "/projected-goals-cs", label: "Gameweek Goals and CS", icon: Target, description: "Projected goals & clean sheets", popular: false },
+        { path: "/team-goal-projections", label: "Team Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
+        { path: "/team-cs-projections", label: "Team Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
+        { path: "/team-goals-against-projections", label: "Team Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
+        { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
+        { path: "/projected-standings", label: "Predicted Standings", icon: Trophy, description: "Final league table projection", popular: false }
+      ]
+    },
+    {
       section: "Player Projections", 
       items: [
         { path: "/player-goals-scored-projections", label: "Player Goals Scored", icon: Trophy, description: "Individual player goal projections", popular: false },
@@ -60,17 +71,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         // { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
         // { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
         // { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false }
-      ]
-    },
-    {
-      section: "Team Projections", 
-      items: [
-        { path: "/projected-goals-cs", label: "Gameweek Goals and CS", icon: Target, description: "Projected goals & clean sheets", popular: false },
-        { path: "/team-goal-projections", label: "Team Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
-        { path: "/team-cs-projections", label: "Team Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
-        { path: "/team-goals-against-projections", label: "Team Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
-        { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
-        { path: "/projected-standings", label: "Predicted Standings", icon: Trophy, description: "Final league table projection", popular: false }
       ]
     },
     {
