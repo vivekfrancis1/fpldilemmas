@@ -160,28 +160,7 @@ export default function RecentPriceChanges() {
       return 0;
     }) : [];
 
-  // Calculate comprehensive season statistics
-  const getSeasonStats = () => {
-    if (!Array.isArray(priceChanges)) {
-      return { totalRises: 0, totalFalls: 0, totalChanges: 0, avgRiseAmount: 0, avgFallAmount: 0 };
-    }
 
-    const rises = priceChanges.filter((c: PriceChange) => c.price_change > 0);
-    const falls = priceChanges.filter((c: PriceChange) => c.price_change < 0);
-    
-    const avgRiseAmount = rises.length > 0 ? 
-      rises.reduce((sum, c) => sum + c.price_change, 0) / rises.length : 0;
-    const avgFallAmount = falls.length > 0 ? 
-      Math.abs(falls.reduce((sum, c) => sum + c.price_change, 0) / falls.length) : 0;
-
-    return {
-      totalRises: rises.length,
-      totalFalls: falls.length,
-      totalChanges: priceChanges.length,
-      avgRiseAmount: avgRiseAmount,
-      avgFallAmount: avgFallAmount
-    };
-  };
 
   // Calculate today's price change statistics
   const getTodayStats = () => {
@@ -201,7 +180,6 @@ export default function RecentPriceChanges() {
     };
   };
 
-  const seasonStats = getSeasonStats();
   const todayStats = getTodayStats();
 
   const formatPrice = (price: number | string | undefined | null) => {
@@ -283,56 +261,7 @@ export default function RecentPriceChanges() {
           </Card>
         </div>
 
-        {/* Season Statistics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8 px-1">
-          <Card className="bg-white shadow-sm border border-gray-100">
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-full mr-3">
-                  <DollarSign className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-green-600" data-testid="text-total-rises">
-                    {seasonStats.totalRises}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600">Price rises this season</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className="bg-white shadow-sm border border-gray-100">
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-red-100 rounded-full mr-3">
-                  <TrendingDown className="h-6 w-6 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-red-600" data-testid="text-total-falls">
-                    {seasonStats.totalFalls}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600">Price falls this season</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white shadow-sm border border-gray-100">
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-full mr-3">
-                  <BarChart3 className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600" data-testid="text-total-changes">
-                    {seasonStats.totalChanges}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600">Total price changes this season</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Search and Filters */}
         <Card className="mb-6">
