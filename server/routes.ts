@@ -10629,72 +10629,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bonus Probability API - Step 2: Calculate probabilities from BPS
+  // Bonus Probability API - Step 2: Calculate probabilities from BPS with match-level normalization
   app.get("/api/player-bonus-probabilities", async (req, res) => {
     try {
       const { startGameweek = 4, endGameweek = 9 } = req.query;
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
 
-      console.log("DEBUG: Player Bonus Probabilities API called - step 2 of BPS methodology");
+      console.log("DEBUG: Player Bonus Probabilities API called - step 2 with match-level normalization (100% total per match)");
 
       const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       const data = await bootstrapResponse.json();
       const players = data.elements;
       const teams = data.teams;
 
-      const bonusProbabilities = await Promise.all(
-        players.slice(0, 100).map(async (player: any) => {
+      // Calculate match-level normalized probabilities
+      const allPlayerProbabilities: { [playerId: number]: any } = {};
+      
+      // Initialize all players first
+      for (const player of players.slice(0, 100)) {
+        const team = teams.find((t: any) => t.id === player.team);
+        const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
+        
+        allPlayerProbabilities[player.id] = {
+          playerId: player.id,
+          playerName: player.web_name,
+          teamName: team?.short_name || 'UNK',
+          position,
+          bonusProbabilities: {},
+          averageProbability: 0
+        };
+      }
+
+      // Process each gameweek for match-level normalization
+      for (let gw = start; gw <= end; gw++) {
+        // Get fixtures for this gameweek to identify matches
+        const gameweekFixtures = await getGameweekFixtures(gw);
+        
+        // Calculate raw BPS for all players in this gameweek
+        const gwPlayerBPS: { [playerId: number]: { bps: number, player: any, team: any } } = {};
+        
+        for (const player of players.slice(0, 100)) {
           const team = teams.find((t: any) => t.id === player.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
+          const willPlay = await estimatePlayerWillPlay(player, gw, position);
           
-          const bonusProbabilities: { [key: string]: number } = {};
-          let totalProbability = 0;
+          if (willPlay) {
+            const projectedBPS = calculateHistoricBPS(player, position) * calculateFormMultiplier(player);
+            gwPlayerBPS[player.id] = { bps: projectedBPS, player, team };
+          }
+        }
 
-          for (let gw = start; gw <= end; gw++) {
-            const willPlay = await estimatePlayerWillPlay(player, gw, position);
+        // Process each fixture to normalize probabilities within matches
+        for (const fixture of gameweekFixtures) {
+          const homeTeamId = fixture.team_h;
+          const awayTeamId = fixture.team_a;
+          
+          // Get all players in this match
+          const matchPlayers = Object.values(gwPlayerBPS).filter(p => 
+            p.player.team === homeTeamId || p.player.team === awayTeamId
+          );
+          
+          if (matchPlayers.length > 0) {
+            // Sort players by BPS (highest first)
+            matchPlayers.sort((a, b) => b.bps - a.bps);
             
-            if (willPlay) {
-              // Calculate BPS and convert to probability
-              const projectedBPS = calculateHistoricBPS(player, position) * calculateFormMultiplier(player);
+            // Calculate raw probabilities based on BPS ranking
+            const rawProbabilities: { [playerId: number]: number } = {};
+            let rawTotal = 0;
+            
+            matchPlayers.forEach((playerData, index) => {
+              let baseProbability = 0;
               
-              // Calculate probability based on BPS thresholds
-              let probability = 0;
-              if (projectedBPS >= 35) {
-                probability = 0.8; // High chance for bonus
-              } else if (projectedBPS >= 30) {
-                probability = 0.6; // Good chance
-              } else if (projectedBPS >= 25) {
-                probability = 0.3; // Some chance
+              // Assign base probabilities based on BPS ranking
+              if (index === 0) {
+                baseProbability = 0.40; // Top player gets highest chance
+              } else if (index === 1) {
+                baseProbability = 0.25; // Second gets good chance
+              } else if (index === 2) {
+                baseProbability = 0.20; // Third gets decent chance
+              } else if (index <= 5) {
+                baseProbability = 0.08; // 4th-6th get small chance
+              } else if (index <= 10) {
+                baseProbability = 0.03; // 7th-11th get tiny chance
               } else {
-                probability = 0.1; // Low chance
+                baseProbability = 0.01; // Rest get minimal chance
               }
               
-              bonusProbabilities[`gw${gw}`] = probability;
-              totalProbability += probability;
-            } else {
-              bonusProbabilities[`gw${gw}`] = 0;
-            }
+              rawProbabilities[playerData.player.id] = baseProbability;
+              rawTotal += baseProbability;
+            });
+            
+            // Normalize to ensure probabilities sum to exactly 1.0 (100%) per match
+            const normalizationFactor = rawTotal > 0 ? 1.0 / rawTotal : 0;
+            
+            matchPlayers.forEach(playerData => {
+              const normalizedProbability = rawProbabilities[playerData.player.id] * normalizationFactor;
+              allPlayerProbabilities[playerData.player.id].bonusProbabilities[`gw${gw}`] = 
+                parseFloat(normalizedProbability.toFixed(3));
+            });
           }
+        }
 
-          return {
-            playerId: player.id,
-            playerName: player.web_name,
-            teamName: team?.short_name || 'UNK',
-            position,
-            bonusProbabilities,
-            averageProbability: parseFloat((totalProbability / (end - start + 1)).toFixed(3))
-          };
-        })
-      );
+        // Set probability to 0 for players not in any match this gameweek
+        for (const player of players.slice(0, 100)) {
+          if (!allPlayerProbabilities[player.id].bonusProbabilities[`gw${gw}`]) {
+            allPlayerProbabilities[player.id].bonusProbabilities[`gw${gw}`] = 0;
+          }
+        }
+      }
 
-      console.log(`DEBUG: Generated bonus probabilities for ${bonusProbabilities.length} players`);
+      // Calculate average probabilities
+      const bonusProbabilities = Object.values(allPlayerProbabilities).map((playerData: any) => {
+        const probabilities = Object.values(playerData.bonusProbabilities) as number[];
+        const totalProbability = probabilities.reduce((sum, prob) => sum + prob, 0);
+        playerData.averageProbability = parseFloat((totalProbability / (end - start + 1)).toFixed(3));
+        return playerData;
+      });
+
+      console.log(`DEBUG: Generated match-normalized bonus probabilities for ${bonusProbabilities.length} players`);
       res.json(bonusProbabilities);
     } catch (error) {
       console.error("Error in player bonus probabilities:", error);
       res.status(500).json({ error: "Failed to get player bonus probabilities" });
     }
   });
+
+  // Helper function to get fixtures for a gameweek
+  async function getGameweekFixtures(gameweek: number): Promise<any[]> {
+    try {
+      const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+      const fixtures = await fixturesResponse.json();
+      return fixtures.filter((fixture: any) => fixture.event === gameweek);
+    } catch (error) {
+      console.log(`Failed to fetch fixtures for GW${gameweek}, using fallback`);
+      return []; // Return empty array as fallback
+    }
+  }
 
   // Helper functions for BPS calculations
   function calculateHistoricBPS(player: any, position: string): number {
