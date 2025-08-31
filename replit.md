@@ -13,6 +13,7 @@ Projection Tools Limit: All projection tools (Player Projections, Match Projecti
 Most popular tools: Player Statistics, My Live Rank, and Fixture Analyzer.
 Fixture Analyzer display: Shows 6 gameweeks by default with user customization up to GW38 for comprehensive fixture analysis.
 FPL Content Creators Admin: Streamlined admin interface with only essential fields: Name, Manager ID, Description, Twitter Handle, and YouTube URL. Removed Handle, Platform, and Website fields per user request. Both Twitter and YouTube fields are optional and can be left blank. Database schema updated accordingly with proper column removal. All content creators now have complete Twitter handles and YouTube URLs populated with authentic social media data. Interface displays full URLs as clickable links and Twitter handles as styled text. Complete CRUD functionality implemented including delete feature with confirmation dialog and red-styled delete button next to edit button. Admin URL updated from /admin to /admin-content-creators for better specificity.
+Navigation Cleanup: Hidden Player Yellow Cards, Red Cards, Goals Conceded, and Bonus Points tools from sidebar navigation (Aug 31, 2025) since these components are now integrated into the comprehensive Player Total Points tool. Tools remain accessible via direct URLs but are not prominently displayed in navigation menu.
 
 ## System Architecture
 

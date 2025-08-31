@@ -19,9 +19,7 @@ import {
   Clock,
   Settings,
   Book,
-  ShieldAlert,
-  AlertTriangle,
-  XCircle
+
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,11 +69,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/player-goals-scored-projections", label: "Player Goals Scored", icon: Trophy, description: "Individual player goal projections", popular: false },
         { path: "/player-assist-projections", label: "Player Assists", icon: Zap, description: "Individual player assist projections", popular: false },
         { path: "/player-defensive-contributions", label: "Player Defensive Contributions", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
-        { path: "/player-saves", label: "Player Saves", icon: Shield, description: "Goalkeeper saves and penalty save projections", popular: false },
-        { path: "/player-goals-conceded", label: "Player Goals Conceded", icon: ShieldAlert, description: "Goals conceded penalties for GKP and DEF", popular: false },
-        { path: "/player-yellow-cards", label: "Player Yellow Cards", icon: AlertTriangle, description: "Yellow card probability and point penalties", popular: false },
-        { path: "/player-red-cards", label: "Player Red Cards", icon: XCircle, description: "Red card probability and severe penalties", popular: false },
-        { path: "/player-bonus-points", label: "Player Bonus Points", icon: Star, description: "BPS system simulation and bonus rewards", popular: false }
+        { path: "/player-saves", label: "Player Saves", icon: Shield, description: "Goalkeeper saves and penalty save projections", popular: false }
         // { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
         // { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
         // { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false }
