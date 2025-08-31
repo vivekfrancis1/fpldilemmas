@@ -7413,40 +7413,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      console.log(`DEBUG: Player Total Points API - fetching from ALL individual projection tools for GW${start}-${end}`);
+      console.log(`DEBUG: Player Total Points API - using direct projection service access for GW${start}-${end}`);
       const startTime = Date.now();
       
-      // Fetch from all individual projection tools simultaneously
-      const [
-        goalsResponse,
-        assistsResponse, 
-        cleanSheetsResponse,
-        defensiveResponse,
-        minutesResponse,
-        bootstrapResponse
-      ] = await Promise.allSettled([
-        fetch(`http://localhost:5000/api/player-goals-scored-projections`),
-        fetch(`http://localhost:5000/api/player-assist-projections`),
-        fetch(`http://localhost:5000/api/team-clean-sheet-projections?gameweek=${start}`), // We'll adapt this
-        fetch(`http://localhost:5000/api/defensive-contribution-projections?startGameweek=${start}&endGameweek=${end}`),
-        fetch(`http://localhost:5000/api/player-projections?startGameweek=${start}&endGameweek=${end}`), // For minutes
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
-      ]);
-
-      // Parse successful responses
-      const goalsData = goalsResponse.status === 'fulfilled' && goalsResponse.value.ok ? 
-        await goalsResponse.value.json() : [];
-      const assistsData = assistsResponse.status === 'fulfilled' && assistsResponse.value.ok ? 
-        await assistsResponse.value.json() : [];
-      const defensiveData = defensiveResponse.status === 'fulfilled' && defensiveResponse.value.ok ? 
-        await defensiveResponse.value.json() : [];
-      const minutesData = minutesResponse.status === 'fulfilled' && minutesResponse.value.ok ? 
-        await minutesResponse.value.json() : [];
-
-      if (bootstrapResponse.status !== 'fulfilled' || !bootstrapResponse.value.ok) {
+      // Get bootstrap data for player info
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
-      const bootstrapData = await bootstrapResponse.value.json();
+      const bootstrapData = await bootstrapResponse.json();
+
+      // Get goals projections directly from the projection service cache
+      const goalsProjections = await projectionService.getPlayerGoalsProjections();
+      console.log(`DEBUG: Retrieved ${Object.keys(goalsProjections).length} goal projections from service`);
 
       console.log(`DEBUG: Fetched data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Defensive: ${defensiveData.length}, Minutes: ${minutesData.length}`);
 
