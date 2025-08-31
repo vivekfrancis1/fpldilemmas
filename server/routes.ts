@@ -9285,6 +9285,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             minutesValue = minutesThisGW;
           }
           
+          // Define position-specific thresholds for showing tick marks
+          const defensiveContributionThreshold = player.element_type === 2 ? 10 : 12; // Defenders: 10, Mid/Fwd: 12
+          const actualDataAvailable = isCompleted || (isOngoing && teamFixture?.finished);
+          const meetsThreshold = dcValue >= defensiveContributionThreshold;
+          
           return {
             gameweek,
             defensiveContribution: Math.round(dcValue * 100) / 100,
@@ -9295,7 +9300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             opponent: opponentInfo.name,
             opponentTier: opponentInfo.tier,
             fixtureMultiplier: Math.round(fixtureMultiplier * 100) / 100,
-            isActual: isCompleted || (isOngoing && teamFixture?.finished),
+            isActual: actualDataAvailable && meetsThreshold, // Only show tick mark if actual data AND meets threshold
             isProjected: isFuture || (isOngoing && !teamFixture?.finished),
             dataSource: (isCompleted || (isOngoing && teamFixture?.finished)) ? 'actual' : 'projected'
           };
