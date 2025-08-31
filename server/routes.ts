@@ -6511,8 +6511,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               if (homeTeamScored && awayTeamScored) {
                 // Direct mirror: home concedes what away scores, away concedes what home scores
-                homeTeamAgainst.gameweekProjections[fixture.event] = awayTeamScored.gameweekProjections[fixture.event] || 0;
-                awayTeamAgainst.gameweekProjections[fixture.event] = homeTeamScored.gameweekProjections[fixture.event] || 0;
+                // Handle both null and undefined values properly
+                const awayGoals = awayTeamScored.gameweekProjections[fixture.event];
+                const homeGoals = homeTeamScored.gameweekProjections[fixture.event];
+                
+                homeTeamAgainst.gameweekProjections[fixture.event] = (awayGoals !== null && awayGoals !== undefined) ? awayGoals : 0;
+                awayTeamAgainst.gameweekProjections[fixture.event] = (homeGoals !== null && homeGoals !== undefined) ? homeGoals : 0;
               }
             }
           }
