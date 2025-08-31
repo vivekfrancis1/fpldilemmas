@@ -25,6 +25,7 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Navigation**: Side navigation bar.
 - **Component Structure**: Modular components with reusable UI elements.
 - **UI/UX Decisions**: Enhanced UI design for My Team section; color-coded defensive metrics in Player Statistics; streamlined interfaces for Transfer Tracker and Open FPL Projections. Complete header standardization across all application pages using unified fpl-page-header system with consistent typography and icon sizing.
+- **Recent Routing Fix**: Added missing `/player-goals-scored` route to App.tsx router configuration (Aug 31, 2025) - maps to PlayerGoalProjections component to resolve 404 errors.
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js.
