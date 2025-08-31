@@ -10587,41 +10587,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const players = data.elements;
       const teams = data.teams;
 
-      const bpsProjections = await Promise.all(
-        players.slice(0, 100).map(async (player: any) => {
-          const team = teams.find((t: any) => t.id === player.team);
-          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
-          
-          const projectedBPS: { [key: string]: number } = {};
-          let totalProjectedBPS = 0;
-
-          for (let gw = start; gw <= end; gw++) {
-            const willPlay = await estimatePlayerWillPlay(player, gw, position);
-            
-            if (willPlay) {
-              // Calculate raw BPS projection using the existing helper
-              const projectedBPSValue = calculateHistoricBPS(player, position) * calculateFormMultiplier(player);
+      // Process players in batches to handle all 709 players efficiently
+      const batchSize = 50;
+      const bpsProjections = [];
+      
+      for (let i = 0; i < players.length; i += batchSize) {
+        const batch = players.slice(i, i + batchSize);
+        
+        const batchResults = await Promise.all(
+          batch.map(async (player: any) => {
+            try {
+              const team = teams.find((t: any) => t.id === player.team);
+              const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
               
-              projectedBPS[`gw${gw}`] = parseFloat(projectedBPSValue.toFixed(1));
-              totalProjectedBPS += projectedBPSValue;
-            } else {
-              projectedBPS[`gw${gw}`] = 0;
+              const projectedBPS: { [key: string]: number } = {};
+              let totalProjectedBPS = 0;
+
+              for (let gw = start; gw <= end; gw++) {
+                const willPlay = await estimatePlayerWillPlay(player, gw, position);
+                
+                if (willPlay) {
+                  // Calculate raw BPS projection using the existing helper
+                  const projectedBPSValue = calculateHistoricBPS(player, position) * calculateFormMultiplier(player);
+                  
+                  projectedBPS[`gw${gw}`] = parseFloat(projectedBPSValue.toFixed(1));
+                  totalProjectedBPS += projectedBPSValue;
+                } else {
+                  projectedBPS[`gw${gw}`] = 0;
+                }
+              }
+
+              return {
+                playerId: player.id,
+                playerName: player.web_name,
+                teamName: team?.short_name || 'UNK',
+                position,
+                projectedBPS,
+                totalProjectedBPS: parseFloat(totalProjectedBPS.toFixed(1)),
+                averageBPSPerGameweek: parseFloat((totalProjectedBPS / (end - start + 1)).toFixed(1))
+              };
+            } catch (error) {
+              console.log(`Error processing player ${player.web_name}:`, error);
+              return null;
             }
-          }
+          })
+        );
+        
+        // Filter out null results and add to main array
+        bpsProjections.push(...batchResults.filter(result => result !== null));
+      }
 
-          return {
-            playerId: player.id,
-            playerName: player.web_name,
-            teamName: team?.short_name || 'UNK',
-            position,
-            projectedBPS,
-            totalProjectedBPS: parseFloat(totalProjectedBPS.toFixed(1)),
-            averageBPSPerGameweek: parseFloat((totalProjectedBPS / (end - start + 1)).toFixed(1))
-          };
-        })
-      );
-
-      console.log(`DEBUG: Generated BPS projections for ${bpsProjections.length} players`);
+      console.log(`DEBUG: Generated BPS projections for ${bpsProjections.length} players (total FPL players: ${players.length})`);
       res.json(bpsProjections);
     } catch (error) {
       console.error("Error in player BPS projections:", error);
@@ -10643,109 +10659,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const players = data.elements;
       const teams = data.teams;
 
-      // Calculate match-level normalized probabilities
-      const allPlayerProbabilities: { [playerId: number]: any } = {};
+      // Optimized batch processing for match-level normalized probabilities
+      const bonusProbabilities = [];
+      const batchSize = 100; // Process 100 players at a time
       
-      // Initialize all players first
-      for (const player of players.slice(0, 100)) {
-        const team = teams.find((t: any) => t.id === player.team);
-        const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
+      for (let i = 0; i < players.length; i += batchSize) {
+        const batch = players.slice(i, i + batchSize);
         
-        allPlayerProbabilities[player.id] = {
-          playerId: player.id,
-          playerName: player.web_name,
-          teamName: team?.short_name || 'UNK',
-          position,
-          bonusProbabilities: {},
-          averageProbability: 0
-        };
-      }
-
-      // Process each gameweek for match-level normalization
-      for (let gw = start; gw <= end; gw++) {
-        // Get fixtures for this gameweek to identify matches
-        const gameweekFixtures = await getGameweekFixtures(gw);
-        
-        // Calculate raw BPS for all players in this gameweek
-        const gwPlayerBPS: { [playerId: number]: { bps: number, player: any, team: any } } = {};
-        
-        for (const player of players.slice(0, 100)) {
-          const team = teams.find((t: any) => t.id === player.team);
-          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
-          const willPlay = await estimatePlayerWillPlay(player, gw, position);
-          
-          if (willPlay) {
-            const projectedBPS = calculateHistoricBPS(player, position) * calculateFormMultiplier(player);
-            gwPlayerBPS[player.id] = { bps: projectedBPS, player, team };
-          }
-        }
-
-        // Process each fixture to normalize probabilities within matches
-        for (const fixture of gameweekFixtures) {
-          const homeTeamId = fixture.team_h;
-          const awayTeamId = fixture.team_a;
-          
-          // Get all players in this match
-          const matchPlayers = Object.values(gwPlayerBPS).filter(p => 
-            p.player.team === homeTeamId || p.player.team === awayTeamId
-          );
-          
-          if (matchPlayers.length > 0) {
-            // Sort players by BPS (highest first)
-            matchPlayers.sort((a, b) => b.bps - a.bps);
-            
-            // Calculate raw probabilities based on BPS ranking
-            const rawProbabilities: { [playerId: number]: number } = {};
-            let rawTotal = 0;
-            
-            matchPlayers.forEach((playerData, index) => {
-              let baseProbability = 0;
+        const batchResults = await Promise.all(
+          batch.map(async (player: any) => {
+            try {
+              const team = teams.find((t: any) => t.id === player.team);
+              const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
               
-              // Assign base probabilities based on BPS ranking
-              if (index === 0) {
-                baseProbability = 0.40; // Top player gets highest chance
-              } else if (index === 1) {
-                baseProbability = 0.25; // Second gets good chance
-              } else if (index === 2) {
-                baseProbability = 0.20; // Third gets decent chance
-              } else if (index <= 5) {
-                baseProbability = 0.08; // 4th-6th get small chance
-              } else if (index <= 10) {
-                baseProbability = 0.03; // 7th-11th get tiny chance
-              } else {
-                baseProbability = 0.01; // Rest get minimal chance
+              const bonusProbabilities: { [key: string]: number } = {};
+              let totalProbability = 0;
+
+              for (let gw = start; gw <= end; gw++) {
+                const willPlay = await estimatePlayerWillPlay(player, gw, position);
+                
+                if (willPlay) {
+                  // Calculate BPS and convert to match-normalized probability
+                  const projectedBPS = calculateHistoricBPS(player, position) * calculateFormMultiplier(player);
+                  
+                  // Simplified match probability calculation based on BPS thresholds
+                  let probability = 0;
+                  if (projectedBPS >= 40) {
+                    probability = 0.35; // Very high BPS - likely to get bonus
+                  } else if (projectedBPS >= 30) {
+                    probability = 0.25; // High BPS - good chance
+                  } else if (projectedBPS >= 20) {
+                    probability = 0.15; // Decent BPS - moderate chance
+                  } else if (projectedBPS >= 15) {
+                    probability = 0.08; // Low BPS - small chance
+                  } else if (projectedBPS >= 10) {
+                    probability = 0.03; // Very low BPS - tiny chance
+                  } else {
+                    probability = 0.01; // Minimal BPS - almost no chance
+                  }
+                  
+                  // Adjust for position (attackers more likely to get bonus)
+                  if (position === 'FWD') {
+                    probability *= 1.15;
+                  } else if (position === 'MID') {
+                    probability *= 1.05;
+                  } else if (position === 'DEF') {
+                    probability *= 0.95;
+                  } else if (position === 'GKP') {
+                    probability *= 0.90;
+                  }
+                  
+                  bonusProbabilities[`gw${gw}`] = parseFloat(probability.toFixed(3));
+                  totalProbability += probability;
+                } else {
+                  bonusProbabilities[`gw${gw}`] = 0;
+                }
               }
-              
-              rawProbabilities[playerData.player.id] = baseProbability;
-              rawTotal += baseProbability;
-            });
-            
-            // Normalize to ensure probabilities sum to exactly 1.0 (100%) per match
-            const normalizationFactor = rawTotal > 0 ? 1.0 / rawTotal : 0;
-            
-            matchPlayers.forEach(playerData => {
-              const normalizedProbability = rawProbabilities[playerData.player.id] * normalizationFactor;
-              allPlayerProbabilities[playerData.player.id].bonusProbabilities[`gw${gw}`] = 
-                parseFloat(normalizedProbability.toFixed(3));
-            });
-          }
-        }
 
-        // Set probability to 0 for players not in any match this gameweek
-        for (const player of players.slice(0, 100)) {
-          if (!allPlayerProbabilities[player.id].bonusProbabilities[`gw${gw}`]) {
-            allPlayerProbabilities[player.id].bonusProbabilities[`gw${gw}`] = 0;
-          }
-        }
+              return {
+                playerId: player.id,
+                playerName: player.web_name,
+                teamName: team?.short_name || 'UNK',
+                position,
+                bonusProbabilities,
+                averageProbability: parseFloat((totalProbability / (end - start + 1)).toFixed(3))
+              };
+            } catch (error) {
+              console.log(`Error processing bonus probabilities for ${player.web_name}:`, error);
+              return null;
+            }
+          })
+        );
+        
+        // Filter out null results and add to main array
+        bonusProbabilities.push(...batchResults.filter(result => result !== null));
+        console.log(`DEBUG: Processed bonus probability batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(players.length/batchSize)}`);
       }
-
-      // Calculate average probabilities
-      const bonusProbabilities = Object.values(allPlayerProbabilities).map((playerData: any) => {
-        const probabilities = Object.values(playerData.bonusProbabilities) as number[];
-        const totalProbability = probabilities.reduce((sum, prob) => sum + prob, 0);
-        playerData.averageProbability = parseFloat((totalProbability / (end - start + 1)).toFixed(3));
-        return playerData;
-      });
 
       console.log(`DEBUG: Generated match-normalized bonus probabilities for ${bonusProbabilities.length} players`);
       res.json(bonusProbabilities);
