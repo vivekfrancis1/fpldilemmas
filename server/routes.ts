@@ -10573,6 +10573,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // BPS Projections API - Step 1: Raw BPS calculations
+  app.get("/api/player-bps-projections", async (req, res) => {
+    try {
+      const { startGameweek = 4, endGameweek = 9 } = req.query;
+      const start = parseInt(startGameweek as string);
+      const end = parseInt(endGameweek as string);
+
+      console.log("DEBUG: Player BPS Projections API called - step 1 of BPS methodology");
+
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const data = await bootstrapResponse.json();
+      const players = data.elements;
+      const teams = data.teams;
+
+      const bpsProjections = await Promise.all(
+        players.slice(0, 100).map(async (player: any) => {
+          const team = teams.find((t: any) => t.id === player.team);
+          const position = getPositionName(player.element_type);
+          
+          const projectedBPS: { [key: string]: number } = {};
+          let totalProjectedBPS = 0;
+
+          for (let gw = start; gw <= end; gw++) {
+            const willPlay = await estimatePlayerWillPlay(player, gw, position);
+            
+            if (willPlay) {
+              // Calculate raw BPS projection using the existing helper
+              const projectedBPSValue = calculateHistoricBPS(player, position) * calculateFormMultiplier(player);
+              
+              projectedBPS[`gw${gw}`] = parseFloat(projectedBPSValue.toFixed(1));
+              totalProjectedBPS += projectedBPSValue;
+            } else {
+              projectedBPS[`gw${gw}`] = 0;
+            }
+          }
+
+          return {
+            playerId: player.id,
+            playerName: player.web_name,
+            teamName: team?.short_name || 'UNK',
+            position,
+            projectedBPS,
+            totalProjectedBPS: parseFloat(totalProjectedBPS.toFixed(1)),
+            averageBPSPerGameweek: parseFloat((totalProjectedBPS / (end - start + 1)).toFixed(1))
+          };
+        })
+      );
+
+      console.log(`DEBUG: Generated BPS projections for ${bpsProjections.length} players`);
+      res.json(bpsProjections);
+    } catch (error) {
+      console.error("Error in player BPS projections:", error);
+      res.status(500).json({ error: "Failed to get player BPS projections" });
+    }
+  });
+
+  // Bonus Probability API - Step 2: Calculate probabilities from BPS
+  app.get("/api/player-bonus-probabilities", async (req, res) => {
+    try {
+      const { startGameweek = 4, endGameweek = 9 } = req.query;
+      const start = parseInt(startGameweek as string);
+      const end = parseInt(endGameweek as string);
+
+      console.log("DEBUG: Player Bonus Probabilities API called - step 2 of BPS methodology");
+
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const data = await bootstrapResponse.json();
+      const players = data.elements;
+      const teams = data.teams;
+
+      const bonusProbabilities = await Promise.all(
+        players.slice(0, 100).map(async (player: any) => {
+          const team = teams.find((t: any) => t.id === player.team);
+          const position = getPositionName(player.element_type);
+          
+          const bonusProbabilities: { [key: string]: number } = {};
+          let totalProbability = 0;
+
+          for (let gw = start; gw <= end; gw++) {
+            const willPlay = await estimatePlayerWillPlay(player, gw, position);
+            
+            if (willPlay) {
+              // Calculate BPS and convert to probability
+              const projectedBPS = calculateHistoricBPS(player, position) * calculateFormMultiplier(player);
+              
+              // Calculate probability based on BPS thresholds
+              let probability = 0;
+              if (projectedBPS >= 35) {
+                probability = 0.8; // High chance for bonus
+              } else if (projectedBPS >= 30) {
+                probability = 0.6; // Good chance
+              } else if (projectedBPS >= 25) {
+                probability = 0.3; // Some chance
+              } else {
+                probability = 0.1; // Low chance
+              }
+              
+              bonusProbabilities[`gw${gw}`] = probability;
+              totalProbability += probability;
+            } else {
+              bonusProbabilities[`gw${gw}`] = 0;
+            }
+          }
+
+          return {
+            playerId: player.id,
+            playerName: player.web_name,
+            teamName: team?.short_name || 'UNK',
+            position,
+            bonusProbabilities,
+            averageProbability: parseFloat((totalProbability / (end - start + 1)).toFixed(3))
+          };
+        })
+      );
+
+      console.log(`DEBUG: Generated bonus probabilities for ${bonusProbabilities.length} players`);
+      res.json(bonusProbabilities);
+    } catch (error) {
+      console.error("Error in player bonus probabilities:", error);
+      res.status(500).json({ error: "Failed to get player bonus probabilities" });
+    }
+  });
+
+  // Helper functions for BPS calculations
+  function calculateHistoricBPS(player: any, position: string): number {
+    // Base BPS from FPL stats
+    const baseBPS = (player.bps || 0) / Math.max(player.minutes || 1, 90) * 90; // Per 90 mins
+    
+    // Position-specific BPS scoring weights
+    const positionMultipliers = {
+      'FWD': 1.2, // Forwards get more BPS per goal/assist
+      'MID': 1.0, // Midfielders balanced
+      'DEF': 0.8, // Defenders get less attacking BPS
+      'GKP': 0.6  // Goalkeepers different BPS profile
+    };
+    
+    const multiplier = positionMultipliers[position as keyof typeof positionMultipliers] || 1.0;
+    
+    // Factor in current season performance
+    const seasonBPS = player.total_points * 0.5; // Rough BPS correlation
+    
+    return Math.max((baseBPS * multiplier + seasonBPS * 0.1), 5); // Minimum 5 BPS baseline
+  }
+
+  function calculateFormMultiplier(player: any): number {
+    const form = parseFloat(player.form || "0");
+    const pointsPerGame = parseFloat(player.points_per_game || "0");
+    
+    // Form-based multiplier (0.8x to 1.4x range)
+    let formMultiplier = 1.0;
+    if (form >= 6) formMultiplier = 1.4;
+    else if (form >= 4) formMultiplier = 1.2;
+    else if (form >= 2) formMultiplier = 1.0;
+    else if (form >= 1) formMultiplier = 0.9;
+    else formMultiplier = 0.8;
+    
+    // PPG adjustment
+    if (pointsPerGame >= 6) formMultiplier *= 1.1;
+    else if (pointsPerGame <= 2) formMultiplier *= 0.9;
+    
+    return formMultiplier;
+  }
+
   // Helper function for BPS-based bonus point calculation  
   function calculateBonusPointsFromBPS(player: any, position: string): number {
     const form = parseFloat(player.form || "0");
