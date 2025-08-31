@@ -17,6 +17,7 @@ type PlayerProjection = {
   currentPrice: number;
   projectedGoals: number;
   goalShare: number;
+  gameweekProjections?: { [gameweek: number]: number };
 };
 
 type SortField = "name" | "team" | "position" | "projectedGoals" | "goalShare" | "currentPrice" | "valuePerGoal";
@@ -118,11 +119,13 @@ export default function PlayerGoalProjections() {
   const [searchFilter, setSearchFilter] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
+  const [startGameweek, setStartGameweek] = useState(4); // Default to next 6 gameweeks
+  const [endGameweek, setEndGameweek] = useState(9);
   const [sortField, setSortField] = useState<SortField>("projectedGoals");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const { data: players, isLoading, error } = useQuery({
-    queryKey: ["/api/player-goal-projections"],
+    queryKey: ["/api/player-goals-scored-projections", startGameweek, endGameweek],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -236,12 +239,18 @@ export default function PlayerGoalProjections() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Player Total Goal Projections</h1>
-        <p className="text-gray-600">
-          Season-long goal projections for all players based on 3-year weighted historical analysis
-        </p>
+    <div className="fpl-page-wrapper">
+      <div className="fpl-container fpl-content-area fpl-section-spacing">
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Target className="h-8 w-8" />
+            <h1>Player Goal Projections</h1>
+          </div>
+          <p className="fpl-page-subtitle">
+            Projected goals based on team scoring potential, fixture difficulty, and individual player share with penalty taker adjustments
+          </p>
+        </div>
       </div>
 
       {/* Filters */}
@@ -250,7 +259,36 @@ export default function PlayerGoalProjections() {
           <CardTitle className="text-lg">Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            {/* Gameweek Range */}
+            <div>
+              <Label htmlFor="start-gameweek">Start GW</Label>
+              <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
+                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="end-gameweek">End GW</Label>
+              <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
+                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label htmlFor="search">Search Player/Team</Label>
               <Input
@@ -368,6 +406,7 @@ export default function PlayerGoalProjections() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }
