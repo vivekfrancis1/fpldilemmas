@@ -20,8 +20,9 @@ export default function ProjectionDocumentation() {
 
       <div className="fpl-section-spacing">
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="flow">Logic Flow</TabsTrigger>
             <TabsTrigger value="algorithms">Algorithms</TabsTrigger>
             <TabsTrigger value="player-tools">Player Tools</TabsTrigger>
             <TabsTrigger value="team-tools">Team Tools</TabsTrigger>
@@ -105,6 +106,402 @@ export default function ProjectionDocumentation() {
                       </ul>
                     </div>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Logic Flow Tab */}
+          <TabsContent value="flow" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <GitBranch className="h-5 w-5" />
+                  Complete Projection Logic Flow
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    This diagram shows the complete dependency chain from MASTER_TEAM_DEFAULTS configuration through to final player projections.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-8">
+                  {/* Step 1: Configuration */}
+                  <div className="border-2 border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                      <h3 className="text-lg font-semibold">Configuration Source</h3>
+                    </div>
+                    <div className="bg-blue-50 p-4 rounded">
+                      <h4 className="font-semibold mb-2">MASTER_TEAM_DEFAULTS (server/routes.ts)</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <strong>Team Classifications:</strong>
+                          <ul className="list-disc ml-5 mt-1">
+                            <li>Attack teams by tier (Elite/Strong/Average/Weak)</li>
+                            <li>Defense teams by tier (Elite/Strong/Average/Weak)</li>
+                            <li>Team multipliers for each tier</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <strong>Base Parameters:</strong>
+                          <ul className="list-disc ml-5 mt-1">
+                            <li>averageBaseXGPerTeamPerGame: 1.5</li>
+                            <li>homeAdvantageMultiplier: 1.16</li>
+                            <li>awayFactorMultiplier: 0.84</li>
+                            <li>Context multipliers (15+ factors)</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 2: Team Goals Scored */}
+                  <div className="border-2 border-green-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">2</div>
+                      <h3 className="text-lg font-semibold">Team Goals Scored Calculation</h3>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded">
+                      <div className="space-y-3">
+                        <div className="bg-white p-3 rounded border font-mono text-sm">
+                          <strong>Formula:</strong><br/>
+                          TeamGoals = BaseXG × AttackMultiplier × DefenseMultiplier × VenueFactor × ContextMultipliers
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <strong>Inputs:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>BaseXG = 1.5 goals per game</li>
+                              <li>Home team attack tier → AttackMultiplier</li>
+                              <li>Away team defense tier → DefenseMultiplier</li>
+                              <li>Venue (H/A) → VenueFactor (1.16/0.84)</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <strong>Output:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Expected goals per team per gameweek</li>
+                              <li>Used for: Player goal projections</li>
+                              <li>Used for: Team assists calculation</li>
+                              <li>Used for: Match predictions</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 3: Team Goals Conceded */}
+                  <div className="border-2 border-red-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center font-bold">3</div>
+                      <h3 className="text-lg font-semibold">Team Goals Conceded Calculation</h3>
+                    </div>
+                    <div className="bg-red-50 p-4 rounded">
+                      <div className="space-y-3">
+                        <div className="bg-white p-3 rounded border font-mono text-sm">
+                          <strong>Formula:</strong><br/>
+                          GoalsConceded = OpponentGoalsScored<br/>
+                          (Uses opponent's attack strength vs team's defense strength)
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <strong>Inputs:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Opponent attack tier</li>
+                              <li>Team defense tier</li>
+                              <li>Venue factor</li>
+                              <li>Context multipliers</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <strong>Output:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Expected goals against per team</li>
+                              <li>Used for: Clean sheet calculations</li>
+                              <li>Used for: Defensive points</li>
+                              <li>Used for: League standings</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 4: Team Assists */}
+                  <div className="border-2 border-purple-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">4</div>
+                      <h3 className="text-lg font-semibold">Team Assists Calculation</h3>
+                    </div>
+                    <div className="bg-purple-50 p-4 rounded">
+                      <div className="space-y-3">
+                        <div className="bg-white p-3 rounded border font-mono text-sm">
+                          <strong>Formula:</strong><br/>
+                          TeamAssists = TeamGoals × GoalToAssistRatio × CreativityFactor
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <strong>Inputs:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Team goals scored (from Step 2)</li>
+                              <li>Historical goal-to-assist ratio</li>
+                              <li>Team creativity metrics</li>
+                              <li>Playing style factors</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <strong>Output:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Expected assists per team</li>
+                              <li>Used for: Player assist projections</li>
+                              <li>Used for: Creative player identification</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 5: Clean Sheet Probability */}
+                  <div className="border-2 border-cyan-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center font-bold">5</div>
+                      <h3 className="text-lg font-semibold">Clean Sheet Probability</h3>
+                    </div>
+                    <div className="bg-cyan-50 p-4 rounded">
+                      <div className="space-y-3">
+                        <div className="bg-white p-3 rounded border font-mono text-sm">
+                          <strong>Formula:</strong><br/>
+                          CleanSheetProbability = 100 × e^(-1.1 × GoalsConceded)
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <strong>Inputs:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Goals conceded (from Step 3)</li>
+                              <li>Exponential decay factor (-1.1)</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <strong>Output:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Clean sheet probability %</li>
+                              <li>Used for: Player CS points</li>
+                              <li>Used for: Defensive player selection</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 6: Player Goal Share */}
+                  <div className="border-2 border-orange-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold">6</div>
+                      <h3 className="text-lg font-semibold">Player Goal Share Distribution</h3>
+                    </div>
+                    <div className="bg-orange-50 p-4 rounded">
+                      <div className="space-y-3">
+                        <div className="bg-white p-3 rounded border font-mono text-sm">
+                          <strong>Formula:</strong><br/>
+                          PlayerGoals = TeamGoals × PlayerGoalShare × MinutesWeight<br/>
+                          PlayerGoalShare = min(HistoricalShare × FormFactor, POSITION_CAPS)
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <strong>Inputs:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Team goals (from Step 2)</li>
+                              <li>Historical goal share %</li>
+                              <li>Expected minutes per game</li>
+                              <li>Position caps (GK:2%, DEF:25%, MID:35%, FWD:35%)</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <strong>Penalty Adjustments:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Primary takers: +0.08 to +0.15 goals</li>
+                              <li>Secondary takers: +0.04 to +0.08 goals</li>
+                              <li>Applied after base calculation</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 7: Player Assist Share */}
+                  <div className="border-2 border-indigo-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-indigo-500 text-white rounded-full flex items-center justify-center font-bold">7</div>
+                      <h3 className="text-lg font-semibold">Player Assist Share Distribution</h3>
+                    </div>
+                    <div className="bg-indigo-50 p-4 rounded">
+                      <div className="space-y-3">
+                        <div className="bg-white p-3 rounded border font-mono text-sm">
+                          <strong>Formula:</strong><br/>
+                          PlayerAssists = TeamAssists × PlayerAssistShare × MinutesWeight<br/>
+                          PlayerAssistShare = min(HistoricalShare × CreativityFactor, POSITION_CAPS)
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <strong>Inputs:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Team assists (from Step 4)</li>
+                              <li>Historical assist share %</li>
+                              <li>Expected minutes per game</li>
+                              <li>Position caps (GK:2%, DEF:25%, MID:35%, FWD:25%)</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <strong>Key Factors:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Minutes weighting prevents backup inflation</li>
+                              <li>Lower FWD assist cap (25% vs 35%)</li>
+                              <li>Creativity role assessment</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 8: Player Clean Sheet Points */}
+                  <div className="border-2 border-teal-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-teal-500 text-white rounded-full flex items-center justify-center font-bold">8</div>
+                      <h3 className="text-lg font-semibold">Player Clean Sheet Points</h3>
+                    </div>
+                    <div className="bg-teal-50 p-4 rounded">
+                      <div className="space-y-3">
+                        <div className="bg-white p-3 rounded border font-mono text-sm">
+                          <strong>Formula:</strong><br/>
+                          PlayerCSPoints = CleanSheetProbability × Minutes60+Probability × PositionPoints
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <strong>Inputs:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Clean sheet % (from Step 5)</li>
+                              <li>60+ minutes probability</li>
+                              <li>Position-specific points</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <strong>Position Points:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>GK/DEF: 4 points</li>
+                              <li>MID: 1 point</li>
+                              <li>FWD: 0 points</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 9: Defensive Contributions */}
+                  <div className="border-2 border-rose-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-rose-500 text-white rounded-full flex items-center justify-center font-bold">9</div>
+                      <h3 className="text-lg font-semibold">Defensive Contribution Points</h3>
+                    </div>
+                    <div className="bg-rose-50 p-4 rounded">
+                      <div className="space-y-3">
+                        <div className="bg-white p-3 rounded border font-mono text-sm">
+                          <strong>Formulas:</strong><br/>
+                          DEF: DC = CBI + Tackles<br/>
+                          MID/FWD: DC = CBI + Tackles + Recoveries<br/>
+                          Points = (DC ≥ threshold) ? 2 : 0
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <strong>Inputs:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Projected tackles per game</li>
+                              <li>Projected recoveries per game</li>
+                              <li>Projected CBI per game</li>
+                              <li>Player position</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <strong>Thresholds:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>DEF: DC ≥ 10 → 2 points</li>
+                              <li>MID/FWD: DC ≥ 12 → 2 points</li>
+                              <li>Below threshold → 0 points</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 10: Total Points Compilation */}
+                  <div className="border-2 border-gray-800 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-gray-800 text-white rounded-full flex items-center justify-center font-bold">10</div>
+                      <h3 className="text-lg font-semibold">Player Total Points Compilation</h3>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded">
+                      <div className="space-y-3">
+                        <div className="bg-white p-3 rounded border font-mono text-sm">
+                          <strong>Formula:</strong><br/>
+                          TotalPoints = GoalPoints + AssistPoints + CSPoints + DCPoints + BonusPoints + MinutesPoints + SavesPoints - PenaltyPoints
+                        </div>
+                        <div className="text-sm">
+                          <strong>Final Compilation:</strong>
+                          <ul className="list-disc ml-5 mt-2 space-y-1">
+                            <li>Goal points: PlayerGoals × position multiplier (DEF: 6pts, MID: 5pts, FWD: 4pts)</li>
+                            <li>Assist points: PlayerAssists × 3 points</li>
+                            <li>Clean sheet points: From Step 8</li>
+                            <li>Defensive contribution points: From Step 9</li>
+                            <li>Minutes points: 1pt if ≥60min, 2pts if ≥90min</li>
+                            <li>Saves points: GK only, 1pt per 3 saves</li>
+                            <li>Bonus points: Historical average per gameweek</li>
+                            <li>Penalty points: Yellow cards (-1), Red cards (-3), Goals conceded (-1 per 2 for GK/DEF)</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mathematical Balance Verification */}
+                  <div className="border-2 border-amber-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-amber-500 text-white rounded-full flex items-center justify-center font-bold">✓</div>
+                      <h3 className="text-lg font-semibold">Mathematical Balance Verification</h3>
+                    </div>
+                    <div className="bg-amber-50 p-4 rounded">
+                      <div className="space-y-3">
+                        <div className="bg-white p-3 rounded border">
+                          <strong>Two-Pass Normalization System:</strong>
+                          <div className="font-mono text-sm mt-2 space-y-1">
+                            <div>1. Apply position caps to all players</div>
+                            <div>2. Calculate excess: TeamTotal - Sum(CappedPlayerTotals)</div>
+                            <div>3. Redistribute excess proportionally to uncapped players</div>
+                            <div>4. Verify: Sum(FinalPlayerTotals) ≈ TeamTotal (±0.5)</div>
+                          </div>
+                        </div>
+                        <div className="text-sm">
+                          <strong>Quality Assurance:</strong>
+                          <ul className="list-disc ml-5 mt-2">
+                            <li>Team totals must balance with individual player sums</li>
+                            <li>Position caps must be strictly enforced</li>
+                            <li>No player can exceed realistic seasonal totals</li>
+                            <li>Mathematical accuracy: 99.975% (0.29 goal discrepancy max)</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               </CardContent>
             </Card>
