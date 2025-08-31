@@ -50,18 +50,18 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/content-creators", label: "FPL Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false, new: true }
       ]
     },
-    // {
-    //   section: "Player Projections", 
-    //   items: [
-    //     { path: "/player-total-points", label: "Player Total Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: true },
-    //     { path: "/player-goals-scored-projections", label: "Player Goals Scored", icon: Trophy, description: "Individual player goal projections", popular: false },
-    //     { path: "/player-assist-projections", label: "Player Assists", icon: Zap, description: "Individual player assist projections", popular: false },
-    //     { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
-    //     { path: "/player-defensive-contributions", label: "Player Defensive Contributions", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
-    //     { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
-    //     { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false }
-    //   ]
-    // },
+    {
+      section: "Player Projections", 
+      items: [
+        { path: "/player-total-points", label: "Player Total Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: true },
+        { path: "/player-goals-scored-projections", label: "Player Goals Scored", icon: Trophy, description: "Individual player goal projections", popular: false },
+        { path: "/player-assist-projections", label: "Player Assists", icon: Zap, description: "Individual player assist projections", popular: false },
+        { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
+        { path: "/player-defensive-contributions", label: "Player Defensive Contributions", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
+        { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
+        { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false }
+      ]
+    },
     {
       section: "Team Projections", 
       items: [
