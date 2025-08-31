@@ -93,6 +93,7 @@ function Router() {
       <Route path="/goal-share" component={GoalShare} />
       <Route path="/assist-share" component={AssistShare} />
       <Route path="/player-goal-projections" component={PlayerGoalProjections} />
+      <Route path="/player-goals-scored" component={PlayerGoalProjections} />
       <Route path="/player-assist-projections" component={PlayerAssistProjections} />
       <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
       <Route path="/defensive-contribution-projections" component={DefensiveContributionProjections} />
