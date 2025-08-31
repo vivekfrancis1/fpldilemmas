@@ -7433,13 +7433,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const bootstrapData = await bootstrapResponse.json();
 
-      // Fetch all individual projections in parallel using working endpoints
-      const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse] = await Promise.all([
+      // Fetch all individual projections in parallel using cached endpoints for optimal performance
+      const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse, savesResponse, goalsConcededResponse, yellowCardsResponse, redCardsResponse, bonusPointsResponse] = await Promise.all([
         fetch(`http://localhost:5000/api/player-goals-scored-projections`),
         fetch(`http://localhost:5000/api/player-assist-projections`),
         fetch(`http://localhost:5000/api/player-minutes-projections`),
         fetch(`http://localhost:5000/api/defensive-contribution-projections`),
-        fetch(`http://localhost:5000/api/team-cs-projections`)
+        fetch(`http://localhost:5000/api/team-cs-projections`),
+        fetch(`http://localhost:5000/api/cached/player-saves-projections`),
+        fetch(`http://localhost:5000/api/cached/player-goals-conceded-projections`),
+        fetch(`http://localhost:5000/api/cached/player-yellow-cards-projections`),
+        fetch(`http://localhost:5000/api/cached/player-red-cards-projections`),
+        fetch(`http://localhost:5000/api/cached/player-bonus-points-projections`)
       ]);
 
       // Check all responses
@@ -7448,19 +7453,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!minutesResponse.ok) throw new Error("Failed to fetch minutes projections");
       if (!defensiveResponse.ok) throw new Error("Failed to fetch defensive projections");
       if (!cleanSheetsResponse.ok) throw new Error("Failed to fetch clean sheets projections");
+      if (!savesResponse.ok) throw new Error("Failed to fetch saves projections");
+      if (!goalsConcededResponse.ok) throw new Error("Failed to fetch goals conceded projections");
+      if (!yellowCardsResponse.ok) throw new Error("Failed to fetch yellow cards projections");
+      if (!redCardsResponse.ok) throw new Error("Failed to fetch red cards projections");
+      if (!bonusPointsResponse.ok) throw new Error("Failed to fetch bonus points projections");
 
       // Parse all projection data
-      const [goalsData, assistsData, minutesData, defensiveData, cleanSheetsData] = await Promise.all([
+      const [goalsData, assistsData, minutesData, defensiveData, cleanSheetsData, savesData, goalsConcededData, yellowCardsData, redCardsData, bonusPointsData] = await Promise.all([
         goalsResponse.json(),
         assistsResponse.json(),
         minutesResponse.json(),
         defensiveResponse.json(),
-        cleanSheetsResponse.json()
+        cleanSheetsResponse.json(),
+        savesResponse.json(),
+        goalsConcededResponse.json(),
+        yellowCardsResponse.json(),
+        redCardsResponse.json(),
+        bonusPointsResponse.json()
       ]);
 
       // Handle defensive data structure (it returns an object with data property)
       const defensiveDataArray = defensiveData.data || [];
-      console.log(`DEBUG: Retrieved projection data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveDataArray.length}, Clean Sheets: ${cleanSheetsData.length}`);
+      console.log(`DEBUG: Retrieved projection data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveDataArray.length}, Clean Sheets: ${cleanSheetsData.length}, Saves: ${savesData.length}, Goals Conceded: ${goalsConcededData.length}, Yellow Cards: ${yellowCardsData.length}, Red Cards: ${redCardsData.length}, Bonus Points: ${bonusPointsData.length}`);
       
       // Convert to lookup maps for fast access
       const goalsProjections: Record<number, Record<number, number>> = {};
@@ -7468,6 +7483,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const minutesProjections: Record<number, Record<number, number>> = {};
       const defensiveProjections: Record<number, Record<number, { dc: number, points: number }>> = {};
       const teamCleanSheetProjections: Record<number, Record<number, number>> = {};
+      const savesProjections: Record<number, Record<string, number>> = {};
+      const goalsConcededProjections: Record<number, Record<string, number>> = {};
+      const yellowCardsProjections: Record<number, Record<string, number>> = {};
+      const redCardsProjections: Record<number, Record<string, number>> = {};
+      const bonusPointsProjections: Record<number, Record<string, number>> = {};
 
       goalsData.forEach((player: any) => {
         if (player.gameweekProjections) {
@@ -7508,6 +7528,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // Populate FPL scoring component projections from cached data
+      savesData.forEach((player: any) => {
+        if (player.pointsFromSaves) {
+          savesProjections[player.playerId] = player.pointsFromSaves;
+        }
+      });
+
+      goalsConcededData.forEach((player: any) => {
+        if (player.pointsFromGoalsConceded) {
+          goalsConcededProjections[player.playerId] = player.pointsFromGoalsConceded;
+        }
+      });
+
+      yellowCardsData.forEach((player: any) => {
+        if (player.pointsFromYellowCards) {
+          yellowCardsProjections[player.playerId] = player.pointsFromYellowCards;
+        }
+      });
+
+      redCardsData.forEach((player: any) => {
+        if (player.pointsFromRedCards) {
+          redCardsProjections[player.playerId] = player.pointsFromRedCards;
+        }
+      });
+
+      bonusPointsData.forEach((player: any) => {
+        if (player.pointsFromBonus) {
+          bonusPointsProjections[player.playerId] = player.pointsFromBonus;
+        }
+      });
+
       // Create projections using authentic goals data from projection service
       const projections = bootstrapData.elements.map((fplPlayer: any) => {
         const team = bootstrapData.teams.find((t: any) => t.id === fplPlayer.team);
@@ -7522,9 +7573,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pointsFromCleanSheets: { [key: string]: number } = {};
         const pointsFromMinutes: { [key: string]: number } = {};
         const pointsFromDefensiveContributions: { [key: string]: number } = {};
+        const pointsFromSaves: { [key: string]: number } = {};
+        const pointsFromGoalsConceded: { [key: string]: number } = {};
+        const pointsFromYellowCards: { [key: string]: number } = {};
+        const pointsFromRedCards: { [key: string]: number } = {};
+        const pointsFromBonus: { [key: string]: number } = {};
         
         let totalExpectedPoints = 0;
         let totalGoalPoints = 0, totalAssistPoints = 0, totalCleanSheetPoints = 0, totalMinutesPoints = 0, totalDefensivePoints = 0;
+        let totalSavesPoints = 0, totalGoalsConcededPoints = 0, totalYellowCardsPoints = 0, totalRedCardsPoints = 0, totalBonusPoints = 0;
         
         // Get all cached projection data for this player
         const playerGoals = goalsProjections[fplPlayer.id] || {};
@@ -7532,6 +7589,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const playerMinutes = minutesProjections[fplPlayer.id] || {};
         const playerDefensive = defensiveProjections[fplPlayer.id] || {};
         const teamCleanSheets = teamCleanSheetProjections[fplPlayer.team] || {};
+        const playerSaves = savesProjections[fplPlayer.id] || {};
+        const playerGoalsConceded = goalsConcededProjections[fplPlayer.id] || {};
+        const playerYellowCards = yellowCardsProjections[fplPlayer.id] || {};
+        const playerRedCards = redCardsProjections[fplPlayer.id] || {};
+        const playerBonus = bonusPointsProjections[fplPlayer.id] || {};
         
         // Position-specific clean sheet points
         const csPoints = position === 'GKP' || position === 'DEF' ? 4 : position === 'MID' ? 1 : 0;
@@ -7570,8 +7632,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromDefensiveContributions[`gw${gw}`] = Math.round(defensivePoints * 100) / 100;
           totalDefensivePoints += defensivePoints;
           
-          // Total gameweek points using all cached projection components
-          const gwTotal = gwGoalPoints + gwAssistPoints + cleanSheetPoints + minutesPoints + defensivePoints;
+          // Saves from cached FPL scoring API (already calculated as FPL points)
+          const savesPoints = playerSaves[`gw${gw}`] || 0;
+          pointsFromSaves[`gw${gw}`] = Math.round(savesPoints * 100) / 100;
+          totalSavesPoints += savesPoints;
+          
+          // Goals conceded from cached FPL scoring API (already calculated as FPL points)
+          const goalsConcededPoints = playerGoalsConceded[`gw${gw}`] || 0;
+          pointsFromGoalsConceded[`gw${gw}`] = Math.round(goalsConcededPoints * 100) / 100;
+          totalGoalsConcededPoints += goalsConcededPoints;
+          
+          // Yellow cards from cached FPL scoring API (already calculated as FPL points)
+          const yellowCardsPoints = playerYellowCards[`gw${gw}`] || 0;
+          pointsFromYellowCards[`gw${gw}`] = Math.round(yellowCardsPoints * 100) / 100;
+          totalYellowCardsPoints += yellowCardsPoints;
+          
+          // Red cards from cached FPL scoring API (already calculated as FPL points)
+          const redCardsPoints = playerRedCards[`gw${gw}`] || 0;
+          pointsFromRedCards[`gw${gw}`] = Math.round(redCardsPoints * 100) / 100;
+          totalRedCardsPoints += redCardsPoints;
+          
+          // Bonus points from cached FPL scoring API (already calculated as FPL points)
+          const bonusPoints = playerBonus[`gw${gw}`] || 0;
+          pointsFromBonus[`gw${gw}`] = Math.round(bonusPoints * 100) / 100;
+          totalBonusPoints += bonusPoints;
+          
+          // Total gameweek points using ALL FPL scoring components
+          const gwTotal = gwGoalPoints + gwAssistPoints + cleanSheetPoints + minutesPoints + defensivePoints + 
+                         savesPoints + goalsConcededPoints + yellowCardsPoints + redCardsPoints + bonusPoints;
           gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;
           totalExpectedPoints += gwTotal;
         }
@@ -7598,13 +7686,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromCleanSheets,
           pointsFromMinutes,
           pointsFromDefensiveContributions,
-          pointsFromBonus: {},
+          pointsFromSaves,
+          pointsFromGoalsConceded,
+          pointsFromYellowCards,
+          pointsFromRedCards,
+          pointsFromBonus,
           totalPointsFromGoals: Math.round(totalGoalPoints * 100) / 100,
           totalPointsFromAssists: Math.round(totalAssistPoints * 100) / 100,
           totalPointsFromCleanSheets: Math.round(totalCleanSheetPoints * 100) / 100,
           totalPointsFromMinutes: Math.round(totalMinutesPoints * 100) / 100,
           totalPointsFromDefensiveContributions: Math.round(totalDefensivePoints * 100) / 100,
-          totalPointsFromBonus: 0
+          totalPointsFromSaves: Math.round(totalSavesPoints * 100) / 100,
+          totalPointsFromGoalsConceded: Math.round(totalGoalsConcededPoints * 100) / 100,
+          totalPointsFromYellowCards: Math.round(totalYellowCardsPoints * 100) / 100,
+          totalPointsFromRedCards: Math.round(totalRedCardsPoints * 100) / 100,
+          totalPointsFromBonus: Math.round(totalBonusPoints * 100) / 100
         };
       })
       .filter((p: any) => p.totalExpectedPoints > 0)

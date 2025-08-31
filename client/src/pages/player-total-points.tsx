@@ -77,7 +77,30 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <span className="font-medium text-pink-700">
                 {player.pointsFromBonus?.[gwKey]?.toFixed(1) || '0.0'}
               </span>
-              <span className="text-xs text-gray-400 ml-1">(actual only)</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">🥅 Saves:</span>
+              <span className="font-medium text-cyan-700">
+                {player.pointsFromSaves?.[gwKey]?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">🚪 Goals Conceded:</span>
+              <span className="font-medium text-red-600">
+                {player.pointsFromGoalsConceded?.[gwKey]?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">🟨 Yellow Cards:</span>
+              <span className="font-medium text-yellow-600">
+                {player.pointsFromYellowCards?.[gwKey]?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">🟥 Red Cards:</span>
+              <span className="font-medium text-red-700">
+                {player.pointsFromRedCards?.[gwKey]?.toFixed(1) || '0.0'}
+              </span>
             </div>
           </div>
           <div className="border-t pt-2 mt-3">
@@ -94,7 +117,11 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
                 (player.pointsFromCleanSheets?.[gwKey] || 0) +
                 (player.pointsFromDefensiveContributions?.[gwKey] || 0) +
                 (player.pointsFromMinutes?.[gwKey] || 0) +
-                (player.pointsFromBonus?.[gwKey] || 0)
+                (player.pointsFromBonus?.[gwKey] || 0) +
+                (player.pointsFromSaves?.[gwKey] || 0) +
+                (player.pointsFromGoalsConceded?.[gwKey] || 0) +
+                (player.pointsFromYellowCards?.[gwKey] || 0) +
+                (player.pointsFromRedCards?.[gwKey] || 0)
               ).toFixed(1)}
             </div>
           </div>
@@ -168,7 +195,30 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <span className="font-medium text-pink-700">
                 {player.totalPointsFromBonus?.toFixed(1) || '0.0'}
               </span>
-              <span className="text-xs text-gray-400 ml-1">(actual only)</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">🥅 Saves:</span>
+              <span className="font-medium text-cyan-700">
+                {player.totalPointsFromSaves?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">🚪 Goals Conceded:</span>
+              <span className="font-medium text-red-600">
+                {player.totalPointsFromGoalsConceded?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">🟨 Yellow Cards:</span>
+              <span className="font-medium text-yellow-600">
+                {player.totalPointsFromYellowCards?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">🟥 Red Cards:</span>
+              <span className="font-medium text-red-700">
+                {player.totalPointsFromRedCards?.toFixed(1) || '0.0'}
+              </span>
             </div>
           </div>
           <div className="border-t pt-2 mt-3">
@@ -185,7 +235,11 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
                 (player.totalPointsFromCleanSheets || 0) +
                 (player.totalPointsFromDefensiveContributions || 0) +
                 (player.totalPointsFromMinutes || 0) +
-                (player.totalPointsFromBonus || 0)
+                (player.totalPointsFromBonus || 0) +
+                (player.totalPointsFromSaves || 0) +
+                (player.totalPointsFromGoalsConceded || 0) +
+                (player.totalPointsFromYellowCards || 0) +
+                (player.totalPointsFromRedCards || 0)
               ).toFixed(1)}
             </div>
           </div>
@@ -214,12 +268,20 @@ interface PlayerTotalPointsData {
   pointsFromDefensiveContributions?: { [key: string]: number };
   pointsFromMinutes?: { [key: string]: number };
   pointsFromBonus?: { [key: string]: number };
+  pointsFromSaves?: { [key: string]: number };
+  pointsFromGoalsConceded?: { [key: string]: number };
+  pointsFromYellowCards?: { [key: string]: number };
+  pointsFromRedCards?: { [key: string]: number };
   totalPointsFromGoals?: number;
   totalPointsFromAssists?: number;
   totalPointsFromCleanSheets?: number;
   totalPointsFromDefensiveContributions?: number;
   totalPointsFromMinutes?: number;
   totalPointsFromBonus?: number;
+  totalPointsFromSaves?: number;
+  totalPointsFromGoalsConceded?: number;
+  totalPointsFromYellowCards?: number;
+  totalPointsFromRedCards?: number;
 }
 
 type SortField = 'name' | 'position' | 'team' | 'totalExpectedPoints' | 'seasonTotalPoints' | 'averagePerGameweek' | string;
@@ -534,7 +596,7 @@ export default function PlayerTotalPoints() {
                 <h1>Player Total Points</h1>
               </div>
               <p className="fpl-page-subtitle">
-                Complete FPL points projection combining goals, assists, clean sheets, and expected minutes performance
+                Complete FPL points projection combining all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, and bonus points
               </p>
             </div>
           </div>
