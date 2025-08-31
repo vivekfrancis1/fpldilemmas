@@ -10590,7 +10590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bpsProjections = await Promise.all(
         players.slice(0, 100).map(async (player: any) => {
           const team = teams.find((t: any) => t.id === player.team);
-          const position = getPositionName(player.element_type);
+          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
           
           const projectedBPS: { [key: string]: number } = {};
           let totalProjectedBPS = 0;
@@ -10646,7 +10646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bonusProbabilities = await Promise.all(
         players.slice(0, 100).map(async (player: any) => {
           const team = teams.find((t: any) => t.id === player.team);
-          const position = getPositionName(player.element_type);
+          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
           
           const bonusProbabilities: { [key: string]: number } = {};
           let totalProbability = 0;

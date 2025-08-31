@@ -85,8 +85,9 @@ export default function PlayerBonusPoints() {
   ];
 
   // Filter function for all three data types
-  const filterAndSort = (data: any[], sortKey: string) => {
-    return (data || []).filter((item: any) => {
+  const filterAndSort = (data: any[] | undefined, sortKey: string) => {
+    if (!data) return [];
+    return data.filter((item: any) => {
       const matchesSearch = !searchTerm || 
         item.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.teamName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -102,11 +103,11 @@ export default function PlayerBonusPoints() {
     });
   };
 
-  const filteredBPSProjections = filterAndSort(bpsProjections, "totalProjectedBPS");
-  const filteredBonusProbabilities = filterAndSort(bonusProbabilities, "averageProbability");
-  const filteredBonusPointsProjections = filterAndSort(bonusPointsProjections, "totalBonusPoints");
+  const filteredBPSProjections = filterAndSort(bpsProjections as any[], "totalProjectedBPS");
+  const filteredBonusProbabilities = filterAndSort(bonusProbabilities as any[], "averageProbability");
+  const filteredBonusPointsProjections = filterAndSort(bonusPointsProjections as any[], "totalBonusPoints");
 
-  const handleSort = (column: string) => {
+  const handleSort = (column: "totalBonusPoints" | "totalPoints" | "totalProjectedBPS" | "averageProbability") => {
     if (sortBy === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
