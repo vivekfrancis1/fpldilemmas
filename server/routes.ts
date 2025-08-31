@@ -7656,9 +7656,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromRedCards[`gw${gw}`] = Math.round(redCardsPoints * 100) / 100;
           totalRedCardsPoints += redCardsPoints;
           
-          // Bonus points using new simplified calculation: Probability × 1
+          // Bonus points using corrected calculation: Probability × 3 (3 points per team)
           const bonusProbability = playerBonusProbs[`gw${gw}`] || 0;
-          const bonusPoints = bonusProbability; // Simplified formula: Probability × 1
+          const bonusPoints = bonusProbability * 3; // Corrected formula: Probability × 3
           pointsFromBonus[`gw${gw}`] = Math.round(bonusPoints * 100) / 100;
           totalBonusPoints += bonusPoints;
           
@@ -11071,10 +11071,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let totalBonusPoints = 0;
         let totalPoints = 0;
         
-        // Apply simple formula: Bonus Points = Bonus Probability × 1.0
+        // Apply corrected formula: Bonus Points = Bonus Probability × 3 (3 points per team)
         Object.keys(playerData.bonusProbabilities).forEach(gwKey => {
           const probability = playerData.bonusProbabilities[gwKey];
-          const bonusPointsValue = probability * 1.0; // Exact 1:1 multiplication
+          const bonusPointsValue = probability * 3.0; // Corrected formula: Probability × 3
           
           bonusPoints[gwKey] = parseFloat(bonusPointsValue.toFixed(3));
           pointsFromBonus[gwKey] = parseFloat(bonusPointsValue.toFixed(3));
@@ -11098,7 +11098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      console.log(`DEBUG: Generated ${bonusPointsProjections.length} bonus point projections using probability × 1 formula`);
+      console.log(`DEBUG: Generated ${bonusPointsProjections.length} bonus point projections using probability × 3 formula`);
       res.json(bonusPointsProjections);
     } catch (error) {
       console.error("Error in simple bonus points calculation:", error);
