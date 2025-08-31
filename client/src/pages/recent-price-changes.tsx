@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -457,12 +457,24 @@ export default function RecentPriceChanges() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAndSortedChanges.map((change: PriceChange, index: number) => (
-                      <tr 
-                        key={`${change.player_id}-${index}`}
-                        className="border-b hover:bg-muted/50 transition-colors"
-                        data-testid={`price-change-${change.player_id}`}
-                      >
+                    {filteredAndSortedChanges.map((change: PriceChange, index: number) => {
+                      const currentDate = change.change_date;
+                      const previousDate = index > 0 ? filteredAndSortedChanges[index - 1].change_date : null;
+                      const isNewDateGroup = currentDate !== previousDate;
+                      
+                      return (
+                        <React.Fragment key={`${change.player_id}-${index}`}>
+                          {isNewDateGroup && index > 0 && (
+                            <tr>
+                              <td colSpan={7} className="p-0">
+                                <div className="border-t-2 border-gray-200 dark:border-gray-700"></div>
+                              </td>
+                            </tr>
+                          )}
+                          <tr 
+                            className="border-b hover:bg-muted/50 transition-colors"
+                            data-testid={`price-change-${change.player_id}`}
+                          >
                         <td className="p-3">
                           <div className="text-sm text-muted-foreground">
                             {new Date(change.change_date).toLocaleDateString()}
@@ -499,9 +511,10 @@ export default function RecentPriceChanges() {
                         <td className="p-3 text-right font-medium">
                           {formatPrice(change.current_price)}
                         </td>
-
                       </tr>
-                    ))}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
