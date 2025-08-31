@@ -49,6 +49,7 @@ import AdminDataPopulation from "./pages/admin-data-population";
 import AdminGameweekCache from "./pages/admin-gameweek-cache";
 import DefensiveContributionProjections from "./pages/defensive-contribution-projections";
 import PlayerDefensiveContributions from "./pages/player-defensive-contributions";
+import ProjectionDocumentation from "./pages/projection-documentation";
 
 
 function Router() {
@@ -100,6 +101,7 @@ function Router() {
       <Route path="/admin-gameweek-cache" component={AdminGameweekCache} />
       <Route path="/content-creators" component={ContentCreators} />
       <Route path="/content-creators/:id/team" component={CreatorTeam} />
+      <Route path="/projection-docs" component={ProjectionDocumentation} />
 
       <Route component={NotFound} />
     </Switch>
