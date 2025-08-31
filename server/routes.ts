@@ -9368,8 +9368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if we have recent cached data
       const cachedGoals = await db.select()
         .from(playerGoalsProjections)
-        .where(eq(playerGoalsProjections.season, "2025/26"))
-        .limit(10);
+        .where(eq(playerGoalsProjections.season, "2025/26"));
       
       if (cachedGoals.length > 0) {
         // Check if cache is recent (less than 12 hours old)
