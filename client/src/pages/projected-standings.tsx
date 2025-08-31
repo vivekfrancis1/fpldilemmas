@@ -71,32 +71,32 @@ export default function ProjectedStandings() {
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
 
   return (
-    
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30">
-        <div className="w-full max-w-6xl mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
-              <Trophy className="h-8 w-8 text-purple-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              Projected Final Standings
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Final Premier League table based on actual results and projected outcomes for remaining fixtures
-            </p>
-            <div className="mt-6">
-              <Button 
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-                data-testid="button-refresh-standings"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Refreshing...' : 'Refresh Standings'}
-              </Button>
-            </div>
+    <div className="fpl-page-container">
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Trophy className="h-8 w-8" />
+            <h1>Projected Final Standings</h1>
           </div>
+          <p className="fpl-page-subtitle">
+            Final Premier League table based on actual results and projected outcomes for remaining fixtures
+          </p>
+          <div className="mt-6">
+            <Button 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              data-testid="button-refresh-standings"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh Standings'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="fpl-section-spacing">
 
           {/* Current Status */}
           <Card className="mb-6 shadow-md border-0">

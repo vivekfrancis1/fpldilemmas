@@ -24,7 +24,7 @@ FPL Content Creators Admin: Streamlined admin interface with only essential fiel
 - **Styling**: Tailwind CSS with a custom FPL-themed design system.
 - **Navigation**: Side navigation bar.
 - **Component Structure**: Modular components with reusable UI elements.
-- **UI/UX Decisions**: Enhanced UI design for My Team section; color-coded defensive metrics in Player Statistics (orange for Defensive Contribution, blue for Tackles, green for Recoveries, purple for CBI); streamlined interfaces for Transfer Tracker and Open FPL Projections.
+- **UI/UX Decisions**: Enhanced UI design for My Team section; color-coded defensive metrics in Player Statistics (orange for Defensive Contribution, blue for Tackles, green for Recoveries, purple for CBI); streamlined interfaces for Transfer Tracker and Open FPL Projections. Complete header standardization across all application pages using unified fpl-page-header system with consistent typography (text-2xl sm:text-3xl lg:text-4xl), proper h1 tags, and standardized icon sizing (h-8 w-8) - August 31, 2025.
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js.
