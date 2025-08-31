@@ -134,8 +134,8 @@ class ProjectionService {
           let totalGoalPoints = 0, totalAssistPoints = 0, totalCleanSheetPoints = 0;
           let totalDefensivePoints = 0, totalMinutesPoints = 0, totalBonusPoints = 0;
           
-          // FPL scoring system
-          const goalPoints = position === 'GKP' || position === 'DEF' ? 6 : position === 'MID' ? 5 : 4;
+          // FPL scoring system - CORRECT GOAL POINTS
+          const goalPoints = position === 'GKP' ? 10 : position === 'DEF' ? 6 : position === 'MID' ? 5 : 4;
           const assistPoints = 3;
           const cleanSheetPoints = position === 'GKP' || position === 'DEF' ? 4 : position === 'MID' ? 1 : 0;
           
