@@ -125,25 +125,21 @@ export default function PlayerCleanSheetPoints() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50 to-emerald-50">
-      <div className="container mx-auto px-6 py-8">
-        {/* Professional Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center items-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg">
-              <Shield className="h-8 w-8 text-white" />
-            </div>
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-lg">
-              <Calendar className="h-8 w-8 text-white" />
-            </div>
+    <div className="fpl-page-container">
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Shield className="h-8 w-8" />
+            <h1>Player Clean Sheet Points</h1>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-            Player Clean Sheet Points
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
+          <p className="fpl-page-subtitle">
             Expected clean sheet points per gameweek: Defenders & Goalkeepers (4 pts), Midfielders (1 pt), Forwards (0 pts)
           </p>
         </div>
+      </div>
+
+      <div className="fpl-section-spacing">
 
         {/* Filters and Controls */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-8 p-6">

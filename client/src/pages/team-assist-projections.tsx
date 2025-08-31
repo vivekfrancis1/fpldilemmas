@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, TrendingUp, Filter, BarChart3, Trophy } from "lucide-react";
+import { Users, TrendingUp, Filter, BarChart3, Trophy, Zap } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -128,17 +128,21 @@ export default function TeamAssistProjections() {
   }
 
   return (
-    
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-            Team Assist Projections
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
+    <div className="fpl-page-container">
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Zap className="h-8 w-8" />
+            <h1>Team Assist Projections</h1>
+          </div>
+          <p className="fpl-page-subtitle">
             Assists for each team across all 38 gameweeks - actual assists for completed games, projections for upcoming games
           </p>
         </div>
+      </div>
+
+      <div className="fpl-section-spacing">
 
         {/* Controls */}
         <Card>
@@ -444,6 +448,6 @@ export default function TeamAssistProjections() {
           </Card>
         </div>
       </div>
-    
+    </div>
   );
 }

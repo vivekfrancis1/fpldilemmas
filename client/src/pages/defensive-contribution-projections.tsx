@@ -134,19 +134,24 @@ export default function DefensiveContributionProjections() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Shield className="h-8 w-8" />
-          Defensive Contribution Projections
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Fixture-aware defensive projections with up to 50% variance based on opponent attacking strength
-        </p>
-        <div className="mt-3 text-sm text-muted-foreground">
-          Uses position-specific calculations: Defenders (CBI + Tackles), Midfielders/Forwards (CBI + Tackles + Recoveries)
+    <div className="fpl-page-container">
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Shield className="h-8 w-8" />
+            <h1>Defensive Contribution Projections</h1>
+          </div>
+          <p className="fpl-page-subtitle">
+            Fixture-aware defensive projections with up to 50% variance based on opponent attacking strength
+          </p>
+          <div className="fpl-page-tagline">
+            Uses position-specific calculations: Defenders (CBI + Tackles), Midfielders/Forwards (CBI + Tackles + Recoveries)
+          </div>
         </div>
       </div>
+
+      <div className="fpl-section-spacing">
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -469,6 +474,7 @@ export default function DefensiveContributionProjections() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

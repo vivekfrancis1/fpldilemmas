@@ -163,20 +163,21 @@ export default function PlayerMinutes() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50/30">
-      <div className="w-full max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <Clock className="h-8 w-8 text-blue-600" />
+    <div className="fpl-page-container">
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Clock className="h-8 w-8" />
+            <h1>Player Minutes</h1>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-            Player Minutes
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
+          <p className="fpl-page-subtitle">
             Expected minutes per game and FPL points from minutes for each player, calculated using rotation patterns and current form
           </p>
         </div>
+      </div>
+
+      <div className="fpl-section-spacing">
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

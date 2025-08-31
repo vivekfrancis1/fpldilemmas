@@ -192,20 +192,21 @@ export default function PlayerAssistProjections() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50/30">
-      <div className="w-full max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-            <Zap className="h-8 w-8 text-green-600" />
+    <div className="fpl-page-container">
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Zap className="h-8 w-8" />
+            <h1>Player Assists</h1>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-            Player Assists
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
+          <p className="fpl-page-subtitle">
             Individual player assist projections for gameweeks 4-9, calculated using team assist projections and weighted historical assist share data with expected minutes factoring
           </p>
         </div>
+      </div>
+
+      <div className="fpl-section-spacing">
 
         {/* Filters */}
         <Card className="mb-6">

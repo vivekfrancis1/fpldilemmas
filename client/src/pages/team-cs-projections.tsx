@@ -99,20 +99,21 @@ export default function TeamCSProjections() {
   const gameweeks = getGameweeks();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50/30">
-        <div className="w-full max-w-7xl mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-              <Shield className="h-8 w-8 text-blue-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              Team CS Projections
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Clean sheet probabilities for each team across all 38 gameweeks - actual results for completed games, projections for upcoming games
-            </p>
+    <div className="fpl-page-container">
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Shield className="h-8 w-8" />
+            <h1>Team CS Projections</h1>
           </div>
+          <p className="fpl-page-subtitle">
+            Clean sheet probabilities for each team across all 38 gameweeks - actual results for completed games, projections for upcoming games
+          </p>
+        </div>
+      </div>
+
+      <div className="fpl-section-spacing">
 
           {/* Controls */}
           <Card className="mb-6">
