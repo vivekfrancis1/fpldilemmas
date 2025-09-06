@@ -132,7 +132,7 @@ export default function TeamGoalsAgainstProjections() {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center p-8">
-          <h2 className="text-xl font-semibold text-red-600 mb-4">Unable to Load Team Goals Against Projections</h2>
+          <h2 className="text-xl font-semibold text-red-600 mb-4">Unable to Load Team Goals Conceded Projections</h2>
           <p className="text-gray-600 mb-4">There was an error loading the projection data. Please try refreshing the page.</p>
           <button 
             onClick={() => window.location.reload()} 
@@ -164,7 +164,7 @@ export default function TeamGoalsAgainstProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Shield className="h-8 w-8" />
-            <h1>Team Goals Against Projections</h1>
+            <h1>Team Goals Conceded Projections</h1>
           </div>
           <p className="fpl-page-subtitle">
             Goals conceded by each team across all 38 gameweeks - defensive analysis based on opponent expected goals
@@ -250,12 +250,12 @@ export default function TeamGoalsAgainstProjections() {
             </CardContent>
           </Card>
 
-          {/* Team Goals Against Projections Table */}
+          {/* Team Goals Conceded Projections Table */}
           <Card className="overflow-hidden">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                {`Team Goals Against Projections: GW${startGameweek}-GW${endGameweek}`}
+                {`Team Goals Conceded Projections: GW${startGameweek}-GW${endGameweek}`}
                 <Badge variant="outline" className="ml-2">
                   {filteredProjections.length} teams
                 </Badge>
@@ -383,7 +383,7 @@ export default function TeamGoalsAgainstProjections() {
           {/* Info Panel */}
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle className="text-lg">About Team Goals Against Projections</CardTitle>
+              <CardTitle className="text-lg">About Team Goals Conceded Projections</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

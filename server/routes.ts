@@ -6817,7 +6817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Debug info (season totals removed)
-      console.log(`DEBUG: Team Goals Against Projections - Generated gameweek data for ${teamsGoalsAgainst.size} teams`);
+      console.log(`DEBUG: Team Goals Conceded Projections - Generated gameweek data for ${teamsGoalsAgainst.size} teams`);
       
       // Convert to array and sort by team ID since no season totals
       const finalProjections = Array.from(teamsGoalsAgainst.values())
