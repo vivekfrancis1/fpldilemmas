@@ -11234,27 +11234,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Process each gameweek
         for (const [gw, goalProj] of Object.entries(player.gameweekProjections || {})) {
           const goals = Number(goalProj) || 0;
+          const gwKey = `gw${gw}`; // Add "gw" prefix to match frontend expectations
           
           // Points from goals
           const gwGoalPoints = goals * goalPointsByPosition;
-          pointsFromGoals[gw] = Math.round(gwGoalPoints * 100) / 100;
+          pointsFromGoals[gwKey] = Math.round(gwGoalPoints * 100) / 100;
           totalGoalPoints += gwGoalPoints;
           
           // Basic assist projection (20% of goals for attackers, 10% for others)
           const assistMultiplier = position === 'FWD' || position === 'MID' ? 0.2 : 0.1;
           const assists = goals * assistMultiplier;
           const gwAssistPoints = assists * 3;
-          pointsFromAssists[gw] = Math.round(gwAssistPoints * 100) / 100;
+          pointsFromAssists[gwKey] = Math.round(gwAssistPoints * 100) / 100;
           totalAssistPoints += gwAssistPoints;
           
           // Basic minutes projection (assume playing if scoring goals)
           const gwMinutesPoints = goals > 0.1 ? 2 : (goals > 0.01 ? 1 : 0); // 2 if likely starter, 1 if sub
-          pointsFromMinutes[gw] = gwMinutesPoints;
+          pointsFromMinutes[gwKey] = gwMinutesPoints;
           totalMinutesPoints += gwMinutesPoints;
           
           // Total points for this gameweek
           const gwTotalPoints = gwGoalPoints + gwAssistPoints + gwMinutesPoints;
-          gameweekProjections[gw] = Math.round(gwTotalPoints * 100) / 100;
+          gameweekProjections[gwKey] = Math.round(gwTotalPoints * 100) / 100;
         }
         
         const totalExpectedPoints = totalGoalPoints + totalAssistPoints + totalMinutesPoints;

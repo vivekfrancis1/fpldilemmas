@@ -414,9 +414,9 @@ export default function PlayerTotalPoints() {
       }
       // Handle total points gameweek sorting
       else if (sortField.startsWith('gw')) {
-        const gwNumber = sortField.replace('gw', '');
-        aValue = a.gameweekProjections?.[gwNumber] || 0;
-        bValue = b.gameweekProjections?.[gwNumber] || 0;
+        const gwKey = sortField; // Use the full "gw4" key format
+        aValue = a.gameweekProjections?.[gwKey] || 0;
+        bValue = b.gameweekProjections?.[gwKey] || 0;
       } 
       // Handle regular field sorting
       else {
