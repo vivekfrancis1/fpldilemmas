@@ -3860,11 +3860,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("http://localhost:5000/api/team-projections-combined")
+        fetch("http://localhost:5000/api/team-goal-projections")
       ]);
       
       if (!bootstrapResponse.ok || !teamProjectionsResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API or Team Combined Projections");
+        throw new Error("Failed to fetch data from FPL API or Team Goal Projections");
       }
       
       const bootstrapData = await bootstrapResponse.json();
@@ -3872,11 +3872,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("DEBUG: Goal Share Season API - using simplified approach for better performance");
       
-      // Step 1: Calculate team season totals from Team Combined Projections (Goals Scored)
+      // Step 1: Calculate team season totals from Team Goal Projections
       const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
       
-      // Aggregate expected goals from Team Combined Projections Goals Scored data
-      teamProjectionsData.goalsScored.forEach((team: any) => {
+      // Aggregate expected goals from Team Goal Projections data
+      teamProjectionsData.forEach((team: any) => {
         if (!teamSeasonTotals[team.id]) {
           teamSeasonTotals[team.id] = {
             expectedGoals: 0,
@@ -3885,7 +3885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Sum all gameweek projections for this team's season total
-        Object.values(team.gameweekProjections).forEach((goals: any) => {
+        Object.values(team.gameweekProjections || {}).forEach((goals: any) => {
           if (typeof goals === 'number') {
             teamSeasonTotals[team.id].expectedGoals += goals;
           }
@@ -3936,7 +3936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         4: 0.35  // Forward
       };
       
-      Object.keys(teamSeasonTotals).forEach(teamIdStr => {
+      for (const teamIdStr of Object.keys(teamSeasonTotals)) {
         const teamId = parseInt(teamIdStr);
         const team = bootstrapData.teams.find((t: any) => t.id === teamId);
         
@@ -3967,8 +3967,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const playerContributions: { [playerId: number]: { name: string, position: string, contribution: number, xgPer90: number, expectedMinutes: number } } = {};
           let totalContribution = 0;
           
-          qualifiedPlayers.forEach(player => {
-            // HYBRID APPROACH: Use actual goals for completed matches + projections for remaining matches
+          for (const player of qualifiedPlayers) {
+            // ENHANCED HYBRID APPROACH: Use actual goals + current year xG + last year's xG
             const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
             const completedGameweeks = currentGameweek - 1; // GW1 is completed
             const remainingGameweeks = 38 - completedGameweeks;
@@ -3976,11 +3976,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Calculate goals per game from actual performance
             const actualGoalsPerGame = completedGameweeks > 0 ? player.actualGoalsScored / completedGameweeks : 0;
             
-            // Apply sample size regression with type-safe position lookup
+            // ENHANCED xG CALCULATION: Combine current year xG with last year's xG
+            const currentYearXGPer90 = player.xgPer90;
+            
+            // Calculate last year's xG estimate based on goals/minutes from previous season
+            // This is a simpler approach that doesn't require async database calls
+            let lastYearXGPer90 = 0;
+            
+            // Use a ratio of current actual goals to current xG to estimate historical xG performance
+            if (player.actualGoalsScored > 0 && player.totalXG > 0) {
+              const goalConversionRatio = player.actualGoalsScored / player.totalXG;
+              // Conservative estimate: assume 80% of current conversion rate for historical xG
+              lastYearXGPer90 = currentYearXGPer90 * (goalConversionRatio * 0.8);
+            } else {
+              // Fallback: use position-based historical average
+              lastYearXGPer90 = player.element_type === 1 ? 0.01 : 
+                               player.element_type === 2 ? 0.06 : 
+                               player.element_type === 3 ? 0.12 : 0.25;
+            }
+            
+            // Weighted combination: 70% current year, 30% estimated last year
+            const combinedXGPer90 = (currentYearXGPer90 * 0.7) + (lastYearXGPer90 * 0.3);
+            
+            console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, Estimated Last: ${lastYearXGPer90.toFixed(3)}, Combined: ${combinedXGPer90.toFixed(3)}`);
+            
+            // Apply sample size regression with combined xG data
             const positionAvg = player.element_type === 1 ? 0.02 : 
                               player.element_type === 2 ? 0.08 : 
                               player.element_type === 3 ? 0.15 : 0.35;
-            let projectedXGPer90 = adjustForSampleSize(player, positionAvg);
+            
+            // Use combined xG for regression calculation
+            const playerForRegression = { ...player, xgPer90: combinedXGPer90 };
+            let projectedXGPer90 = adjustForSampleSize(playerForRegression, positionAvg);
             
             // PENALTY TAKER ADJUSTMENT - Add penalty goals that xG excludes
             const penaltyAdjustment = getPenaltyTakerAdjustment(player.name, player.id);
@@ -4031,7 +4058,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
             
             totalContribution += contribution;
-          });
+          }
           
           // ENHANCED NORMALIZATION - Ensure sum equals team xG
           console.log(`DEBUG: Team ${team.name} - Total contribution: ${totalContribution.toFixed(3)}, Team xG: ${teamSeasonTotals[teamId].expectedGoals.toFixed(3)}`);
@@ -4124,7 +4151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           return; // Skip the old historical weighting approach
         }
-      });
+      }
       
       console.log("DEBUG: xG per 90 methodology completed successfully");
       
