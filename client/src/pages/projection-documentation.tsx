@@ -7,7 +7,8 @@ import ProtectedRoute from "@/components/protected-route";
 
 export default function ProjectionDocumentation() {
   return (
-    <div className="fpl-page-container">
+    <ProtectedRoute requireAdmin={true}>
+      <div className="fpl-page-container">
       {/* Unified Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-title">
@@ -1138,5 +1139,6 @@ export default function ProjectionDocumentation() {
         </Tabs>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }
