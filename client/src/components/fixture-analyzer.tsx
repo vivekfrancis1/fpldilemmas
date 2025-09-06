@@ -37,8 +37,8 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
 
   const getDefensiveTier = (teamId: number): string => {
     const eliteDefenseTeams = [1]; // Arsenal
-    const strongDefenseTeams = [12, 13, 7, 15, 16]; // Liverpool, Man City, Chelsea, Newcastle, Nottingham Forest
-    const averageDefenseTeams = [2, 9, 14, 18, 8, 10]; // Aston Villa, Everton, Manchester United, Tottenham, Crystal Palace, Fulham
+    const strongDefenseTeams = [12, 13, 7, 15]; // Liverpool, Man City, Chelsea, Newcastle
+    const averageDefenseTeams = [2, 9, 14, 18, 8, 10, 16]; // Aston Villa, Everton, Manchester United, Tottenham, Crystal Palace, Fulham, Nottingham Forest
     const weakDefenseTeams = [4, 5, 6, 19, 20]; // Bournemouth, Brentford, Brighton, West Ham, Wolves
     const promotedDefenseTeams = [3, 11, 17]; // Burnley, Leeds, Sunderland
     
