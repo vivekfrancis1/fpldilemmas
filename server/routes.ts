@@ -3413,14 +3413,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Convert goal projections to assist projections using correct totals
       const teamAssistProjections = teamGoalProjections.map((team: any) => {
-        const correctTotal = correctAssistTotals[team.teamShort] || (team.totalGoals * 0.72);
-        const assistMultiplier = correctTotal / team.totalGoals;
+        const correctTotal = correctAssistTotals[team.teamShort] || 45; // Default assist total
+        
+        // Calculate total goals from gameweek projections if totalGoals is null
+        const calculatedTotalGoals = team.totalGoals || Object.values(team.gameweekProjections).reduce((sum: number, goals: any) => sum + (goals || 0), 0);
+        const assistMultiplier = correctTotal / calculatedTotalGoals;
         
         // Convert gameweek goals to assists using the team-specific multiplier
         const gameweekProjections: { [gameweek: number]: number } = {};
         Object.keys(team.gameweekProjections).forEach(gameweek => {
           const goals = team.gameweekProjections[gameweek];
-          gameweekProjections[parseInt(gameweek)] = Math.round(goals * assistMultiplier * 100) / 100;
+          // Handle null/undefined goals values by using average goals per game
+          const averageGoalsPerGame = calculatedTotalGoals / 38;
+          const adjustedGoals = goals !== null && goals !== undefined ? goals : averageGoalsPerGame;
+          gameweekProjections[parseInt(gameweek)] = Math.round(adjustedGoals * assistMultiplier * 100) / 100;
         });
         
         const totalAssists = Math.round(correctTotal * 100) / 100;
