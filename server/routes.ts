@@ -29,6 +29,110 @@ import bcrypt from "bcrypt";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 
+// Shared comprehensive goal calculation function for consistency across endpoints
+function calculateComprehensiveGoals(
+  team: any, 
+  opponent: any, 
+  fixture: any, 
+  isHome: boolean, 
+  bettingData: any, 
+  adminGoalSettings: any, 
+  fixturesData: any[]
+): number {
+  // Phase 1: Universal Base xG Foundation
+  let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
+  
+  // Phase 2: Venue Factors
+  const venueMultiplier = isHome ? 
+    adminGoalSettings.homeAdvantageGoalsMultiplier : 
+    adminGoalSettings.awayFactorGoalsMultiplier;
+  baseExpectedGoals *= venueMultiplier;
+  
+  // Phase 3: Defensive Tiers
+  const getDefensiveTier = (teamId: number): string => {
+    const parseTeamArray = (teamData: any): number[] => {
+      if (Array.isArray(teamData)) return teamData;
+      if (typeof teamData === 'string') {
+        try {
+          return JSON.parse(teamData);
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const eliteDefenseTeams = parseTeamArray(adminGoalSettings.eliteDefenseTeams);
+    const strongDefenseTeams = parseTeamArray(adminGoalSettings.strongDefenseTeams);
+    const weakDefenseTeams = parseTeamArray(adminGoalSettings.weakDefenseTeams);
+    const promotedDefenseTeams = parseTeamArray(adminGoalSettings.promotedDefenseTeams);
+
+    if (eliteDefenseTeams.includes(teamId)) return 'elite';
+    if (strongDefenseTeams.includes(teamId)) return 'strong';
+    if (weakDefenseTeams.includes(teamId)) return 'weak';
+    if (promotedDefenseTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+  
+  const opponentDefensiveTier = getDefensiveTier(opponent.id);
+  let opponentDefensiveMultiplier = 1.0;
+  switch (opponentDefensiveTier) {
+    case 'elite': opponentDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier; break;
+    case 'strong': opponentDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier; break;
+    case 'average': opponentDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier; break;
+    case 'weak': opponentDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier; break;
+    case 'promoted': opponentDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier; break;
+  }
+  
+  baseExpectedGoals *= opponentDefensiveMultiplier;
+  
+  // Phase 4: Attacking Tiers
+  const getAttackingTier = (teamId: number) => {
+    const parseTeamArray = (teamData: any): number[] => {
+      if (Array.isArray(teamData)) return teamData;
+      if (typeof teamData === 'string') {
+        try {
+          return JSON.parse(teamData);
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const eliteAttackTeams = parseTeamArray(adminGoalSettings.eliteAttackTeams);
+    const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams);
+    const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams);
+    const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams);
+    
+    if (eliteAttackTeams.includes(teamId)) return 'elite';
+    if (strongAttackTeams.includes(teamId)) return 'strong';
+    if (weakAttackTeams.includes(teamId)) return 'weak';
+    if (promotedAttackTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+  
+  const attackingTier = getAttackingTier(team.id);
+  let attackingTierMultiplier = 1.0;
+  switch (attackingTier) {
+    case 'elite': attackingTierMultiplier = adminGoalSettings.eliteAttackMultiplier; break;
+    case 'strong': attackingTierMultiplier = adminGoalSettings.strongAttackMultiplier; break;
+    case 'average': attackingTierMultiplier = adminGoalSettings.averageAttackMultiplier; break;
+    case 'weak': attackingTierMultiplier = adminGoalSettings.weakAttackMultiplier; break;
+    case 'promoted': attackingTierMultiplier = adminGoalSettings.promotedAttackMultiplier; break;
+  }
+  
+  baseExpectedGoals *= attackingTierMultiplier;
+  
+  // Apply final bounds
+  baseExpectedGoals = Math.max(
+    adminGoalSettings.absoluteMinGoals || 0.3, 
+    Math.min(baseExpectedGoals, adminGoalSettings.absoluteMaxGoals || 4.2)
+  );
+  
+  return Math.round(baseExpectedGoals * 100) / 100;
+}
+
 // Master Default Team Configuration - Single Source of Truth
 const MASTER_TEAM_DEFAULTS = {
   // Base Settings
@@ -6440,47 +6544,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               console.log(`DEBUG: Goals Scored - GW${fixture.event} ACTUAL - ${homeTeam.teamShort} scored: ${homeGoals} goals`);
             } else {
-              // Use projections for incomplete gameweeks - basic calculation for now
+              // Use comprehensive 8-phase calculation (same as team-goal-projections endpoint)
               const homeTeamData = teams.find((t: any) => t.id === fixture.team_h);
               const awayTeamData = teams.find((t: any) => t.id === fixture.team_a);
               
               if (homeTeamData && awayTeamData) {
-                // Basic goal calculation - can be enhanced later
-                let homeGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
-                let awayGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
-                
-                // Apply home advantage
-                homeGoals *= adminGoalSettings.homeAdvantageGoalsMultiplier;
-                awayGoals *= adminGoalSettings.awayFactorGoalsMultiplier;
-                
-                // Apply attacking tier multipliers
-                const getAttackTier = (teamId: number) => {
-                  const parseArray = (arr: any) => Array.isArray(arr) ? arr : JSON.parse(arr || '[]');
-                  if (parseArray(adminGoalSettings.eliteAttackTeams).includes(teamId)) return adminGoalSettings.eliteAttackMultiplier;
-                  if (parseArray(adminGoalSettings.strongAttackTeams).includes(teamId)) return adminGoalSettings.strongAttackMultiplier;
-                  if (parseArray(adminGoalSettings.weakAttackTeams).includes(teamId)) return adminGoalSettings.weakAttackMultiplier;
-                  if (parseArray(adminGoalSettings.promotedAttackTeams).includes(teamId)) return adminGoalSettings.promotedAttackMultiplier;
-                  return adminGoalSettings.averageAttackMultiplier;
+                // Calculate home team goals using exact same logic as team-goal-projections
+                const homeTeamBettingData = bettingData.teamGoalRates[homeTeamData.id] || { 
+                  expectedGoalsPerGame: adminGoalSettings.defaultExpectedGoalsPerGame, 
+                  variance: adminGoalSettings.defaultTeamVariance 
                 };
                 
-                const getDefenseTier = (teamId: number) => {
-                  const parseArray = (arr: any) => Array.isArray(arr) ? arr : JSON.parse(arr || '[]');
-                  if (parseArray(adminGoalSettings.eliteDefenseTeams).includes(teamId)) return adminGoalSettings.eliteDefenseMultiplier;
-                  if (parseArray(adminGoalSettings.strongDefenseTeams).includes(teamId)) return adminGoalSettings.strongDefenseMultiplier;
-                  if (parseArray(adminGoalSettings.weakDefenseTeams).includes(teamId)) return adminGoalSettings.weakDefenseMultiplier;
-                  if (parseArray(adminGoalSettings.promotedDefenseTeams).includes(teamId)) return adminGoalSettings.promotedDefenseMultiplier;
-                  return adminGoalSettings.averageDefenseMultiplier;
+                // Phase 1: Universal Base xG Foundation
+                let homeExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
+                
+                // Phase 2: Venue Factors
+                homeExpectedGoals *= adminGoalSettings.homeAdvantageGoalsMultiplier;
+                
+                // Phase 3: Away team's defensive tier
+                const getDefensiveTier = (teamId: number): string => {
+                  const parseTeamArray = (teamData: any): number[] => {
+                    if (Array.isArray(teamData)) return teamData;
+                    if (typeof teamData === 'string') {
+                      try {
+                        return JSON.parse(teamData);
+                      } catch {
+                        return [];
+                      }
+                    }
+                    return [];
+                  };
+
+                  const eliteDefenseTeams = parseTeamArray(adminGoalSettings.eliteDefenseTeams);
+                  const strongDefenseTeams = parseTeamArray(adminGoalSettings.strongDefenseTeams);
+                  const weakDefenseTeams = parseTeamArray(adminGoalSettings.weakDefenseTeams);
+                  const promotedDefenseTeams = parseTeamArray(adminGoalSettings.promotedDefenseTeams);
+
+                  if (eliteDefenseTeams.includes(teamId)) return 'elite';
+                  if (strongDefenseTeams.includes(teamId)) return 'strong';
+                  if (weakDefenseTeams.includes(teamId)) return 'weak';
+                  if (promotedDefenseTeams.includes(teamId)) return 'promoted';
+                  return 'average';
                 };
                 
-                homeGoals *= getAttackTier(homeTeamData.id);
-                homeGoals *= getDefenseTier(awayTeamData.id);
+                const awayDefensiveTier = getDefensiveTier(awayTeamData.id);
+                let awayDefensiveMultiplier = 1.0;
+                switch (awayDefensiveTier) {
+                  case 'elite': awayDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier; break;
+                  case 'strong': awayDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier; break;
+                  case 'average': awayDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier; break;
+                  case 'weak': awayDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier; break;
+                  case 'promoted': awayDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier; break;
+                }
+                homeExpectedGoals *= awayDefensiveMultiplier;
                 
-                awayGoals *= getAttackTier(awayTeamData.id);
-                awayGoals *= getDefenseTier(homeTeamData.id);
+                // Phase 4: Home team's attacking tier
+                const getAttackingTier = (teamId: number) => {
+                  const parseTeamArray = (teamData: any): number[] => {
+                    if (Array.isArray(teamData)) return teamData;
+                    if (typeof teamData === 'string') {
+                      try {
+                        return JSON.parse(teamData);
+                      } catch {
+                        return [];
+                      }
+                    }
+                    return [];
+                  };
+
+                  const eliteAttackTeams = parseTeamArray(adminGoalSettings.eliteAttackTeams);
+                  const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams);
+                  const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams);
+                  const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams);
+                  
+                  if (eliteAttackTeams.includes(teamId)) return 'elite';
+                  if (strongAttackTeams.includes(teamId)) return 'strong';
+                  if (weakAttackTeams.includes(teamId)) return 'weak';
+                  if (promotedAttackTeams.includes(teamId)) return 'promoted';
+                  return 'average';
+                };
                 
-                // Apply bounds
-                homeGoals = Math.max(adminGoalSettings.absoluteMinGoals || 0, Math.min(homeGoals, adminGoalSettings.absoluteMaxGoals || 7));
-                awayGoals = Math.max(adminGoalSettings.absoluteMinGoals || 0, Math.min(awayGoals, adminGoalSettings.absoluteMaxGoals || 7));
+                const homeAttackingTier = getAttackingTier(homeTeamData.id);
+                let homeAttackingTierMultiplier = 1.0;
+                switch (homeAttackingTier) {
+                  case 'elite': homeAttackingTierMultiplier = adminGoalSettings.eliteAttackMultiplier; break;
+                  case 'strong': homeAttackingTierMultiplier = adminGoalSettings.strongAttackMultiplier; break;
+                  case 'average': homeAttackingTierMultiplier = adminGoalSettings.averageAttackMultiplier; break;
+                  case 'weak': homeAttackingTierMultiplier = adminGoalSettings.weakAttackMultiplier; break;
+                  case 'promoted': homeAttackingTierMultiplier = adminGoalSettings.promotedAttackMultiplier; break;
+                }
+                homeExpectedGoals *= homeAttackingTierMultiplier;
+                
+                // Apply bounds with market constraints like the individual endpoint
+                const homeMaxGoal = Math.min(adminGoalSettings.marketCeilingMultiplier * adminGoalSettings.averageBaseXGPerTeamPerGame, adminGoalSettings.absoluteMaxGoals);
+                const homeMinGoal = Math.max(adminGoalSettings.marketFloorMultiplier * adminGoalSettings.averageBaseXGPerTeamPerGame, adminGoalSettings.absoluteMinGoals);
+                homeExpectedGoals = Math.max(homeMinGoal, Math.min(homeExpectedGoals, homeMaxGoal));
+                
+                // Calculate away team goals using same logic
+                let awayExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
+                awayExpectedGoals *= adminGoalSettings.awayFactorGoalsMultiplier;
+                
+                const homeDefensiveTier = getDefensiveTier(homeTeamData.id);
+                let homeDefensiveMultiplier = 1.0;
+                switch (homeDefensiveTier) {
+                  case 'elite': homeDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier; break;
+                  case 'strong': homeDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier; break;
+                  case 'average': homeDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier; break;
+                  case 'weak': homeDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier; break;
+                  case 'promoted': homeDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier; break;
+                }
+                awayExpectedGoals *= homeDefensiveMultiplier;
+                
+                const awayAttackingTier = getAttackingTier(awayTeamData.id);
+                let awayAttackingTierMultiplier = 1.0;
+                switch (awayAttackingTier) {
+                  case 'elite': awayAttackingTierMultiplier = adminGoalSettings.eliteAttackMultiplier; break;
+                  case 'strong': awayAttackingTierMultiplier = adminGoalSettings.strongAttackMultiplier; break;
+                  case 'average': awayAttackingTierMultiplier = adminGoalSettings.averageAttackMultiplier; break;
+                  case 'weak': awayAttackingTierMultiplier = adminGoalSettings.weakAttackMultiplier; break;
+                  case 'promoted': awayAttackingTierMultiplier = adminGoalSettings.promotedAttackMultiplier; break;
+                }
+                awayExpectedGoals *= awayAttackingTierMultiplier;
+                
+                const awayMaxGoal = Math.min(adminGoalSettings.marketCeilingMultiplier * adminGoalSettings.averageBaseXGPerTeamPerGame, adminGoalSettings.absoluteMaxGoals);
+                const awayMinGoal = Math.max(adminGoalSettings.marketFloorMultiplier * adminGoalSettings.averageBaseXGPerTeamPerGame, adminGoalSettings.absoluteMinGoals);
+                awayExpectedGoals = Math.max(awayMinGoal, Math.min(awayExpectedGoals, awayMaxGoal));
+                
+                const homeGoals = Math.round(homeExpectedGoals * 100) / 100;
+                const awayGoals = Math.round(awayExpectedGoals * 100) / 100;
                 
                 homeTeam.gameweekProjections[fixture.event] = homeGoals;
                 awayTeam.gameweekProjections[fixture.event] = awayGoals;
