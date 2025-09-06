@@ -3457,8 +3457,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const teamGoalsAgainstProjections = teamGoalsAgainstMap.get(team.id) || {};
           const gameweekGoalsAgainst = teamGoalsAgainstProjections[fixture.event.toString()] || 1.5; // Default if not found
           
-          // EXPONENTIAL FORMULA: CS = 100 × e^(-1.1 × xGA)
-          let cleanSheetProbability = 100 * Math.exp(-1.1 * gameweekGoalsAgainst);
+          // CONFIGURABLE EXPONENTIAL FORMULA: CS = cleanSheetMultiplier × e^(-cleanSheetExponent × xGA)
+          let cleanSheetProbability = (adminGoalSettings.cleanSheetMultiplier || 100) * Math.exp(-(adminGoalSettings.cleanSheetExponent || 1.0) * gameweekGoalsAgainst);
           
           // Ensure realistic bounds (0-100%)
           cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
