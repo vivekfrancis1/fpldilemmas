@@ -75,7 +75,7 @@ function calculateFastGoals(
   return Math.round(goals * 100) / 100;
 }
 
-// Legacy function kept for backwards compatibility but simplified
+// Original comprehensive goal calculation function - RESTORED for accuracy
 function calculateComprehensiveGoals(
   team: any, 
   opponent: any, 
@@ -85,8 +85,98 @@ function calculateComprehensiveGoals(
   adminGoalSettings: any, 
   fixturesData: any[]
 ): number {
-  // Use fast calculation for 90% performance boost
-  return calculateFastGoals(team.id, opponent.id, isHome);
+  // Phase 1: Universal Base xG Foundation
+  let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
+  
+  // Phase 2: Venue Factors
+  const venueMultiplier = isHome ? 
+    adminGoalSettings.homeAdvantageGoalsMultiplier : 
+    adminGoalSettings.awayFactorGoalsMultiplier;
+  baseExpectedGoals *= venueMultiplier;
+  
+  // Phase 3: Defensive Tiers
+  const getDefensiveTier = (teamId: number): string => {
+    const parseTeamArray = (teamData: any): number[] => {
+      if (Array.isArray(teamData)) return teamData;
+      if (typeof teamData === 'string') {
+        try {
+          return JSON.parse(teamData);
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const eliteDefenseTeams = parseTeamArray(adminGoalSettings.eliteDefenseTeams);
+    const strongDefenseTeams = parseTeamArray(adminGoalSettings.strongDefenseTeams);
+    const weakDefenseTeams = parseTeamArray(adminGoalSettings.weakDefenseTeams);
+    const promotedDefenseTeams = parseTeamArray(adminGoalSettings.promotedDefenseTeams);
+
+    if (eliteDefenseTeams.includes(teamId)) return 'elite';
+    if (strongDefenseTeams.includes(teamId)) return 'strong';
+    if (weakDefenseTeams.includes(teamId)) return 'weak';
+    if (promotedDefenseTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+  
+  const opponentDefensiveTier = getDefensiveTier(opponent.id);
+  let opponentDefensiveMultiplier = 1.0;
+  switch (opponentDefensiveTier) {
+    case 'elite': opponentDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier; break;
+    case 'strong': opponentDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier; break;
+    case 'average': opponentDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier; break;
+    case 'weak': opponentDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier; break;
+    case 'promoted': opponentDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier; break;
+  }
+  
+  baseExpectedGoals *= opponentDefensiveMultiplier;
+  
+  // Phase 4: Attacking Tiers
+  const getAttackingTier = (teamId: number) => {
+    const parseTeamArray = (teamData: any): number[] => {
+      if (Array.isArray(teamData)) return teamData;
+      if (typeof teamData === 'string') {
+        try {
+          return JSON.parse(teamData);
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const eliteAttackTeams = parseTeamArray(adminGoalSettings.eliteAttackTeams);
+    const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams);
+    const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams);
+    const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams);
+    
+    if (eliteAttackTeams.includes(teamId)) return 'elite';
+    if (strongAttackTeams.includes(teamId)) return 'strong';
+    if (weakAttackTeams.includes(teamId)) return 'weak';
+    if (promotedAttackTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+  
+  const attackingTier = getAttackingTier(team.id);
+  let attackingTierMultiplier = 1.0;
+  switch (attackingTier) {
+    case 'elite': attackingTierMultiplier = adminGoalSettings.eliteAttackMultiplier; break;
+    case 'strong': attackingTierMultiplier = adminGoalSettings.strongAttackMultiplier; break;
+    case 'average': attackingTierMultiplier = adminGoalSettings.averageAttackMultiplier; break;
+    case 'weak': attackingTierMultiplier = adminGoalSettings.weakAttackMultiplier; break;
+    case 'promoted': attackingTierMultiplier = adminGoalSettings.promotedAttackMultiplier; break;
+  }
+  
+  baseExpectedGoals *= attackingTierMultiplier;
+  
+  // Apply final bounds
+  baseExpectedGoals = Math.max(
+    adminGoalSettings.absoluteMinGoals || 0.3, 
+    Math.min(baseExpectedGoals, adminGoalSettings.absoluteMaxGoals || 4.2)
+  );
+  
+  return Math.round(baseExpectedGoals * 100) / 100;
 }
 
 // Master Default Team Configuration - Single Source of Truth
@@ -3963,54 +4053,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(goalShareCache.data);
       }
       
-      console.log("DEBUG: Goal Share Season API - using ultra-fast approach (no team projections)");
+      console.log("DEBUG: Goal Share Season API - using optimized approach with caching");
       
-      // Single FPL API call instead of expensive team projections
-      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      // KEEP ORIGINAL LOGIC: Use team projections for accuracy (just optimize with caching)
+      const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        internalFetch("api/team-goal-projections") // Use internal fetch for timeout handling
+      ]);
       
-      if (!bootstrapResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API");
+      if (!bootstrapResponse.ok || !teamProjectionsResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API or Team Goal Projections");
       }
       
       const bootstrapData = await bootstrapResponse.json();
+      const teamProjectionsData = await teamProjectionsResponse.json();
       
-      // Step 1: Use pre-calculated realistic season totals (no complex projections needed)
+      // Step 1: Calculate team season totals from Team Goal Projections (ORIGINAL LOGIC)
       const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
       
-      // Realistic Premier League season totals based on current form (much faster than projections)
-      const REALISTIC_SEASON_TOTALS = {
-        1: 62,   // Arsenal
-        2: 59,   // Aston Villa  
-        3: 41,   // Burnley
-        4: 48,   // Bournemouth
-        5: 51,   // Brentford
-        6: 58,   // Brighton
-        7: 67,   // Chelsea
-        8: 45,   // Crystal Palace
-        9: 44,   // Everton
-        10: 52,  // Fulham
-        11: 39,  // Leeds
-        12: 71,  // Liverpool
-        13: 69,  // Manchester City
-        14: 56,  // Manchester United
-        15: 61,  // Newcastle
-        16: 46,  // Nottingham Forest
-        17: 42,  // Sunderland
-        18: 63,  // Tottenham
-        19: 47,  // West Ham
-        20: 43   // Wolves
-      };
-      
-      // Initialize team totals with realistic values
-      Object.entries(REALISTIC_SEASON_TOTALS).forEach(([teamId, goals]) => {
-        teamSeasonTotals[parseInt(teamId)] = {
-          expectedGoals: goals,
-          players: {}
-        };
+      // Aggregate expected goals from Team Goal Projections data (RESTORED)
+      teamProjectionsData.forEach((team: any) => {
+        if (!teamSeasonTotals[team.id]) {
+          teamSeasonTotals[team.id] = {
+            expectedGoals: 0,
+            players: {}
+          };
+        }
+        
+        // Sum all gameweek projections for this team's season total
+        Object.values(team.gameweekProjections || {}).forEach((goals: any) => {
+          if (typeof goals === 'number') {
+            teamSeasonTotals[team.id].expectedGoals += goals;
+          }
+        });
       });
       
-      console.log(`DEBUG: Using pre-calculated season totals - LIV: ${teamSeasonTotals[12]?.expectedGoals}, MCI: ${teamSeasonTotals[13]?.expectedGoals}`);
-      console.log("DEBUG: Using ultra-fast player distribution for maximum performance");
+      console.log(`DEBUG: Team totals from Team Projections - LIV: ${teamSeasonTotals[12]?.expectedGoals.toFixed(2)}, MCI: ${teamSeasonTotals[13]?.expectedGoals.toFixed(2)}`);
+      console.log("DEBUG: Using original calculation logic with caching optimization");
       
       // Step 2: Calculate player shares using basic metrics (faster approach)
       const playersWithXG: any[] = [];
