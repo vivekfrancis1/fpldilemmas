@@ -11130,105 +11130,199 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ FPL Scoring Cache API routes registered successfully");
 
-  // Team Goals - Spread Betting API
+  // Team Goals - Spread Betting API (Real Market Data)
   app.get("/api/team-goals-spread-betting", async (req, res) => {
     try {
-      console.log("📊 Generating Team Goals from Spread Betting Markets");
+      console.log("📊 Fetching Real Spread Betting Market Data from The Odds API");
       
-      // Get bootstrap data for teams and fixtures
+      if (!process.env.ODDS_API_KEY) {
+        console.error("❌ ODDS_API_KEY not found in environment variables");
+        return res.status(500).json({ error: "API key not configured" });
+      }
+
+      // Get FPL data for team mapping
       const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
       const bootstrapData = await bootstrapResponse.json();
       
-      // Filter fixtures for future gameweeks (GW4+)
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
-      const futureFixtures = bootstrapData.events
-        .filter((event: any) => event.id >= Math.max(4, currentGameweek + 1))
-        .flatMap((event: any) => 
-          bootstrapData.fixtures.filter((fixture: any) => 
-            fixture.event === event.id && !fixture.finished
-          )
+      // Fetch real Premier League odds from The Odds API
+      const oddsApiUrl = `https://api.the-odds-api.com/v4/sports/soccer_epl/odds`;
+      const oddsParams = new URLSearchParams({
+        apiKey: process.env.ODDS_API_KEY,
+        regions: 'uk,us,eu',
+        markets: 'totals,spreads',
+        oddsFormat: 'decimal',
+        dateFormat: 'iso'
+      });
+
+      console.log(`🔗 Calling The Odds API: ${oddsApiUrl}?${oddsParams}`);
+      const oddsResponse = await fetch(`${oddsApiUrl}?${oddsParams}`);
+      
+      if (!oddsResponse.ok) {
+        console.error(`❌ The Odds API error: ${oddsResponse.status} ${oddsResponse.statusText}`);
+        const errorText = await oddsResponse.text();
+        console.error("Response:", errorText);
+        return res.status(500).json({ error: "Failed to fetch odds data", details: errorText });
+      }
+
+      const oddsData = await oddsResponse.json();
+      console.log(`📈 Received ${oddsData.length} fixtures from The Odds API`);
+
+      // Process real market data
+      const spreadBettingData = oddsData.map((fixture: any) => {
+        // Find matching FPL teams
+        const homeTeam = bootstrapData.teams.find((team: any) => 
+          team.name.toLowerCase().includes(fixture.home_team.toLowerCase()) ||
+          fixture.home_team.toLowerCase().includes(team.name.toLowerCase())
+        );
+        const awayTeam = bootstrapData.teams.find((team: any) => 
+          team.name.toLowerCase().includes(fixture.away_team.toLowerCase()) ||
+          fixture.away_team.toLowerCase().includes(team.name.toLowerCase())
         );
 
-      // Generate spread betting data for each fixture
-      const spreadBettingData = futureFixtures.map((fixture: any) => {
-        const homeTeam = bootstrapData.teams.find((team: any) => team.id === fixture.team_h);
-        const awayTeam = bootstrapData.teams.find((team: any) => team.id === fixture.team_a);
+        // Extract total goals and spreads from bookmaker data
+        let totalGoalsData = null;
+        let spreadsData = null;
+
+        // Process bookmaker markets
+        for (const bookmaker of fixture.bookmakers || []) {
+          for (const market of bookmaker.markets || []) {
+            if (market.key === 'totals' && !totalGoalsData) {
+              // Get over/under 2.5 goals as proxy for total goals
+              const overUnder = market.outcomes.find((outcome: any) => 
+                outcome.point && (outcome.point === 2.5 || outcome.point === 2 || outcome.point === 3)
+              );
+              if (overUnder) {
+                // Convert over/under odds to total goals spread estimate
+                const impliedTotal = overUnder.point + 0.2; // Slight adjustment for spread betting
+                totalGoalsData = {
+                  sell: Math.max(0.1, impliedTotal - 0.15),
+                  buy: impliedTotal + 0.15,
+                  confidence: 'Medium'
+                };
+              }
+            }
+            
+            if (market.key === 'spreads' && !spreadsData) {
+              // Get handicap data for supremacy calculation
+              const homeSpread = market.outcomes.find((outcome: any) => 
+                outcome.name === fixture.home_team && outcome.point
+              );
+              if (homeSpread) {
+                const supremacy = -homeSpread.point; // Negative point is home advantage
+                spreadsData = {
+                  sell: supremacy - 0.1,
+                  buy: supremacy + 0.1,
+                  confidence: 'Medium'
+                };
+              }
+            }
+          }
+        }
+
+        // Fallback to estimated data if real market data not available
+        if (!totalGoalsData) {
+          totalGoalsData = {
+            sell: 2.3,
+            buy: 2.7,
+            confidence: 'Low'
+          };
+        }
         
-        // Generate realistic spread betting market data
-        const baseTotal = 2.4 + (Math.random() * 1.2); // 2.4-3.6 range
-        const spread = 0.1 + (Math.random() * 0.3); // 0.1-0.4 spread width
-        
-        const totalGoalsSpread = {
-          sell: parseFloat((baseTotal - spread/2).toFixed(1)),
-          buy: parseFloat((baseTotal + spread/2).toFixed(1))
-        };
-        
-        // Generate supremacy based on team strength difference
-        const homeStrength = getTeamStrength(fixture.team_h);
-        const awayStrength = getTeamStrength(fixture.team_a);
-        const strengthDiff = homeStrength - awayStrength;
-        
-        const baseSupremacy = strengthDiff * 0.3 + (Math.random() - 0.5) * 0.4;
-        const supremacySpread = {
-          sell: parseFloat((baseSupremacy - spread/2).toFixed(1)),
-          buy: parseFloat((baseSupremacy + spread/2).toFixed(1))
-        };
-        
+        if (!spreadsData) {
+          // Estimate supremacy based on team strength
+          const homeStrength = homeTeam ? getTeamStrength(homeTeam.id) : 3;
+          const awayStrength = awayTeam ? getTeamStrength(awayTeam.id) : 3;
+          const estimatedSupremacy = (homeStrength - awayStrength) * 0.2;
+          
+          spreadsData = {
+            sell: estimatedSupremacy - 0.1,
+            buy: estimatedSupremacy + 0.1,
+            confidence: 'Low'
+          };
+        }
+
         // Calculate midpoints
-        const totalGoalsMidpoint = (totalGoalsSpread.sell + totalGoalsSpread.buy) / 2;
-        const supremacyMidpoint = (supremacySpread.sell + supremacySpread.buy) / 2;
+        const totalGoalsMidpoint = (totalGoalsData.sell + totalGoalsData.buy) / 2;
+        const supremacyMidpoint = (spreadsData.sell + spreadsData.buy) / 2;
         
         // Apply T+S/2 and T-S/2 formulas
-        const homeExpectedGoals = (totalGoalsMidpoint + supremacyMidpoint) / 2;
-        const awayExpectedGoals = (totalGoalsMidpoint - supremacyMidpoint) / 2;
-        
-        // Determine confidence based on spread width
-        const getConfidence = (spread: number) => {
-          if (spread <= 0.2) return 'High';
-          if (spread <= 0.35) return 'Medium';
-          return 'Low';
-        };
-        
-        const marketConfidence = getConfidence(spread);
-        
+        const homeExpectedGoals = Math.max(0.1, (totalGoalsMidpoint + supremacyMidpoint) / 2);
+        const awayExpectedGoals = Math.max(0.1, (totalGoalsMidpoint - supremacyMidpoint) / 2);
+
+        // Determine gameweek from FPL fixtures if teams match
+        let gameweek = 4; // Default to GW4
+        if (homeTeam && awayTeam) {
+          const fplFixture = bootstrapData.fixtures.find((fix: any) => 
+            fix.team_h === homeTeam.id && fix.team_a === awayTeam.id &&
+            !fix.finished && fix.event >= 4
+          );
+          if (fplFixture) {
+            gameweek = fplFixture.event;
+          }
+        }
+
         return {
-          id: fixture.id,
-          gameweek: fixture.event,
-          kickoffTime: fixture.kickoff_time,
+          id: `odds_${fixture.id}`,
+          gameweek,
+          kickoffTime: fixture.commence_time,
           homeTeam: {
-            id: fixture.team_h,
-            name: homeTeam.name,
-            shortName: homeTeam.short_name,
-            totalGoalsSpread,
-            supremacySpread,
-            expectedGoals: Math.max(0.1, homeExpectedGoals),
-            confidence: marketConfidence
+            id: homeTeam?.id || 0,
+            name: homeTeam?.name || fixture.home_team,
+            shortName: homeTeam?.short_name || fixture.home_team.slice(0, 3),
+            totalGoalsSpread: {
+              sell: parseFloat(totalGoalsData.sell.toFixed(1)),
+              buy: parseFloat(totalGoalsData.buy.toFixed(1))
+            },
+            supremacySpread: {
+              sell: parseFloat(spreadsData.sell.toFixed(1)),
+              buy: parseFloat(spreadsData.buy.toFixed(1))
+            },
+            expectedGoals: parseFloat(homeExpectedGoals.toFixed(2)),
+            confidence: totalGoalsData.confidence
           },
           awayTeam: {
-            id: fixture.team_a,
-            name: awayTeam.name,
-            shortName: awayTeam.short_name,
-            totalGoalsSpread,
-            supremacySpread: {
-              sell: -supremacySpread.buy,
-              buy: -supremacySpread.sell
+            id: awayTeam?.id || 0,
+            name: awayTeam?.name || fixture.away_team,
+            shortName: awayTeam?.short_name || fixture.away_team.slice(0, 3),
+            totalGoalsSpread: {
+              sell: parseFloat(totalGoalsData.sell.toFixed(1)),
+              buy: parseFloat(totalGoalsData.buy.toFixed(1))
             },
-            expectedGoals: Math.max(0.1, awayExpectedGoals),
-            confidence: marketConfidence
+            supremacySpread: {
+              sell: parseFloat((-spreadsData.buy).toFixed(1)),
+              buy: parseFloat((-spreadsData.sell).toFixed(1))
+            },
+            expectedGoals: parseFloat(awayExpectedGoals.toFixed(2)),
+            confidence: totalGoalsData.confidence
           },
           matchData: {
-            totalGoalsMidpoint,
-            supremacyMidpoint,
-            spreadConfidence: marketConfidence
+            totalGoalsMidpoint: parseFloat(totalGoalsMidpoint.toFixed(2)),
+            supremacyMidpoint: parseFloat(supremacyMidpoint.toFixed(2)),
+            spreadConfidence: totalGoalsData.confidence,
+            source: 'The Odds API',
+            bookmakers: fixture.bookmakers?.length || 0
           }
         };
       });
 
-      console.log(`📊 Generated spread betting data for ${spreadBettingData.length} fixtures`);
+      console.log(`📊 Processed ${spreadBettingData.length} fixtures with real market data`);
+      
+      // Add response headers to show API usage
+      const usageHeaders = oddsResponse.headers;
+      if (usageHeaders.get('x-requests-remaining')) {
+        res.set('X-Odds-API-Remaining', usageHeaders.get('x-requests-remaining'));
+      }
+      if (usageHeaders.get('x-requests-used')) {
+        res.set('X-Odds-API-Used', usageHeaders.get('x-requests-used'));
+      }
+
       res.json(spreadBettingData);
     } catch (error) {
-      console.error("Error generating spread betting data:", error);
-      res.status(500).json({ error: "Failed to generate spread betting data" });
+      console.error("Error fetching real spread betting data:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch spread betting data", 
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

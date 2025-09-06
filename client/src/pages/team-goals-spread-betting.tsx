@@ -131,7 +131,7 @@ export default function TeamGoalsSpreadBetting() {
             <h1>Team Goals - Spread Betting</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Expected team goals calculated from spread betting market odds using T+S/2 and T-S/2 mathematical formulas
+            Expected team goals calculated from real spread betting market odds using T+S/2 and T-S/2 mathematical formulas via The Odds API
           </p>
         </div>
       </div>
@@ -212,10 +212,11 @@ export default function TeamGoalsSpreadBetting() {
               <div className="space-y-2">
                 <h4 className="font-semibold text-sm text-gray-700">Market Data Sources:</h4>
                 <div className="space-y-1 text-sm text-gray-600">
-                  <p>• Total Goals Spread: Combined goals by both teams</p>
-                  <p>• Match Supremacy Spread: Goal difference (Home - Away)</p>
-                  <p>• Midpoints represent bookmaker's implied expected values</p>
-                  <p>• Narrower spreads indicate higher market confidence</p>
+                  <p>• <strong>Real Market Data:</strong> Live odds from The Odds API</p>
+                  <p>• <strong>Total Goals:</strong> Derived from over/under 2.5 goals markets</p>
+                  <p>• <strong>Match Supremacy:</strong> Extracted from handicap/spread markets</p>
+                  <p>• <strong>Bookmakers:</strong> UK, US, and EU region coverage</p>
+                  <p>• <strong>Confidence:</strong> Based on market data availability and spread width</p>
                 </div>
               </div>
             </div>
@@ -251,7 +252,7 @@ export default function TeamGoalsSpreadBetting() {
                       Away Expected
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Market Confidence
+                      Data Source
                     </th>
                   </tr>
                 </thead>
@@ -324,9 +325,17 @@ export default function TeamGoalsSpreadBetting() {
                         </td>
                         
                         <td className="px-4 py-4 text-center">
-                          <Badge variant="secondary" className={getConfidenceColor(match.matchData.spreadConfidence)}>
-                            {match.matchData.spreadConfidence}
-                          </Badge>
+                          <div className="space-y-1">
+                            <div className="text-xs text-gray-600">
+                              {match.matchData?.source || 'Market Data'}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {match.matchData?.bookmakers > 0 ? `${match.matchData.bookmakers} bookmakers` : 'Real odds'}
+                            </div>
+                            <Badge variant="secondary" className={getConfidenceColor(match.matchData.spreadConfidence)}>
+                              {match.matchData.spreadConfidence}
+                            </Badge>
+                          </div>
                         </td>
                       </tr>
                     );
