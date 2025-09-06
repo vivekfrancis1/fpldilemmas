@@ -392,21 +392,12 @@ export default function PlayerAssistProjections() {
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
                             <td className="py-3 px-1">
-                              <div className="flex flex-col">
-                                <span className="font-medium text-sm">{player.playerName}</span>
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Badge variant="outline" className="text-xs">
-                                    {player.position === 'Goalkeeper' ? 'GKP' : 
-                                     player.position === 'Defender' ? 'DEF' : 
-                                     player.position === 'Midfielder' ? 'MID' : 
-                                     player.position === 'Forward' ? 'FWD' : 
-                                     player.position || 'N/A'}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    {player.teamShort}
-                                  </Badge>
-                                </div>
-                              </div>
+                              <PlayerNameCell 
+                                name={player.playerName}
+                                position={player.position}
+                                team={player.teamShort}
+                                compact={true}
+                              />
                             </td>
                             <td className="text-center py-3 px-1">
                               <ValueCell 
@@ -544,21 +535,12 @@ export default function PlayerAssistProjections() {
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
                             <td className="py-3 px-1">
-                              <div className="flex flex-col">
-                                <span className="font-medium text-sm">{player.playerName}</span>
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Badge variant="outline" className="text-xs">
-                                    {player.position === 'Goalkeeper' ? 'GKP' : 
-                                     player.position === 'Defender' ? 'DEF' : 
-                                     player.position === 'Midfielder' ? 'MID' : 
-                                     player.position === 'Forward' ? 'FWD' : 
-                                     player.position || 'N/A'}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    {player.teamShort}
-                                  </Badge>
-                                </div>
-                              </div>
+                              <PlayerNameCell 
+                                name={player.playerName}
+                                position={player.position}
+                                team={player.teamShort}
+                                compact={true}
+                              />
                             </td>
                             <td className="text-center py-3 px-1">
                               <span className={`${(player.gameweekProjections[4] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>

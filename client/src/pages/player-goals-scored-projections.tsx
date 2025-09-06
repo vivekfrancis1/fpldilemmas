@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 
 interface PlayerGoalProjection {
   playerId: number;
@@ -524,27 +525,12 @@ export default function PlayerGoalsScoredProjections() {
                     return (
                       <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                         <td className="py-3 px-4 sticky left-0 bg-white border-r border-gray-200 z-10">
-                          <div className="flex flex-col">
-                            <div className="font-semibold text-gray-900">
-                              {player.playerName}
-                            </div>
-                            <div className="flex items-center gap-1 mt-1">
-                              <Badge className={`text-xs font-medium ${
-                                (player.position === 'Goalkeeper' || player.position === 'GKP') ? 'bg-yellow-100 text-yellow-800' :
-                                (player.position === 'Defender' || player.position === 'DEF') ? 'bg-green-100 text-green-800' :
-                                (player.position === 'Midfielder' || player.position === 'MID') ? 'bg-blue-100 text-blue-800' :
-                                'bg-red-100 text-red-800'
-                              }`}>
-                                {player.position === 'Midfielder' ? 'MID' : 
-                                 player.position === 'Defender' ? 'DEF' :
-                                 player.position === 'Forward' ? 'FWD' :
-                                 player.position === 'Goalkeeper' ? 'GKP' : player.position}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs text-gray-600">
-                                {player.teamShort}
-                              </Badge>
-                            </div>
-                          </div>
+                          <PlayerNameCell 
+                            name={player.playerName}
+                            position={player.position}
+                            team={player.teamShort}
+                            compact={false}
+                          />
                         </td>
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw.toString()] || 0;
@@ -681,27 +667,12 @@ export default function PlayerGoalsScoredProjections() {
                     return (
                       <tr key={`${player.playerId}-points`} className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                         <td className="py-3 px-4 sticky left-0 bg-white border-r border-gray-200 z-10">
-                          <div className="flex flex-col">
-                            <div className="font-semibold text-gray-900">
-                              {player.playerName}
-                            </div>
-                            <div className="flex items-center gap-1 mt-1">
-                              <Badge className={`text-xs font-medium ${
-                                (player.position === 'Goalkeeper' || player.position === 'GKP') ? 'bg-yellow-100 text-yellow-800' :
-                                (player.position === 'Defender' || player.position === 'DEF') ? 'bg-green-100 text-green-800' :
-                                (player.position === 'Midfielder' || player.position === 'MID') ? 'bg-blue-100 text-blue-800' :
-                                'bg-red-100 text-red-800'
-                              }`}>
-                                {player.position === 'Midfielder' ? 'MID' : 
-                                 player.position === 'Defender' ? 'DEF' :
-                                 player.position === 'Forward' ? 'FWD' :
-                                 player.position === 'Goalkeeper' ? 'GKP' : player.position}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs text-gray-600">
-                                {player.teamShort}
-                              </Badge>
-                            </div>
-                          </div>
+                          <PlayerNameCell 
+                            name={player.playerName}
+                            position={player.position}
+                            team={player.teamShort}
+                            compact={false}
+                          />
                         </td>
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw.toString()] || 0;
