@@ -306,8 +306,6 @@ export default function PlayerStatsTable({
               <th className="px-2 sm:px-3 py-2 sm:py-3 text-left min-w-[120px] sm:min-w-[160px] font-semibold text-gray-900 text-xs sm:text-sm sticky left-0 bg-gray-50 z-10 border-r border-gray-200">
                 Player
               </th>
-              <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[40px] sm:min-w-[50px] font-semibold text-gray-900 text-xs sm:text-sm">Team</th>
-              <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[35px] sm:min-w-[50px] font-semibold text-gray-900 text-xs sm:text-sm">Pos</th>
               {/* Priority columns first */}
               <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[60px] sm:min-w-[80px]">
                 <SortableHeader field="now_cost" label="Price" />
@@ -471,20 +469,20 @@ export default function PlayerStatsTable({
                       <span className="font-medium text-gray-900 text-xs sm:text-sm">
                         {player.web_name}
                       </span>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Badge className={`text-xs font-medium ${
+                          position === 'GKP' ? 'bg-yellow-100 text-yellow-800' :
+                          position === 'DEF' ? 'bg-green-100 text-green-800' :
+                          position === 'MID' ? 'bg-blue-100 text-blue-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {position}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs text-gray-600">
+                          {teamName}
+                        </Badge>
+                      </div>
                     </div>
-                  </td>
-                  <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
-                    <span className="text-xs text-gray-600">{teamName}</span>
-                  </td>
-                  <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">
-                    <Badge className={`text-xs font-medium ${
-                      position === 'GKP' ? 'bg-yellow-100 text-yellow-800' :
-                      position === 'DEF' ? 'bg-green-100 text-green-800' :
-                      position === 'MID' ? 'bg-blue-100 text-blue-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {position}
-                    </Badge>
                   </td>
                   {/* Priority columns first */}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-gray-900">
