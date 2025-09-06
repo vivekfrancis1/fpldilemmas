@@ -404,7 +404,11 @@ export default function PlayerAssistProjections() {
                                 <span className="font-medium text-sm">{player.playerName}</span>
                                 <div className="flex items-center gap-1 mt-1">
                                   <Badge variant="outline" className="text-xs">
-                                    {player.position === 'MID' ? 'MID' : player.position?.charAt(0) || 'N/A'}
+                                    {player.position === 'Goalkeeper' ? 'GKP' : 
+                                     player.position === 'Defender' ? 'DEF' : 
+                                     player.position === 'Midfielder' ? 'MID' : 
+                                     player.position === 'Forward' ? 'FWD' : 
+                                     player.position || 'N/A'}
                                   </Badge>
                                   <Badge variant="outline" className="text-xs">
                                     {player.teamShort}
@@ -530,7 +534,11 @@ export default function PlayerAssistProjections() {
                                 <span className="font-medium text-sm">{player.playerName}</span>
                                 <div className="flex items-center gap-1 mt-1">
                                   <Badge variant="outline" className="text-xs">
-                                    {player.position === 'MID' ? 'MID' : player.position?.charAt(0) || 'N/A'}
+                                    {player.position === 'Goalkeeper' ? 'GKP' : 
+                                     player.position === 'Defender' ? 'DEF' : 
+                                     player.position === 'Midfielder' ? 'MID' : 
+                                     player.position === 'Forward' ? 'FWD' : 
+                                     player.position || 'N/A'}
                                   </Badge>
                                   <Badge variant="outline" className="text-xs">
                                     {player.teamShort}
