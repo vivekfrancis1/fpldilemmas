@@ -140,8 +140,8 @@ export default function PlayerGoalProjections() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const { data: players, isLoading, error } = useQuery({
-    queryKey: ["/api/player-goals-scored-projections", startGameweek, endGameweek],
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey: ["/api/cached/player-goals-projections"],
+    staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
   });
 
   if (isLoading) {

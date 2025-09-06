@@ -69,14 +69,10 @@ export default function DefensiveContributionProjections() {
   const [sortBy, setSortBy] = useState<string>("projectedDefensiveContribution");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Fetch defensive contribution projections
+  // Fetch defensive contribution projections from cached database
   const { data: defensiveData, isLoading: defensiveLoading } = useQuery({
-    queryKey: ["/api/defensive-contribution-projections"],
-    queryFn: async () => {
-      const response = await fetch("/api/defensive-contribution-projections");
-      if (!response.ok) throw new Error("Failed to fetch defensive projections");
-      return response.json();
-    }
+    queryKey: ["/api/cached/player-defensive-projections"],
+    staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
   });
 
   // Use the projections data directly from API

@@ -11553,6 +11553,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import Spread Betting Cache Service
   const spreadBettingCacheService = SpreadBettingCacheService.getInstance();
 
+  // CACHED PLAYER PROJECTION ENDPOINTS - Ultra-fast database serving
+  app.get("/api/cached/player-goals-projections", async (req, res) => {
+    try {
+      console.log("📊 Serving cached player goals data from database");
+      const cachedData = await db.select().from(playerGoalsProjections)
+        .where(eq(playerGoalsProjections.season, '2025/26'))
+        .orderBy(desc(playerGoalsProjections.goals));
+      
+      // Transform to expected format for frontend compatibility
+      const transformedData = cachedData.reduce((acc, row) => {
+        const existingPlayer = acc.find(p => p.playerId === row.playerId);
+        if (existingPlayer) {
+          existingPlayer.gameweekProjections[row.gameweek] = row.goals;
+          existingPlayer.totalProjectedGoals += row.goals;
+        } else {
+          acc.push({
+            playerId: row.playerId,
+            playerName: row.playerName || 'Unknown',
+            gameweekProjections: { [row.gameweek]: row.goals },
+            totalProjectedGoals: row.goals,
+            goalShare: 0, // Will be calculated if needed
+          });
+        }
+        return acc;
+      }, [] as any[]);
+      
+      res.json(transformedData);
+    } catch (error) {
+      console.error("Error fetching cached goals projections:", error);
+      res.status(500).json({ error: "Failed to fetch cached goals projections" });
+    }
+  });
+
+  app.get("/api/cached/player-assists-projections", async (req, res) => {
+    try {
+      console.log("📊 Serving cached player assists data from database");
+      const cachedData = await db.select().from(playerAssistProjections)
+        .where(eq(playerAssistProjections.season, '2025/26'))
+        .orderBy(desc(playerAssistProjections.assists));
+      
+      // Transform to expected format for frontend compatibility
+      const transformedData = cachedData.reduce((acc, row) => {
+        const existingPlayer = acc.find(p => p.playerId === row.playerId);
+        if (existingPlayer) {
+          existingPlayer.gameweekProjections[row.gameweek] = row.assists;
+          existingPlayer.totalProjectedAssists += row.assists;
+        } else {
+          acc.push({
+            playerId: row.playerId,
+            playerName: row.playerName || 'Unknown',
+            gameweekProjections: { [row.gameweek]: row.assists },
+            totalProjectedAssists: row.assists,
+            assistShare: 0, // Will be calculated if needed
+          });
+        }
+        return acc;
+      }, [] as any[]);
+      
+      res.json(transformedData);
+    } catch (error) {
+      console.error("Error fetching cached assists projections:", error);
+      res.status(500).json({ error: "Failed to fetch cached assists projections" });
+    }
+  });
+
+  app.get("/api/cached/player-minutes-projections", async (req, res) => {
+    try {
+      console.log("📊 Serving cached player minutes data from database");
+      const cachedData = await db.select().from(playerMinutesProjections)
+        .where(eq(playerMinutesProjections.season, '2025/26'))
+        .orderBy(desc(playerMinutesProjections.expectedMinutes));
+      
+      res.json(cachedData);
+    } catch (error) {
+      console.error("Error fetching cached minutes projections:", error);
+      res.status(500).json({ error: "Failed to fetch cached minutes projections" });
+    }
+  });
+
+  app.get("/api/cached/player-defensive-projections", async (req, res) => {
+    try {
+      console.log("📊 Serving cached player defensive data from database");
+      const cachedData = await db.select().from(playerDefensiveProjections)
+        .where(eq(playerDefensiveProjections.season, '2025/26'))
+        .orderBy(desc(playerDefensiveProjections.defensiveContribution));
+      
+      res.json(cachedData);
+    } catch (error) {
+      console.error("Error fetching cached defensive projections:", error);
+      res.status(500).json({ error: "Failed to fetch cached defensive projections" });
+    }
+  });
+
+  app.get("/api/cached/team-cs-projections", async (req, res) => {
+    try {
+      console.log("📊 Serving cached team clean sheet data from database");
+      const cachedData = await db.select().from(teamCleanSheetProjections)
+        .where(eq(teamCleanSheetProjections.season, '2025/26'))
+        .orderBy(desc(teamCleanSheetProjections.cleanSheetProbability));
+      
+      res.json(cachedData);
+    } catch (error) {
+      console.error("Error fetching cached team clean sheet projections:", error);
+      res.status(500).json({ error: "Failed to fetch cached team clean sheet projections" });
+    }
+  });
+
   // Cached FPL Scoring Component Endpoints - Serve data from database
   app.get("/api/cached/player-saves-projections", async (req, res) => {
     try {

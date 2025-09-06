@@ -6,9 +6,10 @@ class ProjectionCacheScheduler {
     { hour: 7, minute: 0 },   // 7:00 AM
     { hour: 19, minute: 0 }   // 7:00 PM
   ];
+  private readonly HOURLY_UPDATE_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
   
   /**
-   * Start the projection cache scheduler
+   * Start the projection cache scheduler with hourly updates
    */
   start(): void {
     console.log('🔄 Starting projection cache scheduler...');
@@ -18,12 +19,12 @@ class ProjectionCacheScheduler {
       console.error('❌ Initial cache update failed:', error);
     });
     
-    // Schedule to check every hour and run at designated times
+    // Schedule to run every hour for faster data freshness
     this.intervalId = setInterval(() => {
-      this.checkAndRunCache();
-    }, 60 * 60 * 1000); // Check every hour
+      this.runHourlyUpdate();
+    }, this.HOURLY_UPDATE_INTERVAL);
     
-    console.log('✅ Projection cache scheduler started (runs at 7:00 AM and 7:00 PM daily)');
+    console.log('✅ Projection cache scheduler started (runs every hour)');
   }
   
   /**
@@ -38,24 +39,17 @@ class ProjectionCacheScheduler {
   }
   
   /**
-   * Check if it's time to run and execute if needed
+   * Run hourly cache updates for faster data freshness
    */
-  private checkAndRunCache(): void {
+  private runHourlyUpdate(): void {
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     
-    // Check if current time matches any scheduled time (within 1 minute window)
-    const shouldRun = this.SCHEDULE_TIMES.some(schedule => 
-      currentHour === schedule.hour && currentMinute >= schedule.minute && currentMinute < schedule.minute + 1
-    );
-    
-    if (shouldRun) {
-      console.log(`⏰ Scheduled cache update triggered at ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
-      this.runCacheUpdate().catch(error => {
-        console.error('❌ Scheduled cache update failed:', error);
-      });
-    }
+    console.log(`⏰ Hourly projection cache update triggered at ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
+    this.runCacheUpdate().catch(error => {
+      console.error('❌ Hourly cache update failed:', error);
+    });
   }
   
   /**
