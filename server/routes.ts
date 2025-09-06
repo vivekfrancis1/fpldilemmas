@@ -6468,8 +6468,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamShort: team.teamShort,
         teamName: team.teamName,
         gameweekProjections: team.gameweekProjections,
-        totalProjectedGoals: team.totalProjectedGoals,
-        averageGoalsPerGame: team.averageGoalsPerGame,
+        totalProjectedGoals: team.totalGoals || 0, // Map from totalGoals to totalProjectedGoals with fallback
+        averageGoalsPerGame: team.averageGoalsPerGame || 0,
         confidence: team.confidence || 'Medium',
         position: team.position || 0
       }));
