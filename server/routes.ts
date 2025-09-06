@@ -11199,21 +11199,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("📊 Building comprehensive total points from main endpoint");
       const startTime = Date.now();
 
-      // Fetch comprehensive data from the main total points endpoint
-      const totalPointsResponse = await fetch(`http://localhost:5000/api/player-total-points?startGameweek=${start}&endGameweek=${end}`);
-      if (!totalPointsResponse.ok) {
-        throw new Error("Failed to fetch comprehensive total points data");
-      }
+      // Fetch comprehensive data from the main total points endpoint with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
-      const totalPointsData = await totalPointsResponse.json();
+      try {
+        const totalPointsResponse = await fetch(`http://localhost:5000/api/player-total-points?startGameweek=${start}&endGameweek=${end}`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        if (!totalPointsResponse.ok) {
+          throw new Error("Failed to fetch comprehensive total points data");
+        }
+        
+        const totalPointsData = await totalPointsResponse.json();
 
-      // Cache the comprehensive response with the specific gameweek range
-      totalPointsResponseCache.set(cacheKey, { data: totalPointsData, timestamp: now });
-      
-      const duration = Date.now() - startTime;
-      console.log(`📊 Built ${totalPointsData.length} comprehensive total points projections in ${duration}ms using main endpoint for GW${start}-${end}`);
-      
-      res.json(totalPointsData);
+        // Cache the comprehensive response with the specific gameweek range
+        totalPointsResponseCache.set(cacheKey, { data: totalPointsData, timestamp: now });
+        
+        const duration = Date.now() - startTime;
+        console.log(`📊 Built ${totalPointsData.length} comprehensive total points projections in ${duration}ms using main endpoint for GW${start}-${end}`);
+        
+        res.json(totalPointsData);
+        
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        
+        if (fetchError.name === 'AbortError') {
+          console.log("⚠️ Total points calculation timed out after 30s, returning lightweight fallback");
+        } else {
+          console.error("Error fetching total points:", fetchError);
+        }
+        
+        // Fallback: return basic data structure with message
+        const fallbackData = [{
+          message: "Total points calculation is taking longer than expected. Please try again in a few minutes.",
+          isCalculating: true,
+          estimatedTime: "2-3 minutes"
+        }];
+        
+        res.json(fallbackData);
+      }
     } catch (error) {
       console.error("Error building cached total points:", error);
       res.status(500).json({ error: "Failed to build cached total points" });
