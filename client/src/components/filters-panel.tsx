@@ -44,13 +44,30 @@ export default function FiltersPanel({
           <Skeleton className="h-6 w-48" />
         </div>
         <div className="fpl-card-content">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i}>
-                <Skeleton className="h-4 w-24 mb-2" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ))}
+          {/* Search Section Loading */}
+          <div className="mb-6">
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </div>
+          
+          {/* Filters Section Loading */}
+          <div className="space-y-4">
+            <Skeleton className="h-5 w-24" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Clear Button Loading */}
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <Skeleton className="h-10 w-40" />
           </div>
         </div>
       </div>
@@ -66,90 +83,109 @@ export default function FiltersPanel({
         </div>
       </div>
       <div className="fpl-card-content">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="relative sm:col-span-2 lg:col-span-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search players..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange("search", e.target.value)}
-            className="pl-10 h-10 md:h-12 border-2"
-            data-testid="input-search"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-1">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">Position</label>
-            <Select value={filters.position} onValueChange={(value) => handleFilterChange("position", value)}>
-              <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-position">
-                <SelectValue placeholder="All Positions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Positions</SelectItem>
-                {elementTypes?.map((type) => (
-                  <SelectItem key={type.id} value={type.id.toString()}>
-                    {type.singular_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">Team</label>
-            <Select value={filters.team} onValueChange={(value) => handleFilterChange("team", value)}>
-              <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-team">
-                <SelectValue placeholder="All Teams" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Teams</SelectItem>
-                {teams?.map((team) => (
-                  <SelectItem key={team.id} value={team.id.toString()}>
-                    {team.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Search Section */}
+        <div className="mb-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Search Players</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search by player name..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange("search", e.target.value)}
+                className="pl-10 h-12 border-2 text-base"
+                data-testid="input-search"
+              />
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:col-span-1">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">Max Price</label>
-            <Select value={filters.maxPrice} onValueChange={(value) => handleFilterChange("maxPrice", value)}>
-              <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-max-price">
-                <SelectValue placeholder="Any Price" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Any Price</SelectItem>
-                <SelectItem value="40">Under £4.0m</SelectItem>
-                <SelectItem value="45">Under £4.5m</SelectItem>
-                <SelectItem value="50">Under £5.0m</SelectItem>
-                <SelectItem value="55">Under £5.5m</SelectItem>
-                <SelectItem value="60">Under £6.0m</SelectItem>
-                <SelectItem value="65">Under £6.5m</SelectItem>
-                <SelectItem value="70">Under £7.0m</SelectItem>
-                <SelectItem value="75">Under £7.5m</SelectItem>
-                <SelectItem value="80">Under £8.0m</SelectItem>
-                <SelectItem value="85">Under £8.5m</SelectItem>
-                <SelectItem value="90">Under £9.0m</SelectItem>
-                <SelectItem value="95">Under £9.5m</SelectItem>
-                <SelectItem value="100">Under £10.0m</SelectItem>
-                <SelectItem value="105">Under £10.5m</SelectItem>
-                <SelectItem value="110">Under £11.0m</SelectItem>
-                <SelectItem value="115">Under £11.5m</SelectItem>
-                <SelectItem value="120">Under £12.0m</SelectItem>
-                <SelectItem value="125">Under £12.5m</SelectItem>
-                <SelectItem value="130">Under £13.0m</SelectItem>
-                <SelectItem value="135">Under £13.5m</SelectItem>
-                <SelectItem value="140">Under £14.0m</SelectItem>
-                <SelectItem value="145">Under £14.5m</SelectItem>
-                <SelectItem value="150">Under £15.0m</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Filters Section */}
+        <div className="space-y-4">
+          <div className="text-sm font-medium text-gray-700 mb-4">Filter Options</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-600">Position</label>
+              <Select value={filters.position} onValueChange={(value) => handleFilterChange("position", value)}>
+                <SelectTrigger className="h-12 border-2 text-base" data-testid="select-position">
+                  <SelectValue placeholder="All Positions" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Positions</SelectItem>
+                  {elementTypes?.map((type) => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.singular_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-600">Team</label>
+              <Select value={filters.team} onValueChange={(value) => handleFilterChange("team", value)}>
+                <SelectTrigger className="h-12 border-2 text-base" data-testid="select-team">
+                  <SelectValue placeholder="All Teams" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Teams</SelectItem>
+                  {teams?.map((team) => (
+                    <SelectItem key={team.id} value={team.id.toString()}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-600">Max Price</label>
+              <Select value={filters.maxPrice} onValueChange={(value) => handleFilterChange("maxPrice", value)}>
+                <SelectTrigger className="h-12 border-2 text-base" data-testid="select-max-price">
+                  <SelectValue placeholder="Any Price" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Any Price</SelectItem>
+                  <SelectItem value="40">Under £4.0m</SelectItem>
+                  <SelectItem value="45">Under £4.5m</SelectItem>
+                  <SelectItem value="50">Under £5.0m</SelectItem>
+                  <SelectItem value="55">Under £5.5m</SelectItem>
+                  <SelectItem value="60">Under £6.0m</SelectItem>
+                  <SelectItem value="65">Under £6.5m</SelectItem>
+                  <SelectItem value="70">Under £7.0m</SelectItem>
+                  <SelectItem value="75">Under £7.5m</SelectItem>
+                  <SelectItem value="80">Under £8.0m</SelectItem>
+                  <SelectItem value="85">Under £8.5m</SelectItem>
+                  <SelectItem value="90">Under £9.0m</SelectItem>
+                  <SelectItem value="95">Under £9.5m</SelectItem>
+                  <SelectItem value="100">Under £10.0m</SelectItem>
+                  <SelectItem value="105">Under £10.5m</SelectItem>
+                  <SelectItem value="110">Under £11.0m</SelectItem>
+                  <SelectItem value="115">Under £11.5m</SelectItem>
+                  <SelectItem value="120">Under £12.0m</SelectItem>
+                  <SelectItem value="125">Under £12.5m</SelectItem>
+                  <SelectItem value="130">Under £13.0m</SelectItem>
+                  <SelectItem value="135">Under £13.5m</SelectItem>
+                  <SelectItem value="140">Under £14.0m</SelectItem>
+                  <SelectItem value="145">Under £14.5m</SelectItem>
+                  <SelectItem value="150">Under £15.0m</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
+
+        {/* Clear Filters Button */}
+        <div className="mt-6 pt-4 border-t border-gray-100">
+          <Button 
+            variant="outline" 
+            onClick={clearFilters}
+            className="h-10 px-4 text-sm font-medium"
+            data-testid="button-clear-filters"
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Clear All Filters
+          </Button>
         </div>
       </div>
     </div>
