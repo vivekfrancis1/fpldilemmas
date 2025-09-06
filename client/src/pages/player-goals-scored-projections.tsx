@@ -524,25 +524,13 @@ export default function PlayerGoalsScoredProjections() {
                           const goals = player.gameweekProjections[gw.toString()] || 0;
                           return (
                             <td key={gw} className="px-4 py-4 text-center text-sm font-medium text-gray-900">
-                              <ValueCell 
-                                value={goals} 
-                                format="goals" 
-                                decimals={2} 
-                                colorScheme="goals"
-                                fontWeight="medium"
-                              />
+                              {goals > 0 ? goals.toFixed(2) : "-"}
                             </td>
                           );
                         })}
                         <td className="px-4 py-4 text-center bg-orange-50">
                           <span className="text-lg font-bold text-orange-900">
-                            <ValueCell 
-                              value={selectedTotal} 
-                              format="goals" 
-                              decimals={2} 
-                              colorScheme="goals"
-                              fontWeight="bold"
-                            />
+                            {selectedTotal.toFixed(2)}
                           </span>
                         </td>
                       </tr>
@@ -556,22 +544,12 @@ export default function PlayerGoalsScoredProjections() {
                     </td>
                     {selectedGameweeks.map(gw => (
                       <td key={gw} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
-                        <ValueCell 
-                          value={totalGoals.gameweekTotals[gw] || 0} 
-                          format="goals" 
-                          decimals={2} 
-                          fontWeight="bold"
-                        />
+                        {(totalGoals.gameweekTotals[gw] || 0) > 0 ? (totalGoals.gameweekTotals[gw] || 0).toFixed(2) : "-"}
                       </td>
                     ))}
                     <td className="px-4 py-4 text-center bg-orange-100">
                       <span className="text-lg font-bold text-orange-900">
-                        <ValueCell 
-                          value={totalGoals.overallTotal} 
-                          format="goals" 
-                          decimals={2} 
-                          fontWeight="bold"
-                        />
+                        {totalGoals.overallTotal.toFixed(2)}
                       </span>
                     </td>
                   </tr>
@@ -666,28 +644,12 @@ export default function PlayerGoalsScoredProjections() {
                           const points = getPointsFromGoals(goals, player.position);
                           return (
                             <td key={gw} className="py-3 px-2 text-center">
-                              <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getPointsColor(points)}`}>
-                                <ValueCell 
-                                  value={points} 
-                                  format="points" 
-                                  decimals={1} 
-                                  colorScheme="points"
-                                  fontWeight="medium"
-                                />
-                              </span>
+                              {points > 0 ? points.toFixed(1) : "-"}
                             </td>
                           );
                         })}
                         <td className="py-3 px-2 text-center border-l border-gray-200">
-                          <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-sm">
-                            <ValueCell 
-                              value={selectedTotal} 
-                              format="points" 
-                              decimals={1} 
-                              colorScheme="points"
-                              fontWeight="semibold"
-                            />
-                          </span>
+                          {selectedTotal.toFixed(1)}
                         </td>
                       </tr>
                     );
@@ -700,23 +662,11 @@ export default function PlayerGoalsScoredProjections() {
                     </td>
                     {selectedGameweeks.map(gw => (
                       <td key={gw} className="py-3 px-2 text-center font-bold text-blue-600">
-                        <ValueCell 
-                          value={totalGoals.pointsGameweekTotals[gw] || 0} 
-                          format="points" 
-                          decimals={1} 
-                          fontWeight="semibold"
-                          colorScheme="points"
-                        />
+                        {(totalGoals.pointsGameweekTotals[gw] || 0) > 0 ? (totalGoals.pointsGameweekTotals[gw] || 0).toFixed(1) : "-"}
                       </td>
                     ))}
                     <td className="py-3 px-2 text-center font-bold text-blue-600">
-                      <ValueCell 
-                        value={totalGoals.pointsOverallTotal} 
-                        format="points" 
-                        decimals={1} 
-                        fontWeight="bold"
-                        colorScheme="points"
-                      />
+                      {totalGoals.pointsOverallTotal.toFixed(1)}
                     </td>
                   </tr>
                 </tfoot>

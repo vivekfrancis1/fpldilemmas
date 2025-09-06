@@ -400,67 +400,25 @@ export default function PlayerAssistProjections() {
                               />
                             </td>
                             <td className="text-center py-3 px-1">
-                              <ValueCell 
-                                value={player.gameweekProjections[4] || 0} 
-                                format="assists" 
-                                decimals={2} 
-                                colorScheme="assists"
-                                fontWeight="medium"
-                              />
+                              {(player.gameweekProjections[4] || 0) > 0 ? (player.gameweekProjections[4] || 0).toFixed(2) : "-"}
                             </td>
                             <td className="text-center py-3 px-1">
-                              <ValueCell 
-                                value={player.gameweekProjections[5] || 0} 
-                                format="assists" 
-                                decimals={2} 
-                                colorScheme="assists"
-                                fontWeight="medium"
-                              />
+                              {(player.gameweekProjections[5] || 0) > 0 ? (player.gameweekProjections[5] || 0).toFixed(2) : "-"}
                             </td>
                             <td className="text-center py-3 px-1">
-                              <ValueCell 
-                                value={player.gameweekProjections[6] || 0} 
-                                format="assists" 
-                                decimals={2} 
-                                colorScheme="assists"
-                                fontWeight="medium"
-                              />
+                              {(player.gameweekProjections[6] || 0) > 0 ? (player.gameweekProjections[6] || 0).toFixed(2) : "-"}
                             </td>
                             <td className="text-center py-3 px-1">
-                              <ValueCell 
-                                value={player.gameweekProjections[7] || 0} 
-                                format="assists" 
-                                decimals={2} 
-                                colorScheme="assists"
-                                fontWeight="medium"
-                              />
+                              {(player.gameweekProjections[7] || 0) > 0 ? (player.gameweekProjections[7] || 0).toFixed(2) : "-"}
                             </td>
                             <td className="text-center py-3 px-1">
-                              <ValueCell 
-                                value={player.gameweekProjections[8] || 0} 
-                                format="assists" 
-                                decimals={2} 
-                                colorScheme="assists"
-                                fontWeight="medium"
-                              />
+                              {(player.gameweekProjections[8] || 0) > 0 ? (player.gameweekProjections[8] || 0).toFixed(2) : "-"}
                             </td>
                             <td className="text-center py-3 px-1">
-                              <ValueCell 
-                                value={player.gameweekProjections[9] || 0} 
-                                format="assists" 
-                                decimals={2} 
-                                colorScheme="assists"
-                                fontWeight="medium"
-                              />
+                              {(player.gameweekProjections[9] || 0) > 0 ? (player.gameweekProjections[9] || 0).toFixed(2) : "-"}
                             </td>
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              <ValueCell 
-                                value={getFilteredTotal(player)} 
-                                format="assists" 
-                                decimals={2} 
-                                colorScheme="assists"
-                                fontWeight="semibold"
-                              />
+                              {getFilteredTotal(player).toFixed(2)}
                             </td>
                           </tr>
                           );
@@ -543,79 +501,25 @@ export default function PlayerAssistProjections() {
                               />
                             </td>
                             <td className="text-center py-3 px-1">
-                              <span className={`${(player.gameweekProjections[4] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                <ValueCell 
-                                  value={(player.gameweekProjections[4] || 0) * 3} 
-                                  format="points" 
-                                  decimals={1} 
-                                  colorScheme="points"
-                                  fontWeight="medium"
-                                />
-                              </span>
+                              {((player.gameweekProjections[4] || 0) * 3) > 0 ? ((player.gameweekProjections[4] || 0) * 3).toFixed(1) : "-"}
                             </td>
                             <td className="text-center py-3 px-1">
-                              <span className={`${(player.gameweekProjections[5] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                <ValueCell 
-                                  value={(player.gameweekProjections[5] || 0) * 3} 
-                                  format="points" 
-                                  decimals={1} 
-                                  colorScheme="points"
-                                  fontWeight="medium"
-                                />
-                              </span>
+                              {((player.gameweekProjections[5] || 0) * 3) > 0 ? ((player.gameweekProjections[5] || 0) * 3).toFixed(1) : "-"}
                             </td>
                             <td className="text-center py-3 px-1">
-                              <span className={`${(player.gameweekProjections[6] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                <ValueCell 
-                                  value={(player.gameweekProjections[6] || 0) * 3} 
-                                  format="points" 
-                                  decimals={1} 
-                                  colorScheme="points"
-                                  fontWeight="medium"
-                                />
-                              </span>
+                              {((player.gameweekProjections[6] || 0) * 3) > 0 ? ((player.gameweekProjections[6] || 0) * 3).toFixed(1) : "-"}
                             </td>
                             <td className="text-center py-3 px-1">
-                              <span className={`${(player.gameweekProjections[7] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                <ValueCell 
-                                  value={(player.gameweekProjections[7] || 0) * 3} 
-                                  format="points" 
-                                  decimals={1} 
-                                  colorScheme="points"
-                                  fontWeight="medium"
-                                />
-                              </span>
+                              {((player.gameweekProjections[7] || 0) * 3) > 0 ? ((player.gameweekProjections[7] || 0) * 3).toFixed(1) : "-"}
                             </td>
                             <td className="text-center py-3 px-1">
-                              <span className={`${(player.gameweekProjections[8] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                <ValueCell 
-                                  value={(player.gameweekProjections[8] || 0) * 3} 
-                                  format="points" 
-                                  decimals={1} 
-                                  colorScheme="points"
-                                  fontWeight="medium"
-                                />
-                              </span>
+                              {((player.gameweekProjections[8] || 0) * 3) > 0 ? ((player.gameweekProjections[8] || 0) * 3).toFixed(1) : "-"}
                             </td>
                             <td className="text-center py-3 px-1">
-                              <span className={`${(player.gameweekProjections[9] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                <ValueCell 
-                                  value={(player.gameweekProjections[9] || 0) * 3} 
-                                  format="points" 
-                                  decimals={1} 
-                                  colorScheme="points"
-                                  fontWeight="medium"
-                                />
-                              </span>
+                              {((player.gameweekProjections[9] || 0) * 3) > 0 ? ((player.gameweekProjections[9] || 0) * 3).toFixed(1) : "-"}
                             </td>
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              <ValueCell 
-                                value={filteredGwPoints} 
-                                format="points" 
-                                decimals={1} 
-                                colorScheme="points"
-                                fontWeight="semibold"
-                              />
+                              {filteredGwPoints.toFixed(1)}
                             </td>
                           </tr>
                           );
