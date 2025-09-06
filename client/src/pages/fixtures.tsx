@@ -48,21 +48,6 @@ export default function Fixtures() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Debug admin settings loading
-  useEffect(() => {
-    if (adminSettings) {
-      console.log('Admin settings loaded:', {
-        eliteAttackTeams: adminSettings.eliteAttackTeams,
-        strongAttackTeams: adminSettings.strongAttackTeams,
-        eliteDefenseTeams: adminSettings.eliteDefenseTeams,
-        strongDefenseTeams: adminSettings.strongDefenseTeams
-      });
-    } else if (adminSettingsLoading) {
-      console.log('Admin settings loading...');
-    } else {
-      console.log('Admin settings not loaded yet');
-    }
-  }, [adminSettings, adminSettingsLoading]);
 
   // Get current gameweek and available gameweeks
   const { currentGameweek, availableGameweeks } = useMemo(() => {
