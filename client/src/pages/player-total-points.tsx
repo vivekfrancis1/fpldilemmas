@@ -36,7 +36,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
       <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
         <div className="space-y-2">
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
-            {player.name} - GW{gameweek} Breakdown
+            GW{gameweek} Points Breakdown
           </div>
           <div className="text-xs text-gray-500 mb-2">
             Comprehensive FPL scoring: Completed GWs use actual data • Future GWs use projections
@@ -106,7 +106,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
           </div>
           <div className="border-t pt-2 mt-3">
             <div className="flex justify-between items-center font-semibold">
-              <span className="text-gray-800">GW{gameweek} Total:</span>
+              <span className="text-gray-800">GW{gameweek} Points Total:</span>
               <span className="text-green-800">
                 {gwPoints.toFixed(1)}
               </span>
