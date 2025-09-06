@@ -463,8 +463,8 @@ export default function PlayerGoalsScoredProjections() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'auto', width: '100%', maxWidth: '100%', position: 'relative', display: 'block' }}>
-                  <table className="w-full min-w-max">
+                <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'visible', width: '100%', maxWidth: '100%', height: 'auto', display: 'block', scrollbarWidth: 'auto' }}>
+                  <table className="w-full" style={{ minWidth: '1400px', tableLayout: 'auto' }}>
                     <thead>
                       <tr className="border-b border-gray-200">
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 sticky left-0 bg-white border-r border-gray-200 z-10">

@@ -395,28 +395,41 @@ button, a, input, select, textarea {
 /* Force horizontal scrollbar visibility */
 .overflow-x-scroll {
   overflow-x: scroll !important;
+  overflow-y: hidden !important;
   /* Force scrollbar to always show */
+  scrollbar-width: auto !important; /* Firefox */
 }
 
 /* Custom scrollbar styling for horizontal tables */
 .overflow-x-scroll::-webkit-scrollbar {
-  height: 12px;
-  background-color: #f1f5f9;
+  height: 16px !important;
+  background-color: #e2e8f0 !important;
+  border-radius: 0 !important;
 }
 
 .overflow-x-scroll::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 6px;
+  background: #e2e8f0 !important;
+  border-radius: 0 !important;
 }
 
 .overflow-x-scroll::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 6px;
-  border: 2px solid #f1f5f9;
+  background: #64748b !important;
+  border-radius: 0 !important;
+  border: none !important;
+  min-width: 20px !important;
 }
 
 .overflow-x-scroll::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #475569 !important;
+}
+
+.overflow-x-scroll::-webkit-scrollbar-thumb:active {
+  background: #334155 !important;
+}
+
+/* Force visibility on all browsers */
+.overflow-x-scroll::-webkit-scrollbar-corner {
+  background: #e2e8f0 !important;
 }
 
 /* Button System */

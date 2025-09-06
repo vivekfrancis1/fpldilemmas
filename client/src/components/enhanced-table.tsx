@@ -83,17 +83,15 @@ export function EnhancedTable<T = any>({
       className
     )}>
       <div 
-        className={cn(
-          "overflow-x-scroll overflow-y-auto w-full",
-          maxHeight && `max-h-[${maxHeight}]`
-        )}
+        className="overflow-x-scroll w-full"
         style={{ 
           overflowX: 'scroll',
-          overflowY: 'auto',
+          overflowY: 'visible',
           width: '100%',
           maxWidth: '100%',
-          position: 'relative',
-          display: 'block'
+          height: 'auto',
+          display: 'block',
+          scrollbarWidth: 'auto'
         }}
       >
         <table className="w-full" style={{ minWidth: 'max-content', tableLayout: 'auto' }}>
