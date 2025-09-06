@@ -3093,14 +3093,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const teams = bootstrapData.teams;
       
-      // Demo market-based clean sheet projections
+      // Realistic defensive rankings based on actual team strength
+      const defensiveStrengthMap: { [key: string]: number } = {
+        'ARS': 0.45, 'MCI': 0.42, 'LIV': 0.40, 'NEW': 0.38, 'CHE': 0.35,
+        'MUN': 0.32, 'TOT': 0.30, 'AVL': 0.28, 'WHU': 0.25, 'BHA': 0.25,
+        'CRY': 0.22, 'FUL': 0.20, 'WOL': 0.18, 'BRE': 0.16, 'NFO': 0.15,
+        'BOU': 0.14, 'IPS': 0.12, 'LEI': 0.10, 'EVE': 0.08, 'SOU': 0.06
+      };
+
+      // Demo market-based clean sheet projections with realistic rankings
       const marketProjections = teams.map((team: any) => {
+        const baseStrength = defensiveStrengthMap[team.short_name] || 0.15;
         const demoMarketData = {
           // These would be derived from actual clean sheet betting markets
-          baseCleanSheetRate: 0.15 + (Math.random() * 0.35), // Market implied CS rate
-          homeAdvantage: 0.15, // Home CS boost from markets
-          formAdjustment: -0.05 + (Math.random() * 0.1), // Recent defensive form
-          injuryAdjustment: -0.02 + (Math.random() * 0.04) // Key player injuries
+          baseCleanSheetRate: baseStrength, // Market implied CS rate based on defensive strength
+          homeAdvantage: 0.12, // Home CS boost from markets
+          formAdjustment: (team.id % 3 - 1) * 0.02, // Consistent form pattern
+          injuryAdjustment: (team.id % 2) * -0.01 // Consistent injury impact
         };
         
         const gameweekProjections: { [key: string]: number } = {};
@@ -3116,12 +3125,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             // Market-based projections for future gameweeks
             const baseRate = demoMarketData.baseCleanSheetRate;
-            const homeGame = Math.random() > 0.5;
+            const homeGame = (gw % 2 === 0); // Consistent home/away pattern
             const marketOdds = baseRate + 
               (homeGame ? demoMarketData.homeAdvantage : 0) +
               demoMarketData.formAdjustment +
-              demoMarketData.injuryAdjustment +
-              (Math.random() * 0.05 - 0.025); // Small variance
+              demoMarketData.injuryAdjustment;
             
             gwCleanSheetOdds = Math.max(5, Math.min(85, marketOdds * 100));
           }
@@ -6525,14 +6533,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const teams = bootstrapData.teams;
       
-      // Demo market-based projections (in production, this would come from The Odds API)
+      // Realistic attacking rankings based on actual team strength
+      const attackingStrengthMap: { [key: string]: number } = {
+        'MCI': 2.1, 'ARS': 2.0, 'LIV': 1.9, 'CHE': 1.7, 'TOT': 1.6,
+        'AVL': 1.5, 'NEW': 1.4, 'MUN': 1.4, 'BHA': 1.3, 'WHU': 1.3,
+        'FUL': 1.2, 'BRE': 1.1, 'WOL': 1.0, 'CRY': 1.0, 'BOU': 0.9,
+        'NFO': 0.9, 'EVE': 0.8, 'LEI': 0.8, 'IPS': 0.7, 'SOU': 0.6
+      };
+
+      // Demo market-based projections with realistic rankings (in production, this would come from The Odds API)
       const marketProjections = teams.map((team: any) => {
+        const baseStrength = attackingStrengthMap[team.short_name] || 1.0;
         const demoMarketData = {
           // These would be derived from actual over/under betting lines
-          avgGoalsPerMatch: 1.2 + (Math.random() * 1.0), // Market implied rate
-          homeAdvantage: 0.3, // Market home boost
-          formAdjustment: -0.1 + (Math.random() * 0.2), // Recent form from markets
-          injuryAdjustment: -0.05 + (Math.random() * 0.1) // Injury impact from odds movements
+          avgGoalsPerMatch: baseStrength, // Market implied rate based on attacking strength
+          homeAdvantage: 0.25, // Market home boost
+          formAdjustment: (team.id % 3 - 1) * 0.05, // Consistent form pattern
+          injuryAdjustment: (team.id % 2) * -0.03 // Consistent injury impact
         };
         
         const gameweekProjections: { [key: string]: number } = {};
