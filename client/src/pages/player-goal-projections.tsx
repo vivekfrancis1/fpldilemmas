@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useState, useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
-import { Target, Search, Filter, Trophy } from "lucide-react";
+import { Target, Search, Filter, Trophy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean }>;
@@ -283,7 +283,9 @@ export default function PlayerGoalProjections() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 38 - nextGameweek + 1 }, (_, i) => nextGameweek + i).map(gw => (
+                  {bootstrapData ? Array.from({ length: 38 - nextGameweek + 1 }, (_, i) => nextGameweek + i).map(gw => (
+                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                  )) : Array.from({ length: 35 }, (_, i) => i + 4).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
@@ -297,7 +299,9 @@ export default function PlayerGoalProjections() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 38 - nextGameweek + 1 }, (_, i) => nextGameweek + i).filter(gw => gw >= startGameweek).map(gw => (
+                  {bootstrapData ? Array.from({ length: 38 - nextGameweek + 1 }, (_, i) => nextGameweek + i).filter(gw => gw >= startGameweek).map(gw => (
+                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                  )) : Array.from({ length: 35 }, (_, i) => i + 4).filter(gw => gw >= startGameweek).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
