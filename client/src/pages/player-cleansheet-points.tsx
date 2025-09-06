@@ -243,21 +243,21 @@ export default function PlayerCleanSheetPoints() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gradient-to-r from-green-600 to-emerald-700 text-white">
+                  <thead className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
                     <tr>
-                      <th className="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-green-700 transition-colors"
+                      <th className="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors"
                           onClick={() => handleSort('playerName')}>
                         <div className="flex items-center gap-2">
                           Player {getSortIcon('playerName')}
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-green-700 transition-colors"
+                      <th className="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors"
                           onClick={() => handleSort('position')}>
                         <div className="flex items-center gap-2">
                           Pos {getSortIcon('position')}
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-green-700 transition-colors"
+                      <th className="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors"
                           onClick={() => handleSort('team')}>
                         <div className="flex items-center gap-2">
                           Team {getSortIcon('team')}
@@ -266,7 +266,7 @@ export default function PlayerCleanSheetPoints() {
                       {gameweekRange.map(gw => (
                         <th key={gw} className="px-4 py-3 text-center font-semibold">GW{gw}</th>
                       ))}
-                      <th className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-green-700 transition-colors"
+                      <th className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors border-l border-blue-500"
                           onClick={() => handleSort('totalExpectedPoints')}>
                         <div className="flex items-center justify-center gap-2">
                           Total {getSortIcon('totalExpectedPoints')}
