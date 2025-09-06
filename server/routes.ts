@@ -11409,12 +11409,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Response cache for assists
+  let assistsResponseCache: { data: any[]; timestamp: number } | null = null;
+
   app.get("/api/cached/player-assists-projections", async (req, res) => {
     try {
+      // Return cached response if available and fresh
+      const now = Date.now();
+      if (assistsResponseCache && (now - assistsResponseCache.timestamp) < RESPONSE_CACHE_DURATION) {
+        console.log("⚡ Serving assists projections from response cache");
+        return res.json(assistsResponseCache.data);
+      }
+
       console.log("📊 Serving cached player assists data from database");
       
-      // Fetch cached data and group by player for optimal performance
-      const cachedData = await db.select()
+      // Fetch cached data with optimized query - only essential fields
+      const cachedData = await db.select({
+        playerId: playerAssistProjections.playerId,
+        gameweek: playerAssistProjections.gameweek,
+        assists: playerAssistProjections.assists
+      })
         .from(playerAssistProjections)
         .where(eq(playerAssistProjections.season, '2025/26'))
         .orderBy(desc(playerAssistProjections.assists));
@@ -11424,39 +11438,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      // Fetch current bootstrap data for player names and teams
-      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      const fplData = await fplResponse.json();
-      
-      // Create lookup maps for better performance
-      const playerLookup = new Map();
-      const teamLookup = new Map();
-      
-      fplData.elements.forEach((player: any) => {
-        playerLookup.set(player.id, {
-          name: player.web_name,
-          position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID',
-          teamId: player.team
-        });
-      });
-      
-      fplData.teams.forEach((team: any) => {
-        teamLookup.set(team.id, team.short_name);
-      });
+      // Use optimized metadata cache instead of fresh FPL API call
+      const playerMetadata = await getPlayerMetadata();
       
       // Group by player efficiently using Map for O(n) performance
       const playersMap = new Map();
       
       for (const row of cachedData) {
         if (!playersMap.has(row.playerId)) {
-          const playerInfo = playerLookup.get(row.playerId);
-          const teamShort = playerInfo ? teamLookup.get(playerInfo.teamId) : null;
+          const metadata = playerMetadata.get(row.playerId);
           
           playersMap.set(row.playerId, {
             playerId: row.playerId,
-            playerName: playerInfo?.name || `Player ${row.playerId}`,
-            teamShort: teamShort || null,
-            position: playerInfo?.position || null,
+            playerName: metadata?.name || `Player ${row.playerId}`,
+            teamShort: metadata?.teamShort || null,
+            position: metadata?.position || null,
             gameweekProjections: {},
             totalProjectedAssists: 0,
             assistShare: 0
@@ -11471,6 +11467,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert to array and sort by total assists descending
       const responseData = Array.from(playersMap.values())
         .sort((a, b) => b.totalProjectedAssists - a.totalProjectedAssists);
+      
+      // Cache the processed response
+      assistsResponseCache = { data: responseData, timestamp: now };
       
       res.json(responseData);
     } catch (error) {
