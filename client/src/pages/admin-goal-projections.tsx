@@ -694,17 +694,17 @@ export default function AdminGoalProjections() {
       </Alert>
 
       <Tabs defaultValue="calculation-base" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="flex flex-wrap gap-1 h-auto p-1">
-          <TabsTrigger value="calculation-base">Projection Model</TabsTrigger>
-          <TabsTrigger value="base-xg">Base xG Settings</TabsTrigger>
-          <TabsTrigger value="attacking-teams">Attack Teams</TabsTrigger>
-          <TabsTrigger value="attacking-multipliers">Attack Multipliers</TabsTrigger>
-          <TabsTrigger value="defensive-teams">Defence Teams</TabsTrigger>
-          <TabsTrigger value="defensive-multipliers">Defence Multipliers</TabsTrigger>
-          <TabsTrigger value="venue">Venue Factors</TabsTrigger>
-          <TabsTrigger value="context">Context Multipliers</TabsTrigger>
-          <TabsTrigger value="market">Market Bounds</TabsTrigger>
-          <TabsTrigger value="final-bounds">Final Bounds</TabsTrigger>
+        <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 h-auto p-2 bg-muted rounded-lg">
+          <TabsTrigger value="calculation-base" className="text-xs md:text-sm whitespace-nowrap">Projection Model</TabsTrigger>
+          <TabsTrigger value="base-xg" className="text-xs md:text-sm whitespace-nowrap">Base xG Settings</TabsTrigger>
+          <TabsTrigger value="attacking-teams" className="text-xs md:text-sm whitespace-nowrap">Attack Teams</TabsTrigger>
+          <TabsTrigger value="attacking-multipliers" className="text-xs md:text-sm whitespace-nowrap">Attack Multipliers</TabsTrigger>
+          <TabsTrigger value="defensive-teams" className="text-xs md:text-sm whitespace-nowrap">Defence Teams</TabsTrigger>
+          <TabsTrigger value="defensive-multipliers" className="text-xs md:text-sm whitespace-nowrap">Defence Multipliers</TabsTrigger>
+          <TabsTrigger value="venue" className="text-xs md:text-sm whitespace-nowrap">Venue Factors</TabsTrigger>
+          <TabsTrigger value="context" className="text-xs md:text-sm whitespace-nowrap">Context Multipliers</TabsTrigger>
+          <TabsTrigger value="market" className="text-xs md:text-sm whitespace-nowrap">Market Bounds</TabsTrigger>
+          <TabsTrigger value="final-bounds" className="text-xs md:text-sm whitespace-nowrap">Final Bounds</TabsTrigger>
         </TabsList>
 
         {/* Calculation Base Tab */}
