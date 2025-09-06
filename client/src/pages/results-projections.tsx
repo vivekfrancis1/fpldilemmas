@@ -120,59 +120,39 @@ export default function ResultsProjections() {
   const calculateProbabilities = (homeScore: number, awayScore: number, homeXG: number, awayXG: number) => {
     const scoreDiff = homeScore - awayScore;
     const xgDiff = homeXG - awayXG;
-    const xgRatio = homeXG / Math.max(awayXG, 0.1); // Avoid division by zero
     
     let homeWin, draw, awayWin;
     
-    // Base probabilities calibrated against betting markets
-    const baseDraw = 22; // Market average around 17-26%
-    
     if (scoreDiff > 0) {
-      // Home team predicted to win - calibrated to market data
-      const boost = Math.min(35, scoreDiff * 15 + xgDiff * 10);
-      homeWin = 45 + boost;
-      awayWin = Math.max(8, 35 - boost);
+      // Home team predicted to win - stronger boost for clear xG advantage
+      homeWin = 50 + Math.min(30, scoreDiff * 12 + xgDiff * 8);
+      awayWin = Math.max(8, 40 - scoreDiff * 12 - xgDiff * 8);
       draw = 100 - homeWin - awayWin;
     } else if (scoreDiff < 0) {
-      // Away team predicted to win - calibrated to market data
-      const boost = Math.min(35, Math.abs(scoreDiff) * 15 + Math.abs(xgDiff) * 10);
-      awayWin = 45 + boost;
-      homeWin = Math.max(8, 35 - boost);
+      // Away team predicted to win - stronger boost for clear xG advantage
+      awayWin = 50 + Math.min(30, Math.abs(scoreDiff) * 12 + Math.abs(xgDiff) * 8);
+      homeWin = Math.max(8, 40 - Math.abs(scoreDiff) * 12 - Math.abs(xgDiff) * 8);
       draw = 100 - homeWin - awayWin;
     } else {
-      // Draw predicted - use xG ratio for more nuanced calculation
-      let favoriteBoost = 0;
+      // Draw predicted - make much more responsive to xG difference to match betting markets
+      const baseProb = 25; // Lower base for stronger team differentiation
+      const xgMultiplier = Math.min(25, Math.abs(xgDiff) * 20); // Much stronger multiplier to match market odds
       
-      if (xgRatio > 1.5) {
-        // Strong home favorite (like Arsenal vs Forest)
-        favoriteBoost = Math.min(35, (xgRatio - 1) * 25);
-        homeWin = 40 + favoriteBoost;
-        awayWin = Math.max(12, 38 - favoriteBoost);
-      } else if (xgRatio < 0.67) {
-        // Strong away favorite
-        favoriteBoost = Math.min(35, (1/xgRatio - 1) * 25);
-        awayWin = 40 + favoriteBoost;
-        homeWin = Math.max(12, 38 - favoriteBoost);
+      if (xgDiff > 0) {
+        homeWin = baseProb + 10 + xgMultiplier;
+        awayWin = Math.max(10, baseProb + 10 - xgMultiplier);
       } else {
-        // Close match (like Liverpool vs Chelsea)
-        const smallBoost = Math.abs(xgDiff) * 8;
-        if (xgDiff > 0) {
-          homeWin = 40 + smallBoost;
-          awayWin = 40 - smallBoost;
-        } else {
-          homeWin = 40 - smallBoost;
-          awayWin = 40 + smallBoost;
-        }
+        homeWin = Math.max(10, baseProb + 10 - xgMultiplier);
+        awayWin = baseProb + 10 + xgMultiplier;
       }
-      
       draw = 100 - homeWin - awayWin;
     }
     
-    // Apply realistic bounds based on market analysis
+    // Apply realistic bounds to prevent extreme probabilities
     return {
-      homeWin: Math.max(8, Math.min(80, homeWin)),
-      draw: Math.max(15, Math.min(35, draw)),
-      awayWin: Math.max(8, Math.min(80, awayWin))
+      homeWin: Math.max(5, Math.min(85, homeWin)),
+      draw: Math.max(10, Math.min(50, draw)),
+      awayWin: Math.max(5, Math.min(85, awayWin))
     };
   };
 
