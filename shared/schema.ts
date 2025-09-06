@@ -580,8 +580,8 @@ export const adminGoalProjectionSettings = pgTable("admin_goal_projection_settin
   absoluteMaxGoals: decimal("absolute_max_goals", { precision: 4, scale: 2 }).default("4.2"),
   
   // Clean Sheet Parameters
-  cleanSheetExponent: decimal("clean_sheet_exponent", { precision: 4, scale: 2 }).default("1.0"),
-  cleanSheetMultiplier: decimal("clean_sheet_multiplier", { precision: 4, scale: 2 }).default("100"),
+  cleanSheetExponent: decimal("clean_sheet_exponent", { precision: 4, scale: 2 }).default("1.15"),
+  cleanSheetMultiplier: decimal("clean_sheet_multiplier", { precision: 4, scale: 2 }).default("85"),
   
   // Metadata
   lastUpdated: timestamp("last_updated").defaultNow(),
@@ -718,8 +718,8 @@ export const adminMatchProjectionSettings = pgTable("admin_match_projection_sett
   awayMaxGoals: decimal("away_max_goals", { precision: 4, scale: 2 }).default("3.5"),
   
   // Clean sheet calculation parameters
-  cleanSheetExponent: decimal("clean_sheet_exponent", { precision: 4, scale: 2 }).default("1.0"), // For Math.exp(-goals * exponent)
-  cleanSheetMultiplier: decimal("clean_sheet_multiplier", { precision: 4, scale: 2 }).default("100"), // Convert to percentage
+  cleanSheetExponent: decimal("clean_sheet_exponent", { precision: 4, scale: 2 }).default("1.15"), // For Math.exp(-goals * exponent)
+  cleanSheetMultiplier: decimal("clean_sheet_multiplier", { precision: 4, scale: 2 }).default("85"), // Convert to percentage
   
   // Match context adjustments
   derbyMatchMultiplier: decimal("derby_match_multiplier", { precision: 4, scale: 2 }).default("0.92"),

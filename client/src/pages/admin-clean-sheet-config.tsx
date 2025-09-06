@@ -19,8 +19,8 @@ interface CleanSheetSettings {
 }
 
 const DEFAULT_VALUES = {
-  cleanSheetExponent: 1.1,
-  cleanSheetMultiplier: 90,
+  cleanSheetExponent: 1.15,
+  cleanSheetMultiplier: 85,
 };
 
 export default function AdminCleanSheetConfig() {
