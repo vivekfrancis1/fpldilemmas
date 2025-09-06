@@ -341,46 +341,46 @@ export default function PlayerAssistProjections() {
                 <CardContent>
                   <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'visible', width: '100%', maxWidth: '100%', height: 'auto', display: 'block', scrollbarWidth: 'auto', scrollSnapType: 'none', overscrollBehaviorX: 'contain' }} onDoubleClick={(e) => { const target = e.currentTarget as HTMLElement; target.scrollLeft = 0; }}>
                     <table className="w-full" style={{ minWidth: '1200px', tableLayout: 'auto' }}>
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="hover:bg-green-50">
+                      <thead className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+                        <tr>
+                          <th className="text-left py-3 px-4 font-semibold sticky left-0 bg-gradient-to-r from-blue-600 to-indigo-700 border-r border-blue-500 z-10">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               Player {getSortIcon('name')}
                             </Button>
                           </th>
 
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw4')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw4')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               GW4 {getSortIcon('gw4')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw5')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw5')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               GW5 {getSortIcon('gw5')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw6')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw6')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               GW6 {getSortIcon('gw6')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw7')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw7')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               GW7 {getSortIcon('gw7')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw8')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw8')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               GW8 {getSortIcon('gw8')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw9')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw9')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               GW9 {getSortIcon('gw9')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white border-l border-blue-500">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               6GW Total {getSortIcon('sixGwTotal')}
                             </Button>
                           </th>
@@ -462,46 +462,46 @@ export default function PlayerAssistProjections() {
                 <CardContent>
                   <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'visible', width: '100%', maxWidth: '100%', height: 'auto', display: 'block', scrollbarWidth: 'auto', scrollSnapType: 'none', overscrollBehaviorX: 'contain' }} onDoubleClick={(e) => { const target = e.currentTarget as HTMLElement; target.scrollLeft = 0; }}>
                     <table className="w-full" style={{ minWidth: '1200px', tableLayout: 'auto' }}>
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="hover:bg-green-50">
+                      <thead className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+                        <tr>
+                          <th className="text-left py-3 px-4 font-semibold sticky left-0 bg-gradient-to-r from-blue-600 to-indigo-700 border-r border-blue-500 z-10">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               Player {getSortIcon('name')}
                             </Button>
                           </th>
 
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw4')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw4')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               GW4 {getSortIcon('gw4')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw5')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw5')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               GW5 {getSortIcon('gw5')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw6')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw6')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               GW6 {getSortIcon('gw6')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw7')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw7')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               GW7 {getSortIcon('gw7')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw8')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw8')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               GW8 {getSortIcon('gw8')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw9')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw9')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               GW9 {getSortIcon('gw9')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="hover:bg-green-50">
+                          <th className="text-center py-3 px-2 font-semibold text-white border-l border-blue-500">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
                               6GW Total {getSortIcon('sixGwTotal')}
                             </Button>
                           </th>
