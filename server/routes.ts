@@ -11638,6 +11638,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const totalExpectedPoints = totalGoalPoints + totalAssistPoints + totalMinutesPoints;
 
+        const gameweekCount = Object.keys(gameweekProjections).length;
+        const avgPerGameweek = gameweekCount > 0 ? totalExpectedPoints / gameweekCount : 0;
+        const seasonTotalPoints = avgPerGameweek * 38; // Project over full 38 gameweek season
+        
         return {
           playerId: player.playerId,
           name: player.playerName,
@@ -11648,7 +11652,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ownership: 5.0, // Default ownership
           gameweekProjections: gameweekProjections,
           totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
-          averagePerGameweek: Math.round((totalExpectedPoints / Object.keys(gameweekProjections).length) * 100) / 100,
+          seasonTotalPoints: Math.round(seasonTotalPoints * 100) / 100,
+          averagePerGameweek: Math.round(avgPerGameweek * 100) / 100,
           // Detailed breakdowns
           pointsFromGoals: pointsFromGoals,
           pointsFromAssists: pointsFromAssists,
