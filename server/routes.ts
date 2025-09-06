@@ -1694,12 +1694,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
       
-      // Generate predictions for upcoming fixtures (next 5 gameweeks)
+      // Generate predictions for upcoming fixtures (future gameweeks only)
       const upcomingFixtures = fixturesData
         .filter((fixture: any) => 
           !fixture.finished && 
-          fixture.event >= currentGameweek && 
-          fixture.event <= currentGameweek + 4
+          fixture.event > currentGameweek
         )
         .slice(0, 50); // Limit to 50 matches for performance
       
