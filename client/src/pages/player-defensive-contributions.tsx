@@ -540,10 +540,9 @@ export default function PlayerDefensiveContributions() {
                   >
                     Player
                   </TableHead>
-                  <TableHead className="sticky left-[150px] bg-background z-10 min-w-[80px]">Pos</TableHead>
-                  <TableHead className="sticky left-[230px] bg-background z-10 min-w-[80px]">Team</TableHead>
+
                   <TableHead 
-                    className="cursor-pointer hover:bg-muted/50 sticky left-[310px] bg-background z-10 min-w-[100px]"
+                    className="cursor-pointer hover:bg-muted/50 sticky left-[150px] bg-background z-10 min-w-[100px]"
                     onClick={() => handleSort("current")}
                   >
                     Current/90
@@ -582,17 +581,19 @@ export default function PlayerDefensiveContributions() {
                 {filteredPlayers.map((player) => (
                   <TableRow key={player.playerId}>
                     <TableCell className="font-medium sticky left-0 bg-background z-10">
-                      {player.playerName}
+                      <div className="flex flex-col">
+                        <span>{player.playerName}</span>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {player.position.slice(0, 3).toUpperCase()}
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {player.teamName.slice(0, 3).toUpperCase()}
+                          </Badge>
+                        </div>
+                      </div>
                     </TableCell>
-                    <TableCell className="sticky left-[150px] bg-background z-10">
-                      <Badge variant="outline" className="text-xs">
-                        {player.position.slice(0, 3).toUpperCase()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="sticky left-[230px] bg-background z-10">
-                      {player.teamName}
-                    </TableCell>
-                    <TableCell className="font-mono sticky left-[310px] bg-background z-10">
+                    <TableCell className="font-mono sticky left-[150px] bg-background z-10">
                       {player.currentSeasonStats.dcPer90.toFixed(1)}
                     </TableCell>
                     {player.gameweekProjections.map((gw) => (
@@ -643,8 +644,7 @@ export default function PlayerDefensiveContributions() {
                   <TableHead className="cursor-pointer hover:bg-muted/50 sticky left-0 bg-background z-10 min-w-[150px]">
                     Player
                   </TableHead>
-                  <TableHead className="sticky left-[150px] bg-background z-10 min-w-[80px]">Pos</TableHead>
-                  <TableHead className="sticky left-[230px] bg-background z-10 min-w-[80px]">Team</TableHead>
+
                   <TableHead className="sticky left-[310px] bg-background z-10 min-w-[100px]">
                     Current/90
                   </TableHead>
@@ -676,17 +676,19 @@ export default function PlayerDefensiveContributions() {
                 {filteredPlayers.map((player) => (
                   <TableRow key={player.playerId}>
                     <TableCell className="font-medium sticky left-0 bg-background z-10">
-                      {player.playerName}
+                      <div className="flex flex-col">
+                        <span>{player.playerName}</span>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {player.position.slice(0, 3).toUpperCase()}
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {player.teamName.slice(0, 3).toUpperCase()}
+                          </Badge>
+                        </div>
+                      </div>
                     </TableCell>
-                    <TableCell className="sticky left-[150px] bg-background z-10">
-                      <Badge variant="outline" className="text-xs">
-                        {player.position.slice(0, 3).toUpperCase()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="sticky left-[230px] bg-background z-10">
-                      {player.teamName}
-                    </TableCell>
-                    <TableCell className="font-mono sticky left-[310px] bg-background z-10">
+                    <TableCell className="font-mono sticky left-[150px] bg-background z-10">
                       {player.currentSeasonStats.dcPer90.toFixed(1)}
                     </TableCell>
                     {player.gameweekProjections.map((gw) => (

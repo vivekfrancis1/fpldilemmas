@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 interface BootstrapData {
   elements: any[];
@@ -171,7 +172,7 @@ export default function PlayerSaves() {
                     <thead>
                       <tr>
                         <th className="text-left">Goalkeeper</th>
-                        <th className="text-center">Team</th>
+
                         <th className="text-center">GW4</th>
                         <th className="text-center">GW5</th>
                         <th className="text-center">GW6</th>
@@ -189,8 +190,15 @@ export default function PlayerSaves() {
                     <tbody>
                       {filteredProjections.map((projection: SavesProjection) => (
                         <tr key={projection.playerId}>
-                          <td className="font-medium">{projection.playerName}</td>
-                          <td className="text-center text-sm">{projection.teamName}</td>
+                          <td className="font-medium">
+                            <div className="flex flex-col">
+                              <span>{projection.playerName}</span>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Badge variant="secondary" className="text-xs">GKP</Badge>
+                                <Badge variant="outline" className="text-xs">{projection.teamName}</Badge>
+                              </div>
+                            </div>
+                          </td>
                           <td className="text-center">{projection.saves.gw4}</td>
                           <td className="text-center">{projection.saves.gw5}</td>
                           <td className="text-center">{projection.saves.gw6}</td>
@@ -226,7 +234,7 @@ export default function PlayerSaves() {
                     <thead>
                       <tr>
                         <th className="text-left">Goalkeeper</th>
-                        <th className="text-center">Team</th>
+
                         <th className="text-center">GW4</th>
                         <th className="text-center">GW5</th>
                         <th className="text-center">GW6</th>
@@ -244,8 +252,15 @@ export default function PlayerSaves() {
                     <tbody>
                       {filteredProjections.map((projection: SavesProjection) => (
                         <tr key={projection.playerId}>
-                          <td className="font-medium">{projection.playerName}</td>
-                          <td className="text-center text-sm">{projection.teamName}</td>
+                          <td className="font-medium">
+                            <div className="flex flex-col">
+                              <span>{projection.playerName}</span>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Badge variant="secondary" className="text-xs">GKP</Badge>
+                                <Badge variant="outline" className="text-xs">{projection.teamName}</Badge>
+                              </div>
+                            </div>
+                          </td>
                           <td className="text-center">{projection.pointsFromSaves.gw4}</td>
                           <td className="text-center">{projection.pointsFromSaves.gw5}</td>
                           <td className="text-center">{projection.pointsFromSaves.gw6}</td>

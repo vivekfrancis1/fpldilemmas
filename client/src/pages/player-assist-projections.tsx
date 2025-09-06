@@ -340,16 +340,7 @@ export default function PlayerAssistProjections() {
                               Player {getSortIcon('name')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('team')} className="hover:bg-green-50">
-                              Team {getSortIcon('team')}
-                            </Button>
-                          </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('position')} className="hover:bg-green-50">
-                              Pos {getSortIcon('position')}
-                            </Button>
-                          </th>
+
                           <th className="text-center py-2 px-1">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('gw4')} className="hover:bg-green-50">
                               GW4 {getSortIcon('gw4')}
@@ -399,17 +390,15 @@ export default function PlayerAssistProjections() {
                             <td className="py-3 px-1">
                               <div className="flex flex-col">
                                 <span className="font-medium text-sm">{player.playerName}</span>
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {player.position.charAt(0)}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {player.teamShort}
+                                  </Badge>
+                                </div>
                               </div>
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              <Badge variant="outline" className="text-xs">
-                                {player.teamShort}
-                              </Badge>
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              <Badge variant="secondary" className="text-xs">
-                                {player.position.charAt(0)}
-                              </Badge>
                             </td>
                             <td className="text-center py-3 px-1">
                               <span className={`${(player.gameweekProjections[4] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
@@ -475,16 +464,7 @@ export default function PlayerAssistProjections() {
                               Player {getSortIcon('name')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('team')} className="hover:bg-green-50">
-                              Team {getSortIcon('team')}
-                            </Button>
-                          </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('position')} className="hover:bg-green-50">
-                              Pos {getSortIcon('position')}
-                            </Button>
-                          </th>
+
                           <th className="text-center py-2 px-1">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('gw4')} className="hover:bg-green-50">
                               GW4 {getSortIcon('gw4')}
@@ -536,17 +516,15 @@ export default function PlayerAssistProjections() {
                             <td className="py-3 px-1">
                               <div className="flex flex-col">
                                 <span className="font-medium text-sm">{player.playerName}</span>
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {player.position.charAt(0)}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {player.teamShort}
+                                  </Badge>
+                                </div>
                               </div>
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              <Badge variant="outline" className="text-xs">
-                                {player.teamShort}
-                              </Badge>
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              <Badge variant="secondary" className="text-xs">
-                                {player.position.charAt(0)}
-                              </Badge>
                             </td>
                             <td className="text-center py-3 px-1">
                               <span className={`${(player.gameweekProjections[4] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
