@@ -331,7 +331,7 @@ export default function PlayerAssistProjections() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-scroll" style={{ scrollBehavior: 'auto', WebkitOverflowScrolling: 'touch', overflowX: 'scroll', width: '100%', display: 'block' }}>
+                  <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'auto', width: '100%', maxWidth: '100%', position: 'relative', display: 'block' }}>
                     <table className="w-full min-w-max">
                       <thead>
                         <tr className="border-b border-gray-200">
@@ -455,7 +455,7 @@ export default function PlayerAssistProjections() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-scroll" style={{ scrollBehavior: 'auto', WebkitOverflowScrolling: 'touch', overflowX: 'scroll', width: '100%', display: 'block' }}>
+                  <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'auto', width: '100%', maxWidth: '100%', position: 'relative', display: 'block' }}>
                     <table className="w-full min-w-max">
                       <thead>
                         <tr className="border-b border-gray-200">
