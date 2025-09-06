@@ -465,13 +465,13 @@ export default function PlayerGoalsScoredProjections() {
               <CardContent>
                 <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'visible', width: '100%', maxWidth: '100%', height: 'auto', display: 'block', scrollbarWidth: 'auto', scrollSnapType: 'none', overscrollBehaviorX: 'contain' }} onDoubleClick={(e) => { const target = e.currentTarget as HTMLElement; target.scrollLeft = 0; }}>
                   <table className="w-full" style={{ minWidth: '1400px', tableLayout: 'auto' }}>
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 sticky left-0 bg-white border-r border-gray-200 z-10">
+                    <thead className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-semibold sticky left-0 bg-gradient-to-r from-blue-600 to-indigo-700 border-r border-blue-500 z-10">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                            className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white"
                             onClick={() => handleSort("name")}
                             data-testid="sort-player-name"
                           >
@@ -483,11 +483,11 @@ export default function PlayerGoalsScoredProjections() {
                           </Button>
                         </th>
                     {selectedGameweeks.map(gw => (
-                      <th key={gw} className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[70px]">
+                      <th key={gw} className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                          className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white"
                           onClick={() => handleSort(`gw${gw}`)}
                           data-testid={`sort-gw${gw}`}
                         >
@@ -499,15 +499,15 @@ export default function PlayerGoalsScoredProjections() {
                         </Button>
                       </th>
                     ))}
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900 border-l border-gray-200">
+                    <th className="text-center py-3 px-2 font-semibold text-white border-l border-blue-500">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
+                        className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white"
                         onClick={() => handleSort("total")}
                         data-testid="sort-total"
                       >
-                        {selectedGameweeks.length} GW
+                        {selectedGameweeks.length} GW Total
                         {sortBy === "total" && (
                           sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
                         )}
@@ -556,7 +556,7 @@ export default function PlayerGoalsScoredProjections() {
                           );
                         })}
                         <td className="py-3 px-2 text-center border-l border-gray-200">
-                          <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-sm">
+                          <span className="px-3 py-1 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-sm">
                             {selectedTotal.toFixed(2)}
                           </span>
                         </td>
@@ -565,16 +565,16 @@ export default function PlayerGoalsScoredProjections() {
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t border-gray-200 bg-blue-50">
-                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-blue-50 border-r border-gray-200 z-10" colSpan={1}>
+                  <tr className="border-t border-blue-300 bg-gradient-to-r from-blue-100 to-indigo-100">
+                    <td className="py-3 px-4 font-bold text-blue-900 sticky left-0 bg-gradient-to-r from-blue-100 to-indigo-100 border-r border-blue-300 z-10" colSpan={1}>
                       {selectedGameweeks.length} GW TOTAL
                     </td>
                     {selectedGameweeks.map(gw => (
-                      <td key={gw} className="py-3 px-2 text-center font-bold text-blue-600">
+                      <td key={gw} className="py-3 px-2 text-center font-bold text-blue-800">
                         {(totalGoals.gameweekTotals[gw] || 0).toFixed(2)}
                       </td>
                     ))}
-                    <td className="py-3 px-2 text-center font-bold text-blue-600">
+                    <td className="py-3 px-2 text-center font-bold text-blue-800">
                       {totalGoals.overallTotal.toFixed(2)}
                     </td>
                   </tr>
@@ -596,8 +596,8 @@ export default function PlayerGoalsScoredProjections() {
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
+                <thead className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+                  <tr>
                     <th className="text-left py-3 px-4 font-semibold text-gray-900 sticky left-0 bg-white border-r border-gray-200 z-10">
                       <Button
                         variant="ghost"
