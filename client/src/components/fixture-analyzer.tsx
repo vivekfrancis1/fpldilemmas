@@ -17,6 +17,64 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [sortBy, setSortBy] = useState("easiest");
   const [viewMode, setViewMode] = useState<"teams" | "gameweeks">("teams");
+  const [difficultyType, setDifficultyType] = useState<"attacking" | "defensive">("attacking");
+
+  // Team tier assignments based on server-side configuration
+  const getAttackingTier = (teamId: number): string => {
+    const eliteAttackTeams = [12, 13]; // Liverpool, Manchester City
+    const strongAttackTeams = [1, 7, 15, 18, 2]; // Arsenal, Chelsea, Newcastle, Tottenham, Aston Villa
+    const averageAttackTeams = [6, 14, 4, 5, 10, 8]; // Brighton, Manchester United, Bournemouth, Brentford, Fulham, Crystal Palace
+    const weakAttackTeams = [9, 16, 19, 20]; // Everton, Nottingham Forest, West Ham, Wolves
+    const promotedAttackTeams = [3, 11, 17]; // Burnley, Leeds, Sunderland
+    
+    if (eliteAttackTeams.includes(teamId)) return 'elite';
+    if (strongAttackTeams.includes(teamId)) return 'strong';
+    if (averageAttackTeams.includes(teamId)) return 'average';
+    if (weakAttackTeams.includes(teamId)) return 'weak';
+    if (promotedAttackTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+
+  const getDefensiveTier = (teamId: number): string => {
+    const eliteDefenseTeams = [1]; // Arsenal
+    const strongDefenseTeams = [12, 13, 7, 15, 16]; // Liverpool, Man City, Chelsea, Newcastle, Nottingham Forest
+    const averageDefenseTeams = [2, 9, 14, 18, 8, 10]; // Aston Villa, Everton, Manchester United, Tottenham, Crystal Palace, Fulham
+    const weakDefenseTeams = [4, 5, 6, 19, 20]; // Bournemouth, Brentford, Brighton, West Ham, Wolves
+    const promotedDefenseTeams = [3, 11, 17]; // Burnley, Leeds, Sunderland
+    
+    if (eliteDefenseTeams.includes(teamId)) return 'elite';
+    if (strongDefenseTeams.includes(teamId)) return 'strong';
+    if (averageDefenseTeams.includes(teamId)) return 'average';
+    if (weakDefenseTeams.includes(teamId)) return 'weak';
+    if (promotedDefenseTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+
+  // Calculate attacking difficulty based on opponent's defensive strength
+  const getAttackingDifficulty = (opponentId: number): number => {
+    const defensiveTier = getDefensiveTier(opponentId);
+    switch (defensiveTier) {
+      case 'elite': return 5; // Very Hard
+      case 'strong': return 4; // Hard
+      case 'average': return 3; // Medium
+      case 'weak': return 2; // Easy
+      case 'promoted': return 1; // Very Easy
+      default: return 3;
+    }
+  };
+
+  // Calculate defensive difficulty based on opponent's attacking strength
+  const getDefensiveDifficulty = (opponentId: number): number => {
+    const attackingTier = getAttackingTier(opponentId);
+    switch (attackingTier) {
+      case 'elite': return 5; // Very Hard for defense
+      case 'strong': return 4; // Hard for defense
+      case 'average': return 3; // Medium for defense
+      case 'weak': return 2; // Easy for defense
+      case 'promoted': return 1; // Very Easy for defense
+      default: return 3;
+    }
+  };
 
   const { data: fixtures, isLoading: fixturesLoading } = useQuery<Fixture[]>({
     queryKey: ["/api/fixtures"],
@@ -36,7 +94,10 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
           const isHome = fixture.team_h === team.id;
           const opponentId = isHome ? fixture.team_a : fixture.team_h;
           const opponent = data.teams.find(t => t.id === opponentId);
-          const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+          // Use custom difficulty calculation based on selected type
+          const difficulty = difficultyType === 'attacking' 
+            ? getAttackingDifficulty(opponentId) 
+            : getDefensiveDifficulty(opponentId);
           
           return {
             ...fixture,
@@ -57,7 +118,7 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
         avgDifficulty: parseFloat(avgDifficulty.toFixed(2))
       };
     });
-  }, [data, fixtures, selectedGameweeks]);
+  }, [data, fixtures, selectedGameweeks, difficultyType]);
 
   const filteredTeamFixtures = useMemo(() => {
     if (selectedTeam === "all") return teamFixtures;
@@ -119,9 +180,17 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
           }
           return 0;
         }),
-        avgDifficulty: fixtures.reduce((sum: number, f: any) => sum + f.team_h_difficulty + f.team_a_difficulty, 0) / (fixtures.length * 2)
+        avgDifficulty: fixtures.reduce((sum: number, f: any) => {
+          const homeTeamDifficulty = difficultyType === 'attacking' 
+            ? getAttackingDifficulty(f.team_a) 
+            : getDefensiveDifficulty(f.team_a);
+          const awayTeamDifficulty = difficultyType === 'attacking' 
+            ? getAttackingDifficulty(f.team_h) 
+            : getDefensiveDifficulty(f.team_h);
+          return sum + homeTeamDifficulty + awayTeamDifficulty;
+        }, 0) / (fixtures.length * 2)
       }));
-  }, [data, fixtures, selectedGameweeks]);
+  }, [data, fixtures, selectedGameweeks, difficultyType]);
 
   const getDifficultyColor = (difficulty: number): string => {
     if (difficulty === 1) return "bg-green-600 text-white"; // Very Easy - Dark Green (softer)
@@ -230,6 +299,35 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
               By Gameweeks
             </Button>
           </div>
+        </div>
+
+        {/* Difficulty Type Toggle */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">FDR Analysis Type</label>
+          <div className="flex space-x-2">
+            <Button
+              variant={difficultyType === "attacking" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setDifficultyType("attacking")}
+              data-testid="button-attacking-fdr"
+            >
+              FDR for Attackers
+            </Button>
+            <Button
+              variant={difficultyType === "defensive" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setDifficultyType("defensive")}
+              data-testid="button-defensive-fdr"
+            >
+              FDR for Defenders
+            </Button>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            {difficultyType === "attacking" 
+              ? "Shows how difficult it is for teams to score goals (based on opponent's defensive strength)"
+              : "Shows how difficult it is for teams to keep clean sheets (based on opponent's attacking strength)"
+            }
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
