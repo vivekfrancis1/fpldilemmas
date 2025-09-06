@@ -582,7 +582,7 @@ export default function AdminGoalProjections() {
   };
 
   const handleReset = () => {
-    if (confirm('Reset ALL settings across ALL pages and configurations in the entire system? This includes Team Goals, Team Clean Sheets, and all other projection configurations. This action cannot be undone.')) {
+    if (confirm('Reset ALL settings across ALL pages and configurations in the entire system? This includes Team Goals and all other projection configurations. This action cannot be undone.')) {
       resetSettingsMutation.mutate();
     }
   };
