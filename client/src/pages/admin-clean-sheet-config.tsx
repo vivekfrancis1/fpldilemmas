@@ -214,8 +214,8 @@ export default function AdminCleanSheetConfig() {
                       step: 5
                     }
                   ].map((param) => {
-                    const currentValue = settings?.[param.key as keyof CleanSheetSettings] || param.default;
-                    const newValue = formData[param.key as keyof CleanSheetSettings];
+                    const currentValue = Number(settings?.[param.key as keyof CleanSheetSettings] || param.default);
+                    const newValue = Number(formData[param.key as keyof CleanSheetSettings] || param.default);
                     const isChanged = Math.abs(newValue - param.default) > 0.01;
                     const isModified = Math.abs(newValue - currentValue) > 0.01;
                     
@@ -234,7 +234,7 @@ export default function AdminCleanSheetConfig() {
                         </td>
                         <td className="text-center p-3 border border-gray-200 dark:border-gray-700">
                           <span className={`font-mono font-medium ${isChanged ? 'text-blue-600' : ''}`}>
-                            {currentValue.toFixed(param.key === 'cleanSheetExponent' ? 1 : 0)}
+                            {Number(currentValue).toFixed(param.key === 'cleanSheetExponent' ? 1 : 0)}
                           </span>
                           {isChanged && (
                             <div className="text-xs text-blue-600 mt-1">Modified</div>
@@ -246,7 +246,7 @@ export default function AdminCleanSheetConfig() {
                             step={param.step}
                             min={param.min}
                             max={param.max}
-                            value={newValue.toFixed(param.key === 'cleanSheetExponent' ? 1 : 0)}
+                            value={Number(newValue).toFixed(param.key === 'cleanSheetExponent' ? 1 : 0)}
                             onChange={(e) => handleInputChange(param.key as keyof CleanSheetSettings, e.target.value)}
                             className={`w-24 text-center font-mono ${isModified ? 'border-orange-300 bg-orange-50' : ''}`}
                             data-testid={`input-${param.key.replace(/([A-Z])/g, '-$1').toLowerCase()}`}
