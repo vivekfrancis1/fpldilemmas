@@ -105,15 +105,15 @@ export default function ResultsProjections() {
   };
 
   /**
-   * Calculate match result probabilities based on predicted scores and expected goals
+   * Calculate match result probabilities based on expected goals and predicted scores
    * 
    * Algorithm:
-   * 1. Analyzes predicted score difference (home - away)
-   * 2. Incorporates expected goals difference as secondary factor
-   * 3. Applies probability distribution logic:
-   *    - Home/Away Wins: 50% base + bonus (up to 25%) based on score margin and xG advantage
-   *    - Draws: 35% base when scores are equal, adjusted by xG difference
-   * 4. Enforces realistic bounds: 5-85% for wins, 10-50% for draws
+   * 1. Primary factor: Expected goals difference (xG) between teams
+   * 2. Secondary factor: Predicted score difference for final adjustments
+   * 3. Base probabilities calculated from xG (33% each + xG advantage)
+   * 4. Score predictions provide additional boost to favored team
+   * 5. Draw scenarios heavily influenced by xG closeness
+   * 6. Enforces realistic bounds: 8-82% for wins, 12-45% for draws
    * 
    * Note: These are calculated probabilities, not sourced from betting markets
    */
@@ -121,38 +121,51 @@ export default function ResultsProjections() {
     const scoreDiff = homeScore - awayScore;
     const xgDiff = homeXG - awayXG;
     
+    // Base probabilities more influenced by xG than predicted scores
     let homeWin, draw, awayWin;
     
+    // Calculate base probabilities primarily from xG difference
+    const xgAdvantage = xgDiff;
+    const baseHomeWin = 33 + (xgAdvantage * 15); // More responsive to xG
+    const baseAwayWin = 33 - (xgAdvantage * 15);
+    const baseDraw = 34 - Math.abs(xgAdvantage * 8); // Draw decreases with bigger xG differences
+    
     if (scoreDiff > 0) {
-      // Home team predicted to win - stronger boost for clear xG advantage
-      homeWin = 50 + Math.min(30, scoreDiff * 12 + xgDiff * 8);
-      awayWin = Math.max(8, 40 - scoreDiff * 12 - xgDiff * 8);
+      // Home team predicted to win - combine xG advantage with score prediction
+      homeWin = Math.max(baseHomeWin, 40) + Math.min(20, scoreDiff * 8);
+      awayWin = Math.max(10, baseAwayWin - scoreDiff * 6);
       draw = 100 - homeWin - awayWin;
     } else if (scoreDiff < 0) {
-      // Away team predicted to win - stronger boost for clear xG advantage
-      awayWin = 50 + Math.min(30, Math.abs(scoreDiff) * 12 + Math.abs(xgDiff) * 8);
-      homeWin = Math.max(8, 40 - Math.abs(scoreDiff) * 12 - Math.abs(xgDiff) * 8);
+      // Away team predicted to win - combine xG advantage with score prediction
+      awayWin = Math.max(baseAwayWin, 40) + Math.min(20, Math.abs(scoreDiff) * 8);
+      homeWin = Math.max(10, baseHomeWin - Math.abs(scoreDiff) * 6);
       draw = 100 - homeWin - awayWin;
     } else {
-      // Draw predicted - make much more responsive to xG difference to match betting markets
-      const baseProb = 25; // Lower base for stronger team differentiation
-      const xgMultiplier = Math.min(25, Math.abs(xgDiff) * 20); // Much stronger multiplier to match market odds
-      
-      if (xgDiff > 0) {
-        homeWin = baseProb + 10 + xgMultiplier;
-        awayWin = Math.max(10, baseProb + 10 - xgMultiplier);
+      // Draw predicted - rely heavily on xG difference
+      if (Math.abs(xgDiff) < 0.3) {
+        // Very close xG - high draw probability
+        homeWin = 30 + (xgDiff * 10);
+        awayWin = 30 - (xgDiff * 10);
+        draw = 40;
       } else {
-        homeWin = Math.max(10, baseProb + 10 - xgMultiplier);
-        awayWin = baseProb + 10 + xgMultiplier;
+        // Significant xG difference even with draw prediction
+        homeWin = baseHomeWin;
+        awayWin = baseAwayWin;
+        draw = baseDraw;
       }
-      draw = 100 - homeWin - awayWin;
     }
+    
+    // Normalize to ensure probabilities sum to 100
+    const total = homeWin + draw + awayWin;
+    homeWin = (homeWin / total) * 100;
+    draw = (draw / total) * 100;
+    awayWin = (awayWin / total) * 100;
     
     // Apply realistic bounds to prevent extreme probabilities
     return {
-      homeWin: Math.max(5, Math.min(85, homeWin)),
-      draw: Math.max(10, Math.min(50, draw)),
-      awayWin: Math.max(5, Math.min(85, awayWin))
+      homeWin: Math.max(8, Math.min(82, homeWin)),
+      draw: Math.max(12, Math.min(45, draw)),
+      awayWin: Math.max(8, Math.min(82, awayWin))
     };
   };
 
