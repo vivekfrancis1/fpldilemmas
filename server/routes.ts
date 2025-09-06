@@ -11860,41 +11860,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cached Goal Share data - fallback to live API if cache not ready
+  // Response cache for goal share data
+  let goalShareResponseCache: { data: any[]; timestamp: number } | null = null;
+  const GOAL_SHARE_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+  // Cached Goal Share data - ultra-fast cached response
   app.get("/api/cached/goal-share", async (req, res) => {
     try {
-      console.log("📊 Serving cached goal share data from database");
-      const cachedData = await db.select().from(teamProjections)
-        .where(eq(teamProjections.season, '2025/26'))
-        .orderBy(teamProjections.teamId);
-      
-      // If no cached data, fallback to live API
-      if (!cachedData || cachedData.length === 0) {
-        console.log("📊 No cached data found, falling back to live Goal Share API");
-        const response = await fetch('http://localhost:5000/api/goal-share-season');
-        const liveData = await response.json();
-        return res.json(liveData);
+      // Return cached response if available and fresh
+      const now = Date.now();
+      if (goalShareResponseCache && (now - goalShareResponseCache.timestamp) < GOAL_SHARE_CACHE_DURATION) {
+        console.log("⚡ Serving goal share from response cache");
+        return res.json(goalShareResponseCache.data);
       }
+
+      console.log("📊 Building goal share from cached goals projections");
       
-      // Transform the cached data to match expected format
-      const goalShareData = cachedData.map(team => ({
-        teamId: team.teamId,
-        teamName: team.teamName,
-        goalShareData: team.goalShareData,
-        totalGoals: Object.values(team.goalProjections as any).reduce((sum: number, val: any) => sum + val, 0)
-      }));
+      // Use cached goals data to create simplified goal share
+      const goalsResponse = await fetch(`http://localhost:5000/api/cached/player-goals-projections`);
+      if (!goalsResponse.ok) {
+        throw new Error("Failed to fetch cached goals");
+      }
+      const goalsData = await goalsResponse.json();
+
+      // Use optimized metadata cache for team info
+      const playerMetadata = await getPlayerMetadata();
+
+      // Group by team and calculate shares
+      const teamGoalData: Record<string, any> = {};
       
+      goalsData.forEach((player: any) => {
+        const metadata = playerMetadata.get(player.playerId);
+        const teamName = metadata?.teamName || player.teamName;
+        const teamShort = metadata?.teamShort || player.teamShort;
+        
+        if (!teamGoalData[teamName]) {
+          teamGoalData[teamName] = {
+            gameweek: 0,
+            teamId: Object.keys(teamGoalData).length + 1,
+            teamName: teamName,
+            teamShort: teamShort,
+            expectedGoals: 0,
+            players: []
+          };
+        }
+
+        teamGoalData[teamName].expectedGoals += player.totalProjectedGoals || 0;
+        teamGoalData[teamName].players.push({
+          id: player.playerId,
+          name: player.playerName,
+          position: metadata?.position || 'MID',
+          goalShare: 0, // Will calculate after team totals
+          projectedGoals: player.totalProjectedGoals || 0,
+          xgPer90: (player.totalProjectedGoals || 0) / 6 * 1.5 // Estimate
+        });
+      });
+
+      // Calculate goal shares as percentages
+      Object.values(teamGoalData).forEach((team: any) => {
+        team.players.forEach((player: any) => {
+          player.goalShare = team.expectedGoals > 0 
+            ? Math.round((player.projectedGoals / team.expectedGoals) * 100 * 100) / 100
+            : 0;
+        });
+        
+        // Sort players by projected goals
+        team.players.sort((a: any, b: any) => b.projectedGoals - a.projectedGoals);
+      });
+
+      const goalShareData = Object.values(teamGoalData);
+      
+      // Cache the processed response
+      goalShareResponseCache = { data: goalShareData, timestamp: now };
+      
+      console.log(`📊 Built goal share for ${goalShareData.length} teams using cached data`);
       res.json(goalShareData);
     } catch (error) {
-      console.error("Error fetching cached goal share data:", error);
-      // Fallback to live API on error
-      try {
-        const response = await fetch('http://localhost:5000/api/goal-share-season');
-        const liveData = await response.json();
-        res.json(liveData);
-      } catch (fallbackError) {
-        res.status(500).json({ error: "Failed to fetch goal share data" });
-      }
+      console.error("Error building cached goal share:", error);
+      res.status(500).json({ error: "Failed to build goal share data" });
     }
   });
 
