@@ -7,6 +7,7 @@ import Layout from "@/components/layout";
 import { useEffect } from "react";
 import { initGA } from "../lib/analytics";
 import { useAnalytics } from "../hooks/use-analytics";
+import { ErrorBoundary } from "react-error-boundary";
 import NotFound from "@/pages/not-found";
 import Fixtures from "./pages/fixtures";
 import Transfers from "./pages/transfers";
@@ -125,6 +126,42 @@ function Router() {
   );
 }
 
+// Error fallback component
+function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  console.error('App Error:', error);
+  
+  return (
+    <div style={{ 
+      padding: '20px', 
+      textAlign: 'center', 
+      backgroundColor: '#fff',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center'
+    }}>
+      <h1 style={{ color: '#dc2626', marginBottom: '16px' }}>Application Error</h1>
+      <p style={{ marginBottom: '16px', color: '#6b7280' }}>
+        Something went wrong: {error.message}
+      </p>
+      <button 
+        onClick={resetErrorBoundary}
+        style={{
+          padding: '8px 16px',
+          backgroundColor: '#3b82f6',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }}
+      >
+        Try Again
+      </button>
+    </div>
+  );
+}
+
 function App() {
   // Initialize Google Analytics when app loads
   useEffect(() => {
@@ -137,14 +174,18 @@ function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Layout>
-          <Router />
-        </Layout>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary FallbackComponent={ErrorFallback} onError={(error) => console.error('ErrorBoundary caught:', error)}>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Layout>
+            <ErrorBoundary FallbackComponent={ErrorFallback}>
+              <Router />
+            </ErrorBoundary>
+          </Layout>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
