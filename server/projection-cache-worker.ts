@@ -8,6 +8,7 @@ import {
   teamProjections
 } from "../shared/schema";
 import { eq, and } from "drizzle-orm";
+import { internalFetch } from "./config";
 
 interface ProjectionData {
   playerId: number;
@@ -102,7 +103,7 @@ class ProjectionCacheWorker {
   private async cacheGoalsProjections(): Promise<void> {
     try {
       console.log(`📊 Caching goals projections...`);
-      const response = await fetch('http://localhost:5000/api/player-goals-scored-projections');
+      const response = await internalFetch('api/player-goals-scored-projections');
       
       if (!response.ok) {
         throw new Error(`Goals API returned ${response.status}`);
@@ -155,7 +156,7 @@ class ProjectionCacheWorker {
   private async cacheAssistProjections(): Promise<void> {
     try {
       console.log(`📊 Caching assist projections...`);
-      const response = await fetch('http://localhost:5000/api/player-assist-projections?startGameweek=4&endGameweek=9');
+      const response = await internalFetch('api/player-assist-projections?startGameweek=4&endGameweek=9');
       
       if (!response.ok) {
         throw new Error(`Assists API returned ${response.status}`);
@@ -210,7 +211,7 @@ class ProjectionCacheWorker {
       console.log(`📊 Caching team clean sheet projections...`);
       
       // Use Team CS Projections API directly
-      const response = await fetch('http://localhost:5000/api/team-cs-projections?startGameweek=4&endGameweek=9');
+      const response = await internalFetch('api/team-cs-projections?startGameweek=4&endGameweek=9');
       if (!response.ok) {
         console.log(`Team CS projections API returned ${response.status}, skipping clean sheet cache`);
         return;
@@ -325,7 +326,7 @@ class ProjectionCacheWorker {
   private async cacheDefensiveProjections(): Promise<void> {
     try {
       console.log(`📊 Caching defensive projections...`);
-      const response = await fetch('http://localhost:5000/api/defensive-contribution-projections?startGameweek=4&endGameweek=9');
+      const response = await internalFetch('api/defensive-contribution-projections?startGameweek=4&endGameweek=9');
       
       if (!response.ok) {
         throw new Error(`Defensive API returned ${response.status}`);
@@ -391,7 +392,7 @@ class ProjectionCacheWorker {
   private async cacheTeamProjections(): Promise<void> {
     try {
       console.log(`📊 Caching team projections...`);
-      const response = await fetch('http://localhost:5000/api/team-goal-projections');
+      const response = await internalFetch('api/team-goal-projections');
       
       if (!response.ok) {
         throw new Error(`Team Goals API returned ${response.status}`);
@@ -442,8 +443,8 @@ class ProjectionCacheWorker {
       console.log(`📊 Caching goal and assist share data...`);
       
       // Fetch goal share data
-      const goalShareResponse = await fetch('http://localhost:5000/api/goal-share-season');
-      const assistShareResponse = await fetch('http://localhost:5000/api/assist-share-season');
+      const goalShareResponse = await internalFetch('api/goal-share-season');
+      const assistShareResponse = await internalFetch('api/assist-share-season');
       
       if (!goalShareResponse.ok || !assistShareResponse.ok) {
         console.log('Note: Goal/Assist share APIs not ready yet, skipping cache');

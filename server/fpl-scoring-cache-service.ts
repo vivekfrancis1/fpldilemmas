@@ -6,9 +6,9 @@ import {
   cachedPlayerRedCards, 
   cachedPlayerBonusPoints 
 } from "@shared/schema";
+import { internalFetch } from "./config";
 
 export class FPLScoringCacheService {
-  private readonly baseUrl = "http://localhost:5000";
   
   /**
    * Fetch and cache all FPL scoring component data

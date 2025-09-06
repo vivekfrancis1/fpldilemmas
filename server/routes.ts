@@ -29,6 +29,7 @@ import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/d
 import bcrypt from "bcrypt";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import { internalFetch, getApiBaseUrl } from "./config";
 
 // Shared comprehensive goal calculation function for consistency across endpoints
 function calculateComprehensiveGoals(
@@ -3379,7 +3380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Team Assist Projections API called - using correct assist projections`);
       
       // Fetch team goal projections for structure
-      const teamGoalResponse = await fetch("http://localhost:5000/api/team-goal-projections");
+      const teamGoalResponse = await internalFetch("api/team-goal-projections");
       
       if (!teamGoalResponse.ok) {
         throw new Error("Failed to fetch Team Goal Projections data");
@@ -7838,11 +7839,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Still fetch core projection data via API (until cached)
       const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse] = await Promise.all([
-        fetch(`http://localhost:5000/api/goals-projections-cached`),
-        fetch(`http://localhost:5000/api/assist-projections-cached`),
-        fetch(`http://localhost:5000/api/minutes-projections-cached`),
-        fetch(`http://localhost:5000/api/defensive-contribution-projections-cached`),
-        fetch(`http://localhost:5000/api/team-cs-projections-cached`)
+        internalFetch(`api/goals-projections-cached`),
+        internalFetch(`api/assist-projections-cached`),
+        internalFetch(`api/minutes-projections-cached`),
+        internalFetch(`api/defensive-contribution-projections-cached`),
+        internalFetch(`api/team-cs-projections-cached`)
       ]);
 
       // Check API responses
@@ -11258,7 +11259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
       try {
-        const totalPointsResponse = await fetch(`http://localhost:5000/api/player-total-points?startGameweek=${start}&endGameweek=${end}`, {
+        const totalPointsResponse = await internalFetch(`api/player-total-points?startGameweek=${start}&endGameweek=${end}`, {
           signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -11360,7 +11361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!cachedData || cachedData.length === 0) {
         console.log("⚠️ No cached player goals data found, falling back to live API");
         try {
-          const liveResponse = await fetch("http://localhost:5000/api/player-goals-scored-projections");
+          const liveResponse = await internalFetch("api/player-goals-scored-projections");
           if (liveResponse.ok) {
             const liveData = await liveResponse.json();
             console.log(`✅ Fallback successful, returning ${liveData.length} players from live API`);
@@ -11543,7 +11544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("📊 Building goal share from cached goals projections");
       
       // Use cached goals data to create simplified goal share
-      const goalsResponse = await fetch(`http://localhost:5000/api/cached/player-goals-projections`);
+      const goalsResponse = await internalFetch(`api/cached/player-goals-projections`);
       if (!goalsResponse.ok) {
         throw new Error("Failed to fetch cached goals");
       }
