@@ -104,6 +104,35 @@ export default function ResultsProjections() {
     }
   };
 
+  const calculateProbabilities = (homeScore: number, awayScore: number, homeXG: number, awayXG: number) => {
+    // Simple probability calculation based on score difference and expected goals
+    const scoreDiff = homeScore - awayScore;
+    const xgDiff = homeXG - awayXG;
+    
+    let homeWin, draw, awayWin;
+    
+    if (scoreDiff > 0) {
+      homeWin = 50 + Math.min(25, scoreDiff * 10 + xgDiff * 5);
+      awayWin = Math.max(10, 40 - scoreDiff * 10 - xgDiff * 5);
+      draw = 100 - homeWin - awayWin;
+    } else if (scoreDiff < 0) {
+      awayWin = 50 + Math.min(25, Math.abs(scoreDiff) * 10 + Math.abs(xgDiff) * 5);
+      homeWin = Math.max(10, 40 - Math.abs(scoreDiff) * 10 - Math.abs(xgDiff) * 5);
+      draw = 100 - homeWin - awayWin;
+    } else {
+      // Draw predicted
+      draw = 35;
+      homeWin = 32.5 + xgDiff * 2;
+      awayWin = 32.5 - xgDiff * 2;
+    }
+    
+    return {
+      homeWin: Math.max(5, Math.min(85, homeWin)),
+      draw: Math.max(10, Math.min(50, draw)),
+      awayWin: Math.max(5, Math.min(85, awayWin))
+    };
+  };
+
   if (isLoading || predictionsLoading) {
     return (
       
@@ -207,6 +236,12 @@ export default function ResultsProjections() {
                     {filteredPredictions.map((match) => {
                       const kickoff = formatKickoffTime(match.kickoffTime);
                       const resultType = getResultType(match.homeTeam.predictedScore, match.awayTeam.predictedScore);
+                      const probabilities = calculateProbabilities(
+                        match.homeTeam.predictedScore,
+                        match.awayTeam.predictedScore,
+                        match.homeTeam.expectedGoals,
+                        match.awayTeam.expectedGoals
+                      );
                       
                       return (
                         <tr key={match.id} className="hover:bg-gray-50" data-testid={`prediction-row-${match.id}`}>
@@ -245,13 +280,13 @@ export default function ResultsProjections() {
                           <td className="px-4 py-4 text-center">
                             <div className="space-y-1">
                               <div className="flex justify-between text-xs">
-                                <span className="text-blue-600">{match.homeTeam.shortName}: {match.homeTeam.cleanSheetOdds.toFixed(1)}%</span>
+                                <span className="text-blue-600">{match.homeTeam.shortName}: {probabilities.homeWin.toFixed(1)}%</span>
                               </div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-gray-600">Expected: {match.totalExpectedGoals.toFixed(1)}</span>
+                                <span className="text-gray-600">Draw: {probabilities.draw.toFixed(1)}%</span>
                               </div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-red-600">{match.awayTeam.shortName}: {match.awayTeam.cleanSheetOdds.toFixed(1)}%</span>
+                                <span className="text-red-600">{match.awayTeam.shortName}: {probabilities.awayWin.toFixed(1)}%</span>
                               </div>
                             </div>
                           </td>
@@ -263,6 +298,15 @@ export default function ResultsProjections() {
                               </div>
                               <div className="text-xs">
                                 <span className="text-gray-600">Away xG: {match.awayTeam.expectedGoals.toFixed(1)}</span>
+                              </div>
+                              <div className="text-xs">
+                                <span className="text-gray-600">Total xG: {match.totalExpectedGoals.toFixed(1)}</span>
+                              </div>
+                              <div className="text-xs mt-1">
+                                <span className="text-blue-600">CS: {match.homeTeam.shortName} {match.homeTeam.cleanSheetOdds.toFixed(1)}%</span>
+                              </div>
+                              <div className="text-xs">
+                                <span className="text-red-600">CS: {match.awayTeam.shortName} {match.awayTeam.cleanSheetOdds.toFixed(1)}%</span>
                               </div>
                             </div>
                           </td>
