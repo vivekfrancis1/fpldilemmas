@@ -62,9 +62,9 @@ export default function ProjectionDocumentation() {
                     </p>
                   </div>
                   <div className="bg-purple-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-purple-900 mb-2">Hybrid Methodology</h3>
+                    <h3 className="font-semibold text-purple-900 mb-2">Pure Projection Methodology</h3>
                     <p className="text-sm text-purple-700">
-                      Uses actual data for completed gameweeks and projections for future gameweeks
+                      Uses pure projections for upcoming gameweeks only (GW4+) without mixing actual data
                     </p>
                   </div>
                 </div>
@@ -90,12 +90,12 @@ export default function ProjectionDocumentation() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <h4 className="font-semibold mb-2">Hybrid Calculation</h4>
+                      <h4 className="font-semibold mb-2">Pure Projection Calculation</h4>
                       <ul className="text-sm space-y-1 text-gray-600">
-                        <li>• Actual FPL data for completed gameweeks</li>
-                        <li>• Mixed data for ongoing gameweeks</li>
-                        <li>• Projections for future gameweeks</li>
-                        <li>• Real-time data integration</li>
+                        <li>• Pure projections for upcoming gameweeks only</li>
+                        <li>• No mixing with completed gameweek data</li>
+                        <li>• Forward-looking analysis (GW4+)</li>
+                        <li>• Clean projection methodology</li>
                       </ul>
                     </div>
                     <div>
@@ -529,19 +529,18 @@ export default function ProjectionDocumentation() {
 
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">1. Hybrid Calculation Methodology</h3>
+                    <h3 className="text-lg font-semibold mb-4">1. Pure Projection Methodology</h3>
                     <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm">
                       <div className="space-y-2">
-                        <div><span className="text-blue-600">if</span> gameweek.status === <span className="text-green-600">"finished"</span>:</div>
-                        <div className="ml-4">data = FPL_API.getActualData(gameweek)</div>
-                        <div><span className="text-blue-600">elif</span> gameweek.status === <span className="text-orange-600">"current"</span>:</div>
-                        <div className="ml-4">data = mixActualAndProjected(gameweek)</div>
-                        <div><span className="text-blue-600">else</span>:</div>
-                        <div className="ml-4">data = calculateProjections(gameweek)</div>
+                        <div><span className="text-blue-600">for</span> gameweek <span className="text-blue-600">in</span> upcoming_gameweeks:</div>
+                        <div className="ml-4"><span className="text-blue-600">if</span> gameweek >= current_gameweek + 1:</div>
+                        <div className="ml-8">data = calculatePureProjections(gameweek)</div>
+                        <div className="ml-4"><span className="text-blue-600">else</span>:</div>
+                        <div className="ml-8">skip  # Only future gameweeks</div>
                       </div>
                     </div>
                     <p className="text-sm text-gray-600 mt-2">
-                      This ensures maximum accuracy by using actual FPL data when available and projections only when necessary.
+                      This ensures clean forward-looking projections by focusing only on upcoming gameweeks (GW4+) without mixing historical data.
                     </p>
                   </div>
 
@@ -640,7 +639,7 @@ export default function ProjectionDocumentation() {
                     <Badge variant="outline">Minutes Points</Badge>
                   </div>
                   <div className="bg-yellow-50 p-3 rounded text-sm">
-                    <strong>Logic:</strong> Uses pure projection methodology for future gameweeks with database-backed FPL scoring cache. Features range-specific caching (GW4-6, GW4-9) and detailed component breakdowns in interactive tooltips showing all scoring factors.
+                    <strong>Logic:</strong> Pure projection methodology for upcoming gameweeks only (GW4+). Uses database-backed FPL scoring cache with range-specific caching (GW4-6, GW4-9) and detailed component breakdowns in interactive tooltips showing all scoring factors.
                   </div>
                   <div className="bg-blue-50 p-3 rounded text-sm">
                     <strong>Recent Fixes:</strong> Resolved Drizzle ORM field access issues (camelCase naming), fixed gameweek key format mismatches, and implemented Map-based range-specific caching for ultra-fast performance.
@@ -664,17 +663,17 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Individual player goal projections using hybrid calculation methodology with current and historical xG data integration.
+                    Individual player goal projections using pure calculation methodology with historical xG data integration for upcoming gameweeks only.
                   </p>
                   <div className="space-y-2">
-                    <Badge variant="outline">Hybrid Methodology</Badge>
+                    <Badge variant="outline">Pure Projection Methodology</Badge>
                     <Badge variant="outline">Historical xG Integration</Badge>
                     <Badge variant="outline">Expected Minutes Weighting</Badge>
                     <Badge variant="outline">Penalty Taker Adjustments</Badge>
                     <Badge variant="outline">Perfect Mathematical Balance</Badge>
                   </div>
                   <div className="bg-green-50 p-3 rounded text-sm">
-                    <strong>Logic:</strong> Pure projection methodology for future gameweeks using team goal projections × player goal share × minutes weighting. Enhanced with historical and current season xG data for ultra-realistic projections with position-specific caps and perfect team balance.
+                    <strong>Logic:</strong> Pure projection methodology for upcoming gameweeks only using team goal projections × player goal share × minutes weighting. Enhanced with historical season xG data for ultra-realistic projections with position-specific caps and perfect team balance.
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                     <div>API: /api/cached/player-goals-projections</div>
