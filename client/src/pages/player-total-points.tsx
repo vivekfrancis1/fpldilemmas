@@ -13,7 +13,7 @@ import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, typ
 // Gameweek Point Breakdown Tooltip Component
 function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTotalPointsData, gameweek: number }) {
   const hasBreakdownData = player.pointsFromGoals !== undefined;
-  const gwKey = `gw${gameweek}`;
+  const gwKey = gameweek.toString();
   const gwPoints = player.gameweekProjections?.[gwKey];
   
   if (!hasBreakdownData || !gwPoints) {
@@ -440,13 +440,15 @@ export default function PlayerTotalPoints() {
       // Handle component-specific gameweek sorting (e.g., "pointsFromGoals.gw4")
       if (sortField.includes('.gw')) {
         const [component, gwKey] = sortField.split('.');
-        aValue = a[component]?.[gwKey] || 0;
-        bValue = b[component]?.[gwKey] || 0;
+        const gwNumber = gwKey.replace('gw', '');
+        aValue = a[component]?.[gwNumber] || 0;
+        bValue = b[component]?.[gwNumber] || 0;
       }
       // Handle total points gameweek sorting
       else if (sortField.startsWith('gw')) {
-        aValue = a.gameweekProjections?.[sortField] || 0;
-        bValue = b.gameweekProjections?.[sortField] || 0;
+        const gwNumber = sortField.replace('gw', '');
+        aValue = a.gameweekProjections?.[gwNumber] || 0;
+        bValue = b.gameweekProjections?.[gwNumber] || 0;
       } 
       // Handle regular field sorting
       else {
