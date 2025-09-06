@@ -391,8 +391,8 @@ export default function PlayerAssistProjections() {
                               <div className="flex flex-col">
                                 <span className="font-medium text-sm">{player.playerName}</span>
                                 <div className="flex items-center gap-1 mt-1">
-                                  <Badge variant="secondary" className="text-xs">
-                                    {player.position.charAt(0)}
+                                  <Badge variant="outline" className="text-xs">
+                                    {player.position === 'MID' ? 'MID' : player.position.charAt(0)}
                                   </Badge>
                                   <Badge variant="outline" className="text-xs">
                                     {player.teamShort}
@@ -517,8 +517,8 @@ export default function PlayerAssistProjections() {
                               <div className="flex flex-col">
                                 <span className="font-medium text-sm">{player.playerName}</span>
                                 <div className="flex items-center gap-1 mt-1">
-                                  <Badge variant="secondary" className="text-xs">
-                                    {player.position.charAt(0)}
+                                  <Badge variant="outline" className="text-xs">
+                                    {player.position === 'MID' ? 'MID' : player.position.charAt(0)}
                                   </Badge>
                                   <Badge variant="outline" className="text-xs">
                                     {player.teamShort}
