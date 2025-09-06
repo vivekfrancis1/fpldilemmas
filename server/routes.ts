@@ -7884,23 +7884,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Populate FPL scoring component projections from database cache data
       savesData.forEach((player: any) => {
-        savesProjections[player.playerId] = player.gameweekData as Record<string, number>;
-        savesPointsProjections[player.playerId] = player.pointsData as Record<string, number>;
+        savesProjections[player.playerId] = player.gameweek_data as Record<string, number>;
+        savesPointsProjections[player.playerId] = player.points_data as Record<string, number>;
       });
 
       goalsConcededData.forEach((player: any) => {
-        goalsConcededProjections[player.playerId] = player.gameweekData as Record<string, number>;
-        goalsConcededPointsProjections[player.playerId] = player.pointsData as Record<string, number>;
+        goalsConcededProjections[player.playerId] = player.gameweek_data as Record<string, number>;
+        goalsConcededPointsProjections[player.playerId] = player.points_data as Record<string, number>;
       });
 
       yellowCardsData.forEach((player: any) => {
-        yellowCardsProjections[player.playerId] = player.gameweekData as Record<string, number>;
-        yellowCardsPointsProjections[player.playerId] = player.pointsData as Record<string, number>;
+        yellowCardsProjections[player.playerId] = player.gameweek_data as Record<string, number>;
+        yellowCardsPointsProjections[player.playerId] = player.points_data as Record<string, number>;
       });
 
       redCardsData.forEach((player: any) => {
-        redCardsProjections[player.playerId] = player.gameweekData as Record<string, number>;
-        redCardsPointsProjections[player.playerId] = player.pointsData as Record<string, number>;
+        redCardsProjections[player.playerId] = player.gameweek_data as Record<string, number>;
+        redCardsPointsProjections[player.playerId] = player.points_data as Record<string, number>;
       });
 
       // Process bonus probabilities data with simplified calculation (Probability × 1)
