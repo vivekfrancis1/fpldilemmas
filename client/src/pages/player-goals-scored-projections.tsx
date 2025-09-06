@@ -463,8 +463,8 @@ export default function PlayerGoalsScoredProjections() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="overflow-x-auto" style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}>
+                  <table className="w-full min-w-max">
                     <thead>
                       <tr className="border-b border-gray-200">
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 sticky left-0 bg-white border-r border-gray-200 z-10">

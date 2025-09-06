@@ -380,6 +380,12 @@ button, a, input, select, textarea {
   background: #94a3b8;
 }
 
+/* Additional overflow fix for table containers */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
 /* Button System */
 .fpl-button-primary {
   @apply bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition-all duration-200;

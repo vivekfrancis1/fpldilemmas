@@ -331,8 +331,8 @@ export default function PlayerAssistProjections() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
+                  <div className="overflow-x-auto" style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}>
+                    <table className="w-full min-w-max">
                       <thead>
                         <tr className="border-b border-gray-200">
                           <th className="text-left py-2 px-1">
@@ -455,8 +455,8 @@ export default function PlayerAssistProjections() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
+                  <div className="overflow-x-auto" style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}>
+                    <table className="w-full min-w-max">
                       <thead>
                         <tr className="border-b border-gray-200">
                           <th className="text-left py-2 px-1">
