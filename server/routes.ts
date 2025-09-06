@@ -3079,97 +3079,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Market-Based Team Clean Sheet Projections endpoint - uses spread betting data
-  app.get("/api/team-cs-projections-market", async (req, res) => {
-    try {
-      console.log(`DEBUG: Market-Based Team Clean Sheet Projections API called`);
-      
-      // TODO: Integrate with The Odds API for real clean sheet market data
-      // For now, we'll create a demo structure showing how market data would enhance projections
-      
-      const [bootstrapResponse] = await Promise.all([
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
-      ]);
-      const bootstrapData = await bootstrapResponse.json();
-      const teams = bootstrapData.teams;
-      
-      // Realistic defensive rankings based on actual team strength
-      const defensiveStrengthMap: { [key: string]: number } = {
-        'ARS': 0.45, 'MCI': 0.42, 'LIV': 0.40, 'NEW': 0.38, 'CHE': 0.35,
-        'MUN': 0.32, 'TOT': 0.30, 'AVL': 0.28, 'WHU': 0.25, 'BHA': 0.25,
-        'CRY': 0.22, 'FUL': 0.20, 'WOL': 0.18, 'BRE': 0.16, 'NFO': 0.15,
-        'BOU': 0.14, 'IPS': 0.12, 'LEI': 0.10, 'EVE': 0.08, 'SOU': 0.06
-      };
-
-      // Demo market-based clean sheet projections with realistic rankings
-      const marketProjections = teams.map((team: any) => {
-        const baseStrength = defensiveStrengthMap[team.short_name] || 0.15;
-        const demoMarketData = {
-          // These would be derived from actual clean sheet betting markets
-          baseCleanSheetRate: baseStrength, // Market implied CS rate based on defensive strength
-          homeAdvantage: 0.12, // Home CS boost from markets
-          formAdjustment: (team.id % 3 - 1) * 0.02, // Consistent form pattern
-          injuryAdjustment: (team.id % 2) * -0.01 // Consistent injury impact
-        };
-        
-        const gameweekProjections: { [key: string]: number } = {};
-        let totalProjectedCleanSheets = 0;
-        
-        // Generate market-calibrated projections for all 38 gameweeks
-        for (let gw = 1; gw <= 38; gw++) {
-          let gwCleanSheetOdds;
-          
-          if (gw <= 3) {
-            // Use actual clean sheets for completed gameweeks
-            gwCleanSheetOdds = Math.random() > 0.7 ? 100 : 0; // Demo actual data
-          } else {
-            // Market-based projections for future gameweeks
-            const baseRate = demoMarketData.baseCleanSheetRate;
-            const homeGame = (gw % 2 === 0); // Consistent home/away pattern
-            const marketOdds = baseRate + 
-              (homeGame ? demoMarketData.homeAdvantage : 0) +
-              demoMarketData.formAdjustment +
-              demoMarketData.injuryAdjustment;
-            
-            gwCleanSheetOdds = Math.max(5, Math.min(85, marketOdds * 100));
-          }
-          
-          gameweekProjections[gw.toString()] = parseFloat(gwCleanSheetOdds.toFixed(1));
-          if (gw >= 4) totalProjectedCleanSheets += (gwCleanSheetOdds / 100);
-        }
-        
-        return {
-          id: team.id,
-          team: team.short_name,
-          teamShort: team.short_name,
-          teamName: team.name,
-          gameweekProjections,
-          totalProjectedCleanSheets: parseFloat(totalProjectedCleanSheets.toFixed(1)),
-          averageCleanSheetOdds: parseFloat((totalProjectedCleanSheets / 35 * 100).toFixed(1)),
-          confidence: 'High', // Market data has high confidence
-          position: 0, // Will be set after sorting
-          marketSource: 'Clean Sheet Betting Markets',
-          lastUpdated: new Date().toISOString()
-        };
-      });
-      
-      // Sort by total projected clean sheets (descending)
-      marketProjections.sort((a, b) => b.totalProjectedCleanSheets - a.totalProjectedCleanSheets);
-      
-      // Set positions
-      marketProjections.forEach((team, index) => {
-        team.position = index + 1;
-      });
-      
-      console.log(`DEBUG: Generated market-based clean sheet projections for ${marketProjections.length} teams`);
-      res.json(marketProjections);
-      
-    } catch (error) {
-      console.error("Error generating market-based team clean sheet projections:", error);
-      res.status(500).json({ error: "Failed to generate market-based clean sheet projections" });
-    }
-  });
-
   // Team Clean Sheet Projections endpoint
   app.get("/api/team-cs-projections", async (req, res) => {
     try {
@@ -6533,23 +6442,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const teams = bootstrapData.teams;
       
-      // Realistic attacking rankings based on actual team strength
-      const attackingStrengthMap: { [key: string]: number } = {
-        'MCI': 2.1, 'ARS': 2.0, 'LIV': 1.9, 'CHE': 1.7, 'TOT': 1.6,
-        'AVL': 1.5, 'NEW': 1.4, 'MUN': 1.4, 'BHA': 1.3, 'WHU': 1.3,
-        'FUL': 1.2, 'BRE': 1.1, 'WOL': 1.0, 'CRY': 1.0, 'BOU': 0.9,
-        'NFO': 0.9, 'EVE': 0.8, 'LEI': 0.8, 'IPS': 0.7, 'SOU': 0.6
-      };
-
-      // Demo market-based projections with realistic rankings (in production, this would come from The Odds API)
+      // Demo market-based projections (in production, this would come from The Odds API)
       const marketProjections = teams.map((team: any) => {
-        const baseStrength = attackingStrengthMap[team.short_name] || 1.0;
         const demoMarketData = {
           // These would be derived from actual over/under betting lines
-          avgGoalsPerMatch: baseStrength, // Market implied rate based on attacking strength
-          homeAdvantage: 0.25, // Market home boost
-          formAdjustment: (team.id % 3 - 1) * 0.05, // Consistent form pattern
-          injuryAdjustment: (team.id % 2) * -0.03 // Consistent injury impact
+          avgGoalsPerMatch: 1.2 + (Math.random() * 1.0), // Market implied rate
+          homeAdvantage: 0.3, // Market home boost
+          formAdjustment: -0.1 + (Math.random() * 0.2), // Recent form from markets
+          injuryAdjustment: -0.05 + (Math.random() * 0.1) // Injury impact from odds movements
         };
         
         const gameweekProjections: { [key: string]: number } = {};

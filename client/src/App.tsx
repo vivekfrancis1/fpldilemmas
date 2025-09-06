@@ -39,7 +39,6 @@ import ProjectedStandings from "./pages/projected-standings";
 import PredictedScores from "./pages/predicted-scores";
 import TeamGoalProjections from "./pages/team-goal-projections";
 import TeamGoalProjectionsMarket from "./pages/team-goal-projections-market";
-import TeamCSProjectionsMarket from "./pages/team-cs-projections-market";
 import TeamGoalsAgainstProjections from "./pages/team-goals-against-projections";
 import TeamAssistProjections from "./pages/team-assist-projections";
 import TeamCSProjections from "./pages/team-cs-projections";
@@ -93,7 +92,6 @@ function Router() {
       <Route path="/team-goals-against-projections" component={TeamGoalsAgainstProjections} />
       <Route path="/team-assist-projections" component={TeamAssistProjections} />
       <Route path="/team-cs-projections" component={TeamCSProjections} />
-      <Route path="/team-cs-projections-market" component={TeamCSProjectionsMarket} />
       <Route path="/goal-share" component={GoalShare} />
       <Route path="/assist-share" component={AssistShare} />
       <Route path="/player-goal-projections" component={PlayerGoalProjections} />
