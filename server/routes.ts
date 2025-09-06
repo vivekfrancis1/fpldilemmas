@@ -4080,7 +4080,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Goals Scored Projections endpoint - gameweek by gameweek breakdown with hybrid calculations
   app.get("/api/player-goals-scored-projections", async (req, res) => {
     try {
-      console.log(`DEBUG: Player Goals Scored Projections API called`);
+      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
+      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
+      
+      console.log(`DEBUG: Player Goals Scored Projections API called for GW${startGameweek}-${endGameweek}`);
       
       // Check if we have saved goal share data from the recent call
       if (!savedGoalShareData || !savedGoalShareData.response || (Date.now() - savedGoalShareData.timestamp) > 300000) {
@@ -4248,8 +4251,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Don't apply penalty adjustments here - they're already included in the goal share data
           // The goal share calculation already includes penalty taker adjustments
           
-          // Use the pre-calculated season total from goal share data
-          const seasonTotal = player.projectedGoals;
+          // Filter gameweek projections to requested range and calculate total
+          const filteredGameweekProjections: { [gameweek: number]: number } = {};
+          let rangeTotal = 0;
+          
+          for (let gw = startGameweek; gw <= endGameweek; gw++) {
+            if (gameweekProjections[gw] !== undefined) {
+              filteredGameweekProjections[gw] = gameweekProjections[gw];
+              rangeTotal += gameweekProjections[gw];
+            }
+          }
           
           // Convert position to short form
           const getShortPosition = (pos: string) => {
@@ -4269,8 +4280,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamShort: team.short_name,
             position: getShortPosition(player.position),
             currentPrice: player.currentPrice || 0,
-            projectedGoals: seasonTotal,
-            gameweekProjections,
+            projectedGoals: Math.round(rangeTotal * 100) / 100,
+            gameweekProjections: filteredGameweekProjections,
             goalShare: player.goalShare
           });
         }
@@ -4278,8 +4289,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Generated hybrid projections for ${playerProjections.length} players with actual+projected data`);
       
-      // Sort by total projected goals descending
-      playerProjections.sort((a, b) => b.totalProjectedGoals - a.totalProjectedGoals);
+      // Sort by projected goals descending
+      playerProjections.sort((a, b) => b.projectedGoals - a.projectedGoals);
       
       res.json(playerProjections);
     } catch (error) {
