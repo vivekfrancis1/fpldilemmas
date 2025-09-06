@@ -55,6 +55,7 @@ import PlayerGoalsConceded from "./pages/player-goals-conceded";
 import PlayerYellowCards from "./pages/player-yellow-cards";
 import PlayerRedCards from "./pages/player-red-cards";
 import PlayerBonusPoints from "./pages/player-bonus-points";
+import TeamGoalsSpreadBetting from "./pages/team-goals-spread-betting";
 
 
 function Router() {
@@ -87,6 +88,7 @@ function Router() {
       <Route path="/player-cleansheet-points" component={PlayerCleanSheetPoints} />
       <Route path="/player-total-points" component={PlayerTotalPoints} />
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
+      <Route path="/team-goals-spread-betting" component={TeamGoalsSpreadBetting} />
       <Route path="/team-goals-against-projections" component={TeamGoalsAgainstProjections} />
       <Route path="/team-assist-projections" component={TeamAssistProjections} />
       <Route path="/team-cs-projections" component={TeamCSProjections} />
