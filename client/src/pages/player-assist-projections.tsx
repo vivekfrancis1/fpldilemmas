@@ -373,12 +373,12 @@ export default function PlayerAssistProjections() {
                           </th>
                           <th className="text-center py-2 px-1">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="hover:bg-green-50">
-                              GW{startGameweek}-{endGameweek} {getSortIcon('sixGwTotal')}
+                              6GW Total {getSortIcon('sixGwTotal')}
                             </Button>
                           </th>
                           <th className="text-center py-2 px-1">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
-                              Rest of Season {getSortIcon('seasonTotal')}
+                              Rest of Season Total {getSortIcon('seasonTotal')}
                             </Button>
                           </th>
                         </tr>
@@ -497,12 +497,12 @@ export default function PlayerAssistProjections() {
                           </th>
                           <th className="text-center py-2 px-1">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="hover:bg-green-50">
-                              GW{startGameweek}-{endGameweek} {getSortIcon('sixGwTotal')}
+                              6GW Total {getSortIcon('sixGwTotal')}
                             </Button>
                           </th>
                           <th className="text-center py-2 px-1">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
-                              Rest of Season {getSortIcon('seasonTotal')}
+                              Rest of Season Total {getSortIcon('seasonTotal')}
                             </Button>
                           </th>
                         </tr>

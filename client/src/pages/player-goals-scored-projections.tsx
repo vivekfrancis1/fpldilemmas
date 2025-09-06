@@ -552,7 +552,7 @@ export default function PlayerGoalsScoredProjections() {
                         onClick={() => handleSort("season")}
                         data-testid="sort-season"
                       >
-                        Season
+                        Rest of Season Total
                         {sortBy === "season" && (
                           sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
                         )}
@@ -745,7 +745,7 @@ export default function PlayerGoalsScoredProjections() {
                         onClick={() => handleSort("season")}
                         data-testid="sort-season-points"
                       >
-                        Season Pts
+                        Rest of Season Total Pts
                         {sortBy === "season" && (
                           sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
                         )}

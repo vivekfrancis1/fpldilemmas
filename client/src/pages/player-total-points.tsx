@@ -137,7 +137,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
       <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
         <div className="space-y-2">
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
-            {player.name} - Range Total Breakdown
+            {player.name} - 6GW Total Breakdown
           </div>
           <div className="text-xs text-gray-500 mb-2">
             Complete FPL scoring: Actual data + comprehensive projections
@@ -207,7 +207,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
           </div>
           <div className="border-t pt-2 mt-3">
             <div className="flex justify-between items-center font-semibold">
-              <span className="text-gray-800">Range Total:</span>
+              <span className="text-gray-800">6GW Total:</span>
               <span className="text-green-800">
                 {player.totalExpectedPoints?.toFixed(1) || '0.0'}
               </span>
@@ -309,7 +309,7 @@ function createPlayerTotalPointsColumns(
     })),
     {
       key: 'totalExpectedPoints',
-      header: 'Range Total',
+      header: '6GW Total',
       sortable: true,
       align: 'center',
       className: 'min-w-[100px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300',
