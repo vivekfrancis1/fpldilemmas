@@ -47,6 +47,7 @@ import AdminUpsetConfig from "./pages/admin-upset-config";
 import Admin from "./pages/admin";
 import AdminDataPopulation from "./pages/admin-data-population";
 import AdminGameweekCache from "./pages/admin-gameweek-cache";
+import AdminCleanSheetConfig from "./pages/admin-clean-sheet-config";
 import DefensiveContributionProjections from "./pages/defensive-contribution-projections";
 import PlayerDefensiveContributions from "./pages/player-defensive-contributions";
 import ProjectionDocumentation from "./pages/projection-documentation";
@@ -109,6 +110,7 @@ function Router() {
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
       <Route path="/season-projections" component={SeasonProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
+      <Route path="/admin-clean-sheet-config" component={AdminCleanSheetConfig} />
       <Route path="/admin-upset-config" component={AdminUpsetConfig} />
       <Route path="/admin-content-creators" component={Admin} />
       <Route path="/admin-data-population" component={AdminDataPopulation} />

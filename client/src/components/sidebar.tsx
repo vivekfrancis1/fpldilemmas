@@ -102,6 +102,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/admin-content-creators", label: "Content Creator Admin", icon: UserCog, description: "Manage FPL content creators", popular: false },
         { path: "/admin-goal-projections", label: "Goal Projections Admin", icon: Settings, description: "Configure goal projection settings", popular: false },
+        { path: "/admin-clean-sheet-config", label: "Team Clean Sheet Config", icon: Shield, description: "Configure clean sheet probability calculations", popular: false },
         { path: "/admin-upset-config", label: "Upset Configuration", icon: Settings, description: "Configure upset configuration settings", popular: false },
         { path: "/admin-data-population", label: "Data Population", icon: Database, description: "Populate and manage data", popular: false },
         { path: "/admin-gameweek-cache", label: "Gameweek Cache", icon: RefreshCw, description: "Manage gameweek cache", popular: false }
