@@ -11640,7 +11640,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const gameweekCount = Object.keys(gameweekProjections).length;
         const avgPerGameweek = gameweekCount > 0 ? totalExpectedPoints / gameweekCount : 0;
-        const seasonTotalPoints = avgPerGameweek * 38; // Project over full 38 gameweek season
+        
+        // Calculate Rest of Season Total (GW4 to GW38 = 35 gameweeks remaining)
+        const remainingGameweeks = 38 - 3; // Total gameweeks minus completed gameweeks (GW1-3)
+        const seasonTotalPoints = avgPerGameweek * remainingGameweeks;
         
         return {
           playerId: player.playerId,
