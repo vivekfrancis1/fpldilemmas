@@ -8019,15 +8019,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       defensiveDataArray.forEach((player: any) => {
         if (player.gameweekProjections) {
           defensiveProjections[player.playerId] = {};
-          player.gameweekProjections.forEach((gwData: any) => {
-            const gw = gwData.gameweek;
-            if (gw >= start && gw <= end) {
-              defensiveProjections[player.playerId][gw] = {
-                dc: gwData.defensiveContribution || 0,
-                points: gwData.points || 0
-              };
-            }
-          });
+          
+          // Handle two formats: array format (gameweekProjections as array) or object format (gameweeks as keys)
+          if (Array.isArray(player.gameweekProjections)) {
+            // Array format: iterate over array
+            player.gameweekProjections.forEach((gwData: any) => {
+              const gw = gwData.gameweek;
+              if (gw >= start && gw <= end) {
+                defensiveProjections[player.playerId][gw] = {
+                  dc: gwData.defensiveContribution || 0,
+                  points: gwData.points || 0
+                };
+              }
+            });
+          } else {
+            // Object format: iterate over gameweek keys
+            Object.entries(player.gameweekProjections).forEach(([gwStr, dcValue]) => {
+              const gw = parseInt(gwStr);
+              if (gw >= start && gw <= end) {
+                defensiveProjections[player.playerId][gw] = {
+                  dc: dcValue as number,
+                  points: (player.pointsProjections && player.pointsProjections[gwStr]) || 0
+                };
+              }
+            });
+          }
         }
       });
 
@@ -8137,17 +8153,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const defensiveData = playerDefensive[gw];
           let defensivePoints = 0;
           
-          if (defensiveData && defensiveData.defensiveContribution !== undefined) {
-            // Position-specific thresholds: DEF ≥10, MID/FWD ≥12
-            const threshold = position === 'DEF' ? 10 : 12;
-            const dcValue = defensiveData.defensiveContribution;
+          if (defensiveData) {
+            // Handle both old format (with dc field) and direct defensive contribution value
+            const dcValue = defensiveData.dc || defensiveData.defensiveContribution || defensiveData;
             
-            // Calculate percentage probability of hitting threshold
-            // Using sigmoid function for smooth probability curve
-            const probabilityOfHittingThreshold = 1 / (1 + Math.exp(-(dcValue - threshold) * 0.5));
-            
-            // Points = 2 × percentage probability 
-            defensivePoints = 2 * probabilityOfHittingThreshold;
+            if (dcValue && typeof dcValue === 'number') {
+              // Position-specific thresholds: DEF ≥10, MID/FWD ≥12
+              const threshold = position === 'DEF' ? 10 : 12;
+              
+              // Calculate percentage probability of hitting threshold
+              // Using sigmoid function for smooth probability curve
+              const probabilityOfHittingThreshold = 1 / (1 + Math.exp(-(dcValue - threshold) * 0.5));
+              
+              // Points = 2 × percentage probability 
+              defensivePoints = 2 * probabilityOfHittingThreshold;
+            }
           }
           
           pointsFromDefensiveContributions[`gw${gw}`] = Math.round(defensivePoints * 100) / 100;
