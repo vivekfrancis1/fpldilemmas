@@ -58,10 +58,22 @@ export default function PlayerAssistProjections() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   // Fetch player assist projections data from cached database
-  const { data: playerAssistData, isLoading, error } = useQuery<PlayerAssistProjection[]>({
+  const { data: cachedAssistData, isLoading: cachedLoading, error: cachedError } = useQuery<PlayerAssistProjection[]>({
     queryKey: ["/api/cached/player-assists-projections"],
     staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
   });
+
+  // Fallback to live data if cache is empty
+  const { data: liveAssistData, isLoading: liveLoading, error: liveError } = useQuery<PlayerAssistProjection[]>({
+    queryKey: ["/api/player-assist-projections"],
+    enabled: !cachedLoading && (!cachedAssistData || cachedAssistData.length === 0), // Only fetch if cache is empty
+    staleTime: 5 * 60 * 1000, // 5 minutes for live data
+  });
+
+  // Use cached data if available, otherwise use live data
+  const playerAssistData = cachedAssistData && cachedAssistData.length > 0 ? cachedAssistData : liveAssistData;
+  const isLoading = cachedLoading || ((!cachedAssistData || cachedAssistData.length === 0) && liveLoading);
+  const error = cachedError || liveError;
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
