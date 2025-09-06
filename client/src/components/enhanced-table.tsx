@@ -91,7 +91,21 @@ export function EnhancedTable<T = any>({
           maxWidth: '100%',
           height: 'auto',
           display: 'block',
-          scrollbarWidth: 'auto'
+          scrollbarWidth: 'auto',
+          scrollSnapType: 'none',
+          overscrollBehaviorX: 'contain'
+        }}
+        onScroll={(e) => {
+          // Ensure scroll position is preserved
+          const target = e.target as HTMLElement;
+          if (target.scrollLeft < 0) {
+            target.scrollLeft = 0;
+          }
+        }}
+        onDoubleClick={(e) => {
+          // Double-click to reset scroll position
+          const target = e.currentTarget as HTMLElement;
+          target.scrollLeft = 0;
         }}
       >
         <table className="w-full" style={{ minWidth: 'max-content', tableLayout: 'auto' }}>

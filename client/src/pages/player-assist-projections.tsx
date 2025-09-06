@@ -331,7 +331,7 @@ export default function PlayerAssistProjections() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'visible', width: '100%', maxWidth: '100%', height: 'auto', display: 'block', scrollbarWidth: 'auto' }}>
+                  <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'visible', width: '100%', maxWidth: '100%', height: 'auto', display: 'block', scrollbarWidth: 'auto', scrollSnapType: 'none', overscrollBehaviorX: 'contain' }} onDoubleClick={(e) => { const target = e.currentTarget as HTMLElement; target.scrollLeft = 0; }}>
                     <table className="w-full" style={{ minWidth: '1200px', tableLayout: 'auto' }}>
                       <thead>
                         <tr className="border-b border-gray-200">
@@ -455,7 +455,7 @@ export default function PlayerAssistProjections() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'visible', width: '100%', maxWidth: '100%', height: 'auto', display: 'block', scrollbarWidth: 'auto' }}>
+                  <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'visible', width: '100%', maxWidth: '100%', height: 'auto', display: 'block', scrollbarWidth: 'auto', scrollSnapType: 'none', overscrollBehaviorX: 'contain' }} onDoubleClick={(e) => { const target = e.currentTarget as HTMLElement; target.scrollLeft = 0; }}>
                     <table className="w-full" style={{ minWidth: '1200px', tableLayout: 'auto' }}>
                       <thead>
                         <tr className="border-b border-gray-200">

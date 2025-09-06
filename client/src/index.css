@@ -398,6 +398,9 @@ button, a, input, select, textarea {
   overflow-y: hidden !important;
   /* Force scrollbar to always show */
   scrollbar-width: auto !important; /* Firefox */
+  /* Ensure proper scroll behavior */
+  scroll-snap-type: none !important;
+  overscroll-behavior-x: contain !important;
 }
 
 /* Custom scrollbar styling for horizontal tables */
