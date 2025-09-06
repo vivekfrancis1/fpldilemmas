@@ -17,6 +17,7 @@ import {
   cachedPlayerYellowCards,
   cachedPlayerRedCards,
   cachedPlayerBonusPoints,
+  teamProjections,
   users
 } from "@shared/schema";
 import { db } from "./db";
