@@ -187,6 +187,17 @@ export class SpreadBettingCacheService {
 
       const oddsData = await oddsResponse.json();
       console.log(`📊 Received ${oddsData.length} games from The Odds API`);
+      
+      // Log a sample of the data for debugging
+      if (oddsData.length > 0) {
+        console.log(`📊 Sample game:`, {
+          home_team: oddsData[0].home_team,
+          away_team: oddsData[0].away_team,
+          commence_time: oddsData[0].commence_time,
+          bookmakers_count: oddsData[0].bookmakers?.length || 0,
+          markets: oddsData[0].bookmakers?.[0]?.markets?.map((m: any) => m.key) || []
+        });
+      }
 
       // Process and return the data
       return this.processOddsData(oddsData, bootstrapData);
@@ -269,10 +280,17 @@ export class SpreadBettingCacheService {
         }
 
         // Process bookmaker odds to extract totals and spreads
-        const { totalsData, spreadsData, bookmakerCount } = this.extractMarketData(game.bookmakers);
+        const { totalsData, spreadsData, bookmakerCount } = this.extractMarketData(game.bookmakers || []);
+        
+        console.log(`📊 Market data for ${homeTeamName} vs ${awayTeamName}:`, {
+          bookmakers: game.bookmakers?.length || 0,
+          totalsData: totalsData ? 'Found' : 'Missing',
+          spreadsData: spreadsData ? 'Found' : 'Missing',
+          bookmakerCount
+        });
         
         if (!totalsData || !spreadsData) {
-          console.log(`⚠️ Missing market data for ${homeTeamName} vs ${awayTeamName}`);
+          console.log(`⚠️ Missing market data for ${homeTeamName} vs ${awayTeamName} - skipping`);
           continue;
         }
 
@@ -282,9 +300,15 @@ export class SpreadBettingCacheService {
         const homeExpectedGoals = (T + S) / 2;
         const awayExpectedGoals = (T - S) / 2;
 
-        // Determine market confidence based on bookmaker count
-        const marketConfidence = bookmakerCount >= 8 ? 'High' : 
-                               bookmakerCount >= 5 ? 'Medium' : 'Low';
+        // Determine market confidence based on data source and bookmaker count
+        let marketConfidence = 'Low';
+        if (totalsData.source === 'real_market' && spreadsData.source === 'real_market') {
+          marketConfidence = bookmakerCount >= 8 ? 'High' : 
+                           bookmakerCount >= 4 ? 'Medium' : 'Medium';
+        } else if (totalsData.source === 'real_market' || spreadsData.source === 'real_market') {
+          marketConfidence = 'Medium';
+        }
+        // Keep 'Low' for fallback data
 
         const fixtureId = `${homeTeam.shortName}_${awayTeam.shortName}_GW${gameweek}`;
 
@@ -366,43 +390,88 @@ export class SpreadBettingCacheService {
   private extractMarketData(bookmakers: any[]): { totalsData: any, spreadsData: any, bookmakerCount: number } {
     let totalsData: any = null;
     let spreadsData: any = null;
-    let bookmakerCount = 0;
+    let bookmakerCount = bookmakers.length;
+
+    console.log(`🔍 Extracting market data from ${bookmakerCount} bookmakers`);
 
     for (const bookmaker of bookmakers) {
-      bookmakerCount++;
+      console.log(`📊 Bookmaker: ${bookmaker.title || 'Unknown'}, Markets: ${bookmaker.markets?.map((m: any) => m.key).join(', ') || 'None'}`);
       
-      for (const market of bookmaker.markets) {
+      for (const market of bookmaker.markets || []) {
+        console.log(`🎯 Processing market: ${market.key}, Outcomes: ${market.outcomes?.length || 0}`);
+        
         if (market.key === 'totals' && !totalsData) {
-          const overOutcome = market.outcomes.find((o: any) => o.name === 'Over');
-          const underOutcome = market.outcomes.find((o: any) => o.name === 'Under');
+          // Look for over/under markets with different point values
+          const validOutcome = market.outcomes.find((o: any) => 
+            o.point && (o.point >= 2.0 && o.point <= 4.0) && 
+            (o.name === 'Over' || o.name === 'Under')
+          );
           
-          if (overOutcome && underOutcome && overOutcome.point) {
-            const point = parseFloat(overOutcome.point);
+          if (validOutcome) {
+            const point = parseFloat(validOutcome.point);
             totalsData = {
-              sell: point - 0.25, // Typical spread
+              sell: Math.max(0.5, point - 0.25),
               buy: point + 0.25,
-              midpoint: point
+              midpoint: point,
+              source: 'real_market'
             };
+            console.log(`✅ Found totals market: ${point} (${validOutcome.name})`);
+          } else {
+            console.log(`⚠️ No valid totals outcomes found for market outcomes:`, market.outcomes?.map((o: any) => `${o.name}: ${o.point}`) || []);
           }
         }
         
         if (market.key === 'spreads' && !spreadsData) {
-          const homeOutcome = market.outcomes[0]; // Usually home team first
-          if (homeOutcome && homeOutcome.point) {
-            const point = parseFloat(homeOutcome.point);
+          // Look for handicap/spread markets
+          const validOutcome = market.outcomes.find((o: any) => 
+            o.point !== undefined && o.point !== null && 
+            Math.abs(o.point) <= 3.0 // Reasonable spread range
+          );
+          
+          if (validOutcome) {
+            const point = parseFloat(validOutcome.point);
             spreadsData = {
               sell: point - 0.25,
               buy: point + 0.25,
-              midpoint: point
+              midpoint: point,
+              source: 'real_market'
             };
+            console.log(`✅ Found spreads market: ${point} (${validOutcome.name})`);
+          } else {
+            console.log(`⚠️ No valid spreads outcomes found for market outcomes:`, market.outcomes?.map((o: any) => `${o.name}: ${o.point}`) || []);
           }
         }
       }
       
       // Break if we have both markets from this bookmaker
-      if (totalsData && spreadsData) break;
+      if (totalsData && spreadsData) {
+        console.log(`✅ Found both markets from ${bookmaker.title}`);
+        break;
+      }
     }
 
+    // Enhanced fallback system with more realistic data
+    if (!totalsData) {
+      console.log(`⚠️ No real totals data found, using enhanced fallback`);
+      totalsData = {
+        sell: 2.3,
+        buy: 2.7,
+        midpoint: 2.5,
+        source: 'fallback'
+      };
+    }
+    
+    if (!spreadsData) {
+      console.log(`⚠️ No real spreads data found, using enhanced fallback`);
+      spreadsData = {
+        sell: -0.25,
+        buy: 0.25,
+        midpoint: 0.0,
+        source: 'fallback'
+      };
+    }
+
+    console.log(`📊 Market data extraction complete: Totals=${totalsData.source}, Spreads=${spreadsData.source}`);
     return { totalsData, spreadsData, bookmakerCount };
   }
 }
