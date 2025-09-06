@@ -4075,20 +4075,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Calculate expected minutes with realistic projections
             const expectedMinutes = calculateExpectedMinutes(player, playersWithXG);
             
-            // More conservative position multipliers
+            // Enhanced position multipliers for better goal distribution
             let positionMultiplier = 1.0;
             switch (player.element_type) {
               case 4: // Forward
-                positionMultiplier = 1.1; // Reduced from 1.2
+                positionMultiplier = 1.25; // Increased significantly for forwards
                 break;
               case 3: // Midfielder
-                positionMultiplier = 1.05; // Reduced from 1.1
+                positionMultiplier = 1.15; // Increased for midfielders
                 break;
               case 2: // Defender
-                positionMultiplier = 0.4; // Increased from 0.3
+                positionMultiplier = 0.4; // Kept same
                 break;
               case 1: // Goalkeeper
-                positionMultiplier = 0.15; // Increased from 0.1
+                positionMultiplier = 0.15; // Kept same
                 break;
             }
             
