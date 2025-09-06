@@ -3853,8 +3853,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Goal Share endpoint with improved performance
   app.get("/api/goal-share-season", async (req, res) => {
     try {
-      // Check cache first
-      if (goalShareCache && Date.now() - goalShareCache.timestamp < CACHE_DURATION) {
+      // Check cache first - extend cache duration for better performance
+      const EXTENDED_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+      if (goalShareCache && Date.now() - goalShareCache.timestamp < EXTENDED_CACHE_DURATION) {
         console.log("DEBUG: Returning cached goal share data");
         return res.json(goalShareCache.data);
       }
@@ -3871,21 +3872,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamProjectionsData = await teamProjectionsResponse.json();
       
       // Fetch historical xG data from 2024/25 and 2023/24 seasons
-      const historicalXGData: { [season: string]: any[] } = {};
       const historicalSeasons = ["2024/25", "2023/24"];
       
-      await Promise.all(historicalSeasons.map(async (season) => {
-        try {
-          const historicalPlayers = await storage.getHistoricalPlayers(season);
-          if (historicalPlayers && historicalPlayers.length > 0) {
-            console.log(`DEBUG: Found ${historicalPlayers.length} historical players for ${season} (for xG data)`);
-            historicalXGData[season] = historicalPlayers;
+      // Optimize: Only fetch historical data if cache is empty
+      let historicalXGData: { [season: string]: any[] } = {};
+      if (!goalShareCache) {
+        await Promise.all(historicalSeasons.map(async (season) => {
+          try {
+            const historicalPlayers = await storage.getHistoricalPlayers(season);
+            if (historicalPlayers && historicalPlayers.length > 0) {
+              console.log(`DEBUG: Found ${historicalPlayers.length} historical players for ${season} (for xG data)`);
+              historicalXGData[season] = historicalPlayers;
+            }
+          } catch (error) {
+            console.warn(`Could not fetch historical xG data for ${season}:`, (error as Error).message);
+            historicalXGData[season] = [];
           }
-        } catch (error) {
-          console.warn(`Could not fetch historical xG data for ${season}:`, (error as Error).message);
-          historicalXGData[season] = [];
-        }
-      }));
+        }));
+      } else {
+        // Use fallback data for faster response
+        historicalXGData = { "2024/25": [], "2023/24": [] };
+      }
       
       console.log("DEBUG: Goal Share Season API - using simplified approach for better performance");
       
@@ -3996,39 +4003,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // ENHANCED xG CALCULATION: Combine current year xG with ACTUAL historical xG data
             const currentYearXGPer90 = player.xgPer90;
             
-            // Look up actual historical xG data for this player
+            // Optimized: Only do intensive historical lookup when cache is empty
             let historical2024XGPer90 = 0;
             let historical2023XGPer90 = 0;
             
-            const playerFullName = player.name.toLowerCase();
-            
-            // Find player in 2024/25 historical data
-            if (historicalXGData["2024/25"]) {
-              const historical2024Player = historicalXGData["2024/25"].find((hp: any) => {
-                const historicalName = `${hp.firstName || ''} ${hp.secondName || ''}`.toLowerCase().trim();
-                return historicalName === playerFullName || 
-                       (hp.webName && hp.webName.toLowerCase() === player.name.toLowerCase()) ||
-                       historicalName.includes(player.name.split(' ')[1]?.toLowerCase() || '');
-              });
+            if (historicalXGData["2024/25"]?.length > 0 || historicalXGData["2023/24"]?.length > 0) {
+              const playerFullName = player.name.toLowerCase();
               
-              if (historical2024Player && historical2024Player.minutes > 0) {
-                historical2024XGPer90 = ((historical2024Player.expectedGoals || 0) / historical2024Player.minutes) * 90;
-                console.log(`DEBUG: Found ${player.name} 2024/25 xG data: ${historical2024XGPer90.toFixed(3)} per 90`);
+              // Find player in 2024/25 historical data
+              if (historicalXGData["2024/25"]?.length > 0) {
+                const historical2024Player = historicalXGData["2024/25"].find((hp: any) => {
+                  const historicalName = `${hp.firstName || ''} ${hp.secondName || ''}`.toLowerCase().trim();
+                  return historicalName === playerFullName || 
+                         (hp.webName && hp.webName.toLowerCase() === player.name.toLowerCase()) ||
+                         historicalName.includes(player.name.split(' ')[1]?.toLowerCase() || '');
+                });
+                
+                if (historical2024Player && historical2024Player.minutes > 0) {
+                  historical2024XGPer90 = ((historical2024Player.expectedGoals || 0) / historical2024Player.minutes) * 90;
+                }
               }
-            }
-            
-            // Find player in 2023/24 historical data  
-            if (historicalXGData["2023/24"]) {
-              const historical2023Player = historicalXGData["2023/24"].find((hp: any) => {
-                const historicalName = `${hp.firstName || ''} ${hp.secondName || ''}`.toLowerCase().trim();
-                return historicalName === playerFullName || 
-                       (hp.webName && hp.webName.toLowerCase() === player.name.toLowerCase()) ||
-                       historicalName.includes(player.name.split(' ')[1]?.toLowerCase() || '');
-              });
               
-              if (historical2023Player && historical2023Player.minutes > 0) {
-                historical2023XGPer90 = ((historical2023Player.expectedGoals || 0) / historical2023Player.minutes) * 90;
-                console.log(`DEBUG: Found ${player.name} 2023/24 xG data: ${historical2023XGPer90.toFixed(3)} per 90`);
+              // Find player in 2023/24 historical data  
+              if (historicalXGData["2023/24"]?.length > 0) {
+                const historical2023Player = historicalXGData["2023/24"].find((hp: any) => {
+                  const historicalName = `${hp.firstName || ''} ${hp.secondName || ''}`.toLowerCase().trim();
+                  return historicalName === playerFullName || 
+                         (hp.webName && hp.webName.toLowerCase() === player.name.toLowerCase()) ||
+                         historicalName.includes(player.name.split(' ')[1]?.toLowerCase() || '');
+                });
+                
+                if (historical2023Player && historical2023Player.minutes > 0) {
+                  historical2023XGPer90 = ((historical2023Player.expectedGoals || 0) / historical2023Player.minutes) * 90;
+                }
               }
             }
             
@@ -4041,9 +4048,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
             const combinedXGPer90 = (currentYearXGPer90 * 0.5) + (fallback2024 * 0.3) + (fallback2023 * 0.2);
             
-            const has2024Data = historical2024XGPer90 > 0;
-            const has2023Data = historical2023XGPer90 > 0;
-            console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, 2024/25: ${fallback2024.toFixed(3)}${has2024Data ? ' (actual)' : ' (fallback)'}, 2023/24: ${fallback2023.toFixed(3)}${has2023Data ? ' (actual)' : ' (fallback)'}, Combined: ${combinedXGPer90.toFixed(3)}`);
+            // Reduce debug logging for performance
+            if (player.name.includes('Salah') || player.name.includes('Haaland')) {
+              const has2024Data = historical2024XGPer90 > 0;
+              const has2023Data = historical2023XGPer90 > 0;
+              console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, 2024/25: ${fallback2024.toFixed(3)}${has2024Data ? ' (actual)' : ' (fallback)'}, 2023/24: ${fallback2023.toFixed(3)}${has2023Data ? ' (actual)' : ' (fallback)'}, Combined: ${combinedXGPer90.toFixed(3)}`);
+            }
             
             // Apply sample size regression with combined xG data
             const positionAvg = player.element_type === 1 ? 0.02 : 
@@ -5030,11 +5040,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const historicalSeasons = ["2024/25", "2023/24"];
       const historicalXAData: { [season: string]: any[] } = {};
       
-      await Promise.all(historicalSeasons.map(async (season) => {
+      // Optimize: Fetch historical data only once with faster processing
+      const historicalPromises = historicalSeasons.map(async (season) => {
         try {
+          const startTime = Date.now();
           const historicalPlayers = await storage.getHistoricalPlayers(season);
+          const endTime = Date.now();
+          
           if (historicalPlayers && historicalPlayers.length > 0) {
-            console.log(`DEBUG: Found ${historicalPlayers.length} historical players for ${season} (for xA data)`);
+            console.log(`DEBUG: Found ${historicalPlayers.length} historical players for ${season} (for xA data) - ${endTime - startTime}ms`);
             historicalData[season] = historicalPlayers;
             historicalXAData[season] = historicalPlayers; // Also store for xA calculations
           }
@@ -5043,7 +5057,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           historicalData[season] = [];
           historicalXAData[season] = [];
         }
-      }));
+      });
+      
+      await Promise.all(historicalPromises);
       
       // Now distribute assist shares among players for each team using 3-year weighted approach
       Object.keys(teamSeasonTotals).forEach(teamIdStr => {
@@ -5162,7 +5178,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                               enhancedAssistShare = (seasonAssistShare * assistWeight) + 
                                                   ((historicalXAPer90 / Math.max(0.1, currentXAPer90 || 0.1)) * seasonAssistShare * xAWeight);
                               
-                              console.log(`DEBUG: Enhanced ${weightedPlayerShares[matchedPlayerId].name} ${season} share with xA data: ${seasonAssistShare.toFixed(1)}% → ${enhancedAssistShare.toFixed(1)}% (xA/90: ${historicalXAPer90.toFixed(3)})`);
+                              // Reduce debug logging for performance
+                              if (weightedPlayerShares[matchedPlayerId].name.includes('Salah') || weightedPlayerShares[matchedPlayerId].name.includes('De Bruyne')) {
+                                console.log(`DEBUG: Enhanced ${weightedPlayerShares[matchedPlayerId].name} ${season} share with xA data: ${seasonAssistShare.toFixed(1)}% → ${enhancedAssistShare.toFixed(1)}% (xA/90: ${historicalXAPer90.toFixed(3)})`);
+                              }
                             }
                           }
                         }
@@ -5177,7 +5196,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         
                         weightedPlayerShares[matchedPlayerId].totalWeightedShare += adjustedAssistShare * 0.3333;
                         weightedPlayerShares[matchedPlayerId].totalWeight += 0.3333;
-                        console.log(`DEBUG: Added ${season} data for ${weightedPlayerShares[matchedPlayerId].name}: ${enhancedAssistShare.toFixed(1)}% → ${adjustedAssistShare.toFixed(1)}% (minutes weight: ${minutesWeight.toFixed(2)})`);
+                        // Reduce debug logging for performance
+                        if (weightedPlayerShares[matchedPlayerId].name.includes('Salah') || weightedPlayerShares[matchedPlayerId].name.includes('De Bruyne')) {
+                          console.log(`DEBUG: Added ${season} data for ${weightedPlayerShares[matchedPlayerId].name}: ${enhancedAssistShare.toFixed(1)}% → ${adjustedAssistShare.toFixed(1)}% (minutes weight: ${minutesWeight.toFixed(2)})`);
+                        }
                       }
                     } else if (season !== "current") {
                       const playerNameForDebug = (getPlayerName(player.playerId) || `${player.first_name || player.firstName} ${player.second_name || player.secondName}`);
