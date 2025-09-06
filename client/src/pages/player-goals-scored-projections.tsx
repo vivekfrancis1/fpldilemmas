@@ -411,7 +411,13 @@ export default function PlayerGoalsScoredProjections() {
             <CardContent className="p-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-600">
-                  {activeTab === "points" ? totalGoals.pointsOverallTotal.toFixed(1) : totalGoals.overallTotal.toFixed(2)}
+                  <ValueCell 
+                    value={activeTab === "points" ? totalGoals.pointsOverallTotal : totalGoals.overallTotal} 
+                    format={activeTab === "points" ? "points" : "goals"} 
+                    decimals={activeTab === "points" ? 1 : 2} 
+                    fontWeight="semibold"
+                    colorScheme={activeTab === "points" ? "points" : "goals"}
+                  />
                 </p>
                 <p className="text-sm text-gray-600">{selectedGameweeks.length} GW {activeTab === "points" ? "Points" : "Goals"}</p>
               </div>
@@ -422,7 +428,13 @@ export default function PlayerGoalsScoredProjections() {
             <CardContent className="p-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-purple-600">
-                  {activeTab === "points" ? totalGoals.pointsAveragePerGame.toFixed(1) : totalGoals.averagePerGame.toFixed(2)}
+                  <ValueCell 
+                    value={activeTab === "points" ? totalGoals.pointsAveragePerGame : totalGoals.averagePerGame} 
+                    format={activeTab === "points" ? "points" : "goals"} 
+                    decimals={activeTab === "points" ? 1 : 2} 
+                    fontWeight="medium"
+                    colorScheme={activeTab === "points" ? "points" : "goals"}
+                  />
                 </p>
                 <p className="text-sm text-gray-600">Avg {activeTab === "points" ? "Points" : "Goals"} Per GW (GW{startGameweek}-{endGameweek})</p>
               </div>
@@ -539,14 +551,26 @@ export default function PlayerGoalsScoredProjections() {
                           return (
                             <td key={gw} className="py-3 px-2 text-center">
                               <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getGoalsColor(goals)}`}>
-                                {goals.toFixed(2)}
+                                <ValueCell 
+                                  value={goals} 
+                                  format="goals" 
+                                  decimals={2} 
+                                  colorScheme="goals"
+                                  fontWeight="medium"
+                                />
                               </span>
                             </td>
                           );
                         })}
                         <td className="py-3 px-2 text-center border-l border-gray-200">
                           <span className="px-3 py-1 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-sm">
-                            {selectedTotal.toFixed(2)}
+                            <ValueCell 
+                              value={selectedTotal} 
+                              format="goals" 
+                              decimals={2} 
+                              colorScheme="goals"
+                              fontWeight="semibold"
+                            />
                           </span>
                         </td>
                       </tr>
@@ -560,11 +584,22 @@ export default function PlayerGoalsScoredProjections() {
                     </td>
                     {selectedGameweeks.map(gw => (
                       <td key={gw} className="py-3 px-2 text-center font-bold text-blue-800">
-                        {(totalGoals.gameweekTotals[gw] || 0).toFixed(2)}
+                        <ValueCell 
+                          value={totalGoals.gameweekTotals[gw] || 0} 
+                          format="goals" 
+                          decimals={2} 
+                          fontWeight="semibold"
+                        />
                       </td>
                     ))}
                     <td className="py-3 px-2 text-center font-bold text-blue-800">
-                      {totalGoals.overallTotal.toFixed(2)}
+                      <ValueCell 
+                        value={totalGoals.overallTotal} 
+                        format="goals" 
+                        decimals={2} 
+                        fontWeight="bold"
+                        colorScheme="goals"
+                      />
                     </td>
                   </tr>
                 </tfoot>
@@ -674,14 +709,26 @@ export default function PlayerGoalsScoredProjections() {
                           return (
                             <td key={gw} className="py-3 px-2 text-center">
                               <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getPointsColor(points)}`}>
-                                {points.toFixed(1)}
+                                <ValueCell 
+                                  value={points} 
+                                  format="points" 
+                                  decimals={1} 
+                                  colorScheme="points"
+                                  fontWeight="medium"
+                                />
                               </span>
                             </td>
                           );
                         })}
                         <td className="py-3 px-2 text-center border-l border-gray-200">
                           <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-sm">
-                            {selectedTotal.toFixed(1)}
+                            <ValueCell 
+                              value={selectedTotal} 
+                              format="points" 
+                              decimals={1} 
+                              colorScheme="points"
+                              fontWeight="semibold"
+                            />
                           </span>
                         </td>
                       </tr>
@@ -695,11 +742,23 @@ export default function PlayerGoalsScoredProjections() {
                     </td>
                     {selectedGameweeks.map(gw => (
                       <td key={gw} className="py-3 px-2 text-center font-bold text-blue-600">
-                        {(totalGoals.pointsGameweekTotals[gw] || 0).toFixed(1)}
+                        <ValueCell 
+                          value={totalGoals.pointsGameweekTotals[gw] || 0} 
+                          format="points" 
+                          decimals={1} 
+                          fontWeight="semibold"
+                          colorScheme="points"
+                        />
                       </td>
                     ))}
                     <td className="py-3 px-2 text-center font-bold text-blue-600">
-                      {totalGoals.pointsOverallTotal.toFixed(1)}
+                      <ValueCell 
+                        value={totalGoals.pointsOverallTotal} 
+                        format="points" 
+                        decimals={1} 
+                        fontWeight="bold"
+                        colorScheme="points"
+                      />
                     </td>
                   </tr>
                 </tfoot>
