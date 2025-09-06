@@ -3870,6 +3870,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const teamProjectionsData = await teamProjectionsResponse.json();
       
+      // Fetch historical xG data from 2024/25 and 2023/24 seasons
+      const historicalXGData: { [season: string]: any[] } = {};
+      const historicalSeasons = ["2024/25", "2023/24"];
+      
+      await Promise.all(historicalSeasons.map(async (season) => {
+        try {
+          const historicalPlayers = await storage.getHistoricalPlayers(season);
+          if (historicalPlayers && historicalPlayers.length > 0) {
+            console.log(`DEBUG: Found ${historicalPlayers.length} historical players for ${season} (for xG data)`);
+            historicalXGData[season] = historicalPlayers;
+          }
+        } catch (error) {
+          console.warn(`Could not fetch historical xG data for ${season}:`, (error as Error).message);
+          historicalXGData[season] = [];
+        }
+      }));
+      
       console.log("DEBUG: Goal Share Season API - using simplified approach for better performance");
       
       // Step 1: Calculate team season totals from Team Goal Projections
@@ -3976,29 +3993,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Calculate goals per game from actual performance
             const actualGoalsPerGame = completedGameweeks > 0 ? player.actualGoalsScored / completedGameweeks : 0;
             
-            // ENHANCED xG CALCULATION: Combine current year xG with last year's xG
+            // ENHANCED xG CALCULATION: Combine current year xG with ACTUAL historical xG data
             const currentYearXGPer90 = player.xgPer90;
             
-            // Calculate last year's xG estimate based on goals/minutes from previous season
-            // This is a simpler approach that doesn't require async database calls
-            let lastYearXGPer90 = 0;
+            // Look up actual historical xG data for this player
+            let historical2024XGPer90 = 0;
+            let historical2023XGPer90 = 0;
             
-            // Use a ratio of current actual goals to current xG to estimate historical xG performance
-            if (player.actualGoalsScored > 0 && player.totalXG > 0) {
-              const goalConversionRatio = player.actualGoalsScored / player.totalXG;
-              // Conservative estimate: assume 80% of current conversion rate for historical xG
-              lastYearXGPer90 = currentYearXGPer90 * (goalConversionRatio * 0.8);
-            } else {
-              // Fallback: use position-based historical average
-              lastYearXGPer90 = player.element_type === 1 ? 0.01 : 
-                               player.element_type === 2 ? 0.06 : 
-                               player.element_type === 3 ? 0.12 : 0.25;
+            const playerFullName = player.name.toLowerCase();
+            
+            // Find player in 2024/25 historical data
+            if (historicalXGData["2024/25"]) {
+              const historical2024Player = historicalXGData["2024/25"].find((hp: any) => {
+                const historicalName = `${hp.firstName || ''} ${hp.secondName || ''}`.toLowerCase().trim();
+                return historicalName === playerFullName || 
+                       (hp.webName && hp.webName.toLowerCase() === player.name.toLowerCase()) ||
+                       historicalName.includes(player.name.split(' ')[1]?.toLowerCase() || '');
+              });
+              
+              if (historical2024Player && historical2024Player.minutes > 0) {
+                historical2024XGPer90 = ((historical2024Player.expectedGoals || 0) / historical2024Player.minutes) * 90;
+                console.log(`DEBUG: Found ${player.name} 2024/25 xG data: ${historical2024XGPer90.toFixed(3)} per 90`);
+              }
             }
             
-            // Weighted combination: 70% current year, 30% estimated last year
-            const combinedXGPer90 = (currentYearXGPer90 * 0.7) + (lastYearXGPer90 * 0.3);
+            // Find player in 2023/24 historical data  
+            if (historicalXGData["2023/24"]) {
+              const historical2023Player = historicalXGData["2023/24"].find((hp: any) => {
+                const historicalName = `${hp.firstName || ''} ${hp.secondName || ''}`.toLowerCase().trim();
+                return historicalName === playerFullName || 
+                       (hp.webName && hp.webName.toLowerCase() === player.name.toLowerCase()) ||
+                       historicalName.includes(player.name.split(' ')[1]?.toLowerCase() || '');
+              });
+              
+              if (historical2023Player && historical2023Player.minutes > 0) {
+                historical2023XGPer90 = ((historical2023Player.expectedGoals || 0) / historical2023Player.minutes) * 90;
+                console.log(`DEBUG: Found ${player.name} 2023/24 xG data: ${historical2023XGPer90.toFixed(3)} per 90`);
+              }
+            }
             
-            console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, Estimated Last: ${lastYearXGPer90.toFixed(3)}, Combined: ${combinedXGPer90.toFixed(3)}`);
+            // Weighted combination: 50% current year, 30% 2024/25, 20% 2023/24
+            // Fall back to position averages if no historical data found
+            const fallback2024 = historical2024XGPer90 > 0 ? historical2024XGPer90 : 
+              (player.element_type === 1 ? 0.01 : player.element_type === 2 ? 0.06 : player.element_type === 3 ? 0.12 : 0.25);
+            const fallback2023 = historical2023XGPer90 > 0 ? historical2023XGPer90 : 
+              (player.element_type === 1 ? 0.01 : player.element_type === 2 ? 0.06 : player.element_type === 3 ? 0.12 : 0.25);
+              
+            const combinedXGPer90 = (currentYearXGPer90 * 0.5) + (fallback2024 * 0.3) + (fallback2023 * 0.2);
+            
+            const has2024Data = historical2024XGPer90 > 0;
+            const has2023Data = historical2023XGPer90 > 0;
+            console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, 2024/25: ${fallback2024.toFixed(3)}${has2024Data ? ' (actual)' : ' (fallback)'}, 2023/24: ${fallback2023.toFixed(3)}${has2023Data ? ' (actual)' : ' (fallback)'}, Combined: ${combinedXGPer90.toFixed(3)}`);
             
             // Apply sample size regression with combined xG data
             const positionAvg = player.element_type === 1 ? 0.02 : 
@@ -4981,19 +5026,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const historicalData: { [season: string]: any[] } = {};
       historicalData["current"] = currentYearActualData;
       
-      // Fetch historical data from past two years PLUS current year actual data for assist share weighting
+      // Fetch historical xA data from past two years PLUS current year actual data for assist share weighting
       const historicalSeasons = ["2024/25", "2023/24"];
+      const historicalXAData: { [season: string]: any[] } = {};
       
       await Promise.all(historicalSeasons.map(async (season) => {
         try {
           const historicalPlayers = await storage.getHistoricalPlayers(season);
           if (historicalPlayers && historicalPlayers.length > 0) {
-            console.log(`DEBUG: Found ${historicalPlayers.length} historical players for ${season}`);
+            console.log(`DEBUG: Found ${historicalPlayers.length} historical players for ${season} (for xA data)`);
             historicalData[season] = historicalPlayers;
+            historicalXAData[season] = historicalPlayers; // Also store for xA calculations
           }
         } catch (error) {
           console.warn(`Could not fetch historical data for ${season}:`, (error as Error).message);
           historicalData[season] = [];
+          historicalXAData[season] = [];
         }
       }));
       
@@ -5084,22 +5132,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       }
                     }
                     
-                    // Add weighted assist share if player matched, but weight by expected minutes
+                    // Add weighted assist share if player matched, enhanced with xA data for historical seasons
                     if (matchedPlayerId && weightedPlayerShares[matchedPlayerId]) {
                       // Get current player data to calculate expected minutes weighting
                       const currentPlayer = teamPlayers.find(p => p.id === matchedPlayerId);
                       if (currentPlayer) {
+                        // For historical seasons, also incorporate xA data if available
+                        let enhancedAssistShare = seasonAssistShare;
+                        
+                        if (season !== "current" && historicalXAData[season]) {
+                          // Look up xA data for this player in this historical season
+                          const currentPlayerName = `${currentPlayer.first_name} ${currentPlayer.second_name}`.toLowerCase();
+                          const historicalPlayerWithXA = historicalXAData[season].find((hp: any) => {
+                            const historicalName = `${hp.firstName || ''} ${hp.secondName || ''}`.toLowerCase().trim();
+                            return historicalName === currentPlayerName || 
+                                   (hp.webName && hp.webName.toLowerCase() === currentPlayerName) ||
+                                   historicalName.includes(currentPlayer.second_name?.toLowerCase() || '');
+                          });
+                          
+                          if (historicalPlayerWithXA && historicalPlayerWithXA.minutes > 0) {
+                            const historicalXAPer90 = ((historicalPlayerWithXA.expectedAssists || 0) / historicalPlayerWithXA.minutes) * 90;
+                            const currentXAPer90 = currentPlayer.expected_assists ? 
+                              ((parseFloat(currentPlayer.expected_assists) || 0) / (parseInt(currentPlayer.minutes) || 1)) * 90 : 0;
+                            
+                            // Blend xA data: 60% historical xA, 40% historical assists for more accurate projection
+                            if (historicalXAPer90 > 0) {
+                              const xAWeight = 0.6;
+                              const assistWeight = 0.4;
+                              enhancedAssistShare = (seasonAssistShare * assistWeight) + 
+                                                  ((historicalXAPer90 / Math.max(0.1, currentXAPer90 || 0.1)) * seasonAssistShare * xAWeight);
+                              
+                              console.log(`DEBUG: Enhanced ${weightedPlayerShares[matchedPlayerId].name} ${season} share with xA data: ${seasonAssistShare.toFixed(1)}% → ${enhancedAssistShare.toFixed(1)}% (xA/90: ${historicalXAPer90.toFixed(3)})`);
+                            }
+                          }
+                        }
+                        
                         // Calculate expected minutes for this player
                         const expectedMinutes = calculateExpectedMinutes(currentPlayer, teamPlayers);
                         const maxExpectedMinutes = Math.max(...teamPlayers.map(p => calculateExpectedMinutes(p, teamPlayers)), 1); // Prevent division by zero
                         
                         // Weight assist share by expected minutes (players with more expected minutes get higher weight)
                         const minutesWeight = Math.max(0.1, expectedMinutes / maxExpectedMinutes); // Minimum weight of 0.1
-                        const adjustedAssistShare = seasonAssistShare * minutesWeight;
+                        const adjustedAssistShare = enhancedAssistShare * minutesWeight;
                         
                         weightedPlayerShares[matchedPlayerId].totalWeightedShare += adjustedAssistShare * 0.3333;
                         weightedPlayerShares[matchedPlayerId].totalWeight += 0.3333;
-                        console.log(`DEBUG: Added ${season} data for ${weightedPlayerShares[matchedPlayerId].name}: ${seasonAssistShare.toFixed(1)}% → ${adjustedAssistShare.toFixed(1)}% (minutes weight: ${minutesWeight.toFixed(2)})`);
+                        console.log(`DEBUG: Added ${season} data for ${weightedPlayerShares[matchedPlayerId].name}: ${enhancedAssistShare.toFixed(1)}% → ${adjustedAssistShare.toFixed(1)}% (minutes weight: ${minutesWeight.toFixed(2)})`);
                       }
                     } else if (season !== "current") {
                       const playerNameForDebug = (getPlayerName(player.playerId) || `${player.first_name || player.firstName} ${player.second_name || player.secondName}`);
