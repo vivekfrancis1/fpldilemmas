@@ -2703,6 +2703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       adminGoalSettings = updatedSettings;
       
       // Clear cached data to force recalculation with new settings
+      totalPointsCache.clear();
       console.log("Clean sheet admin settings updated, projection model will use new parameters");
       
       res.json({
@@ -2736,6 +2737,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedBy: "admin"
       };
       
+      // Clear cached data to force recalculation with reset settings
+      totalPointsCache.clear();
       console.log("Clean sheet admin settings reset to default values");
       
       res.json({
