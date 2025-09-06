@@ -8133,8 +8133,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalMinutesPoints += minutesPoints;
           
           // Defensive contributions from cached Defensive Projections API
+          // NEW FORMULA: 2 × percentage probability of hitting threshold (≥12 for mid/fwd, ≥10 for def)
           const defensiveData = playerDefensive[gw];
-          const defensivePoints = defensiveData ? defensiveData.points : 0;
+          let defensivePoints = 0;
+          
+          if (defensiveData && defensiveData.defensiveContribution !== undefined) {
+            // Position-specific thresholds: DEF ≥10, MID/FWD ≥12
+            const threshold = position === 'DEF' ? 10 : 12;
+            const dcValue = defensiveData.defensiveContribution;
+            
+            // Calculate percentage probability of hitting threshold
+            // Using sigmoid function for smooth probability curve
+            const probabilityOfHittingThreshold = 1 / (1 + Math.exp(-(dcValue - threshold) * 0.5));
+            
+            // Points = 2 × percentage probability 
+            defensivePoints = 2 * probabilityOfHittingThreshold;
+          }
+          
           pointsFromDefensiveContributions[`gw${gw}`] = Math.round(defensivePoints * 100) / 100;
           totalDefensivePoints += defensivePoints;
           
