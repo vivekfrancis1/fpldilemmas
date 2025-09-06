@@ -240,7 +240,7 @@ export default function ResultsProjections() {
                         Win Probabilities
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Goals Market
+                        xG
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Clean Sheets
@@ -303,13 +303,10 @@ export default function ResultsProjections() {
                           <td className="px-4 py-4 text-center">
                             <div className="space-y-1">
                               <div className="text-xs">
-                                <span className="text-gray-600">Home xG: {match.homeTeam.expectedGoals.toFixed(2)}</span>
+                                <span className="text-gray-600">{match.homeTeam.shortName}: {match.homeTeam.expectedGoals.toFixed(2)}</span>
                               </div>
                               <div className="text-xs">
-                                <span className="text-gray-600">Away xG: {match.awayTeam.expectedGoals.toFixed(2)}</span>
-                              </div>
-                              <div className="text-xs">
-                                <span className="text-gray-600">Total xG: {match.totalExpectedGoals.toFixed(2)}</span>
+                                <span className="text-gray-600">{match.awayTeam.shortName}: {match.awayTeam.expectedGoals.toFixed(2)}</span>
                               </div>
                             </div>
                           </td>
