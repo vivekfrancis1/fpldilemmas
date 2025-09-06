@@ -11157,6 +11157,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔗 Calling The Odds API: ${oddsApiUrl}?${oddsParams}`);
       const oddsResponse = await fetch(`${oddsApiUrl}?${oddsParams}`);
       
+      console.log(`📊 API Response Status: ${oddsResponse.status} ${oddsResponse.statusText}`);
+      console.log(`📊 Response Headers:`, {
+        remaining: oddsResponse.headers.get('x-requests-remaining'),
+        used: oddsResponse.headers.get('x-requests-used'),
+        last: oddsResponse.headers.get('x-requests-last')
+      });
+      
       if (!oddsResponse.ok) {
         console.error(`❌ The Odds API error: ${oddsResponse.status} ${oddsResponse.statusText}`);
         const errorText = await oddsResponse.text();
@@ -11166,18 +11173,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const oddsData = await oddsResponse.json();
       console.log(`📈 Received ${oddsData.length} fixtures from The Odds API`);
+      
+      if (oddsData.length === 0) {
+        console.warn(`⚠️ No fixtures returned from The Odds API for soccer_epl`);
+        // Try to get available sports to debug
+        try {
+          const sportsUrl = `https://api.the-odds-api.com/v4/sports?apiKey=${process.env.ODDS_API_KEY}`;
+          const sportsResponse = await fetch(sportsUrl);
+          const sportsData = await sportsResponse.json();
+          console.log(`📊 Available sports:`, sportsData.filter((sport: any) => sport.key.includes('soccer')).map((sport: any) => sport.key));
+        } catch (debugError) {
+          console.error("Debug error:", debugError);
+        }
+      }
 
       // Process real market data
       const spreadBettingData = oddsData.map((fixture: any) => {
+        console.log(`🏈 Processing fixture: ${fixture.home_team} vs ${fixture.away_team}`);
+        
         // Find matching FPL teams
-        const homeTeam = bootstrapData.teams.find((team: any) => 
+        const homeTeam = bootstrapData?.teams?.find((team: any) => 
           team.name.toLowerCase().includes(fixture.home_team.toLowerCase()) ||
           fixture.home_team.toLowerCase().includes(team.name.toLowerCase())
         );
-        const awayTeam = bootstrapData.teams.find((team: any) => 
+        const awayTeam = bootstrapData?.teams?.find((team: any) => 
           team.name.toLowerCase().includes(fixture.away_team.toLowerCase()) ||
           fixture.away_team.toLowerCase().includes(team.name.toLowerCase())
         );
+        
+        console.log(`🔍 Team mapping: ${fixture.home_team} -> ${homeTeam?.name || 'Not found'}, ${fixture.away_team} -> ${awayTeam?.name || 'Not found'}`);
 
         // Extract total goals and spreads from bookmaker data
         let totalGoalsData = null;
@@ -11251,7 +11275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Determine gameweek from FPL fixtures if teams match
         let gameweek = 4; // Default to GW4
-        if (homeTeam && awayTeam) {
+        if (homeTeam && awayTeam && bootstrapData?.fixtures) {
           const fplFixture = bootstrapData.fixtures.find((fix: any) => 
             fix.team_h === homeTeam.id && fix.team_a === awayTeam.id &&
             !fix.finished && fix.event >= 4
