@@ -2704,6 +2704,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clear cached data to force recalculation with new settings
       totalPointsCache.clear();
+      
+      // Clear database cache for clean sheet projections
+      await db.delete(teamCleanSheetProjections)
+        .where(eq(teamCleanSheetProjections.season, '2025/26'));
+      
       console.log("Clean sheet admin settings updated, projection model will use new parameters");
       
       res.json({
@@ -2739,6 +2744,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clear cached data to force recalculation with reset settings
       totalPointsCache.clear();
+      
+      // Clear database cache for clean sheet projections
+      await db.delete(teamCleanSheetProjections)
+        .where(eq(teamCleanSheetProjections.season, '2025/26'));
+      
       console.log("Clean sheet admin settings reset to default values");
       
       res.json({
