@@ -3,10 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 import { Target, Search, Filter, Trophy } from "lucide-react";
+
+interface BootstrapData {
+  events: Array<{ id: number; is_current: boolean; finished: boolean }>;
+}
 
 type PlayerProjection = {
   id: number;
@@ -103,11 +107,35 @@ function createGoalProjectionsColumns(): TableColumn<PlayerProjection>[] {
 }
 
 export default function PlayerGoalProjections() {
+  // Fetch bootstrap data to get current gameweek
+  const { data: bootstrapData } = useQuery<BootstrapData>({
+    queryKey: ["/api/bootstrap-static"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Calculate current gameweek and upcoming gameweeks
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 3; // Default fallback
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    return currentEvent ? currentEvent.id : 3;
+  }, [bootstrapData]);
+
+  const nextGameweek = currentGameweek + 1;
+  const defaultEndGameweek = Math.min(nextGameweek + 5, 38); // Next 6 gameweeks or up to GW38
+
   const [searchFilter, setSearchFilter] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
-  const [startGameweek, setStartGameweek] = useState(4); // Default to next 6 gameweeks
-  const [endGameweek, setEndGameweek] = useState(9);
+  const [startGameweek, setStartGameweek] = useState(nextGameweek);
+  const [endGameweek, setEndGameweek] = useState(defaultEndGameweek);
+
+  // Update start and end gameweeks when bootstrap data loads
+  useMemo(() => {
+    if (bootstrapData && startGameweek === nextGameweek) { // Only update if still at default
+      setStartGameweek(nextGameweek);
+      setEndGameweek(defaultEndGameweek);
+    }
+  }, [bootstrapData, nextGameweek, defaultEndGameweek, startGameweek]);
   const [sortField, setSortField] = useState<SortField>("projectedGoals");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
@@ -255,7 +283,7 @@ export default function PlayerGoalProjections() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
+                  {Array.from({ length: 38 - nextGameweek + 1 }, (_, i) => nextGameweek + i).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
@@ -269,7 +297,7 @@ export default function PlayerGoalProjections() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
+                  {Array.from({ length: 38 - nextGameweek + 1 }, (_, i) => nextGameweek + i).filter(gw => gw >= startGameweek).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
