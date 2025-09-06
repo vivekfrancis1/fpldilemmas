@@ -511,7 +511,6 @@ export default function PlayerAssistProjections() {
                       <tbody>
                         {filteredAndSortedData.map((player, index) => {
                           const filteredGwPoints = Math.round(getFilteredTotal(player) * 3 * 10) / 10; // 3 points per assist
-                          const seasonPoints = Math.round(player.totalProjectedAssists * 3 * 10) / 10;
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
                             <td className="py-3 px-1">
@@ -563,9 +562,6 @@ export default function PlayerAssistProjections() {
                             </td>
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
                               {filteredGwPoints}
-                            </td>
-                            <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {seasonPoints}
                             </td>
                           </tr>
                           );

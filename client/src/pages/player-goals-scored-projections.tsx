@@ -397,7 +397,7 @@ export default function PlayerGoalsScoredProjections() {
         </Card>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
               <div className="text-center">
@@ -414,17 +414,6 @@ export default function PlayerGoalsScoredProjections() {
                   {activeTab === "points" ? totalGoals.pointsOverallTotal.toFixed(1) : totalGoals.overallTotal.toFixed(2)}
                 </p>
                 <p className="text-sm text-gray-600">{selectedGameweeks.length} GW {activeTab === "points" ? "Points" : "Goals"}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">
-                  {activeTab === "points" ? totalGoals.pointsSeasonTotal.toFixed(1) : totalGoals.seasonTotal.toFixed(2)}
-                </p>
-                <p className="text-sm text-gray-600">Season {activeTab === "points" ? "Points" : "Goals"}</p>
               </div>
             </CardContent>
           </Card>
