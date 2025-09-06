@@ -11511,6 +11511,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Spread Betting Cache Management Endpoint
+  app.post("/api/spread-betting-cache/update", async (req, res) => {
+    try {
+      console.log("🚀 Manual spread betting cache update triggered");
+      
+      const freshData = await spreadBettingCacheService.fetchFreshData();
+      
+      if (freshData.length > 0) {
+        await spreadBettingCacheService.cacheData(freshData);
+        res.json({ 
+          success: true, 
+          message: "Spread betting data cache updated successfully",
+          fixturesCount: freshData.length,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(503).json({
+          success: false,
+          message: "Failed to fetch fresh spread betting data",
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error("Error updating spread betting cache:", error);
+      res.status(500).json({ 
+        error: "Failed to update spread betting cache",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Helper function to get team strength for supremacy calculation
   function getTeamStrength(teamId: number): number {
     const { 
