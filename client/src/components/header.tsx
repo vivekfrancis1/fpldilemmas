@@ -18,13 +18,20 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
   const handleLogout = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout");
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Clear all auth-related queries from cache
+      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.clear(); // Clear all cached data for security
+      
       toast({
         title: "Logged out",
         description: "You have been logged out successfully",
       });
+      
+      // Navigate to home page after successful logout
       setLocation("/");
     } catch (error) {
+      console.error("Logout error:", error);
       toast({
         title: "Logout failed",
         description: "There was an error logging out",
