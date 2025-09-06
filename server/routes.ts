@@ -7678,7 +7678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           playerId: fplPlayer.id,
           name: fplPlayer.web_name,
           fullName: `${fplPlayer.first_name} ${fplPlayer.second_name}`,
-          team: team?.name || 'Unknown',
+          team: team?.short_name || 'UNK',
           position: position,
           price: fplPlayer.now_cost / 10,
           ownership: parseFloat(fplPlayer.selected_by_percent),
