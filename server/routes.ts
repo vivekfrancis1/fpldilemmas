@@ -6155,16 +6155,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Base minutes calculation on current minutes and games played
         const totalMinutes = player.minutes || 0;
         const totalGames = Math.max(currentGameweek - 1, 1); // Avoid division by zero
-        const currentMinutesPerGame = totalMinutes / totalGames;
+        const currentMinutesPerGame = Math.min(90, totalMinutes / totalGames); // Cap at 90 minutes per game
         
         // Expected minutes estimation based on current form and role
         let expectedMinutesPerGame = 0;
         if (currentMinutesPerGame >= 75) {
           // Regular starter
-          expectedMinutesPerGame = Math.min(88, currentMinutesPerGame * 1.02); // Slight boost for consistent starters
+          expectedMinutesPerGame = Math.min(90, currentMinutesPerGame * 1.02); // Slight boost for consistent starters, capped at 90
         } else if (currentMinutesPerGame >= 45) {
           // Squad rotation player
-          expectedMinutesPerGame = currentMinutesPerGame * 1.0; // Maintain current rate
+          expectedMinutesPerGame = Math.min(90, currentMinutesPerGame * 1.0); // Maintain current rate, capped at 90
         } else if (currentMinutesPerGame >= 20) {
           // Substitute/impact player
           expectedMinutesPerGame = Math.min(60, currentMinutesPerGame * 1.15); // Potential for more opportunities
@@ -6179,7 +6179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Adjust based on form and recent performances
         const form = parseFloat(player.form) || 0;
         const formAdjustment = Math.max(0.8, Math.min(1.2, 1 + (form - 5) / 20)); // Form adjustment between 0.8-1.2
-        expectedMinutesPerGame *= formAdjustment;
+        expectedMinutesPerGame = Math.min(90, expectedMinutesPerGame * formAdjustment); // Apply form adjustment and cap at 90
         
 
         
@@ -7304,7 +7304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const ownership = parseFloat(player.selected_by_percent || "0");
           
           const minutesPlayed = parseInt(player.minutes || "0");
-          const gamesPlayed = Math.max(1, Math.floor(minutesPlayed / 90));
+          const gamesPlayed = Math.max(1, bootstrapData.events.filter((event: any) => event.finished).length || 1); // Use actual completed games, not calculated from minutes
           const xgPerGame = (parseFloat(player.expected_goals || "0") / Math.max(1, gamesPlayed)) * (availability / 100);
           const xaPerGame = (parseFloat(player.expected_assists || "0") / Math.max(1, gamesPlayed)) * (availability / 100);
           
@@ -7316,7 +7316,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let predictedBonus = 0;
           
           if (availability >= 75) {
-            const expectedMinutes = Math.min(90, (minutesPlayed / Math.max(1, gamesPlayed)) * (availability / 100));
+            const currentMinutesPerGame = Math.min(90, minutesPlayed / Math.max(1, gamesPlayed)); // Cap at 90 minutes per game
+            const expectedMinutes = Math.min(90, currentMinutesPerGame * (availability / 100));
             predictedMinutes = Math.round(expectedMinutes);
             
             if (positionName === "GKP") {
