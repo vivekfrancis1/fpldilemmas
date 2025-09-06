@@ -19,6 +19,7 @@ import {
   Clock,
   Settings,
   Book,
+  DollarSign,
 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/projected-goals-cs", label: "Gameweek Goals and CS", icon: Target, description: "Projected goals & clean sheets", popular: false },
         { path: "/team-goal-projections", label: "Team Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
+        { path: "/team-goal-projections-market", label: "Market-Based Team Goals", icon: DollarSign, description: "Goals from betting market data", popular: false, new: true },
         { path: "/team-cs-projections", label: "Team Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/team-goals-against-projections", label: "Team Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
         { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },

@@ -38,6 +38,7 @@ import ProjectedGoalsCS from "./pages/projected-goals-cs";
 import ProjectedStandings from "./pages/projected-standings";
 import PredictedScores from "./pages/predicted-scores";
 import TeamGoalProjections from "./pages/team-goal-projections";
+import TeamGoalProjectionsMarket from "./pages/team-goal-projections-market";
 import TeamGoalsAgainstProjections from "./pages/team-goals-against-projections";
 import TeamAssistProjections from "./pages/team-assist-projections";
 import TeamCSProjections from "./pages/team-cs-projections";
@@ -87,6 +88,7 @@ function Router() {
       <Route path="/player-cleansheet-points" component={PlayerCleanSheetPoints} />
       <Route path="/player-total-points" component={PlayerTotalPoints} />
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
+      <Route path="/team-goal-projections-market" component={TeamGoalProjectionsMarket} />
       <Route path="/team-goals-against-projections" component={TeamGoalsAgainstProjections} />
       <Route path="/team-assist-projections" component={TeamAssistProjections} />
       <Route path="/team-cs-projections" component={TeamCSProjections} />
