@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, RotateCcw, Save, AlertTriangle, Users, Shield, TrendingUp, Target, BarChart3 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PREMIER_LEAGUE_TEAMS } from "@shared/schema";
+import ProtectedRoute from "@/components/protected-route";
 
 interface Team {
   id: number;
@@ -672,7 +673,8 @@ export default function AdminGoalProjections() {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <ProtectedRoute requireAdmin={true}>
+      <div className="container mx-auto p-6">
       <div className="flex items-center gap-2 mb-6">
         <Settings className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Configuration Portal - Team Goals Scored</h1>
@@ -2004,5 +2006,6 @@ export default function AdminGoalProjections() {
         </Card>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

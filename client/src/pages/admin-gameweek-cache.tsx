@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { RefreshCw, Database, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import ProtectedRoute from "@/components/protected-route";
 
 interface GameweekCacheStatus {
   cachedGameweeks: number[];
@@ -112,7 +113,8 @@ export default function AdminGameweekCache() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
+    <ProtectedRoute requireAdmin={true}>
+      <div className="max-w-6xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Gameweek Data Cache Admin</h1>
@@ -376,5 +378,6 @@ export default function AdminGameweekCache() {
         </CardContent>
       </Card>
     </div>
+    </ProtectedRoute>
   );
 }

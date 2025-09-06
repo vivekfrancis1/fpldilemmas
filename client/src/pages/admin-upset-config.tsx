@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Settings, RotateCcw, Save, AlertTriangle, Zap, Target, TrendingDown, DicesIcon, Calculator } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiRequest } from "@/lib/queryClient";
+import ProtectedRoute from "@/components/protected-route";
 
 interface UpsetConfig {
   // Enable/disable options
@@ -338,7 +339,8 @@ export default function AdminUpsetConfig() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6" data-testid="admin-upset-config">
+    <ProtectedRoute requireAdmin={true}>
+      <div className="container mx-auto py-8 space-y-6" data-testid="admin-upset-config">
       <div className="flex items-center gap-3">
         <Settings className="h-8 w-8 text-blue-600" />
         <div>
@@ -861,5 +863,6 @@ export default function AdminUpsetConfig() {
         </div>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle, Clock, AlertCircle } from "lucide-react";
+import ProtectedRoute from "@/components/protected-route";
 
 export default function AdminDataPopulation() {
   const [populationStatus, setPopulationStatus] = useState<Record<string, 'pending' | 'running' | 'completed' | 'error'>>({});
@@ -70,7 +71,8 @@ export default function AdminDataPopulation() {
   const progress = (completedSeasons / seasons.length) * 100;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <ProtectedRoute requireAdmin={true}>
+      <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Historical Data Population</h1>
         <p className="text-muted-foreground mt-2">
@@ -146,5 +148,6 @@ export default function AdminDataPopulation() {
         })}
       </div>
     </div>
+    </ProtectedRoute>
   );
 }
