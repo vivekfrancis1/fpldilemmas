@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
+import RefreshButton from "@/components/refresh-button";
 
 interface HeaderProps {
   onSidebarToggle: () => void;
@@ -64,6 +65,7 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
         </div>
         
         <div className="flex items-center space-x-2">
+          <RefreshButton />
           {!isLoading && (
             <>
               {isAuthenticated ? (
