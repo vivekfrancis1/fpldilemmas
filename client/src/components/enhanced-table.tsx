@@ -77,12 +77,48 @@ export function EnhancedTable<T = any>({
     );
   }
 
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft = Math.max(0, scrollContainerRef.current.scrollLeft - 200);
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft += 200;
+    }
+  };
+
+  const scrollToStart = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft = 0;
+    }
+  };
+
   return (
     <div className={cn(
       "rounded-lg border bg-white shadow-sm overflow-hidden",
       className
     )}>
+      {/* Scroll Controls */}
+      <div className="flex justify-between items-center px-4 py-2 bg-gray-50 border-b">
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={scrollToStart} className="text-xs">
+            ⏮ Start
+          </Button>
+          <Button variant="outline" size="sm" onClick={scrollLeft} className="text-xs">
+            ← Left
+          </Button>
+          <Button variant="outline" size="sm" onClick={scrollRight} className="text-xs">
+            Right →
+          </Button>
+        </div>
+        <span className="text-xs text-gray-500">Use scrollbar, buttons, or arrow keys to navigate</span>
+      </div>
       <div 
+        ref={scrollContainerRef}
         className="overflow-x-scroll w-full"
         style={{ 
           overflowX: 'scroll',
@@ -93,7 +129,7 @@ export function EnhancedTable<T = any>({
           display: 'block',
           scrollbarWidth: 'auto',
           scrollSnapType: 'none',
-          overscrollBehaviorX: 'contain'
+          overscrollBehaviorX: 'auto'
         }}
         onScroll={(e) => {
           // Ensure scroll position is preserved
@@ -107,6 +143,24 @@ export function EnhancedTable<T = any>({
           const target = e.currentTarget as HTMLElement;
           target.scrollLeft = 0;
         }}
+        onKeyDown={(e) => {
+          // Arrow key navigation
+          const target = e.currentTarget as HTMLElement;
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            target.scrollLeft = Math.max(0, target.scrollLeft - 50);
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            target.scrollLeft += 50;
+          } else if (e.key === 'Home') {
+            e.preventDefault();
+            target.scrollLeft = 0;
+          } else if (e.key === 'End') {
+            e.preventDefault();
+            target.scrollLeft = target.scrollWidth - target.clientWidth;
+          }
+        }}
+        tabIndex={0}
       >
         <table className="w-full" style={{ minWidth: 'max-content', tableLayout: 'auto' }}>
           <thead className={cn(

@@ -400,34 +400,64 @@ button, a, input, select, textarea {
   scrollbar-width: auto !important; /* Firefox */
   /* Ensure proper scroll behavior */
   scroll-snap-type: none !important;
-  overscroll-behavior-x: contain !important;
+  overscroll-behavior-x: auto !important;
+  /* Force directional scrolling */
+  scroll-behavior: auto !important;
+  direction: ltr !important;
 }
 
-/* Custom scrollbar styling for horizontal tables */
+/* Custom scrollbar styling for horizontal tables - Chrome optimized */
 .overflow-x-scroll::-webkit-scrollbar {
-  height: 16px !important;
-  background-color: #e2e8f0 !important;
+  height: 18px !important;
+  background-color: #f8fafc !important;
   border-radius: 0 !important;
 }
 
 .overflow-x-scroll::-webkit-scrollbar-track {
-  background: #e2e8f0 !important;
+  background: #f1f5f9 !important;
   border-radius: 0 !important;
+  box-shadow: inset 0 0 1px rgba(0,0,0,0.1) !important;
 }
 
 .overflow-x-scroll::-webkit-scrollbar-thumb {
-  background: #64748b !important;
+  background: linear-gradient(180deg, #64748b 0%, #475569 100%) !important;
   border-radius: 0 !important;
-  border: none !important;
-  min-width: 20px !important;
+  border: 1px solid #334155 !important;
+  min-width: 30px !important;
+  cursor: pointer !important;
 }
 
 .overflow-x-scroll::-webkit-scrollbar-thumb:hover {
-  background: #475569 !important;
+  background: linear-gradient(180deg, #475569 0%, #334155 100%) !important;
 }
 
 .overflow-x-scroll::-webkit-scrollbar-thumb:active {
-  background: #334155 !important;
+  background: #1e293b !important;
+}
+
+/* Chrome specific fixes */
+.overflow-x-scroll::-webkit-scrollbar-button {
+  width: 20px !important;
+  height: 18px !important;
+  background: #cbd5e1 !important;
+  border: 1px solid #94a3b8 !important;
+  display: block !important;
+}
+
+.overflow-x-scroll::-webkit-scrollbar-button:hover {
+  background: #94a3b8 !important;
+}
+
+.overflow-x-scroll::-webkit-scrollbar-button:horizontal:decrement {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23475569' viewBox='0 0 16 16'%3e%3cpath d='M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z'/%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+.overflow-x-scroll::-webkit-scrollbar-button:horizontal:increment {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23475569' viewBox='0 0 16 16'%3e%3cpath d='M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
 }
 
 /* Force visibility on all browsers */
