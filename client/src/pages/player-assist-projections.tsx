@@ -339,9 +339,9 @@ export default function PlayerAssistProjections() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'visible', width: '100%', maxWidth: '100%', height: 'auto', display: 'block', scrollbarWidth: 'auto', scrollSnapType: 'none', overscrollBehaviorX: 'contain' }} onDoubleClick={(e) => { const target = e.currentTarget as HTMLElement; target.scrollLeft = 0; }}>
-                    <table className="w-full" style={{ minWidth: '1200px', tableLayout: 'auto' }}>
-                      <thead className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b">
                         <tr>
                           <th className="text-left py-3 px-4 font-semibold sticky left-0 bg-gradient-to-r from-blue-600 to-indigo-700 border-r border-blue-500 z-10">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white">
