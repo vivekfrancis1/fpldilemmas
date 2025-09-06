@@ -262,8 +262,8 @@ export default function PlayerAssistProjections() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    {positions.map(position => (
-                      <SelectItem key={position} value={position}>{position}</SelectItem>
+                    {positions.map((position, index) => (
+                      <SelectItem key={`pos-${position}-${index}`} value={position}>{position}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -278,8 +278,8 @@ export default function PlayerAssistProjections() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    {teams.map(team => (
-                      <SelectItem key={team} value={team}>{team}</SelectItem>
+                    {teams.map((team, index) => (
+                      <SelectItem key={`team-${team}-${index}`} value={team}>{team}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -293,8 +293,8 @@ export default function PlayerAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableGameweeks.filter(gw => gw >= nextGameweek).map(gw => (
-                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    {availableGameweeks.filter(gw => gw >= nextGameweek).map((gw, index) => (
+                      <SelectItem key={`start-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -304,8 +304,8 @@ export default function PlayerAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableGameweeks.filter(gw => gw >= nextGameweek && gw >= startGameweek).map(gw => (
-                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    {availableGameweeks.filter(gw => gw >= nextGameweek && gw >= startGameweek).map((gw, index) => (
+                      <SelectItem key={`end-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -404,7 +404,7 @@ export default function PlayerAssistProjections() {
                                 <span className="font-medium text-sm">{player.playerName}</span>
                                 <div className="flex items-center gap-1 mt-1">
                                   <Badge variant="outline" className="text-xs">
-                                    {player.position === 'MID' ? 'MID' : player.position.charAt(0)}
+                                    {player.position === 'MID' ? 'MID' : player.position?.charAt(0) || 'N/A'}
                                   </Badge>
                                   <Badge variant="outline" className="text-xs">
                                     {player.teamShort}
@@ -530,7 +530,7 @@ export default function PlayerAssistProjections() {
                                 <span className="font-medium text-sm">{player.playerName}</span>
                                 <div className="flex items-center gap-1 mt-1">
                                   <Badge variant="outline" className="text-xs">
-                                    {player.position === 'MID' ? 'MID' : player.position.charAt(0)}
+                                    {player.position === 'MID' ? 'MID' : player.position?.charAt(0) || 'N/A'}
                                   </Badge>
                                   <Badge variant="outline" className="text-xs">
                                     {player.teamShort}
