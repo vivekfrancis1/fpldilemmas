@@ -7884,23 +7884,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Populate FPL scoring component projections from database cache data
       savesData.forEach((player: any) => {
-        savesProjections[player.playerId] = player.gameweek_data as Record<string, number>;
-        savesPointsProjections[player.playerId] = player.points_data as Record<string, number>;
+        savesProjections[player.playerId] = typeof player.gameweekData === 'string' ? JSON.parse(player.gameweekData) : player.gameweekData;
+        savesPointsProjections[player.playerId] = typeof player.pointsData === 'string' ? JSON.parse(player.pointsData) : player.pointsData;
       });
 
       goalsConcededData.forEach((player: any) => {
-        goalsConcededProjections[player.playerId] = player.gameweek_data as Record<string, number>;
-        goalsConcededPointsProjections[player.playerId] = player.points_data as Record<string, number>;
+        goalsConcededProjections[player.playerId] = typeof player.gameweekData === 'string' ? JSON.parse(player.gameweekData) : player.gameweekData;
+        goalsConcededPointsProjections[player.playerId] = typeof player.pointsData === 'string' ? JSON.parse(player.pointsData) : player.pointsData;
       });
 
       yellowCardsData.forEach((player: any) => {
-        yellowCardsProjections[player.playerId] = player.gameweek_data as Record<string, number>;
-        yellowCardsPointsProjections[player.playerId] = player.points_data as Record<string, number>;
+        yellowCardsProjections[player.playerId] = typeof player.gameweekData === 'string' ? JSON.parse(player.gameweekData) : player.gameweekData;
+        yellowCardsPointsProjections[player.playerId] = typeof player.pointsData === 'string' ? JSON.parse(player.pointsData) : player.pointsData;
       });
 
       redCardsData.forEach((player: any) => {
-        redCardsProjections[player.playerId] = player.gameweek_data as Record<string, number>;
-        redCardsPointsProjections[player.playerId] = player.points_data as Record<string, number>;
+        redCardsProjections[player.playerId] = typeof player.gameweekData === 'string' ? JSON.parse(player.gameweekData) : player.gameweekData;
+        redCardsPointsProjections[player.playerId] = typeof player.pointsData === 'string' ? JSON.parse(player.pointsData) : player.pointsData;
       });
 
       // Process bonus probabilities data with simplified calculation (Probability × 1)
