@@ -578,7 +578,10 @@ export default function PlayerGoalsScoredProjections() {
                           </Badge>
                         </td>
                         <td className="py-3 px-2 text-center text-sm text-gray-600">
-                          {player.position === 'Midfielder' ? 'MID' : player.position}
+                          {player.position === 'Midfielder' ? 'MID' : 
+                           player.position === 'Defender' ? 'DEF' :
+                           player.position === 'Forward' ? 'FWD' :
+                           player.position === 'Goalkeeper' ? 'GKP' : player.position}
                         </td>
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw] || 0;
@@ -771,7 +774,10 @@ export default function PlayerGoalsScoredProjections() {
                           </Badge>
                         </td>
                         <td className="py-3 px-2 text-center text-sm text-gray-600">
-                          {player.position === 'Midfielder' ? 'MID' : player.position}
+                          {player.position === 'Midfielder' ? 'MID' : 
+                           player.position === 'Defender' ? 'DEF' :
+                           player.position === 'Forward' ? 'FWD' :
+                           player.position === 'Goalkeeper' ? 'GKP' : player.position}
                         </td>
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw] || 0;
