@@ -20,6 +20,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
+import { SpreadBettingCacheService } from "./spread-betting-cache";
 import { projectionService } from "./projection-service";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
@@ -10995,6 +10996,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import FPL Scoring Cache Service
   const { fplScoringCacheService } = await import("./fpl-scoring-cache-service");
 
+  // Import Spread Betting Cache Service
+  const spreadBettingCacheService = SpreadBettingCacheService.getInstance();
+
   // Cached FPL Scoring Component Endpoints - Serve data from database
   app.get("/api/cached/player-saves-projections", async (req, res) => {
     try {
@@ -11130,39 +11134,196 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ FPL Scoring Cache API routes registered successfully");
 
-  // Team Goals - Spread Betting API (Real Market Data)
+  // Team Goals - Spread Betting API (Cached Real Market Data)
   app.get("/api/team-goals-spread-betting", async (req, res) => {
     try {
-      console.log("📊 Fetching Real Spread Betting Market Data from The Odds API");
+      console.log("📊 Team Goals Spread Betting API - Checking cache and fetching data");
+      
+      // Check if we have fresh data for today
+      const hasFreshData = await spreadBettingCacheService.hasFreshData();
+      
+      if (hasFreshData) {
+        console.log("✅ Using cached spread betting data");
+        const cachedData = await spreadBettingCacheService.getCachedData();
+        
+        // Transform cached data to match expected API format
+        const transformedData = cachedData.map(item => ({
+          id: item.fixtureId,
+          gameweek: item.gameweek,
+          kickoffTime: item.kickoffTime,
+          homeTeam: {
+            id: item.homeTeamId,
+            name: item.homeTeamName,
+            shortName: item.homeTeamShortName,
+            totalGoalsSpread: {
+              sell: item.totalGoalsSell,
+              buy: item.totalGoalsBuy
+            },
+            supremacySpread: {
+              sell: item.supremacySell,
+              buy: item.supremacyBuy
+            },
+            expectedGoals: item.homeExpectedGoals,
+            confidence: item.marketConfidence
+          },
+          awayTeam: {
+            id: item.awayTeamId,
+            name: item.awayTeamName,
+            shortName: item.awayTeamShortName,
+            totalGoalsSpread: {
+              sell: item.totalGoalsSell,
+              buy: item.totalGoalsBuy
+            },
+            supremacySpread: {
+              sell: -item.supremacyBuy,
+              buy: -item.supremacySell
+            },
+            expectedGoals: item.awayExpectedGoals,
+            confidence: item.marketConfidence
+          },
+          matchData: {
+            totalGoalsMidpoint: item.totalGoalsMidpoint,
+            supremacyMidpoint: item.supremacyMidpoint,
+            spreadConfidence: item.marketConfidence,
+            source: item.dataSource,
+            bookmakers: item.bookmakerCount
+          }
+        }));
+        
+        return res.json(transformedData);
+      }
+      
+      console.log("🔄 No fresh cache found, fetching from The Odds API");
       
       if (!process.env.ODDS_API_KEY) {
         console.error("❌ ODDS_API_KEY not found in environment variables");
+        // Fallback to any existing cached data if API key missing
+        const fallbackData = await spreadBettingCacheService.getCachedData();
+        if (fallbackData.length > 0) {
+          console.log("⚠️ Using fallback cached data due to missing API key");
+          return res.json(fallbackData);
+        }
         return res.status(500).json({ error: "API key not configured" });
       }
 
-      // Get FPL data for team mapping
-      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
-      const bootstrapData = await bootstrapResponse.json();
+      // Fetch fresh data from The Odds API
+      const freshData = await spreadBettingCacheService.fetchFreshData();
       
-      // Fetch real Premier League odds from The Odds API
-      const oddsApiUrl = `https://api.the-odds-api.com/v4/sports/soccer_epl/odds`;
-      const oddsParams = new URLSearchParams({
-        apiKey: process.env.ODDS_API_KEY,
-        regions: 'uk,us,eu',
-        markets: 'totals,spreads',
-        oddsFormat: 'decimal',
-        dateFormat: 'iso'
+      if (freshData.length > 0) {
+        // Cache the fresh data
+        await spreadBettingCacheService.cacheData(freshData);
+        console.log("✅ Fresh data cached successfully");
+        
+        // Transform fresh data to match expected API format
+        const transformedData = freshData.map(item => ({
+          id: item.fixtureId,
+          gameweek: item.gameweek,
+          kickoffTime: item.kickoffTime,
+          homeTeam: {
+            id: item.homeTeamId,
+            name: item.homeTeamName,
+            shortName: item.homeTeamShortName,
+            totalGoalsSpread: {
+              sell: item.totalGoalsSell,
+              buy: item.totalGoalsBuy
+            },
+            supremacySpread: {
+              sell: item.supremacySell,
+              buy: item.supremacyBuy
+            },
+            expectedGoals: item.homeExpectedGoals,
+            confidence: item.marketConfidence
+          },
+          awayTeam: {
+            id: item.awayTeamId,
+            name: item.awayTeamName,
+            shortName: item.awayTeamShortName,
+            totalGoalsSpread: {
+              sell: item.totalGoalsSell,
+              buy: item.totalGoalsBuy
+            },
+            supremacySpread: {
+              sell: -item.supremacyBuy,
+              buy: -item.supremacySell
+            },
+            expectedGoals: item.awayExpectedGoals,
+            confidence: item.marketConfidence
+          },
+          matchData: {
+            totalGoalsMidpoint: item.totalGoalsMidpoint,
+            supremacyMidpoint: item.supremacyMidpoint,
+            spreadConfidence: item.marketConfidence,
+            source: item.dataSource,
+            bookmakers: item.bookmakerCount
+          }
+        }));
+        
+        return res.json(transformedData);
+      } else {
+        // Fallback to any existing cached data if API fails
+        console.log("⚠️ API fetch failed, trying cached data as fallback");
+        const fallbackData = await spreadBettingCacheService.getCachedData();
+        
+        if (fallbackData.length > 0) {
+          const transformedData = fallbackData.map(item => ({
+            id: item.fixtureId,
+            gameweek: item.gameweek,
+            kickoffTime: item.kickoffTime,
+            homeTeam: {
+              id: item.homeTeamId,
+              name: item.homeTeamName,
+              shortName: item.homeTeamShortName,
+              totalGoalsSpread: {
+                sell: item.totalGoalsSell,
+                buy: item.totalGoalsBuy
+              },
+              supremacySpread: {
+                sell: item.supremacySell,
+                buy: item.supremacyBuy
+              },
+              expectedGoals: item.homeExpectedGoals,
+              confidence: item.marketConfidence
+            },
+            awayTeam: {
+              id: item.awayTeamId,
+              name: item.awayTeamName,
+              shortName: item.awayTeamShortName,
+              totalGoalsSpread: {
+                sell: item.totalGoalsSell,
+                buy: item.totalGoalsBuy
+              },
+              supremacySpread: {
+                sell: -item.supremacyBuy,
+                buy: -item.supremacySell
+              },
+              expectedGoals: item.awayExpectedGoals,
+              confidence: item.marketConfidence
+            },
+            matchData: {
+              totalGoalsMidpoint: item.totalGoalsMidpoint,
+              supremacyMidpoint: item.supremacyMidpoint,
+              spreadConfidence: item.marketConfidence,
+              source: item.dataSource,
+              bookmakers: item.bookmakerCount
+            }
+          }));
+          
+          return res.json(transformedData);
+        }
+        
+        return res.status(503).json({ 
+          error: "Service temporarily unavailable", 
+          details: "Unable to fetch fresh data and no cached data available" 
+        });
+      }
+    } catch (error) {
+      console.error("Error in spread betting API:", error);
+      res.status(500).json({ 
+        error: "Failed to get spread betting data", 
+        details: error instanceof Error ? error.message : "Unknown error"
       });
-
-      console.log(`🔗 Calling The Odds API: ${oddsApiUrl}?${oddsParams}`);
-      const oddsResponse = await fetch(`${oddsApiUrl}?${oddsParams}`);
-      
-      console.log(`📊 API Response Status: ${oddsResponse.status} ${oddsResponse.statusText}`);
-      console.log(`📊 Response Headers:`, {
-        remaining: oddsResponse.headers.get('x-requests-remaining'),
-        used: oddsResponse.headers.get('x-requests-used'),
-        last: oddsResponse.headers.get('x-requests-last')
-      });
+    }
+  });
       
       if (!oddsResponse.ok) {
         console.error(`❌ The Odds API error: ${oddsResponse.status} ${oddsResponse.statusText}`);
