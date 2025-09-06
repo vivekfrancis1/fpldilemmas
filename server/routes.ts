@@ -6276,8 +6276,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (upsetConfig.enableControlledVariance) {
           const homeVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin));
           const awayVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin));
+          const originalHome = homeExpected;
+          const originalAway = awayExpected;
           homeExpected *= homeVariance;
           awayExpected *= awayVariance;
+          console.log(`DEBUG: Variance applied - ${match.homeTeam.shortName} ${originalHome.toFixed(2)} -> ${homeExpected.toFixed(2)} (${homeVariance.toFixed(3)}x), ${match.awayTeam.shortName} ${originalAway.toFixed(2)} -> ${awayExpected.toFixed(2)} (${awayVariance.toFixed(3)}x)`);
         }
         
         // Option 3: Context-based upsets
@@ -6346,6 +6349,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Use simple rounding to ensure predictable, consistent results
         homeScore = Math.max(0, Math.round(homeExpected));
         awayScore = Math.max(0, Math.round(awayExpected));
+        
+        console.log(`DEBUG: Final scores - ${match.homeTeam.shortName} ${homeExpected.toFixed(2)} -> ${homeScore}, ${match.awayTeam.shortName} ${awayExpected.toFixed(2)} -> ${awayScore}`);
         
         // Determine match outcome
         let predictedResult;
