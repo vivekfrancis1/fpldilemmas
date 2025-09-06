@@ -20,7 +20,7 @@ interface PlayerCleanSheetData {
   seasonTotalPoints: number;
 }
 
-type SortField = 'playerName' | 'position' | 'team' | 'totalExpectedPoints' | 'seasonTotalPoints';
+type SortField = 'playerName' | 'position' | 'team' | 'totalExpectedPoints';
 
 export default function PlayerCleanSheetPoints() {
   const [startGameweek, setStartGameweek] = useState(4);
@@ -272,12 +272,6 @@ export default function PlayerCleanSheetPoints() {
                           Total {getSortIcon('totalExpectedPoints')}
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-green-700 transition-colors"
-                          onClick={() => handleSort('seasonTotalPoints')}>
-                        <div className="flex items-center justify-center gap-2">
-                          Season {getSortIcon('seasonTotalPoints')}
-                        </div>
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -315,11 +309,6 @@ export default function PlayerCleanSheetPoints() {
                         <td className="px-4 py-3 text-center">
                           <span className="inline-block px-3 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold">
                             {player.totalExpectedPoints.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className="inline-block px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold">
-                            {(player.seasonTotalPoints || 0).toFixed(1)}
                           </span>
                         </td>
                       </tr>
