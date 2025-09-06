@@ -11275,8 +11275,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(playerGoalsProjections.season, '2025/26'))
         .orderBy(desc(playerGoalsProjections.goals));
       
-      // If no cached data, return empty array
+      // If no cached data, fallback to live API
       if (!cachedData || cachedData.length === 0) {
+        console.log("⚠️ No cached player goals data found, falling back to live API");
+        try {
+          const liveResponse = await fetch("http://localhost:5000/api/player-goals-scored-projections");
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            console.log(`✅ Fallback successful, returning ${liveData.length} players from live API`);
+            return res.json(liveData);
+          }
+        } catch (error) {
+          console.error("Fallback API call failed:", error);
+        }
+        console.log("❌ Fallback failed, returning empty array");
         return res.json([]);
       }
       
