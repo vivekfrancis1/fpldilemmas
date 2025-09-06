@@ -269,7 +269,7 @@ interface PlayerTotalPointsData {
   totalPointsFromRedCards?: number;
 }
 
-type SortField = 'name' | 'position' | 'team' | 'totalExpectedPoints' | 'seasonTotalPoints' | 'averagePerGameweek' | string;
+type SortField = 'name' | 'position' | 'team' | 'totalExpectedPoints' | 'averagePerGameweek' | string;
 
 // Create columns configuration for the enhanced table
 function createPlayerTotalPointsColumns(
@@ -314,21 +314,6 @@ function createPlayerTotalPointsColumns(
       align: 'center',
       className: 'min-w-[100px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300',
       render: (_, player) => <RangeTotalBreakdownTooltip player={player} />
-    },
-    {
-      key: 'seasonTotalPoints',
-      header: 'Rest of Season Total',
-      sortable: true,
-      align: 'center',
-      className: 'min-w-[110px] bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300',
-      render: (value) => (
-        <ValueCell 
-          value={value || 0} 
-          format="points" 
-          decimals={1}
-          className="font-bold text-purple-800 text-lg"
-        />
-      )
     },
     {
       key: 'averagePerGameweek',
