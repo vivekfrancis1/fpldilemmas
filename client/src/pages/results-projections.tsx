@@ -205,7 +205,7 @@ export default function ResultsProjections() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredPredictions.map((match) => {
                       const kickoff = formatKickoffTime(match.kickoffTime);
-                      const resultType = getResultType(match.predictedHomeScore, match.predictedAwayScore);
+                      const resultType = getResultType(match.homeTeam.predictedScore, match.awayTeam.predictedScore);
                       
                       return (
                         <tr key={match.id} className="hover:bg-gray-50" data-testid={`prediction-row-${match.id}`}>
@@ -213,12 +213,12 @@ export default function ResultsProjections() {
                             <div className="flex items-center justify-between">
                               <div className="text-right">
                                 <div className="text-sm font-medium text-gray-900">{match.homeTeam}</div>
-                                <div className="text-xs text-gray-500">{match.homeTeamShort}</div>
+                                <div className="text-xs text-gray-500">{match.homeTeam.shortName}</div>
                               </div>
                               <div className="mx-4 text-xs text-gray-400">vs</div>
                               <div className="text-left">
                                 <div className="text-sm font-medium text-gray-900">{match.awayTeam}</div>
-                                <div className="text-xs text-gray-500">{match.awayTeamShort}</div>
+                                <div className="text-xs text-gray-500">{match.awayTeam.shortName}</div>
                               </div>
                             </div>
                           </td>
@@ -237,20 +237,20 @@ export default function ResultsProjections() {
                               resultType === 'away-win' ? 'bg-red-100 text-red-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {match.predictedHomeScore} - {match.predictedAwayScore}
+                              {match.homeTeam.predictedScore} - {match.awayTeam.predictedScore}
                             </div>
                           </td>
                           
                           <td className="px-4 py-4 text-center">
                             <div className="space-y-1">
                               <div className="flex justify-between text-xs">
-                                <span className="text-blue-600">{match.homeTeamShort}: {match.homeWinProbability}%</span>
+                                <span className="text-blue-600">{match.homeTeam.shortName}: {match.homeTeam.cleanSheetOdds.toFixed(1)}%</span>
                               </div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-gray-600">Draw: {match.drawProbability}%</span>
+                                <span className="text-gray-600">Expected: {match.totalExpectedGoals.toFixed(1)}</span>
                               </div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-red-600">{match.awayTeamShort}: {match.awayWinProbability}%</span>
+                                <span className="text-red-600">{match.awayTeam.shortName}: {match.awayTeam.cleanSheetOdds.toFixed(1)}%</span>
                               </div>
                             </div>
                           </td>
@@ -258,10 +258,10 @@ export default function ResultsProjections() {
                           <td className="px-4 py-4 text-center">
                             <div className="space-y-1">
                               <div className="text-xs">
-                                <span className="text-gray-600">O2.5: {match.totalGoalsProbability.over2_5}%</span>
+                                <span className="text-gray-600">Home xG: {match.homeTeam.expectedGoals.toFixed(1)}</span>
                               </div>
                               <div className="text-xs">
-                                <span className="text-gray-600">U2.5: {match.totalGoalsProbability.under2_5}%</span>
+                                <span className="text-gray-600">Away xG: {match.awayTeam.expectedGoals.toFixed(1)}</span>
                               </div>
                             </div>
                           </td>
