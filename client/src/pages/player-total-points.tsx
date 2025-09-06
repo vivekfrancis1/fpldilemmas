@@ -251,6 +251,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
 }
 
 interface PlayerTotalPointsData {
+  [key: string]: any; // Add index signature for dynamic property access
   playerId: number;
   name: string;
   fullName: string;
@@ -331,7 +332,7 @@ function createPlayerTotalPointsColumns(
       sortable: true,
       align: 'center' as const,
       className: 'min-w-[70px] bg-blue-50/30',
-      render: (_, player: PlayerTotalPointsData) => (
+      render: (_: any, player: PlayerTotalPointsData) => (
         <GameweekPointBreakdownTooltip player={player} gameweek={gw} />
       )
     })),
@@ -345,7 +346,7 @@ function createPlayerTotalPointsColumns(
     },
     {
       key: 'seasonTotalPoints',
-      header: 'Season Total',
+      header: 'Rest of Season Total',
       sortable: true,
       align: 'center',
       className: 'min-w-[110px] bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300',
@@ -376,10 +377,38 @@ function createPlayerTotalPointsColumns(
   ];
 }
 
+interface BootstrapData {
+  events: Array<{ id: number; is_current: boolean; finished: boolean }>;
+}
+
 export default function PlayerTotalPoints() {
-  const [startGameweek, setStartGameweek] = useState(4);
-  const [endGameweek, setEndGameweek] = useState(9); // Default 6 gameweeks
+  // Fetch bootstrap data to get current gameweek
+  const { data: bootstrapData } = useQuery<BootstrapData>({
+    queryKey: ["/api/bootstrap-static"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Calculate current gameweek and upcoming gameweeks
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 3; // Default fallback
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    return currentEvent ? currentEvent.id : 3;
+  }, [bootstrapData]);
+
+  const nextGameweek = currentGameweek + 1;
+  const defaultEndGameweek = Math.min(nextGameweek + 5, 38); // Next 6 gameweeks or up to GW38
+
+  const [startGameweek, setStartGameweek] = useState(nextGameweek);
+  const [endGameweek, setEndGameweek] = useState(defaultEndGameweek);
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
+
+  // Update start and end gameweeks when bootstrap data loads
+  useMemo(() => {
+    if (bootstrapData && startGameweek === nextGameweek) { // Only update if still at default
+      setStartGameweek(nextGameweek);
+      setEndGameweek(defaultEndGameweek);
+    }
+  }, [bootstrapData, nextGameweek, defaultEndGameweek, startGameweek]);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
@@ -530,7 +559,7 @@ export default function PlayerTotalPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
+                  {Array.from({ length: 38 - nextGameweek + 1 }, (_, i) => nextGameweek + i).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
@@ -544,7 +573,7 @@ export default function PlayerTotalPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
+                  {Array.from({ length: 38 - nextGameweek + 1 }, (_, i) => nextGameweek + i).filter(gw => gw >= startGameweek).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
