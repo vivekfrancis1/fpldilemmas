@@ -397,51 +397,6 @@ export default function PlayerGoalsScoredProjections() {
           </CardContent>
         </Card>
 
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{filteredProjections.length}</p>
-                <p className="text-sm text-gray-600">Players</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-blue-600">
-                  <ValueCell 
-                    value={activeTab === "points" ? totalGoals.pointsOverallTotal : totalGoals.overallTotal} 
-                    format={activeTab === "points" ? "points" : "goals"} 
-                    decimals={activeTab === "points" ? 1 : 2} 
-                    fontWeight="semibold"
-                    colorScheme={activeTab === "points" ? "points" : "goals"}
-                  />
-                </p>
-                <p className="text-sm text-gray-600">{selectedGameweeks.length} GW {activeTab === "points" ? "Points" : "Goals"}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-purple-600">
-                  <ValueCell 
-                    value={activeTab === "points" ? totalGoals.pointsAveragePerGame : totalGoals.averagePerGame} 
-                    format={activeTab === "points" ? "points" : "goals"} 
-                    decimals={activeTab === "points" ? 1 : 2} 
-                    fontWeight="medium"
-                    colorScheme={activeTab === "points" ? "points" : "goals"}
-                  />
-                </p>
-                <p className="text-sm text-gray-600">Avg {activeTab === "points" ? "Points" : "Goals"} Per GW (GW{startGameweek}-{endGameweek})</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Tab Navigation and Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
