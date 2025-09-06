@@ -579,6 +579,10 @@ export const adminGoalProjectionSettings = pgTable("admin_goal_projection_settin
   absoluteMinGoals: decimal("absolute_min_goals", { precision: 4, scale: 2 }).default("0.3"),
   absoluteMaxGoals: decimal("absolute_max_goals", { precision: 4, scale: 2 }).default("4.2"),
   
+  // Clean Sheet Parameters
+  cleanSheetExponent: decimal("clean_sheet_exponent", { precision: 4, scale: 2 }).default("1.0"),
+  cleanSheetMultiplier: decimal("clean_sheet_multiplier", { precision: 4, scale: 2 }).default("100"),
+  
   // Metadata
   lastUpdated: timestamp("last_updated").defaultNow(),
   updatedBy: varchar("updated_by").default("admin"),
