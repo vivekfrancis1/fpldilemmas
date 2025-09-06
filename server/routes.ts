@@ -11661,13 +11661,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cached Goal Share data
+  // Cached Goal Share data - fallback to live API if cache not ready
   app.get("/api/cached/goal-share", async (req, res) => {
     try {
       console.log("📊 Serving cached goal share data from database");
       const cachedData = await db.select().from(teamProjections)
         .where(eq(teamProjections.season, '2025/26'))
         .orderBy(teamProjections.teamId);
+      
+      // If no cached data, fallback to live API
+      if (!cachedData || cachedData.length === 0) {
+        console.log("📊 No cached data found, falling back to live Goal Share API");
+        const response = await fetch('http://localhost:5000/api/goal-share-season');
+        const liveData = await response.json();
+        return res.json(liveData);
+      }
       
       // Transform the cached data to match expected format
       const goalShareData = cachedData.map(team => ({
@@ -11680,17 +11688,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(goalShareData);
     } catch (error) {
       console.error("Error fetching cached goal share data:", error);
-      res.status(500).json({ error: "Failed to fetch cached goal share data" });
+      // Fallback to live API on error
+      try {
+        const response = await fetch('http://localhost:5000/api/goal-share-season');
+        const liveData = await response.json();
+        res.json(liveData);
+      } catch (fallbackError) {
+        res.status(500).json({ error: "Failed to fetch goal share data" });
+      }
     }
   });
 
-  // Cached Assist Share data
+  // Cached Assist Share data - fallback to live API if cache not ready
   app.get("/api/cached/assist-share", async (req, res) => {
     try {
       console.log("📊 Serving cached assist share data from database");
       const cachedData = await db.select().from(teamProjections)
         .where(eq(teamProjections.season, '2025/26'))
         .orderBy(teamProjections.teamId);
+      
+      // If no cached data, fallback to live API
+      if (!cachedData || cachedData.length === 0) {
+        console.log("📊 No cached data found, falling back to live Assist Share API");
+        const response = await fetch('http://localhost:5000/api/assist-share-season');
+        const liveData = await response.json();
+        return res.json(liveData);
+      }
       
       // Transform the cached data to match expected format
       const assistShareData = cachedData.map(team => ({
@@ -11703,7 +11726,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(assistShareData);
     } catch (error) {
       console.error("Error fetching cached assist share data:", error);
-      res.status(500).json({ error: "Failed to fetch cached assist share data" });
+      // Fallback to live API on error
+      try {
+        const response = await fetch('http://localhost:5000/api/assist-share-season');
+        const liveData = await response.json();
+        res.json(liveData);
+      } catch (fallbackError) {
+        res.status(500).json({ error: "Failed to fetch assist share data" });
+      }
     }
   });
 
