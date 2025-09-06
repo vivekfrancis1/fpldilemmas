@@ -63,7 +63,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/team-goal-projections", label: "Team Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-cs-projections", label: "Team Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/team-goals-against-projections", label: "Team Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
-        { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
         { path: "/projected-standings", label: "Predicted Standings", icon: Trophy, description: "Final league table projection", popular: false }
       ]
     },
@@ -125,6 +124,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/goal-share", label: "Goal Share", icon: Target, description: "Player goal share breakdown by team", popular: false },
         { path: "/assist-share", label: "Assist Share", icon: Zap, description: "Player assist share breakdown by team", popular: false },
+        { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
         { path: "/results-projections", label: "Results Projections", icon: Calendar, description: "Mathematical match predictions without variance", popular: false },
         { path: "/team-goals-spread-betting", label: "Team Goals Spread Betting", icon: Target, description: "Spread betting analysis", popular: false },
         { path: "/season-projections", label: "Season Projections", icon: Trophy, description: "Full season projections", popular: false }
