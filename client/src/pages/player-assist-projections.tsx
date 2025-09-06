@@ -627,7 +627,13 @@ export default function PlayerAssistProjections() {
                               </span>
                             </td>
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {filteredGwPoints}
+                              <ValueCell 
+                                value={filteredGwPoints} 
+                                format="points" 
+                                decimals={1} 
+                                colorScheme="points"
+                                fontWeight="semibold"
+                              />
                             </td>
                           </tr>
                           );
