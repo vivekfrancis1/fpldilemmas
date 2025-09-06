@@ -162,9 +162,9 @@ export default function TeamGoalsAgainstProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 38 }, (_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          {i + 1}
+                      {Array.from({ length: 35 }, (_, i) => (
+                        <SelectItem key={i + 4} value={(i + 4).toString()}>
+                          {i + 4}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -178,9 +178,9 @@ export default function TeamGoalsAgainstProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 38 }, (_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          {i + 1}
+                      {Array.from({ length: 35 }, (_, i) => (
+                        <SelectItem key={i + 4} value={(i + 4).toString()}>
+                          {i + 4}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -212,7 +212,7 @@ export default function TeamGoalsAgainstProjections() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="total">Period Total</SelectItem>
-                      <SelectItem value="season">Season Total</SelectItem>
+                      <SelectItem value="season">Rest of Season Total</SelectItem>
                       <SelectItem value="average">Goals Against/Game</SelectItem>
                       <SelectItem value="position">Defensive Ranking</SelectItem>
                       {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
@@ -279,7 +279,7 @@ export default function TeamGoalsAgainstProjections() {
                         onClick={() => setSortBy('season')}
                       >
                         <div className="flex items-center justify-center gap-1">
-                          Season Total
+                          Rest of Season Total
                           {sortBy === 'season' && <TrendingUp className="h-3 w-3" />}
                         </div>
                       </th>
