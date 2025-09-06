@@ -6613,8 +6613,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const matchOdds = [];
       const teamIds = Array.from(teamLookup.keys());
       
-      // Process all 38 gameweeks
-      for (let gw = 1; gw <= 38; gw++) {
+      // Process only future gameweeks (exclude completed and current)
+      for (let gw = currentGameweek + 1; gw <= 38; gw++) {
         // Get real fixtures for this gameweek
         const gwRealFixtures = realFixtures.filter((f: any) => f.event === gw);
         

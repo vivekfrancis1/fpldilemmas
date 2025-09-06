@@ -10,23 +10,30 @@ interface PredictedMatch {
   id: number;
   gameweek: number;
   kickoffTime: string;
-  homeTeam: string;
-  awayTeam: string;
-  homeTeamShort: string;
-  awayTeamShort: string;
-  predictedHomeScore: number;
-  predictedAwayScore: number;
-  homeWinProbability: number;
-  drawProbability: number;
-  awayWinProbability: number;
-  totalGoalsProbability: {
-    under2_5: number;
-    over2_5: number;
-    under3_5: number;
-    over3_5: number;
-  };
-  confidence: 'High' | 'Medium' | 'Low';
   finished: boolean;
+  predictedResult: string;
+  actualResult: string;
+  homeTeam: {
+    id: number;
+    name: string;
+    shortName: string;
+    predictedScore: number;
+    expectedGoals: number;
+    cleanSheetOdds: number;
+    result: string;
+  };
+  awayTeam: {
+    id: number;
+    name: string;
+    shortName: string;
+    predictedScore: number;
+    expectedGoals: number;
+    cleanSheetOdds: number;
+    result: string;
+  };
+  totalPredictedGoals: number;
+  totalExpectedGoals: number;
+  confidence: 'High' | 'Medium' | 'Low';
 }
 
 export default function ResultsProjections() {
@@ -38,7 +45,7 @@ export default function ResultsProjections() {
   });
 
   const { data: predictionsData, isLoading: predictionsLoading } = useQuery<PredictedMatch[]>({
-    queryKey: ["/api/results-projections"],
+    queryKey: ["/api/predicted-scores"],
   });
 
   const gameweeks = useMemo(() => {
@@ -54,8 +61,8 @@ export default function ResultsProjections() {
       .filter(match => selectedGameweek === "all" || match.gameweek.toString() === selectedGameweek)
       .filter(match => 
         selectedTeam === "all" || 
-        match.homeTeamShort === selectedTeam || 
-        match.awayTeamShort === selectedTeam
+        match.homeTeam.shortName === selectedTeam || 
+        match.awayTeam.shortName === selectedTeam
       )
       .sort((a, b) => {
         // Sort by gameweek first, then by kickoff time
