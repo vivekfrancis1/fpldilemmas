@@ -482,36 +482,6 @@ export default function PlayerGoalsScoredProjections() {
                             {sortBy !== "name" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
                           </Button>
                         </th>
-                        <th className="text-center py-3 px-2 font-semibold text-gray-900">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
-                            onClick={() => handleSort("team")}
-                            data-testid="sort-team"
-                          >
-                            Team
-                            {sortBy === "team" && (
-                              sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
-                            )}
-                            {sortBy !== "team" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                          </Button>
-                        </th>
-                        <th className="text-center py-3 px-2 font-semibold text-gray-900">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
-                            onClick={() => handleSort("position")}
-                            data-testid="sort-position"
-                          >
-                            Pos
-                            {sortBy === "position" && (
-                              sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
-                            )}
-                            {sortBy !== "position" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                          </Button>
-                        </th>
                     {selectedGameweeks.map(gw => (
                       <th key={gw} className="text-center py-3 px-2 font-semibold text-gray-900 min-w-[70px]">
                         <Button
@@ -568,20 +538,27 @@ export default function PlayerGoalsScoredProjections() {
                     return (
                       <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                         <td className="py-3 px-4 sticky left-0 bg-white border-r border-gray-200 z-10">
-                          <div className="font-semibold text-gray-900">
-                            {player.playerName}
+                          <div className="flex flex-col">
+                            <div className="font-semibold text-gray-900">
+                              {player.playerName}
+                            </div>
+                            <div className="flex items-center gap-1 mt-1">
+                              <Badge className={`text-xs font-medium ${
+                                (player.position === 'Goalkeeper' || player.position === 'GKP') ? 'bg-yellow-100 text-yellow-800' :
+                                (player.position === 'Defender' || player.position === 'DEF') ? 'bg-green-100 text-green-800' :
+                                (player.position === 'Midfielder' || player.position === 'MID') ? 'bg-blue-100 text-blue-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {player.position === 'Midfielder' ? 'MID' : 
+                                 player.position === 'Defender' ? 'DEF' :
+                                 player.position === 'Forward' ? 'FWD' :
+                                 player.position === 'Goalkeeper' ? 'GKP' : player.position}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs text-gray-600">
+                                {player.teamShort}
+                              </Badge>
+                            </div>
                           </div>
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          <Badge variant="outline" className="text-xs font-medium">
-                            {player.teamShort}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-2 text-center text-sm text-gray-600">
-                          {player.position === 'Midfielder' ? 'MID' : 
-                           player.position === 'Defender' ? 'DEF' :
-                           player.position === 'Forward' ? 'FWD' :
-                           player.position === 'Goalkeeper' ? 'GKP' : player.position}
                         </td>
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw] || 0;
@@ -609,7 +586,7 @@ export default function PlayerGoalsScoredProjections() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-gray-200 bg-blue-50">
-                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-blue-50 border-r border-gray-200 z-10" colSpan={3}>
+                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-blue-50 border-r border-gray-200 z-10" colSpan={1}>
                       {selectedGameweeks.length} GW TOTAL
                     </td>
                     {selectedGameweeks.map(gw => (
@@ -625,7 +602,7 @@ export default function PlayerGoalsScoredProjections() {
                     </td>
                   </tr>
                   <tr className="border-t border-gray-200 bg-green-50">
-                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-green-50 border-r border-gray-200 z-10" colSpan={3}>
+                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-green-50 border-r border-gray-200 z-10" colSpan={1}>
                       SEASON TOTAL
                     </td>
                     {selectedGameweeks.map(gw => (
@@ -673,36 +650,6 @@ export default function PlayerGoalsScoredProjections() {
                           sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
                         )}
                         {sortBy !== "name" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                      </Button>
-                    </th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
-                        onClick={() => handleSort("team")}
-                        data-testid="sort-team-points"
-                      >
-                        Team
-                        {sortBy === "team" && (
-                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
-                        )}
-                        {sortBy !== "team" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                      </Button>
-                    </th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
-                        onClick={() => handleSort("position")}
-                        data-testid="sort-position-points"
-                      >
-                        Pos
-                        {sortBy === "position" && (
-                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
-                        )}
-                        {sortBy !== "position" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
                       </Button>
                     </th>
                     {selectedGameweeks.map(gw => (
@@ -764,20 +711,27 @@ export default function PlayerGoalsScoredProjections() {
                     return (
                       <tr key={`${player.playerId}-points`} className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                         <td className="py-3 px-4 sticky left-0 bg-white border-r border-gray-200 z-10">
-                          <div className="font-semibold text-gray-900">
-                            {player.playerName}
+                          <div className="flex flex-col">
+                            <div className="font-semibold text-gray-900">
+                              {player.playerName}
+                            </div>
+                            <div className="flex items-center gap-1 mt-1">
+                              <Badge className={`text-xs font-medium ${
+                                (player.position === 'Goalkeeper' || player.position === 'GKP') ? 'bg-yellow-100 text-yellow-800' :
+                                (player.position === 'Defender' || player.position === 'DEF') ? 'bg-green-100 text-green-800' :
+                                (player.position === 'Midfielder' || player.position === 'MID') ? 'bg-blue-100 text-blue-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {player.position === 'Midfielder' ? 'MID' : 
+                                 player.position === 'Defender' ? 'DEF' :
+                                 player.position === 'Forward' ? 'FWD' :
+                                 player.position === 'Goalkeeper' ? 'GKP' : player.position}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs text-gray-600">
+                                {player.teamShort}
+                              </Badge>
+                            </div>
                           </div>
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          <Badge variant="outline" className="text-xs font-medium">
-                            {player.teamShort}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-2 text-center text-sm text-gray-600">
-                          {player.position === 'Midfielder' ? 'MID' : 
-                           player.position === 'Defender' ? 'DEF' :
-                           player.position === 'Forward' ? 'FWD' :
-                           player.position === 'Goalkeeper' ? 'GKP' : player.position}
                         </td>
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw] || 0;
@@ -806,7 +760,7 @@ export default function PlayerGoalsScoredProjections() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-gray-200 bg-blue-50">
-                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-blue-50 border-r border-gray-200 z-10" colSpan={3}>
+                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-blue-50 border-r border-gray-200 z-10" colSpan={1}>
                       {selectedGameweeks.length} GW TOTAL
                     </td>
                     {selectedGameweeks.map(gw => (
@@ -822,7 +776,7 @@ export default function PlayerGoalsScoredProjections() {
                     </td>
                   </tr>
                   <tr className="border-t border-gray-200 bg-green-50">
-                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-green-50 border-r border-gray-200 z-10" colSpan={3}>
+                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-green-50 border-r border-gray-200 z-10" colSpan={1}>
                       SEASON TOTAL
                     </td>
                     {selectedGameweeks.map(gw => (
