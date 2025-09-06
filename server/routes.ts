@@ -8109,10 +8109,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const playerMinutes = minutesProjections[fplPlayer.id] || {};
         const playerDefensive = defensiveProjections[fplPlayer.id] || {};
         const teamCleanSheets = teamCleanSheetProjections[fplPlayer.team] || {};
-        const playerSaves = savesPointsProjections[fplPlayer.id] || {};
-        const playerGoalsConceded = goalsConcededPointsProjections[fplPlayer.id] || {};
-        const playerYellowCards = yellowCardsPointsProjections[fplPlayer.id] || {};
-        const playerRedCards = redCardsPointsProjections[fplPlayer.id] || {};
+        const playerSaves = savesProjections[fplPlayer.id] || {};
+        const playerSavesPoints = savesPointsProjections[fplPlayer.id] || {};
+        const playerGoalsConceded = goalsConcededProjections[fplPlayer.id] || {};
+        const playerGoalsConcededPoints = goalsConcededPointsProjections[fplPlayer.id] || {};
+        const playerYellowCards = yellowCardsProjections[fplPlayer.id] || {};
+        const playerYellowCardsPoints = yellowCardsPointsProjections[fplPlayer.id] || {};
+        const playerRedCards = redCardsProjections[fplPlayer.id] || {};
+        const playerRedCardsPoints = redCardsPointsProjections[fplPlayer.id] || {};
         const playerBonusProbs = bonusProbabilities[fplPlayer.id] || {};
         
         // Position-specific clean sheet points
@@ -8174,22 +8178,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalDefensivePoints += defensivePoints;
           
           // Saves from cached FPL scoring API (already calculated as FPL points)
-          const savesPoints = playerSaves[`gw${gw}`] || 0;
+          const savesPoints = playerSavesPoints[`gw${gw}`] || 0;
           pointsFromSaves[`gw${gw}`] = Math.round(savesPoints * 100) / 100;
           totalSavesPoints += savesPoints;
           
           // Goals conceded from cached FPL scoring API (already calculated as FPL points)
-          const goalsConcededPoints = playerGoalsConceded[`gw${gw}`] || 0;
+          const goalsConcededPoints = playerGoalsConcededPoints[`gw${gw}`] || 0;
           pointsFromGoalsConceded[`gw${gw}`] = Math.round(goalsConcededPoints * 100) / 100;
           totalGoalsConcededPoints += goalsConcededPoints;
           
           // Yellow cards from cached FPL scoring API (already calculated as FPL points)
-          const yellowCardsPoints = playerYellowCards[`gw${gw}`] || 0;
+          const yellowCardsPoints = playerYellowCardsPoints[`gw${gw}`] || 0;
           pointsFromYellowCards[`gw${gw}`] = Math.round(yellowCardsPoints * 100) / 100;
           totalYellowCardsPoints += yellowCardsPoints;
           
           // Red cards from cached FPL scoring API (already calculated as FPL points)
-          const redCardsPoints = playerRedCards[`gw${gw}`] || 0;
+          const redCardsPoints = playerRedCardsPoints[`gw${gw}`] || 0;
           pointsFromRedCards[`gw${gw}`] = Math.round(redCardsPoints * 100) / 100;
           totalRedCardsPoints += redCardsPoints;
           
