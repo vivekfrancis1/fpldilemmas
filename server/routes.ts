@@ -7045,6 +7045,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // FPL Scoring Cache Manual Trigger
+  app.post("/api/fpl-scoring-cache/trigger", async (req, res) => {
+    try {
+      console.log("Manual FPL scoring cache update triggered");
+      const { fplScoringCacheScheduler } = await import('./fpl-scoring-cache-scheduler');
+      await fplScoringCacheScheduler.manualTrigger();
+      res.json({ 
+        success: true, 
+        message: "FPL scoring cache updated successfully",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error in manual FPL scoring cache update:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "FPL scoring cache update failed",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Complete Cache System Status
+  app.get("/api/cache-system/status", async (req, res) => {
+    try {
+      const { projectionCacheScheduler } = await import('./projection-cache-scheduler');
+      const { fplScoringCacheScheduler } = await import('./fpl-scoring-cache-scheduler');
+      
+      const status = {
+        projectionCache: {
+          nextRun: projectionCacheScheduler.getNextScheduledRun().toISOString(),
+          scheduleTimes: ['06:00', '12:00', '18:00', '23:00'],
+          frequency: 'Four times daily + hourly light updates'
+        },
+        fplScoringCache: {
+          isRunning: fplScoringCacheScheduler.isRunning(),
+          nextRun: fplScoringCacheScheduler.getNextScheduledTime().toISOString(),
+          frequency: 'Twice daily (every 12 hours)'
+        },
+        priceData: {
+          frequency: 'Twice daily (7:05 AM & 7:05 PM IST)',
+          lastUpdate: 'Tracking via database timestamps'
+        },
+        gameweekCache: {
+          frequency: 'Every 2 hours (automatic completed gameweek detection)'
+        }
+      };
+      
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting cache system status:", error);
+      res.status(500).json({ error: "Failed to get cache system status" });
+    }
+  });
+
   app.get("/api/daily-prices/:playerId", async (req, res) => {
     try {
       const { playerId } = req.params;

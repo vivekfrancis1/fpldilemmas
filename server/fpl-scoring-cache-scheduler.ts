@@ -70,6 +70,21 @@ class FPLScoringCacheScheduler {
   isRunning(): boolean {
     return this.schedulerInterval !== null;
   }
+
+  /**
+   * Manual trigger for immediate cache update
+   */
+  async manualTrigger(): Promise<void> {
+    console.log("🔧 Manual FPL scoring cache update triggered");
+    await this.performCacheUpdate();
+  }
+
+  /**
+   * Get the next scheduled update time (alias for compatibility)
+   */
+  getNextScheduledTime(): Date {
+    return this.getNextUpdateTime();
+  }
 }
 
 // Export singleton instance
