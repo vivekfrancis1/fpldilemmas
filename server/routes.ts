@@ -11196,106 +11196,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(totalPointsResponseCache.data);
       }
 
-      console.log("📊 Building total points from individual cached endpoints");
+      console.log("📊 Building comprehensive total points from main endpoint");
       const startTime = Date.now();
 
-      // Use optimized metadata cache (already implemented above)
-      const playerMetadata = await getPlayerMetadata();
+      // Fetch comprehensive data from the main total points endpoint
+      const totalPointsResponse = await fetch(`http://localhost:5000/api/player-total-points?startGameweek=${start}&endGameweek=${end}`);
+      if (!totalPointsResponse.ok) {
+        throw new Error("Failed to fetch comprehensive total points data");
+      }
+      
+      const totalPointsData = await totalPointsResponse.json();
 
-      // Get cached projections from individual cached endpoints (fast API calls)
-      const [goalsResponse, assistsResponse, minutesResponse, cleanSheetsResponse] = await Promise.all([
-        fetch(`http://localhost:5000/api/cached/player-goals-projections`),
-        fetch(`http://localhost:5000/api/cached/player-goals-projections`), // Use same for now, can optimize later
-        fetch(`http://localhost:5000/api/cached/player-goals-projections`), // Use same for now, can optimize later  
-        fetch(`http://localhost:5000/api/cached/player-goals-projections`)  // Use same for now, can optimize later
-      ]);
-
-      if (!goalsResponse.ok) throw new Error("Failed to fetch cached goals");
-      const goalsData = await goalsResponse.json();
-
-      // Build simplified total points projections using just goals data for now
-      const totalPointsData = goalsData.map((player: any) => {
-        const metadata = playerMetadata.get(player.playerId);
-        const position = metadata?.position || 'MID';
-        
-        // Calculate FPL goal points by position
-        const goalPointsByPosition = position === 'GKP' ? 10 : position === 'DEF' ? 6 : position === 'MID' ? 5 : 4;
-        
-        // Calculate gameweek-by-gameweek points
-        const gameweekProjections: { [key: string]: number } = {};
-        const pointsFromGoals: { [key: string]: number } = {};
-        const pointsFromAssists: { [key: string]: number } = {};
-        const pointsFromMinutes: { [key: string]: number } = {};
-        
-        let totalGoalPoints = 0;
-        let totalAssistPoints = 0;
-        let totalMinutesPoints = 0;
-        
-        // Process each gameweek
-        for (const [gw, goalProj] of Object.entries(player.gameweekProjections || {})) {
-          const goals = Number(goalProj) || 0;
-          const gwKey = `gw${gw}`; // Add "gw" prefix to match frontend expectations
-          
-          // Points from goals
-          const gwGoalPoints = goals * goalPointsByPosition;
-          pointsFromGoals[gwKey] = Math.round(gwGoalPoints * 100) / 100;
-          totalGoalPoints += gwGoalPoints;
-          
-          // Basic assist projection (20% of goals for attackers, 10% for others)
-          const assistMultiplier = position === 'FWD' || position === 'MID' ? 0.2 : 0.1;
-          const assists = goals * assistMultiplier;
-          const gwAssistPoints = assists * 3;
-          pointsFromAssists[gwKey] = Math.round(gwAssistPoints * 100) / 100;
-          totalAssistPoints += gwAssistPoints;
-          
-          // Basic minutes projection (assume playing if scoring goals)
-          const gwMinutesPoints = goals > 0.1 ? 2 : (goals > 0.01 ? 1 : 0); // 2 if likely starter, 1 if sub
-          pointsFromMinutes[gwKey] = gwMinutesPoints;
-          totalMinutesPoints += gwMinutesPoints;
-          
-          // Total points for this gameweek
-          const gwTotalPoints = gwGoalPoints + gwAssistPoints + gwMinutesPoints;
-          gameweekProjections[gwKey] = Math.round(gwTotalPoints * 100) / 100;
-        }
-        
-        const totalExpectedPoints = totalGoalPoints + totalAssistPoints + totalMinutesPoints;
-
-        const gameweekCount = Object.keys(gameweekProjections).length;
-        const avgPerGameweek = gameweekCount > 0 ? totalExpectedPoints / gameweekCount : 0;
-        
-        // Calculate Rest of Season Total (GW4 to GW38 = 35 gameweeks remaining)
-        const remainingGameweeks = 38 - 3; // Total gameweeks minus completed gameweeks (GW1-3)
-        const seasonTotalPoints = avgPerGameweek * remainingGameweeks;
-        
-        return {
-          playerId: player.playerId,
-          name: player.playerName,
-          fullName: player.playerName,
-          team: player.teamName,
-          position: position,
-          price: 50, // Default price
-          ownership: 5.0, // Default ownership
-          gameweekProjections: gameweekProjections,
-          totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
-          seasonTotalPoints: Math.round(seasonTotalPoints * 100) / 100,
-          averagePerGameweek: Math.round(avgPerGameweek * 100) / 100,
-          // Detailed breakdowns
-          pointsFromGoals: pointsFromGoals,
-          pointsFromAssists: pointsFromAssists,
-          pointsFromCleanSheets: {},
-          pointsFromMinutes: pointsFromMinutes,
-          totalPointsFromGoals: Math.round(totalGoalPoints * 100) / 100,
-          totalPointsFromAssists: Math.round(totalAssistPoints * 100) / 100,
-          totalPointsFromCleanSheets: 0,
-          totalPointsFromMinutes: Math.round(totalMinutesPoints * 100) / 100
-        };
-      }).sort((a: any, b: any) => b.totalExpectedPoints - a.totalExpectedPoints);
-
-      // Cache the processed response
+      // Cache the comprehensive response
       totalPointsResponseCache = { data: totalPointsData, timestamp: now };
       
       const duration = Date.now() - startTime;
-      console.log(`📊 Built ${totalPointsData.length} total points projections in ${duration}ms using cached data`);
+      console.log(`📊 Built ${totalPointsData.length} comprehensive total points projections in ${duration}ms using main endpoint`);
       
       res.json(totalPointsData);
     } catch (error) {
