@@ -40,7 +40,7 @@ export class FPLScoringCacheService {
     console.log("📊 Caching player saves data...");
     
     try {
-      const response = await fetch(`${this.baseUrl}/api/player-saves-projections?startGameweek=4&endGameweek=9`);
+      const response = await internalFetch(`api/player-saves-projections?startGameweek=4&endGameweek=9`);
       if (!response.ok) throw new Error(`Failed to fetch saves data: ${response.statusText}`);
       
       const savesData = await response.json();

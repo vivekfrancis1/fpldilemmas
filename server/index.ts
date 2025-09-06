@@ -7,6 +7,7 @@ import { projectionCacheScheduler } from "./projection-cache-scheduler";
 import { fplScoringCacheScheduler } from "./fpl-scoring-cache-scheduler";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedContentCreators } from "./seed-database";
+import { productionCacheInitializer } from "./production-cache-initializer";
 
 const app = express();
 app.use(express.json());
@@ -57,6 +58,9 @@ app.use((req, res, next) => {
     
     // Seed database with initial data
     await seedContentCreators();
+    
+    // Initialize production cache if needed (only runs if cache is empty)
+    await productionCacheInitializer.initializeProductionCache();
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
