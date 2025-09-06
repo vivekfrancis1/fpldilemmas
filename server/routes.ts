@@ -11554,29 +11554,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/cached/player-goals-projections", async (req, res) => {
     try {
       console.log("📊 Serving cached player goals data from database");
-      const cachedData = await db.select().from(playerGoalsProjections)
+      
+      // Fetch cached data and group by player for optimal performance
+      const cachedData = await db.select()
+        .from(playerGoalsProjections)
         .where(eq(playerGoalsProjections.season, '2025/26'))
         .orderBy(desc(playerGoalsProjections.goals));
       
-      // Transform to expected format for frontend compatibility
-      const transformedData = cachedData.reduce((acc, row) => {
-        const existingPlayer = acc.find(p => p.playerId === row.playerId);
-        if (existingPlayer) {
-          existingPlayer.gameweekProjections[row.gameweek] = row.goals;
-          existingPlayer.totalProjectedGoals += row.goals;
-        } else {
-          acc.push({
+      // Group by player efficiently using Map for O(n) performance
+      const playersMap = new Map();
+      
+      for (const row of cachedData) {
+        if (!playersMap.has(row.playerId)) {
+          playersMap.set(row.playerId, {
             playerId: row.playerId,
-            playerName: row.playerName || 'Unknown',
-            gameweekProjections: { [row.gameweek]: row.goals },
-            totalProjectedGoals: row.goals,
-            goalShare: 0, // Will be calculated if needed
+            playerName: getPlayerName(row.playerId) || 'Unknown',
+            gameweekProjections: {},
+            totalProjectedGoals: 0,
+            goalShare: 0
           });
         }
-        return acc;
-      }, [] as any[]);
+        
+        const player = playersMap.get(row.playerId);
+        player.gameweekProjections[row.gameweek] = row.goals;
+        player.totalProjectedGoals += row.goals;
+      }
       
-      res.json(transformedData);
+      // Convert to array and sort by total goals descending
+      const responseData = Array.from(playersMap.values())
+        .sort((a, b) => b.totalProjectedGoals - a.totalProjectedGoals);
+      
+      res.json(responseData);
     } catch (error) {
       console.error("Error fetching cached goals projections:", error);
       res.status(500).json({ error: "Failed to fetch cached goals projections" });
@@ -11586,29 +11594,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/cached/player-assists-projections", async (req, res) => {
     try {
       console.log("📊 Serving cached player assists data from database");
-      const cachedData = await db.select().from(playerAssistProjections)
+      
+      // Fetch cached data and group by player for optimal performance
+      const cachedData = await db.select()
+        .from(playerAssistProjections)
         .where(eq(playerAssistProjections.season, '2025/26'))
         .orderBy(desc(playerAssistProjections.assists));
       
-      // Transform to expected format for frontend compatibility
-      const transformedData = cachedData.reduce((acc, row) => {
-        const existingPlayer = acc.find(p => p.playerId === row.playerId);
-        if (existingPlayer) {
-          existingPlayer.gameweekProjections[row.gameweek] = row.assists;
-          existingPlayer.totalProjectedAssists += row.assists;
-        } else {
-          acc.push({
+      // Group by player efficiently using Map for O(n) performance
+      const playersMap = new Map();
+      
+      for (const row of cachedData) {
+        if (!playersMap.has(row.playerId)) {
+          playersMap.set(row.playerId, {
             playerId: row.playerId,
-            playerName: row.playerName || 'Unknown',
-            gameweekProjections: { [row.gameweek]: row.assists },
-            totalProjectedAssists: row.assists,
-            assistShare: 0, // Will be calculated if needed
+            playerName: getPlayerName(row.playerId) || 'Unknown',
+            gameweekProjections: {},
+            totalProjectedAssists: 0,
+            assistShare: 0
           });
         }
-        return acc;
-      }, [] as any[]);
+        
+        const player = playersMap.get(row.playerId);
+        player.gameweekProjections[row.gameweek] = row.assists;
+        player.totalProjectedAssists += row.assists;
+      }
       
-      res.json(transformedData);
+      // Convert to array and sort by total assists descending
+      const responseData = Array.from(playersMap.values())
+        .sort((a, b) => b.totalProjectedAssists - a.totalProjectedAssists);
+      
+      res.json(responseData);
     } catch (error) {
       console.error("Error fetching cached assists projections:", error);
       res.status(500).json({ error: "Failed to fetch cached assists projections" });
