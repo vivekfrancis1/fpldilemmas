@@ -64,6 +64,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/team-cs-projections", label: "Team Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/team-goals-against-projections", label: "Team Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
         { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
+        { path: "/results-projections", label: "Results Projections", icon: Calendar, description: "Future match predictions with expected goals", popular: false },
         { path: "/projected-standings", label: "Predicted Standings", icon: Trophy, description: "Final league table projection", popular: false }
       ]
     },
