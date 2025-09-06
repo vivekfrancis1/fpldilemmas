@@ -11178,7 +11178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const spreadBettingCacheService = SpreadBettingCacheService.getInstance();
 
   // CACHED PLAYER TOTAL POINTS ENDPOINT - Ultra-fast database serving
-  let totalPointsResponseCache: { data: any[]; timestamp: number } | null = null;
+  let totalPointsResponseCache: Map<string, { data: any[]; timestamp: number }> = new Map();
   const TOTAL_POINTS_RESPONSE_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
   app.get("/api/cached/player-total-points", async (req, res) => {
@@ -11188,12 +11188,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const end = parseInt(endGameweek as string);
       const cacheKey = `${start}-${end}`;
 
-      // Return cached response if available and fresh
+      // Return cached response if available and fresh for this specific range
       const now = Date.now();
-      if (totalPointsResponseCache && totalPointsResponseCache.data && 
-          (now - totalPointsResponseCache.timestamp) < TOTAL_POINTS_RESPONSE_CACHE_DURATION) {
-        console.log("⚡ Serving player total points from response cache");
-        return res.json(totalPointsResponseCache.data);
+      const cachedData = totalPointsResponseCache.get(cacheKey);
+      if (cachedData && (now - cachedData.timestamp) < TOTAL_POINTS_RESPONSE_CACHE_DURATION) {
+        console.log(`⚡ Serving player total points from response cache for GW${start}-${end}`);
+        return res.json(cachedData.data);
       }
 
       console.log("📊 Building comprehensive total points from main endpoint");
@@ -11207,11 +11207,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const totalPointsData = await totalPointsResponse.json();
 
-      // Cache the comprehensive response
-      totalPointsResponseCache = { data: totalPointsData, timestamp: now };
+      // Cache the comprehensive response with the specific gameweek range
+      totalPointsResponseCache.set(cacheKey, { data: totalPointsData, timestamp: now });
       
       const duration = Date.now() - startTime;
-      console.log(`📊 Built ${totalPointsData.length} comprehensive total points projections in ${duration}ms using main endpoint`);
+      console.log(`📊 Built ${totalPointsData.length} comprehensive total points projections in ${duration}ms using main endpoint for GW${start}-${end}`);
       
       res.json(totalPointsData);
     } catch (error) {
