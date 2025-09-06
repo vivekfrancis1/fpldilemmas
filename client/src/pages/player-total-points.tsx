@@ -461,16 +461,30 @@ export default function PlayerTotalPoints() {
   const { data: totalPointsData, isLoading, error } = useQuery<PlayerTotalPointsData[]>({
     queryKey: ["/api/cached/player-total-points", startGameweek, endGameweek],
     queryFn: async () => {
-      const response = await fetch(`/api/cached/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
-      if (!response.ok) {
-        throw new Error(`Failed to load total points: ${response.status} ${response.statusText}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      try {
+        const response = await fetch(`/api/cached/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to load total points: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
       }
-      return response.json();
     },
-    staleTime: 15 * 60 * 1000, // 15 minutes to align with backend cache
+    staleTime: 60 * 60 * 1000, // 1 hour cache for production stability
+    gcTime: 2 * 60 * 60 * 1000, // Keep in cache for 2 hours
     enabled: startGameweek <= endGameweek,
     retry: 3,
-    retryDelay: 1000,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    networkMode: 'online',
   });
 
   // Generate gameweek range for table headers

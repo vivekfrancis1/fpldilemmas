@@ -44,7 +44,7 @@ export const buildApiUrl = (endpoint: string): string => {
 };
 
 /**
- * Makes an internal API fetch call with proper URL resolution
+ * Makes an internal API fetch call with proper URL resolution and timeouts
  */
 export const internalFetch = async (endpoint: string, options?: RequestInit): Promise<Response> => {
   const baseUrl = getApiBaseUrl();
@@ -58,6 +58,26 @@ export const internalFetch = async (endpoint: string, options?: RequestInit): Pr
     url = buildApiUrl(endpoint);
   }
   
-  console.log(`🌐 Internal API call: ${url}`);
-  return fetch(url, options);
+  // Create abort controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    console.log(`⏰ Internal API call timeout: ${url}`);
+    controller.abort();
+  }, 45000); // 45 second timeout for internal calls
+  
+  try {
+    console.log(`🌐 Internal API call: ${url}`);
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Internal API call timed out: ${url}`);
+    }
+    throw error;
+  }
 };

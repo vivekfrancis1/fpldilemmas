@@ -47,8 +47,12 @@ export default function PlayerGoalsScoredProjections() {
 
   const { data: playerGoalData, isLoading: playerGoalLoading, error } = useQuery<PlayerGoalProjection[]>({
     queryKey: ["/api/cached/player-goals-projections"],
-    staleTime: 15 * 60 * 1000, // 15 minutes cache
+    staleTime: 60 * 60 * 1000, // 1 hour cache for production stability
+    gcTime: 2 * 60 * 60 * 1000, // Keep in cache for 2 hours
     refetchOnMount: false,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    networkMode: 'online'
   });
 
   // Get current gameweek from bootstrap data
