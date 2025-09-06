@@ -56,7 +56,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/projected-goals-cs", label: "Gameweek Goals and CS", icon: Target, description: "Projected goals & clean sheets", popular: false },
         { path: "/team-goal-projections", label: "Team Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
-        { path: "/team-goals-spread-betting", label: "Team Goals - Spread Betting", icon: Target, description: "Team goals from spread betting markets", popular: false, new: true },
         { path: "/team-cs-projections", label: "Team Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/team-goals-against-projections", label: "Team Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
         { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
