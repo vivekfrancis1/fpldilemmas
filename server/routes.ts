@@ -6473,7 +6473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections: gameweekProjections,
-          totalGoalsAgainst: 0,
+          totalProjectedGoalsAgainst: 0,
           averageGoalsAgainstPerGame: 0,
           confidence: 'Medium',
           position: 0
@@ -6534,9 +6534,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
         
-        team.totalGoalsAgainst = Math.round(teamTotal * 100) / 100;
+        team.totalProjectedGoalsAgainst = Math.round(teamTotal * 100) / 100;
         team.averageGoalsAgainstPerGame = Math.round((teamTotal / 38) * 100) / 100;
-        totalGoalsAgainst += team.totalGoalsAgainst;
+        totalGoalsAgainst += team.totalProjectedGoalsAgainst;
         
         // Set confidence based on defensive quality
         team.confidence = team.averageGoalsAgainstPerGame <= 1.0 ? 'High' : 
@@ -6544,12 +6544,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Calculate exact total from goals scored for verification
-      const exactGoalsScoredTotal = teamGoalProjections.reduce((sum: number, team: any) => sum + team.totalGoals, 0);
+      const exactGoalsScoredTotal = teamGoalProjections.reduce((sum: number, team: any) => sum + team.totalProjectedGoals, 0);
       console.log(`DEBUG: PERFECT MIRROR SUCCESS - Goals Scored: ${exactGoalsScoredTotal.toFixed(2)}, Goals Against: ${totalGoalsAgainst.toFixed(2)}`);
       
       // Convert to array and sort by goals against (best defense first)
       const finalProjections = Array.from(teamsGoalsAgainst.values())
-        .sort((a, b) => a.totalGoalsAgainst - b.totalGoalsAgainst)
+        .sort((a, b) => a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst)
         .map((team, index) => ({
           ...team,
           position: index + 1
