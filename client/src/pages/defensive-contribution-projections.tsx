@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Shield, TrendingUp, BarChart3, Clock } from "lucide-react";
+import ProtectedRoute from "@/components/protected-route";
 
 interface DefensiveProjection {
   playerId: number;

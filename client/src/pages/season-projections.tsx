@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BarChart3, Target, Users, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import ProtectedRoute from "@/components/protected-route";
 
 interface SeasonProjection {
   rank: number;

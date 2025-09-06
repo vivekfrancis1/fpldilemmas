@@ -5,6 +5,7 @@ import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import ProtectedRoute from "@/components/protected-route";
 
 interface SpreadBettingData {
   id: number;
