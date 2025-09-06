@@ -323,6 +323,67 @@ export const PositionBadge = ({ position, className, compact = false }: { positi
   );
 };
 
+// Standardized sortable header component
+export const SortableHeader = ({ 
+  field, 
+  children, 
+  onSort, 
+  sortField, 
+  sortDirection,
+  className,
+  align = 'left'
+}: { 
+  field: string; 
+  children: React.ReactNode; 
+  onSort?: (field: string) => void;
+  sortField?: string;
+  sortDirection?: 'asc' | 'desc';
+  className?: string;
+  align?: 'left' | 'center' | 'right';
+}) => {
+  const getSortIcon = () => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-3 h-3 opacity-50" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ChevronUp className="w-3 h-3" /> 
+      : <ChevronDown className="w-3 h-3" />;
+  };
+
+  const getAlignment = () => {
+    switch (align) {
+      case 'center': return 'justify-center';
+      case 'right': return 'justify-end';
+      default: return 'justify-start';
+    }
+  };
+
+  if (!onSort) {
+    return (
+      <div className={cn("flex items-center gap-1", getAlignment(), className)}>
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => onSort(field)}
+      className={cn(
+        "h-auto p-0 font-semibold text-gray-700 hover:text-indigo-600 hover:bg-transparent",
+        "flex items-center gap-1 transition-colors",
+        getAlignment(),
+        className
+      )}
+    >
+      {children}
+      {getSortIcon()}
+    </Button>
+  );
+};
+
 export const ValueCell = ({ 
   value, 
   format = 'number', 
