@@ -18,19 +18,27 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
   
   if (!hasBreakdownData || !gwPoints) {
     return (
-      <span className={`font-medium ${gwPoints >= 6 ? 'text-green-700' : gwPoints >= 4 ? 'text-blue-700' : 'text-gray-600'}`}>
-        {gwPoints ? gwPoints.toFixed(1) : '0.0'}
-      </span>
+      <ValueCell 
+        value={gwPoints || 0} 
+        format="points" 
+        decimals={1} 
+        colorScheme="points"
+        fontWeight="medium"
+      />
     );
   }
 
   return (
     <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
-        <button className={`font-medium cursor-help hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 ${
-          gwPoints >= 6 ? 'text-green-700' : gwPoints >= 4 ? 'text-blue-700' : 'text-gray-600'
-        }`}>
-          {gwPoints.toFixed(1)}
+        <button className="cursor-help hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+          <ValueCell 
+            value={gwPoints} 
+            format="points" 
+            decimals={1} 
+            colorScheme="points"
+            fontWeight="medium"
+          />
         </button>
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
@@ -41,72 +49,115 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⚽ Goals:</span>
-              <span className="font-medium text-green-700">
-                {player.pointsFromGoals?.[gwKey]?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.pointsFromGoals?.[gwKey] || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-green-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🎯 Assists:</span>
-              <span className="font-medium text-blue-700">
-                {player.pointsFromAssists?.[gwKey]?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.pointsFromAssists?.[gwKey] || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-blue-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🛡️ Clean Sheets:</span>
-              <span className="font-medium text-yellow-700">
-                {player.pointsFromCleanSheets?.[gwKey]?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.pointsFromCleanSheets?.[gwKey] || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-yellow-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⚔️ Defensive:</span>
-              <span className="font-medium text-orange-700">
-                {player.pointsFromDefensiveContributions?.[gwKey]?.toFixed(1) || '0.0'}
-              </span>
-
+              <ValueCell 
+                value={player.pointsFromDefensiveContributions?.[gwKey] || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-orange-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⏱️ Minutes:</span>
-              <span className="font-medium text-purple-700">
-                {player.pointsFromMinutes?.[gwKey]?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.pointsFromMinutes?.[gwKey] || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-purple-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">✨ Bonus:</span>
-              <span className="font-medium text-pink-700">
-                {player.pointsFromBonus?.[gwKey]?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.pointsFromBonus?.[gwKey] || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-pink-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🥅 Saves:</span>
-              <span className="font-medium text-cyan-700">
-                {player.pointsFromSaves?.[gwKey]?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.pointsFromSaves?.[gwKey] || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-cyan-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🚪 Goals Conceded:</span>
-              <span className="font-medium text-red-600">
-                {player.pointsFromGoalsConceded?.[gwKey]?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.pointsFromGoalsConceded?.[gwKey] || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-red-600"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🟨 Yellow Cards:</span>
-              <span className="font-medium text-yellow-600">
-                {player.pointsFromYellowCards?.[gwKey]?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.pointsFromYellowCards?.[gwKey] || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-yellow-600"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🟥 Red Cards:</span>
-              <span className="font-medium text-red-700">
-                {player.pointsFromRedCards?.[gwKey]?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.pointsFromRedCards?.[gwKey] || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-red-700"
+                fontWeight="medium"
+              />
             </div>
           </div>
           <div className="border-t pt-2 mt-3">
             <div className="flex justify-between items-center font-semibold">
               <span className="text-gray-800">GW{gameweek} Points Total:</span>
-              <span className="text-green-800">
-                {gwPoints.toFixed(1)}
-              </span>
+              <ValueCell 
+                value={gwPoints} 
+                format="points" 
+                decimals={1} 
+                className="text-green-800"
+                fontWeight="semibold"
+              />
             </div>
           </div>
         </div>
@@ -121,17 +172,27 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
   
   if (!hasBreakdownData) {
     return (
-      <span className="font-bold text-green-800">
-        {player.totalExpectedPoints?.toFixed(1) || '0.0'}
-      </span>
+      <ValueCell 
+        value={player.totalExpectedPoints || 0} 
+        format="points" 
+        decimals={1} 
+        className="text-green-800"
+        fontWeight="bold"
+      />
     );
   }
 
   return (
     <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
-        <button className="font-bold text-green-800 cursor-help hover:text-green-900 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
-          {player.totalExpectedPoints?.toFixed(1) || '0.0'}
+        <button className="cursor-help hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+          <ValueCell 
+            value={player.totalExpectedPoints || 0} 
+            format="points" 
+            decimals={1} 
+            className="text-green-800"
+            fontWeight="bold"
+          />
         </button>
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
@@ -142,72 +203,115 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⚽ Goals:</span>
-              <span className="font-medium text-green-700">
-                {player.totalPointsFromGoals?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.totalPointsFromGoals || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-green-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🎯 Assists:</span>
-              <span className="font-medium text-blue-700">
-                {player.totalPointsFromAssists?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.totalPointsFromAssists || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-blue-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🛡️ Clean Sheets:</span>
-              <span className="font-medium text-yellow-700">
-                {player.totalPointsFromCleanSheets?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.totalPointsFromCleanSheets || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-yellow-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⚔️ Defensive:</span>
-              <span className="font-medium text-orange-700">
-                {player.totalPointsFromDefensiveContributions?.toFixed(1) || '0.0'}
-              </span>
-
+              <ValueCell 
+                value={player.totalPointsFromDefensiveContributions || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-orange-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⏱️ Minutes:</span>
-              <span className="font-medium text-purple-700">
-                {player.totalPointsFromMinutes?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.totalPointsFromMinutes || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-purple-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">✨ Bonus:</span>
-              <span className="font-medium text-pink-700">
-                {player.totalPointsFromBonus?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.totalPointsFromBonus || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-pink-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🥅 Saves:</span>
-              <span className="font-medium text-cyan-700">
-                {player.totalPointsFromSaves?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.totalPointsFromSaves || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-cyan-700"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🚪 Goals Conceded:</span>
-              <span className="font-medium text-red-600">
-                {player.totalPointsFromGoalsConceded?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.totalPointsFromGoalsConceded || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-red-600"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🟨 Yellow Cards:</span>
-              <span className="font-medium text-yellow-600">
-                {player.totalPointsFromYellowCards?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.totalPointsFromYellowCards || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-yellow-600"
+                fontWeight="medium"
+              />
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">🟥 Red Cards:</span>
-              <span className="font-medium text-red-700">
-                {player.totalPointsFromRedCards?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.totalPointsFromRedCards || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-red-700"
+                fontWeight="medium"
+              />
             </div>
           </div>
           <div className="border-t pt-2 mt-3">
             <div className="flex justify-between items-center font-semibold">
               <span className="text-gray-800">6GW Total:</span>
-              <span className="text-green-800">
-                {player.totalExpectedPoints?.toFixed(1) || '0.0'}
-              </span>
+              <ValueCell 
+                value={player.totalExpectedPoints || 0} 
+                format="points" 
+                decimals={1} 
+                className="text-green-800"
+                fontWeight="semibold"
+              />
             </div>
           </div>
         </div>
