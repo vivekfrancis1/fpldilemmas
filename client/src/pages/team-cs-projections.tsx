@@ -127,9 +127,9 @@ export default function TeamCSProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 38 }, (_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          {i + 1}
+                      {Array.from({ length: 35 }, (_, i) => (
+                        <SelectItem key={i + 4} value={(i + 4).toString()}>
+                          {i + 4}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -143,9 +143,9 @@ export default function TeamCSProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 38 }, (_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          {i + 1}
+                      {Array.from({ length: 35 }, (_, i) => (
+                        <SelectItem key={i + 4} value={(i + 4).toString()}>
+                          {i + 4}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -177,7 +177,7 @@ export default function TeamCSProjections() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="average">Period CS/Game</SelectItem>
-                      <SelectItem value="season">Season CS/Game</SelectItem>
+                      <SelectItem value="season">Rest of Season CS/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
                       {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
                         const gwNumber = parseInt(startGameweek) + i;
@@ -244,7 +244,7 @@ export default function TeamCSProjections() {
                         onClick={() => setSortBy('season')}
                       >
                         <div className="flex items-center justify-center gap-1">
-                          Season CS/Game
+                          Rest of Season CS/Game
                           {sortBy === 'season' && <TrendingUp className="h-3 w-3" />}
                         </div>
                       </th>
