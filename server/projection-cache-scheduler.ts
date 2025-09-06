@@ -3,10 +3,13 @@ import { projectionCacheWorker } from './projection-cache-worker';
 class ProjectionCacheScheduler {
   private intervalId: NodeJS.Timeout | null = null;
   private readonly SCHEDULE_TIMES = [
-    { hour: 7, minute: 0 },   // 7:00 AM
-    { hour: 19, minute: 0 }   // 7:00 PM
+    { hour: 6, minute: 0 },   // 6:00 AM
+    { hour: 12, minute: 0 },  // 12:00 PM
+    { hour: 18, minute: 0 },  // 6:00 PM
+    { hour: 23, minute: 0 }   // 11:00 PM
   ];
   private readonly HOURLY_UPDATE_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
+  private lastFullUpdate: Date | null = null;
   
   /**
    * Start the projection cache scheduler with hourly updates
@@ -46,31 +49,69 @@ class ProjectionCacheScheduler {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     
-    console.log(`⏰ Hourly projection cache update triggered at ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
-    this.runCacheUpdate().catch(error => {
-      console.error('❌ Hourly cache update failed:', error);
-    });
+    // Check if it's a scheduled full update time
+    const isScheduledTime = this.SCHEDULE_TIMES.some(time => 
+      time.hour === currentHour && currentMinute >= time.minute && currentMinute < time.minute + 5
+    );
+    
+    if (isScheduledTime || this.shouldRunFullUpdate()) {
+      console.log(`⏰ Full projection cache update triggered at ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
+      this.runCacheUpdate(true).catch(error => {
+        console.error('❌ Full cache update failed:', error);
+      });
+    } else {
+      console.log(`⏰ Light projection cache update triggered at ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
+      this.runCacheUpdate(false).catch(error => {
+        console.error('❌ Light cache update failed:', error);
+      });
+    }
+  }
+  
+  /**
+   * Check if we should run a full update (if it's been more than 8 hours)
+   */
+  private shouldRunFullUpdate(): boolean {
+    if (!this.lastFullUpdate) return true;
+    const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000);
+    return this.lastFullUpdate < eightHoursAgo;
   }
   
   /**
    * Execute the cache update
    */
-  private async runCacheUpdate(): Promise<void> {
+  private async runCacheUpdate(fullUpdate: boolean = true): Promise<void> {
     try {
-      console.log('🚀 Starting scheduled projection cache update...');
+      const updateType = fullUpdate ? 'full' : 'light';
+      console.log(`🚀 Starting scheduled ${updateType} projection cache update...`);
       const startTime = Date.now();
       
-      await projectionCacheWorker.cacheAllProjections();
+      if (fullUpdate) {
+        await projectionCacheWorker.cacheAllProjections();
+        this.lastFullUpdate = new Date();
+      } else {
+        // Light update: only update the most critical cached data
+        await projectionCacheWorker.cacheEssentialProjections();
+      }
       
       // Get cache statistics
       const stats = await projectionCacheWorker.getCacheStats();
       
       const duration = Date.now() - startTime;
-      console.log(`✅ Projection cache update completed in ${Math.round(duration / 1000)}s`);
+      console.log(`✅ ${updateType} projection cache update completed in ${Math.round(duration / 1000)}s`);
       console.log(`📊 Cache stats:`, stats);
       
     } catch (error) {
-      console.error('❌ Projection cache update failed:', error);
+      console.error(`❌ Projection cache update failed:`, error);
+      // If full update fails, try light update as fallback
+      if (fullUpdate) {
+        console.log('🔄 Attempting light update as fallback...');
+        try {
+          await projectionCacheWorker.cacheEssentialProjections();
+          console.log('✅ Fallback light update completed');
+        } catch (fallbackError) {
+          console.error('❌ Fallback update also failed:', fallbackError);
+        }
+      }
     }
   }
   
