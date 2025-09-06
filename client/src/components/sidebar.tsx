@@ -123,6 +123,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Advanced Team Tools", 
       items: [
+        { path: "/goal-share", label: "Goal Share", icon: Target, description: "Player goal share breakdown by team", popular: false },
+        { path: "/assist-share", label: "Assist Share", icon: Zap, description: "Player assist share breakdown by team", popular: false },
         { path: "/results-projections", label: "Results Projections", icon: Calendar, description: "Mathematical match predictions without variance", popular: false },
         { path: "/team-goals-spread-betting", label: "Team Goals Spread Betting", icon: Target, description: "Spread betting analysis", popular: false },
         { path: "/season-projections", label: "Season Projections", icon: Trophy, description: "Full season projections", popular: false }
