@@ -7821,9 +7821,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromRedCards[`gw${gw}`] = Math.round(redCardsPoints * 100) / 100;
           totalRedCardsPoints += redCardsPoints;
           
-          // Bonus points using corrected calculation: Probability × 3 (3 points per team)
+          // Bonus points using position-based hierarchy calculation
           const bonusProbability = playerBonusProbs[`gw${gw}`] || 0;
-          const bonusPoints = bonusProbability * 3; // Corrected formula: Probability × 3
+          
+          // Position-based multipliers: Forwards > Midfielders > Defenders > Goalkeepers
+          const getPositionMultiplier = (pos: string): number => {
+            switch (pos.toLowerCase()) {
+              case 'forward':
+              case 'fwd': 
+                return 1.3; // Forwards get 30% more bonus points
+              case 'midfielder':
+              case 'mid': 
+                return 1.1; // Midfielders get 10% more bonus points
+              case 'defender':
+              case 'def': 
+                return 0.9; // Defenders get 10% fewer bonus points
+              case 'goalkeeper':
+              case 'gkp':
+              case 'gk': 
+                return 0.7; // Goalkeepers get 30% fewer bonus points
+              default: 
+                return 1.0; // Default multiplier
+            }
+          };
+          
+          const positionMultiplier = getPositionMultiplier(position);
+          const bonusPoints = bonusProbability * 3 * positionMultiplier; // Position-adjusted formula
           pointsFromBonus[`gw${gw}`] = Math.round(bonusPoints * 100) / 100;
           totalBonusPoints += bonusPoints;
           
@@ -11263,10 +11286,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let totalBonusPoints = 0;
         let totalPoints = 0;
         
-        // Apply corrected formula: Bonus Points = Bonus Probability × 3 (3 points per team)
+        // Apply position-based hierarchy: Forwards > Midfielders > Defenders > Goalkeepers
+        const getPositionMultiplier = (position: string): number => {
+          switch (position.toLowerCase()) {
+            case 'forward':
+            case 'fwd': 
+              return 1.3; // Forwards get 30% more bonus points
+            case 'midfielder':
+            case 'mid': 
+              return 1.1; // Midfielders get 10% more bonus points
+            case 'defender':
+            case 'def': 
+              return 0.9; // Defenders get 10% fewer bonus points
+            case 'goalkeeper':
+            case 'gkp':
+            case 'gk': 
+              return 0.7; // Goalkeepers get 30% fewer bonus points
+            default: 
+              return 1.0; // Default multiplier
+          }
+        };
+        
+        const positionMultiplier = getPositionMultiplier(playerData.position);
+        
         Object.keys(playerData.bonusProbabilities).forEach(gwKey => {
           const probability = playerData.bonusProbabilities[gwKey];
-          const bonusPointsValue = probability * 3.0; // Corrected formula: Probability × 3
+          const bonusPointsValue = probability * 3.0 * positionMultiplier; // Position-adjusted formula
           
           bonusPoints[gwKey] = parseFloat(bonusPointsValue.toFixed(3));
           pointsFromBonus[gwKey] = parseFloat(bonusPointsValue.toFixed(3));
