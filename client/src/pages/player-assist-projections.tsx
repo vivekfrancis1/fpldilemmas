@@ -409,37 +409,67 @@ export default function PlayerAssistProjections() {
                               </div>
                             </td>
                             <td className="text-center py-3 px-1">
-                              <span className={`${(player.gameweekProjections[4] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                {(player.gameweekProjections[4] || 0).toFixed(2)}
-                              </span>
+                              <ValueCell 
+                                value={player.gameweekProjections[4] || 0} 
+                                format="assists" 
+                                decimals={2} 
+                                colorScheme="assists"
+                                fontWeight="medium"
+                              />
                             </td>
                             <td className="text-center py-3 px-1">
-                              <span className={`${(player.gameweekProjections[5] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                {(player.gameweekProjections[5] || 0).toFixed(2)}
-                              </span>
+                              <ValueCell 
+                                value={player.gameweekProjections[5] || 0} 
+                                format="assists" 
+                                decimals={2} 
+                                colorScheme="assists"
+                                fontWeight="medium"
+                              />
                             </td>
                             <td className="text-center py-3 px-1">
-                              <span className={`${(player.gameweekProjections[6] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                {(player.gameweekProjections[6] || 0).toFixed(2)}
-                              </span>
+                              <ValueCell 
+                                value={player.gameweekProjections[6] || 0} 
+                                format="assists" 
+                                decimals={2} 
+                                colorScheme="assists"
+                                fontWeight="medium"
+                              />
                             </td>
                             <td className="text-center py-3 px-1">
-                              <span className={`${(player.gameweekProjections[7] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                {(player.gameweekProjections[7] || 0).toFixed(2)}
-                              </span>
+                              <ValueCell 
+                                value={player.gameweekProjections[7] || 0} 
+                                format="assists" 
+                                decimals={2} 
+                                colorScheme="assists"
+                                fontWeight="medium"
+                              />
                             </td>
                             <td className="text-center py-3 px-1">
-                              <span className={`${(player.gameweekProjections[8] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                {(player.gameweekProjections[8] || 0).toFixed(2)}
-                              </span>
+                              <ValueCell 
+                                value={player.gameweekProjections[8] || 0} 
+                                format="assists" 
+                                decimals={2} 
+                                colorScheme="assists"
+                                fontWeight="medium"
+                              />
                             </td>
                             <td className="text-center py-3 px-1">
-                              <span className={`${(player.gameweekProjections[9] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                {(player.gameweekProjections[9] || 0).toFixed(2)}
-                              </span>
+                              <ValueCell 
+                                value={player.gameweekProjections[9] || 0} 
+                                format="assists" 
+                                decimals={2} 
+                                colorScheme="assists"
+                                fontWeight="medium"
+                              />
                             </td>
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {getFilteredTotal(player).toFixed(2)}
+                              <ValueCell 
+                                value={getFilteredTotal(player)} 
+                                format="assists" 
+                                decimals={2} 
+                                colorScheme="assists"
+                                fontWeight="semibold"
+                              />
                             </td>
                           </tr>
                           );
@@ -532,32 +562,68 @@ export default function PlayerAssistProjections() {
                             </td>
                             <td className="text-center py-3 px-1">
                               <span className={`${(player.gameweekProjections[4] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                {((player.gameweekProjections[4] || 0) * 3).toFixed(1)}
+                                <ValueCell 
+                                  value={(player.gameweekProjections[4] || 0) * 3} 
+                                  format="points" 
+                                  decimals={1} 
+                                  colorScheme="points"
+                                  fontWeight="medium"
+                                />
                               </span>
                             </td>
                             <td className="text-center py-3 px-1">
                               <span className={`${(player.gameweekProjections[5] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                {((player.gameweekProjections[5] || 0) * 3).toFixed(1)}
+                                <ValueCell 
+                                  value={(player.gameweekProjections[5] || 0) * 3} 
+                                  format="points" 
+                                  decimals={1} 
+                                  colorScheme="points"
+                                  fontWeight="medium"
+                                />
                               </span>
                             </td>
                             <td className="text-center py-3 px-1">
                               <span className={`${(player.gameweekProjections[6] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                {((player.gameweekProjections[6] || 0) * 3).toFixed(1)}
+                                <ValueCell 
+                                  value={(player.gameweekProjections[6] || 0) * 3} 
+                                  format="points" 
+                                  decimals={1} 
+                                  colorScheme="points"
+                                  fontWeight="medium"
+                                />
                               </span>
                             </td>
                             <td className="text-center py-3 px-1">
                               <span className={`${(player.gameweekProjections[7] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                {((player.gameweekProjections[7] || 0) * 3).toFixed(1)}
+                                <ValueCell 
+                                  value={(player.gameweekProjections[7] || 0) * 3} 
+                                  format="points" 
+                                  decimals={1} 
+                                  colorScheme="points"
+                                  fontWeight="medium"
+                                />
                               </span>
                             </td>
                             <td className="text-center py-3 px-1">
                               <span className={`${(player.gameweekProjections[8] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                {((player.gameweekProjections[8] || 0) * 3).toFixed(1)}
+                                <ValueCell 
+                                  value={(player.gameweekProjections[8] || 0) * 3} 
+                                  format="points" 
+                                  decimals={1} 
+                                  colorScheme="points"
+                                  fontWeight="medium"
+                                />
                               </span>
                             </td>
                             <td className="text-center py-3 px-1">
                               <span className={`${(player.gameweekProjections[9] || 0) >= 0.15 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                {((player.gameweekProjections[9] || 0) * 3).toFixed(1)}
+                                <ValueCell 
+                                  value={(player.gameweekProjections[9] || 0) * 3} 
+                                  format="points" 
+                                  decimals={1} 
+                                  colorScheme="points"
+                                  fontWeight="medium"
+                                />
                               </span>
                             </td>
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
