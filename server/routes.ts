@@ -7819,8 +7819,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         db.select().from(cachedPlayerRedCards)
       ]);
 
-      // Fetch bonus probabilities using the new simplified calculation API
-      const bonusProbabilitiesResponse = await fetch(`http://localhost:5000/api/player-bonus-probabilities`);
+      // Fetch bonus probabilities using the cached endpoint for ultra-fast performance
+      const bonusProbabilitiesResponse = await internalFetch(`api/cached/player-bonus-probabilities`);
       if (!bonusProbabilitiesResponse.ok) throw new Error("Failed to fetch bonus probabilities");
       const bonusProbabilitiesData = await bonusProbabilitiesResponse.json();
 
@@ -11412,6 +11412,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Response cache for assists
   let assistsResponseCache: { data: any[]; timestamp: number } | null = null;
 
+  // Response cache for bonus probabilities
+  let bonusResponseCache: { data: any[]; timestamp: number } | null = null;
+
+  app.get("/api/cached/player-bonus-probabilities", async (req, res) => {
+    try {
+      // Return cached response if available and fresh
+      const now = Date.now();
+      if (bonusResponseCache && (now - bonusResponseCache.timestamp) < RESPONSE_CACHE_DURATION) {
+        console.log("⚡ Serving bonus probabilities from response cache");
+        return res.json(bonusResponseCache.data);
+      }
+
+      console.log("📊 Serving cached player bonus probabilities from database");
+      
+      // Fetch cached data with optimized query - only essential fields
+      const cachedData = await db.select({
+        playerId: cachedPlayerBonusPoints.playerId,
+        playerName: cachedPlayerBonusPoints.playerName,
+        teamName: cachedPlayerBonusPoints.teamName,
+        position: cachedPlayerBonusPoints.position,
+        gameweekData: cachedPlayerBonusPoints.gameweekData,
+        pointsData: cachedPlayerBonusPoints.pointsData,
+        totalValue: cachedPlayerBonusPoints.totalValue,
+        totalPoints: cachedPlayerBonusPoints.totalPoints
+      })
+        .from(cachedPlayerBonusPoints)
+        .orderBy(desc(cachedPlayerBonusPoints.totalValue));
+      
+      // If no cached data, fallback to live API
+      if (!cachedData || cachedData.length === 0) {
+        console.log("⚠️ No cached bonus probabilities data found, falling back to live API");
+        try {
+          const liveResponse = await internalFetch("api/player-bonus-probabilities");
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            console.log(`✅ Fallback successful, returning ${liveData.length} players from live API`);
+            return res.json(liveData);
+          }
+        } catch (error) {
+          console.error("Fallback API call failed:", error);
+        }
+        console.log("❌ Fallback failed, returning empty array");
+        return res.json([]);
+      }
+      
+      // Transform cached data to match expected format
+      const responseData = cachedData.map(row => {
+        const gameweekData = row.gameweekData as any;
+        const pointsData = row.pointsData as any;
+        
+        return {
+          playerId: row.playerId,
+          playerName: row.playerName,
+          teamShort: row.teamName,
+          position: row.position,
+          bonusPoints: gameweekData || {},
+          pointsFromBonus: pointsData || {},
+          totalBonusPoints: row.totalValue || 0,
+          totalPoints: row.totalPoints || 0,
+          averagePerGameweek: row.totalPoints ? parseFloat((row.totalPoints / 6).toFixed(2)) : 0
+        };
+      });
+      
+      // Cache the processed response
+      bonusResponseCache = { data: responseData, timestamp: now };
+      
+      res.json(responseData);
+    } catch (error) {
+      console.error("Error fetching cached bonus probabilities:", error);
+      res.status(500).json({ error: "Failed to fetch cached bonus probabilities" });
+    }
+  });
+
   app.get("/api/cached/player-assists-projections", async (req, res) => {
     try {
       // Return cached response if available and fresh
@@ -11766,8 +11839,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { startGameweek = 4, endGameweek = 9 } = req.query;
       
-      // Get bonus probabilities from our probability API
-      const probabilitiesResponse = await fetch(`http://localhost:5000/api/player-bonus-probabilities?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      // Get bonus probabilities from our cached API for instant performance
+      const probabilitiesResponse = await internalFetch(`api/cached/player-bonus-probabilities`);
       const probabilitiesData = await probabilitiesResponse.json();
       
       // Convert probabilities to final bonus points: Probability × 1
