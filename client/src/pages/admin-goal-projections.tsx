@@ -932,11 +932,11 @@ export default function AdminGoalProjections() {
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
                           <div className="text-center">
                             <p className="font-medium text-purple-600">Phase 4: Attack Tiers</p>
-                            <p className="text-muted-foreground">Elite (×1.5), Strong (×1.25), etc.</p>
+                            <p className="text-muted-foreground">Elite (×{formData.eliteAttackMultiplier || 1.35}), Strong (×{formData.strongAttackMultiplier || 1.15}), etc.</p>
                           </div>
                           <div className="text-center">
                             <p className="font-medium text-blue-600">Phase 3: Defensive Tiers</p>
-                            <p className="text-muted-foreground">Elite (×0.65), Strong (×0.80), etc.</p>
+                            <p className="text-muted-foreground">Elite (×{formData.eliteDefenseMultiplier || 0.7}), Strong (×{formData.strongDefenseMultiplier || 0.85}), etc.</p>
                           </div>
                           <div className="text-center">
                             <p className="font-medium text-green-600">Phase 2: Venue</p>
