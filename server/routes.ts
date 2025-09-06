@@ -10430,7 +10430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 1;
       
       // Get team goals conceded projections as the source of truth from combined endpoint
-      const teamProjectionsResponse = await fetch(`http://localhost:5000/api/team-projections-combined?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      const teamProjectionsResponse = await fetch(`http://localhost:5000/api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       const teamProjectionsData = await teamProjectionsResponse.json();
       const teamProjections = teamProjectionsData.goalsAgainst || [];
       

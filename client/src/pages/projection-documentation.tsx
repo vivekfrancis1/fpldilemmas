@@ -763,7 +763,7 @@ export default function ProjectionDocumentation() {
                     <strong>Logic:</strong> Base xG per team (1.5) × attack multiplier × defense multiplier × home/away factor × context multipliers. Attack tiers: Elite (1.35), Strong (1.15), Average (1.00), Weak (0.85).
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
-                    <div>API: /api/team-projections-combined</div>
+                    <div>API: /api/team-goal-projections</div>
                     <div>Base: 1.5 goals per game</div>
                     <div>Multipliers: Attack × Defense × Venue</div>
                   </div>
