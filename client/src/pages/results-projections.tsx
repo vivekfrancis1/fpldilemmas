@@ -159,21 +159,21 @@ export default function ResultsProjections() {
   }
 
   return (
-    
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50/30">
-        <div className="w-full max-w-7xl mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-              <Target className="h-8 w-8 text-green-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              Results Projections
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Predicted match results based on sports spread betting markets and statistical analysis
-            </p>
+    <div className="fpl-page-container">
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Target className="h-8 w-8" />
+            <h1>Results Projections</h1>
           </div>
+          <p className="fpl-page-subtitle">
+            Predicted match results based on sports spread betting markets and statistical analysis
+          </p>
+        </div>
+      </div>
+
+      <div className="fpl-section-spacing">
 
           {/* Controls */}
           <Card className="mb-6">
@@ -358,8 +358,7 @@ export default function ResultsProjections() {
               </div>
             </CardContent>
           </Card>
-        </div>
       </div>
-    
+    </div>
   );
 }
