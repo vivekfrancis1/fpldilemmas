@@ -6272,17 +6272,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let homeExpected = match.homeTeam.expectedGoals;
         let awayExpected = match.awayTeam.expectedGoals;
         
-        // Option 2: Controlled variance (DISABLED for data consistency)
-        // Variance disabled to ensure Results Projections match Team Goal Projections exactly
-        if (false && upsetConfig.enableControlledVariance) {
+        // Option 2: Controlled variance
+        if (upsetConfig.enableControlledVariance) {
           const homeVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin));
           const awayVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin));
           homeExpected *= homeVariance;
           awayExpected *= awayVariance;
         }
         
-        // Option 3: Context-based upsets (DISABLED for data consistency)
-        if (false && upsetConfig.enableContextUpsets) {
+        // Option 3: Context-based upsets
+        if (upsetConfig.enableContextUpsets) {
           let homeContextBoost = 1.0;
           let awayContextBoost = 1.0;
           
@@ -6316,8 +6315,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           awayExpected *= awayContextBoost;
         }
         
-        // Option 5: Season-long upset budget (DISABLED for data consistency)
-        if (false && upsetConfig.enableSeasonUpsetBudget) {
+        // Option 5: Season-long upset budget
+        if (upsetConfig.enableSeasonUpsetBudget) {
           if (Math.random() < upsetConfig.upsetBudgetChance) {
             const upsetBudgetMultiplier = upsetConfig.upsetBudgetMin + (Math.random() * (upsetConfig.upsetBudgetMax - upsetConfig.upsetBudgetMin));
             homeExpected *= upsetBudgetMultiplier;
