@@ -2658,6 +2658,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== CLEAN SHEET ADMIN ENDPOINTS ====================
+
+  // GET clean sheet admin settings endpoint
+  app.get("/api/admin/clean-sheet-settings", async (req, res) => {
+    try {
+      // Add cache-busting headers to ensure immediate reflection of changes
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+      
+      // Extract only clean sheet parameters from adminGoalSettings
+      const cleanSheetSettings = {
+        cleanSheetExponent: adminGoalSettings.cleanSheetExponent || 1.0,
+        cleanSheetMultiplier: adminGoalSettings.cleanSheetMultiplier || 100,
+        lastUpdated: adminGoalSettings.lastUpdated,
+        updatedBy: adminGoalSettings.updatedBy
+      };
+      
+      res.json(cleanSheetSettings);
+    } catch (error) {
+      console.error("Error fetching clean sheet settings:", error);
+      res.status(500).json({
+        error: "Failed to fetch clean sheet settings",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // PUT clean sheet admin settings endpoint
+  app.put("/api/admin/clean-sheet-settings", async (req, res) => {
+    try {
+      // Update only clean sheet parameters in adminGoalSettings
+      const updatedSettings = {
+        ...adminGoalSettings,
+        cleanSheetExponent: req.body.cleanSheetExponent || adminGoalSettings.cleanSheetExponent,
+        cleanSheetMultiplier: req.body.cleanSheetMultiplier || adminGoalSettings.cleanSheetMultiplier,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      adminGoalSettings = updatedSettings;
+      
+      // Clear cached data to force recalculation with new settings
+      console.log("Clean sheet admin settings updated, projection model will use new parameters");
+      
+      res.json({
+        success: true,
+        message: "Clean sheet settings updated successfully",
+        settings: {
+          cleanSheetExponent: updatedSettings.cleanSheetExponent,
+          cleanSheetMultiplier: updatedSettings.cleanSheetMultiplier,
+          lastUpdated: updatedSettings.lastUpdated,
+          updatedBy: updatedSettings.updatedBy
+        }
+      });
+    } catch (error) {
+      console.error("Error updating clean sheet settings:", error);
+      res.status(500).json({
+        error: "Failed to update clean sheet settings",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // POST reset clean sheet admin settings endpoint
+  app.post("/api/admin/clean-sheet-settings/reset", async (req, res) => {
+    try {
+      // Reset only clean sheet parameters to default values
+      adminGoalSettings = {
+        ...adminGoalSettings,
+        cleanSheetExponent: 1.0,
+        cleanSheetMultiplier: 100,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin"
+      };
+      
+      console.log("Clean sheet admin settings reset to default values");
+      
+      res.json({
+        success: true,
+        message: "Clean sheet settings reset to defaults successfully",
+        settings: {
+          cleanSheetExponent: adminGoalSettings.cleanSheetExponent,
+          cleanSheetMultiplier: adminGoalSettings.cleanSheetMultiplier,
+          lastUpdated: adminGoalSettings.lastUpdated,
+          updatedBy: adminGoalSettings.updatedBy
+        }
+      });
+    } catch (error) {
+      console.error("Error resetting clean sheet settings:", error);
+      res.status(500).json({
+        error: "Failed to reset clean sheet settings",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // ==================== LEGACY GOAL PROJECTION ADMIN ENDPOINTS ====================
 
   // Get admin settings

@@ -77,9 +77,6 @@ interface AdminSettings {
   marketCeilingMultiplier: number;
   absoluteMinGoals: number;
   absoluteMaxGoals: number;
-  // Clean Sheet Parameters
-  cleanSheetExponent: number;
-  cleanSheetMultiplier: number;
   lastUpdated: string;
   updatedBy: string;
 }
@@ -218,9 +215,6 @@ export default function AdminGoalProjections() {
         marketFloorMultiplier: settings.marketFloorMultiplier ?? DEFAULT_VALUES.marketBounds.marketFloorMultiplier,
         marketCeilingMultiplier: settings.marketCeilingMultiplier ?? DEFAULT_VALUES.marketBounds.marketCeilingMultiplier,
         
-        // Clean Sheet Parameters
-        cleanSheetExponent: settings.cleanSheetExponent ?? 1.0,
-        cleanSheetMultiplier: settings.cleanSheetMultiplier ?? 100,
         
         homeAdvantageGoalsMultiplier: settings.homeAdvantageGoalsMultiplier ?? DEFAULT_VALUES.venueFactors.homeAdvantageMultiplier,
         awayFactorGoalsMultiplier: settings.awayFactorGoalsMultiplier ?? DEFAULT_VALUES.venueFactors.awayFactorMultiplier,
@@ -1882,9 +1876,7 @@ export default function AdminGoalProjections() {
                     <tbody>
                       {[
                         { key: 'absoluteMinGoals', name: 'Absolute Min Goals', default: 0.0, min: 0.0, max: 0.8, description: 'Hard minimum goals per match - no game can project below this' },
-                        { key: 'absoluteMaxGoals', name: 'Absolute Max Goals', default: 7.0, min: 3.0, max: 10.0, description: 'Hard maximum goals per match - no game can project above this' },
-                        { key: 'cleanSheetExponent', name: 'Clean Sheet Exponent', default: 1.0, min: 0.8, max: 2.0, description: 'Controls clean sheet sensitivity: higher = more conservative CS probabilities' },
-                        { key: 'cleanSheetMultiplier', name: 'Clean Sheet Multiplier', default: 100, min: 50, max: 120, description: 'Overall CS probability multiplier: lower = more conservative' }
+                        { key: 'absoluteMaxGoals', name: 'Absolute Max Goals', default: 7.0, min: 3.0, max: 10.0, description: 'Hard maximum goals per match - no game can project above this' }
                       ].map((setting) => {
                         const currentValue = (formData as any)[setting.key] || setting.default;
                         const isChanged = Math.abs(currentValue - setting.default) > 0.01;

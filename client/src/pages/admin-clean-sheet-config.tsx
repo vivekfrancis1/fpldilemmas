@@ -35,7 +35,7 @@ export default function AdminCleanSheetConfig() {
 
   // Fetch current clean sheet settings
   const { data: settings, isLoading } = useQuery<CleanSheetSettings>({
-    queryKey: ['/api/admin/goal-scored-settings'],
+    queryKey: ['/api/admin/clean-sheet-settings'],
     select: (data: any) => ({
       cleanSheetExponent: data.cleanSheetExponent || DEFAULT_VALUES.cleanSheetExponent,
       cleanSheetMultiplier: data.cleanSheetMultiplier || DEFAULT_VALUES.cleanSheetMultiplier,
@@ -47,7 +47,7 @@ export default function AdminCleanSheetConfig() {
   // Update settings mutation
   const updateSettingsMutation = useMutation({
     mutationFn: async (updatedSettings: Partial<CleanSheetSettings>) => {
-      const response = await fetch('/api/admin/goal-scored-settings', {
+      const response = await fetch('/api/admin/clean-sheet-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedSettings),
@@ -56,7 +56,7 @@ export default function AdminCleanSheetConfig() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/goal-scored-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/clean-sheet-settings'] });
       setHasChanges(false);
       toast({
         title: "Settings Updated",
