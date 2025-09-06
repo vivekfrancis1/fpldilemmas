@@ -841,7 +841,7 @@ export default function AdminGoalProjections() {
                     </thead>
                     <tbody>
                       {[
-                        { key: 'averageBaseXGPerTeamPerGame', name: 'Universal Base xG per Team per Game', default: 1.35, min: 0.8, max: 2.0, description: 'Universal foundation xG that all teams start from before adjustments' },
+                        { key: 'averageBaseXGPerTeamPerGame', name: 'Universal Base xG per Team per Game', default: 1.5, min: 0.8, max: 2.0, description: 'Universal foundation xG that all teams start from before adjustments' },
                         { key: 'defaultExpectedGoalsPerGame', name: 'Default Expected Goals per Game', default: 1.3, min: 1.0, max: 2.0, description: 'Fallback value for unknown teams' },
                         { key: 'defaultTeamVariance', name: 'Default Team Variance', default: 0.45, min: 0.2, max: 0.8, description: 'Goal prediction variance for teams' },
                         { key: 'globalTierMultiplier', name: 'Global Tier Multiplier', default: 1.25, min: 1.0, max: 2.0, description: 'Global tier impact factor' }

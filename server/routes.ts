@@ -2930,7 +2930,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Phase 6: Market Bounds - Apply market multiplier constraints to base xG
-          const averageBaseXG = adminGoalSettings.averageBaseXGPerTeamPerGame || 1.35;
+          const averageBaseXG = adminGoalSettings.averageBaseXGPerTeamPerGame || 1.5;
           const marketFloor = averageBaseXG * (adminGoalSettings.marketFloorMultiplier || 0.40);
           const marketCeiling = averageBaseXG * (adminGoalSettings.marketCeilingMultiplier || 2.0);
           baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
