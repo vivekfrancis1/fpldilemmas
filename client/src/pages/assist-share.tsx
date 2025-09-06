@@ -37,11 +37,11 @@ export default function AssistShare() {
     staleTime: 15 * 60 * 1000,
   });
 
-  // Fetch assist share data based on selected season - use Team Assist Projections for current season
+  // Fetch assist share data from cached database for ultra-fast loading
   const { data: assistShareData, isLoading: assistShareLoading } = useQuery<SeasonAssistShareData[]>({
-    queryKey: selectedSeason === "current" ? ["/api/assist-share-season"] : ["/api/assist-share-historical", selectedSeason],
+    queryKey: selectedSeason === "current" ? ["/api/cached/assist-share"] : ["/api/assist-share-historical", selectedSeason],
     enabled: selectedSeason === "current" || (selectedSeason !== "current" && !!selectedSeason),
-    staleTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
   });
 
   // Use season assist share data directly from API
