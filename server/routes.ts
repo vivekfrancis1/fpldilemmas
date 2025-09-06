@@ -4080,10 +4080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Goals Scored Projections endpoint - gameweek by gameweek breakdown with hybrid calculations
   app.get("/api/player-goals-scored-projections", async (req, res) => {
     try {
-      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
-      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
-      
-      console.log(`DEBUG: Player Goals Scored Projections API called for GW${startGameweek}-${endGameweek}`);
+      console.log(`DEBUG: Player Goals Scored Projections API called`);
       
       // Check if we have saved goal share data from the recent call
       if (!savedGoalShareData || !savedGoalShareData.response || (Date.now() - savedGoalShareData.timestamp) > 300000) {
@@ -4251,37 +4248,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Don't apply penalty adjustments here - they're already included in the goal share data
           // The goal share calculation already includes penalty taker adjustments
           
-          // Filter gameweek projections to requested range and calculate total
-          const filteredGameweekProjections: { [gameweek: number]: number } = {};
-          let rangeTotal = 0;
+          // Use the pre-calculated season total from goal share data
+          const seasonTotal = player.projectedGoals;
           
-          for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            if (gameweekProjections[gw] !== undefined) {
-              filteredGameweekProjections[gw] = gameweekProjections[gw];
-              rangeTotal += gameweekProjections[gw];
-            }
-          }
-          
-          // Convert position to short form
-          const getShortPosition = (pos: string) => {
-            switch (pos?.toLowerCase()) {
-              case 'goalkeeper': return 'GKP';
-              case 'defender': return 'DEF'; 
-              case 'midfielder': return 'MID';
-              case 'forward': return 'FWD';
-              default: return pos?.substring(0, 3).toUpperCase() || 'UNK';
-            }
-          };
-
           playerProjections.push({
-            id: player.id,
-            name: player.name,
-            team: team.name,
+            playerId: player.id,
+            playerName: player.name,
+            teamName: team.name,
             teamShort: team.short_name,
-            position: getShortPosition(player.position),
-            currentPrice: player.currentPrice || 0,
-            projectedGoals: Math.round(rangeTotal * 100) / 100,
-            gameweekProjections: filteredGameweekProjections,
+            position: player.position,
+            totalProjectedGoals: seasonTotal,
+            gameweekProjections,
             goalShare: player.goalShare
           });
         }
@@ -4289,8 +4266,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Generated hybrid projections for ${playerProjections.length} players with actual+projected data`);
       
-      // Sort by projected goals descending
-      playerProjections.sort((a, b) => b.projectedGoals - a.projectedGoals);
+      // Sort by total projected goals descending
+      playerProjections.sort((a, b) => b.totalProjectedGoals - a.totalProjectedGoals);
       
       res.json(playerProjections);
     } catch (error) {

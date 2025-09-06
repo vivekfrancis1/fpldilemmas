@@ -15,7 +15,7 @@ interface PlayerGoalProjection {
   teamName: string;
   teamShort: string;
   position: string;
-  projectedGoals: number;
+  totalProjectedGoals: number;
   gameweekProjections: { [gameweek: number]: number };
   goalShare: number;
 }
@@ -105,11 +105,11 @@ export default function PlayerGoalsScoredProjections() {
           }
           case "season": {
             if (activeTab === "points") {
-              const aSeasonPoints = getPointsFromGoals(a.projectedGoals, a.position);
-              const bSeasonPoints = getPointsFromGoals(b.projectedGoals, b.position);
+              const aSeasonPoints = getPointsFromGoals(a.totalProjectedGoals, a.position);
+              const bSeasonPoints = getPointsFromGoals(b.totalProjectedGoals, b.position);
               return (bSeasonPoints - aSeasonPoints) * multiplier;
             } else {
-              return (b.projectedGoals - a.projectedGoals) * multiplier;
+              return (b.totalProjectedGoals - a.totalProjectedGoals) * multiplier;
             }
           }
           case "name": return a.playerName.localeCompare(b.playerName) * multiplier;
@@ -172,9 +172,9 @@ export default function PlayerGoalsScoredProjections() {
     });
     
     // Calculate season totals
-    seasonTotal = filteredProjections.reduce((sum, player) => sum + player.projectedGoals, 0);
+    seasonTotal = filteredProjections.reduce((sum, player) => sum + player.totalProjectedGoals, 0);
     pointsSeasonTotal = filteredProjections.reduce((sum, player) => {
-      return sum + getPointsFromGoals(player.projectedGoals, player.position);
+      return sum + getPointsFromGoals(player.totalProjectedGoals, player.position);
     }, 0);
     
     const averagePerGame = overallTotal / totalWeeks;
@@ -597,7 +597,7 @@ export default function PlayerGoalsScoredProjections() {
                         </td>
                         <td className="py-3 px-2 text-center">
                           <span className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-sm font-medium">
-                            {player.projectedGoals.toFixed(2)}
+                            {player.totalProjectedGoals.toFixed(2)}
                           </span>
                         </td>
                       </tr>
@@ -791,7 +791,7 @@ export default function PlayerGoalsScoredProjections() {
                         </td>
                         <td className="py-3 px-2 text-center">
                           <span className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-sm font-medium">
-                            {getPointsFromGoals(player.projectedGoals, player.position).toFixed(1)}
+                            {getPointsFromGoals(player.totalProjectedGoals, player.position).toFixed(1)}
                           </span>
                         </td>
                       </tr>
