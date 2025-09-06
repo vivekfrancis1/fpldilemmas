@@ -38,9 +38,6 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
             GW{gameweek} Points Breakdown
           </div>
-          <div className="text-xs text-gray-500 mb-2">
-            Comprehensive FPL scoring: Completed GWs use actual data • Future GWs use projections
-          </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⚽ Goals:</span>
@@ -65,7 +62,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <span className="font-medium text-orange-700">
                 {player.pointsFromDefensiveContributions?.[gwKey]?.toFixed(1) || '0.0'}
               </span>
-              <span className="text-xs text-gray-400 ml-1">(2 if DC≥10/12)</span>
+
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⏱️ Minutes:</span>
@@ -110,20 +107,6 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <span className="text-green-800">
                 {gwPoints.toFixed(1)}
               </span>
-            </div>
-            <div className="mt-2 text-xs text-gray-500">
-              Sum: {(
-                (player.pointsFromGoals?.[gwKey] || 0) +
-                (player.pointsFromAssists?.[gwKey] || 0) +
-                (player.pointsFromCleanSheets?.[gwKey] || 0) +
-                (player.pointsFromDefensiveContributions?.[gwKey] || 0) +
-                (player.pointsFromMinutes?.[gwKey] || 0) +
-                (player.pointsFromBonus?.[gwKey] || 0) +
-                (player.pointsFromSaves?.[gwKey] || 0) +
-                (player.pointsFromGoalsConceded?.[gwKey] || 0) +
-                (player.pointsFromYellowCards?.[gwKey] || 0) +
-                (player.pointsFromRedCards?.[gwKey] || 0)
-              ).toFixed(1)}
             </div>
           </div>
         </div>
@@ -183,7 +166,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <span className="font-medium text-orange-700">
                 {player.totalPointsFromDefensiveContributions?.toFixed(1) || '0.0'}
               </span>
-              <span className="text-xs text-gray-400 ml-1">(2 if DC≥10/12)</span>
+
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⏱️ Minutes:</span>
