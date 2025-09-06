@@ -724,7 +724,7 @@ export default function AdminGoalProjections() {
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 1: Foundation</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Average Base xG per Team per Game:</strong> <span className="font-mono text-blue-600">1.35</span>
+                        <strong>Average Base xG per Team per Game:</strong> <span className="font-mono text-blue-600">{formData.averageBaseXGPerTeamPerGame || 1.5}</span>
                       </p>
                     </div>
                     
