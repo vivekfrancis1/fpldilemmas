@@ -3430,7 +3430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         const totalAssists = Math.round(correctTotal * 100) / 100;
-        const averageAssistsPerGame = Math.round((correctTotal / 38) * 100) / 100;
+        const averageAssistsPerGame = Math.round((correctTotal / 35) * 100) / 100; // GW4-38 remaining
         
         return {
           id: team.id,
@@ -6998,7 +6998,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         team.totalProjectedGoalsAgainst = Math.round(teamTotal * 100) / 100;
-        team.averageGoalsAgainstPerGame = Math.round((teamTotal / 38) * 100) / 100;
+        team.averageGoalsAgainstPerGame = Math.round((teamTotal / 35) * 100) / 100; // GW4-38 remaining
         totalGoalsAgainst += team.totalProjectedGoalsAgainst;
         
         // Set confidence based on defensive quality
@@ -8209,7 +8209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ownership: parseFloat(fplPlayer.selected_by_percent),
           gameweekProjections,
           totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
-          seasonTotalPoints: Math.round((totalExpectedPoints / (end - start + 1)) * 38 * 100) / 100,
+          seasonTotalPoints: Math.round((totalExpectedPoints / (end - start + 1)) * 35 * 100) / 100, // GW4-38 remaining
           averagePerGameweek: Math.round((totalExpectedPoints / (end - start + 1)) * 100) / 100,
           pointsFromGoals,
           pointsFromAssists,
@@ -9947,7 +9947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               position: position?.singular_name_short || 'UNK',
               gameweekProjections,
               totalProjectedGoals: Math.round(totalProjectedGoals * 100) / 100,
-              averageGoalsPerGame: Math.round((totalProjectedGoals / 38) * 100) / 100
+              averageGoalsPerGame: Math.round((totalProjectedGoals / 35) * 100) / 100 // GW4-38 remaining
             };
           }).filter(Boolean);
           
@@ -10366,7 +10366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               teamShort: team.short_name,
               gameweekProjections,
               totalProjectedCleanSheets: Math.round(totalProjectedCS * 100) / 100,
-              averageCleanSheetProbability: Math.round((totalProjectedCS / 38) * 10000) / 100
+              averageCleanSheetProbability: Math.round((totalProjectedCS / 35) * 10000) / 100 // GW4-38 remaining
             };
           }).filter(Boolean);
           
@@ -12033,7 +12033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.teamName.slice(0, 3).toUpperCase(),
           gameweekProjections: goalProjections,
           totalProjectedGoals: Math.round(totalGoals * 100) / 100,
-          averageGoalsPerGame: Math.round((totalGoals / 38) * 100) / 100,
+          averageGoalsPerGame: Math.round((totalGoals / 35) * 100) / 100, // GW4-38 remaining
           confidence: "High",
           position: index + 1
         };
@@ -12072,7 +12072,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.teamName.slice(0, 3).toUpperCase(),
           gameweekProjections: assistProjections,
           totalProjectedAssists: Math.round(totalAssists * 100) / 100,
-          averageAssistsPerGame: Math.round((totalAssists / 38) * 100) / 100,
+          averageAssistsPerGame: Math.round((totalAssists / 35) * 100) / 100, // GW4-38 remaining
           confidence: "High",
           position: index + 1
         };
