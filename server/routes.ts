@@ -3305,8 +3305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections,
-          totalProjectedGoals: Math.round(totalGoals * 100) / 100,
-          averageGoalsPerGame: Math.round(averageGoals * 100) / 100,
+          // Removed totalProjectedGoals and averageGoalsPerGame
           confidence,
           position: 0 // Will be set after sorting
         };
@@ -3315,8 +3314,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Goals Scored admin doesn't include auto-balance or variance control features
       // Team Goal Projections use base calculations from Goals Scored admin settings only
 
-      // Sort by total expected goals descending and set positions
-      teamProjections.sort((a: any, b: any) => b.totalProjectedGoals - a.totalProjectedGoals);
+      // Sort by team ID since no season totals
+      teamProjections.sort((a: any, b: any) => a.id - b.id);
       teamProjections.forEach((team: any, index: number) => {
         team.position = index + 1;
       });
@@ -3542,15 +3541,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections,
-          totalCSProbability: roundedTotalCSProbability,
-          averageCSProbability: Math.round(averageCleanSheetOdds * 10) / 10,
+          // Removed totalCSProbability and averageCSProbability
           confidence,
           position: 0 // Will be set after sorting
         };
       });
       
-      // Sort by average clean sheet odds descending and set positions
-      teamProjections.sort((a: any, b: any) => b.averageCSProbability - a.averageCSProbability);
+      // Sort by team ID since no season totals
+      teamProjections.sort((a: any, b: any) => a.id - b.id);
       teamProjections.forEach((team: any, index: number) => {
         team.position = index + 1;
       });
@@ -6702,8 +6700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections: gameweekProjections,
-          totalProjectedGoalsAgainst: 0,
-          averageGoalsAgainstPerGame: 0,
+          // Removed totalProjectedGoalsAgainst and averageGoalsAgainstPerGame
           confidence: 'Medium',
           position: 0
         });
@@ -6763,22 +6760,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
         
-        team.totalProjectedGoalsAgainst = Math.round(teamTotal * 100) / 100;
-        team.averageGoalsAgainstPerGame = Math.round((teamTotal / 35) * 100) / 100; // GW4-38 remaining
-        totalGoalsAgainst += team.totalProjectedGoalsAgainst;
-        
-        // Set confidence based on defensive quality
-        team.confidence = team.averageGoalsAgainstPerGame <= 1.0 ? 'High' : 
-                         team.averageGoalsAgainstPerGame <= 1.5 ? 'Medium' : 'Low';
+        // Removed season total calculations
+        // Set confidence to medium for all teams
+        team.confidence = 'Medium';
       });
       
-      // Calculate exact total from goals scored for verification
-      const exactGoalsScoredTotal = teamGoalProjections.reduce((sum: number, team: any) => sum + team.totalProjectedGoals, 0);
-      console.log(`DEBUG: PERFECT MIRROR SUCCESS - Goals Scored: ${exactGoalsScoredTotal.toFixed(2)}, Goals Against: ${totalGoalsAgainst.toFixed(2)}`);
+      // Debug info (season totals removed)
+      console.log(`DEBUG: Team Goals Against Projections - Generated gameweek data for ${teamsGoalsAgainst.size} teams`);
       
-      // Convert to array and sort by goals against (best defense first)
+      // Convert to array and sort by team ID since no season totals
       const finalProjections = Array.from(teamsGoalsAgainst.values())
-        .sort((a, b) => a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst)
+        .sort((a, b) => a.id - b.id)
         .map((team, index) => ({
           ...team,
           position: index + 1
