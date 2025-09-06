@@ -11556,13 +11556,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import Spread Betting Cache Service
   const spreadBettingCacheService = SpreadBettingCacheService.getInstance();
 
+  // Global bootstrap cache for player metadata
+  let playerMetadataCache: { data: Map<number, any>; timestamp: number } | null = null;
+  const METADATA_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+  async function getPlayerMetadata() {
+    const now = Date.now();
+    if (playerMetadataCache && (now - playerMetadataCache.timestamp) < METADATA_CACHE_DURATION) {
+      return playerMetadataCache.data;
+    }
+
+    // Fetch fresh data and build optimized lookup maps
+    const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+    const fplData = await fplResponse.json();
+    
+    const metadataMap = new Map();
+    fplData.elements.forEach((player: any) => {
+      const team = fplData.teams.find((t: any) => t.id === player.team);
+      metadataMap.set(player.id, {
+        name: player.web_name,
+        position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID',
+        teamName: team?.name || null,
+        teamShort: team?.short_name || null
+      });
+    });
+
+    playerMetadataCache = { data: metadataMap, timestamp: now };
+    return metadataMap;
+  }
+
+  // Response cache for fully processed results
+  let goalsResponseCache: { data: any[]; timestamp: number } | null = null;
+  const RESPONSE_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
   // CACHED PLAYER PROJECTION ENDPOINTS - Ultra-fast database serving
   app.get("/api/cached/player-goals-projections", async (req, res) => {
     try {
+      // Return cached response if available and fresh
+      const now = Date.now();
+      if (goalsResponseCache && (now - goalsResponseCache.timestamp) < RESPONSE_CACHE_DURATION) {
+        console.log("⚡ Serving goals projections from response cache");
+        return res.json(goalsResponseCache.data);
+      }
+
       console.log("📊 Serving cached player goals data from database");
       
-      // Fetch cached data and group by player for optimal performance
-      const cachedData = await db.select()
+      // Fetch cached data with optimized query - only essential fields
+      const cachedData = await db.select({
+        playerId: playerGoalsProjections.playerId,
+        gameweek: playerGoalsProjections.gameweek,
+        goals: playerGoalsProjections.goals
+      })
         .from(playerGoalsProjections)
         .where(eq(playerGoalsProjections.season, '2025/26'))
         .orderBy(desc(playerGoalsProjections.goals));
@@ -11572,43 +11616,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      // Fetch current bootstrap data for player names and teams
-      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      const fplData = await fplResponse.json();
-      
-      // Create lookup maps for better performance
-      const playerLookup = new Map();
-      const teamLookup = new Map();
-      
-      fplData.elements.forEach((player: any) => {
-        playerLookup.set(player.id, {
-          name: player.web_name,
-          position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID',
-          teamId: player.team
-        });
-      });
-      
-      fplData.teams.forEach((team: any) => {
-        teamLookup.set(team.id, {
-          name: team.name,
-          shortName: team.short_name
-        });
-      });
+      // Use optimized metadata cache
+      const playerMetadata = await getPlayerMetadata();
       
       // Group by player efficiently using Map for O(n) performance
       const playersMap = new Map();
       
       for (const row of cachedData) {
         if (!playersMap.has(row.playerId)) {
-          const playerInfo = playerLookup.get(row.playerId);
-          const teamInfo = playerInfo ? teamLookup.get(playerInfo.teamId) : null;
+          const metadata = playerMetadata.get(row.playerId);
           
           playersMap.set(row.playerId, {
             playerId: row.playerId,
-            playerName: playerInfo?.name || `Player ${row.playerId}`,
-            teamName: teamInfo?.name || null,
-            teamShort: teamInfo?.shortName || null,
-            position: playerInfo?.position || null,
+            playerName: metadata?.name || `Player ${row.playerId}`,
+            teamName: metadata?.teamName || null,
+            teamShort: metadata?.teamShort || null,
+            position: metadata?.position || null,
             gameweekProjections: {},
             totalProjectedGoals: 0,
             goalShare: 0
@@ -11623,6 +11646,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert to array and sort by total goals descending
       const responseData = Array.from(playersMap.values())
         .sort((a, b) => b.totalProjectedGoals - a.totalProjectedGoals);
+      
+      // Cache the processed response
+      goalsResponseCache = { data: responseData, timestamp: now };
       
       res.json(responseData);
     } catch (error) {

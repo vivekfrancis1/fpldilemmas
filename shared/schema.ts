@@ -215,6 +215,24 @@ export type PlayerSummary = z.infer<typeof playerSummarySchema>;
 export type HistoricalPlayerStats = typeof historicalPlayerStats.$inferSelect;
 export type InsertHistoricalPlayerStats = typeof historicalPlayerStats.$inferInsert;
 
+// Pre-calculated player summary table for optimized queries
+export const playerSummaryCache = pgTable("player_summary_cache", {
+  playerId: integer("player_id").primaryKey(),
+  playerName: varchar("player_name", { length: 100 }),
+  teamName: varchar("team_name", { length: 50 }),
+  teamShort: varchar("team_short", { length: 10 }),
+  position: varchar("position", { length: 10 }),
+  season: varchar("season", { length: 10 }).default("2025/26"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    seasonIdx: index("player_summary_cache_season_idx").on(table.season)
+  };
+});
+
+export type PlayerSummaryCache = typeof playerSummaryCache.$inferSelect;
+export type InsertPlayerSummaryCache = typeof playerSummaryCache.$inferInsert;
+
 // Re-export watchlist types
 export * from "./watchlist-schema";
 
