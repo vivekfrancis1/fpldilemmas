@@ -19,10 +19,14 @@ import {
   Clock,
   Settings,
   Book,
+  Database,
+  UserCog,
+  FileText
 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -31,6 +35,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [location] = useLocation();
+  const { isAdmin } = useAuth();
 
   const isActive = (path: string) => location === path;
 
@@ -88,15 +93,49 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         // { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
       ]
     },
-    // {
-    //   section: "Admin Tools",
-    //   items: [
-    //     { path: "/projection-docs", label: "Projection Documentation", icon: Book, description: "Comprehensive guide to all projection tools and methodologies", popular: false }
-    //     // { path: "/admin-content-creators", label: "Admin", icon: Settings, description: "Manage content creators", popular: false },
-    //   ]
-    // },
-
   ];
+
+  // Admin-only navigation items
+  const adminNavItems = [
+    {
+      section: "Admin Tools",
+      items: [
+        { path: "/admin-content-creators", label: "Content Creator Admin", icon: UserCog, description: "Manage FPL content creators", popular: false },
+        { path: "/admin-goal-projections", label: "Goal Projections Admin", icon: Settings, description: "Configure goal projection settings", popular: false },
+        { path: "/admin-upset-config", label: "Upset Configuration", icon: Settings, description: "Configure upset configuration settings", popular: false },
+        { path: "/admin-data-population", label: "Data Population", icon: Database, description: "Populate and manage data", popular: false },
+        { path: "/admin-gameweek-cache", label: "Gameweek Cache", icon: RefreshCw, description: "Manage gameweek cache", popular: false }
+      ]
+    },
+    {
+      section: "Advanced Player Tools",
+      items: [
+        { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
+        { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false },
+        { path: "/player-goals-conceded", label: "Player Goals Conceded", icon: Shield, description: "Goals conceded projections", popular: false },
+        { path: "/player-yellow-cards", label: "Player Yellow Cards", icon: Shield, description: "Yellow card projections", popular: false },
+        { path: "/player-red-cards", label: "Player Red Cards", icon: Shield, description: "Red card projections", popular: false },
+        { path: "/player-bonus-points", label: "Player Bonus Points", icon: Star, description: "Bonus point projections", popular: false },
+        { path: "/defensive-contribution-projections", label: "Defensive Contributions", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false }
+      ]
+    },
+    {
+      section: "Advanced Team Tools", 
+      items: [
+        { path: "/team-goals-spread-betting", label: "Team Goals Spread Betting", icon: Target, description: "Spread betting analysis", popular: false },
+        { path: "/season-projections", label: "Season Projections", icon: Trophy, description: "Full season projections", popular: false }
+      ]
+    },
+    {
+      section: "Documentation",
+      items: [
+        { path: "/projection-docs", label: "Projection Documentation", icon: Book, description: "Comprehensive guide to all projection tools and methodologies", popular: false }
+      ]
+    }
+  ];
+
+  // Combine public and admin navigation items
+  const allNavItems = isAdmin ? [...navItems, ...adminNavItems] : navItems;
 
   return (
     <>
@@ -139,7 +178,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="p-2 sm:p-3 md:p-6 space-y-3 sm:space-y-4 md:space-y-6 pb-16 sm:pb-20">
-          {navItems
+          {allNavItems
             .filter((section) => section.items.length > 0) // Only show sections with visible items
             .map((section) => (
             <div key={section.section} className="space-y-2 sm:space-y-3">
