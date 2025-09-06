@@ -347,9 +347,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return 0; // No penalty adjustment for this player
   }
 
+  // Bootstrap data cache (5 minutes)
+  let bootstrapCache: { data: any; timestamp: number } | null = null;
+  const BOOTSTRAP_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
   // Player data routes
   app.get("/api/bootstrap-static", async (req, res) => {
     try {
+      // Check cache first
+      const now = Date.now();
+      if (bootstrapCache && (now - bootstrapCache.timestamp) < BOOTSTRAP_CACHE_DURATION) {
+        console.log("DEBUG: Serving bootstrap-static from cache");
+        return res.json(bootstrapCache.data);
+      }
+
       const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       if (!response.ok) {
         console.error(`FPL API responded with status: ${response.status}`);
@@ -385,6 +396,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Replace teams data with hardcoded version
       data.teams = teamsWithStrength;
       
+      // Cache the processed data
+      bootstrapCache = { data, timestamp: now };
+      console.log("DEBUG: Cached fresh bootstrap-static data");
+      
       res.json(data);
     } catch (error) {
       console.error("Error fetching FPL data:", error);
@@ -395,6 +410,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Historical data cache (10 minutes - data doesn't change often)
+  const historicalCache = new Map<string, { data: any; timestamp: number }>();
+  const HISTORICAL_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
   // Historical player data by season
   app.get("/api/players/historical/:season", async (req, res) => {
     const { season } = req.params;
@@ -404,7 +423,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
+      // Check cache first
+      const now = Date.now();
+      const cached = historicalCache.get(season);
+      if (cached && (now - cached.timestamp) < HISTORICAL_CACHE_DURATION) {
+        console.log(`DEBUG: Serving historical ${season} from cache`);
+        return res.json(cached.data);
+      }
+
       const historicalData = await storage.getHistoricalPlayers(season);
+      
+      // Cache the data
+      historicalCache.set(season, { data: historicalData, timestamp: now });
+      console.log(`DEBUG: Cached historical ${season} data`);
+      
       res.json(historicalData);
     } catch (error) {
       console.error(`Error fetching historical data for season ${season}:`, error);
@@ -892,6 +924,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ managerId: null });
   });
 
+  // Manager data cache (2 minutes)
+  const managerCache = new Map<string, { data: any; timestamp: number }>();
+  const MANAGER_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+
   // Get manager data
   app.get("/api/manager/:managerId", async (req, res) => {
     try {
@@ -899,6 +935,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!managerId || isNaN(Number(managerId))) {
         return res.status(400).json({ message: "Invalid manager ID" });
+      }
+
+      // Check cache first
+      const now = Date.now();
+      const cached = managerCache.get(managerId);
+      if (cached && (now - cached.timestamp) < MANAGER_CACHE_DURATION) {
+        console.log(`DEBUG: Serving manager ${managerId} from cache`);
+        return res.json(cached.data);
       }
       
       const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
@@ -911,6 +955,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const data = await response.json();
+      
+      // Cache the data
+      managerCache.set(managerId, { data, timestamp: now });
+      console.log(`DEBUG: Cached manager ${managerId} data`);
+      
       res.json(data);
     } catch (error) {
       console.error(`Error fetching manager data for ID ${req.params.managerId}:`, error);
