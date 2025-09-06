@@ -104,28 +104,43 @@ export default function ResultsProjections() {
     }
   };
 
+  /**
+   * Calculate match result probabilities based on predicted scores and expected goals
+   * 
+   * Algorithm:
+   * 1. Analyzes predicted score difference (home - away)
+   * 2. Incorporates expected goals difference as secondary factor
+   * 3. Applies probability distribution logic:
+   *    - Home/Away Wins: 50% base + bonus (up to 25%) based on score margin and xG advantage
+   *    - Draws: 35% base when scores are equal, adjusted by xG difference
+   * 4. Enforces realistic bounds: 5-85% for wins, 10-50% for draws
+   * 
+   * Note: These are calculated probabilities, not sourced from betting markets
+   */
   const calculateProbabilities = (homeScore: number, awayScore: number, homeXG: number, awayXG: number) => {
-    // Simple probability calculation based on score difference and expected goals
     const scoreDiff = homeScore - awayScore;
     const xgDiff = homeXG - awayXG;
     
     let homeWin, draw, awayWin;
     
     if (scoreDiff > 0) {
+      // Home team predicted to win
       homeWin = 50 + Math.min(25, scoreDiff * 10 + xgDiff * 5);
       awayWin = Math.max(10, 40 - scoreDiff * 10 - xgDiff * 5);
       draw = 100 - homeWin - awayWin;
     } else if (scoreDiff < 0) {
+      // Away team predicted to win
       awayWin = 50 + Math.min(25, Math.abs(scoreDiff) * 10 + Math.abs(xgDiff) * 5);
       homeWin = Math.max(10, 40 - Math.abs(scoreDiff) * 10 - Math.abs(xgDiff) * 5);
       draw = 100 - homeWin - awayWin;
     } else {
-      // Draw predicted
+      // Draw predicted - start with 35% draw, adjust by xG difference
       draw = 35;
       homeWin = 32.5 + xgDiff * 2;
       awayWin = 32.5 - xgDiff * 2;
     }
     
+    // Apply realistic bounds to prevent extreme probabilities
     return {
       homeWin: Math.max(5, Math.min(85, homeWin)),
       draw: Math.max(10, Math.min(50, draw)),

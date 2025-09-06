@@ -60,6 +60,7 @@ Navigation Cleanup: Hidden Player Yellow Cards, Red Cards, Goals Conceded, and B
 - **Transfer Tracker**: Authentic transfer data analysis using real FPL API data.
 - **Open FPL Projections**: Advanced machine learning projection tool with position-specific ensemble models, multi-horizon forecasting, and hourly updates.
 - **Price Tracker**: Complete FPL API-based system tracking actual price changes with intelligent initialization and automated splitting for granularity.
+- **Results Projections**: Match prediction tool displaying predicted scores, calculated win probabilities, expected goals, and clean sheet odds for future gameweeks only (GW4+). Win probabilities are calculated using a proprietary algorithm based on predicted score differences and expected goals variance, not sourced from betting markets.
 - **Historical Data**: Year selection functionality for player statistics from 2016/17 season onwards.
 - **Defensive Contribution Analytics**: Integration of new FPL API defensive data points and comprehensive projection model using attacking tier system for fixture-aware variance calculations. Position-specific tick mark thresholds implemented (defenders: 10, forwards/midfielders: 12) for meaningful defensive contribution display.
 - **Historical Player Stats Database**: Comprehensive PostgreSQL table with complete historical data for all players across 9 seasons (2016/17-2024/25), including all stats and per-90 statistics.
