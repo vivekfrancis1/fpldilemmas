@@ -134,16 +134,16 @@ export default function ResultsProjections() {
       homeWin = Math.max(8, 40 - Math.abs(scoreDiff) * 12 - Math.abs(xgDiff) * 8);
       draw = 100 - homeWin - awayWin;
     } else {
-      // Draw predicted - make more responsive to xG difference
-      const baseProb = 30; // Start lower for draw
-      const xgMultiplier = Math.min(15, Math.abs(xgDiff) * 12); // Much stronger multiplier
+      // Draw predicted - make much more responsive to xG difference to match betting markets
+      const baseProb = 25; // Lower base for stronger team differentiation
+      const xgMultiplier = Math.min(25, Math.abs(xgDiff) * 20); // Much stronger multiplier to match market odds
       
       if (xgDiff > 0) {
-        homeWin = baseProb + 5 + xgMultiplier;
-        awayWin = baseProb + 5 - xgMultiplier;
+        homeWin = baseProb + 10 + xgMultiplier;
+        awayWin = Math.max(10, baseProb + 10 - xgMultiplier);
       } else {
-        homeWin = baseProb + 5 - xgMultiplier;
-        awayWin = baseProb + 5 + xgMultiplier;
+        homeWin = Math.max(10, baseProb + 10 - xgMultiplier);
+        awayWin = baseProb + 10 + xgMultiplier;
       }
       draw = 100 - homeWin - awayWin;
     }
