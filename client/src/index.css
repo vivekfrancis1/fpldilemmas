@@ -384,6 +384,10 @@ button, a, input, select, textarea {
 .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
+  /* Ensure scroll area has proper dimensions */
+  position: relative;
+  display: block;
+  width: 100%;
 }
 
 /* Button System */

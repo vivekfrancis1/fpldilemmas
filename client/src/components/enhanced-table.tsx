@@ -84,15 +84,16 @@ export function EnhancedTable<T = any>({
     )}>
       <div 
         className={cn(
-          "overflow-x-auto overflow-y-auto",
+          "overflow-x-auto overflow-y-auto w-full",
           maxHeight && `max-h-[${maxHeight}]`
         )}
         style={{ 
           scrollBehavior: 'smooth',
-          WebkitOverflowScrolling: 'touch'
+          WebkitOverflowScrolling: 'touch',
+          minWidth: '100%'
         }}
       >
-        <table className="w-full">
+        <table className="w-full" style={{ minWidth: 'max-content' }}>
           <thead className={cn(
             "border-b bg-gray-50/50",
             stickyHeader && "sticky top-0 z-10 backdrop-blur-sm bg-gray-50/90"
