@@ -30,6 +30,7 @@ import bcrypt from "bcrypt";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { internalFetch, getApiBaseUrl } from "./config";
+import { resultCache } from "./result-cache-service";
 
 // Pre-calculated team multipliers for ultra-fast lookups (no parsing needed)
 const TEAM_MULTIPLIERS = {
