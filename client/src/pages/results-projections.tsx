@@ -228,7 +228,7 @@ export default function ResultsProjections() {
                         Goals Market
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Confidence
+                        Clean Sheets
                       </th>
                     </tr>
                   </thead>
@@ -302,19 +302,18 @@ export default function ResultsProjections() {
                               <div className="text-xs">
                                 <span className="text-gray-600">Total xG: {match.totalExpectedGoals.toFixed(1)}</span>
                               </div>
-                              <div className="text-xs mt-1">
-                                <span className="text-blue-600">CS: {match.homeTeam.shortName} {match.homeTeam.cleanSheetOdds.toFixed(1)}%</span>
-                              </div>
-                              <div className="text-xs">
-                                <span className="text-red-600">CS: {match.awayTeam.shortName} {match.awayTeam.cleanSheetOdds.toFixed(1)}%</span>
-                              </div>
                             </div>
                           </td>
                           
                           <td className="px-4 py-4 text-center">
-                            <Badge className={getConfidenceColor(match.confidence)}>
-                              {match.confidence}
-                            </Badge>
+                            <div className="space-y-1">
+                              <div className="text-xs">
+                                <span className="text-blue-600">{match.homeTeam.shortName}: {match.homeTeam.cleanSheetOdds.toFixed(1)}%</span>
+                              </div>
+                              <div className="text-xs">
+                                <span className="text-red-600">{match.awayTeam.shortName}: {match.awayTeam.cleanSheetOdds.toFixed(1)}%</span>
+                              </div>
+                            </div>
                           </td>
                         </tr>
                       );
