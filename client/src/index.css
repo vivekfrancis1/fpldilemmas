@@ -358,6 +358,8 @@ button, a, input, select, textarea {
   @apply overflow-x-auto;
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 #f1f5f9;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 .table-scroll::-webkit-scrollbar {

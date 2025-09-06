@@ -84,9 +84,13 @@ export function EnhancedTable<T = any>({
     )}>
       <div 
         className={cn(
-          "overflow-auto",
+          "overflow-x-auto overflow-y-auto",
           maxHeight && `max-h-[${maxHeight}]`
         )}
+        style={{ 
+          scrollBehavior: 'smooth',
+          WebkitOverflowScrolling: 'touch'
+        }}
       >
         <table className="w-full">
           <thead className={cn(
