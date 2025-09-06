@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PlayerNameCell, TeamBadge, PositionBadge, ValueCell } from "@/components/enhanced-table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -362,19 +363,21 @@ export default function PriceTracker() {
                                 ) : (
                                   <BarChart3 className="h-4 w-4 text-blue-600" />
                                 )}
-                                <div>
-                                  <p className="font-medium">{change.player_name}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {change.ownership}% owned
-                                  </p>
-                                </div>
+                                <PlayerNameCell 
+                                  name={change.player_name}
+                                  position={change.position}
+                                  team={change.team_name}
+                                  compact={true}
+                                  showOwnership={true}
+                                  ownership={change.ownership}
+                                />
                               </div>
                             </td>
                             <td className="p-3 text-sm">
-                              {change.team_name}
+                              <TeamBadge team={change.team_name} compact={true} />
                             </td>
                             <td className="p-3 text-sm">
-                              {change.position}
+                              <PositionBadge position={change.position} compact={true} />
                             </td>
                             <td className="p-3 text-right">
                               {change.price_change !== 0 ? (

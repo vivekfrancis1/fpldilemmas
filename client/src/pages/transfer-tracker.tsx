@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TrendingUp, TrendingDown, AlertTriangle, Search, BarChart3, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PlayerNameCell, TeamBadge, PositionBadge, ValueCell } from "@/components/enhanced-table";
 import { BootstrapData } from "@shared/schema";
 
 interface TransferData {
@@ -470,14 +471,18 @@ export default function TransferTracker() {
                             ) : (
                               <BarChart3 className="h-3 w-3 text-gray-400 flex-shrink-0" />
                             )}
-                            <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{transfer.player_name}</span>
+                            <PlayerNameCell 
+                              name={transfer.player_name}
+                              position={transfer.position}
+                              team={transfer.team_name}
+                              compact={true}
+                              showOwnership={true}
+                              ownership={transfer.ownership_percentage}
+                            />
                           </div>
                         </td>
                         <td className="py-2 px-2">
-                          <div className="space-y-0.5">
-                            <div className="font-medium text-xs text-gray-800 dark:text-gray-200">{transfer.team_name}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium">{transfer.position}</div>
-                          </div>
+                          <TeamBadge team={transfer.team_name} compact={true} />
                         </td>
                         <td className="py-2 px-2 text-right">
                           <span className="font-semibold text-gray-900 dark:text-gray-100">

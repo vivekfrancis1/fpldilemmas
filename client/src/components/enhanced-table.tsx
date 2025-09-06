@@ -251,9 +251,42 @@ export function EnhancedTable<T = any>({
   );
 }
 
-// Utility components for common cell types
-export const PlayerNameCell = ({ name, className }: { name: string; className?: string }) => (
-  <span className={cn("font-medium text-gray-900", className)}>{name}</span>
+// Enhanced utility components for common cell types
+export const PlayerNameCell = ({ 
+  name, 
+  position, 
+  team, 
+  compact = false, 
+  showOwnership = false, 
+  ownership,
+  className 
+}: { 
+  name: string; 
+  position?: string; 
+  team?: string; 
+  compact?: boolean; 
+  showOwnership?: boolean; 
+  ownership?: number;
+  className?: string;
+}) => (
+  <div className={cn("flex flex-col", className)}>
+    <div className="font-semibold text-gray-900">
+      {name}
+    </div>
+    <div className="flex items-center gap-1 mt-1">
+      {position && (
+        <PositionBadge position={position} compact={true} />
+      )}
+      {team && (
+        <TeamBadge team={team} compact={true} />
+      )}
+      {showOwnership && ownership !== undefined && (
+        <span className="text-xs text-gray-500">
+          {ownership}% owned
+        </span>
+      )}
+    </div>
+  </div>
 );
 
 export const TeamBadge = ({ team, className, compact = false }: { team: string; className?: string; compact?: boolean }) => (
