@@ -177,7 +177,6 @@ export default function TeamCSProjections() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="average">Period CS/Game</SelectItem>
-                      <SelectItem value="season">Rest of Season CS/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
                       {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
                         const gwNumber = parseInt(startGameweek) + i;
@@ -239,15 +238,6 @@ export default function TeamCSProjections() {
                           {sortBy === 'average' && <TrendingUp className="h-3 w-3" />}
                         </div>
                       </th>
-                      <th 
-                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50 font-semibold cursor-pointer hover:bg-green-100 transition-colors"
-                        onClick={() => setSortBy('season')}
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          Rest of Season CS/Game
-                          {sortBy === 'season' && <TrendingUp className="h-3 w-3" />}
-                        </div>
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -289,12 +279,6 @@ export default function TeamCSProjections() {
                               const periodAvg = periodValues.length > 0 ? periodValues.reduce((sum, val) => sum + val, 0) / periodValues.length : 0;
                               return `${periodAvg.toFixed(1)}%`;
                             })()}
-                          </span>
-                        </td>
-                        
-                        <td className="px-4 py-4 text-center bg-green-50">
-                          <span className="text-lg font-bold text-green-900">
-                            {team.averageCSProbability}%
                           </span>
                         </td>
                         
