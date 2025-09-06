@@ -339,7 +339,7 @@ export default function TeamGoalsAgainstProjections() {
                           const goalsAgainst = team.gameweekProjections[gwNumber] || 0;
                           return (
                             <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsAgainstColor(goalsAgainst)}`}>
-                              {goalsAgainst > 0 ? goalsAgainst.toFixed(2) : "-"}
+                              {goalsAgainst > 0 ? (goalsAgainst || 0).toFixed(2) : "-"}
                             </td>
                           );
                         })}
@@ -359,12 +359,12 @@ export default function TeamGoalsAgainstProjections() {
                         
                         <td className="px-4 py-4 text-center bg-orange-50">
                           <span className="text-lg font-bold text-orange-900">
-                            {team.totalProjectedGoalsAgainst.toFixed(2)}
+                            {(team.totalProjectedGoalsAgainst || 0).toFixed(2)}
                           </span>
                         </td>
                         
                         <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
-                          {team.averageGoalsAgainstPerGame.toFixed(2)}
+                          {(team.averageGoalsAgainstPerGame || 0).toFixed(2)}
                         </td>
                         
                       </tr>
@@ -390,25 +390,25 @@ export default function TeamGoalsAgainstProjections() {
                         const gwTotal = totalGoalsAgainst.gameweekTotals[gwNumber] || 0;
                         return (
                           <td key={weekIndex} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
-                            {gwTotal > 0 ? gwTotal.toFixed(2) : "-"}
+                            {gwTotal > 0 ? (gwTotal || 0).toFixed(2) : "-"}
                           </td>
                         );
                       })}
                       
                       <td className="px-4 py-4 text-center bg-blue-100">
                         <span className="text-lg font-bold text-blue-900">
-                          {totalGoalsAgainst.overallTotal.toFixed(2)}
+                          {(totalGoalsAgainst.overallTotal || 0).toFixed(2)}
                         </span>
                       </td>
                       
                       <td className="px-4 py-4 text-center bg-orange-100">
                         <span className="text-lg font-bold text-orange-900">
-                          {totalGoalsAgainst.seasonTotal.toFixed(2)}
+                          {(totalGoalsAgainst.seasonTotal || 0).toFixed(2)}
                         </span>
                       </td>
                       
                       <td className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
-                        {totalGoalsAgainst.averagePerGame.toFixed(2)}
+                        {(totalGoalsAgainst.averagePerGame || 0).toFixed(2)}
                       </td>
                       
                     </tr>
