@@ -34,6 +34,31 @@ button, a, input, select, textarea {
   .fpl-card-header {
     @apply p-3;
   }
+  
+  /* Prevent text overflow in mobile cards and tabs */
+  .card-title-mobile {
+    @apply text-base font-semibold leading-tight break-words;
+  }
+  
+  .tab-trigger-mobile {
+    @apply px-2 py-1 text-xs truncate max-w-[120px];
+  }
+  
+  /* Ensure mobile tables don't overflow */
+  .mobile-table-container {
+    @apply overflow-x-auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .mobile-table-container::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Mobile button adjustments */
+  .mobile-button {
+    @apply px-3 py-2 text-xs min-h-[36px];
+  }
 }
 
 /* =============================================================================
@@ -93,6 +118,16 @@ button, a, input, select, textarea {
 
 .fpl-section-spacing {
   @apply space-y-6 sm:space-y-8;
+}
+
+/* Utility Classes */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Typography System */
