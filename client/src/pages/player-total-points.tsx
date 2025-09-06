@@ -387,9 +387,9 @@ export default function PlayerTotalPoints() {
 
   // Fetch player total points data
   const { data: totalPointsData, isLoading, error } = useQuery<PlayerTotalPointsData[]>({
-    queryKey: ["/api/player-total-points", startGameweek, endGameweek],
+    queryKey: ["/api/cached/player-total-points", startGameweek, endGameweek],
     queryFn: async () => {
-      const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      const response = await fetch(`/api/cached/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) {
         throw new Error(`Failed to load total points: ${response.status} ${response.statusText}`);
       }

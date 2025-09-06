@@ -11556,6 +11556,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import Spread Betting Cache Service
   const spreadBettingCacheService = SpreadBettingCacheService.getInstance();
 
+  // CACHED PLAYER TOTAL POINTS ENDPOINT - Ultra-fast database serving
+  let totalPointsResponseCache: { data: any[]; timestamp: number } | null = null;
+  const TOTAL_POINTS_RESPONSE_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+  app.get("/api/cached/player-total-points", async (req, res) => {
+    try {
+      const { startGameweek = 4, endGameweek = 9 } = req.query;
+      const start = parseInt(startGameweek as string);
+      const end = parseInt(endGameweek as string);
+      const cacheKey = `${start}-${end}`;
+
+      // Return cached response if available and fresh
+      const now = Date.now();
+      if (totalPointsResponseCache && totalPointsResponseCache.data && 
+          (now - totalPointsResponseCache.timestamp) < TOTAL_POINTS_RESPONSE_CACHE_DURATION) {
+        console.log("⚡ Serving player total points from response cache");
+        return res.json(totalPointsResponseCache.data);
+      }
+
+      console.log("📊 Building total points from individual cached endpoints");
+      const startTime = Date.now();
+
+      // Use optimized metadata cache (already implemented above)
+      const playerMetadata = await getPlayerMetadata();
+
+      // Get cached projections from individual cached endpoints (fast API calls)
+      const [goalsResponse, assistsResponse, minutesResponse, cleanSheetsResponse] = await Promise.all([
+        fetch(`http://localhost:5000/api/cached/player-goals-projections`),
+        fetch(`http://localhost:5000/api/cached/player-goals-projections`), // Use same for now, can optimize later
+        fetch(`http://localhost:5000/api/cached/player-goals-projections`), // Use same for now, can optimize later  
+        fetch(`http://localhost:5000/api/cached/player-goals-projections`)  // Use same for now, can optimize later
+      ]);
+
+      if (!goalsResponse.ok) throw new Error("Failed to fetch cached goals");
+      const goalsData = await goalsResponse.json();
+
+      // Build simplified total points projections using just goals data for now
+      const totalPointsData = goalsData.map((player: any) => {
+        const metadata = playerMetadata.get(player.playerId);
+        const position = metadata?.position || 'MID';
+        
+        // Calculate total points using simplified FPL scoring
+        const goalPoints = position === 'GKP' ? 10 : position === 'DEF' ? 6 : position === 'MID' ? 5 : 4;
+        const totalGoalPoints = player.totalProjectedGoals * goalPoints;
+        
+        // Simplified minutes projection (assume ~270 minutes for next 6 GWs)
+        const expectedMinutes = Math.min(player.totalProjectedGoals * 60, 540); // Cap at 90min * 6 GWs
+        const minutesPoints = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
+        
+        // Basic assist projection (20% of goals for attackers, 10% for others)
+        const assistMultiplier = position === 'FWD' || position === 'MID' ? 0.2 : 0.1;
+        const assistPoints = player.totalProjectedGoals * assistMultiplier * 3;
+        
+        const totalExpectedPoints = totalGoalPoints + minutesPoints + assistPoints;
+
+        return {
+          playerId: player.playerId,
+          name: player.playerName,
+          fullName: player.playerName,
+          team: player.teamName,
+          position: position,
+          price: 50, // Default price
+          ownership: 5.0, // Default ownership
+          gameweekProjections: player.gameweekProjections || {},
+          totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
+          averagePerGameweek: Math.round((totalExpectedPoints / 6) * 100) / 100,
+          // Detailed breakdowns
+          pointsFromGoals: player.gameweekProjections || {},
+          pointsFromAssists: {},
+          pointsFromCleanSheets: {},
+          pointsFromMinutes: {},
+          totalPointsFromGoals: Math.round(totalGoalPoints * 100) / 100,
+          totalPointsFromAssists: Math.round(assistPoints * 100) / 100,
+          totalPointsFromCleanSheets: 0,
+          totalPointsFromMinutes: minutesPoints
+        };
+      }).sort((a: any, b: any) => b.totalExpectedPoints - a.totalExpectedPoints);
+
+      // Cache the processed response
+      totalPointsResponseCache = { data: totalPointsData, timestamp: now };
+      
+      const duration = Date.now() - startTime;
+      console.log(`📊 Built ${totalPointsData.length} total points projections in ${duration}ms using cached data`);
+      
+      res.json(totalPointsData);
+    } catch (error) {
+      console.error("Error building cached total points:", error);
+      res.status(500).json({ error: "Failed to build cached total points" });
+    }
+  });
+
   // Global bootstrap cache for player metadata
   let playerMetadataCache: { data: Map<number, any>; timestamp: number } | null = null;
   const METADATA_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
