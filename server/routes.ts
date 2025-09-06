@@ -4272,7 +4272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const getPositionGoalShareCap = (position: string): number => {
             switch (position?.toLowerCase()) {
               case 'goalkeeper': return 2; // Max 2% share for GKs
-              case 'defender': return 25; // Max 25% share for defenders
+              case 'defender': return 18; // Max 18% share for defenders
               case 'midfielder': return 35; // Max 35% share for midfielders
               case 'forward': return 35; // Max 35% share for forwards
               default: return 25;
@@ -5405,7 +5405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const getPositionShareCap = (position: string): number => {
               switch (position.toLowerCase()) {
                 case 'goalkeeper': return 2; // Max 2% share for GKs
-                case 'defender': return 25; // Max 25% share for defenders
+                case 'defender': return 18; // Max 18% share for defenders
                 case 'midfielder': return 35; // Max 35% share for midfielders
                 case 'forward': return 25; // Max 25% share for forwards
                 default: return 20;
@@ -5440,7 +5440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const getPositionShareCap = (position: string): number => {
                 switch (position.toLowerCase()) {
                   case 'goalkeeper': return 2; // Max 2% share for GKs
-                  case 'defender': return 25; // Max 25% share for defenders
+                  case 'defender': return 18; // Max 18% share for defenders
                   case 'midfielder': return 35; // Max 35% share for midfielders
                   case 'forward': return 25; // Max 25% share for forwards
                   default: return 20;
