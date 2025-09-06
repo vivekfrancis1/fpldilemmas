@@ -124,20 +124,28 @@ export default function ResultsProjections() {
     let homeWin, draw, awayWin;
     
     if (scoreDiff > 0) {
-      // Home team predicted to win
-      homeWin = 50 + Math.min(25, scoreDiff * 10 + xgDiff * 5);
-      awayWin = Math.max(10, 40 - scoreDiff * 10 - xgDiff * 5);
+      // Home team predicted to win - stronger boost for clear xG advantage
+      homeWin = 50 + Math.min(30, scoreDiff * 12 + xgDiff * 8);
+      awayWin = Math.max(8, 40 - scoreDiff * 12 - xgDiff * 8);
       draw = 100 - homeWin - awayWin;
     } else if (scoreDiff < 0) {
-      // Away team predicted to win
-      awayWin = 50 + Math.min(25, Math.abs(scoreDiff) * 10 + Math.abs(xgDiff) * 5);
-      homeWin = Math.max(10, 40 - Math.abs(scoreDiff) * 10 - Math.abs(xgDiff) * 5);
+      // Away team predicted to win - stronger boost for clear xG advantage
+      awayWin = 50 + Math.min(30, Math.abs(scoreDiff) * 12 + Math.abs(xgDiff) * 8);
+      homeWin = Math.max(8, 40 - Math.abs(scoreDiff) * 12 - Math.abs(xgDiff) * 8);
       draw = 100 - homeWin - awayWin;
     } else {
-      // Draw predicted - start with 35% draw, adjust by xG difference
-      draw = 35;
-      homeWin = 32.5 + xgDiff * 2;
-      awayWin = 32.5 - xgDiff * 2;
+      // Draw predicted - make more responsive to xG difference
+      const baseProb = 30; // Start lower for draw
+      const xgMultiplier = Math.min(15, Math.abs(xgDiff) * 12); // Much stronger multiplier
+      
+      if (xgDiff > 0) {
+        homeWin = baseProb + 5 + xgMultiplier;
+        awayWin = baseProb + 5 - xgMultiplier;
+      } else {
+        homeWin = baseProb + 5 - xgMultiplier;
+        awayWin = baseProb + 5 + xgMultiplier;
+      }
+      draw = 100 - homeWin - awayWin;
     }
     
     // Apply realistic bounds to prevent extreme probabilities
