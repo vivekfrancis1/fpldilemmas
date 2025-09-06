@@ -45,7 +45,7 @@ export default function PlayerGoalsScoredProjections() {
   });
 
   const { data: playerGoalData, isLoading: playerGoalLoading, error } = useQuery<PlayerGoalProjection[]>({
-    queryKey: ["/api/player-goals-scored-projections"],
+    queryKey: ["/api/cached/player-goals-projections"],
     staleTime: 15 * 60 * 1000, // 15 minutes cache
     refetchOnMount: false,
   });
@@ -220,8 +220,8 @@ export default function PlayerGoalsScoredProjections() {
   };
 
   const handleRefreshData = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["/api/player-goals-scored-projections"] });
-    await queryClient.refetchQueries({ queryKey: ["/api/player-goals-scored-projections"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/cached/player-goals-projections"] });
+    await queryClient.refetchQueries({ queryKey: ["/api/cached/player-goals-projections"] });
   };
 
   const getGoalsColor = (goals: number) => {

@@ -11567,14 +11567,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(playerGoalsProjections.season, '2025/26'))
         .orderBy(desc(playerGoalsProjections.goals));
       
+      // If no cached data, return empty array
+      if (!cachedData || cachedData.length === 0) {
+        return res.json([]);
+      }
+      
+      // Fetch current bootstrap data for player names and teams
+      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const fplData = await fplResponse.json();
+      
+      // Create lookup maps for better performance
+      const playerLookup = new Map();
+      const teamLookup = new Map();
+      
+      fplData.elements.forEach((player: any) => {
+        playerLookup.set(player.id, {
+          name: player.web_name,
+          position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID',
+          teamId: player.team
+        });
+      });
+      
+      fplData.teams.forEach((team: any) => {
+        teamLookup.set(team.id, {
+          name: team.name,
+          shortName: team.short_name
+        });
+      });
+      
       // Group by player efficiently using Map for O(n) performance
       const playersMap = new Map();
       
       for (const row of cachedData) {
         if (!playersMap.has(row.playerId)) {
+          const playerInfo = playerLookup.get(row.playerId);
+          const teamInfo = playerInfo ? teamLookup.get(playerInfo.teamId) : null;
+          
           playersMap.set(row.playerId, {
             playerId: row.playerId,
-            playerName: getPlayerName(row.playerId) || 'Unknown',
+            playerName: playerInfo?.name || `Player ${row.playerId}`,
+            teamName: teamInfo?.name || null,
+            teamShort: teamInfo?.shortName || null,
+            position: playerInfo?.position || null,
             gameweekProjections: {},
             totalProjectedGoals: 0,
             goalShare: 0
