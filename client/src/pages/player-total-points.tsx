@@ -462,7 +462,7 @@ export default function PlayerTotalPoints() {
     queryKey: ["/api/cached/player-total-points", startGameweek, endGameweek],
     queryFn: async () => {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout (reduced)
       
       try {
         const response = await fetch(`/api/cached/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`, {
@@ -479,11 +479,11 @@ export default function PlayerTotalPoints() {
         throw error;
       }
     },
-    staleTime: 2 * 60 * 60 * 1000, // 2 hour cache for production stability
-    gcTime: 4 * 60 * 60 * 1000, // Keep in cache for 4 hours  
+    staleTime: 60 * 60 * 1000, // 1 hour cache (more aggressive caching)
+    gcTime: 2 * 60 * 60 * 1000, // Keep in cache for 2 hours  
     enabled: startGameweek <= endGameweek,
-    retry: 2, // Reduced retries for faster failure
-    retryDelay: (attemptIndex) => Math.min(1000 * attemptIndex, 5000), // Faster retry intervals
+    retry: 1, // Only 1 retry for faster failure
+    retryDelay: 2000, // Fixed 2 second retry delay
     networkMode: 'online',
     placeholderData: [], // Show empty table immediately while loading
     refetchOnWindowFocus: false, // Prevent unnecessary refetches

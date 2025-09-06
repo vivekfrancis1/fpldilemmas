@@ -1137,6 +1137,23 @@ export const cachedPlayerBonusPoints = pgTable("cached_player_bonus_points", {
   index("idx_cached_bonus_points_total_value").on(table.totalValue),
 ]);
 
+// CACHED PLAYER TOTAL POINTS - Ultra-fast comprehensive FPL points cache
+export const cachedPlayerTotalPoints = pgTable("cached_player_total_points", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamName: text("team_name").notNull(),
+  position: text("position").notNull(),
+  gameweekData: jsonb("gameweek_data").notNull(), // all 10 FPL scoring components per gameweek
+  totalPointsData: jsonb("total_points_data").notNull(), // comprehensive points breakdown per gameweek
+  totalExpectedPoints: real("total_expected_points").notNull().default(0),
+  averagePerGameweek: real("average_per_gameweek").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  index("idx_cached_total_points_player_id").on(table.playerId),
+  index("idx_cached_total_points_total").on(table.totalExpectedPoints),
+]);
+
 // Cached spread betting odds data
 export const cachedSpreadBettingOdds = pgTable("cached_spread_betting_odds", {
   id: serial("id").primaryKey(),

@@ -11221,7 +11221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // CACHED PLAYER TOTAL POINTS ENDPOINT - Ultra-fast database serving
   let totalPointsResponseCache: Map<string, { data: any[]; timestamp: number }> = new Map();
-  const TOTAL_POINTS_RESPONSE_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+  const TOTAL_POINTS_RESPONSE_CACHE_DURATION = 60 * 60 * 1000; // 1 hour cache (increased)
 
   app.get("/api/cached/player-total-points", async (req, res) => {
     try {
@@ -11234,16 +11234,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const now = Date.now();
       const cachedData = totalPointsResponseCache.get(cacheKey);
       if (cachedData && (now - cachedData.timestamp) < TOTAL_POINTS_RESPONSE_CACHE_DURATION) {
-        console.log(`⚡ Serving player total points from response cache for GW${start}-${end}`);
+        console.log(`⚡ Serving player total points from response cache for GW${start}-${end} (${Math.round((now - cachedData.timestamp) / 1000 / 60)}min old)`);
         return res.json(cachedData.data);
       }
 
-      console.log("📊 Building comprehensive total points from main endpoint");
+      console.log("📊 Building comprehensive total points from optimized endpoint");
       const startTime = Date.now();
 
-      // Fetch comprehensive data from the main total points endpoint with timeout
+      // Use a much shorter timeout to fail fast and serve from cache
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout (reduced)
       
       try {
         const totalPointsResponse = await internalFetch(`api/player-total-points?startGameweek=${start}&endGameweek=${end}`, {
@@ -11269,9 +11269,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clearTimeout(timeoutId);
         
         if (fetchError.name === 'AbortError') {
-          console.log("⚠️ Total points calculation timed out after 30s, returning lightweight fallback");
+          console.log("⚠️ Total points calculation timed out after 15s, checking for older cache");
         } else {
           console.error("Error fetching total points:", fetchError);
+        }
+
+        // If we have ANY cached data for this range (even if stale), serve it
+        if (cachedData) {
+          const age = Math.round((now - cachedData.timestamp) / 1000 / 60);
+          console.log(`🔄 Serving stale cache for GW${start}-${end} (${age}min old) due to timeout`);
+          return res.json(cachedData.data);
         }
         
         // Fallback: return basic data structure with message
