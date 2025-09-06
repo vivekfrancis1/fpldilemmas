@@ -499,7 +499,7 @@ export default function OpenFPLProjections() {
                                           player.position === 'MID' ? 'bg-blue-500' :
                                           'bg-red-500'
                                         }`}>
-                                          {player.position.charAt(0)}
+                                          {player.position === 'MID' ? 'MID' : player.position.charAt(0)}
                                         </span>
                                       </td>
                                       <td className="px-1 sm:px-2 py-2 sm:py-3 text-center">

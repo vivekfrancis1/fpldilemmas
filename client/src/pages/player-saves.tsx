@@ -194,7 +194,7 @@ export default function PlayerSaves() {
                             <div className="flex flex-col">
                               <span>{projection.playerName}</span>
                               <div className="flex items-center gap-1 mt-1">
-                                <Badge variant="secondary" className="text-xs">GKP</Badge>
+                                <Badge variant="outline" className="text-xs">GKP</Badge>
                                 <Badge variant="outline" className="text-xs">{projection.teamName}</Badge>
                               </div>
                             </div>
@@ -256,7 +256,7 @@ export default function PlayerSaves() {
                             <div className="flex flex-col">
                               <span>{projection.playerName}</span>
                               <div className="flex items-center gap-1 mt-1">
-                                <Badge variant="secondary" className="text-xs">GKP</Badge>
+                                <Badge variant="outline" className="text-xs">GKP</Badge>
                                 <Badge variant="outline" className="text-xs">{projection.teamName}</Badge>
                               </div>
                             </div>

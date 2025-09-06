@@ -587,7 +587,7 @@ export default function PlayerDefensiveContributions() {
                           <Badge variant="outline" className="text-xs">
                             {player.position.slice(0, 3).toUpperCase()}
                           </Badge>
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="outline" className="text-xs">
                             {player.teamName.slice(0, 3).toUpperCase()}
                           </Badge>
                         </div>
@@ -682,7 +682,7 @@ export default function PlayerDefensiveContributions() {
                           <Badge variant="outline" className="text-xs">
                             {player.position.slice(0, 3).toUpperCase()}
                           </Badge>
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="outline" className="text-xs">
                             {player.teamName.slice(0, 3).toUpperCase()}
                           </Badge>
                         </div>
