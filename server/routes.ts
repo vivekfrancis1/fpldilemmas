@@ -4263,12 +4263,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           playerProjections.push({
-            playerId: player.id,
-            playerName: player.name,
-            teamName: team.name,
+            id: player.id,
+            name: player.name,
+            team: team.name,
             teamShort: team.short_name,
             position: getShortPosition(player.position),
-            totalProjectedGoals: seasonTotal,
+            currentPrice: player.currentPrice || 0,
+            projectedGoals: seasonTotal,
             gameweekProjections,
             goalShare: player.goalShare
           });
