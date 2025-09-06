@@ -257,7 +257,7 @@ export default function PlayerAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem key="pos-all" value="all">All</SelectItem>
                     {positions.map((position, index) => (
                       <SelectItem key={`pos-${position}-${index}`} value={position}>{position}</SelectItem>
                     ))}
@@ -273,7 +273,7 @@ export default function PlayerAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem key="team-all" value="all">All</SelectItem>
                     {teams.map((team, index) => (
                       <SelectItem key={`team-${team}-${index}`} value={team}>{team}</SelectItem>
                     ))}

@@ -533,7 +533,7 @@ export default function ProjectionDocumentation() {
                     <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm">
                       <div className="space-y-2">
                         <div><span className="text-blue-600">for</span> gameweek <span className="text-blue-600">in</span> upcoming_gameweeks:</div>
-                        <div className="ml-4"><span className="text-blue-600">if</span> gameweek >= current_gameweek + 1:</div>
+                        <div className="ml-4"><span className="text-blue-600">if</span> gameweek &gt;= current_gameweek + 1:</div>
                         <div className="ml-8">data = calculatePureProjections(gameweek)</div>
                         <div className="ml-4"><span className="text-blue-600">else</span>:</div>
                         <div className="ml-8">skip  # Only future gameweeks</div>
