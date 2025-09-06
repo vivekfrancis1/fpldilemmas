@@ -45,14 +45,14 @@ export default function PlayerGoalsScoredProjections() {
     queryKey: ["/api/bootstrap-static"],
   });
 
-  // Progressive loading: Try cache first, then fresh data
+  // Use fast cached endpoint - fallback to direct cache if needed
   const { data: playerGoalData, isLoading: playerGoalLoading, error } = useQuery<PlayerGoalProjection[]>({
-    queryKey: ["/api/cached/player-goals-projections"],
-    staleTime: 2 * 60 * 60 * 1000, // 2 hour cache for production stability
-    gcTime: 4 * 60 * 60 * 1000, // Keep in cache for 4 hours
+    queryKey: ["/api/goals-projections-cached"],
+    staleTime: 30 * 60 * 1000, // 30 minute cache
+    gcTime: 2 * 60 * 60 * 1000, // Keep in cache for 2 hours
     refetchOnMount: false,
-    retry: 2, // Reduced retries for faster failure
-    retryDelay: (attemptIndex) => Math.min(1000 * attemptIndex, 5000), // Faster retry intervals
+    retry: 1, // Single retry for speed
+    retryDelay: 2000, // Fast retry
     networkMode: 'online',
     placeholderData: [], // Show empty table immediately while loading
     refetchOnWindowFocus: false // Prevent unnecessary refetches

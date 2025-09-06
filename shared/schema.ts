@@ -888,6 +888,37 @@ export type InsertFplCreatorTracking = typeof fplCreatorTracking.$inferInsert;
 export const insertFplCreatorTrackingSchema = createInsertSchema(fplCreatorTracking);
 export type InsertUnifiedProjectionSettings = typeof unifiedProjectionSettings.$inferInsert;
 
+// Historical xG data cache - pre-calculated and never changes
+export const historicalXGCache = pgTable("historical_xg_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name").notNull(),
+  season: varchar("season").notNull(), // "2024/25", "2023/24", etc.
+  firstName: varchar("first_name"),
+  secondName: varchar("second_name"),
+  webName: varchar("web_name"),
+  teamId: integer("team_id"),
+  teamName: varchar("team_name"),
+  elementType: integer("element_type").notNull(), // 1=GK, 2=DEF, 3=MID, 4=FWD
+  
+  // xG metrics
+  expectedGoals: decimal("expected_goals", { precision: 6, scale: 3 }).notNull().default("0"),
+  minutes: integer("minutes").notNull().default(0),
+  xgPer90: decimal("xg_per_90", { precision: 6, scale: 3 }).notNull().default("0"),
+  
+  // Cache metadata
+  createdAt: timestamp("created_at").defaultNow(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  index("idx_historical_xg_player_season").on(table.playerId, table.season),
+  index("idx_historical_xg_season").on(table.season),
+  index("idx_historical_xg_name").on(table.playerName),
+  uniqueIndex("idx_historical_xg_unique").on(table.playerId, table.season),
+]);
+
+export type HistoricalXGCache = typeof historicalXGCache.$inferSelect;
+export type InsertHistoricalXGCache = typeof historicalXGCache.$inferInsert;
+
 // Player Projection Cache Tables
 export const playerGoalsProjections = pgTable("player_goals_projections", {
   playerId: integer("player_id").notNull(),
