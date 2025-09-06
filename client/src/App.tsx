@@ -9,6 +9,7 @@ import { initGA } from "../lib/analytics";
 import { useAnalytics } from "../hooks/use-analytics";
 import { ErrorBoundary } from "react-error-boundary";
 import NotFound from "@/pages/not-found";
+import ProtectedRoute from "@/components/protected-route";
 import Fixtures from "./pages/fixtures";
 import Transfers from "./pages/transfers";
 import Captain from "./pages/captain";
@@ -86,10 +87,26 @@ function Router() {
       <Route path="/projected-standings" component={ProjectedStandings} />
       <Route path="/predicted-scores" component={PredictedScores} />
       <Route path="/results-projections" component={ResultsProjections} />
-      <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
-      <Route path="/player-minutes" component={PlayerMinutes} />
-      <Route path="/player-cleansheet-points" component={PlayerCleanSheetPoints} />
-      <Route path="/player-total-points" component={PlayerTotalPoints} />
+      <Route path="/player-goals-scored-projections">
+        <ProtectedRoute requireAdmin={true}>
+          <PlayerGoalsScoredProjections />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/player-minutes">
+        <ProtectedRoute requireAdmin={true}>
+          <PlayerMinutes />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/player-cleansheet-points">
+        <ProtectedRoute requireAdmin={true}>
+          <PlayerCleanSheetPoints />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/player-total-points">
+        <ProtectedRoute requireAdmin={true}>
+          <PlayerTotalPoints />
+        </ProtectedRoute>
+      </Route>
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
       <Route path="/team-goals-spread-betting" component={TeamGoalsSpreadBetting} />
       <Route path="/team-goals-against-projections" component={TeamGoalsAgainstProjections} />
@@ -97,10 +114,21 @@ function Router() {
       <Route path="/team-cs-projections" component={TeamCSProjections} />
       <Route path="/goal-share" component={GoalShare} />
       <Route path="/assist-share" component={AssistShare} />
-      <Route path="/player-goal-projections" component={PlayerGoalProjections} />
-      <Route path="/player-goals-scored" component={PlayerGoalProjections} />
-      <Route path="/player-assist-projections" component={PlayerAssistProjections} />
-      <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
+      <Route path="/player-goal-projections">
+        <ProtectedRoute requireAdmin={true}>
+          <PlayerGoalProjections />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/player-goals-scored">
+        <ProtectedRoute requireAdmin={true}>
+          <PlayerGoalProjections />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/player-assist-projections">
+        <ProtectedRoute requireAdmin={true}>
+          <PlayerAssistProjections />
+        </ProtectedRoute>
+      </Route>
       <Route path="/defensive-contribution-projections" component={DefensiveContributionProjections} />
       <Route path="/player-defensive-contributions" component={PlayerDefensiveContributions} />
       <Route path="/player-saves" component={PlayerSaves} />
