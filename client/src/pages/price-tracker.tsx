@@ -297,7 +297,7 @@ export default function PriceTracker() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="predictions" className="space-y-6">
-          <TabsList className="justify-start">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="predictions" data-testid="tab-predictions">All Players (705)</TabsTrigger>
             <TabsTrigger value="recent" data-testid="tab-recent-changes">Recent Changes</TabsTrigger>
           </TabsList>
