@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Save, X, Users, Shield, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import ProtectedRoute from "@/components/protected-route";
 
 interface ContentCreator {
   id: number;
@@ -188,8 +189,9 @@ export default function Admin() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
+    <ProtectedRoute requireAdmin={true}>
+      <div className="container mx-auto p-6 space-y-6">
+        {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <Shield className="h-8 w-8 text-red-600" />
@@ -454,5 +456,6 @@ export default function Admin() {
         ))}
       </div>
     </div>
+    </ProtectedRoute>
   );
 }
