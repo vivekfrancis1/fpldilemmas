@@ -94,8 +94,8 @@ export default function TeamGoalProjections() {
       overallTotal += gwTotal;
     }
     
-    // Calculate season total (all 38 gameweeks)
-    for (let gwNumber = 1; gwNumber <= 38; gwNumber++) {
+    // Calculate rest of season total (gameweek 4 onwards)
+    for (let gwNumber = 4; gwNumber <= 38; gwNumber++) {
       const gwTotal = filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
       seasonTotal += gwTotal;
     }
@@ -161,9 +161,9 @@ export default function TeamGoalProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 38 }, (_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          {i + 1}
+                      {Array.from({ length: 35 }, (_, i) => (
+                        <SelectItem key={i + 4} value={(i + 4).toString()}>
+                          {i + 4}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -177,9 +177,9 @@ export default function TeamGoalProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 38 }, (_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          {i + 1}
+                      {Array.from({ length: 35 }, (_, i) => (
+                        <SelectItem key={i + 4} value={(i + 4).toString()}>
+                          {i + 4}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -211,7 +211,7 @@ export default function TeamGoalProjections() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="total">Period Total</SelectItem>
-                      <SelectItem value="season">Season Total</SelectItem>
+                      <SelectItem value="season">Rest of Season Total</SelectItem>
                       <SelectItem value="average">Goals/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
                       {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
@@ -278,7 +278,7 @@ export default function TeamGoalProjections() {
                         onClick={() => setSortBy('season')}
                       >
                         <div className="flex items-center justify-center gap-1">
-                          Season Total
+                          Rest of Season Total
                           {sortBy === 'season' && <TrendingUp className="h-3 w-3" />}
                         </div>
                       </th>
