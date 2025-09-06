@@ -121,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: true,
+    createTableIfMissing: false,
     ttl: 7 * 24 * 60 * 60 // 7 days
   });
 
