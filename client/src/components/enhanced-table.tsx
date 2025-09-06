@@ -183,7 +183,7 @@ export const PlayerNameCell = ({ name, className }: { name: string; className?: 
 );
 
 export const TeamBadge = ({ team, className, compact = false }: { team: string; className?: string; compact?: boolean }) => (
-  <Badge variant="secondary" className={cn("text-xs font-medium", compact && "px-1 py-0.5", className)}>
+  <Badge variant="outline" className={cn("text-xs font-medium", compact && "px-1 py-0.5", className)}>
     {team}
   </Badge>
 );
