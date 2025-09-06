@@ -82,7 +82,7 @@ export default function PlayerSaves() {
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <Shield className="h-8 w-8" />
-              <h1>Player Saves Projections</h1>
+              <h1>Goalkeeper Saves Projections</h1>
             </div>
             <p className="fpl-page-subtitle">
               Goalkeeper save predictions and FPL points analysis for upcoming gameweeks
@@ -105,7 +105,7 @@ export default function PlayerSaves() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Shield className="h-8 w-8" />
-            <h1>Player Saves Projections</h1>
+            <h1>Goalkeeper Saves Projections</h1>
           </div>
           <p className="fpl-page-subtitle">
             Goalkeeper save predictions and FPL points analysis for upcoming gameweeks
