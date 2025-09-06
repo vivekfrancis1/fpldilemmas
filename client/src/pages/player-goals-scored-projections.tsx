@@ -514,21 +514,6 @@ export default function PlayerGoalsScoredProjections() {
                         {sortBy !== "total" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
                       </Button>
                     </th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
-                        onClick={() => handleSort("season")}
-                        data-testid="sort-season"
-                      >
-                        Rest of Season Total
-                        {sortBy === "season" && (
-                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
-                        )}
-                        {sortBy !== "season" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                      </Button>
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -575,11 +560,6 @@ export default function PlayerGoalsScoredProjections() {
                             {selectedTotal.toFixed(2)}
                           </span>
                         </td>
-                        <td className="py-3 px-2 text-center">
-                          <span className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-sm font-medium">
-                            {player.totalProjectedGoals.toFixed(2)}
-                          </span>
-                        </td>
                       </tr>
                     );
                   })}
@@ -596,25 +576,6 @@ export default function PlayerGoalsScoredProjections() {
                     ))}
                     <td className="py-3 px-2 text-center font-bold text-blue-600">
                       {totalGoals.overallTotal.toFixed(2)}
-                    </td>
-                    <td className="py-3 px-2 text-center font-bold text-gray-600">
-                      -
-                    </td>
-                  </tr>
-                  <tr className="border-t border-gray-200 bg-green-50">
-                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-green-50 border-r border-gray-200 z-10" colSpan={1}>
-                      SEASON TOTAL
-                    </td>
-                    {selectedGameweeks.map(gw => (
-                      <td key={gw} className="py-3 px-2 text-center font-bold text-gray-600">
-                        -
-                      </td>
-                    ))}
-                    <td className="py-3 px-2 text-center font-bold text-gray-600">
-                      -
-                    </td>
-                    <td className="py-3 px-2 text-center font-bold text-green-600">
-                      {totalGoals.seasonTotal.toFixed(2)}
                     </td>
                   </tr>
                 </tfoot>
@@ -684,21 +645,6 @@ export default function PlayerGoalsScoredProjections() {
                         {sortBy !== "total" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
                       </Button>
                     </th>
-                    <th className="text-center py-3 px-2 font-semibold text-gray-900">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold text-gray-900 hover:text-blue-600"
-                        onClick={() => handleSort("season")}
-                        data-testid="sort-season-points"
-                      >
-                        Rest of Season Total Pts
-                        {sortBy === "season" && (
-                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
-                        )}
-                        {sortBy !== "season" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                      </Button>
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -749,11 +695,6 @@ export default function PlayerGoalsScoredProjections() {
                             {selectedTotal.toFixed(1)}
                           </span>
                         </td>
-                        <td className="py-3 px-2 text-center">
-                          <span className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-sm font-medium">
-                            {getPointsFromGoals(player.totalProjectedGoals, player.position).toFixed(1)}
-                          </span>
-                        </td>
                       </tr>
                     );
                   })}
@@ -770,25 +711,6 @@ export default function PlayerGoalsScoredProjections() {
                     ))}
                     <td className="py-3 px-2 text-center font-bold text-blue-600">
                       {totalGoals.pointsOverallTotal.toFixed(1)}
-                    </td>
-                    <td className="py-3 px-2 text-center font-bold text-gray-600">
-                      -
-                    </td>
-                  </tr>
-                  <tr className="border-t border-gray-200 bg-green-50">
-                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-green-50 border-r border-gray-200 z-10" colSpan={1}>
-                      SEASON TOTAL
-                    </td>
-                    {selectedGameweeks.map(gw => (
-                      <td key={gw} className="py-3 px-2 text-center font-bold text-gray-600">
-                        -
-                      </td>
-                    ))}
-                    <td className="py-3 px-2 text-center font-bold text-gray-600">
-                      -
-                    </td>
-                    <td className="py-3 px-2 text-center font-bold text-green-600">
-                      {totalGoals.pointsSeasonTotal.toFixed(1)}
                     </td>
                   </tr>
                 </tfoot>
