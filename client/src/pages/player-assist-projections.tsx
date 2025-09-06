@@ -22,7 +22,7 @@ interface PlayerAssistProjection {
   assistShare: number;
 }
 
-type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'sixGwTotal' | 'seasonTotal' | 'gw4' | 'gw5' | 'gw6' | 'gw7' | 'gw8' | 'gw9' | 'assistShare';
+type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'sixGwTotal' | 'gw4' | 'gw5' | 'gw6' | 'gw7' | 'gw8' | 'gw9' | 'assistShare';
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerAssistProjections() {
@@ -146,10 +146,6 @@ export default function PlayerAssistProjections() {
         case 'sixGwTotal':
           aValue = getFilteredTotal(a);
           bValue = getFilteredTotal(b);
-          break;
-        case 'seasonTotal':
-          aValue = a.totalProjectedAssists;
-          bValue = b.totalProjectedAssists;
           break;
         case 'assistShare':
           aValue = a.assistShare;
@@ -388,11 +384,7 @@ export default function PlayerAssistProjections() {
                               6GW Total {getSortIcon('sixGwTotal')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
-                              Rest of Season Total {getSortIcon('seasonTotal')}
-                            </Button>
-                          </th>
+
                         </tr>
                       </thead>
                       <tbody>
@@ -448,9 +440,6 @@ export default function PlayerAssistProjections() {
                             </td>
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
                               {getFilteredTotal(player).toFixed(2)}
-                            </td>
-                            <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {player.totalProjectedAssists}
                             </td>
                           </tr>
                           );
@@ -516,11 +505,7 @@ export default function PlayerAssistProjections() {
                               6GW Total {getSortIcon('sixGwTotal')}
                             </Button>
                           </th>
-                          <th className="text-center py-2 px-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
-                              Rest of Season Total {getSortIcon('seasonTotal')}
-                            </Button>
-                          </th>
+
                         </tr>
                       </thead>
                       <tbody>
