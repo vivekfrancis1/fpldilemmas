@@ -1,4 +1,8 @@
 import { useState, useMemo } from "react";
+
+interface BootstrapData {
+  events: Array<{ id: number; is_current: boolean; finished: boolean }>;
+}
 import { useQuery } from "@tanstack/react-query";
 import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,10 +26,34 @@ type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'sixGwTotal' | 
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerAssistProjections() {
+  // Fetch bootstrap data to get current gameweek
+  const { data: bootstrapData } = useQuery<BootstrapData>({
+    queryKey: ["/api/bootstrap-static"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Calculate current gameweek and upcoming gameweeks
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 3; // Default fallback
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    return currentEvent ? currentEvent.id : 3;
+  }, [bootstrapData]);
+
+  const nextGameweek = currentGameweek + 1;
+  const defaultEndGameweek = Math.min(nextGameweek + 5, 38); // Next 6 gameweeks or up to GW38
+
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [startGameweek, setStartGameweek] = useState<number>(4); // Default to next gameweek
-  const [endGameweek, setEndGameweek] = useState<number>(9); // Default to 6 gameweeks ahead
+  const [startGameweek, setStartGameweek] = useState<number>(nextGameweek);
+  const [endGameweek, setEndGameweek] = useState<number>(defaultEndGameweek);
+
+  // Update start and end gameweeks when bootstrap data loads
+  useMemo(() => {
+    if (bootstrapData && startGameweek === nextGameweek) { // Only update if still at default
+      setStartGameweek(nextGameweek);
+      setEndGameweek(defaultEndGameweek);
+    }
+  }, [bootstrapData, nextGameweek, defaultEndGameweek, startGameweek]);
   const [sortField, setSortField] = useState<SortField>('sixGwTotal');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -253,7 +281,7 @@ export default function PlayerAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableGameweeks.map(gw => (
+                    {availableGameweeks.filter(gw => gw >= nextGameweek).map(gw => (
                       <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
@@ -264,7 +292,7 @@ export default function PlayerAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableGameweeks.filter(gw => gw >= startGameweek).map(gw => (
+                    {availableGameweeks.filter(gw => gw >= nextGameweek && gw >= startGameweek).map(gw => (
                       <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
@@ -359,7 +387,7 @@ export default function PlayerAssistProjections() {
                           </th>
                           <th className="text-center py-2 px-1">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
-                              Season {getSortIcon('seasonTotal')}
+                              Rest of Season {getSortIcon('seasonTotal')}
                             </Button>
                           </th>
                         </tr>
@@ -494,7 +522,7 @@ export default function PlayerAssistProjections() {
                           </th>
                           <th className="text-center py-2 px-1">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('seasonTotal')} className="hover:bg-green-50">
-                              Season {getSortIcon('seasonTotal')}
+                              Rest of Season {getSortIcon('seasonTotal')}
                             </Button>
                           </th>
                         </tr>
