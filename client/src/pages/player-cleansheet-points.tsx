@@ -126,7 +126,8 @@ export default function PlayerCleanSheetPoints() {
   }
 
   return (
-    <div className="fpl-page-container">
+    <ProtectedRoute requireAdmin={true}>
+      <div className="fpl-page-container">
       {/* Unified Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-header-content">
@@ -337,5 +338,6 @@ export default function PlayerCleanSheetPoints() {
         </div>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

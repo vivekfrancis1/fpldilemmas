@@ -146,7 +146,8 @@ export default function PlayerBonusPoints() {
   }
 
   return (
-    <div className="fpl-page-container">
+    <ProtectedRoute requireAdmin={true}>
+      <div className="fpl-page-container">
       {/* Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-header-content">
@@ -445,5 +446,6 @@ export default function PlayerBonusPoints() {
         </Tabs>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }
