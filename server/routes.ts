@@ -2509,8 +2509,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     homeMaxGoals: 4.0,
     awayMinGoals: 0.3,
     awayMaxGoals: 3.5,
-    cleanSheetExponent: 1.0,
-    cleanSheetMultiplier: 100,
+    cleanSheetExponent: 1.1,
+    cleanSheetMultiplier: 90,
     derbyMatchMultiplier: 0.92,
     topSixMatchMultiplier: 1.08,
     relegationBattleMultiplier: 0.88,
@@ -2672,8 +2672,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Extract only clean sheet parameters from adminGoalSettings
       const cleanSheetSettings = {
-        cleanSheetExponent: adminGoalSettings.cleanSheetExponent || 1.0,
-        cleanSheetMultiplier: adminGoalSettings.cleanSheetMultiplier || 100,
+        cleanSheetExponent: adminGoalSettings.cleanSheetExponent || 1.1,
+        cleanSheetMultiplier: adminGoalSettings.cleanSheetMultiplier || 90,
         lastUpdated: adminGoalSettings.lastUpdated,
         updatedBy: adminGoalSettings.updatedBy
       };
@@ -2731,8 +2731,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reset only clean sheet parameters to default values
       adminGoalSettings = {
         ...adminGoalSettings,
-        cleanSheetExponent: 1.0,
-        cleanSheetMultiplier: 100,
+        cleanSheetExponent: 1.1,
+        cleanSheetMultiplier: 90,
         lastUpdated: new Date().toISOString(),
         updatedBy: "admin"
       };
@@ -3461,7 +3461,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const gameweekGoalsAgainst = teamGoalsAgainstProjections[fixture.event.toString()] || 1.5; // Default if not found
           
           // CONFIGURABLE EXPONENTIAL FORMULA: CS = cleanSheetMultiplier × e^(-cleanSheetExponent × xGA)
-          let cleanSheetProbability = (adminGoalSettings.cleanSheetMultiplier || 100) * Math.exp(-(adminGoalSettings.cleanSheetExponent || 1.0) * gameweekGoalsAgainst);
+          let cleanSheetProbability = (adminGoalSettings.cleanSheetMultiplier || 90) * Math.exp(-(adminGoalSettings.cleanSheetExponent || 1.1) * gameweekGoalsAgainst);
           
           // Ensure realistic bounds (0-100%)
           cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
