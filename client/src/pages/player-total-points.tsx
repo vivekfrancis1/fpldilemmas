@@ -302,29 +302,17 @@ function createPlayerTotalPointsColumns(
       render: (_, player) => (
         <div className="min-w-[180px]">
           <PlayerNameCell name={player.name} />
-          <div className="text-xs text-gray-500 mt-1 space-x-2">
+          <div className="flex items-center gap-1 mt-1 mb-1">
+            <PositionBadge position={player.position} compact={true} />
+            <TeamBadge team={player.team} compact={true} />
+          </div>
+          <div className="text-xs text-gray-500 space-x-2">
             <span className="font-medium">£{player.price ? (player.price / 10).toFixed(1) : '0.0'}m</span>
             <span className="text-gray-400">•</span>
             <span>{player.ownership ? player.ownership.toFixed(1) : '0.0'}%</span>
           </div>
         </div>
       )
-    },
-    {
-      key: 'position',
-      header: 'Pos',
-      sortable: true,
-      align: 'center',
-      className: 'min-w-[50px]',
-      render: (position) => <PositionBadge position={position} compact={true} />
-    },
-    {
-      key: 'team',
-      header: 'Team',
-      sortable: true,
-      align: 'center',
-      className: 'min-w-[50px]',
-      render: (team) => <TeamBadge team={team} compact={true} />
     },
     ...gameweekRange.map(gw => ({
       key: `gw${gw}`,
