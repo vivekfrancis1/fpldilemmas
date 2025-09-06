@@ -139,9 +139,6 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
             {player.name} - 6GW Total Breakdown
           </div>
-          <div className="text-xs text-gray-500 mb-2">
-            Complete FPL scoring: Actual data + comprehensive projections
-          </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⚽ Goals:</span>
@@ -211,20 +208,6 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <span className="text-green-800">
                 {player.totalExpectedPoints?.toFixed(1) || '0.0'}
               </span>
-            </div>
-            <div className="mt-2 text-xs text-gray-500">
-              Sum: {(
-                (player.totalPointsFromGoals || 0) +
-                (player.totalPointsFromAssists || 0) +
-                (player.totalPointsFromCleanSheets || 0) +
-                (player.totalPointsFromDefensiveContributions || 0) +
-                (player.totalPointsFromMinutes || 0) +
-                (player.totalPointsFromBonus || 0) +
-                (player.totalPointsFromSaves || 0) +
-                (player.totalPointsFromGoalsConceded || 0) +
-                (player.totalPointsFromYellowCards || 0) +
-                (player.totalPointsFromRedCards || 0)
-              ).toFixed(1)}
             </div>
           </div>
         </div>
