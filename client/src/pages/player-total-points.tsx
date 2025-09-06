@@ -13,7 +13,7 @@ import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, typ
 // Gameweek Point Breakdown Tooltip Component
 function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTotalPointsData, gameweek: number }) {
   const hasBreakdownData = player.pointsFromGoals !== undefined;
-  const gwKey = gameweek.toString();
+  const gwKey = `gw${gameweek}`;
   const gwPoints = player.gameweekProjections?.[gwKey];
   
   if (!hasBreakdownData || !gwPoints) {
