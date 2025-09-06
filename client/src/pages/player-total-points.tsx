@@ -314,14 +314,16 @@ function createPlayerTotalPointsColumns(
       header: 'Pos',
       sortable: true,
       align: 'center',
-      render: (position) => <PositionBadge position={position} />
+      className: 'min-w-[50px]',
+      render: (position) => <PositionBadge position={position} compact={true} />
     },
     {
       key: 'team',
       header: 'Team',
       sortable: true,
       align: 'center',
-      render: (team) => <TeamBadge team={team} />
+      className: 'min-w-[50px]',
+      render: (team) => <TeamBadge team={team} compact={true} />
     },
     ...gameweekRange.map(gw => ({
       key: `gw${gw}`,

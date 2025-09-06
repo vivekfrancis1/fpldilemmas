@@ -163,7 +163,7 @@ export function EnhancedTable<T = any>({
                           column.className
                         )}
                       >
-                        {renderedValue}
+                        {renderedValue as React.ReactNode}
                       </td>
                     );
                   })}
@@ -182,13 +182,13 @@ export const PlayerNameCell = ({ name, className }: { name: string; className?: 
   <span className={cn("font-medium text-gray-900", className)}>{name}</span>
 );
 
-export const TeamBadge = ({ team, className }: { team: string; className?: string }) => (
-  <Badge variant="secondary" className={cn("text-xs font-medium", className)}>
+export const TeamBadge = ({ team, className, compact = false }: { team: string; className?: string; compact?: boolean }) => (
+  <Badge variant="secondary" className={cn("text-xs font-medium", compact && "px-1 py-0.5", className)}>
     {team}
   </Badge>
 );
 
-export const PositionBadge = ({ position, className }: { position: string; className?: string }) => {
+export const PositionBadge = ({ position, className, compact = false }: { position: string; className?: string; compact?: boolean }) => {
   const getPositionColor = (pos: string) => {
     switch (pos?.toLowerCase()) {
       case 'goalkeeper': return 'bg-yellow-100 text-yellow-800';
@@ -199,9 +199,19 @@ export const PositionBadge = ({ position, className }: { position: string; class
     }
   };
 
+  const getShortPosition = (pos: string) => {
+    switch (pos?.toLowerCase()) {
+      case 'goalkeeper': return 'GKP';
+      case 'defender': return 'DEF';
+      case 'midfielder': return 'MID';
+      case 'forward': return 'FWD';
+      default: return pos?.substring(0, 3).toUpperCase() || 'UNK';
+    }
+  };
+
   return (
-    <Badge className={cn("text-xs font-medium", getPositionColor(position), className)}>
-      {position}
+    <Badge className={cn("text-xs font-medium", getPositionColor(position), compact && "px-1 py-0.5", className)}>
+      {compact ? getShortPosition(position) : position}
     </Badge>
   );
 };
