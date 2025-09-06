@@ -6060,16 +6060,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let homeExpected = match.homeTeam.expectedGoals;
         let awayExpected = match.awayTeam.expectedGoals;
         
-        // Option 2: Controlled variance (configurable range)
-        if (upsetConfig.enableControlledVariance) {
+        // Option 2: Controlled variance (DISABLED for data consistency)
+        // Variance disabled to ensure Results Projections match Team Goal Projections exactly
+        if (false && upsetConfig.enableControlledVariance) {
           const homeVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin));
           const awayVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin));
           homeExpected *= homeVariance;
           awayExpected *= awayVariance;
         }
         
-        // Option 3: Context-based upsets
-        if (upsetConfig.enableContextUpsets) {
+        // Option 3: Context-based upsets (DISABLED for data consistency)
+        if (false && upsetConfig.enableContextUpsets) {
           let homeContextBoost = 1.0;
           let awayContextBoost = 1.0;
           
@@ -6103,8 +6104,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           awayExpected *= awayContextBoost;
         }
         
-        // Option 5: Season-long upset budget (configurable major swings)
-        if (upsetConfig.enableSeasonUpsetBudget) {
+        // Option 5: Season-long upset budget (DISABLED for data consistency)
+        if (false && upsetConfig.enableSeasonUpsetBudget) {
           if (Math.random() < upsetConfig.upsetBudgetChance) {
             const upsetBudgetMultiplier = upsetConfig.upsetBudgetMin + (Math.random() * (upsetConfig.upsetBudgetMax - upsetConfig.upsetBudgetMin));
             homeExpected *= upsetBudgetMultiplier;
@@ -6130,19 +6131,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Final score calculation using configuration
         let homeScore, awayScore;
         
-        if (upsetConfig.enablePoissonDistribution && Math.random() < upsetConfig.poissonChance) {
-          // Option 1: Poisson distribution
-          homeScore = poissonSample(homeExpected);
-          awayScore = poissonSample(awayExpected);
-        } else if (upsetConfig.enableSmartRounding && Math.random() < upsetConfig.upsetRoundingChance) {
-          // Option 4: Smart rounding with upset bias (floor rounding)
-          homeScore = Math.max(0, Math.floor(homeExpected));
-          awayScore = Math.max(0, Math.floor(awayExpected));
-        } else {
-          // Default: Normal rounding
-          homeScore = Math.max(0, Math.round(homeExpected));
-          awayScore = Math.max(0, Math.round(awayExpected));
-        }
+        // DISABLED: All randomization disabled for data consistency
+        // Use simple rounding to ensure predictable, consistent results
+        homeScore = Math.max(0, Math.round(homeExpected));
+        awayScore = Math.max(0, Math.round(awayExpected));
         
         // Determine match outcome
         let predictedResult;
