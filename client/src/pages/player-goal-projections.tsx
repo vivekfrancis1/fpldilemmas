@@ -168,7 +168,7 @@ export default function PlayerGoalProjections() {
   }
 
   // Filter and sort players
-  const filteredPlayers = players?.filter((player: PlayerProjection) => {
+  const filteredPlayers = (players || []).filter((player: PlayerProjection) => {
     const matchesSearch = player.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
                          player.team.toLowerCase().includes(searchFilter.toLowerCase());
     const matchesPosition = positionFilter === "all" || player.position === positionFilter;
@@ -240,15 +240,15 @@ export default function PlayerGoalProjections() {
   };
 
   // Get unique values for filters
-  const positions = [...new Set(players?.map((p: PlayerProjection) => p.position) || [])];
-  const teams = [...new Set(players?.map((p: PlayerProjection) => p.team) || [])].sort();
+  const positions = Array.from(new Set((players || []).map((p: PlayerProjection) => p.position)));
+  const teams = Array.from(new Set((players || []).map((p: PlayerProjection) => p.team))).sort();
 
   const getPositionBadgeColor = (position: string) => {
     switch (position) {
-      case "Goalkeeper": return "bg-red-100 text-red-800 border-red-200";
-      case "Defender": return "bg-blue-100 text-blue-800 border-blue-200";
-      case "Midfielder": return "bg-green-100 text-green-800 border-green-200";
-      case "Forward": return "bg-purple-100 text-purple-800 border-purple-200";
+      case "GKP": return "bg-red-100 text-red-800 border-red-200";
+      case "DEF": return "bg-blue-100 text-blue-800 border-blue-200";
+      case "MID": return "bg-green-100 text-green-800 border-green-200";
+      case "FWD": return "bg-purple-100 text-purple-800 border-purple-200";
       default: return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
@@ -328,7 +328,7 @@ export default function PlayerGoalProjections() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All positions</SelectItem>
-                  {positions.map(position => (
+                  {positions.map((position: string) => (
                     <SelectItem key={position} value={position}>{position}</SelectItem>
                   ))}
                 </SelectContent>
@@ -343,7 +343,7 @@ export default function PlayerGoalProjections() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All teams</SelectItem>
-                  {teams.map(team => (
+                  {teams.map((team: string) => (
                     <SelectItem key={team} value={team}>{team}</SelectItem>
                   ))}
                 </SelectContent>
@@ -377,7 +377,7 @@ export default function PlayerGoalProjections() {
           <EnhancedTable
             data={sortedPlayers}
             columns={createGoalProjectionsColumns()}
-            onSort={handleSort}
+            onSort={(field: string) => handleSort(field as SortField)}
             sortField={sortField}
             sortDirection={sortDirection}
             loading={isLoading}

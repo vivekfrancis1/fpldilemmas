@@ -4251,12 +4251,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Use the pre-calculated season total from goal share data
           const seasonTotal = player.projectedGoals;
           
+          // Convert position to short form
+          const getShortPosition = (pos: string) => {
+            switch (pos?.toLowerCase()) {
+              case 'goalkeeper': return 'GKP';
+              case 'defender': return 'DEF'; 
+              case 'midfielder': return 'MID';
+              case 'forward': return 'FWD';
+              default: return pos?.substring(0, 3).toUpperCase() || 'UNK';
+            }
+          };
+
           playerProjections.push({
             playerId: player.id,
             playerName: player.name,
             teamName: team.name,
             teamShort: team.short_name,
-            position: player.position,
+            position: getShortPosition(player.position),
             totalProjectedGoals: seasonTotal,
             gameweekProjections,
             goalShare: player.goalShare
