@@ -317,7 +317,7 @@ export default function PlayerAssistProjections() {
         {/* Results */}
         {!isLoading && filteredAndSortedData.length > 0 && (
           <Tabs defaultValue="assists" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="justify-start">
               <TabsTrigger value="assists">Assists</TabsTrigger>
               <TabsTrigger value="points">Points from Assists</TabsTrigger>
             </TabsList>

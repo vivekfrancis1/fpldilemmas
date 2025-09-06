@@ -523,7 +523,7 @@ export default function Fixtures() {
 
           {/* Tabs for Different Analysis Views */}
           <Tabs defaultValue="difficulty" className="space-y-6" onValueChange={(value) => setActiveTab(value as 'difficulty' | 'attacking' | 'defensive')}>
-            <TabsList className="grid grid-cols-3 w-full">
+            <TabsList className="justify-start">
               <TabsTrigger value="difficulty" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Overall FDR

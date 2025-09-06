@@ -640,7 +640,7 @@ export default function PlayerTotalPoints() {
               </div>
               <div className="fpl-card-content p-0">
                 <Tabs defaultValue="total" className="w-full">
-                  <TabsList className="grid w-full grid-cols-1 bg-gray-50 p-1 m-4 mb-0 rounded-lg gap-1">
+                  <TabsList className="justify-center bg-gray-50 p-1 m-4 mb-0 rounded-lg gap-1">
                     <TabsTrigger value="total" className="flex items-center gap-1 text-xs md:text-sm px-2 py-1.5">
                       <Trophy className="h-3 w-3 md:h-4 md:w-4" />
                       <span className="hidden sm:inline">Total Points</span>
