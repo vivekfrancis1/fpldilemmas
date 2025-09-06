@@ -3777,7 +3777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // In-memory storage for 2025/26 assist share data
   let savedAssistShareData: any = null;
   
-  // Helper functions for enhanced Goal Share calculation
+  // Enhanced helper function for comprehensive availability and injury analysis
   function calculateExpectedMinutes(player: any, allPlayers: any[]): number {
     const position = player.element_type;
     const currentMinutes = player.minutes || 0;
@@ -3815,19 +3815,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expectedMinutes = 1000;
     }
     
-    // Apply injury/availability factor from FPL API
-    const availabilityFactor = Math.max(0.4, (player.chance_of_playing_next_round || 75) / 100);
+    // ENHANCED AVAILABILITY AND INJURY ANALYSIS
     
-    // Apply form factor (more conservative)
+    // 1. Primary availability factor from FPL API
+    const chanceNextRound = player.chance_of_playing_next_round || 75;
+    const chanceThisRound = player.chance_of_playing_this_round || 75;
+    
+    // 2. Analyze player status and news for injury severity
+    const playerStatus = (player.status || '').toLowerCase();
+    const playerNews = (player.news || '').toLowerCase();
+    
+    let injuryMultiplier = 1.0;
+    let returnTimelineWeeks = 0;
+    
+    // Comprehensive injury status analysis
+    if (playerStatus === 'd' || playerStatus === 'doubtful') {
+      injuryMultiplier = 0.6; // 40% reduction for doubtful players
+      returnTimelineWeeks = 1;
+    } else if (playerStatus === 's' || playerStatus === 'suspended') {
+      injuryMultiplier = 0.0; // No minutes during suspension
+      returnTimelineWeeks = Math.max(1, Math.floor(Math.random() * 3) + 1); // 1-3 weeks typical
+    } else if (playerStatus === 'i' || playerStatus === 'injured') {
+      // Analyze injury news for severity
+      if (playerNews.includes('out for') || playerNews.includes('long-term') || playerNews.includes('surgery')) {
+        injuryMultiplier = 0.1; // Long-term injury
+        returnTimelineWeeks = 6; // 6+ weeks for serious injuries
+      } else if (playerNews.includes('weeks') || playerNews.includes('month')) {
+        injuryMultiplier = 0.2; // Medium-term injury
+        returnTimelineWeeks = 4; // 4 weeks average
+      } else if (playerNews.includes('knock') || playerNews.includes('minor') || playerNews.includes('strain')) {
+        injuryMultiplier = 0.4; // Minor injury
+        returnTimelineWeeks = 2; // 2 weeks for minor issues
+      } else {
+        injuryMultiplier = 0.3; // Unknown injury severity
+        returnTimelineWeeks = 3; // Default 3 weeks
+      }
+    } else if (playerStatus === 'n' || playerStatus === 'unavailable') {
+      injuryMultiplier = 0.0; // Completely unavailable
+      returnTimelineWeeks = 4; // Default return timeline
+    }
+    
+    // 3. Combine availability chances for more accurate assessment
+    const avgAvailability = (chanceNextRound + chanceThisRound) / 2;
+    const availabilityFactor = Math.max(0.1, avgAvailability / 100);
+    
+    // 4. Apply form factor (more conservative)
     const formFactor = player.form ? Math.max(0.7, Math.min(1.1, player.form / 5)) : 0.9;
     
-    // Apply injury buffer (15% reduction for realistic expectations)
+    // 5. Calculate seasonal adjustment for injured players
+    const remainingSeasonWeeks = 35; // Approximate weeks left in season
+    const availableWeeks = Math.max(1, remainingSeasonWeeks - returnTimelineWeeks);
+    const seasonalAvailability = availableWeeks / remainingSeasonWeeks;
+    
+    // 6. Apply injury buffer (15% reduction for realistic expectations)
     const injuryBuffer = 0.85;
     
-    // Calculate final expected minutes
-    const finalExpectedMinutes = expectedMinutes * availabilityFactor * formFactor * injuryBuffer;
+    // Calculate final expected minutes with comprehensive factors
+    const finalExpectedMinutes = expectedMinutes * 
+                                availabilityFactor * 
+                                injuryMultiplier * 
+                                seasonalAvailability * 
+                                formFactor * 
+                                injuryBuffer;
     
-    return Math.round(Math.max(300, finalExpectedMinutes)); // Minimum 300 minutes
+    // Debug logging for injured/unavailable players
+    if (injuryMultiplier < 0.8 || availabilityFactor < 0.8) {
+      console.log(`DEBUG: ${player.first_name} ${player.second_name} availability - Status: ${playerStatus}, Chance: ${avgAvailability}%, Injury mult: ${injuryMultiplier}, Return: ${returnTimelineWeeks}w, Final minutes: ${Math.round(finalExpectedMinutes)}`);
+    }
+    
+    return Math.round(Math.max(100, finalExpectedMinutes)); // Minimum 100 minutes (for severely injured players)
   }
   
   // Sample size regression function
@@ -5221,11 +5277,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const playerData = weightedPlayerShares[playerId];
             const currentPlayer = teamPlayers.find(p => p.id === playerId);
             
-            // Skip players with very low expected minutes (likely not regular players)
+            // Enhanced player availability check including injury status
             if (currentPlayer) {
               const expectedMinutes = calculateExpectedMinutes(currentPlayer, teamPlayers);
-              if (expectedMinutes < 100) {
-                console.log(`DEBUG: Skipping ${playerData.name} - too few expected minutes (${expectedMinutes})`);
+              
+              // Check for severely injured or unavailable players
+              const playerStatus = (currentPlayer.status || '').toLowerCase();
+              const isUnavailable = playerStatus === 's' || playerStatus === 'n' || 
+                                   (playerStatus === 'i' && ((currentPlayer.news || '').toLowerCase().includes('out for') || 
+                                                             (currentPlayer.news || '').toLowerCase().includes('long-term')));
+              
+              if (expectedMinutes < 100 || isUnavailable) {
+                console.log(`DEBUG: Skipping ${playerData.name} - insufficient availability (${expectedMinutes} mins, status: ${playerStatus})`);
                 return;
               }
               
@@ -7435,7 +7498,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (availability >= 75) {
             const currentMinutesPerGame = Math.min(90, minutesPlayed / Math.max(1, gamesPlayed)); // Cap at 90 minutes per game
-            const expectedMinutes = Math.min(90, currentMinutesPerGame * (availability / 100));
+            let expectedMinutes = Math.min(90, currentMinutesPerGame * (availability / 100));
+            
+            // Enhanced injury analysis for immediate gameweek projections
+            const playerStatus = (player.status || '').toLowerCase();
+            const playerNews = (player.news || '').toLowerCase();
+            
+            // Apply immediate injury/status adjustments for near-term projections
+            if (playerStatus === 's' || playerStatus === 'suspended') {
+              expectedMinutes = 0; // Suspended players get 0 minutes
+            } else if (playerStatus === 'i' || playerStatus === 'injured') {
+              if (playerNews.includes('ruled out') || playerNews.includes('out for')) {
+                expectedMinutes = 0; // Ruled out players
+              } else if (playerNews.includes('doubt') || playerStatus === 'd') {
+                expectedMinutes *= 0.3; // High doubt factor
+              }
+            } else if (availability < 50) {
+              expectedMinutes *= 0.2; // Very low availability
+            } else if (availability < 75) {
+              expectedMinutes *= 0.5; // Moderate availability concerns
+            }
+            
             predictedMinutes = Math.round(expectedMinutes);
             
             if (positionName === "GKP") {
