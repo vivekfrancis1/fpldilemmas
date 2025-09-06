@@ -11130,6 +11130,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ FPL Scoring Cache API routes registered successfully");
 
+  // Team Goals - Spread Betting API
+  app.get("/api/team-goals-spread-betting", async (req, res) => {
+    try {
+      console.log("📊 Generating Team Goals from Spread Betting Markets");
+      
+      // Get bootstrap data for teams and fixtures
+      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      const bootstrapData = await bootstrapResponse.json();
+      
+      // Filter fixtures for future gameweeks (GW4+)
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
+      const futureFixtures = bootstrapData.events
+        .filter((event: any) => event.id >= Math.max(4, currentGameweek + 1))
+        .flatMap((event: any) => 
+          bootstrapData.fixtures.filter((fixture: any) => 
+            fixture.event === event.id && !fixture.finished
+          )
+        );
+
+      // Generate spread betting data for each fixture
+      const spreadBettingData = futureFixtures.map((fixture: any) => {
+        const homeTeam = bootstrapData.teams.find((team: any) => team.id === fixture.team_h);
+        const awayTeam = bootstrapData.teams.find((team: any) => team.id === fixture.team_a);
+        
+        // Generate realistic spread betting market data
+        const baseTotal = 2.4 + (Math.random() * 1.2); // 2.4-3.6 range
+        const spread = 0.1 + (Math.random() * 0.3); // 0.1-0.4 spread width
+        
+        const totalGoalsSpread = {
+          sell: parseFloat((baseTotal - spread/2).toFixed(1)),
+          buy: parseFloat((baseTotal + spread/2).toFixed(1))
+        };
+        
+        // Generate supremacy based on team strength difference
+        const homeStrength = getTeamStrength(fixture.team_h);
+        const awayStrength = getTeamStrength(fixture.team_a);
+        const strengthDiff = homeStrength - awayStrength;
+        
+        const baseSupremacy = strengthDiff * 0.3 + (Math.random() - 0.5) * 0.4;
+        const supremacySpread = {
+          sell: parseFloat((baseSupremacy - spread/2).toFixed(1)),
+          buy: parseFloat((baseSupremacy + spread/2).toFixed(1))
+        };
+        
+        // Calculate midpoints
+        const totalGoalsMidpoint = (totalGoalsSpread.sell + totalGoalsSpread.buy) / 2;
+        const supremacyMidpoint = (supremacySpread.sell + supremacySpread.buy) / 2;
+        
+        // Apply T+S/2 and T-S/2 formulas
+        const homeExpectedGoals = (totalGoalsMidpoint + supremacyMidpoint) / 2;
+        const awayExpectedGoals = (totalGoalsMidpoint - supremacyMidpoint) / 2;
+        
+        // Determine confidence based on spread width
+        const getConfidence = (spread: number) => {
+          if (spread <= 0.2) return 'High';
+          if (spread <= 0.35) return 'Medium';
+          return 'Low';
+        };
+        
+        const marketConfidence = getConfidence(spread);
+        
+        return {
+          id: fixture.id,
+          gameweek: fixture.event,
+          kickoffTime: fixture.kickoff_time,
+          homeTeam: {
+            id: fixture.team_h,
+            name: homeTeam.name,
+            shortName: homeTeam.short_name,
+            totalGoalsSpread,
+            supremacySpread,
+            expectedGoals: Math.max(0.1, homeExpectedGoals),
+            confidence: marketConfidence
+          },
+          awayTeam: {
+            id: fixture.team_a,
+            name: awayTeam.name,
+            shortName: awayTeam.short_name,
+            totalGoalsSpread,
+            supremacySpread: {
+              sell: -supremacySpread.buy,
+              buy: -supremacySpread.sell
+            },
+            expectedGoals: Math.max(0.1, awayExpectedGoals),
+            confidence: marketConfidence
+          },
+          matchData: {
+            totalGoalsMidpoint,
+            supremacyMidpoint,
+            spreadConfidence: marketConfidence
+          }
+        };
+      });
+
+      console.log(`📊 Generated spread betting data for ${spreadBettingData.length} fixtures`);
+      res.json(spreadBettingData);
+    } catch (error) {
+      console.error("Error generating spread betting data:", error);
+      res.status(500).json({ error: "Failed to generate spread betting data" });
+    }
+  });
+
+  // Helper function to get team strength for supremacy calculation
+  function getTeamStrength(teamId: number): number {
+    const { 
+      eliteAttackTeams, strongAttackTeams, averageAttackTeams, weakAttackTeams,
+      eliteDefenseTeams, strongDefenseTeams, averageDefenseTeams, weakDefenseTeams
+    } = MASTER_TEAM_DEFAULTS;
+    
+    let attackStrength = 3; // Average
+    let defenseStrength = 3; // Average
+    
+    // Attack strength
+    if (eliteAttackTeams.includes(teamId)) attackStrength = 5;
+    else if (strongAttackTeams.includes(teamId)) attackStrength = 4;
+    else if (weakAttackTeams.includes(teamId)) attackStrength = 2;
+    else if (averageAttackTeams.includes(teamId)) attackStrength = 3;
+    else attackStrength = 1; // Promoted teams
+    
+    // Defense strength (inverted - lower goals against = higher defense)
+    if (eliteDefenseTeams.includes(teamId)) defenseStrength = 5;
+    else if (strongDefenseTeams.includes(teamId)) defenseStrength = 4;
+    else if (weakDefenseTeams.includes(teamId)) defenseStrength = 2;
+    else if (averageDefenseTeams.includes(teamId)) defenseStrength = 3;
+    else defenseStrength = 1; // Promoted teams
+    
+    return (attackStrength + defenseStrength) / 2;
+  }
+
   const httpServer = createServer(app);
   return httpServer;
 }
