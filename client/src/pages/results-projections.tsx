@@ -261,16 +261,10 @@ export default function ResultsProjections() {
                       return (
                         <tr key={match.id} className="hover:bg-gray-50" data-testid={`prediction-row-${match.id}`}>
                           <td className="px-4 py-4">
-                            <div className="flex items-center justify-between">
-                              <div className="text-right">
-                                <div className="text-sm font-medium text-gray-900">{match.homeTeam.name}</div>
-                                <div className="text-xs text-gray-500">{match.homeTeam.shortName}</div>
-                              </div>
-                              <div className="mx-4 text-xs text-gray-400">vs</div>
-                              <div className="text-left">
-                                <div className="text-sm font-medium text-gray-900">{match.awayTeam.name}</div>
-                                <div className="text-xs text-gray-500">{match.awayTeam.shortName}</div>
-                              </div>
+                            <div className="flex items-center justify-center gap-3">
+                              <div className="text-sm font-medium text-gray-900">{match.homeTeam.shortName}</div>
+                              <div className="text-xs text-gray-400">vs</div>
+                              <div className="text-sm font-medium text-gray-900">{match.awayTeam.shortName}</div>
                             </div>
                           </td>
                           
@@ -309,13 +303,13 @@ export default function ResultsProjections() {
                           <td className="px-4 py-4 text-center">
                             <div className="space-y-1">
                               <div className="text-xs">
-                                <span className="text-gray-600">Home xG: {match.homeTeam.expectedGoals.toFixed(1)}</span>
+                                <span className="text-gray-600">Home xG: {match.homeTeam.expectedGoals.toFixed(2)}</span>
                               </div>
                               <div className="text-xs">
-                                <span className="text-gray-600">Away xG: {match.awayTeam.expectedGoals.toFixed(1)}</span>
+                                <span className="text-gray-600">Away xG: {match.awayTeam.expectedGoals.toFixed(2)}</span>
                               </div>
                               <div className="text-xs">
-                                <span className="text-gray-600">Total xG: {match.totalExpectedGoals.toFixed(1)}</span>
+                                <span className="text-gray-600">Total xG: {match.totalExpectedGoals.toFixed(2)}</span>
                               </div>
                             </div>
                           </td>
