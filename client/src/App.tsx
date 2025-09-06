@@ -56,6 +56,7 @@ import PlayerYellowCards from "./pages/player-yellow-cards";
 import PlayerRedCards from "./pages/player-red-cards";
 import PlayerBonusPoints from "./pages/player-bonus-points";
 import TeamGoalsSpreadBetting from "./pages/team-goals-spread-betting";
+import Login from "./pages/login";
 
 
 function Router() {
@@ -115,6 +116,7 @@ function Router() {
       <Route path="/content-creators" component={ContentCreators} />
       <Route path="/content-creators/:id/team" component={CreatorTeam} />
       <Route path="/projection-docs" component={ProjectionDocumentation} />
+      <Route path="/login" component={Login} />
 
       <Route component={NotFound} />
     </Switch>
