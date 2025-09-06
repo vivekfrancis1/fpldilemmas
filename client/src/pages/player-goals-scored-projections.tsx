@@ -465,15 +465,15 @@ export default function PlayerGoalsScoredProjections() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'visible', width: '100%', maxWidth: '100%', height: 'auto', display: 'block', scrollbarWidth: 'auto', scrollSnapType: 'none', overscrollBehaviorX: 'contain' }} onDoubleClick={(e) => { const target = e.currentTarget as HTMLElement; target.scrollLeft = 0; }}>
-                  <table className="w-full" style={{ minWidth: '1400px', tableLayout: 'auto' }}>
-                    <thead className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="text-left py-3 px-4 font-semibold sticky left-0 bg-gradient-to-r from-blue-600 to-indigo-700 border-r border-blue-500 z-10">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white"
+                            className="h-auto p-0 font-medium text-gray-500 hover:text-gray-700 hover:bg-transparent"
                             onClick={() => handleSort("name")}
                             data-testid="sort-player-name"
                           >
@@ -485,46 +485,34 @@ export default function PlayerGoalsScoredProjections() {
                           </Button>
                         </th>
                     {selectedGameweeks.map(gw => (
-                      <th key={gw} className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white"
-                          onClick={() => handleSort(`gw${gw}`)}
-                          data-testid={`sort-gw${gw}`}
-                        >
+                      <th key={gw} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center justify-center gap-1" onClick={() => handleSort(`gw${gw}`)}>
                           GW{gw}
                           {sortBy === `gw${gw}` && (
-                            sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                            sortDirection === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
                           )}
-                          {sortBy !== `gw${gw}` && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                        </Button>
+                          {sortBy !== `gw${gw}` && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                        </div>
                       </th>
                     ))}
-                    <th className="text-center py-3 px-2 font-semibold text-white border-l border-blue-500">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white"
-                        onClick={() => handleSort("total")}
-                        data-testid="sort-total"
-                      >
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors">
+                      <div className="flex items-center justify-center gap-1" onClick={() => handleSort("total")}>
                         {selectedGameweeks.length} GW Total
                         {sortBy === "total" && (
-                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
+                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
                         )}
-                        {sortBy !== "total" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                      </Button>
+                        {sortBy !== "total" && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                      </div>
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white divide-y divide-gray-200">
                   {filteredProjections.map((player, index) => {
                     const selectedTotal = selectedGameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw.toString()] || 0), 0);
                     
                     return (
-                      <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
-                        <td className="py-3 px-4 sticky left-0 bg-white border-r border-gray-200 z-10">
+                      <tr key={player.playerId} className="hover:bg-gray-50">
+                        <td className="px-4 py-4 sticky left-0 bg-white">
                           <PlayerNameCell 
                             name={player.playerName}
                             position={player.position}
@@ -535,27 +523,25 @@ export default function PlayerGoalsScoredProjections() {
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw.toString()] || 0;
                           return (
-                            <td key={gw} className="py-3 px-2 text-center">
-                              <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getGoalsColor(goals)}`}>
-                                <ValueCell 
-                                  value={goals} 
-                                  format="goals" 
-                                  decimals={2} 
-                                  colorScheme="goals"
-                                  fontWeight="medium"
-                                />
-                              </span>
+                            <td key={gw} className="px-4 py-4 text-center text-sm font-medium text-gray-900">
+                              <ValueCell 
+                                value={goals} 
+                                format="goals" 
+                                decimals={2} 
+                                colorScheme="goals"
+                                fontWeight="medium"
+                              />
                             </td>
                           );
                         })}
-                        <td className="py-3 px-2 text-center border-l border-gray-200">
-                          <span className="px-3 py-1 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-sm">
+                        <td className="px-4 py-4 text-center bg-orange-50">
+                          <span className="text-lg font-bold text-orange-900">
                             <ValueCell 
                               value={selectedTotal} 
                               format="goals" 
                               decimals={2} 
                               colorScheme="goals"
-                              fontWeight="semibold"
+                              fontWeight="bold"
                             />
                           </span>
                         </td>
@@ -564,28 +550,29 @@ export default function PlayerGoalsScoredProjections() {
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t border-blue-300 bg-gradient-to-r from-blue-100 to-indigo-100">
-                    <td className="py-3 px-4 font-bold text-blue-900 sticky left-0 bg-gradient-to-r from-blue-100 to-indigo-100 border-r border-blue-300 z-10" colSpan={1}>
-                      {selectedGameweeks.length} GW TOTAL
+                  <tr className="bg-gray-100 border-t-2 border-gray-300 font-semibold">
+                    <td className="px-4 py-4 text-center text-sm font-bold text-gray-700 sticky left-0 bg-gray-100">
+                      TOTAL
                     </td>
                     {selectedGameweeks.map(gw => (
-                      <td key={gw} className="py-3 px-2 text-center font-bold text-blue-800">
+                      <td key={gw} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
                         <ValueCell 
                           value={totalGoals.gameweekTotals[gw] || 0} 
                           format="goals" 
                           decimals={2} 
-                          fontWeight="semibold"
+                          fontWeight="bold"
                         />
                       </td>
                     ))}
-                    <td className="py-3 px-2 text-center font-bold text-blue-800">
-                      <ValueCell 
-                        value={totalGoals.overallTotal} 
-                        format="goals" 
-                        decimals={2} 
-                        fontWeight="bold"
-                        colorScheme="goals"
-                      />
+                    <td className="px-4 py-4 text-center bg-orange-100">
+                      <span className="text-lg font-bold text-orange-900">
+                        <ValueCell 
+                          value={totalGoals.overallTotal} 
+                          format="goals" 
+                          decimals={2} 
+                          fontWeight="bold"
+                        />
+                      </span>
                     </td>
                   </tr>
                 </tfoot>
