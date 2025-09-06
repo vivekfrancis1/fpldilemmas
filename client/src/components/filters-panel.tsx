@@ -93,7 +93,7 @@ export default function FiltersPanel({
                 placeholder="Search by player name..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
-                className="pl-10 h-12 border-2 text-base"
+                className="pl-10 h-12 border-2 text-base mobile-form-input"
                 data-testid="input-search"
               />
             </div>
@@ -103,11 +103,11 @@ export default function FiltersPanel({
         {/* Filters Section */}
         <div className="space-y-4">
           <div className="text-sm font-medium text-gray-700 mb-4">Filter Options</div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mobile-filter-grid">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600">Position</label>
               <Select value={filters.position} onValueChange={(value) => handleFilterChange("position", value)}>
-                <SelectTrigger className="h-12 border-2 text-base" data-testid="select-position">
+                <SelectTrigger className="h-12 border-2 text-base mobile-form-input" data-testid="select-position">
                   <SelectValue placeholder="All Positions" />
                 </SelectTrigger>
                 <SelectContent>
@@ -124,7 +124,7 @@ export default function FiltersPanel({
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600">Team</label>
               <Select value={filters.team} onValueChange={(value) => handleFilterChange("team", value)}>
-                <SelectTrigger className="h-12 border-2 text-base" data-testid="select-team">
+                <SelectTrigger className="h-12 border-2 text-base mobile-form-input" data-testid="select-team">
                   <SelectValue placeholder="All Teams" />
                 </SelectTrigger>
                 <SelectContent>

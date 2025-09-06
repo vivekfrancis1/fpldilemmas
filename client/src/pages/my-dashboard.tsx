@@ -668,19 +668,19 @@ export default function MyDashboard() {
               <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
                 <TabsTrigger 
                   value="overview" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
                 >
                   Overview
                 </TabsTrigger>
                 <TabsTrigger 
                   value="team" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
                 >
                   Team
                 </TabsTrigger>
                 <TabsTrigger 
                   value="performance" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
                 >
                   Performance
                 </TabsTrigger>

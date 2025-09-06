@@ -41,7 +41,7 @@ button, a, input, select, textarea {
   }
   
   .tab-trigger-mobile {
-    @apply px-2 py-1 text-xs truncate max-w-[120px];
+    @apply px-2 py-1 text-xs truncate max-w-[120px] min-h-[44px];
   }
   
   /* Ensure mobile tables don't overflow */
@@ -58,6 +58,107 @@ button, a, input, select, textarea {
   /* Mobile button adjustments */
   .mobile-button {
     @apply px-3 py-2 text-xs min-h-[36px];
+  }
+  
+  /* Enhanced mobile table styles */
+  .mobile-table {
+    @apply text-xs;
+    min-width: 100%;
+  }
+  
+  .mobile-table th {
+    @apply px-2 py-1 text-xs font-medium sticky top-0 bg-gray-50 z-10;
+    white-space: nowrap;
+  }
+  
+  .mobile-table td {
+    @apply px-2 py-2 text-xs;
+    white-space: nowrap;
+  }
+  
+  /* Mobile form improvements */
+  .mobile-form-group {
+    @apply space-y-3;
+  }
+  
+  .mobile-form-label {
+    @apply text-sm font-medium;
+  }
+  
+  .mobile-form-input {
+    @apply text-base; /* Prevent zoom on iOS */
+  }
+  
+  /* Mobile dialog/modal adjustments */
+  .mobile-dialog {
+    @apply m-2 rounded-lg;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 32px);
+  }
+  
+  /* Mobile navigation improvements */
+  .mobile-nav-item {
+    @apply py-3 px-4 text-base;
+  }
+  
+  /* Mobile stats cards */
+  .mobile-stats-card {
+    @apply p-3 space-y-1;
+  }
+  
+  .mobile-stats-value {
+    @apply text-lg font-bold;
+  }
+  
+  .mobile-stats-label {
+    @apply text-xs text-gray-600;
+  }
+  
+  /* Mobile filters */
+  .mobile-filter-container {
+    @apply space-y-3;
+  }
+  
+  .mobile-filter-grid {
+    @apply grid grid-cols-1 gap-3;
+  }
+  
+  /* Mobile overflow prevention */
+  .mobile-no-overflow {
+    @apply overflow-x-hidden max-w-full;
+  }
+  
+  /* Mobile card spacing */
+  .mobile-card-spacing {
+    @apply space-y-4;
+  }
+  
+  /* Mobile text sizing */
+  .mobile-text-xs {
+    @apply text-xs;
+  }
+  
+  .mobile-text-sm {
+    @apply text-sm;
+  }
+}
+
+/* Tablet-specific optimizations */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tablet-table-container {
+    @apply overflow-x-auto;
+  }
+  
+  .tablet-grid {
+    @apply grid grid-cols-2 gap-4;
+  }
+  
+  .tablet-card-content {
+    @apply p-4;
+  }
+  
+  .tablet-button {
+    @apply px-4 py-2 text-sm;
   }
 }
 

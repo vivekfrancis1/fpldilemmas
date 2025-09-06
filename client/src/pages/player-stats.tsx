@@ -72,7 +72,7 @@ export default function PlayerStats() {
 
   return (
     <div className="fpl-page-wrapper">
-      <div className="fpl-container fpl-content-area fpl-section-spacing">
+      <div className="fpl-container fpl-content-area fpl-section-spacing px-2 sm:px-4">
         {/* Page Header */}
         <div className="fpl-page-header">
           <div className="fpl-page-header-content">
@@ -89,10 +89,10 @@ export default function PlayerStats() {
         {/* Season Selector */}
         <div className="fpl-card mb-6">
           <div className="fpl-card-content">
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-3 flex-wrap">
               <Calendar className="h-5 w-5 text-slate-500" />
               <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-                <SelectTrigger className="w-48" data-testid="select-season">
+                <SelectTrigger className="w-48 mobile-form-input" data-testid="select-season">
                   <SelectValue placeholder="Select season" />
                 </SelectTrigger>
                 <SelectContent>
@@ -115,29 +115,29 @@ export default function PlayerStats() {
           </div>
         </div>
 
-          {/* Quick Stats Overview */}
-          <div className="mb-6 sm:mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4" data-testid="text-quick-stats-title">
-                Quick Stats Overview
-              </h2>
-              <StatsCards data={selectedSeason === "current" ? bootstrapData : undefined} isLoading={isLoading} />
-            </div>
+        {/* Quick Stats Overview */}
+        <div className="mb-6 sm:mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 mobile-stats-card">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4" data-testid="text-quick-stats-title">
+              Quick Stats Overview
+            </h2>
+            <StatsCards data={selectedSeason === "current" ? bootstrapData : undefined} isLoading={isLoading} />
           </div>
+        </div>
 
-          {/* Filters */}
-          <div className="mb-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-              <FiltersPanel 
-                filters={filters}
-                setFilters={setFilters}
-                teams={selectedSeason === "current" ? bootstrapData?.teams : undefined}
-                elementTypes={selectedSeason === "current" ? bootstrapData?.element_types : undefined}
-                isLoading={isLoading}
-                isHistorical={selectedSeason !== "current"}
-              />
-            </div>
+        {/* Filters */}
+        <div className="mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mobile-filter-container">
+            <FiltersPanel 
+              filters={filters}
+              setFilters={setFilters}
+              teams={selectedSeason === "current" ? bootstrapData?.teams : undefined}
+              elementTypes={selectedSeason === "current" ? bootstrapData?.element_types : undefined}
+              isLoading={isLoading}
+              isHistorical={selectedSeason !== "current"}
+            />
           </div>
+        </div>
           
           {/* Player Statistics Table */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

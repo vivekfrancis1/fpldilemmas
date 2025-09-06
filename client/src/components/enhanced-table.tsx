@@ -102,20 +102,24 @@ export function EnhancedTable<T = any>({
       "rounded-lg border bg-white shadow-sm overflow-hidden",
       className
     )}>
-      {/* Scroll Controls */}
-      <div className="flex justify-between items-center px-4 py-2 bg-gray-50 border-b">
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={scrollToStart} className="text-xs">
-            ⏮ Start
+      {/* Scroll Controls - Mobile Optimized */}
+      <div className="flex justify-between items-center px-2 sm:px-4 py-2 bg-gray-50 border-b">
+        <div className="flex gap-1 sm:gap-2">
+          <Button variant="outline" size="sm" onClick={scrollToStart} className="text-xs mobile-button">
+            <span className="hidden sm:inline">⏮ Start</span>
+            <span className="sm:hidden">⏮</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={scrollLeft} className="text-xs">
-            ← Left
+          <Button variant="outline" size="sm" onClick={scrollLeft} className="text-xs mobile-button">
+            <span className="hidden sm:inline">← Left</span>
+            <span className="sm:hidden">←</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={scrollRight} className="text-xs">
-            Right →
+          <Button variant="outline" size="sm" onClick={scrollRight} className="text-xs mobile-button">
+            <span className="hidden sm:inline">Right →</span>
+            <span className="sm:hidden">→</span>
           </Button>
         </div>
-        <span className="text-xs text-gray-500">Use scrollbar, buttons, or arrow keys to navigate</span>
+        <span className="text-xs text-gray-500 hidden md:block">Use scrollbar, buttons, or arrow keys to navigate</span>
+        <span className="text-xs text-gray-500 md:hidden">Scroll table →</span>
       </div>
       <div 
         ref={scrollContainerRef}
@@ -162,7 +166,7 @@ export function EnhancedTable<T = any>({
         }}
         tabIndex={0}
       >
-        <table className="w-full" style={{ minWidth: 'max-content', tableLayout: 'auto' }}>
+        <table className="w-full mobile-table" style={{ minWidth: 'max-content', tableLayout: 'auto' }}>
           <thead className={cn(
             "border-b bg-gray-50/50",
             stickyHeader && "sticky top-0 z-10 backdrop-blur-sm bg-gray-50/90"
