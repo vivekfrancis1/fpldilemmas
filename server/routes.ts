@@ -11597,19 +11597,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const metadata = playerMetadata.get(player.playerId);
         const position = metadata?.position || 'MID';
         
-        // Calculate total points using simplified FPL scoring
-        const goalPoints = position === 'GKP' ? 10 : position === 'DEF' ? 6 : position === 'MID' ? 5 : 4;
-        const totalGoalPoints = player.totalProjectedGoals * goalPoints;
+        // Calculate FPL goal points by position
+        const goalPointsByPosition = position === 'GKP' ? 10 : position === 'DEF' ? 6 : position === 'MID' ? 5 : 4;
         
-        // Simplified minutes projection (assume ~270 minutes for next 6 GWs)
-        const expectedMinutes = Math.min(player.totalProjectedGoals * 60, 540); // Cap at 90min * 6 GWs
-        const minutesPoints = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
+        // Calculate gameweek-by-gameweek points
+        const gameweekProjections: { [key: string]: number } = {};
+        const pointsFromGoals: { [key: string]: number } = {};
+        const pointsFromAssists: { [key: string]: number } = {};
+        const pointsFromMinutes: { [key: string]: number } = {};
         
-        // Basic assist projection (20% of goals for attackers, 10% for others)
-        const assistMultiplier = position === 'FWD' || position === 'MID' ? 0.2 : 0.1;
-        const assistPoints = player.totalProjectedGoals * assistMultiplier * 3;
+        let totalGoalPoints = 0;
+        let totalAssistPoints = 0;
+        let totalMinutesPoints = 0;
         
-        const totalExpectedPoints = totalGoalPoints + minutesPoints + assistPoints;
+        // Process each gameweek
+        for (const [gw, goalProj] of Object.entries(player.gameweekProjections || {})) {
+          const goals = Number(goalProj) || 0;
+          
+          // Points from goals
+          const gwGoalPoints = goals * goalPointsByPosition;
+          pointsFromGoals[gw] = Math.round(gwGoalPoints * 100) / 100;
+          totalGoalPoints += gwGoalPoints;
+          
+          // Basic assist projection (20% of goals for attackers, 10% for others)
+          const assistMultiplier = position === 'FWD' || position === 'MID' ? 0.2 : 0.1;
+          const assists = goals * assistMultiplier;
+          const gwAssistPoints = assists * 3;
+          pointsFromAssists[gw] = Math.round(gwAssistPoints * 100) / 100;
+          totalAssistPoints += gwAssistPoints;
+          
+          // Basic minutes projection (assume playing if scoring goals)
+          const gwMinutesPoints = goals > 0.1 ? 2 : (goals > 0.01 ? 1 : 0); // 2 if likely starter, 1 if sub
+          pointsFromMinutes[gw] = gwMinutesPoints;
+          totalMinutesPoints += gwMinutesPoints;
+          
+          // Total points for this gameweek
+          const gwTotalPoints = gwGoalPoints + gwAssistPoints + gwMinutesPoints;
+          gameweekProjections[gw] = Math.round(gwTotalPoints * 100) / 100;
+        }
+        
+        const totalExpectedPoints = totalGoalPoints + totalAssistPoints + totalMinutesPoints;
 
         return {
           playerId: player.playerId,
@@ -11619,18 +11646,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: position,
           price: 50, // Default price
           ownership: 5.0, // Default ownership
-          gameweekProjections: player.gameweekProjections || {},
+          gameweekProjections: gameweekProjections,
           totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
-          averagePerGameweek: Math.round((totalExpectedPoints / 6) * 100) / 100,
+          averagePerGameweek: Math.round((totalExpectedPoints / Object.keys(gameweekProjections).length) * 100) / 100,
           // Detailed breakdowns
-          pointsFromGoals: player.gameweekProjections || {},
-          pointsFromAssists: {},
+          pointsFromGoals: pointsFromGoals,
+          pointsFromAssists: pointsFromAssists,
           pointsFromCleanSheets: {},
-          pointsFromMinutes: {},
+          pointsFromMinutes: pointsFromMinutes,
           totalPointsFromGoals: Math.round(totalGoalPoints * 100) / 100,
-          totalPointsFromAssists: Math.round(assistPoints * 100) / 100,
+          totalPointsFromAssists: Math.round(totalAssistPoints * 100) / 100,
           totalPointsFromCleanSheets: 0,
-          totalPointsFromMinutes: minutesPoints
+          totalPointsFromMinutes: Math.round(totalMinutesPoints * 100) / 100
         };
       }).sort((a: any, b: any) => b.totalExpectedPoints - a.totalExpectedPoints);
 
