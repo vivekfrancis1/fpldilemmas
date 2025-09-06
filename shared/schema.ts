@@ -1082,6 +1082,44 @@ export const cachedPlayerBonusPoints = pgTable("cached_player_bonus_points", {
   index("idx_cached_bonus_points_total_value").on(table.totalValue),
 ]);
 
+// Cached spread betting odds data
+export const cachedSpreadBettingOdds = pgTable("cached_spread_betting_odds", {
+  id: serial("id").primaryKey(),
+  fixtureId: varchar("fixture_id").notNull(),
+  gameweek: integer("gameweek").notNull(),
+  kickoffTime: timestamp("kickoff_time").notNull(),
+  homeTeamId: integer("home_team_id"),
+  homeTeamName: varchar("home_team_name").notNull(),
+  homeTeamShortName: varchar("home_team_short_name").notNull(),
+  awayTeamId: integer("away_team_id"),
+  awayTeamName: varchar("away_team_name").notNull(),
+  awayTeamShortName: varchar("away_team_short_name").notNull(),
+  // Total goals spread data
+  totalGoalsSell: real("total_goals_sell").notNull(),
+  totalGoalsBuy: real("total_goals_buy").notNull(),
+  totalGoalsMidpoint: real("total_goals_midpoint").notNull(),
+  // Supremacy spread data  
+  supremacySell: real("supremacy_sell").notNull(),
+  supremacyBuy: real("supremacy_buy").notNull(),
+  supremacyMidpoint: real("supremacy_midpoint").notNull(),
+  // Calculated expected goals using T+S/2 and T-S/2 formulas
+  homeExpectedGoals: real("home_expected_goals").notNull(),
+  awayExpectedGoals: real("away_expected_goals").notNull(),
+  // Market data metadata
+  marketConfidence: varchar("market_confidence").notNull(), // High, Medium, Low
+  dataSource: varchar("data_source").notNull().default("The Odds API"),
+  bookmakerCount: integer("bookmaker_count").default(0),
+  // Cache metadata
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  fetchDate: date("fetch_date").notNull(),
+}, (table) => [
+  index("idx_spread_betting_gameweek").on(table.gameweek),
+  index("idx_spread_betting_kickoff").on(table.kickoffTime),
+  index("idx_spread_betting_teams").on(table.homeTeamShortName, table.awayTeamShortName),
+  index("idx_spread_betting_fetch_date").on(table.fetchDate),
+  uniqueIndex("idx_spread_betting_unique").on(table.fixtureId, table.fetchDate),
+]);
+
 // Types for cached scoring component tables
 export type CachedPlayerSaves = typeof cachedPlayerSaves.$inferSelect;
 export type InsertCachedPlayerSaves = typeof cachedPlayerSaves.$inferInsert;
@@ -1097,3 +1135,7 @@ export type InsertCachedPlayerRedCards = typeof cachedPlayerRedCards.$inferInser
 
 export type CachedPlayerBonusPoints = typeof cachedPlayerBonusPoints.$inferSelect;
 export type InsertCachedPlayerBonusPoints = typeof cachedPlayerBonusPoints.$inferInsert;
+
+// Types for spread betting odds cache
+export type CachedSpreadBettingOdds = typeof cachedSpreadBettingOdds.$inferSelect;
+export type InsertCachedSpreadBettingOdds = typeof cachedSpreadBettingOdds.$inferInsert;
