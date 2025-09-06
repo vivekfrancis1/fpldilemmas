@@ -5006,8 +5006,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get all players for this team
           const teamPlayers = bootstrapData.elements.filter((p: any) => p.team === teamId);
           
-          // Calculate weighted assist shares using equal weighting (33.33% each year)
-          const weightedPlayerShares: { [playerId: number]: { name: string, position: string, totalWeightedShare: number, totalWeight: number } } = {};
+          // Calculate weighted assist shares using equal weighting (33.33% each year) WITH EXPECTED MINUTES
+          const weightedPlayerShares: { [playerId: number]: { name: string, position: string, totalWeightedShare: number, totalWeight: number, expectedMinutes: number } } = {};
           
           // Initialize all current players (excluding departed players)
           teamPlayers.forEach((player: any) => {
@@ -5024,11 +5024,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return; // Skip this player
             }
             
+            // Calculate expected minutes for this player (same logic as goal share)
+            const expectedMinutes = calculateExpectedMinutes(player, bootstrapData.elements);
+            
             weightedPlayerShares[player.id] = {
               name: playerFullName,
               position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
               totalWeightedShare: 0,
-              totalWeight: 0
+              totalWeight: 0,
+              expectedMinutes: expectedMinutes
             };
           });
           
@@ -5124,11 +5128,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 console.log(`DEBUG: Skipping ${playerData.name} - too few expected minutes (${expectedMinutes})`);
                 return;
               }
+              
+              // Update expected minutes in playerData (in case it wasn't set during initialization)
+              playerData.expectedMinutes = expectedMinutes;
             }
             
-            // Calculate final weighted assist share
-            const finalAssistShare = playerData.totalWeight > 0 ? 
+            // Calculate final weighted assist share with additional minutes weighting
+            let finalAssistShare = playerData.totalWeight > 0 ? 
               playerData.totalWeightedShare / playerData.totalWeight : 0;
+            
+            // Apply additional expected minutes weighting to the final share
+            if (currentPlayer && teamPlayers.length > 0) {
+              const maxExpectedMinutes = Math.max(...teamPlayers.map(p => calculateExpectedMinutes(p, teamPlayers)), 1);
+              const minutesWeight = Math.max(0.15, playerData.expectedMinutes / maxExpectedMinutes); // Minimum weight of 0.15
+              finalAssistShare = finalAssistShare * minutesWeight;
+              
+              if (finalAssistShare > 0) {
+                console.log(`DEBUG: Final assist share for ${playerData.name}: ${(playerData.totalWeightedShare / playerData.totalWeight).toFixed(1)}% → ${finalAssistShare.toFixed(1)}% (minutes weight: ${minutesWeight.toFixed(2)})`);
+              }
+            }
             
             // Apply realistic caps based on position to assist share percentage
             const getPositionShareCap = (position: string): number => {
