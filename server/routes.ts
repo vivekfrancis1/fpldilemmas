@@ -7978,8 +7978,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cleanSheetsResponse.json()
       ]);
 
-      // Handle defensive data structure (it returns an object with data property)
-      const defensiveDataArray = defensiveData.data || [];
+      // Handle defensive data structure (it returns an array directly from cached API)
+      const defensiveDataArray = Array.isArray(defensiveData) ? defensiveData : (defensiveData.data || []);
       console.log(`DEBUG: Retrieved projection data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveDataArray.length}, Clean Sheets: ${cleanSheetsData.length}, DB Saves: ${savesData.length}, DB Goals Conceded: ${goalsConcededData.length}, DB Yellow Cards: ${yellowCardsData.length}, DB Red Cards: ${redCardsData.length}, Bonus Probabilities: ${bonusProbabilitiesData.length}`);
       
       // Convert to lookup maps for fast access
