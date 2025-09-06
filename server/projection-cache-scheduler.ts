@@ -118,28 +118,21 @@ class ProjectionCacheScheduler {
   /**
    * Manually trigger cache update (for testing or API endpoint)
    */
-  async manualUpdate(): Promise<{ success: boolean; message: string; stats?: any }> {
+  async manualUpdate(): Promise<{ success: boolean; message: string; timestamp: string }> {
     try {
       console.log('🔧 Manual projection cache update triggered');
-      const startTime = Date.now();
-      
-      await projectionCacheWorker.cacheAllProjections();
-      const stats = await projectionCacheWorker.getCacheStats();
-      
-      const duration = Date.now() - startTime;
-      const message = `Cache updated successfully in ${Math.round(duration / 1000)}s`;
-      
+      await this.runCacheUpdate(true);
       return {
         success: true,
-        message,
-        stats
+        message: 'Manual cache update completed successfully',
+        timestamp: new Date().toISOString()
       };
-      
     } catch (error) {
       console.error('❌ Manual cache update failed:', error);
       return {
         success: false,
-        message: `Cache update failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Manual cache update failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        timestamp: new Date().toISOString()
       };
     }
   }

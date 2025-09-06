@@ -19,6 +19,43 @@ class ProjectionCacheWorker {
   private readonly BATCH_SIZE = 50;
   
   /**
+   * Cache only essential projections for faster light updates
+   */
+  async cacheEssentialProjections(): Promise<void> {
+    const startTime = Date.now();
+    console.log(`🔄 Starting essential projection cache update...`);
+    
+    try {
+      // Cache only the most critical projection types for light updates
+      const results = await Promise.allSettled([
+        this.cacheGoalsProjections(),
+        this.cacheAssistProjections(), 
+        this.cacheMinutesProjections()
+      ]);
+      
+      // Log results
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      
+      const duration = Date.now() - startTime;
+      console.log(`✅ Essential projection cache update completed: ${successful} successful, ${failed} failed (${duration}ms)`);
+      
+      if (failed > 0) {
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            const types = ['Goals', 'Assists', 'Minutes'];
+            console.error(`❌ Failed to cache ${types[index]} projections:`, result.reason);
+          }
+        });
+      }
+      
+    } catch (error) {
+      console.error(`❌ Essential projection cache worker failed:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Main worker function to cache all projection data
    */
   async cacheAllProjections(): Promise<void> {

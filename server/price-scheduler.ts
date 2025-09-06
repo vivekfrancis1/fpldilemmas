@@ -16,21 +16,51 @@ export class PriceScheduler {
   }
 
   private startScheduler() {
-    // Calculate time until next 7:05 AM IST
-    const nextRun = this.getNext705AMIST();
+    // Calculate time until next scheduled run (twice daily)
+    const nextRun = this.getNextScheduledRun();
     const timeUntilRun = nextRun.getTime() - Date.now();
     
-    console.log(`Next price data fetch scheduled for: ${nextRun.toISOString()} (IST 7:05 AM)`);
+    console.log(`Next price data fetch scheduled for: ${nextRun.toISOString()}`);
     
     // Set initial timeout
     setTimeout(() => {
       this.fetchAndStorePriceData();
       
-      // Then set daily interval (24 hours)
+      // Then set interval for every 12 hours (twice daily)
       this.interval = setInterval(() => {
         this.fetchAndStorePriceData();
-      }, 24 * 60 * 60 * 1000);
+      }, 12 * 60 * 60 * 1000); // 12 hours
     }, timeUntilRun);
+  }
+
+  private getNextScheduledRun(): Date {
+    const now = new Date();
+    const istNow = new Date(now.getTime() + IST_OFFSET);
+    
+    // Schedule times: 7:05 AM and 7:05 PM IST
+    const scheduleTimes = [
+      { hour: 7, minute: 5 },   // 7:05 AM
+      { hour: 19, minute: 5 }   // 7:05 PM
+    ];
+    
+    // Find next scheduled time today
+    for (const time of scheduleTimes) {
+      const target = new Date(istNow);
+      target.setHours(time.hour, time.minute, 0, 0);
+      
+      if (istNow.getTime() < target.getTime()) {
+        // Convert back to UTC
+        return new Date(target.getTime() - IST_OFFSET);
+      }
+    }
+    
+    // If no more times today, return first time tomorrow
+    const tomorrow = new Date(istNow);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(scheduleTimes[0].hour, scheduleTimes[0].minute, 0, 0);
+    
+    // Convert back to UTC
+    return new Date(tomorrow.getTime() - IST_OFFSET);
   }
 
   private getNext705AMIST(): Date {
