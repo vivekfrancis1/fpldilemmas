@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, Download, Filter, Clock, Target } from "lucide-react";
 
+interface BootstrapData {
+  events: Array<{ id: number; is_current: boolean; finished: boolean }>;
+}
+
 interface PlayerDefensiveData {
   playerId: number;
   playerName: string;
@@ -37,6 +41,21 @@ interface PlayerDefensiveData {
 }
 
 export default function PlayerDefensiveContributions() {
+  // Fetch bootstrap data to get current gameweek
+  const { data: bootstrapData } = useQuery<BootstrapData>({
+    queryKey: ["/api/bootstrap-static"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Calculate current gameweek and upcoming gameweeks
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 3; // Default fallback
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    return currentEvent ? currentEvent.id : 3;
+  }, [bootstrapData]);
+
+  const nextGameweek = currentGameweek + 1;
+
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
@@ -61,16 +80,16 @@ export default function PlayerDefensiveContributions() {
 
   const players: PlayerDefensiveData[] = defensiveData?.data || [];
 
-  // Get all gameweeks from the first player's projections
-  const allGameweeks = players.length > 0 ? players[0].gameweekProjections.map(gw => gw.gameweek) : [];
+  // Get all gameweeks from the first player's projections (only future gameweeks)
+  const allGameweeks = players.length > 0 ? players[0].gameweekProjections.map(gw => gw.gameweek).filter(gw => gw >= nextGameweek) : [];
   
   // Set default gameweek range (next 6 gameweeks) on first load
   React.useEffect(() => {
     if (allGameweeks.length > 0 && startGameweek === 0) {
-      setStartGameweek(allGameweeks[0]);
-      setEndGameweek(Math.min(allGameweeks[0] + 5, allGameweeks[allGameweeks.length - 1]));
+      setStartGameweek(nextGameweek);
+      setEndGameweek(Math.min(nextGameweek + 5, 38));
     }
-  }, [allGameweeks, startGameweek]);
+  }, [allGameweeks, startGameweek, nextGameweek]);
   
   // Filter gameweeks based on selected range
   const gameweeks = allGameweeks.filter(gw => gw >= startGameweek && gw <= endGameweek);
