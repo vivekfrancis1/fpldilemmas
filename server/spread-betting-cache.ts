@@ -300,12 +300,13 @@ export class SpreadBettingCacheService {
         const homeExpectedGoals = (T + S) / 2;
         const awayExpectedGoals = (T - S) / 2;
 
-        // Determine market confidence based on data source and bookmaker count
+        // Determine market confidence based on data source quality
         let marketConfidence = 'Low';
         if (totalsData.source === 'real_market' && spreadsData.source === 'real_market') {
-          marketConfidence = bookmakerCount >= 8 ? 'High' : 
-                           bookmakerCount >= 4 ? 'Medium' : 'Medium';
+          // Both markets from popular bookmaker = High confidence
+          marketConfidence = 'High';
         } else if (totalsData.source === 'real_market' || spreadsData.source === 'real_market') {
+          // At least one real market = Medium confidence
           marketConfidence = 'Medium';
         }
         // Keep 'Low' for fallback data
@@ -388,90 +389,115 @@ export class SpreadBettingCacheService {
   }
 
   private extractMarketData(bookmakers: any[]): { totalsData: any, spreadsData: any, bookmakerCount: number } {
-    let totalsData: any = null;
-    let spreadsData: any = null;
-    let bookmakerCount = bookmakers.length;
+    console.log(`🔍 Extracting from ${bookmakers.length} bookmakers, selecting most popular`);
 
-    console.log(`🔍 Extracting market data from ${bookmakerCount} bookmakers`);
+    // Popular bookmakers in order of preference (most reliable and comprehensive)
+    const popularBookmakers = [
+      'bet365', 'william hill', 'ladbrokes', 'paddy power', 'sky bet', 
+      'coral', 'betfair', 'unibet', 'betway', 'virgin bet'
+    ];
+
+    // Find the most popular bookmaker that has both markets
+    let selectedBookmaker: any = null;
+    let bookmakerRank = Infinity;
 
     for (const bookmaker of bookmakers) {
-      console.log(`📊 Bookmaker: ${bookmaker.title || 'Unknown'}, Markets: ${bookmaker.markets?.map((m: any) => m.key).join(', ') || 'None'}`);
+      const bookmakerName = (bookmaker.title || '').toLowerCase();
+      const rank = popularBookmakers.findIndex(popular => 
+        bookmakerName.includes(popular) || popular.includes(bookmakerName.split(' ')[0])
+      );
       
-      for (const market of bookmaker.markets || []) {
-        console.log(`🎯 Processing market: ${market.key}, Outcomes: ${market.outcomes?.length || 0}`);
+      // Check if this bookmaker has both required markets
+      const hasTotal = bookmaker.markets?.some((m: any) => m.key === 'totals');
+      const hasSpread = bookmaker.markets?.some((m: any) => m.key === 'spreads');
+      
+      if (hasTotal && hasSpread && rank < bookmakerRank) {
+        selectedBookmaker = bookmaker;
+        bookmakerRank = rank;
+      }
+    }
+
+    // If no popular bookmaker found, use the first one with both markets
+    if (!selectedBookmaker) {
+      selectedBookmaker = bookmakers.find(bookmaker => {
+        const hasTotal = bookmaker.markets?.some((m: any) => m.key === 'totals');
+        const hasSpread = bookmaker.markets?.some((m: any) => m.key === 'spreads');
+        return hasTotal && hasSpread;
+      });
+    }
+
+    if (!selectedBookmaker) {
+      console.log(`⚠️ No bookmaker found with both totals and spreads markets`);
+      return {
+        totalsData: { sell: 2.3, buy: 2.7, midpoint: 2.5, source: 'fallback' },
+        spreadsData: { sell: -0.25, buy: 0.25, midpoint: 0.0, source: 'fallback' },
+        bookmakerCount: 0
+      };
+    }
+
+    console.log(`✅ Selected bookmaker: ${selectedBookmaker.title} (rank: ${bookmakerRank >= 0 ? bookmakerRank + 1 : 'not in top list'})`);
+
+    let totalsData: any = null;
+    let spreadsData: any = null;
+
+    // Extract data from the selected bookmaker
+    for (const market of selectedBookmaker.markets || []) {
+      if (market.key === 'totals' && !totalsData) {
+        // Find over/under market
+        const overOutcome = market.outcomes.find((o: any) => o.name === 'Over' && o.point);
+        const underOutcome = market.outcomes.find((o: any) => o.name === 'Under' && o.point);
         
-        if (market.key === 'totals' && !totalsData) {
-          // Look for over/under markets with different point values
-          const validOutcome = market.outcomes.find((o: any) => 
-            o.point && (o.point >= 2.0 && o.point <= 4.0) && 
-            (o.name === 'Over' || o.name === 'Under')
-          );
-          
-          if (validOutcome) {
-            const point = parseFloat(validOutcome.point);
+        if (overOutcome && overOutcome.point) {
+          const point = parseFloat(overOutcome.point);
+          if (point >= 1.5 && point <= 4.5) { // Reasonable range
             totalsData = {
               sell: Math.max(0.5, point - 0.25),
               buy: point + 0.25,
               midpoint: point,
-              source: 'real_market'
+              source: 'real_market',
+              bookmaker: selectedBookmaker.title
             };
-            console.log(`✅ Found totals market: ${point} (${validOutcome.name})`);
-          } else {
-            console.log(`⚠️ No valid totals outcomes found for market outcomes:`, market.outcomes?.map((o: any) => `${o.name}: ${o.point}`) || []);
-          }
-        }
-        
-        if (market.key === 'spreads' && !spreadsData) {
-          // Look for handicap/spread markets
-          const validOutcome = market.outcomes.find((o: any) => 
-            o.point !== undefined && o.point !== null && 
-            Math.abs(o.point) <= 3.0 // Reasonable spread range
-          );
-          
-          if (validOutcome) {
-            const point = parseFloat(validOutcome.point);
-            spreadsData = {
-              sell: point - 0.25,
-              buy: point + 0.25,
-              midpoint: point,
-              source: 'real_market'
-            };
-            console.log(`✅ Found spreads market: ${point} (${validOutcome.name})`);
-          } else {
-            console.log(`⚠️ No valid spreads outcomes found for market outcomes:`, market.outcomes?.map((o: any) => `${o.name}: ${o.point}`) || []);
+            console.log(`✅ Found totals market: ${point} goals (${selectedBookmaker.title})`);
           }
         }
       }
       
-      // Break if we have both markets from this bookmaker
-      if (totalsData && spreadsData) {
-        console.log(`✅ Found both markets from ${bookmaker.title}`);
-        break;
+      if (market.key === 'spreads' && !spreadsData) {
+        // Find handicap market - usually first outcome is home team
+        const handicapOutcome = market.outcomes.find((o: any) => 
+          o.point !== undefined && o.point !== null && Math.abs(o.point) <= 3.0
+        );
+        
+        if (handicapOutcome) {
+          const point = parseFloat(handicapOutcome.point);
+          spreadsData = {
+            sell: point - 0.25,
+            buy: point + 0.25,
+            midpoint: point,
+            source: 'real_market',
+            bookmaker: selectedBookmaker.title
+          };
+          console.log(`✅ Found spreads market: ${point} handicap (${selectedBookmaker.title})`);
+        }
       }
     }
 
-    // Enhanced fallback system with more realistic data
+    // Final fallback if extraction failed
     if (!totalsData) {
-      console.log(`⚠️ No real totals data found, using enhanced fallback`);
+      console.log(`⚠️ Could not extract totals from ${selectedBookmaker.title}, using fallback`);
       totalsData = {
-        sell: 2.3,
-        buy: 2.7,
-        midpoint: 2.5,
-        source: 'fallback'
+        sell: 2.3, buy: 2.7, midpoint: 2.5, source: 'fallback'
       };
     }
     
     if (!spreadsData) {
-      console.log(`⚠️ No real spreads data found, using enhanced fallback`);
+      console.log(`⚠️ Could not extract spreads from ${selectedBookmaker.title}, using fallback`);
       spreadsData = {
-        sell: -0.25,
-        buy: 0.25,
-        midpoint: 0.0,
-        source: 'fallback'
+        sell: -0.25, buy: 0.25, midpoint: 0.0, source: 'fallback'
       };
     }
 
-    console.log(`📊 Market data extraction complete: Totals=${totalsData.source}, Spreads=${spreadsData.source}`);
-    return { totalsData, spreadsData, bookmakerCount };
+    console.log(`📊 Final extraction: Totals=${totalsData.source}, Spreads=${spreadsData.source} from ${selectedBookmaker.title}`);
+    return { totalsData, spreadsData, bookmakerCount: 1 };
   }
 }
