@@ -10609,7 +10609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-      console.log(`DEBUG: Generated team-derived goals conceded projections for ${goalsConcededProjections.length} players (GKP/DEF)`);
+      console.log(`DEBUG: Generated pure goals conceded projections for ${goalsConcededProjections.length} players (GKP/DEF) for future gameweeks only`);
       res.json(goalsConcededProjections);
     } catch (error) {
       console.error("Error in player goals conceded projections:", error);
@@ -10617,10 +10617,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Yellow Cards Projections - Hybrid methodology: actual + projected + current gameweek hybrid
+  // Player Yellow Cards Projections - Pure projections for future gameweeks only
   app.get("/api/player-yellow-cards-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Yellow Cards Projections API called - using hybrid calculation");
+      console.log("DEBUG: Player Yellow Cards Projections API called - using pure projections for future gameweeks only");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -10628,9 +10628,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get FPL bootstrap data for current gameweek info and players
       const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       const fplData = await fplResponse.json();
-      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 1;
+      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
+      const nextGameweek = currentGameweek + 1; // Start from next gameweek
       
-      // Extract yellow card data for all players with hybrid methodology
+      // Extract yellow card data for all players using pure projections for future gameweeks only
       const yellowCardProjections = await Promise.all(
         fplData.elements.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -10640,78 +10641,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalYellowCards = 0;
           let totalPoints = 0;
           
-          // Process each gameweek with hybrid methodology
-          for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            let gwYellowCards = 0;
-            let gwPoints = 0;
+          // Process each FUTURE gameweek only with pure projections
+          for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
+            // Use position-specific probability calculations for future gameweeks only
+            let cardProbability;
+            if (position === 'DEF') cardProbability = 0.15;
+            else if (position === 'MID') cardProbability = 0.12;
+            else if (position === 'FWD') cardProbability = 0.08;
+            else cardProbability = 0.03;
             
-            if (gw < currentGameweek) {
-              // COMPLETED GAMEWEEKS: Use actual FPL data
-              try {
-                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-                const playerDetail = await playerDetailResponse.json();
-                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
-                
-                if (gameweekData && gameweekData.minutes > 0) {
-                  gwYellowCards = gameweekData.yellow_cards || 0;
-                  gwPoints = -(gwYellowCards); // -1 point per yellow card
-                }
-              } catch (error) {
-                console.log(`Using projection fallback for player ${player.id} GW${gw}: ${error}`);
-                // Position-specific fallback
-                let cardProbability;
-                if (position === 'DEF') cardProbability = 0.15;
-                else if (position === 'MID') cardProbability = 0.12;
-                else if (position === 'FWD') cardProbability = 0.08;
-                else cardProbability = 0.03;
-                
-                gwYellowCards = parseFloat((Math.random() * cardProbability).toFixed(2));
-                gwPoints = -(gwYellowCards);
-              }
-            } else if (gw === currentGameweek) {
-              // CURRENT GAMEWEEK: Hybrid of actual + projected based on match progress
-              try {
-                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-                const playerDetail = await playerDetailResponse.json();
-                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
-                
-                if (gameweekData && gameweekData.minutes > 0) {
-                  // Player has played - use actual data
-                  gwYellowCards = gameweekData.yellow_cards || 0;
-                  gwPoints = -(gwYellowCards);
-                } else {
-                  // Player hasn't played yet - use projection
-                  let cardProbability;
-                  if (position === 'DEF') cardProbability = 0.15;
-                  else if (position === 'MID') cardProbability = 0.12;
-                  else if (position === 'FWD') cardProbability = 0.08;
-                  else cardProbability = 0.03;
-                  
-                  gwYellowCards = parseFloat((Math.random() * cardProbability).toFixed(2));
-                  gwPoints = -(gwYellowCards);
-                }
-              } catch (error) {
-                // Fallback to projection
-                let cardProbability;
-                if (position === 'DEF') cardProbability = 0.15;
-                else if (position === 'MID') cardProbability = 0.12;
-                else if (position === 'FWD') cardProbability = 0.08;
-                else cardProbability = 0.03;
-                
-                gwYellowCards = parseFloat((Math.random() * cardProbability).toFixed(2));
-                gwPoints = -(gwYellowCards);
-              }
-            } else {
-              // FUTURE GAMEWEEKS: Use position-specific probability calculations
-              let cardProbability;
-              if (position === 'DEF') cardProbability = 0.15;
-              else if (position === 'MID') cardProbability = 0.12;
-              else if (position === 'FWD') cardProbability = 0.08;
-              else cardProbability = 0.03;
-              
-              gwYellowCards = parseFloat((Math.random() * cardProbability).toFixed(2));
-              gwPoints = -(gwYellowCards);
-            }
+            const gwYellowCards = parseFloat((Math.random() * cardProbability).toFixed(2));
+            const gwPoints = -(gwYellowCards);
             
             yellowCards[`gw${gw}`] = parseFloat(gwYellowCards.toFixed(2));
             pointsFromYellowCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(2));
@@ -10728,12 +10668,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pointsFromYellowCards,
             totalYellowCards: parseFloat(totalYellowCards.toFixed(2)),
             totalPoints: parseFloat(totalPoints.toFixed(2)),
-            averagePerGameweek: parseFloat((totalYellowCards / (endGameweek - startGameweek + 1)).toFixed(3))
+            averagePerGameweek: parseFloat((totalYellowCards / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(3))
           };
         })
       );
       
-      console.log(`DEBUG: Generated hybrid yellow card projections for ${yellowCardProjections.length} players`);
+      console.log(`DEBUG: Generated pure yellow card projections for ${yellowCardProjections.length} players for future gameweeks only`);
       res.json(yellowCardProjections);
     } catch (error) {
       console.error("Error in player yellow cards projections:", error);
@@ -10741,10 +10681,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Red Cards Projections - Hybrid methodology: actual + projected + current gameweek hybrid
+  // Player Red Cards Projections - Pure projections for future gameweeks only
   app.get("/api/player-red-cards-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Red Cards Projections API called - using hybrid calculation");
+      console.log("DEBUG: Player Red Cards Projections API called - using pure projections for future gameweeks only");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -10752,9 +10692,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get FPL bootstrap data for current gameweek info and players
       const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       const fplData = await fplResponse.json();
-      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 1;
+      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
+      const nextGameweek = currentGameweek + 1; // Start from next gameweek
       
-      // Extract red card data for all players with hybrid methodology
+      // Extract red card data for all players using pure projections for future gameweeks only
       const redCardProjections = await Promise.all(
         fplData.elements.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -10764,54 +10705,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalRedCards = 0;
           let totalPoints = 0;
           
-          // Process each gameweek with hybrid methodology
-          for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            let gwRedCards = 0;
-            let gwPoints = 0;
-            
-            if (gw < currentGameweek) {
-              // COMPLETED GAMEWEEKS: Use actual FPL data
-              try {
-                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-                const playerDetail = await playerDetailResponse.json();
-                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
-                
-                if (gameweekData && gameweekData.minutes > 0) {
-                  gwRedCards = gameweekData.red_cards || 0;
-                  gwPoints = -(gwRedCards * 3); // -3 points per red card
-                }
-              } catch (error) {
-                console.log(`Using projection fallback for player ${player.id} GW${gw}: ${error}`);
-                // Red cards are very rare - use minimal probabilities
-                gwRedCards = parseFloat((Math.random() * 0.01).toFixed(3)); // 0-0.01
-                gwPoints = -(gwRedCards * 3);
-              }
-            } else if (gw === currentGameweek) {
-              // CURRENT GAMEWEEK: Hybrid of actual + projected based on match progress
-              try {
-                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
-                const playerDetail = await playerDetailResponse.json();
-                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
-                
-                if (gameweekData && gameweekData.minutes > 0) {
-                  // Player has played - use actual data
-                  gwRedCards = gameweekData.red_cards || 0;
-                  gwPoints = -(gwRedCards * 3);
-                } else {
-                  // Player hasn't played yet - use projection
-                  gwRedCards = parseFloat((Math.random() * 0.01).toFixed(3));
-                  gwPoints = -(gwRedCards * 3);
-                }
-              } catch (error) {
-                // Fallback to projection
-                gwRedCards = parseFloat((Math.random() * 0.01).toFixed(3));
-                gwPoints = -(gwRedCards * 3);
-              }
-            } else {
-              // FUTURE GAMEWEEKS: Red cards are rare events
-              gwRedCards = parseFloat((Math.random() * 0.01).toFixed(3));
-              gwPoints = -(gwRedCards * 3);
-            }
+          // Process each FUTURE gameweek only with pure projections
+          for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
+            // Red cards are rare events - use minimal probabilities for future gameweeks only
+            const gwRedCards = parseFloat((Math.random() * 0.01).toFixed(3)); // 0-0.01
+            const gwPoints = -(gwRedCards * 3); // -3 points per red card
             
             redCards[`gw${gw}`] = parseFloat(gwRedCards.toFixed(3));
             pointsFromRedCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
@@ -10828,12 +10726,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pointsFromRedCards,
             totalRedCards: parseFloat(totalRedCards.toFixed(3)),
             totalPoints: parseFloat(totalPoints.toFixed(3)),
-            averagePerGameweek: parseFloat((totalRedCards / (endGameweek - startGameweek + 1)).toFixed(4))
+            averagePerGameweek: parseFloat((totalRedCards / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(4))
           };
         })
       );
       
-      console.log(`DEBUG: Generated hybrid red card projections for ${redCardProjections.length} players`);
+      console.log(`DEBUG: Generated pure red card projections for ${redCardProjections.length} players for future gameweeks only`);
       res.json(redCardProjections);
     } catch (error) {
       console.error("Error in player red cards projections:", error);
