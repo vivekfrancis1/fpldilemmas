@@ -42,7 +42,7 @@ export default function TransferTracker() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [transferTypeFilter, setTransferTypeFilter] = useState("all");
-  const [sortField, setSortField] = useState<SortField>('net_transfers');
+  const [sortField, setSortField] = useState<SortField>('net_transfers_event');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
