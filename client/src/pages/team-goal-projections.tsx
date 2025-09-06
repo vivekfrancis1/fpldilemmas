@@ -235,8 +235,6 @@ export default function TeamGoalProjections() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="total">Period Total</SelectItem>
-                      <SelectItem value="season">Rest of Season Total</SelectItem>
-                      <SelectItem value="average">Goals/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
                       {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
                         const gwNumber = parseInt(startGameweek) + i;
@@ -297,24 +295,6 @@ export default function TeamGoalProjections() {
                           {sortBy === 'total' && <TrendingUp className="h-3 w-3" />}
                         </div>
                       </th>
-                      <th 
-                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors"
-                        onClick={() => setSortBy('season')}
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          Rest of Season Total
-                          {sortBy === 'season' && <TrendingUp className="h-3 w-3" />}
-                        </div>
-                      </th>
-                      <th 
-                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => setSortBy('average')}
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          Avg/Game
-                          {sortBy === 'average' && <TrendingUp className="h-3 w-3" />}
-                        </div>
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -356,16 +336,6 @@ export default function TeamGoalProjections() {
                           </span>
                         </td>
                         
-                        <td className="px-4 py-4 text-center bg-blue-50">
-                          <span className="text-lg font-bold text-blue-900">
-                            {(team.totalProjectedGoals || 0).toFixed(2)}
-                          </span>
-                        </td>
-                        
-                        <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
-                          {(team.averageGoalsPerGame || 0).toFixed(2)}
-                        </td>
-                        
                       </tr>
                     ))}
                     
@@ -398,16 +368,6 @@ export default function TeamGoalProjections() {
                         <span className="text-lg font-bold text-orange-900">
                           {totalGoals.overallTotal.toFixed(2)}
                         </span>
-                      </td>
-                      
-                      <td className="px-4 py-4 text-center bg-blue-100">
-                        <span className="text-lg font-bold text-blue-900">
-                          {totalGoals.seasonTotal.toFixed(2)}
-                        </span>
-                      </td>
-                      
-                      <td className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
-                        {totalGoals.averagePerGame.toFixed(2)}
                       </td>
                       
                     </tr>
