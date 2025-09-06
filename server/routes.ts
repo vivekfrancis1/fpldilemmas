@@ -10217,8 +10217,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const willPlay = await estimatePlayerWillPlay(player, gw, 'GKP');
                 
                 if (willPlay) {
-                  // Expected to have played - use reasonable projection with defense tier adjustment
-                  const baseSaves = Math.random() * 3 + 1.5; // 1.5-4.5 saves base
+                  // Expected to have played - use ultra-conservative projection with defense tier adjustment
+                  const baseSaves = Math.random() * 2 + 1; // 1-3 saves base (reduced further)
                   gwSaves = Math.max(0, Math.floor(baseSaves * defensiveSavesMultiplier));
                   gwPoints = Math.floor(gwSaves / 3);
                 } else {
@@ -10246,7 +10246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     // Expected to play - use projection with defense tier and form adjustments
                     const form = parseFloat(player.form || "0");
                     const formMultiplier = Math.max(0.5, Math.min(1.5, form / 5));
-                    const baseSaves = Math.random() * 4 + 2; // 2-6 saves
+                    const baseSaves = Math.random() * 2.5 + 1.5; // 1.5-4 saves (reduced further)
                     gwSaves = Math.max(0, Math.floor(baseSaves * formMultiplier * defensiveSavesMultiplier));
                     gwPoints = Math.floor(gwSaves / 3);
                   } else {
@@ -10263,7 +10263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // Expected to play - use projection with defense tier and form adjustments
                   const form = parseFloat(player.form || "0");
                   const formMultiplier = Math.max(0.5, Math.min(1.5, form / 5));
-                  gwSaves = Math.max(0, Math.floor((Math.random() * 4 + 2) * formMultiplier * defensiveSavesMultiplier));
+                  gwSaves = Math.max(0, Math.floor((Math.random() * 2.5 + 1.5) * formMultiplier * defensiveSavesMultiplier));
                   gwPoints = Math.floor(gwSaves / 3);
                 } else {
                   // Unlikely to play - 0 saves
@@ -10280,8 +10280,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const form = parseFloat(player.form || "0");
                 const formMultiplier = Math.max(0.5, Math.min(1.5, form / 5));
                 
-                // Base saves expectation: 2-6 saves for a playing goalkeeper, adjusted by defense tier
-                const baseSaves = Math.random() * 4 + 2;
+                // Base saves expectation: 1.5-4 saves for a playing goalkeeper (ultra-conservative), adjusted by defense tier
+                const baseSaves = Math.random() * 2.5 + 1.5; // 1.5-4 saves (reduced further)
                 gwSaves = Math.max(0, Math.floor(baseSaves * formMultiplier * defensiveSavesMultiplier));
                 gwPoints = Math.floor(gwSaves / 3);
               } else {
