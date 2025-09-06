@@ -16,7 +16,7 @@ interface PlayerGoalProjection {
   teamShort: string;
   position: string;
   totalProjectedGoals: number;
-  gameweekProjections: { [gameweek: number]: number };
+  gameweekProjections: { [gameweek: string]: number };
   goalShare: number;
 }
 
@@ -77,8 +77,8 @@ export default function PlayerGoalsScoredProjections() {
       .sort((a, b) => {
         if (sortBy.startsWith('gw')) {
           const gwNumber = parseInt(sortBy.replace('gw', ''));
-          const aValue = a.gameweekProjections[gwNumber] || 0;
-          const bValue = b.gameweekProjections[gwNumber] || 0;
+          const aValue = a.gameweekProjections[gwNumber.toString()] || 0;
+          const bValue = b.gameweekProjections[gwNumber.toString()] || 0;
           return bValue - aValue;
         }
         
@@ -89,17 +89,17 @@ export default function PlayerGoalsScoredProjections() {
             // Calculate selected gameweeks total for sorting (goals or points based on active tab)
             if (activeTab === "points") {
               const aPointsTotal = selectedGameweeks.reduce((sum, gw) => {
-                const goals = a.gameweekProjections[gw] || 0;
+                const goals = a.gameweekProjections[gw.toString()] || 0;
                 return sum + getPointsFromGoals(goals, a.position);
               }, 0);
               const bPointsTotal = selectedGameweeks.reduce((sum, gw) => {
-                const goals = b.gameweekProjections[gw] || 0;
+                const goals = b.gameweekProjections[gw.toString()] || 0;
                 return sum + getPointsFromGoals(goals, b.position);
               }, 0);
               return (bPointsTotal - aPointsTotal) * multiplier;
             } else {
-              const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
-              const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+              const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw.toString()] || 0), 0);
+              const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw.toString()] || 0), 0);
               return (bPeriodTotal - aPeriodTotal) * multiplier;
             }
           }
@@ -118,17 +118,17 @@ export default function PlayerGoalsScoredProjections() {
           default: {
             if (activeTab === "points") {
               const aPointsTotal = selectedGameweeks.reduce((sum, gw) => {
-                const goals = a.gameweekProjections[gw] || 0;
+                const goals = a.gameweekProjections[gw.toString()] || 0;
                 return sum + getPointsFromGoals(goals, a.position);
               }, 0);
               const bPointsTotal = selectedGameweeks.reduce((sum, gw) => {
-                const goals = b.gameweekProjections[gw] || 0;
+                const goals = b.gameweekProjections[gw.toString()] || 0;
                 return sum + getPointsFromGoals(goals, b.position);
               }, 0);
               return (bPointsTotal - aPointsTotal) * multiplier;
             } else {
-              const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
-              const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+              const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw.toString()] || 0), 0);
+              const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw.toString()] || 0), 0);
               return (bPeriodTotal - aPeriodTotal) * multiplier;
             }
           }
@@ -159,9 +159,9 @@ export default function PlayerGoalsScoredProjections() {
     
     // Calculate totals for selected gameweeks
     selectedGameweeks.forEach(gwNumber => {
-      const gwTotal = filteredProjections.reduce((sum, player) => sum + (player.gameweekProjections[gwNumber] || 0), 0);
+      const gwTotal = filteredProjections.reduce((sum, player) => sum + (player.gameweekProjections[gwNumber.toString()] || 0), 0);
       const gwPointsTotal = filteredProjections.reduce((sum, player) => {
-        const goals = player.gameweekProjections[gwNumber] || 0;
+        const goals = player.gameweekProjections[gwNumber.toString()] || 0;
         return sum + getPointsFromGoals(goals, player.position);
       }, 0);
       
@@ -507,7 +507,7 @@ export default function PlayerGoalsScoredProjections() {
                 </thead>
                 <tbody>
                   {filteredProjections.map((player, index) => {
-                    const selectedTotal = selectedGameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw] || 0), 0);
+                    const selectedTotal = selectedGameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw.toString()] || 0), 0);
                     
                     return (
                       <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
@@ -535,7 +535,7 @@ export default function PlayerGoalsScoredProjections() {
                           </div>
                         </td>
                         {selectedGameweeks.map(gw => {
-                          const goals = player.gameweekProjections[gw] || 0;
+                          const goals = player.gameweekProjections[gw.toString()] || 0;
                           return (
                             <td key={gw} className="py-3 px-2 text-center">
                               <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getGoalsColor(goals)}`}>
@@ -639,7 +639,7 @@ export default function PlayerGoalsScoredProjections() {
                 <tbody>
                   {filteredProjections.map((player, index) => {
                     const selectedTotal = selectedGameweeks.reduce((sum, gw) => {
-                      const goals = player.gameweekProjections[gw] || 0;
+                      const goals = player.gameweekProjections[gw.toString()] || 0;
                       return sum + getPointsFromGoals(goals, player.position);
                     }, 0);
                     
@@ -669,7 +669,7 @@ export default function PlayerGoalsScoredProjections() {
                           </div>
                         </td>
                         {selectedGameweeks.map(gw => {
-                          const goals = player.gameweekProjections[gw] || 0;
+                          const goals = player.gameweekProjections[gw.toString()] || 0;
                           const points = getPointsFromGoals(goals, player.position);
                           return (
                             <td key={gw} className="py-3 px-2 text-center">
