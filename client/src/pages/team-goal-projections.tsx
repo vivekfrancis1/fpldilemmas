@@ -30,8 +30,10 @@ export default function TeamGoalProjections() {
     queryKey: ["/api/bootstrap-static"],
   });
 
-  const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamGoalProjection[]>({
+  const { data: projectionsData, isLoading: projectionsLoading, error: projectionsError } = useQuery<TeamGoalProjection[]>({
     queryKey: ["/api/team-goal-projections"],
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const filteredProjections = useMemo(() => {
@@ -121,6 +123,36 @@ export default function TeamGoalProjections() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       
+    );
+  }
+
+  // Handle API errors gracefully
+  if (projectionsError) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center p-8">
+          <h2 className="text-xl font-semibold text-red-600 mb-4">Unable to Load Team Goal Projections</h2>
+          <p className="text-gray-600 mb-4">There was an error loading the projection data. Please try refreshing the page.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle missing data
+  if (!projectionsData || projectionsData.length === 0) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center p-8">
+          <h2 className="text-xl font-semibold text-gray-700 mb-4">No Data Available</h2>
+          <p className="text-gray-600">Team goal projections are currently unavailable. Please try again later.</p>
+        </div>
+      </div>
     );
   }
 
