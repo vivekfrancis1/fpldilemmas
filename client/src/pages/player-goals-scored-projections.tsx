@@ -45,17 +45,25 @@ export default function PlayerGoalsScoredProjections() {
     queryKey: ["/api/bootstrap-static"],
   });
 
-  // Use fast cached endpoint - fallback to direct cache if needed
+  // Use fast cached endpoint with robust error handling
   const { data: playerGoalData, isLoading: playerGoalLoading, error } = useQuery<PlayerGoalProjection[]>({
     queryKey: ["/api/goals-projections-cached"],
     staleTime: 30 * 60 * 1000, // 30 minute cache
     gcTime: 2 * 60 * 60 * 1000, // Keep in cache for 2 hours
     refetchOnMount: false,
-    retry: 1, // Single retry for speed
-    retryDelay: 2000, // Fast retry
+    retry: (failureCount, error) => {
+      // Don't retry on 5xx server errors to avoid cascading failures
+      if (error && typeof error === 'object' && 'status' in error && 
+          typeof error.status === 'number' && error.status >= 500) {
+        return false;
+      }
+      return failureCount < 2; // Max 2 retries for other errors
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
     networkMode: 'online',
     placeholderData: [], // Show empty table immediately while loading
-    refetchOnWindowFocus: false // Prevent unnecessary refetches
+    refetchOnWindowFocus: false, // Prevent unnecessary refetches
+    throwOnError: false // Don't throw errors, handle gracefully
   });
 
   // Get current gameweek from bootstrap data
