@@ -7760,6 +7760,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error("Failed to fetch bootstrap data");
       }
       const bootstrapData = await bootstrapResponse.json();
+      
+      // Determine current gameweek and adjust range to match projection APIs
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
+      const nextGameweek = currentGameweek + 1; // Projection APIs start from next gameweek
+      const actualStart = Math.max(start, nextGameweek); // Only process future gameweeks
+      const actualEnd = end;
+      
+      console.log(`DEBUG: Current gameweek: ${currentGameweek}, adjusting range from GW${start}-${end} to GW${actualStart}-${actualEnd} to match projection APIs`);
 
       // Query database tables directly for maximum performance
       const [savesData, goalsConcededData, yellowCardsData, redCardsData] = await Promise.all([
@@ -7943,7 +7951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Position-specific clean sheet points
         const csPoints = position === 'GKP' || position === 'DEF' ? 4 : position === 'MID' ? 1 : 0;
         
-        for (let gw = start; gw <= end; gw++) {
+        for (let gw = actualStart; gw <= actualEnd; gw++) {
           // Goals from cached Goals Projections API
           const goals = playerGoals[gw] || 0;
           const gwGoalPoints = goals * goalPoints;
@@ -8069,8 +8077,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ownership: parseFloat(fplPlayer.selected_by_percent),
           gameweekProjections,
           totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
-          seasonTotalPoints: Math.round((totalExpectedPoints / (end - start + 1)) * 35 * 100) / 100, // GW4-38 remaining
-          averagePerGameweek: Math.round((totalExpectedPoints / (end - start + 1)) * 100) / 100,
+          seasonTotalPoints: Math.round((totalExpectedPoints / (actualEnd - actualStart + 1)) * 35 * 100) / 100, // GW4-38 remaining
+          averagePerGameweek: Math.round((totalExpectedPoints / (actualEnd - actualStart + 1)) * 100) / 100,
           pointsFromGoals,
           pointsFromAssists,
           pointsFromCleanSheets,
