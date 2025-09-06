@@ -11660,6 +11660,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Cached Goal Share data
+  app.get("/api/cached/goal-share", async (req, res) => {
+    try {
+      console.log("📊 Serving cached goal share data from database");
+      const cachedData = await db.select().from(teamProjections)
+        .where(eq(teamProjections.season, '2025/26'))
+        .orderBy(teamProjections.teamId);
+      
+      // Transform the cached data to match expected format
+      const goalShareData = cachedData.map(team => ({
+        teamId: team.teamId,
+        teamName: team.teamName,
+        goalShareData: team.goalShareData,
+        totalGoals: Object.values(team.goalProjections as any).reduce((sum: number, val: any) => sum + val, 0)
+      }));
+      
+      res.json(goalShareData);
+    } catch (error) {
+      console.error("Error fetching cached goal share data:", error);
+      res.status(500).json({ error: "Failed to fetch cached goal share data" });
+    }
+  });
+
+  // Cached Assist Share data
+  app.get("/api/cached/assist-share", async (req, res) => {
+    try {
+      console.log("📊 Serving cached assist share data from database");
+      const cachedData = await db.select().from(teamProjections)
+        .where(eq(teamProjections.season, '2025/26'))
+        .orderBy(teamProjections.teamId);
+      
+      // Transform the cached data to match expected format
+      const assistShareData = cachedData.map(team => ({
+        teamId: team.teamId,
+        teamName: team.teamName,
+        assistShareData: team.assistShareData,
+        totalAssists: Object.values(team.goalProjections as any).reduce((sum: number, val: any) => sum + (val * 0.72), 0)
+      }));
+      
+      res.json(assistShareData);
+    } catch (error) {
+      console.error("Error fetching cached assist share data:", error);
+      res.status(500).json({ error: "Failed to fetch cached assist share data" });
+    }
+  });
+
+  // Cached Team Goal Projections
+  app.get("/api/cached/team-goal-projections", async (req, res) => {
+    try {
+      console.log("📊 Serving cached team goal projections from database");
+      const cachedData = await db.select().from(teamProjections)
+        .where(eq(teamProjections.season, '2025/26'))
+        .orderBy(desc(sql`(${teamProjections.goalProjections}->>'total')::numeric`));
+      
+      // Transform to expected format
+      const teamGoalData = cachedData.map((team, index) => {
+        const goalProjections = team.goalProjections as any;
+        const totalGoals = Object.values(goalProjections).reduce((sum: number, val: any) => sum + (val || 0), 0);
+        
+        return {
+          id: team.teamId,
+          team: team.teamName,
+          teamShort: team.teamName.slice(0, 3).toUpperCase(),
+          gameweekProjections: goalProjections,
+          totalProjectedGoals: Math.round(totalGoals * 100) / 100,
+          averageGoalsPerGame: Math.round((totalGoals / 38) * 100) / 100,
+          confidence: "High",
+          position: index + 1
+        };
+      });
+      
+      res.json(teamGoalData);
+    } catch (error) {
+      console.error("Error fetching cached team goal projections:", error);
+      res.status(500).json({ error: "Failed to fetch cached team goal projections" });
+    }
+  });
+
+  // Cached Team Assist Projections
+  app.get("/api/cached/team-assist-projections", async (req, res) => {
+    try {
+      console.log("📊 Serving cached team assist projections from database");
+      const cachedData = await db.select().from(teamProjections)
+        .where(eq(teamProjections.season, '2025/26'))
+        .orderBy(desc(sql`(${teamProjections.goalProjections}->>'total')::numeric`));
+      
+      // Transform to expected format with assist multiplier
+      const teamAssistData = cachedData.map((team, index) => {
+        const goalProjections = team.goalProjections as any;
+        const totalGoals = Object.values(goalProjections).reduce((sum: number, val: any) => sum + (val || 0), 0);
+        const totalAssists = totalGoals * 0.72; // Standard assist multiplier
+        
+        // Create assist projections based on goal projections
+        const assistProjections: any = {};
+        Object.keys(goalProjections).forEach(gw => {
+          assistProjections[gw] = Math.round((goalProjections[gw] || 0) * 0.72 * 100) / 100;
+        });
+        
+        return {
+          id: team.teamId,
+          team: team.teamName,
+          teamShort: team.teamName.slice(0, 3).toUpperCase(),
+          gameweekProjections: assistProjections,
+          totalProjectedAssists: Math.round(totalAssists * 100) / 100,
+          averageAssistsPerGame: Math.round((totalAssists / 38) * 100) / 100,
+          confidence: "High",
+          position: index + 1
+        };
+      });
+      
+      res.json(teamAssistData);
+    } catch (error) {
+      console.error("Error fetching cached team assist projections:", error);
+      res.status(500).json({ error: "Failed to fetch cached team assist projections" });
+    }
+  });
+
   // Cached FPL Scoring Component Endpoints - Serve data from database
   app.get("/api/cached/player-saves-projections", async (req, res) => {
     try {

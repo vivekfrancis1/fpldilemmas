@@ -4,7 +4,8 @@ import {
   playerAssistProjections, 
   teamCleanSheetProjections, 
   playerMinutesProjections, 
-  playerDefensiveProjections 
+  playerDefensiveProjections,
+  teamProjections
 } from "../shared/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -31,7 +32,9 @@ class ProjectionCacheWorker {
         this.cacheAssistProjections(), 
         this.cacheCleanSheetProjections(),
         this.cacheMinutesProjections(),
-        this.cacheDefensiveProjections()
+        this.cacheDefensiveProjections(),
+        this.cacheTeamProjections(),
+        this.cacheGoalAssistShareData()
       ]);
       
       // Log results
@@ -44,7 +47,7 @@ class ProjectionCacheWorker {
       if (failed > 0) {
         results.forEach((result, index) => {
           if (result.status === 'rejected') {
-            const types = ['Goals', 'Assists', 'Clean Sheets', 'Minutes', 'Defensive'];
+            const types = ['Goals', 'Assists', 'Clean Sheets', 'Minutes', 'Defensive', 'Team Projections', 'Goal/Assist Share'];
             console.error(`❌ Failed to cache ${types[index]} projections:`, result.reason);
           }
         });
@@ -346,19 +349,122 @@ class ProjectionCacheWorker {
   }
   
   /**
+   * Cache team projections from API
+   */
+  private async cacheTeamProjections(): Promise<void> {
+    try {
+      console.log(`📊 Caching team projections...`);
+      const response = await fetch('http://localhost:5000/api/team-goal-projections');
+      
+      if (!response.ok) {
+        throw new Error(`Team Goals API returned ${response.status}`);
+      }
+      
+      const data: any[] = await response.json();
+      console.log(`📥 Retrieved ${data.length} team projections`);
+      
+      // Clear existing data for this season
+      await db.delete(teamProjections)
+        .where(eq(teamProjections.season, '2025/26'));
+      
+      // Prepare records for batch insert
+      const records = [];
+      for (const team of data) {
+        records.push({
+          teamId: team.id,
+          teamName: team.team,
+          goalProjections: team.gameweekProjections,
+          cleanSheetProjections: {}, // Will be updated separately
+          goalsAgainstProjections: {},
+          goalShareData: {},
+          assistShareData: {},
+          gameweekRange: '4-38',
+          startGameweek: 4,
+          endGameweek: 38,
+          season: '2025/26'
+        });
+      }
+      
+      // Insert records
+      if (records.length > 0) {
+        await db.insert(teamProjections).values(records);
+        console.log(`✅ Team projections cached successfully (${records.length} records)`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ Failed to cache team projections:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cache goal and assist share data from API
+   */
+  private async cacheGoalAssistShareData(): Promise<void> {
+    try {
+      console.log(`📊 Caching goal and assist share data...`);
+      
+      // Fetch goal share data
+      const goalShareResponse = await fetch('http://localhost:5000/api/goal-share-season');
+      const assistShareResponse = await fetch('http://localhost:5000/api/assist-share-season');
+      
+      if (!goalShareResponse.ok || !assistShareResponse.ok) {
+        console.log('Note: Goal/Assist share APIs not ready yet, skipping cache');
+        return;
+      }
+      
+      const goalShareData = await goalShareResponse.json();
+      const assistShareData = await assistShareResponse.json();
+      
+      console.log(`📥 Retrieved goal share data for ${goalShareData.length} teams`);
+      console.log(`📥 Retrieved assist share data for ${assistShareData.length} teams`);
+      
+      // Update existing team projection records with share data
+      for (const teamGoals of goalShareData) {
+        const teamAssists = assistShareData.find((t: any) => t.teamId === teamGoals.teamId);
+        
+        await db.update(teamProjections)
+          .set({
+            goalShareData: teamGoals.goalShareData || {},
+            assistShareData: teamAssists?.assistShareData || {}
+          })
+          .where(and(
+            eq(teamProjections.teamId, teamGoals.teamId),
+            eq(teamProjections.season, '2025/26')
+          ));
+      }
+      
+      console.log(`✅ Goal/Assist share data cached successfully`);
+      
+    } catch (error) {
+      console.error(`❌ Failed to cache goal/assist share data:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Get cache statistics
    */
   async getCacheStats(): Promise<any> {
     try {
-      const stats = await Promise.all([
-        db.select().from(playerGoalsProjections).then(r => ({ type: 'Goals', count: r.length })),
-        db.select().from(playerAssistProjections).then(r => ({ type: 'Assists', count: r.length })),
-        db.select().from(teamCleanSheetProjections).then(r => ({ type: 'Team Clean Sheets', count: r.length })),
-        db.select().from(playerMinutesProjections).then(r => ({ type: 'Minutes', count: r.length })),
-        db.select().from(playerDefensiveProjections).then(r => ({ type: 'Defensive', count: r.length }))
+      const { sql } = await import("drizzle-orm");
+      const [goals, assists, cleanSheets, minutes, defensive, teams] = await Promise.all([
+        db.select({ count: sql`count(*)` }).from(playerGoalsProjections),
+        db.select({ count: sql`count(*)` }).from(playerAssistProjections),
+        db.select({ count: sql`count(*)` }).from(teamCleanSheetProjections),
+        db.select({ count: sql`count(*)` }).from(playerMinutesProjections),
+        db.select({ count: sql`count(*)` }).from(playerDefensiveProjections),
+        db.select({ count: sql`count(*)` }).from(teamProjections)
       ]);
       
-      return stats;
+      return [
+        { type: 'Goals', count: goals[0]?.count || 0 },
+        { type: 'Assists', count: assists[0]?.count || 0 },
+        { type: 'Team Clean Sheets', count: cleanSheets[0]?.count || 0 },
+        { type: 'Minutes', count: minutes[0]?.count || 0 },
+        { type: 'Defensive', count: defensive[0]?.count || 0 },
+        { type: 'Team Projections', count: teams[0]?.count || 0 }
+      ];
       
     } catch (error) {
       console.error(`❌ Failed to get cache stats:`, error);
