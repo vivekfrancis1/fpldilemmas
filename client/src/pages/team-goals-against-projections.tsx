@@ -30,17 +30,9 @@ export default function TeamGoalsAgainstProjections() {
     queryKey: ["/api/bootstrap-static"],
   });
 
-  const { data: combinedData, isLoading: projectionsLoading } = useQuery<{
-    goalsScored: any[];
-    goalsAgainst: TeamGoalsAgainstProjection[];
-    totalGoalsScored: number;
-    totalGoalsAgainst: number;
-    perfectBalance: boolean;
-  }>({
-    queryKey: ["/api/team-projections-combined"],
+  const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamGoalsAgainstProjection[]>({
+    queryKey: ["/api/team-goals-against-projections"],
   });
-
-  const projectionsData = combinedData?.goalsAgainst;
 
   const filteredProjections = useMemo(() => {
     if (!projectionsData) return [];

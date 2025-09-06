@@ -3188,7 +3188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections,
-          totalGoals: Math.round(totalGoals * 100) / 100,
+          totalProjectedGoals: Math.round(totalGoals * 100) / 100,
           averageGoalsPerGame: Math.round(averageGoals * 100) / 100,
           confidence,
           position: 0 // Will be set after sorting
@@ -3199,7 +3199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Team Goal Projections use base calculations from Goals Scored admin settings only
 
       // Sort by total expected goals descending and set positions
-      teamProjections.sort((a: any, b: any) => b.totalGoals - a.totalGoals);
+      teamProjections.sort((a: any, b: any) => b.totalProjectedGoals - a.totalProjectedGoals);
       teamProjections.forEach((team: any, index: number) => {
         team.position = index + 1;
       });
@@ -6436,86 +6436,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // Combined Team Projections endpoint - Perfect Balance with Shared Variance
-  app.get("/api/team-projections-combined", async (req, res) => {
-    // FORCE disable all caching to ensure admin changes reflect immediately
-    res.set('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0');
-    res.set('Pragma', 'no-cache');
-    res.set('Expires', '0');
-    res.set('Last-Modified', new Date().toUTCString());
-    res.set('ETag', `"${Date.now()}"`);
-    
-    try {
-      console.log(`DEBUG: Combined Team Projections API called - delegating to individual endpoints for consistency`);
-      
-      // Delegate to existing individual endpoints for maximum consistency
-      const [goalsScoredResponse, goalsAgainstResponse] = await Promise.all([
-        fetch('http://localhost:5000/api/team-goal-projections'),
-        fetch('http://localhost:5000/api/team-goals-against-projections')
-      ]);
-      
-      if (!goalsScoredResponse.ok || !goalsAgainstResponse.ok) {
-        throw new Error("Failed to fetch from individual endpoints");
-      }
-      
-      const goalsScoredData = await goalsScoredResponse.json();
-      const goalsAgainstData = await goalsAgainstResponse.json();
-      
-      // Transform the data to match expected structure
-      const goalsScored = goalsScoredData.map((team: any) => ({
-        id: team.id,
-        team: team.teamShort,
-        teamShort: team.teamShort,
-        teamName: team.teamName,
-        gameweekProjections: team.gameweekProjections,
-        totalProjectedGoals: team.totalGoals || 0, // Map from totalGoals to totalProjectedGoals with fallback
-        averageGoalsPerGame: team.averageGoalsPerGame || 0,
-        confidence: team.confidence || 'Medium',
-        position: team.position || 0
-      }));
-      
-      const goalsAgainst = goalsAgainstData.map((team: any) => ({
-        id: team.id,
-        team: team.teamShort,
-        teamShort: team.teamShort,
-        teamName: team.teamName,
-        gameweekProjections: team.gameweekProjections,
-        totalProjectedGoalsAgainst: team.totalProjectedGoalsAgainst,
-        averageGoalsAgainstPerGame: team.averageGoalsAgainstPerGame,
-        confidence: team.confidence || 'Medium',
-        position: team.position || 0
-      }));
-      
-      // Calculate totals for validation
-      const totalGoalsScored = goalsScored.reduce((sum: number, team: any) => sum + team.totalProjectedGoals, 0);
-      const totalGoalsAgainst = goalsAgainst.reduce((sum: number, team: any) => sum + team.totalProjectedGoalsAgainst, 0);
-      
-      console.log(`DEBUG: DELEGATION SUCCESS - Goals Scored: ${totalGoalsScored.toFixed(2)}, Goals Against: ${totalGoalsAgainst.toFixed(2)}`);
-      
-      // Return combined data structure (already arrays from map function)
-      const goalsScoredArray = goalsScored.sort((a, b) => b.totalProjectedGoals - a.totalProjectedGoals);
-      const goalsAgainstArray = goalsAgainst.sort((a, b) => a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst);
-      
-      // Add positions
-      goalsScoredArray.forEach((team, index) => {
-        team.position = index + 1;
-      });
-      goalsAgainstArray.forEach((team, index) => {
-        team.position = index + 1;
-      });
-      
-      res.json({
-        goalsScored: goalsScoredArray,
-        goalsAgainst: goalsAgainstArray,
-        totalGoalsScored: totalGoalsScored,
-        totalGoalsAgainst: totalGoalsAgainst,
-        perfectBalance: Math.abs(totalGoalsScored - totalGoalsAgainst) < 0.01
-      });
-    } catch (error) {
-      console.error('Error generating combined team projections:', error);
-      res.status(500).json({ error: 'Failed to generate combined team projections' });
-    }
-  });
 
   // Team Goals Against Projections endpoint - PERFECT MIRROR IMAGE
   app.get("/api/team-goals-against-projections", async (req, res) => {
