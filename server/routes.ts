@@ -5132,7 +5132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate team season totals from Team Assist Projections
       const teamSeasonTotals: { [teamId: number]: { expectedAssists: number, players: { [playerId: number]: { name: string, position: string, projectedAssists: number } } } } = {};
       
-      // Aggregate expected assists from Team Assist Projections data
+      // Aggregate expected assists from Team Assist Projections data using totalAssists field
       teamAssistProjectionsData.forEach((team: any) => {
         if (!teamSeasonTotals[team.id]) {
           teamSeasonTotals[team.id] = {
@@ -5141,12 +5141,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
         
-        // Sum all gameweek projections for this team's season total
-        Object.values(team.gameweekProjections).forEach((assists: any) => {
-          if (typeof assists === 'number') {
-            teamSeasonTotals[team.id].expectedAssists += assists;
-          }
-        });
+        // Use the totalAssists field directly (more reliable than summing null gameweek values)
+        teamSeasonTotals[team.id].expectedAssists = team.totalAssists || 0;
       });
       
       // Debug log to verify correct expected assists values
