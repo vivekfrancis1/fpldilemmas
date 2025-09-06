@@ -51,7 +51,8 @@ export default function ResultsProjections() {
   const gameweeks = useMemo(() => {
     if (!predictionsData) return [];
     const gws = Array.from(new Set(predictionsData.map(m => m.gameweek))).sort((a, b) => a - b);
-    return gws;
+    // Filter out completed gameweeks (only show future gameweeks)
+    return gws.filter(gw => gw >= 4);
   }, [predictionsData]);
 
   const filteredPredictions = useMemo(() => {
@@ -212,12 +213,12 @@ export default function ResultsProjections() {
                           <td className="px-4 py-4">
                             <div className="flex items-center justify-between">
                               <div className="text-right">
-                                <div className="text-sm font-medium text-gray-900">{match.homeTeam}</div>
+                                <div className="text-sm font-medium text-gray-900">{match.homeTeam.name}</div>
                                 <div className="text-xs text-gray-500">{match.homeTeam.shortName}</div>
                               </div>
                               <div className="mx-4 text-xs text-gray-400">vs</div>
                               <div className="text-left">
-                                <div className="text-sm font-medium text-gray-900">{match.awayTeam}</div>
+                                <div className="text-sm font-medium text-gray-900">{match.awayTeam.name}</div>
                                 <div className="text-xs text-gray-500">{match.awayTeam.shortName}</div>
                               </div>
                             </div>
