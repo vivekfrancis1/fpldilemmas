@@ -188,15 +188,31 @@ export class SpreadBettingCacheService {
       const oddsData = await oddsResponse.json();
       console.log(`📊 Received ${oddsData.length} games from The Odds API`);
       
-      // Log a sample of the data for debugging
+      // Debug: Sample the first game's raw bookmaker data to check API quality
       if (oddsData.length > 0) {
+        const sampleGame = oddsData[0];
+        console.log(`🔍 RAW API SAMPLE - ${sampleGame.home_team} vs ${sampleGame.away_team}:`);
         console.log(`📊 Sample game:`, {
-          home_team: oddsData[0].home_team,
-          away_team: oddsData[0].away_team,
-          commence_time: oddsData[0].commence_time,
-          bookmakers_count: oddsData[0].bookmakers?.length || 0,
-          markets: oddsData[0].bookmakers?.[0]?.markets?.map((m: any) => m.key) || []
+          home_team: sampleGame.home_team,
+          away_team: sampleGame.away_team,
+          commence_time: sampleGame.commence_time,
+          bookmakers_count: sampleGame.bookmakers?.length || 0,
+          markets: sampleGame.bookmakers?.[0]?.markets?.map((m: any) => m.key) || []
         });
+        
+        if (sampleGame.bookmakers && sampleGame.bookmakers.length > 0) {
+          const sampleBookmaker = sampleGame.bookmakers[0];
+          console.log(`📊 First bookmaker: ${sampleBookmaker.title}`);
+          
+          if (sampleBookmaker.markets) {
+            for (const market of sampleBookmaker.markets) {
+              console.log(`📊 ${market.key} market:`, market.outcomes?.map((o: any) => `${o.name}=${o.point}@${o.price}`) || []);
+              if (market.outcomes && market.outcomes.length > 2) {
+                console.log(`📊 ${market.key} has ${market.outcomes.length} total outcomes`);
+              }
+            }
+          }
+        }
       }
 
       // Process and return the data
@@ -442,13 +458,19 @@ export class SpreadBettingCacheService {
 
     // Extract data from the selected bookmaker
     for (const market of selectedBookmaker.markets || []) {
+      console.log(`🔍 Processing market: ${market.key} with ${market.outcomes?.length || 0} outcomes`);
+      
       if (market.key === 'totals' && !totalsData) {
-        // Find over/under market
+        console.log(`📊 Available totals outcomes:`, market.outcomes?.map((o: any) => `${o.name}: ${o.point} @ ${o.price}`) || []);
+        
+        // Find over/under market - try different approaches
         const overOutcome = market.outcomes.find((o: any) => o.name === 'Over' && o.point);
         const underOutcome = market.outcomes.find((o: any) => o.name === 'Under' && o.point);
         
         if (overOutcome && overOutcome.point) {
           const point = parseFloat(overOutcome.point);
+          console.log(`🎯 Evaluating totals point: ${point} (range: 1.5-4.5)`);
+          
           if (point >= 1.5 && point <= 4.5) { // Reasonable range
             totalsData = {
               sell: Math.max(0.5, point - 0.25),
@@ -458,11 +480,17 @@ export class SpreadBettingCacheService {
               bookmaker: selectedBookmaker.title
             };
             console.log(`✅ Found totals market: ${point} goals (${selectedBookmaker.title})`);
+          } else {
+            console.log(`❌ Point ${point} outside acceptable range 1.5-4.5`);
           }
+        } else {
+          console.log(`❌ No valid Over outcome found with point`);
         }
       }
       
       if (market.key === 'spreads' && !spreadsData) {
+        console.log(`📊 Available spreads outcomes:`, market.outcomes?.map((o: any) => `${o.name}: ${o.point} @ ${o.price}`) || []);
+        
         // Find handicap market - usually first outcome is home team
         const handicapOutcome = market.outcomes.find((o: any) => 
           o.point !== undefined && o.point !== null && Math.abs(o.point) <= 3.0
@@ -470,6 +498,8 @@ export class SpreadBettingCacheService {
         
         if (handicapOutcome) {
           const point = parseFloat(handicapOutcome.point);
+          console.log(`🎯 Evaluating spreads point: ${point} (range: -3.0 to +3.0)`);
+          
           spreadsData = {
             sell: point - 0.25,
             buy: point + 0.25,
@@ -478,6 +508,8 @@ export class SpreadBettingCacheService {
             bookmaker: selectedBookmaker.title
           };
           console.log(`✅ Found spreads market: ${point} handicap (${selectedBookmaker.title})`);
+        } else {
+          console.log(`❌ No valid handicap outcome found within range`);
         }
       }
     }
