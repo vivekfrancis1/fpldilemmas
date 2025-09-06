@@ -295,13 +295,15 @@ export const ValueCell = ({
   format = 'number', 
   decimals = 1, 
   className,
-  colorScheme 
+  colorScheme,
+  fontWeight = 'medium'
 }: { 
   value: number; 
-  format?: 'number' | 'percentage' | 'currency' | 'points';
+  format?: 'number' | 'percentage' | 'currency' | 'points' | 'goals' | 'assists' | 'minutes' | 'rank' | 'price' | 'projection';
   decimals?: number;
   className?: string;
-  colorScheme?: 'default' | 'points' | 'percentage';
+  colorScheme?: 'default' | 'points' | 'percentage' | 'goals' | 'assists' | 'defensive';
+  fontWeight?: 'normal' | 'medium' | 'semibold' | 'bold';
 }) => {
   const formatValue = () => {
     switch (format) {
@@ -309,6 +311,16 @@ export const ValueCell = ({
         return `${(value * 100).toFixed(decimals)}%`;
       case 'currency':
         return `£${value.toFixed(decimals)}`;
+      case 'price':
+        return `£${(value / 10).toFixed(1)}m`;
+      case 'rank':
+        return value.toLocaleString();
+      case 'goals':
+      case 'assists':
+      case 'projection':
+        return value.toFixed(decimals);
+      case 'minutes':
+        return Math.round(value).toString();
       case 'points':
         return value.toFixed(decimals);
       default:
@@ -316,24 +328,52 @@ export const ValueCell = ({
     }
   };
 
+  const getFontWeightClass = () => {
+    switch (fontWeight) {
+      case 'normal': return 'font-normal';
+      case 'medium': return 'font-medium';
+      case 'semibold': return 'font-semibold';
+      case 'bold': return 'font-bold';
+      default: return 'font-medium';
+    }
+  };
+
   const getColorClass = () => {
     if (colorScheme === 'points') {
-      if (value >= 6) return 'text-green-700 font-semibold';
-      if (value >= 4) return 'text-blue-700 font-medium';
+      if (value >= 6) return 'text-green-700';
+      if (value >= 4) return 'text-blue-700';
       if (value >= 2) return 'text-gray-700';
       return 'text-gray-500';
     }
     if (colorScheme === 'percentage') {
-      if (value >= 0.15) return 'text-green-700 font-semibold';
-      if (value >= 0.10) return 'text-blue-700 font-medium';
+      if (value >= 0.15) return 'text-green-700';
+      if (value >= 0.10) return 'text-blue-700';
       if (value >= 0.05) return 'text-gray-700';
+      return 'text-gray-500';
+    }
+    if (colorScheme === 'goals') {
+      if (value >= 0.7) return 'text-green-700';
+      if (value >= 0.4) return 'text-blue-700';
+      if (value >= 0.2) return 'text-gray-700';
+      return 'text-gray-500';
+    }
+    if (colorScheme === 'assists') {
+      if (value >= 0.5) return 'text-green-700';
+      if (value >= 0.3) return 'text-blue-700';
+      if (value >= 0.1) return 'text-gray-700';
+      return 'text-gray-500';
+    }
+    if (colorScheme === 'defensive') {
+      if (value >= 12) return 'text-green-700';
+      if (value >= 8) return 'text-blue-700';
+      if (value >= 4) return 'text-gray-700';
       return 'text-gray-500';
     }
     return 'text-gray-900';
   };
 
   return (
-    <span className={cn(getColorClass(), className)}>
+    <span className={cn(getColorClass(), getFontWeightClass(), 'text-sm', className)}>
       {formatValue()}
     </span>
   );
