@@ -3777,6 +3777,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // In-memory storage for 2025/26 assist share data
   let savedAssistShareData: any = null;
   
+  // International tournament schedule and affected players
+  const INTERNATIONAL_TOURNAMENTS = {
+    AFCON_2025: {
+      startGameweek: 21, // Mid-January 2025
+      endGameweek: 23,   // Early February 2025
+      affectedCountries: [
+        'Algeria', 'Angola', 'Burkina Faso', 'Cameroon', 'Cape Verde', 'Comoros',
+        'DR Congo', 'Egypt', 'Equatorial Guinea', 'Gabon', 'Gambia', 'Ghana',
+        'Guinea', 'Guinea-Bissau', 'Ivory Coast', 'Mali', 'Mauritania', 'Morocco',
+        'Mozambique', 'Namibia', 'Nigeria', 'Senegal', 'Sierra Leone', 'South Africa',
+        'Tanzania', 'Tunisia', 'Uganda', 'Zambia', 'Zimbabwe'
+      ]
+    },
+    COPA_AMERICA_2024: {
+      startGameweek: 38, // End of season - no impact
+      endGameweek: 38,
+      affectedCountries: ['Argentina', 'Brazil', 'Chile', 'Colombia', 'Ecuador', 'Uruguay', 'Venezuela']
+    }
+  };
+
+  // Player nationality mapping (key players who are likely to be called up)
+  const PLAYER_NATIONALITIES = {
+    // Egyptian players
+    'Mohamed Salah': 'Egypt',
+    'Omar Marmoush': 'Egypt',
+    
+    // Senegalese players  
+    'Sadio Mané': 'Senegal',
+    'Ismaïla Sarr': 'Senegal',
+    'Cheikhou Kouyaté': 'Senegal',
+    
+    // Nigerian players
+    'Alex Iwobi': 'Nigeria',
+    'Wilfred Ndidi': 'Nigeria',
+    'Kelechi Iheanacho': 'Nigeria',
+    'Victor Osimhen': 'Nigeria',
+    
+    // Moroccan players
+    'Hakim Ziyech': 'Morocco',
+    'Achraf Hakimi': 'Morocco',
+    'Sofyan Amrabat': 'Morocco',
+    
+    // Ghanaian players
+    'Thomas Partey': 'Ghana',
+    'Mohammed Kudus': 'Ghana',
+    'Jordan Ayew': 'Ghana',
+    
+    // Ivorian players
+    'Wilfried Zaha': 'Ivory Coast',
+    'Nicolas Pépé': 'Ivory Coast',
+    'Jean-Philippe Mateta': 'Ivory Coast',
+    
+    // Algerian players
+    'Riyad Mahrez': 'Algeria',
+    'Said Benrahma': 'Algeria',
+    
+    // Cameroonian players
+    'André-Frank Zambo Anguissa': 'Cameroon',
+    'Karl Toko Ekambi': 'Cameroon'
+  };
+
   // Enhanced helper function for comprehensive availability and injury analysis
   function calculateExpectedMinutes(player: any, allPlayers: any[]): number {
     const position = player.element_type;
@@ -3862,25 +3923,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // 4. Apply form factor (more conservative)
     const formFactor = player.form ? Math.max(0.7, Math.min(1.1, player.form / 5)) : 0.9;
     
-    // 5. Calculate seasonal adjustment for injured players
+    // 5. Check for international tournament impact
+    const playerName = `${player.first_name || ''} ${player.second_name || ''}`.trim();
+    const playerNationality = PLAYER_NATIONALITIES[playerName];
+    
+    let tournamentAdjustment = 1.0;
+    let tournamentWeeksOut = 0;
+    
+    if (playerNationality) {
+      // Check AFCON impact
+      const afcon = INTERNATIONAL_TOURNAMENTS.AFCON_2025;
+      if (afcon.affectedCountries.includes(playerNationality)) {
+        tournamentWeeksOut = afcon.endGameweek - afcon.startGameweek + 1; // 3 gameweeks
+        const currentGameweek = 3; // Current season position
+        
+        // Only apply if tournament is upcoming
+        if (currentGameweek < afcon.startGameweek) {
+          const totalRemainingWeeks = 38 - currentGameweek;
+          tournamentAdjustment = (totalRemainingWeeks - tournamentWeeksOut) / totalRemainingWeeks;
+          
+          console.log(`DEBUG: ${playerName} (${playerNationality}) - AFCON impact: ${tournamentWeeksOut} weeks out, adjustment: ${tournamentAdjustment.toFixed(2)}`);
+        }
+      }
+    }
+    
+    // 6. Calculate seasonal adjustment for injured players
     const remainingSeasonWeeks = 35; // Approximate weeks left in season
     const availableWeeks = Math.max(1, remainingSeasonWeeks - returnTimelineWeeks);
     const seasonalAvailability = availableWeeks / remainingSeasonWeeks;
     
-    // 6. Apply injury buffer (15% reduction for realistic expectations)
+    // 7. Apply injury buffer (15% reduction for realistic expectations)
     const injuryBuffer = 0.85;
     
-    // Calculate final expected minutes with comprehensive factors
+    // Calculate final expected minutes with comprehensive factors including tournaments
     const finalExpectedMinutes = expectedMinutes * 
                                 availabilityFactor * 
                                 injuryMultiplier * 
                                 seasonalAvailability * 
+                                tournamentAdjustment * 
                                 formFactor * 
                                 injuryBuffer;
     
-    // Debug logging for injured/unavailable players
-    if (injuryMultiplier < 0.8 || availabilityFactor < 0.8) {
-      console.log(`DEBUG: ${player.first_name} ${player.second_name} availability - Status: ${playerStatus}, Chance: ${avgAvailability}%, Injury mult: ${injuryMultiplier}, Return: ${returnTimelineWeeks}w, Final minutes: ${Math.round(finalExpectedMinutes)}`);
+    // Debug logging for injured/unavailable players or tournament impacts (only for significant issues)
+    if ((injuryMultiplier < 0.8 || availabilityFactor < 0.8 || tournamentAdjustment < 0.95) && 
+        playerName && playerName.trim() !== '' && !playerName.includes('undefined') && playerName.length > 3) {
+      console.log(`DEBUG: ${playerName} availability - Status: ${playerStatus}, Chance: ${avgAvailability}%, Injury mult: ${injuryMultiplier}, Tournament adj: ${tournamentAdjustment.toFixed(2)}, Return: ${returnTimelineWeeks}w, Final minutes: ${Math.round(finalExpectedMinutes)}`);
     }
     
     return Math.round(Math.max(100, finalExpectedMinutes)); // Minimum 100 minutes (for severely injured players)
@@ -7504,8 +7591,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const playerStatus = (player.status || '').toLowerCase();
             const playerNews = (player.news || '').toLowerCase();
             
+            // Check for international tournament impact on immediate projections
+            const playerName = `${player.first_name || ''} ${player.second_name || ''}`.trim();
+            const playerNationality = PLAYER_NATIONALITIES[playerName];
+            const currentGameweek = 3; // Current season position
+            
+            let isAtTournament = false;
+            if (playerNationality) {
+              const afcon = INTERNATIONAL_TOURNAMENTS.AFCON_2025;
+              if (afcon.affectedCountries.includes(playerNationality) && 
+                  currentGameweek >= afcon.startGameweek && 
+                  currentGameweek <= afcon.endGameweek) {
+                isAtTournament = true;
+                console.log(`DEBUG: ${playerName} at AFCON during GW${currentGameweek} - 0 minutes projected`);
+              }
+            }
+            
             // Apply immediate injury/status adjustments for near-term projections
-            if (playerStatus === 's' || playerStatus === 'suspended') {
+            if (isAtTournament) {
+              expectedMinutes = 0; // Players at international tournaments get 0 minutes
+            } else if (playerStatus === 's' || playerStatus === 'suspended') {
               expectedMinutes = 0; // Suspended players get 0 minutes
             } else if (playerStatus === 'i' || playerStatus === 'injured') {
               if (playerNews.includes('ruled out') || playerNews.includes('out for')) {
