@@ -63,7 +63,7 @@ export const internalFetch = async (endpoint: string, options?: RequestInit): Pr
   const timeoutId = setTimeout(() => {
     console.log(`⏰ Internal API call timeout: ${url}`);
     controller.abort();
-  }, 45000); // 45 second timeout for internal calls
+  }, 30000); // 30 second timeout for internal calls
   
   try {
     console.log(`🌐 Internal API call: ${url}`);

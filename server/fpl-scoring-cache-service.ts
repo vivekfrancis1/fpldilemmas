@@ -82,7 +82,7 @@ export class FPLScoringCacheService {
     console.log("📊 Caching player goals conceded data...");
     
     try {
-      const response = await fetch(`${this.baseUrl}/api/player-goals-conceded-projections?startGameweek=4&endGameweek=9`);
+      const response = await internalFetch(`api/player-goals-conceded-projections?startGameweek=4&endGameweek=9`);
       if (!response.ok) throw new Error(`Failed to fetch goals conceded data: ${response.statusText}`);
       
       const goalsConcededData = await response.json();
@@ -124,7 +124,7 @@ export class FPLScoringCacheService {
     console.log("📊 Caching player yellow cards data...");
     
     try {
-      const response = await fetch(`${this.baseUrl}/api/player-yellow-cards-projections?startGameweek=4&endGameweek=9`);
+      const response = await internalFetch(`api/player-yellow-cards-projections?startGameweek=4&endGameweek=9`);
       if (!response.ok) throw new Error(`Failed to fetch yellow cards data: ${response.statusText}`);
       
       const yellowCardsData = await response.json();
@@ -166,7 +166,7 @@ export class FPLScoringCacheService {
     console.log("📊 Caching player red cards data...");
     
     try {
-      const response = await fetch(`${this.baseUrl}/api/player-red-cards-projections?startGameweek=4&endGameweek=9`);
+      const response = await internalFetch(`api/player-red-cards-projections?startGameweek=4&endGameweek=9`);
       if (!response.ok) throw new Error(`Failed to fetch red cards data: ${response.statusText}`);
       
       const redCardsData = await response.json();
@@ -208,7 +208,7 @@ export class FPLScoringCacheService {
     console.log("📊 Caching player bonus points data...");
     
     try {
-      const response = await fetch(`${this.baseUrl}/api/player-bonus-points-projections?startGameweek=4&endGameweek=9`);
+      const response = await internalFetch(`api/player-bonus-points-projections?startGameweek=4&endGameweek=9`);
       if (!response.ok) throw new Error(`Failed to fetch bonus points data: ${response.statusText}`);
       
       const bonusPointsData = await response.json();

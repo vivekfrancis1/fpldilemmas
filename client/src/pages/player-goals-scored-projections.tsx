@@ -45,14 +45,17 @@ export default function PlayerGoalsScoredProjections() {
     queryKey: ["/api/bootstrap-static"],
   });
 
+  // Progressive loading: Try cache first, then fresh data
   const { data: playerGoalData, isLoading: playerGoalLoading, error } = useQuery<PlayerGoalProjection[]>({
     queryKey: ["/api/cached/player-goals-projections"],
-    staleTime: 60 * 60 * 1000, // 1 hour cache for production stability
-    gcTime: 2 * 60 * 60 * 1000, // Keep in cache for 2 hours
+    staleTime: 2 * 60 * 60 * 1000, // 2 hour cache for production stability
+    gcTime: 4 * 60 * 60 * 1000, // Keep in cache for 4 hours
     refetchOnMount: false,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    networkMode: 'online'
+    retry: 2, // Reduced retries for faster failure
+    retryDelay: (attemptIndex) => Math.min(1000 * attemptIndex, 5000), // Faster retry intervals
+    networkMode: 'online',
+    placeholderData: [], // Show empty table immediately while loading
+    refetchOnWindowFocus: false // Prevent unnecessary refetches
   });
 
   // Get current gameweek from bootstrap data
