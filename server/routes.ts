@@ -10368,10 +10368,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== FPL SCORING COMPONENT ENDPOINTS ====================
   
-  // Player Saves Projections - Hybrid methodology: actual + projected + current gameweek hybrid
+  // Player Saves Projections - Pure projection methodology for future gameweeks only
   app.get("/api/player-saves-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Saves Projections API called - using hybrid calculation with defense tier adjustments");
+      console.log("DEBUG: Player Saves Projections API called - using pure projections for future gameweeks only");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -10379,7 +10379,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get FPL bootstrap data for current gameweek info and players
       const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       const fplData = await fplResponse.json();
-      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 1;
+      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
+      const nextGameweek = currentGameweek + 1; // Start from next gameweek
+      
+      console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
       
       // Get defense tier classifications from MASTER_TEAM_DEFAULTS
       const getDefensiveTier = (teamId: number): string => {
@@ -10402,7 +10405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
-      // Filter to only goalkeepers and implement hybrid methodology
+      // Filter to only goalkeepers and implement pure projection methodology
       const goalkeepers = fplData.elements.filter((player: any) => player.element_type === 1);
       
       const savesProjections = await Promise.all(
@@ -10415,100 +10418,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalSaves = 0;
           let totalPoints = 0;
           
-          // Process each gameweek with hybrid methodology
-          for (let gw = startGameweek; gw <= endGameweek; gw++) {
+          // Process each FUTURE gameweek only with pure projections
+          for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
+            // Use minutes-based likelihood for playing probability
+            const willPlay = await estimatePlayerWillPlay(player, gw, 'GKP');
+            
             let gwSaves = 0;
             let gwPoints = 0;
             
-            if (gw < currentGameweek) {
-              // COMPLETED GAMEWEEKS: Use actual FPL data
-              try {
-                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-                const playerDetail = await playerDetailResponse.json();
-                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
-                
-                if (gameweekData && gameweekData.minutes > 0) {
-                  gwSaves = gameweekData.saves || 0;
-                  gwPoints = Math.floor(gwSaves / 3); // 1 point per 3 saves
-                }
-              } catch (error) {
-                console.log(`Using projection fallback for player ${player.id} GW${gw}: ${error}`);
-                // Minutes-based fallback for completed gameweeks
-                const willPlay = await estimatePlayerWillPlay(player, gw, 'GKP');
-                
-                if (willPlay) {
-                  // Expected to have played - use ultra-conservative projection with defense tier adjustment
-                  const baseSaves = Math.random() * 2 + 1; // 1-3 saves base (reduced further)
-                  gwSaves = Math.max(0, Math.floor(baseSaves * defensiveSavesMultiplier));
-                  gwPoints = Math.floor(gwSaves / 3);
-                } else {
-                  // Unlikely to have played - 0 saves
-                  gwSaves = 0;
-                  gwPoints = 0;
-                }
-              }
-            } else if (gw === currentGameweek) {
-              // CURRENT GAMEWEEK: Hybrid based on match progress
-              try {
-                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-                const playerDetail = await playerDetailResponse.json();
-                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
-                
-                if (gameweekData && gameweekData.minutes > 0) {
-                  // Player has played - use actual data
-                  gwSaves = gameweekData.saves || 0;
-                  gwPoints = Math.floor(gwSaves / 3);
-                } else {
-                  // Player hasn't played yet - check playing likelihood
-                  const willPlay = await estimatePlayerWillPlay(player, gw, 'GKP');
-                  
-                  if (willPlay) {
-                    // Expected to play - use projection with defense tier and form adjustments
-                    const form = parseFloat(player.form || "0");
-                    const formMultiplier = Math.max(0.5, Math.min(1.5, form / 5));
-                    const baseSaves = Math.random() * 2.5 + 1.5; // 1.5-4 saves (reduced further)
-                    gwSaves = Math.max(0, Math.floor(baseSaves * formMultiplier * defensiveSavesMultiplier));
-                    gwPoints = Math.floor(gwSaves / 3);
-                  } else {
-                    // Unlikely to play - 0 saves
-                    gwSaves = 0;
-                    gwPoints = 0;
-                  }
-                }
-              } catch (error) {
-                // Minutes-based fallback for current gameweek
-                const willPlay = await estimatePlayerWillPlay(player, gw, 'GKP');
-                
-                if (willPlay) {
-                  // Expected to play - use projection with defense tier and form adjustments
-                  const form = parseFloat(player.form || "0");
-                  const formMultiplier = Math.max(0.5, Math.min(1.5, form / 5));
-                  gwSaves = Math.max(0, Math.floor((Math.random() * 2.5 + 1.5) * formMultiplier * defensiveSavesMultiplier));
-                  gwPoints = Math.floor(gwSaves / 3);
-                } else {
-                  // Unlikely to play - 0 saves
-                  gwSaves = 0;
-                  gwPoints = 0;
-                }
-              }
-            } else {
-              // FUTURE GAMEWEEKS: Use minutes-based likelihood for playing probability
-              const willPlay = await estimatePlayerWillPlay(player, gw, 'GKP');
+            if (willPlay) {
+              // Player expected to play - calculate realistic saves based on form, opposition, and defense tier
+              const form = parseFloat(player.form || "0");
+              const formMultiplier = Math.max(0.5, Math.min(1.5, form / 5));
               
-              if (willPlay) {
-                // Player expected to play - calculate realistic saves based on form, opposition, and defense tier
-                const form = parseFloat(player.form || "0");
-                const formMultiplier = Math.max(0.5, Math.min(1.5, form / 5));
-                
-                // Base saves expectation: 1.5-4 saves for a playing goalkeeper (ultra-conservative), adjusted by defense tier
-                const baseSaves = Math.random() * 2.5 + 1.5; // 1.5-4 saves (reduced further)
-                gwSaves = Math.max(0, Math.floor(baseSaves * formMultiplier * defensiveSavesMultiplier));
-                gwPoints = Math.floor(gwSaves / 3);
-              } else {
-                // Player unlikely to play - gets 0 saves
-                gwSaves = 0;
-                gwPoints = 0;
-              }
+              // Base saves expectation: 1.5-4 saves for a playing goalkeeper (ultra-conservative), adjusted by defense tier
+              const baseSaves = Math.random() * 2.5 + 1.5; // 1.5-4 saves (reduced further)
+              gwSaves = Math.max(0, Math.floor(baseSaves * formMultiplier * defensiveSavesMultiplier));
+              gwPoints = Math.floor(gwSaves / 3);
+            } else {
+              // Player unlikely to play - gets 0 saves
+              gwSaves = 0;
+              gwPoints = 0;
             }
             
             saves[`gw${gw}`] = parseFloat(gwSaves.toFixed(1));
@@ -10526,12 +10456,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pointsFromSaves,
             totalSaves: parseFloat(totalSaves.toFixed(1)),
             totalPoints: parseFloat(totalPoints.toFixed(1)),
-            averagePerGameweek: parseFloat((totalSaves / (endGameweek - startGameweek + 1)).toFixed(1))
+            averagePerGameweek: parseFloat((totalSaves / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(1))
           };
         })
       );
       
-      console.log(`DEBUG: Generated hybrid saves projections for ${savesProjections.length} goalkeepers`);
+      console.log(`DEBUG: Generated pure saves projections for ${savesProjections.length} goalkeepers for future gameweeks only`);
       res.json(savesProjections);
     } catch (error) {
       console.error("Error in player saves projections:", error);
