@@ -16,7 +16,8 @@ import {
   cachedPlayerGoalsConceded,
   cachedPlayerYellowCards,
   cachedPlayerRedCards,
-  cachedPlayerBonusPoints
+  cachedPlayerBonusPoints,
+  users
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
@@ -24,6 +25,9 @@ import { SpreadBettingCacheService } from "./spread-betting-cache";
 import { projectionService } from "./projection-service";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
+import bcrypt from "bcrypt";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
 
 // Master Default Team Configuration - Single Source of Truth
 const MASTER_TEAM_DEFAULTS = {
@@ -113,6 +117,109 @@ const MASTER_TEAM_DEFAULTS = {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configure session middleware
+  const pgStore = connectPg(session);
+  const sessionStore = new pgStore({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: true,
+    ttl: 7 * 24 * 60 * 60 // 7 days
+  });
+
+  app.use(session({
+    store: sessionStore,
+    secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false, // Set to true in production with HTTPS
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    }
+  }));
+
+  // Middleware to check if user is authenticated
+  function requireAuth(req: any, res: any, next: any) {
+    if (req.session?.user) {
+      next();
+    } else {
+      res.status(401).json({ error: 'Authentication required' });
+    }
+  }
+
+  // Middleware to check if user is admin
+  function requireAdmin(req: any, res: any, next: any) {
+    if (req.session?.user?.role === 'admin') {
+      next();
+    } else {
+      res.status(403).json({ error: 'Admin access required' });
+    }
+  }
+
+  // Authentication routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+
+      // Find user by email
+      const [user] = await db.select().from(users).where(eq(users.email, email));
+      
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      
+      if (!isValidPassword) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      // Store user in session
+      req.session.user = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName
+      };
+
+      res.json({ 
+        success: true, 
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName
+        }
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post("/api/auth/logout", (req: any, res) => {
+    req.session.destroy((err: any) => {
+      if (err) {
+        return res.status(500).json({ error: 'Could not log out' });
+      }
+      res.json({ success: true, message: 'Logged out successfully' });
+    });
+  });
+
+  app.get("/api/auth/user", (req: any, res) => {
+    if (req.session?.user) {
+      res.json(req.session.user);
+    } else {
+      res.status(401).json({ error: 'Not authenticated' });
+    }
+  });
+
   // Function to get penalty taker adjustment
   function getPenaltyTakerAdjustment(playerName: string, playerId: number): number {
     const adjustments = MASTER_TEAM_DEFAULTS.penaltyTakerAdjustments;
