@@ -381,13 +381,20 @@ button, a, input, select, textarea {
 }
 
 /* Additional overflow fix for table containers */
-.overflow-x-auto {
+.overflow-x-auto, .overflow-x-scroll {
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   /* Ensure scroll area has proper dimensions */
   position: relative;
   display: block;
   width: 100%;
+  /* Force scrollbars to always show for consistency */
+  scrollbar-width: thin;
+}
+
+/* Force horizontal scrollbar visibility */
+.overflow-x-scroll {
+  overflow-x: scroll !important;
 }
 
 /* Button System */
