@@ -4099,14 +4099,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ultra-fast Goal Share endpoint - bypasses expensive team projections
   app.get("/api/goal-share-season", async (req, res) => {
     try {
-      // Check cache first - extend cache duration for better performance
+      // Check database first for ultra-fast response
+      const { dailyProjectionsService } = await import('./daily-projections-job');
+      const dbData = await dailyProjectionsService.getGoalShareFromDB();
+      
+      if (dbData.length > 0) {
+        console.log(`✅ Serving goal share data from database (${dbData.length} teams, ultra-fast!)`);
+        return res.json(dbData);
+      }
+      
+      // Check memory cache second
       const EXTENDED_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
       if (goalShareCache && Date.now() - goalShareCache.timestamp < EXTENDED_CACHE_DURATION) {
         console.log("DEBUG: Returning cached goal share data");
         return res.json(goalShareCache.data);
       }
       
-      console.log("DEBUG: Goal Share Season API - using optimized approach with caching");
+      console.log("DEBUG: Goal Share Season API - calculating live data (no database/cache available)");
       
       // KEEP ORIGINAL LOGIC: Use team projections for accuracy (just optimize with caching)
       const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
@@ -4985,6 +4994,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Season-long Assist Share endpoint - uses Team Assist Projections totals with historical assist data
   app.get("/api/assist-share-season", async (req, res) => {
     try {
+      console.log("DEBUG: Assist Share Season API - checking database first");
+      
+      // Check database first for ultra-fast response
+      const { dailyProjectionsService } = await import('./daily-projections-job');
+      const dbData = await dailyProjectionsService.getAssistShareFromDB();
+      
+      if (dbData.length > 0) {
+        console.log(`✅ Serving assist share data from database (${dbData.length} teams, ultra-fast!)`);
+        return res.json(dbData);
+      }
+      
+      console.log("🔄 No database data found, calculating live assist shares...");
+      
       const [bootstrapResponse, teamAssistProjectionsResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
         fetch("http://localhost:5000/api/team-assist-projections")
@@ -4997,7 +5019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const teamAssistProjectionsData = await teamAssistProjectionsResponse.json();
       
-      console.log("DEBUG: Season Assist Share API called - using Team Assist Projections totals");
+      console.log("DEBUG: Assist Share Season API - calculating live data (no database available)");
       
       // Calculate team season totals from Team Assist Projections
       const teamSeasonTotals: { [teamId: number]: { expectedAssists: number, players: { [playerId: number]: { name: string, position: string, projectedAssists: number } } } } = {};
