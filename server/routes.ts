@@ -3067,7 +3067,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (gameweekFixtures.length > 0 && finishedFixtures.length === gameweekFixtures.length) {
           completeGameweeks.add(gw);
+          console.log(`DEBUG: Goals Scored - GW${gw} COMPLETE - All ${gameweekFixtures.length} fixtures finished, using ACTUAL data`);
         } else if (gameweekFixtures.length > 0) {
+          console.log(`DEBUG: Goals Scored - GW${gw} INCOMPLETE - ${finishedFixtures.length}/${gameweekFixtures.length} fixtures finished, using PROJECTIONS`);
         }
       }
       
@@ -3089,6 +3091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (completeGameweeks.has(fixture.event)) {
             // For complete gameweeks, use actual goals scored
             const actualGoals = isHome ? (fixture.team_h_score || 0) : (fixture.team_a_score || 0);
+            console.log(`DEBUG: Goals Scored - GW${fixture.event} ACTUAL - ${team.short_name} scored: ${actualGoals} goals`);
             return {
               gameweek: fixture.event,
               opponent: opponent.short_name,
@@ -4088,12 +4091,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return player.xgPer90;
   }
 
-  // OPTION F: Memory-First Approach - Cache frequently used data in memory
+  // Add simple caching for goal share data
   let goalShareCache: { data: any, timestamp: number } | null = null;
-  let bootstrapCache: { data: any, timestamp: number } | null = null;
-  let teamSeasonTotalsCache: { data: any, timestamp: number } | null = null;
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-  const BOOTSTRAP_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
   // Ultra-fast Goal Share endpoint - bypasses expensive team projections
   app.get("/api/goal-share-season", async (req, res) => {
@@ -4114,50 +4114,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       
-      // OPTION A: Pre-computed Season Totals - Eliminate 700+ calculations per request
-      const STATIC_TEAM_SEASON_TOTALS = {
-        1: 61.82,   // Arsenal
-        2: 51.44,   // Aston Villa  
-        3: 49.33,   // Bournemouth
-        4: 48.79,   // Brentford
-        5: 52.15,   // Brighton
-        6: 41.32,   // Chelsea
-        7: 37.88,   // Crystal Palace
-        8: 47.91,   // Everton
-        9: 55.67,   // Fulham
-        10: 42.55,  // Ipswich
-        11: 48.21,  // Leicester
-        12: 66.51,  // Liverpool
-        13: 58.62,  // Man City
-        14: 53.77,  // Man United
-        15: 64.33,  // Newcastle
-        16: 49.88,  // Nottingham Forest
-        17: 52.44,  // Southampton
-        18: 58.91,  // Tottenham
-        19: 47.32,  // West Ham
-        20: 51.77   // Wolves
-      };
-
-      // OPTION F: Use cached bootstrap data if available  
-      let bootstrapData;
-      if (bootstrapCache && Date.now() - bootstrapCache.timestamp < BOOTSTRAP_CACHE_DURATION) {
-        bootstrapData = bootstrapCache.data;
-      } else {
-        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-        if (!bootstrapResponse.ok) {
-          throw new Error("Failed to fetch bootstrap data");
-        }
-        bootstrapData = await bootstrapResponse.json();
-        bootstrapCache = { data: bootstrapData, timestamp: Date.now() };
+      // KEEP ORIGINAL LOGIC: Use team projections for accuracy (just optimize with caching)
+      const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        internalFetch("api/team-goal-projections") // Use internal fetch for timeout handling
+      ]);
+      
+      if (!bootstrapResponse.ok || !teamProjectionsResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API or Team Goal Projections");
       }
       
-      // OPTION A: Use static totals instead of dynamic calculations
+      const bootstrapData = await bootstrapResponse.json();
+      const teamProjectionsData = await teamProjectionsResponse.json();
+      
+      // Step 1: Calculate team season totals from Team Goal Projections (ORIGINAL LOGIC)
       const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
-      Object.entries(STATIC_TEAM_SEASON_TOTALS).forEach(([teamId, goals]) => {
-        teamSeasonTotals[parseInt(teamId)] = {
-          expectedGoals: goals,
-          players: {}
-        };
+      
+      // Aggregate expected goals from Team Goal Projections data (RESTORED)
+      teamProjectionsData.forEach((team: any) => {
+        if (!teamSeasonTotals[team.id]) {
+          teamSeasonTotals[team.id] = {
+            expectedGoals: 0,
+            players: {}
+          };
+        }
+        
+        // Sum all gameweek projections for this team's season total
+        Object.values(team.gameweekProjections || {}).forEach((goals: any) => {
+          if (typeof goals === 'number') {
+            teamSeasonTotals[team.id].expectedGoals += goals;
+          }
+        });
       });
       
       
@@ -4199,6 +4186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // OPTION 4: Flatten batch results for super-fast processing
       playersWithXG.push(...batchResults.flat());
       
+      console.log(`DEBUG: Processed ${playersWithXG.length} players using bootstrap data`);
       
       // Step 3: Expected minutes and sample size adjustments handled by helper functions
       
@@ -4221,10 +4209,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get all players for this team with xG data
           const teamPlayersWithXG = playersWithXG.filter((p: any) => p.team === teamId);
           
-          // OPTION B: Simple player filtering - use availability status instead of string matching
+          // Filter out departed players and players with insufficient data
           const qualifiedPlayers = teamPlayersWithXG.filter(p => {
-            // Simple availability check instead of complex name matching
-            return p.totalMinutes >= 45 && p.id > 0; // Basic active player check
+            // Check if player is departed by name or ID
+            const playerFullName = p.name || '';
+            const shouldExclude = Array.from(DEPARTED_PLAYER_NAMES).some(departedName => 
+              playerFullName.includes(departedName) || 
+              playerFullName.toLowerCase().includes(departedName.toLowerCase())
+            );
+            
+            if (shouldExclude) {
+              console.log(`DEBUG: Excluding departed player ${playerFullName} from goal share calculations`);
+              return false;
+            }
+            
+            return p.totalMinutes >= 45; // Minimum minutes requirement
           });
           
           console.log(`DEBUG: Team ${team.name} - ${qualifiedPlayers.length}/${teamPlayersWithXG.length} players qualify (≥45 mins)`);
@@ -4326,8 +4325,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // ENHANCED NORMALIZATION - Ensure sum equals team xG
-          // OPTION E: Simple proportional distribution - no complex balance calculations
-          totalContribution = Math.max(totalContribution, 0.1);
+          console.log(`DEBUG: Team ${team.name} - Total contribution: ${totalContribution.toFixed(3)}, Team xG: ${teamSeasonTotals[teamId].expectedGoals.toFixed(3)}`);
+          
+          // Calculate normalized shares with perfect balance after capping
           const getPositionGoalShareCap = (position: string): number => {
             switch (position?.toLowerCase()) {
               case 'goalkeeper': return 2; // Max 2% share for GKs
@@ -4413,7 +4413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .reduce((sum: number, player: any) => sum + player.projectedGoals, 0);
           const balanceError = Math.abs(finalTotalGoals - targetTotal);
           
-          // OPTION E: Skip perfect balance verification for performance
+          console.log(`DEBUG: Team ${team.name} PERFECT BALANCE: Players=${finalTotalGoals.toFixed(3)} vs Team=${targetTotal.toFixed(3)} (error: ${balanceError.toFixed(6)})`);
           
           return; // Skip the old historical weighting approach
         }
