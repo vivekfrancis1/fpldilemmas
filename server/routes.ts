@@ -3011,10 +3011,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamService = await createTeamService();
       const bettingData = teamService.getBettingData();
       
-      // Process only next 6 gameweeks for performance
+      // Process next 6 gameweeks for focused projections (matches projected standings limit)
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + 6, 38);
-      console.log(`DEBUG: Processing next 6 gameweeks (GW${startGameweek}-${endGameweek}), current GW: ${currentGameweek}`);
+      const endGameweek = Math.min(currentGameweek + 6, 38); // Focused 6-gameweek analysis
+      console.log(`DEBUG: Processing next 6 gameweeks (GW${startGameweek}-${endGameweek}) for focused projections, current GW: ${currentGameweek}`);
       
       // Check which gameweeks are COMPLETELY finished (all 10 fixtures done) - only check relevant range
       const completeGameweeks = new Set();
@@ -6074,11 +6074,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      console.log(`DEBUG: Processing standings for all 38 gameweeks, current GW: ${currentGameweek}`);
+      // Limit to next 6 gameweeks for focused analysis (current GW + 6)
+      const endGameweekForStandings = Math.min(currentGameweek + 6, 38);
+      console.log(`DEBUG: Processing standings through GW${endGameweekForStandings}, current GW: ${currentGameweek}`);
       
-      // Get all fixtures for the season
+      // Get fixtures from start of season to current + 6 gameweeks
       const allFixtures = fixturesData.filter((fixture: any) => 
-        fixture.event >= 1 && fixture.event <= 38
+        fixture.event >= 1 && fixture.event <= endGameweekForStandings
       );
       
       // Initialize team standings
