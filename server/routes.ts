@@ -4883,7 +4883,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 teamShort: teamData.teamShort,
                 position: playerData.position,
                 gameweekProjections,
-                totalProjectedAssists: seasonTotal,
+                projectedAssists: seasonTotal,  // Fixed: Use projectedAssists instead of totalProjectedAssists
+                totalProjectedAssists: seasonTotal, // Keep both for compatibility
                 assistShare: playerData.assistShare
               });
             }
@@ -11479,6 +11480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamShort: metadata?.teamShort || null,
             position: metadata?.position || null,
             gameweekProjections: {},
+            projectedAssists: 0,  // Added: Frontend expects this field
             totalProjectedAssists: 0,
             assistShare: 0
           });
@@ -11486,12 +11488,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const player = playersMap.get(row.playerId);
         player.gameweekProjections[row.gameweek] = row.assists;
+        player.projectedAssists += row.assists;  // Added: Update both fields
         player.totalProjectedAssists += row.assists;
       }
       
-      // Convert to array and sort by total assists descending
+      // Convert to array and sort by projected assists descending
       const responseData = Array.from(playersMap.values())
-        .sort((a, b) => b.totalProjectedAssists - a.totalProjectedAssists);
+        .sort((a, b) => b.projectedAssists - a.projectedAssists);
       
       // Cache the processed response
       assistsResponseCache = { data: responseData, timestamp: now };
