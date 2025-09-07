@@ -4305,7 +4305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             switch (position?.toLowerCase()) {
               case 'goalkeeper': return 2; // Max 2% share for GKs
               case 'defender': return 18; // Max 18% share for defenders
-              case 'midfielder': return 35; // Max 35% share for midfielders
+              case 'midfielder': return 28; // Max 28% share for midfielders (was 35%)
               case 'forward': return 35; // Max 35% share for forwards
               default: return 25;
             }
@@ -5253,8 +5253,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               switch (position.toLowerCase()) {
                 case 'goalkeeper': return 2; // Max 2% share for GKs
                 case 'defender': return 18; // Max 18% share for defenders
-                case 'midfielder': return 35; // Max 35% share for midfielders
-                case 'forward': return 25; // Max 25% share for forwards
+                case 'midfielder': return 28; // Max 28% share for midfielders (was 35%)
+                case 'forward': return 20; // Max 20% share for forwards (was 25%)
                 default: return 20;
               }
             };
@@ -5290,8 +5290,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 switch (position.toLowerCase()) {
                   case 'goalkeeper': return 2; // Max 2% share for GKs
                   case 'defender': return 18; // Max 18% share for defenders
-                  case 'midfielder': return 35; // Max 35% share for midfielders
-                  case 'forward': return 25; // Max 25% share for forwards
+                  case 'midfielder': return 28; // Max 28% share for midfielders (was 35%)
+                  case 'forward': return 20; // Max 20% share for forwards (was 25%)
                   default: return 20;
                 }
               };
@@ -5604,7 +5604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         switch (position?.toLowerCase()) {
           case 'goalkeeper': return 2; // Max 2% share for GKs
           case 'defender': return 25; // Max 25% share for defenders
-          case 'midfielder': return 35; // Max 35% share for midfielders
+          case 'midfielder': return 28; // Max 28% share for midfielders (was 35%)
           case 'forward': return 35; // Max 35% share for forwards
           default: return 25;
         }
@@ -5728,24 +5728,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'Forward': { base: 18.0, variance: 6.0 }        // 18% base, playmaking forwards get boost
     };
 
-    // Elite assist provider boost based on historical creativity (deterministic)
+    // Conservative assist provider boost to match goal projections (reduced from aggressive levels)
     const eliteAssistBoosts: { [key: string]: number } = {
-      // Elite creative midfielders and playmakers
-      'Kevin De Bruyne': 2.1, 'Bruno Fernandes': 1.9, 'Martin Ødegaard': 1.7,
-      'Cole Palmer': 1.8, 'James Maddison': 1.6, 'Phil Foden': 1.5,
-      'Bukayo Saka': 1.6, 'Mason Mount': 1.4, 'Eberechi Eze': 1.4,
-      'Pascal Groß': 1.5, 'Emile Smith Rowe': 1.3, 'Jack Grealish': 1.3,
-      // Creative fullbacks and wing-backs
-      'Trent Alexander-Arnold': 2.0, 'Andrew Robertson': 1.6, 'Reece James': 1.5,
-      'Ben Chilwell': 1.4, 'Kieran Trippier': 1.5, 'Luke Shaw': 1.3,
-      'João Cancelo': 1.4, 'Kyle Walker': 1.2, 'Pervis Estupiñán': 1.2,
-      // Playmaking forwards and wide players
-      'Mohamed Salah': 1.5, 'Son Heung-min': 1.4, 'Diogo Jota': 1.2,
-      'Gabriel Jesus': 1.3, 'Ivan Toney': 1.2, 'Harry Kane': 1.4,
-      'Ollie Watkins': 1.3, 'Alexander Isak': 1.2, 'Darwin Núñez': 1.1,
-      // Key creative defenders
-      'Virgil van Dijk': 1.1, 'William Saliba': 1.05, 'Gabriel Magalhães': 1.05,
-      'Thiago Silva': 1.1, 'John Stones': 1.05, 'Rúben Dias': 1.05
+      // Elite creative midfielders and playmakers (reduced from 2.1x to 1.35x max)
+      'Kevin De Bruyne': 1.35, 'Bruno Fernandes': 1.3, 'Martin Ødegaard': 1.25,
+      'Cole Palmer': 1.3, 'James Maddison': 1.2, 'Phil Foden': 1.2,
+      'Bukayo Saka': 1.2, 'Mason Mount': 1.15, 'Eberechi Eze': 1.15,
+      'Pascal Groß': 1.2, 'Emile Smith Rowe': 1.1, 'Jack Grealish': 1.1,
+      // Creative fullbacks and wing-backs (reduced from 2.0x to 1.3x max)
+      'Trent Alexander-Arnold': 1.3, 'Andrew Robertson': 1.2, 'Reece James': 1.2,
+      'Ben Chilwell': 1.15, 'Kieran Trippier': 1.2, 'Luke Shaw': 1.1,
+      'João Cancelo': 1.15, 'Kyle Walker': 1.1, 'Pervis Estupiñán': 1.1,
+      // Playmaking forwards and wide players (reduced significantly)
+      'Mohamed Salah': 1.2, 'Son Heung-min': 1.15, 'Diogo Jota': 1.1,
+      'Gabriel Jesus': 1.15, 'Ivan Toney': 1.1, 'Harry Kane': 1.15,
+      'Ollie Watkins': 1.1, 'Alexander Isak': 1.1, 'Darwin Núñez': 1.05,
+      // Key creative defenders (minimal boosts)
+      'Virgil van Dijk': 1.05, 'William Saliba': 1.02, 'Gabriel Magalhães': 1.02,
+      'Thiago Silva': 1.05, 'John Stones': 1.02, 'Rúben Dias': 1.02
     };
 
     players.forEach(player => {
@@ -5793,24 +5793,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Apply historical boost for proven assist providers
+      // Conservative historical boost for proven assist providers (reduced from aggressive levels)
       if (seasonsFound >= 2 && totalHistoricalAssists >= 8) {
         const avgAssistsPerSeason = totalHistoricalAssists / seasonsFound;
-        // Boost based on historical assist average (elite assisters get major boost)
+        // Conservative boost based on historical assist average (reduced from 1.4x max)
         if (avgAssistsPerSeason >= 6) {
-          historicalMultiplier = 1.4; // Elite historical assist providers
+          historicalMultiplier = 1.2; // Elite historical assist providers (was 1.4x)
         } else if (avgAssistsPerSeason >= 4) {
-          historicalMultiplier = 1.25; // Very good historical assist providers
+          historicalMultiplier = 1.15; // Very good historical assist providers (was 1.25x)
         } else if (avgAssistsPerSeason >= 2.5) {
-          historicalMultiplier = 1.15; // Good historical assist providers
+          historicalMultiplier = 1.1; // Good historical assist providers (was 1.15x)
         }
       }
       
       baseShare *= historicalMultiplier;
       
-      // ICT creativity boost (assists heavily correlate with creativity)
-      const creativityBoost = player.creativity_rank <= 50 ? 1.3 : 
-                             player.creativity_rank <= 100 ? 1.15 : 
+      // Conservative ICT creativity boost (reduced from aggressive 1.3x)
+      const creativityBoost = player.creativity_rank <= 50 ? 1.15 : 
+                             player.creativity_rank <= 100 ? 1.1 : 
                              player.creativity_rank <= 200 ? 1.05 : 1.0;
       baseShare *= creativityBoost;
       
@@ -5819,17 +5819,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const availabilityPenalty = (player.chance_of_playing_next_round || 100) < 75 ? 0.8 : 1.0;
       baseShare *= formBoost * availabilityPenalty;
       
-      // Price tier boost (expensive players often more creative)
-      const priceBoost = player.now_cost >= 90 ? 1.2 : player.now_cost >= 70 ? 1.1 : player.now_cost >= 50 ? 1.05 : 1.0;
+      // Conservative price tier boost (reduced from aggressive 1.2x)
+      const priceBoost = player.now_cost >= 90 ? 1.1 : player.now_cost >= 70 ? 1.05 : player.now_cost >= 50 ? 1.02 : 1.0;
       baseShare *= priceBoost;
       
       // Apply position-based caps to assist share percentage
       const getPositionShareCap = (position: string): number => {
         switch (position?.toLowerCase()) {
           case 'goalkeeper': return 2; // Max 2% share for GKs
-          case 'defender': return 15; // Max 15% share for defenders
-          case 'midfielder': return 35; // Max 35% share for midfielders
-          case 'forward': return 25; // Max 25% share for forwards
+          case 'defender': return 12; // Max 12% share for defenders (was 15%)
+          case 'midfielder': return 28; // Max 28% share for midfielders (was 35%)
+          case 'forward': return 20; // Max 20% share for forwards (was 25%)
           default: return 20;
         }
       };
@@ -6060,9 +6060,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const getPositionShareCap = (position: string): number => {
         switch (position?.toLowerCase()) {
           case 'goalkeeper': return 2; // Max 2% share for GKs
-          case 'defender': return 15; // Max 15% share for defenders
-          case 'midfielder': return 35; // Max 35% share for midfielders
-          case 'forward': return 25; // Max 25% share for forwards
+          case 'defender': return 12; // Max 12% share for defenders (was 15%)
+          case 'midfielder': return 28; // Max 28% share for midfielders (was 35%)
+          case 'forward': return 20; // Max 20% share for forwards (was 25%)
           default: return 20;
         }
       };
