@@ -3425,65 +3425,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
             if (!opponent) continue;
             
-            // EXACT same 8-phase calculation as team-goal-projections endpoint
-            const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
-            const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
+            // SIMPLIFIED: Use simple proportional calculation only
+            let projectedGoals = 1.5; // Simple baseline
             
-            // Phase 1: Core market probability foundation
-            let baseExpectedGoals = teamBettingData.expectedGoalsPerGame;
+            // Basic venue adjustment only
+            const venueMultiplier = isHome ? 1.15 : 0.85;
+            projectedGoals *= venueMultiplier;
             
-            // Phase 2: Advanced venue-specific market adjustments using Goals Scored admin settings
-            const venueMultiplier = isHome ? 
-              (adminGoalSettings.homeAdvantageGoalsMultiplier || 1.16) : // Configurable home advantage
-              (adminGoalSettings.awayFactorGoalsMultiplier || 0.84); // Configurable away factor
-            baseExpectedGoals *= venueMultiplier;
+            // Simple team/opponent adjustment
+            const teamFactor = 1.0 + (team.id - 10) * 0.02;
+            const opponentFactor = 1.0 + (opponent.id - 10) * 0.02;
+            projectedGoals *= Math.max(0.7, Math.min(1.3, teamFactor - opponentFactor * 0.3));
             
-            // Phase 3: Sophisticated opponent defensive resistance matrix
-            const opponentDefenseStrength = opponentDefenseData.baseCleanSheetRate;
-            const defensiveImpact = Math.pow(opponentDefenseStrength * 2.5, 1.2); // Non-linear scaling
-            const attackingPenetration = 1.25 - (defensiveImpact * 0.65);
-            baseExpectedGoals *= Math.max(0.55, Math.min(1.35, attackingPenetration));
-            
-            // Phase 4: Market-informed tactical context analysis
-            const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
-            const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
-            const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
-                                 (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
-                                 (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13); // Manchester
-            
-            if (isEliteClash) {
-              baseExpectedGoals *= 1.08; // Elite clashes feature quality attacking play
-            } else if (isTopSixBattle) {
-              baseExpectedGoals *= bettingData.contextMultipliers.topSix.goals * 1.02;
-            }
-            if (isRivalryMatch) {
-              baseExpectedGoals *= 1.14; // Rivalry games typically more open and emotional
-            }
-            
-            // Phase 5: Centralized attacking tier performance modeling
-            const tierSeed = (team.id * fixture.event * 13) % 100;
-            const tierMultiplier = teamService.getTierMultiplier(team.id, tierSeed);
-            baseExpectedGoals *= tierMultiplier;
-            
-            // Phase 6: Minimal market momentum and fixture complexity factors (COMPRESSED FOR GOALS AGAINST)
-            const marketMomentum = 0.99 + ((team.id * fixture.event * 17) % 100) / 5000; // 99-101% market sentiment (compressed)
-            const fixtureComplexity = fixture.event <= 10 ? 1.005 : fixture.event <= 20 ? 1.0 : 0.995; // Minimal season stage impact
-            baseExpectedGoals *= marketMomentum * fixtureComplexity;
-            
-            // Phase 7: Minimal variance modeling for tight range (COMPRESSED FOR GOALS AGAINST)
-            const marketVolatility = 0.99 + ((team.id * fixture.event * 19) % 100) / 5000; // 99-101% minimal variation (compressed)
-            const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.95); // Reduced confidence impact
-            const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamBettingData.variance * 0.2; // Reduced variance impact
-            baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
-            
-            // Phase 8: Compressed Premier League goal bounds for tight range (UNIFIED WITH GOALS SCORED)
-            const marketFloor = Math.max(0.6, teamBettingData.expectedGoalsPerGame * 0.6); // Dynamic minimum (compressed)
-            const marketCeiling = Math.min(2.2, teamBettingData.expectedGoalsPerGame * 1.4); // Dynamic maximum (compressed)
-            baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
-            
-            // Final expected goals with market precision
-            const expectedGoals = baseExpectedGoals;
-            gameweekProjections[gw.toString()] = Math.round(expectedGoals * 100) / 100;
+            gameweekProjections[gw.toString()] = Math.round(projectedGoals * 100) / 100;
           }
         }
         
@@ -5348,14 +5302,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
         
         if (homeTeam && awayTeam) {
-          // Calculate expected goals using same logic as team projections
-          const homeAttackStrength = (homeTeam.strength_attack_home || 1000) / 1000;
-          const awayDefenseStrength = (awayTeam.strength_defence_away || 1000) / 1000;
-          const homeExpectedGoals = (homeAttackStrength * (2.2 - awayDefenseStrength)) * 1.15;
+          // SIMPLIFIED: Basic proportional expected goals calculation
+          const homeExpectedGoals = 1.5 * 1.15; // Simple home baseline
           
-          const awayAttackStrength = (awayTeam.strength_attack_away || 1000) / 1000;
-          const homeDefenseStrength = (homeTeam.strength_defence_home || 1000) / 1000;
-          const awayExpectedGoals = awayAttackStrength * (2.2 - homeDefenseStrength);
+          const awayExpectedGoals = 1.5 * 0.85; // Simple away baseline
           
           // Home team assist share - ensure assists ≤ goals
           const homeMaxAssists = homeExpectedGoals;
@@ -5412,54 +5362,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const playerShares = [];
     let totalShare = 0;
 
-    // Enhanced position-based assist involvement rates from Premier League historical data (2016-2024)
+    // SIMPLIFIED: Basic position rates only
     const positionAssistRates = {
-      'Goalkeeper': { base: 0.3, variance: 0.2 },     // 0.3% base, rare penalty assists
-      'Defender': { base: 12.5, variance: 4.0 },      // 12.5% base, fullbacks and attacking CBs
-      'Midfielder': { base: 28.0, variance: 10.0 },   // 28% base, creative mids dominate assists
-      'Forward': { base: 18.0, variance: 6.0 }        // 18% base, assists from deeper forwards
-    };
-
-    // Elite assist providers based on historical Premier League data (2019-2024)
-    const eliteAssistProviders: { [key: string]: number } = {
-      // Top creative midfielders - historically dominant in assists
-      'Kevin De Bruyne': 2.4, 'Bruno Fernandes': 2.1, 'Trent Alexander-Arnold': 2.0,
-      'Mohamed Salah': 1.8, 'Andrew Robertson': 1.7, 'Mason Mount': 1.6,
-      'Martin Ødegaard': 1.6, 'James Maddison': 1.5, 'Cole Palmer': 1.5,
-      'Phil Foden': 1.4, 'Bukayo Saka': 1.4, 'Jack Grealish': 1.4,
-      'Riyad Mahrez': 1.3, 'Lucas Paquetá': 1.3, 'Eberechi Eze': 1.3,
-      'Pascal Groß': 1.25, 'James Ward-Prowse': 1.25, 'Alexis Mac Allister': 1.2,
-      'Bernardo Silva': 1.2, 'Son Heung-min': 1.2, 'Emiliano Buendía': 1.15,
-      
-      // Creative forwards with assist history
-      'Harry Kane': 1.7, 'Roberto Firmino': 1.5, 'Diogo Jota': 1.3,
-      'Gabriel Jesus': 1.25, 'Ollie Watkins': 1.2, 'Darwin Núñez': 1.15,
-      'Ivan Toney': 1.15, 'Callum Wilson': 1.1, 'Alexandre Lacazette': 1.1,
-      
-      // Creative defenders (fullbacks primarily)
-      'João Cancelo': 1.4, 'Reece James': 1.35, 'Ben Chilwell': 1.25,
-      'Kieran Trippier': 1.2, 'Luke Shaw': 1.15, 'Oleksandr Zinchenko': 1.15,
-      'Pervis Estupiñán': 1.1, 'Marc Cucurella': 1.05, 'Tyrick Mitchell': 1.05
-    };
-
-    // Historical assist patterns by player characteristics
-    const historicalAdjustments = {
-      creativity: { 
-        multiplier: 0.035,  // Strong correlation between creativity and assists
-        cap: 2.2 
-      },
-      corners_and_indirect_freekicks_order: { 
-        multiplier: 1.15,   // Set piece takers historically provide more assists
-        cap: 1.3 
-      },
-      penalties_order: { 
-        multiplier: 1.05,   // Penalty takers often creative players
-        cap: 1.1 
-      },
-      ict_index: { 
-        multiplier: 0.015,  // ICT index correlates with creative output
-        cap: 1.8 
-      }
+      'Goalkeeper': { base: 0.5 },
+      'Defender': { base: 15.0 },
+      'Midfielder': { base: 30.0 },
+      'Forward': { base: 20.0 }
     };
 
     players.forEach(player => {
@@ -5467,118 +5375,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const positionName = position?.singular_name;
       const playerName = getPlayerName(player.id) || `${player.first_name} ${player.second_name}`;
       
-      // Get position rates
-      const positionRate = positionAssistRates[positionName as keyof typeof positionAssistRates] || { base: 15.0, variance: 5.0 };
+      // SIMPLIFIED: Basic position-based share only
+      const positionRate = positionAssistRates[positionName as keyof typeof positionAssistRates] || { base: 15.0 };
+      let baseShare = positionRate.base;
       
-      // Deterministic variance based on player ID for consistency
-      const seed = (player.id * 23) % 100;
-      const varianceMultiplier = 1 + ((seed - 50) / 100) * (positionRate.variance / positionRate.base);
-      
-      // Base share from position with deterministic variance
-      let baseShare = positionRate.base * Math.max(0.3, Math.min(1.8, varianceMultiplier));
-      
-      // Elite assist provider boost based on historical data
-      const eliteBoost = eliteAssistProviders[playerName] || 1.0;
-      baseShare *= eliteBoost;
-      
-      // Historical performance adjustments using multiple FPL metrics
-      let performanceScore = 1.0;
-      
-      // Creativity metric (strongest predictor of assists)
-      const creativity = player.creativity || 0;
-      const creativityMultiplier = Math.min(historicalAdjustments.creativity.cap, 
-        1 + (creativity * historicalAdjustments.creativity.multiplier));
-      performanceScore *= creativityMultiplier;
-      
-      // ICT Index correlation
-      const ictIndex = player.ict_index || 0;
-      const ictMultiplier = Math.min(historicalAdjustments.ict_index.cap,
-        1 + (ictIndex * historicalAdjustments.ict_index.multiplier));
-      performanceScore *= ictMultiplier;
-      
-      // Set piece responsibility boost
-      const cornersOrder = parseInt(player.corners_and_indirect_freekicks_order) || 0;
-      if (cornersOrder <= 2 && cornersOrder > 0) {
-        performanceScore *= historicalAdjustments.corners_and_indirect_freekicks_order.multiplier;
-      }
-      
-      // Current season form and assist history
+      // Only use current season assists as simple indicator
       const currentAssists = player.assists || 0;
-      const currentForm = parseFloat(player.form) || 0;
-      const minutesPlayed = player.minutes || 0;
-      
-      // Form adjustment (recent performance indicator)
-      const formMultiplier = Math.max(0.6, Math.min(1.4, 1 + (currentForm - 5) / 20));
-      performanceScore *= formMultiplier;
-      
-      // Current assists boost (players who are already assisting)
-      const assistsMultiplier = Math.max(0.7, Math.min(1.6, 1 + (currentAssists * 0.15)));
-      performanceScore *= assistsMultiplier;
-      
-      // Playing time factor (assists require minutes)
-      const minutesMultiplier = Math.max(0.4, Math.min(1.2, minutesPlayed / 1000));
-      performanceScore *= minutesMultiplier;
-      
-      // Historical position-specific adjustments
-      if (positionName === 'Midfielder') {
-        // Midfielders historically dominate assists - additional boost for attacking mids
-        const attackingMidBoost = Math.max(0.8, Math.min(1.3, 1 + (creativity / 200)));
-        performanceScore *= attackingMidBoost;
-      } else if (positionName === 'Defender') {
-        // Fullbacks vs center-backs distinction
-        const isFullback = (player.creativity || 0) > 30; // Creative defenders likely fullbacks
-        if (isFullback) {
-          performanceScore *= 1.4; // Fullbacks provide significantly more assists
-        }
-      } else if (positionName === 'Forward') {
-        // Deeper forwards and false 9s historically provide more assists
-        const deepForwardFactor = Math.max(0.8, Math.min(1.25, (creativity / 80) + 0.7));
-        performanceScore *= deepForwardFactor;
+      if (currentAssists > 0) {
+        baseShare *= (1 + currentAssists * 0.1); // Simple boost for current assists
       }
       
-      // Apply performance multiplier with bounds
-      const performanceMultiplier = Math.max(0.3, Math.min(2.8, performanceScore));
-      
-      // Apply injury/availability factor
-      const availabilityFactor = (player.chance_of_playing_next_round || 100) / 100;
-      const availabilityMultiplier = Math.max(0.2, availabilityFactor);
-      
-      // Calculate final raw share
-      const rawShare = baseShare * performanceMultiplier * availabilityMultiplier;
-      
-      // Apply position-based caps to assist share percentage
-      const getPositionShareCap = (position: string): number => {
-        switch (position?.toLowerCase()) {
-          case 'goalkeeper': return 2; // Max 2% share for GKs
-          case 'defender': return 15; // Max 15% share for defenders
-          case 'midfielder': return 35; // Max 35% share for midfielders
-          case 'forward': return 25; // Max 25% share for forwards
-          default: return 20;
-        }
-      };
-      
-      const positionShareCap = getPositionShareCap(positionName);
-      const cappedRawShare = Math.min(rawShare, positionShareCap);
-      
-      if (cappedRawShare !== rawShare) {
-        console.log(`DEBUG: Capped ${playerName} assist share: ${rawShare.toFixed(1)}% → ${cappedRawShare.toFixed(1)}% (${positionName} cap: ${positionShareCap}%)`);
+      // Simple add to shares array - no caps, no complex normalization
+      if (baseShare > 0) {
+        playerShares.push({
+          id: player.id,
+          name: playerName,
+          position: positionName,
+          assistShare: baseShare
+        });
+        totalShare += baseShare;
       }
-      
-      playerShares.push({
-        id: player.id,
-        name: playerName,
-        position: position?.singular_name_short || 'UNK',
-        rawShare: cappedRawShare
-      });
-      
-      totalShare += cappedRawShare;
     });
-
-    // Normalize to 100% with one decimal place
+    
+    // SIMPLIFIED: Single-pass proportional normalization (no caps, perfect balance)
     return playerShares.map(player => ({
-      ...player,
-      assistShare: Math.round((player.rawShare / totalShare) * 1000) / 10 // One decimal place
-    })).filter(p => p.assistShare > 0).sort((a, b) => b.assistShare - a.assistShare);
+      id: player.id,
+      name: player.name,
+      position: player.position,
+      assistShare: totalShare > 0 ? Math.round((player.assistShare / totalShare) * 100 * 10) / 10 : 0
+    }));
   }
 
   // Projected Standings endpoint - calculates final table based on all match results
@@ -10611,44 +10436,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Helper functions for BPS calculations
+  // SIMPLIFIED: Basic BPS helper functions
   function calculateHistoricBPS(player: any, position: string): number {
-    // Base BPS from FPL stats
-    const baseBPS = (player.bps || 0) / Math.max(player.minutes || 1, 90) * 90; // Per 90 mins
-    
-    // Position-specific BPS scoring weights
-    const positionMultipliers = {
-      'FWD': 1.2, // Forwards get more BPS per goal/assist
-      'MID': 1.0, // Midfielders balanced
-      'DEF': 0.8, // Defenders get less attacking BPS
-      'GKP': 0.6  // Goalkeepers different BPS profile
-    };
-    
-    const multiplier = positionMultipliers[position as keyof typeof positionMultipliers] || 1.0;
-    
-    // Factor in current season performance
-    const seasonBPS = player.total_points * 0.5; // Rough BPS correlation
-    
-    return Math.max((baseBPS * multiplier + seasonBPS * 0.1), 5); // Minimum 5 BPS baseline
+    // Simple BPS calculation - just use total points as baseline
+    const seasonBPS = player.total_points || 0;
+    return Math.max(seasonBPS * 0.5, 5); // Simple conversion
   }
 
   function calculateFormMultiplier(player: any): number {
+    // SIMPLIFIED: Basic form multiplier only
     const form = parseFloat(player.form || "0");
-    const pointsPerGame = parseFloat(player.points_per_game || "0");
-    
-    // Form-based multiplier (0.8x to 1.4x range)
-    let formMultiplier = 1.0;
-    if (form >= 6) formMultiplier = 1.4;
-    else if (form >= 4) formMultiplier = 1.2;
-    else if (form >= 2) formMultiplier = 1.0;
-    else if (form >= 1) formMultiplier = 0.9;
-    else formMultiplier = 0.8;
-    
-    // PPG adjustment
-    if (pointsPerGame >= 6) formMultiplier *= 1.1;
-    else if (pointsPerGame <= 2) formMultiplier *= 0.9;
-    
-    return formMultiplier;
+    return Math.max(0.8, Math.min(1.2, 1.0 + (form - 3) * 0.1)); // Simple form scaling
   }
 
   // Helper function for BPS-based bonus point calculation  
