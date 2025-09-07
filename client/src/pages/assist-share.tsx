@@ -11,7 +11,9 @@ interface SeasonAssistShareData {
   teamId: number;
   teamName: string;
   teamShort: string;
-  expectedAssists: number; // Season total
+  expectedAssists?: number; // Season total (current season)
+  totalAssists?: number; // Season total (alternative field name)
+  assistShareData?: any; // Optional assist share data
   players: {
     id: number;
     name: string;
@@ -60,7 +62,11 @@ export default function AssistShare() {
 
   // Sort teams by total expected assists for better display
   const sortedData = useMemo(() => {
-    return [...filteredData].sort((a, b) => b.expectedAssists - a.expectedAssists);
+    return [...filteredData].sort((a, b) => {
+      const aTotal = a.expectedAssists || a.totalAssists || 0;
+      const bTotal = b.expectedAssists || b.totalAssists || 0;
+      return bTotal - aTotal;
+    });
   }, [filteredData]);
 
   if (error) {
@@ -168,7 +174,7 @@ export default function AssistShare() {
                       </Badge>
                     </CardTitle>
                     <div className="text-sm opacity-90">
-                      {selectedSeason === "current" ? "Expected" : "Total"} Assists: <span className="font-bold text-lg">{teamData.expectedAssists.toFixed(0)}</span>
+                      {selectedSeason === "current" ? "Expected" : "Total"} Assists: <span className="font-bold text-lg">{(teamData.expectedAssists || teamData.totalAssists || 0).toFixed(0)}</span>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4">
@@ -196,10 +202,10 @@ export default function AssistShare() {
                               player.assistShare >= 10 ? 'bg-yellow-100 text-yellow-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {player.assistShare.toFixed(1)}%
+                              {(player.assistShare || 0).toFixed(1)}%
                             </span>
                             <span className="text-xs text-gray-500">
-                              {player.projectedAssists.toFixed(1)} {selectedSeason === "current" ? "proj" : "actual"}
+                              {(player.projectedAssists || 0).toFixed(1)} {selectedSeason === "current" ? "proj" : "actual"}
                             </span>
                           </div>
                         </div>
