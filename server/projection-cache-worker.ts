@@ -556,6 +556,7 @@ class ProjectionCacheWorker {
         teamProjections,
         goalShareDaily,
         assistShareDaily,
+        playerProjections,
         cachedPlayerSaves, 
         cachedPlayerGoalsConceded, 
         cachedPlayerYellowCards, 
@@ -563,7 +564,7 @@ class ProjectionCacheWorker {
         cachedPlayerBonusPoints 
       } = await import("@shared/schema");
       
-      const [goals, assists, cleanSheets, minutes, defensive, teams, goalShare, assistShare, saves, goalsConceded, yellowCards, redCards, bonusPoints] = await Promise.all([
+      const [goals, assists, cleanSheets, minutes, defensive, teams, goalShare, assistShare, totalPoints, saves, goalsConceded, yellowCards, redCards, bonusPoints] = await Promise.all([
         db.select({ 
           count: sql`count(*)`,
           lastUpdated: sql`MAX(calculated_at)`
@@ -596,6 +597,10 @@ class ProjectionCacheWorker {
           count: sql`count(*)`,
           lastUpdated: sql`MAX(updated_at)`
         }).from(assistShareDaily),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(last_updated)`
+        }).from(playerProjections),
         db.select({ 
           count: sql`count(*)`,
           lastUpdated: sql`MAX(last_updated)`
@@ -669,6 +674,12 @@ class ProjectionCacheWorker {
           count: assistShare[0]?.count || 0, 
           lastUpdated: assistShare[0]?.lastUpdated || null,
           isStale: assistShare[0]?.lastUpdated ? (now.getTime() - new Date(assistShare[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        },
+        { 
+          type: 'Player Total Points', 
+          count: totalPoints[0]?.count || 0, 
+          lastUpdated: totalPoints[0]?.lastUpdated || null,
+          isStale: totalPoints[0]?.lastUpdated ? (now.getTime() - new Date(totalPoints[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
         },
         { 
           type: 'Player Saves', 
