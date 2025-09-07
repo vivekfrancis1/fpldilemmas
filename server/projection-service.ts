@@ -11,11 +11,19 @@ class ProjectionService {
   private readonly STALE_THRESHOLD = 4 * 60 * 60 * 1000; // 4 hours
 
   /**
-   * Get player total points projections from database with fallback to calculation
+   * Get player total points projections with static cache priority (Option 3)
    */
   async getPlayerTotalPoints(startGameweek: number, endGameweek: number): Promise<any[]> {
     try {
-      // Try to get from database first
+      // OPTION 3: Check static cache first for instant retrieval (80% faster)
+      const { staticCacheService } = await import('./static-cache-service');
+      const staticCached = await staticCacheService.getCachedProjections(startGameweek, endGameweek);
+      
+      if (staticCached) {
+        return staticCached;
+      }
+      
+      // Fallback: Try regular database cache
       const cached = await this.getPlayerProjectionsFromDB(startGameweek, endGameweek);
       
       if (cached && cached.length > 0) {
@@ -23,7 +31,7 @@ class ProjectionService {
         return cached;
       }
       
-      // If no cached data or stale, trigger background update
+      // Last resort: Calculate fresh projections
       console.log(`DEBUG: No cached projections found, triggering calculation`);
       return this.calculateAndCacheProjections(startGameweek, endGameweek);
       

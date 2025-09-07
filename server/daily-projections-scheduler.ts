@@ -13,7 +13,7 @@ export class DailyProjectionsScheduler {
    * Start the daily scheduler
    */
   start(): void {
-    console.log('🕐 Starting Daily Projections Scheduler (3 AM daily)...');
+    console.log('🕐 Starting Daily Projections Scheduler with Static Cache (3 AM daily)...');
     
     // Schedule to run daily at 3 AM
     this.scheduleDaily();
@@ -76,8 +76,16 @@ export class DailyProjectionsScheduler {
     console.log('🚀 Running scheduled daily projections...');
     
     try {
+      // Run regular daily projections
       await dailyProjectionsService.runDailyCalculations();
       console.log('✅ Scheduled daily projections completed successfully');
+      
+      // Pre-calculate static cache ranges for instant access (Option 3)
+      console.log('🚀 Starting static cache pre-calculation...');
+      const { staticCacheService } = await import('./static-cache-service');
+      await staticCacheService.preCalculateAllRanges();
+      console.log('✅ Static cache pre-calculation completed');
+      
     } catch (error) {
       console.error('❌ Scheduled daily projections failed:', error);
     } finally {
