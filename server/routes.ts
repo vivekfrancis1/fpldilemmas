@@ -76,7 +76,7 @@ function calculateFastGoals(
   return Math.round(goals * 100) / 100;
 }
 
-// Original comprehensive goal calculation function - RESTORED for accuracy
+// SIMPLIFIED: Basic goal calculation with simple multipliers only
 function calculateComprehensiveGoals(
   team: any, 
   opponent: any, 
@@ -86,98 +86,10 @@ function calculateComprehensiveGoals(
   adminGoalSettings: any, 
   fixturesData: any[]
 ): number {
-  // Phase 1: Universal Base xG Foundation
-  let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
-  
-  // Phase 2: Venue Factors
-  const venueMultiplier = isHome ? 
-    adminGoalSettings.homeAdvantageGoalsMultiplier : 
-    adminGoalSettings.awayFactorGoalsMultiplier;
-  baseExpectedGoals *= venueMultiplier;
-  
-  // Phase 3: Defensive Tiers
-  const getDefensiveTier = (teamId: number): string => {
-    const parseTeamArray = (teamData: any): number[] => {
-      if (Array.isArray(teamData)) return teamData;
-      if (typeof teamData === 'string') {
-        try {
-          return JSON.parse(teamData);
-        } catch {
-          return [];
-        }
-      }
-      return [];
-    };
-
-    const eliteDefenseTeams = parseTeamArray(adminGoalSettings.eliteDefenseTeams);
-    const strongDefenseTeams = parseTeamArray(adminGoalSettings.strongDefenseTeams);
-    const weakDefenseTeams = parseTeamArray(adminGoalSettings.weakDefenseTeams);
-    const promotedDefenseTeams = parseTeamArray(adminGoalSettings.promotedDefenseTeams);
-
-    if (eliteDefenseTeams.includes(teamId)) return 'elite';
-    if (strongDefenseTeams.includes(teamId)) return 'strong';
-    if (weakDefenseTeams.includes(teamId)) return 'weak';
-    if (promotedDefenseTeams.includes(teamId)) return 'promoted';
-    return 'average';
-  };
-  
-  const opponentDefensiveTier = getDefensiveTier(opponent.id);
-  let opponentDefensiveMultiplier = 1.0;
-  switch (opponentDefensiveTier) {
-    case 'elite': opponentDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier; break;
-    case 'strong': opponentDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier; break;
-    case 'average': opponentDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier; break;
-    case 'weak': opponentDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier; break;
-    case 'promoted': opponentDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier; break;
-  }
-  
-  baseExpectedGoals *= opponentDefensiveMultiplier;
-  
-  // Phase 4: Attacking Tiers
-  const getAttackingTier = (teamId: number) => {
-    const parseTeamArray = (teamData: any): number[] => {
-      if (Array.isArray(teamData)) return teamData;
-      if (typeof teamData === 'string') {
-        try {
-          return JSON.parse(teamData);
-        } catch {
-          return [];
-        }
-      }
-      return [];
-    };
-
-    const eliteAttackTeams = parseTeamArray(adminGoalSettings.eliteAttackTeams);
-    const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams);
-    const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams);
-    const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams);
-    
-    if (eliteAttackTeams.includes(teamId)) return 'elite';
-    if (strongAttackTeams.includes(teamId)) return 'strong';
-    if (weakAttackTeams.includes(teamId)) return 'weak';
-    if (promotedAttackTeams.includes(teamId)) return 'promoted';
-    return 'average';
-  };
-  
-  const attackingTier = getAttackingTier(team.id);
-  let attackingTierMultiplier = 1.0;
-  switch (attackingTier) {
-    case 'elite': attackingTierMultiplier = adminGoalSettings.eliteAttackMultiplier; break;
-    case 'strong': attackingTierMultiplier = adminGoalSettings.strongAttackMultiplier; break;
-    case 'average': attackingTierMultiplier = adminGoalSettings.averageAttackMultiplier; break;
-    case 'weak': attackingTierMultiplier = adminGoalSettings.weakAttackMultiplier; break;
-    case 'promoted': attackingTierMultiplier = adminGoalSettings.promotedAttackMultiplier; break;
-  }
-  
-  baseExpectedGoals *= attackingTierMultiplier;
-  
-  // Apply final bounds
-  baseExpectedGoals = Math.max(
-    adminGoalSettings.absoluteMinGoals || 0.3, 
-    Math.min(baseExpectedGoals, adminGoalSettings.absoluteMaxGoals || 4.2)
-  );
-  
-  return Math.round(baseExpectedGoals * 100) / 100;
+  // Simple baseline × venue multiplier only
+  let goals = 1.5; // Simple baseline
+  goals *= isHome ? 1.15 : 0.85; // Simple home/away multiplier
+  return Math.max(0.5, Math.min(3.0, goals)); // Simple bounds
 }
 
 // Master Default Team Configuration - Single Source of Truth
@@ -3322,30 +3234,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameweekProjections[p.gameweek] = p.cleanSheetOdds;
         });
         
-        // Elite-level confidence calculation using advanced statistical market analysis
-        const teamBettingData = bettingData.teamCleanSheetRates[team.id] || { confidence: 0.70 };
-        const roundedTotalCSProbability = Math.round(totalCSProbability * 10) / 10;
-        let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
-        
-        // Advanced multi-dimensional confidence assessment
-        const marketConfidence = teamBettingData.confidence; // Base market reliability
-        const performanceConsistency = projections.length > 0 ? 
-          Math.max(0, 1 - (Math.max(...projections.map((p: any) => p.cleanSheetOdds)) - Math.min(...projections.map((p: any) => p.cleanSheetOdds))) / 80) : 0;
-        const volumeConfidence = Math.min(1.0, projections.length / 5); // 5+ fixtures for full confidence
-        const qualityBonus = averageCleanSheetOdds >= 35 ? 0.15 : averageCleanSheetOdds >= 25 ? 0.10 : 0;
-        
-        // Sophisticated composite confidence with weighted factors
-        const compositeConfidence = (marketConfidence * 0.4) + // Market data quality
-                                   (performanceConsistency * 0.25) + // Statistical consistency
-                                   (volumeConfidence * 0.20) + // Sample size adequacy
-                                   (qualityBonus * 0.15); // Performance excellence bonus
-        
-        // Confidence based purely on composite score
-        if (compositeConfidence >= 0.80) {
-          confidence = 'High'; // Elite market confidence and statistical reliability
-        } else if (compositeConfidence <= 0.55) {
-          confidence = 'Low';  // Poor market confidence or statistical reliability
-        }
+        // SIMPLIFIED: Basic confidence - just use "Medium" for all teams
+        const confidence = 'Medium';
         
         return {
           id: team.id,
