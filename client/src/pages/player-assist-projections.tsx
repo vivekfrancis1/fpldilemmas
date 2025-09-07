@@ -238,7 +238,7 @@ export default function PlayerAssistProjections() {
             <h1>Player Assists</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Individual player assist projections for gameweeks 4-9, calculated using team assist projections and weighted historical assist share data with expected minutes factoring
+            Projected Assists for each player across all remaining fixtures
           </p>
         </div>
       </div>
