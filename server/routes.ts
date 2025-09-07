@@ -5716,8 +5716,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const getPositionAssistShareCap = (position: string): number => {
       switch (position?.toLowerCase()) {
         case 'goalkeeper': return 2; // Max 2% share for GKs
-        case 'defender': return 25; // USER SPECIFIED: 25% max for defenders
-        case 'midfielder': return 25; // USER SPECIFIED: 25% max for midfielders
+        case 'defender': return 20; // USER UPDATED: 20% max for defenders
+        case 'midfielder': return 35; // USER UPDATED: 35% max for midfielders
         case 'forward': return 25; // USER SPECIFIED: 25% max for forwards
         default: return 25;
       }
