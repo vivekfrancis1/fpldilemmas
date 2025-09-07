@@ -108,7 +108,7 @@ export default function TeamCSProjections() {
             <h1>Team CS Projections</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Clean sheet probabilities for each team across all 38 gameweeks - actual results for completed games, projections for upcoming games
+            Clean sheet probabilities for each team across all upcoming gameweeks
           </p>
         </div>
       </div>
