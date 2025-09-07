@@ -4353,7 +4353,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               (playerData.contribution / totalContribution) * teamSeasonTotals[teamId].expectedGoals : 0;
             
             // Apply position-based caps
-            const positionGoalShareCap = getPositionGoalShareCap(playerData.position);
+            // OPTION 6: Position-First Caps - immediate static lookup
+            const STATIC_CAPS = { 1: 2.0, 2: 25.0, 3: 35.0, 4: 25.0 };
+            const positionGoalShareCap = STATIC_CAPS[playerData.element_type] || 25.0;
             const maxProjectedGoals = (positionGoalShareCap / 100) * teamSeasonTotals[teamId].expectedGoals;
             const cappedShare = Math.min(normalizedShare, maxProjectedGoals);
             const wasCapped = cappedShare < normalizedShare;
@@ -5288,7 +5290,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             };
             
-            const positionShareCap = getPositionShareCap(playerData.position);
+            // OPTION 6: Position-First Caps for assists - immediate static lookup  
+            const STATIC_ASSIST_CAPS = { 1: 2.0, 2: 25.0, 3: 35.0, 4: 25.0 };
+            const positionShareCap = STATIC_ASSIST_CAPS[playerData.element_type] || 25.0;
             const cappedAssistShare = Math.min(finalAssistShare, positionShareCap);
             
             if (cappedAssistShare !== finalAssistShare) {
@@ -5637,7 +5641,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
-      const positionGoalShareCap = getPositionGoalShareCap(positionName);
+      // OPTION 6: Position-First Caps - static lookup by element_type
+      const STATIC_CAPS = { 1: 2.0, 2: 25.0, 3: 35.0, 4: 25.0 };
+      const positionGoalShareCap = STATIC_CAPS[elementType] || 25.0;
       const cappedAdjustedShare = Math.min(adjustedShare, positionGoalShareCap);
       
       if (cappedAdjustedShare !== adjustedShare) {
