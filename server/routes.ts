@@ -5959,43 +5959,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'Forward': { base: 18.0, variance: 6.0 }        // 18% base, assists from deeper forwards
     };
 
-    // Dynamic assist multiplier calculation based on FPL metrics
-    const calculateAssistMultiplier = (player: any, position: any): number => {
+    // SIMPLIFIED: Single unified multiplier calculation (implements Options A, B, C, D)
+    const calculateUnifiedAssistMultiplier = (player: any, position: any): number => {
       const positionName = position?.singular_name || 'Forward';
       
-      // Base multiplier by position (from historical data)
-      const positionMultipliers = {
-        'Goalkeeper': 1.0,
-        'Defender': 1.15,   // Fullbacks can be creative
-        'Midfielder': 1.35,  // Primary assist providers
-        'Forward': 1.10     // Some forwards are creative
-      };
+      // Option A: Single Unified Multiplier - weighted formula instead of 5 separate boosts
+      const positionWeight = {
+        'Goalkeeper': 0.1,
+        'Defender': 0.4,
+        'Midfielder': 1.0,  // Base multiplier
+        'Forward': 0.6
+      }[positionName] || 0.5;
       
-      let multiplier = positionMultipliers[positionName as keyof typeof positionMultipliers] || 1.0;
-      
-      // Current season assists boost (significant factor)
       const currentAssists = player.assists || 0;
-      const assistsBoost = Math.min(1.8, 1 + (currentAssists * 0.15)); // Up to 1.8x for high assist players
-      multiplier *= assistsBoost;
-      
-      // Creativity stat boost (key FPL metric)
+      const lastSeasonAssists = player.last_season_assists || 0;
       const creativity = player.creativity || 0;
-      const creativityBoost = Math.min(1.6, 1 + (creativity * 0.008)); // Creativity typically 0-150
-      multiplier *= creativityBoost;
       
-      // ICT index boost (overall FPL performance indicator)
-      const ictIndex = player.ict_index || 0;
-      const ictBoost = Math.min(1.4, 1 + (ictIndex * 0.002)); // ICT typically 0-200
-      multiplier *= ictBoost;
+      // Option C: Merge Current + Historical - combined performance score
+      const combinedPerformance = (currentAssists * 0.7) + (lastSeasonAssists * 0.3);
       
-      // Set piece taker boost
+      // Option B: Remove Redundant Metrics - removed ICT index, keeping only creativity
       const setPieceOrder = (player.corners_and_indirect_freekicks_order || 99) + (player.penalties_order || 99);
-      if (setPieceOrder <= 4) { // First or second choice for set pieces
-        multiplier *= 1.25;
-      }
+      const setPieceBonus = setPieceOrder <= 4 ? 1.2 : 1.0;
       
-      // Cap the final multiplier to prevent extreme values
-      return Math.min(2.5, Math.max(0.8, multiplier));
+      // Single unified formula: weighted combination instead of separate multipliers
+      const unifiedMultiplier = (
+        positionWeight * 0.3 +                    // 30% position importance
+        (combinedPerformance / 10) * 0.4 +        // 40% combined current+historical
+        (creativity / 100) * 0.2 +                // 20% creativity (removed ICT correlation)
+        setPieceBonus * 0.1                       // 10% set pieces
+      );
+      
+      return Math.min(2.0, Math.max(0.5, unifiedMultiplier));
     };
 
     // Simplified position-based caps for assist share distribution
@@ -6018,31 +6013,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const seed = (player.id * 23) % 100;
       const varianceMultiplier = 1 + ((seed - 50) / 100) * (positionRate.variance / positionRate.base);
       
-      // Base share from position with deterministic variance
-      let baseShare = positionRate.base * Math.max(0.3, Math.min(1.8, varianceMultiplier));
+      // Option D: Position-First Approach - apply caps first, then scale within limits
+      const maxPositionShare = positionAssistCaps[positionName] || 15.0;
       
-      // Dynamic assist multiplier based on FPL metrics
-      const assistMultiplier = calculateAssistMultiplier(player, position);
-      baseShare *= assistMultiplier;
+      // Calculate base share within position limits from the start
+      let baseShare = Math.min(
+        positionRate.base * Math.max(0.3, Math.min(1.8, varianceMultiplier)),
+        maxPositionShare * 0.8  // Start within 80% of position cap
+      );
       
-      // Simplified performance scoring: Position + Current Season + Last Season
-      let performanceScore = 1.0;
-      
-      // Current season assists (primary factor)
-      const currentAssists = player.assists || 0;
-      const currentBoost = Math.min(2.0, 1 + (currentAssists * 0.1)); // Up to 2x for high assists
-      performanceScore *= currentBoost;
-      
-      // Last season assists (if available - simplified approach)
-      const lastSeasonAssists = player.last_season_assists || 0;
-      const lastSeasonBoost = Math.min(1.5, 1 + (lastSeasonAssists * 0.05)); // Up to 1.5x for last season
-      performanceScore *= lastSeasonBoost;
-      
-      // Simple set piece boost (basic check)
-      const cornersOrder = parseInt(player.corners_and_indirect_freekicks_order) || 0;
-      if (cornersOrder <= 2 && cornersOrder > 0) {
-        performanceScore *= 1.3; // Simple 30% boost for set piece takers
-      }
+      // Apply simplified unified multiplier
+      const unifiedMultiplier = calculateUnifiedAssistMultiplier(player, position);
+      baseShare *= unifiedMultiplier;
       
       // Basic current season form (simplified)
       const currentForm = parseFloat(player.form) || 0;
