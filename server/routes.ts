@@ -4186,20 +4186,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Use position-based fallbacks for now - historical data will be added later
             // This prevents the undefined variable error while maintaining functionality
             
-            // Weighted combination: 50% current year, 30% 2024/25, 20% 2023/24
+            // Weighted combination: 70% current year, 30% 2024/25 (removed 2023/24)
             // Fall back to position averages if no historical data found
             const fallback2024 = historical2024XGPer90 > 0 ? historical2024XGPer90 : 
               (player.element_type === 1 ? 0.01 : player.element_type === 2 ? 0.06 : player.element_type === 3 ? 0.12 : 0.25);
-            const fallback2023 = historical2023XGPer90 > 0 ? historical2023XGPer90 : 
-              (player.element_type === 1 ? 0.01 : player.element_type === 2 ? 0.06 : player.element_type === 3 ? 0.12 : 0.25);
               
-            const combinedXGPer90 = (currentYearXGPer90 * 0.5) + (fallback2024 * 0.3) + (fallback2023 * 0.2);
+            const combinedXGPer90 = (currentYearXGPer90 * 0.7) + (fallback2024 * 0.3);
             
             // Reduce debug logging for performance
             if (player.name.includes('Salah') || player.name.includes('Haaland')) {
               const has2024Data = historical2024XGPer90 > 0;
-              const has2023Data = historical2023XGPer90 > 0;
-              console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, 2024/25: ${fallback2024.toFixed(3)}${has2024Data ? ' (actual)' : ' (fallback)'}, 2023/24: ${fallback2023.toFixed(3)}${has2023Data ? ' (actual)' : ' (fallback)'}, Combined: ${combinedXGPer90.toFixed(3)}`);
+              console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, 2024/25: ${fallback2024.toFixed(3)}${has2024Data ? ' (actual)' : ' (fallback)'}, Combined: ${combinedXGPer90.toFixed(3)}`);
             }
             
             // Apply sample size regression with combined xG data
@@ -5000,8 +4997,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const historicalData: { [season: string]: any[] } = {};
       historicalData["current"] = currentYearActualData;
       
-      // Fetch historical xA data from past two years PLUS current year actual data for assist share weighting
-      const historicalSeasons = ["2024/25", "2023/24"];
+      // Fetch historical xA data from 2024/25 PLUS current year actual data for assist share weighting
+      const historicalSeasons = ["2024/25"];
       const historicalXAData: { [season: string]: any[] } = {};
       
       // Optimize: Fetch historical data only once with faster processing
@@ -5064,8 +5061,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           });
           
-          // Process all three data sources with equal weighting (33.33% each)
-          const allSeasons = ["current", "2024/25", "2023/24"];
+          // Process two data sources with equal weighting (50% each)
+          const allSeasons = ["current", "2024/25"];
           
           allSeasons.forEach(season => {
             const seasonData = historicalData[season];
