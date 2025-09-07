@@ -4239,16 +4239,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // ENHANCED minutes weighting to prevent unrealistic projections for bench players
             const currentMinutes = player.minutes || 0;
             
-            // ULTRA-AGGRESSIVE minutes restrictions to prevent unrealistic projections (like Rio Ngumoha)
+            // PERCENTAGE-BASED minutes restrictions using completed gameweeks
+            const completedGameweeks = 3; // Update this as season progresses
+            const totalPossibleMinutes = 90 * completedGameweeks; // 270 minutes for 3 completed GWs
+            const minutesPercentage = (currentMinutes / totalPossibleMinutes) * 100;
+            
             let minutesRestriction = 1.0;
-            if (currentMinutes < 50) {
-              minutesRestriction = 0.001; // 0.1% for players with <50 minutes (never play)
-            } else if (currentMinutes < 200) {
-              minutesRestriction = 0.005; // 0.5% for players with <200 minutes (bench warmers)
-            } else if (currentMinutes < 500) {
-              minutesRestriction = 0.05; // 5% for squad players with <500 minutes
-            } else if (currentMinutes < 1000) {
-              minutesRestriction = 0.2; // 20% for rotation players with <1000 minutes
+            if (minutesPercentage < 1) {
+              minutesRestriction = 0.001; // 0.1% for players with <1% of total possible minutes
+            } else if (minutesPercentage < 5) {
+              minutesRestriction = 0.005; // 0.5% for players with <5% (extreme bench warmers)
+            } else if (minutesPercentage < 15) {
+              minutesRestriction = 0.05; // 5% for players with <15% (squad players)
+            } else if (minutesPercentage < 30) {
+              minutesRestriction = 0.2; // 20% for players with <30% (rotation players)
             }
             
             const maxExpectedMinutes = Math.max(...playersWithXG.map(p => calculateExpectedMinutes(p, playersWithXG)), 1);
@@ -5687,16 +5691,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // ENHANCED minutes weighting to prevent unrealistic projections for bench players
       const currentMinutes = player.minutes || 0;
       
-      // ULTRA-AGGRESSIVE minutes restrictions to prevent unrealistic projections
+      // PERCENTAGE-BASED minutes restrictions using completed gameweeks
+      const completedGameweeks = 3; // Update this as season progresses
+      const totalPossibleMinutes = 90 * completedGameweeks; // 270 minutes for 3 completed GWs
+      const minutesPercentage = (currentMinutes / totalPossibleMinutes) * 100;
+      
       let minutesRestriction = 1.0;
-      if (currentMinutes < 50) {
-        minutesRestriction = 0.001; // 0.1% for players with <50 minutes (never play)
-      } else if (currentMinutes < 200) {
-        minutesRestriction = 0.005; // 0.5% for players with <200 minutes (bench warmers)
-      } else if (currentMinutes < 500) {
-        minutesRestriction = 0.05; // 5% for squad players with <500 minutes
-      } else if (currentMinutes < 1000) {
-        minutesRestriction = 0.2; // 20% for rotation players with <1000 minutes
+      if (minutesPercentage < 1) {
+        minutesRestriction = 0.001; // 0.1% for players with <1% of total possible minutes
+      } else if (minutesPercentage < 5) {
+        minutesRestriction = 0.005; // 0.5% for players with <5% (extreme bench warmers)
+      } else if (minutesPercentage < 15) {
+        minutesRestriction = 0.05; // 5% for players with <15% (squad players)
+      } else if (minutesPercentage < 30) {
+        minutesRestriction = 0.2; // 20% for players with <30% (rotation players)
       }
       
       const maxExpectedMinutes = Math.max(...players.map(p => calculateExpectedMinutes(p, players)), 1);
