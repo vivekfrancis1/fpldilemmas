@@ -3057,6 +3057,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process all remaining gameweeks for full season final standings
       const startGameweek = currentGameweek + 1;
       const endGameweek = 38; // Full season for projected final standings
+      console.log(`DEBUG: Processing all remaining gameweeks (GW${startGameweek}-${endGameweek}) for full season final standings, current GW: ${currentGameweek}`);
       
       // Check which gameweeks are COMPLETELY finished (all 10 fixtures done) - only check relevant range
       const completeGameweeks = new Set();
@@ -4080,15 +4081,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const weight = Math.max(0.2, player.totalMinutes / minReliableMinutes);
       const adjustedXGPer90 = (player.xgPer90 * weight) + (positionAverage * (1 - weight));
       
+      console.log(`DEBUG: Sample size adjustment for ${player.name}: ${player.xgPer90.toFixed(3)} → ${adjustedXGPer90.toFixed(3)} (${player.totalMinutes} mins)`);
       return adjustedXGPer90;
     }
     
     return player.xgPer90;
   }
 
-  // Add simple caching for goal share data
+  // OPTION F: Memory-First Approach - Cache frequently used data in memory
   let goalShareCache: { data: any, timestamp: number } | null = null;
+  let bootstrapCache: { data: any, timestamp: number } | null = null;
+  let teamSeasonTotalsCache: { data: any, timestamp: number } | null = null;
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const BOOTSTRAP_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
   // Ultra-fast Goal Share endpoint - bypasses expensive team projections
   app.get("/api/goal-share-season", async (req, res) => {
@@ -4191,14 +4196,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
-      // OPTION 9: Pre-filter to active players only (60% speed boost)
-      const activePlayersOnly = batchResults.flat().filter(p => p.totalMinutes >= 90 && p.id > 0);
-      playersWithXG.push(...activePlayersOnly);
+      // OPTION 4: Flatten batch results for super-fast processing
+      playersWithXG.push(...batchResults.flat());
       
       
       // Step 3: Expected minutes and sample size adjustments handled by helper functions
       
       // ENHANCED xG per 90 DISTRIBUTION WITH EXPECTED MINUTES
+      console.log("DEBUG: Implementing xG per 90 player distribution with expected minutes");
       
       // Calculate position averages for sample size regression
       const positionAverages = {
@@ -4208,8 +4213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         4: 0.35  // Forward
       };
       
-      // OPTION 10: Parallel Processing - Process all teams simultaneously (80% speed boost)
-      const teamProcessingPromises = Object.keys(teamSeasonTotals).map(async (teamIdStr) => {
+      for (const teamIdStr of Object.keys(teamSeasonTotals)) {
         const teamId = parseInt(teamIdStr);
         const team = bootstrapData.teams.find((t: any) => t.id === teamId);
         
@@ -4223,6 +4227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return p.totalMinutes >= 45 && p.id > 0; // Basic active player check
           });
           
+          console.log(`DEBUG: Team ${team.name} - ${qualifiedPlayers.length}/${teamPlayersWithXG.length} players qualify (≥45 mins)`);
           
           // Calculate raw contributions using enhanced methodology
           const playerContributions: { [playerId: number]: { name: string, position: string, contribution: number, xgPer90: number, expectedMinutes: number } } = {};
@@ -4280,9 +4285,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Calculate expected minutes with realistic projections
             const expectedMinutes = calculateExpectedMinutes(player, playersWithXG);
             
-            // OPTION 4: Precomputed Player Position Multipliers - Static lookup table
-            const STATIC_POSITION_MULTIPLIERS = { 1: 0.15, 2: 0.4, 3: 1.15, 4: 1.25 };
-            const positionMultiplier = STATIC_POSITION_MULTIPLIERS[player.element_type] || 1.0;
+            // Enhanced position multipliers for better goal distribution
+            let positionMultiplier = 1.0;
+            switch (player.element_type) {
+              case 4: // Forward
+                positionMultiplier = 1.25; // Increased significantly for forwards
+                break;
+              case 3: // Midfielder
+                positionMultiplier = 1.15; // Increased for midfielders
+                break;
+              case 2: // Defender
+                positionMultiplier = 0.4; // Kept same
+                break;
+              case 1: // Goalkeeper
+                positionMultiplier = 0.15; // Kept same
+                break;
+            }
             
             // HYBRID CALCULATION: Use actual goals + projected goals for remaining matches
             const hybridSeasonGoals = actualGoalsFromCompleted + projectedGoalsFromRemaining;
@@ -4292,6 +4310,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const minutesWeight = Math.max(0.1, expectedMinutes / maxExpectedMinutes); // Minimum weight of 0.1
             const contribution = hybridSeasonGoals * positionMultiplier * minutesWeight;
             
+            if (player.name.includes('Salah') || player.name.includes('Haaland') || player.actualGoalsScored > 2) {
+              console.log(`DEBUG: ${player.name} hybrid calculation - Actual: ${actualGoalsFromCompleted}, Projected remaining: ${projectedGoalsFromRemaining.toFixed(2)}, Total: ${hybridSeasonGoals.toFixed(2)}, Minutes weight: ${minutesWeight.toFixed(2)}`);
+            }
             
             playerContributions[player.id] = {
               name: player.name,
@@ -4304,7 +4325,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalContribution += contribution;
           }
           
-          // OPTION 2: No debug logs for performance - Simple proportional distribution
+          // ENHANCED NORMALIZATION - Ensure sum equals team xG
+          // OPTION E: Simple proportional distribution - no complex balance calculations
           totalContribution = Math.max(totalContribution, 0.1);
           const getPositionGoalShareCap = (position: string): number => {
             switch (position?.toLowerCase()) {
@@ -4705,9 +4727,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       console.log(`DEBUG: Saved 2025/26 goal share data for Player Total Goals tool`);
       
-      // OPTION 7: Response Compression + Caching
-      res.setHeader('Content-Encoding', 'gzip');
-      goalShareCache = { data: response, timestamp: Date.now() };
+      // Cache the response for future requests
+      goalShareCache = {
+        data: response,
+        timestamp: Date.now()
+      };
+      
       res.json(response);
     } catch (error) {
       console.error("Error generating optimized season goal share data:", error);
