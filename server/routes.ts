@@ -310,6 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
+      console.log(`DEBUG: Login attempt - Email: ${email}, Password length: ${password?.length}`);
       
       if (!email || !password) {
         return res.status(400).json({ error: 'Email and password are required' });
@@ -317,6 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Find user by email
       const [user] = await db.select().from(users).where(eq(users.email, email));
+      console.log(`DEBUG: User found: ${!!user}, Role: ${user?.role}`);
       
       if (!user) {
         return res.status(401).json({ error: 'Invalid credentials' });
@@ -324,6 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password);
+      console.log(`DEBUG: Password valid: ${isValidPassword}`);
       
       if (!isValidPassword) {
         return res.status(401).json({ error: 'Invalid credentials' });
