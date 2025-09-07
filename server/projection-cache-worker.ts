@@ -488,13 +488,26 @@ class ProjectionCacheWorker {
   async getCacheStats(): Promise<any> {
     try {
       const { sql } = await import("drizzle-orm");
-      const [goals, assists, cleanSheets, minutes, defensive, teams] = await Promise.all([
+      const { 
+        cachedPlayerSaves, 
+        cachedPlayerGoalsConceded, 
+        cachedPlayerYellowCards, 
+        cachedPlayerRedCards, 
+        cachedPlayerBonusPoints 
+      } = await import("@shared/schema");
+      
+      const [goals, assists, cleanSheets, minutes, defensive, teams, saves, goalsConceded, yellowCards, redCards, bonusPoints] = await Promise.all([
         db.select({ count: sql`count(*)` }).from(playerGoalsProjections),
         db.select({ count: sql`count(*)` }).from(playerAssistProjections),
         db.select({ count: sql`count(*)` }).from(teamCleanSheetProjections),
         db.select({ count: sql`count(*)` }).from(playerMinutesProjections),
         db.select({ count: sql`count(*)` }).from(playerDefensiveProjections),
-        db.select({ count: sql`count(*)` }).from(teamProjections)
+        db.select({ count: sql`count(*)` }).from(teamProjections),
+        db.select({ count: sql`count(*)` }).from(cachedPlayerSaves),
+        db.select({ count: sql`count(*)` }).from(cachedPlayerGoalsConceded),
+        db.select({ count: sql`count(*)` }).from(cachedPlayerYellowCards),
+        db.select({ count: sql`count(*)` }).from(cachedPlayerRedCards),
+        db.select({ count: sql`count(*)` }).from(cachedPlayerBonusPoints)
       ]);
       
       return [
@@ -503,7 +516,12 @@ class ProjectionCacheWorker {
         { type: 'Team Clean Sheets', count: cleanSheets[0]?.count || 0 },
         { type: 'Minutes', count: minutes[0]?.count || 0 },
         { type: 'Defensive', count: defensive[0]?.count || 0 },
-        { type: 'Team Projections', count: teams[0]?.count || 0 }
+        { type: 'Team Projections', count: teams[0]?.count || 0 },
+        { type: 'Player Saves', count: saves[0]?.count || 0 },
+        { type: 'Goals Conceded', count: goalsConceded[0]?.count || 0 },
+        { type: 'Yellow Cards', count: yellowCards[0]?.count || 0 },
+        { type: 'Red Cards', count: redCards[0]?.count || 0 },
+        { type: 'Bonus Points', count: bonusPoints[0]?.count || 0 }
       ];
       
     } catch (error) {
