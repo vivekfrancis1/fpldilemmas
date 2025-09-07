@@ -9901,6 +9901,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Insert new cache data
       const cacheInserts = [];
       for (const playerData of liveData) {
+        // CRITICAL FIX: Only cache players with valid player IDs
+        if (!playerData.playerId) {
+          console.log(`DEBUG: Skipping cache for player with null ID: ${playerData.name || 'Unknown'}`);
+          continue;
+        }
+        
         for (const [gameweekStr, goals] of Object.entries(playerData.gameweekProjections)) {
           const gameweek = parseInt(gameweekStr);
           if (gameweek >= 1 && gameweek <= 38) {
