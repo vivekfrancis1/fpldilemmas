@@ -3072,12 +3072,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Phase 1: Universal Base xG Foundation - Use ONLY admin configurable value
           // This ensures consistent baseline across all teams with differences created through tier multipliers
-          let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
+          let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame || MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame;
           
-          // Phase 2: Venue Factors - Use ONLY admin settings (NO FALLBACKS)
+          // DEBUG: Log the actual values being used
+          if (baseExpectedGoals === 0 || !baseExpectedGoals) {
+            console.log(`DEBUG: Goal calculation issue - adminGoalSettings.averageBaseXGPerTeamPerGame=${adminGoalSettings.averageBaseXGPerTeamPerGame}, using fallback=${MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame}`);
+            baseExpectedGoals = MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame;
+          }
+          
+          // Phase 2: Venue Factors - Use admin settings with fallbacks
           const venueMultiplier = isHome ? 
-            adminGoalSettings.homeAdvantageGoalsMultiplier : // Configurable home advantage
-            adminGoalSettings.awayFactorGoalsMultiplier; // Configurable away factor
+            (adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier) : // Configurable home advantage with fallback
+            (adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier); // Configurable away factor with fallback
           baseExpectedGoals *= venueMultiplier;
           
           // Phase 3: Defensive Tiers - Apply opponent's defensive tier multiplier using ONLY admin settings
@@ -3110,11 +3116,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const opponentDefensiveTier = getDefensiveTier(opponent.id);
           let opponentDefensiveMultiplier = 1.0;
           switch (opponentDefensiveTier) {
-            case 'elite': opponentDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier; break;
-            case 'strong': opponentDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier; break;
-            case 'average': opponentDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier; break;
-            case 'weak': opponentDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier; break;
-            case 'promoted': opponentDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier; break;
+            case 'elite': opponentDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier || MASTER_TEAM_DEFAULTS.eliteDefenseMultiplier; break;
+            case 'strong': opponentDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier || MASTER_TEAM_DEFAULTS.strongDefenseMultiplier; break;
+            case 'average': opponentDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier || MASTER_TEAM_DEFAULTS.averageDefenseMultiplier; break;
+            case 'weak': opponentDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier || MASTER_TEAM_DEFAULTS.weakDefenseMultiplier; break;
+            case 'promoted': opponentDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier || MASTER_TEAM_DEFAULTS.promotedDefenseMultiplier; break;
           }
           
           baseExpectedGoals *= opponentDefensiveMultiplier;
@@ -3150,11 +3156,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const attackingTier = getAttackingTier(team.id);
           let attackingTierMultiplier = 1.0;
           switch (attackingTier) {
-            case 'elite': attackingTierMultiplier = adminGoalSettings.eliteAttackMultiplier; break;
-            case 'strong': attackingTierMultiplier = adminGoalSettings.strongAttackMultiplier; break;
-            case 'average': attackingTierMultiplier = adminGoalSettings.averageAttackMultiplier; break;
-            case 'weak': attackingTierMultiplier = adminGoalSettings.weakAttackMultiplier; break;
-            case 'promoted': attackingTierMultiplier = adminGoalSettings.promotedAttackMultiplier; break;
+            case 'elite': attackingTierMultiplier = adminGoalSettings.eliteAttackMultiplier || MASTER_TEAM_DEFAULTS.eliteAttackMultiplier; break;
+            case 'strong': attackingTierMultiplier = adminGoalSettings.strongAttackMultiplier || MASTER_TEAM_DEFAULTS.strongAttackMultiplier; break;
+            case 'average': attackingTierMultiplier = adminGoalSettings.averageAttackMultiplier || MASTER_TEAM_DEFAULTS.averageAttackMultiplier; break;
+            case 'weak': attackingTierMultiplier = adminGoalSettings.weakAttackMultiplier || MASTER_TEAM_DEFAULTS.weakAttackMultiplier; break;
+            case 'promoted': attackingTierMultiplier = adminGoalSettings.promotedAttackMultiplier || MASTER_TEAM_DEFAULTS.promotedAttackMultiplier; break;
           }
           
           baseExpectedGoals *= attackingTierMultiplier;
