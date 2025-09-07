@@ -140,7 +140,7 @@ export default function ProjectedGoalsCS() {
             <h1>Match Projections</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Projected goals and clean sheet odds for each match across selected gameweeks with confidence analysis
+            Projected goals and clean sheet odds for each match
           </p>
         </div>
       </div>
