@@ -76,7 +76,7 @@ function calculateFastGoals(
   return Math.round(goals * 100) / 100;
 }
 
-// Original comprehensive goal calculation function - RESTORED for accuracy
+// SIMPLIFIED goal calculation function - removes complex 8-phase calculation 
 function calculateComprehensiveGoals(
   team: any, 
   opponent: any, 
@@ -86,32 +86,17 @@ function calculateComprehensiveGoals(
   adminGoalSettings: any, 
   fixturesData: any[]
 ): number {
-  // Phase 1: Universal Base xG Foundation
-  let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
+  // SIMPLIFIED: Use basic calculation only
+  let goals = 1.5; // Simple baseline
   
-  // Phase 2: Venue Factors
-  const venueMultiplier = isHome ? 
-    adminGoalSettings.homeAdvantageGoalsMultiplier : 
-    adminGoalSettings.awayFactorGoalsMultiplier;
-  baseExpectedGoals *= venueMultiplier;
+  // Basic venue adjustment
+  goals *= isHome ? 1.15 : 0.85;
   
-  // Phase 3: Defensive Tiers
-  const getDefensiveTier = (teamId: number): string => {
-    const parseTeamArray = (teamData: any): number[] => {
-      if (Array.isArray(teamData)) return teamData;
-      if (typeof teamData === 'string') {
-        try {
-          return JSON.parse(teamData);
-        } catch {
-          return [];
-        }
-      }
-      return [];
-    };
-
-    const eliteDefenseTeams = parseTeamArray(adminGoalSettings.eliteDefenseTeams);
-    const strongDefenseTeams = parseTeamArray(adminGoalSettings.strongDefenseTeams);
-    const weakDefenseTeams = parseTeamArray(adminGoalSettings.weakDefenseTeams);
+  // Basic team strength (use team ID for simple variation)
+  goals *= 1.0 + (10 - team.id) * 0.03;
+  goals = Math.max(0.7, Math.min(1.3, goals));
+  
+  return Math.round(goals * 100) / 100;
     const promotedDefenseTeams = parseTeamArray(adminGoalSettings.promotedDefenseTeams);
 
     if (eliteDefenseTeams.includes(teamId)) return 'elite';
