@@ -4186,17 +4186,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Use position-based fallbacks for now - historical data will be added later
             // This prevents the undefined variable error while maintaining functionality
             
-            // Weighted combination: 70% current year, 30% 2024/25 (removed 2023/24)
+            // Simple equal weighting: (current + 2024/25) * 0.5
             // Fall back to position averages if no historical data found
             const fallback2024 = historical2024XGPer90 > 0 ? historical2024XGPer90 : 
               (player.element_type === 1 ? 0.01 : player.element_type === 2 ? 0.06 : player.element_type === 3 ? 0.12 : 0.25);
               
-            const combinedXGPer90 = (currentYearXGPer90 * 0.7) + (fallback2024 * 0.3);
+            const combinedXGPer90 = (currentYearXGPer90 + fallback2024) * 0.5;
             
             // Reduce debug logging for performance
             if (player.name.includes('Salah') || player.name.includes('Haaland')) {
               const has2024Data = historical2024XGPer90 > 0;
-              console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, 2024/25: ${fallback2024.toFixed(3)}${has2024Data ? ' (actual)' : ' (fallback)'}, Combined: ${combinedXGPer90.toFixed(3)}`);
+              console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, 2024/25: ${fallback2024.toFixed(3)}${has2024Data ? ' (actual)' : ' (fallback)'}, Average: ${combinedXGPer90.toFixed(3)}`);
             }
             
             // Apply sample size regression with combined xG data
