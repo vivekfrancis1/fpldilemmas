@@ -187,8 +187,8 @@ const MASTER_TEAM_DEFAULTS = {
   defaultTeamVariance: 0.45,
   defaultExpectedGoalsPerGame: 1.3,
   globalTierMultiplier: 1.25,
-  homeAdvantageGoalsMultiplier: 1.16,
-  awayFactorGoalsMultiplier: 0.84,
+  homeAdvantageGoalsMultiplier: 1.1,
+  awayFactorGoalsMultiplier: 0.9,
   
   // Attack Team Assignments
   eliteAttackTeams: [12, 13], // Liverpool, Manchester City
@@ -2499,8 +2499,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     globalTierMultiplier: MASTER_TEAM_DEFAULTS.globalTierMultiplier,
     
     // Venue Multipliers
-    homeAdvantageGoalsMultiplier: MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier,
-    awayFactorGoalsMultiplier: MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier,
+    homeAdvantageGoalsMultiplier: 1.1,
+    awayFactorGoalsMultiplier: 0.9,
     
     // Attack Multipliers
     eliteAttackMultiplier: MASTER_TEAM_DEFAULTS.eliteAttackMultiplier,
