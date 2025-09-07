@@ -166,7 +166,7 @@ export default function TeamGoalProjections() {
             <h1>Team Goal Projections</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Goals for each team across all 38 gameweeks - actual goals for completed games, projections for upcoming games
+            Goals for each team across all upcoming gameweeks
           </p>
         </div>
       </div>
