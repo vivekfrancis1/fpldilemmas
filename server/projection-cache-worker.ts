@@ -501,6 +501,8 @@ class ProjectionCacheWorker {
         playerMinutesProjections,
         playerDefensiveProjections,
         teamProjections,
+        goalShareDaily,
+        assistShareDaily,
         cachedPlayerSaves, 
         cachedPlayerGoalsConceded, 
         cachedPlayerYellowCards, 
@@ -508,7 +510,7 @@ class ProjectionCacheWorker {
         cachedPlayerBonusPoints 
       } = await import("@shared/schema");
       
-      const [goals, assists, cleanSheets, minutes, defensive, teams, saves, goalsConceded, yellowCards, redCards, bonusPoints] = await Promise.all([
+      const [goals, assists, cleanSheets, minutes, defensive, teams, goalShare, assistShare, saves, goalsConceded, yellowCards, redCards, bonusPoints] = await Promise.all([
         db.select({ 
           count: sql`count(*)`,
           lastUpdated: sql`MAX(calculated_at)`
@@ -533,6 +535,14 @@ class ProjectionCacheWorker {
           count: sql`count(*)`,
           lastUpdated: sql`MAX(last_updated)`
         }).from(teamProjections),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(updated_at)`
+        }).from(goalShareDaily),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(updated_at)`
+        }).from(assistShareDaily),
         db.select({ 
           count: sql`count(*)`,
           lastUpdated: sql`MAX(last_updated)`
@@ -597,15 +607,15 @@ class ProjectionCacheWorker {
         },
         { 
           type: 'Goal Share', 
-          count: 0, // Will be dynamically populated when goal share cache is implemented
-          lastUpdated: null,
-          isStale: true
+          count: goalShare[0]?.count || 0, 
+          lastUpdated: goalShare[0]?.lastUpdated || null,
+          isStale: goalShare[0]?.lastUpdated ? (now.getTime() - new Date(goalShare[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
         },
         { 
           type: 'Assist Share', 
-          count: 0, // Will be dynamically populated when assist share cache is implemented
-          lastUpdated: null,
-          isStale: true
+          count: assistShare[0]?.count || 0, 
+          lastUpdated: assistShare[0]?.lastUpdated || null,
+          isStale: assistShare[0]?.lastUpdated ? (now.getTime() - new Date(assistShare[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
         },
         { 
           type: 'Player Saves', 
