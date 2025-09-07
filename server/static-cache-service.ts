@@ -9,40 +9,63 @@ interface StaticRange {
 }
 
 export class StaticCacheService {
-  // Common projection ranges for instant cache hits (80% faster)
-  private readonly STATIC_RANGES: StaticRange[] = [
-    { name: "GW4-9", start: 4, end: 9 },    // Most common 6-gameweek range
-    { name: "GW4-15", start: 4, end: 15 },  // Extended 12-gameweek range
-    { name: "GW10-15", start: 10, end: 15 }, // Mid-season range
-  ];
+  // Dynamic projection range for next 12 gameweeks (80% faster)
+  private async getCurrentGameweek(): Promise<number> {
+    try {
+      // Import bootstrap data to get current gameweek
+      const response = await fetch('http://localhost:5000/api/bootstrap-static');
+      const data = await response.json();
+      
+      // Find current or next gameweek
+      const currentEvent = data.events.find((event: any) => event.is_current) || 
+                          data.events.find((event: any) => event.is_next);
+      
+      return currentEvent ? currentEvent.id : 4; // Default to GW4 if not found
+    } catch (error) {
+      console.error('Error getting current gameweek:', error);
+      return 4; // Safe default
+    }
+  }
+  
+  private async getNext12GameweeksRange(): Promise<{ name: string; start: number; end: number }> {
+    const currentGw = await this.getCurrentGameweek();
+    const startGw = Math.max(currentGw, 4); // Never go below GW4
+    const endGw = Math.min(startGw + 11, 38); // Never go above GW38
+    
+    return {
+      name: `GW${startGw}-${endGw}`,
+      start: startGw,
+      end: endGw
+    };
+  }
 
   /**
-   * Initialize static ranges in database if they don't exist
+   * Initialize static range for next 12 gameweeks
    */
   async initializeStaticRanges(): Promise<void> {
-    console.log("🔧 Initializing static projection ranges...");
+    console.log("🔧 Initializing static projection range for next 12 gameweeks...");
     
-    for (const range of this.STATIC_RANGES) {
-      const existing = await db.select()
-        .from(staticProjectionRanges)
-        .where(eq(staticProjectionRanges.rangeName, range.name))
-        .limit(1);
+    const range = await this.getNext12GameweeksRange();
+    
+    const existing = await db.select()
+      .from(staticProjectionRanges)
+      .where(eq(staticProjectionRanges.rangeName, range.name))
+      .limit(1);
 
-      if (existing.length === 0) {
-        await db.insert(staticProjectionRanges).values({
-          rangeName: range.name,
-          startGameweek: range.start,
-          endGameweek: range.end,
-          season: "2025/26",
-          calculationStatus: "pending"
-        });
-        console.log(`✅ Created static range: ${range.name}`);
-      }
+    if (existing.length === 0) {
+      await db.insert(staticProjectionRanges).values({
+        rangeName: range.name,
+        startGameweek: range.start,
+        endGameweek: range.end,
+        season: "2025/26",
+        calculationStatus: "pending"
+      });
+      console.log(`✅ Created static range for next 12 gameweeks: ${range.name}`);
     }
   }
 
   /**
-   * Check if a range is cached and fresh (within 6 hours)
+   * Check if next 12 gameweeks range is cached and fresh (within 12 hours)
    */
   async isRangeCached(startGw: number, endGw: number): Promise<{ cached: boolean; rangeId?: number }> {
     const rangeName = `GW${startGw}-${endGw}`;
@@ -59,11 +82,11 @@ export class StaticCacheService {
       return { cached: false };
     }
 
-    // Check if data is fresh (within 6 hours)
-    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+    // Check if data is fresh (within 12 hours for next 12 GWs cache)
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
     const lastCalculated = range[0].lastCalculated;
     
-    if (!lastCalculated || lastCalculated < sixHoursAgo) {
+    if (!lastCalculated || lastCalculated < twelveHoursAgo) {
       return { cached: false, rangeId: range[0].id };
     }
 
@@ -72,33 +95,68 @@ export class StaticCacheService {
 
   /**
    * Get cached projections for a specific range (instant retrieval)
+   * If requested range falls within our next 12 gameweeks cache, serve it instantly
    */
   async getCachedProjections(startGw: number, endGw: number): Promise<any[] | null> {
-    const { cached, rangeId } = await this.isRangeCached(startGw, endGw);
+    // Check if the requested range falls within our cached next 12 gameweeks
+    const cachedRange = await this.getNext12GameweeksRange();
     
-    if (!cached || !rangeId) {
-      return null;
+    // Only serve from cache if the requested range is fully within our cached range
+    if (startGw >= cachedRange.start && endGw <= cachedRange.end) {
+      const { cached, rangeId } = await this.isRangeCached(cachedRange.start, cachedRange.end);
+      
+      if (!cached || !rangeId) {
+        return null;
+      }
+
+      // Get all cached projections and filter to requested range in memory
+      // This is very fast since it's pre-calculated data
+      const allProjections = await db.select({
+        playerId: staticPlayerProjections.playerId,
+        playerName: staticPlayerProjections.playerName,
+        position: staticPlayerProjections.position,
+        team: staticPlayerProjections.team,
+        totalPoints: staticPlayerProjections.totalPoints,
+        projectedGoals: staticPlayerProjections.projectedGoals,
+        projectedAssists: staticPlayerProjections.projectedAssists,
+        projectedMinutes: staticPlayerProjections.projectedMinutes,
+        projectedCleanSheets: staticPlayerProjections.projectedCleanSheets,
+        projectedBonusPoints: staticPlayerProjections.projectedBonusPoints,
+        gameweekBreakdown: staticPlayerProjections.gameweekBreakdown
+      })
+      .from(staticPlayerProjections)
+      .where(eq(staticPlayerProjections.rangeId, rangeId))
+      .orderBy(sql`${staticPlayerProjections.totalPoints} DESC`);
+
+      // Filter gameweek breakdown to requested range if needed
+      const filteredProjections = allProjections.map(proj => {
+        // If requesting exact cached range, return as-is
+        if (startGw === cachedRange.start && endGw === cachedRange.end) {
+          return proj;
+        }
+        
+        // Otherwise, filter gameweek breakdown to requested range
+        const filteredBreakdown = {};
+        const breakdown = proj.gameweekBreakdown as any || {};
+        
+        for (let gw = startGw; gw <= endGw; gw++) {
+          if (breakdown[`gw${gw}`]) {
+            filteredBreakdown[`gw${gw}`] = breakdown[`gw${gw}`];
+          }
+        }
+        
+        return {
+          ...proj,
+          gameweekBreakdown: filteredBreakdown
+        };
+      });
+
+      console.log(`🚀 INSTANT CACHE HIT: Serving ${filteredProjections.length} projections for GW${startGw}-${endGw} from next 12 GWs cache`);
+      return filteredProjections;
     }
-
-    const projections = await db.select({
-      playerId: staticPlayerProjections.playerId,
-      playerName: staticPlayerProjections.playerName,
-      position: staticPlayerProjections.position,
-      team: staticPlayerProjections.team,
-      totalPoints: staticPlayerProjections.totalPoints,
-      projectedGoals: staticPlayerProjections.projectedGoals,
-      projectedAssists: staticPlayerProjections.projectedAssists,
-      projectedMinutes: staticPlayerProjections.projectedMinutes,
-      projectedCleanSheets: staticPlayerProjections.projectedCleanSheets,
-      projectedBonusPoints: staticPlayerProjections.projectedBonusPoints,
-      gameweekBreakdown: staticPlayerProjections.gameweekBreakdown
-    })
-    .from(staticPlayerProjections)
-    .where(eq(staticPlayerProjections.rangeId, rangeId))
-    .orderBy(sql`${staticPlayerProjections.totalPoints} DESC`);
-
-    console.log(`🚀 Serving ${projections.length} cached projections for GW${startGw}-${endGw} (INSTANT)`);
-    return projections;
+    
+    // Requested range not in our cache
+    return null;
   }
 
   /**
@@ -196,24 +254,25 @@ export class StaticCacheService {
   }
 
   /**
-   * Pre-calculate all common ranges (called by daily scheduler)
+   * Pre-calculate the next 12 gameweeks range (called by daily scheduler)
    */
   async preCalculateAllRanges(): Promise<void> {
-    console.log("🚀 Starting pre-calculation of all static ranges...");
+    console.log("🚀 Starting pre-calculation for next 12 gameweeks...");
     const startTime = Date.now();
 
     await this.initializeStaticRanges();
+    
+    const range = await this.getNext12GameweeksRange();
 
-    for (const range of this.STATIC_RANGES) {
-      try {
-        await this.preCalculateRange(range.start, range.end);
-      } catch (error) {
-        console.error(`Failed to pre-calculate ${range.name}:`, error);
-      }
+    try {
+      await this.preCalculateRange(range.start, range.end);
+      
+      const duration = Date.now() - startTime;
+      console.log(`✅ Static cache pre-calculation completed for ${range.name} in ${Math.round(duration / 1000)}s`);
+    } catch (error) {
+      console.error(`Failed to pre-calculate next 12 gameweeks:`, error);
+      throw error;
     }
-
-    const duration = Date.now() - startTime;
-    console.log(`✅ Static range pre-calculation completed in ${Math.round(duration / 1000)}s`);
   }
 
   /**
