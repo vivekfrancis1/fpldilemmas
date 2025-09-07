@@ -268,8 +268,10 @@ export class DailyProjectionsService {
         };
       }
       acc[teamId].players.push({
-        playerId: row.playerId,
-        playerName: row.playerName,
+        id: row.playerId,           // Fix: Use 'id' instead of 'playerId'
+        name: row.playerName,       // Fix: Use 'name' instead of 'playerName'
+        playerId: row.playerId,     // Keep for compatibility
+        playerName: row.playerName, // Keep for compatibility
         assistShare: parseFloat(row.assistSharePercentage || '0'),
         expectedAssists: parseFloat(row.expectedAssists || '0')
       });
