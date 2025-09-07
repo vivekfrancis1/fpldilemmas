@@ -1,1 +1,343 @@
-import { useState, useEffect } from 'react';\nimport { useToast } from '@/hooks/use-toast';\nimport { apiRequest } from '@/lib/queryClient';\nimport { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';\nimport { Button } from '@/components/ui/button';\nimport { Input } from '@/components/ui/input';\nimport { Label } from '@/components/ui/label';\nimport { Textarea } from '@/components/ui/textarea';\nimport { Badge } from '@/components/ui/badge';\nimport { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';\nimport { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';\nimport { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';\nimport { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';\nimport { Settings, Users, TrendingUp, DollarSign, Target, Zap, Plus, Edit, Trash2, Save } from 'lucide-react';\n\ninterface EliteBoost {\n  id: number;\n  playerName: string;\n  boostMultiplier: string;\n  position: string;\n  isActive: boolean;\n  notes?: string;\n}\n\ninterface HistoricalTier {\n  id: number;\n  tierName: string;\n  minAverageAssists: string;\n  multiplier: string;\n  minSeasonsRequired: number;\n  minTotalAssists: number;\n  isActive: boolean;\n}\n\ninterface CreativityTier {\n  id: number;\n  tierName: string;\n  maxRank: number;\n  multiplier: string;\n  isActive: boolean;\n}\n\ninterface PriceTier {\n  id: number;\n  tierName: string;\n  minCost: number;\n  multiplier: string;\n  isActive: boolean;\n}\n\ninterface PositionRate {\n  id: number;\n  positionName: string;\n  baseRate: string;\n  varianceRate: string;\n  shareCapPercentage: string;\n  isActive: boolean;\n}\n\ninterface GeneralConfig {\n  id: number;\n  configKey: string;\n  configValue: string;\n  description?: string;\n  category: string;\n  isActive: boolean;\n}\n\ninterface AssistConfig {\n  eliteBoosts: EliteBoost[];\n  historicalTiers: HistoricalTier[];\n  creativityTiers: CreativityTier[];\n  priceTiers: PriceTier[];\n  positionRates: PositionRate[];\n  generalConfig: GeneralConfig[];\n}\n\nexport default function AdminAssistProjections() {\n  const { toast } = useToast();\n  const [config, setConfig] = useState<AssistConfig | null>(null);\n  const [loading, setLoading] = useState(true);\n  const [editingItem, setEditingItem] = useState<any>(null);\n  const [editingType, setEditingType] = useState<string>('');\n  const [newEliteBoost, setNewEliteBoost] = useState({ playerName: '', boostMultiplier: '', position: 'Midfielder', notes: '' });\n  const [showAddDialog, setShowAddDialog] = useState(false);\n\n  useEffect(() => {\n    loadConfig();\n  }, []);\n\n  const loadConfig = async () => {\n    try {\n      const data = await apiRequest('/api/admin/assist-config');\n      setConfig(data);\n    } catch (error) {\n      console.error('Error loading assist configuration:', error);\n      toast({\n        title: \"Error\",\n        description: \"Failed to load assist configuration\",\n        variant: \"destructive\"\n      });\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  const saveItem = async (type: string, id: number, data: any) => {\n    try {\n      await apiRequest(`/api/admin/assist-config/${type}/${id}`, {\n        method: 'PUT',\n        body: JSON.stringify(data)\n      });\n      \n      toast({\n        title: \"Success\",\n        description: \"Configuration updated successfully\"\n      });\n      \n      await loadConfig();\n      setEditingItem(null);\n      setEditingType('');\n    } catch (error) {\n      console.error('Error saving configuration:', error);\n      toast({\n        title: \"Error\",\n        description: \"Failed to save configuration\",\n        variant: \"destructive\"\n      });\n    }\n  };\n\n  const addEliteBoost = async () => {\n    try {\n      await apiRequest('/api/admin/assist-config/elite-boost', {\n        method: 'POST',\n        body: JSON.stringify(newEliteBoost)\n      });\n      \n      toast({\n        title: \"Success\",\n        description: \"Elite boost added successfully\"\n      });\n      \n      await loadConfig();\n      setNewEliteBoost({ playerName: '', boostMultiplier: '', position: 'Midfielder', notes: '' });\n      setShowAddDialog(false);\n    } catch (error) {\n      console.error('Error adding elite boost:', error);\n      toast({\n        title: \"Error\",\n        description: \"Failed to add elite boost\",\n        variant: \"destructive\"\n      });\n    }\n  };\n\n  const deleteEliteBoost = async (id: number) => {\n    if (!confirm('Are you sure you want to delete this elite boost?')) return;\n    \n    try {\n      await apiRequest(`/api/admin/assist-config/elite-boost/${id}`, {\n        method: 'DELETE'\n      });\n      \n      toast({\n        title: \"Success\",\n        description: \"Elite boost deleted successfully\"\n      });\n      \n      await loadConfig();\n    } catch (error) {\n      console.error('Error deleting elite boost:', error);\n      toast({\n        title: \"Error\",\n        description: \"Failed to delete elite boost\",\n        variant: \"destructive\"\n      });\n    }\n  };\n\n  if (loading) {\n    return (\n      <div className=\"container mx-auto p-6\">\n        <div className=\"text-center\">Loading assist configuration...</div>\n      </div>\n    );\n  }\n\n  if (!config) {\n    return (\n      <div className=\"container mx-auto p-6\">\n        <div className=\"text-center text-red-500\">Failed to load assist configuration</div>\n      </div>\n    );\n  }\n\n  return (\n    <div className=\"container mx-auto p-6\">\n      <div className=\"mb-6\">\n        <div className=\"flex items-center gap-3\">\n          <Settings className=\"h-8 w-8 text-blue-600\" />\n          <div>\n            <h1 className=\"text-3xl font-bold text-gray-900\">Player Assists Configuration</h1>\n            <p className=\"text-gray-600\">Configure all parameters for Player Assists projections</p>\n          </div>\n        </div>\n      </div>\n\n      <Tabs defaultValue=\"elite-boosts\" className=\"space-y-6\">\n        <TabsList className=\"grid w-full grid-cols-6\">\n          <TabsTrigger value=\"elite-boosts\">Elite Boosts</TabsTrigger>\n          <TabsTrigger value=\"historical-tiers\">Historical</TabsTrigger>\n          <TabsTrigger value=\"creativity-tiers\">Creativity</TabsTrigger>\n          <TabsTrigger value=\"price-tiers\">Price Tiers</TabsTrigger>\n          <TabsTrigger value=\"position-rates\">Positions</TabsTrigger>\n          <TabsTrigger value=\"general-config\">General</TabsTrigger>\n        </TabsList>\n\n        {/* Elite Boosts Tab */}\n        <TabsContent value=\"elite-boosts\">\n          <Card>\n            <CardHeader>\n              <div className=\"flex justify-between items-center\">\n                <div className=\"flex items-center gap-2\">\n                  <Users className=\"h-5 w-5 text-blue-600\" />\n                  <CardTitle>Elite Player Boosts</CardTitle>\n                </div>\n                <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>\n                  <DialogTrigger asChild>\n                    <Button className=\"flex items-center gap-2\">\n                      <Plus className=\"h-4 w-4\" />\n                      Add Player\n                    </Button>\n                  </DialogTrigger>\n                  <DialogContent>\n                    <DialogHeader>\n                      <DialogTitle>Add Elite Player Boost</DialogTitle>\n                      <DialogDescription>\n                        Add a new player with custom assist boost multiplier\n                      </DialogDescription>\n                    </DialogHeader>\n                    <div className=\"space-y-4\">\n                      <div>\n                        <Label htmlFor=\"playerName\">Player Name</Label>\n                        <Input\n                          id=\"playerName\"\n                          value={newEliteBoost.playerName}\n                          onChange={(e) => setNewEliteBoost({...newEliteBoost, playerName: e.target.value})}\n                          placeholder=\"e.g. Kevin De Bruyne\"\n                        />\n                      </div>\n                      <div>\n                        <Label htmlFor=\"boostMultiplier\">Boost Multiplier</Label>\n                        <Input\n                          id=\"boostMultiplier\"\n                          type=\"number\"\n                          step=\"0.01\"\n                          value={newEliteBoost.boostMultiplier}\n                          onChange={(e) => setNewEliteBoost({...newEliteBoost, boostMultiplier: e.target.value})}\n                          placeholder=\"e.g. 1.35\"\n                        />\n                      </div>\n                      <div>\n                        <Label htmlFor=\"position\">Position</Label>\n                        <Select value={newEliteBoost.position} onValueChange={(value) => setNewEliteBoost({...newEliteBoost, position: value})}>\n                          <SelectTrigger>\n                            <SelectValue />\n                          </SelectTrigger>\n                          <SelectContent>\n                            <SelectItem value=\"Goalkeeper\">Goalkeeper</SelectItem>\n                            <SelectItem value=\"Defender\">Defender</SelectItem>\n                            <SelectItem value=\"Midfielder\">Midfielder</SelectItem>\n                            <SelectItem value=\"Forward\">Forward</SelectItem>\n                          </SelectContent>\n                        </Select>\n                      </div>\n                      <div>\n                        <Label htmlFor=\"notes\">Notes</Label>\n                        <Textarea\n                          id=\"notes\"\n                          value={newEliteBoost.notes}\n                          onChange={(e) => setNewEliteBoost({...newEliteBoost, notes: e.target.value})}\n                          placeholder=\"Optional notes about this player\"\n                        />\n                      </div>\n                    </div>\n                    <DialogFooter>\n                      <Button onClick={() => setShowAddDialog(false)} variant=\"outline\">\n                        Cancel\n                      </Button>\n                      <Button onClick={addEliteBoost} disabled={!newEliteBoost.playerName || !newEliteBoost.boostMultiplier}>\n                        Add Player\n                      </Button>\n                    </DialogFooter>\n                  </DialogContent>\n                </Dialog>\n              </div>\n            </CardHeader>\n            <CardContent>\n              <div className=\"overflow-x-auto\">\n                <Table>\n                  <TableHeader>\n                    <TableRow>\n                      <TableHead>Player Name</TableHead>\n                      <TableHead>Position</TableHead>\n                      <TableHead>Multiplier</TableHead>\n                      <TableHead>Notes</TableHead>\n                      <TableHead>Status</TableHead>\n                      <TableHead>Actions</TableHead>\n                    </TableRow>\n                  </TableHeader>\n                  <TableBody>\n                    {config.eliteBoosts.map((boost) => (\n                      <TableRow key={boost.id}>\n                        <TableCell className=\"font-medium\">{boost.playerName}</TableCell>\n                        <TableCell>{boost.position}</TableCell>\n                        <TableCell>\n                          {editingItem?.id === boost.id && editingType === 'elite-boost' ? (\n                            <Input\n                              type=\"number\"\n                              step=\"0.01\"\n                              value={editingItem.boostMultiplier}\n                              onChange={(e) => setEditingItem({...editingItem, boostMultiplier: e.target.value})}\n                              className=\"w-20\"\n                            />\n                          ) : (\n                            `${boost.boostMultiplier}x`\n                          )}\n                        </TableCell>\n                        <TableCell>\n                          {editingItem?.id === boost.id && editingType === 'elite-boost' ? (\n                            <Textarea\n                              value={editingItem.notes || ''}\n                              onChange={(e) => setEditingItem({...editingItem, notes: e.target.value})}\n                              className=\"min-w-48\"\n                            />\n                          ) : (\n                            <span className=\"text-sm text-gray-600\">{boost.notes}</span>\n                          )}\n                        </TableCell>\n                        <TableCell>\n                          <Badge variant={boost.isActive ? \"default\" : \"secondary\"}>\n                            {boost.isActive ? \"Active\" : \"Inactive\"}\n                          </Badge>\n                        </TableCell>\n                        <TableCell>\n                          <div className=\"flex items-center gap-2\">\n                            {editingItem?.id === boost.id && editingType === 'elite-boost' ? (\n                              <Button\n                                size=\"sm\"\n                                onClick={() => saveItem('elite-boost', boost.id, editingItem)}\n                                className=\"flex items-center gap-1\"\n                              >\n                                <Save className=\"h-3 w-3\" />\n                                Save\n                              </Button>\n                            ) : (\n                              <Button\n                                size=\"sm\"\n                                variant=\"outline\"\n                                onClick={() => {\n                                  setEditingItem(boost);\n                                  setEditingType('elite-boost');\n                                }}\n                                className=\"flex items-center gap-1\"\n                              >\n                                <Edit className=\"h-3 w-3\" />\n                                Edit\n                              </Button>\n                            )}\n                            <Button\n                              size=\"sm\"\n                              variant=\"outline\"\n                              onClick={() => deleteEliteBoost(boost.id)}\n                              className=\"flex items-center gap-1 text-red-600 hover:text-red-700\"\n                            >\n                              <Trash2 className=\"h-3 w-3\" />\n                              Delete\n                            </Button>\n                          </div>\n                        </TableCell>\n                      </TableRow>\n                    ))}\n                  </TableBody>\n                </Table>\n              </div>\n            </CardContent>\n          </Card>\n        </TabsContent>\n\n        {/* Historical Tiers Tab */}\n        <TabsContent value=\"historical-tiers\">\n          <Card>\n            <CardHeader>\n              <div className=\"flex items-center gap-2\">\n                <TrendingUp className=\"h-5 w-5 text-green-600\" />\n                <CardTitle>Historical Performance Tiers</CardTitle>\n              </div>\n            </CardHeader>\n            <CardContent>\n              <Table>\n                <TableHeader>\n                  <TableRow>\n                    <TableHead>Tier Name</TableHead>\n                    <TableHead>Min Avg Assists</TableHead>\n                    <TableHead>Multiplier</TableHead>\n                    <TableHead>Min Seasons</TableHead>\n                    <TableHead>Min Total</TableHead>\n                    <TableHead>Actions</TableHead>\n                  </TableRow>\n                </TableHeader>\n                <TableBody>\n                  {config.historicalTiers.map((tier) => (\n                    <TableRow key={tier.id}>\n                      <TableCell className=\"font-medium\">{tier.tierName}</TableCell>\n                      <TableCell>\n                        {editingItem?.id === tier.id && editingType === 'historical-tier' ? (\n                          <Input\n                            type=\"number\"\n                            step=\"0.01\"\n                            value={editingItem.minAverageAssists}\n                            onChange={(e) => setEditingItem({...editingItem, minAverageAssists: e.target.value})}\n                            className=\"w-20\"\n                          />\n                        ) : (\n                          tier.minAverageAssists\n                        )}\n                      </TableCell>\n                      <TableCell>\n                        {editingItem?.id === tier.id && editingType === 'historical-tier' ? (\n                          <Input\n                            type=\"number\"\n                            step=\"0.01\"\n                            value={editingItem.multiplier}\n                            onChange={(e) => setEditingItem({...editingItem, multiplier: e.target.value})}\n                            className=\"w-20\"\n                          />\n                        ) : (\n                          `${tier.multiplier}x`\n                        )}\n                      </TableCell>\n                      <TableCell>\n                        {editingItem?.id === tier.id && editingType === 'historical-tier' ? (\n                          <Input\n                            type=\"number\"\n                            value={editingItem.minSeasonsRequired}\n                            onChange={(e) => setEditingItem({...editingItem, minSeasonsRequired: parseInt(e.target.value)})}\n                            className=\"w-16\"\n                          />\n                        ) : (\n                          tier.minSeasonsRequired\n                        )}\n                      </TableCell>\n                      <TableCell>\n                        {editingItem?.id === tier.id && editingType === 'historical-tier' ? (\n                          <Input\n                            type=\"number\"\n                            value={editingItem.minTotalAssists}\n                            onChange={(e) => setEditingItem({...editingItem, minTotalAssists: parseInt(e.target.value)})}\n                            className=\"w-16\"\n                          />\n                        ) : (\n                          tier.minTotalAssists\n                        )}\n                      </TableCell>\n                      <TableCell>\n                        {editingItem?.id === tier.id && editingType === 'historical-tier' ? (\n                          <Button\n                            size=\"sm\"\n                            onClick={() => saveItem('historical-tier', tier.id, editingItem)}\n                            className=\"flex items-center gap-1\"\n                          >\n                            <Save className=\"h-3 w-3\" />\n                            Save\n                          </Button>\n                        ) : (\n                          <Button\n                            size=\"sm\"\n                            variant=\"outline\"\n                            onClick={() => {\n                              setEditingItem(tier);\n                              setEditingType('historical-tier');\n                            }}\n                            className=\"flex items-center gap-1\"\n                          >\n                            <Edit className=\"h-3 w-3\" />\n                            Edit\n                          </Button>\n                        )}\n                      </TableCell>\n                    </TableRow>\n                  ))}\n                </TableBody>\n              </Table>\n            </CardContent>\n          </Card>\n        </TabsContent>\n\n        {/* Continue with other tabs... */}\n        <TabsContent value=\"creativity-tiers\">\n          <Card>\n            <CardHeader>\n              <div className=\"flex items-center gap-2\">\n                <Zap className=\"h-5 w-5 text-purple-600\" />\n                <CardTitle>ICT Creativity Tiers</CardTitle>\n              </div>\n            </CardHeader>\n            <CardContent>\n              <Table>\n                <TableHeader>\n                  <TableRow>\n                    <TableHead>Tier Name</TableHead>\n                    <TableHead>Max Rank</TableHead>\n                    <TableHead>Multiplier</TableHead>\n                    <TableHead>Actions</TableHead>\n                  </TableRow>\n                </TableHeader>\n                <TableBody>\n                  {config.creativityTiers.map((tier) => (\n                    <TableRow key={tier.id}>\n                      <TableCell className=\"font-medium\">{tier.tierName}</TableCell>\n                      <TableCell>\n                        {editingItem?.id === tier.id && editingType === 'creativity-tier' ? (\n                          <Input\n                            type=\"number\"\n                            value={editingItem.maxRank}\n                            onChange={(e) => setEditingItem({...editingItem, maxRank: parseInt(e.target.value)})}\n                            className=\"w-20\"\n                          />\n                        ) : (\n                          tier.maxRank\n                        )}\n                      </TableCell>\n                      <TableCell>\n                        {editingItem?.id === tier.id && editingType === 'creativity-tier' ? (\n                          <Input\n                            type=\"number\"\n                            step=\"0.01\"\n                            value={editingItem.multiplier}\n                            onChange={(e) => setEditingItem({...editingItem, multiplier: e.target.value})}\n                            className=\"w-20\"\n                          />\n                        ) : (\n                          `${tier.multiplier}x`\n                        )}\n                      </TableCell>\n                      <TableCell>\n                        {editingItem?.id === tier.id && editingType === 'creativity-tier' ? (\n                          <Button\n                            size=\"sm\"\n                            onClick={() => saveItem('creativity-tier', tier.id, editingItem)}\n                            className=\"flex items-center gap-1\"\n                          >\n                            <Save className=\"h-3 w-3\" />\n                            Save\n                          </Button>\n                        ) : (\n                          <Button\n                            size=\"sm\"\n                            variant=\"outline\"\n                            onClick={() => {\n                              setEditingItem(tier);\n                              setEditingType('creativity-tier');\n                            }}\n                            className=\"flex items-center gap-1\"\n                          >\n                            <Edit className=\"h-3 w-3\" />\n                            Edit\n                          </Button>\n                        )}\n                      </TableCell>\n                    </TableRow>\n                  ))}\n                </TableBody>\n              </Table>\n            </CardContent>\n          </Card>\n        </TabsContent>\n\n        {/* Price Tiers Tab */}\n        <TabsContent value=\"price-tiers\">\n          <Card>\n            <CardHeader>\n              <div className=\"flex items-center gap-2\">\n                <DollarSign className=\"h-5 w-5 text-green-600\" />\n                <CardTitle>Price Tiers</CardTitle>\n              </div>\n            </CardHeader>\n            <CardContent>\n              <Table>\n                <TableHeader>\n                  <TableRow>\n                    <TableHead>Tier Name</TableHead>\n                    <TableHead>Min Cost</TableHead>\n                    <TableHead>Multiplier</TableHead>\n                    <TableHead>Actions</TableHead>\n                  </TableRow>\n                </TableHeader>\n                <TableBody>\n                  {config.priceTiers.map((tier) => (\n                    <TableRow key={tier.id}>\n                      <TableCell className=\"font-medium\">{tier.tierName}</TableCell>\n                      <TableCell>\n                        {editingItem?.id === tier.id && editingType === 'price-tier' ? (\n                          <Input\n                            type=\"number\"\n                            value={editingItem.minCost}\n                            onChange={(e) => setEditingItem({...editingItem, minCost: parseInt(e.target.value)})}\n                            className=\"w-20\"\n                          />\n                        ) : (\n                          `£${(tier.minCost / 10).toFixed(1)}m`\n                        )}\n                      </TableCell>\n                      <TableCell>\n                        {editingItem?.id === tier.id && editingType === 'price-tier' ? (\n                          <Input\n                            type=\"number\"\n                            step=\"0.01\"\n                            value={editingItem.multiplier}\n                            onChange={(e) => setEditingItem({...editingItem, multiplier: e.target.value})}\n                            className=\"w-20\"\n                          />\n                        ) : (\n                          `${tier.multiplier}x`\n                        )}\n                      </TableCell>\n                      <TableCell>\n                        {editingItem?.id === tier.id && editingType === 'price-tier' ? (\n                          <Button\n                            size=\"sm\"\n                            onClick={() => saveItem('price-tier', tier.id, editingItem)}\n                            className=\"flex items-center gap-1\"\n                          >\n                            <Save className=\"h-3 w-3\" />\n                            Save\n                          </Button>\n                        ) : (\n                          <Button\n                            size=\"sm\"\n                            variant=\"outline\"\n                            onClick={() => {\n                              setEditingItem(tier);\n                              setEditingType('price-tier');\n                            }}\n                            className=\"flex items-center gap-1\"\n                          >\n                            <Edit className=\"h-3 w-3\" />\n                            Edit\n                          </Button>\n                        )}\n                      </TableCell>\n                    </TableRow>\n                  ))}\n                </TableBody>\n              </Table>\n            </CardContent>\n          </Card>\n        </TabsContent>\n\n        {/* Position Rates Tab */}\n        <TabsContent value=\"position-rates\">\n          <Card>\n            <CardHeader>\n              <div className=\"flex items-center gap-2\">\n                <Target className=\"h-5 w-5 text-indigo-600\" />\n                <CardTitle>Position Base Rates & Caps</CardTitle>\n              </div>\n            </CardHeader>\n            <CardContent>\n              <Table>\n                <TableHeader>\n                  <TableRow>\n                    <TableHead>Position</TableHead>\n                    <TableHead>Base Rate %</TableHead>\n                    <TableHead>Variance %</TableHead>\n                    <TableHead>Share Cap %</TableHead>\n                    <TableHead>Actions</TableHead>\n                  </TableRow>\n                </TableHeader>\n                <TableBody>\n                  {config.positionRates.map((rate) => (\n                    <TableRow key={rate.id}>\n                      <TableCell className=\"font-medium\">{rate.positionName}</TableCell>\n                      <TableCell>\n                        {editingItem?.id === rate.id && editingType === 'position-rate' ? (\n                          <Input\n                            type=\"number\"\n                            step=\"0.01\"\n                            value={editingItem.baseRate}\n                            onChange={(e) => setEditingItem({...editingItem, baseRate: e.target.value})}\n                            className=\"w-20\"\n                          />\n                        ) : (\n                          `${rate.baseRate}%`\n                        )}\n                      </TableCell>\n                      <TableCell>\n                        {editingItem?.id === rate.id && editingType === 'position-rate' ? (\n                          <Input\n                            type=\"number\"\n                            step=\"0.01\"\n                            value={editingItem.varianceRate}\n                            onChange={(e) => setEditingItem({...editingItem, varianceRate: e.target.value})}\n                            className=\"w-20\"\n                          />\n                        ) : (\n                          `${rate.varianceRate}%`\n                        )}\n                      </TableCell>\n                      <TableCell>\n                        {editingItem?.id === rate.id && editingType === 'position-rate' ? (\n                          <Input\n                            type=\"number\"\n                            step=\"0.01\"\n                            value={editingItem.shareCapPercentage}\n                            onChange={(e) => setEditingItem({...editingItem, shareCapPercentage: e.target.value})}\n                            className=\"w-20\"\n                          />\n                        ) : (\n                          `${rate.shareCapPercentage}%`\n                        )}\n                      </TableCell>\n                      <TableCell>\n                        {editingItem?.id === rate.id && editingType === 'position-rate' ? (\n                          <Button\n                            size=\"sm\"\n                            onClick={() => saveItem('position-rate', rate.id, editingItem)}\n                            className=\"flex items-center gap-1\"\n                          >\n                            <Save className=\"h-3 w-3\" />\n                            Save\n                          </Button>\n                        ) : (\n                          <Button\n                            size=\"sm\"\n                            variant=\"outline\"\n                            onClick={() => {\n                              setEditingItem(rate);\n                              setEditingType('position-rate');\n                            }}\n                            className=\"flex items-center gap-1\"\n                          >\n                            <Edit className=\"h-3 w-3\" />\n                            Edit\n                          </Button>\n                        )}\n                      </TableCell>\n                    </TableRow>\n                  ))}\n                </TableBody>\n              </Table>\n            </CardContent>\n          </Card>\n        </TabsContent>\n\n        {/* General Config Tab */}\n        <TabsContent value=\"general-config\">\n          <Card>\n            <CardHeader>\n              <div className=\"flex items-center gap-2\">\n                <Settings className=\"h-5 w-5 text-gray-600\" />\n                <CardTitle>General Configuration</CardTitle>\n              </div>\n            </CardHeader>\n            <CardContent>\n              <Table>\n                <TableHeader>\n                  <TableRow>\n                    <TableHead>Setting</TableHead>\n                    <TableHead>Value</TableHead>\n                    <TableHead>Description</TableHead>\n                    <TableHead>Category</TableHead>\n                    <TableHead>Actions</TableHead>\n                  </TableRow>\n                </TableHeader>\n                <TableBody>\n                  {config.generalConfig.map((item) => (\n                    <TableRow key={item.id}>\n                      <TableCell className=\"font-medium\">{item.configKey}</TableCell>\n                      <TableCell>\n                        {editingItem?.id === item.id && editingType === 'general' ? (\n                          <Input\n                            type=\"number\"\n                            step=\"0.01\"\n                            value={editingItem.configValue}\n                            onChange={(e) => setEditingItem({...editingItem, configValue: e.target.value})}\n                            className=\"w-24\"\n                          />\n                        ) : (\n                          item.configValue\n                        )}\n                      </TableCell>\n                      <TableCell className=\"text-sm text-gray-600\">{item.description}</TableCell>\n                      <TableCell>\n                        <Badge variant=\"outline\">{item.category}</Badge>\n                      </TableCell>\n                      <TableCell>\n                        {editingItem?.id === item.id && editingType === 'general' ? (\n                          <Button\n                            size=\"sm\"\n                            onClick={() => saveItem('general', item.id, editingItem)}\n                            className=\"flex items-center gap-1\"\n                          >\n                            <Save className=\"h-3 w-3\" />\n                            Save\n                          </Button>\n                        ) : (\n                          <Button\n                            size=\"sm\"\n                            variant=\"outline\"\n                            onClick={() => {\n                              setEditingItem(item);\n                              setEditingType('general');\n                            }}\n                            className=\"flex items-center gap-1\"\n                          >\n                            <Edit className=\"h-3 w-3\" />\n                            Edit\n                          </Button>\n                        )}\n                      </TableCell>\n                    </TableRow>\n                  ))}\n                </TableBody>\n              </Table>\n            </CardContent>\n          </Card>\n        </TabsContent>\n      </Tabs>\n    </div>\n  );\n}"
+import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Settings, Users, TrendingUp, DollarSign, Target, Zap, Plus, Edit, Trash2, Save } from 'lucide-react';
+
+interface EliteBoost {
+  id: number;
+  playerName: string;
+  boostMultiplier: string;
+  position: string;
+  isActive: boolean;
+  notes?: string;
+}
+
+interface HistoricalTier {
+  id: number;
+  tierName: string;
+  minAverageAssists: string;
+  multiplier: string;
+  minSeasonsRequired: number;
+  minTotalAssists: number;
+  isActive: boolean;
+}
+
+interface CreativityTier {
+  id: number;
+  tierName: string;
+  maxRank: number;
+  multiplier: string;
+  isActive: boolean;
+}
+
+interface PriceTier {
+  id: number;
+  tierName: string;
+  minCost: number;
+  multiplier: string;
+  isActive: boolean;
+}
+
+interface PositionRate {
+  id: number;
+  positionName: string;
+  baseRate: string;
+  varianceRate: string;
+  shareCapPercentage: string;
+  isActive: boolean;
+}
+
+interface GeneralConfig {
+  id: number;
+  configKey: string;
+  configValue: string;
+  description?: string;
+  category: string;
+  isActive: boolean;
+}
+
+interface AssistConfig {
+  eliteBoosts: EliteBoost[];
+  historicalTiers: HistoricalTier[];
+  creativityTiers: CreativityTier[];
+  priceTiers: PriceTier[];
+  positionRates: PositionRate[];
+  generalConfig: GeneralConfig[];
+}
+
+export default function AdminAssistProjections() {
+  const { toast } = useToast();
+  const [config, setConfig] = useState<AssistConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingType, setEditingType] = useState<string>('');
+  const [newEliteBoost, setNewEliteBoost] = useState({ playerName: '', boostMultiplier: '', position: 'Midfielder', notes: '' });
+  const [showAddDialog, setShowAddDialog] = useState(false);
+
+  useEffect(() => {
+    loadConfig();
+  }, []);
+
+  const loadConfig = async () => {
+    try {
+      const data = await apiRequest('/api/admin/assist-config');
+      setConfig(data);
+    } catch (error) {
+      console.error('Error loading assist configuration:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load assist configuration",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveItem = async (type: string, id: number, data: any) => {
+    try {
+      await apiRequest(`/api/admin/assist-config/${type}/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+      
+      toast({
+        title: "Success",
+        description: "Configuration updated successfully"
+      });
+      
+      await loadConfig();
+      setEditingItem(null);
+      setEditingType('');
+    } catch (error) {
+      console.error('Error saving configuration:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save configuration",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const addEliteBoost = async () => {
+    try {
+      await apiRequest('/api/admin/assist-config/elite-boost', {
+        method: 'POST',
+        body: JSON.stringify(newEliteBoost)
+      });
+      
+      toast({
+        title: "Success",
+        description: "Elite boost added successfully"
+      });
+      
+      await loadConfig();
+      setNewEliteBoost({ playerName: '', boostMultiplier: '', position: 'Midfielder', notes: '' });
+      setShowAddDialog(false);
+    } catch (error) {
+      console.error('Error adding elite boost:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add elite boost",
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center">Loading assist configuration...</div>
+      </div>
+    );
+  }
+
+  if (!config) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center text-red-500">Failed to load assist configuration</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-6">
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <Settings className="h-8 w-8 text-blue-600" />
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Player Assists Configuration</h1>
+            <p className="text-gray-600">Configure all parameters for Player Assists projections</p>
+          </div>
+        </div>
+      </div>
+
+      <Tabs defaultValue="elite-boosts" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="elite-boosts">Elite Boosts</TabsTrigger>
+          <TabsTrigger value="historical-tiers">Historical</TabsTrigger>
+          <TabsTrigger value="creativity-tiers">Creativity</TabsTrigger>
+          <TabsTrigger value="price-tiers">Price Tiers</TabsTrigger>
+          <TabsTrigger value="position-rates">Positions</TabsTrigger>
+          <TabsTrigger value="general-config">General</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="elite-boosts">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  <CardTitle>Elite Player Boosts</CardTitle>
+                </div>
+                <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                  <DialogTrigger asChild>
+                    <Button className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Add Player
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Elite Player Boost</DialogTitle>
+                      <DialogDescription>
+                        Add a new player with custom assist boost multiplier
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="playerName">Player Name</Label>
+                        <Input
+                          id="playerName"
+                          value={newEliteBoost.playerName}
+                          onChange={(e) => setNewEliteBoost({...newEliteBoost, playerName: e.target.value})}
+                          placeholder="e.g. Kevin De Bruyne"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="boostMultiplier">Boost Multiplier</Label>
+                        <Input
+                          id="boostMultiplier"
+                          type="number"
+                          step="0.01"
+                          value={newEliteBoost.boostMultiplier}
+                          onChange={(e) => setNewEliteBoost({...newEliteBoost, boostMultiplier: e.target.value})}
+                          placeholder="e.g. 1.35"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="position">Position</Label>
+                        <Select value={newEliteBoost.position} onValueChange={(value) => setNewEliteBoost({...newEliteBoost, position: value})}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Goalkeeper">Goalkeeper</SelectItem>
+                            <SelectItem value="Defender">Defender</SelectItem>
+                            <SelectItem value="Midfielder">Midfielder</SelectItem>
+                            <SelectItem value="Forward">Forward</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="notes">Notes</Label>
+                        <Textarea
+                          id="notes"
+                          value={newEliteBoost.notes}
+                          onChange={(e) => setNewEliteBoost({...newEliteBoost, notes: e.target.value})}
+                          placeholder="Optional notes about this player"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={() => setShowAddDialog(false)} variant="outline">
+                        Cancel
+                      </Button>
+                      <Button onClick={addEliteBoost} disabled={!newEliteBoost.playerName || !newEliteBoost.boostMultiplier}>
+                        Add Player
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Player Name</TableHead>
+                      <TableHead>Position</TableHead>
+                      <TableHead>Multiplier</TableHead>
+                      <TableHead>Notes</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {config.eliteBoosts.map((boost) => (
+                      <TableRow key={boost.id}>
+                        <TableCell className="font-medium">{boost.playerName}</TableCell>
+                        <TableCell>{boost.position}</TableCell>
+                        <TableCell>
+                          {editingItem?.id === boost.id && editingType === 'elite-boost' ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={editingItem.boostMultiplier}
+                              onChange={(e) => setEditingItem({...editingItem, boostMultiplier: e.target.value})}
+                              className="w-20"
+                            />
+                          ) : (
+                            `${boost.boostMultiplier}x`
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">{boost.notes}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {editingItem?.id === boost.id && editingType === 'elite-boost' ? (
+                              <Button
+                                size="sm"
+                                onClick={() => saveItem('elite-boost', boost.id, editingItem)}
+                                className="flex items-center gap-1"
+                              >
+                                <Save className="h-3 w-3" />
+                                Save
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingItem(boost);
+                                  setEditingType('elite-boost');
+                                }}
+                                className="flex items-center gap-1"
+                              >
+                                <Edit className="h-3 w-3" />
+                                Edit
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
