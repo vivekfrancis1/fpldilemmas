@@ -1236,3 +1236,47 @@ export type InsertCachedHistoricalData = typeof cachedHistoricalData.$inferInser
 // Types for spread betting odds cache
 export type CachedSpreadBettingOdds = typeof cachedSpreadBettingOdds.$inferSelect;
 export type InsertCachedSpreadBettingOdds = typeof cachedSpreadBettingOdds.$inferInsert;
+
+// Daily projection storage tables for ultra-fast performance
+export const teamProjectionsDaily = pgTable("team_projections_daily", {
+  id: serial("id").primaryKey(),
+  calculationDate: date("calculation_date").notNull(),
+  teamId: integer("team_id").notNull(),
+  gameweeks: varchar("gameweeks").notNull(), // JSON array as string: "[4,5,6,7,8,9]"
+  homeGoals: decimal("home_goals", { precision: 4, scale: 2 }),
+  awayGoals: decimal("away_goals", { precision: 4, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const goalShareDaily = pgTable("goal_share_daily", {
+  id: serial("id").primaryKey(),
+  calculationDate: date("calculation_date").notNull(),
+  teamId: integer("team_id").notNull(),
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name").notNull(),
+  goalSharePercentage: decimal("goal_share_percentage", { precision: 5, scale: 2 }).notNull(),
+  expectedGoals: decimal("expected_goals", { precision: 6, scale: 3 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const assistShareDaily = pgTable("assist_share_daily", {
+  id: serial("id").primaryKey(),
+  calculationDate: date("calculation_date").notNull(),
+  teamId: integer("team_id").notNull(),
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name").notNull(),
+  assistSharePercentage: decimal("assist_share_percentage", { precision: 5, scale: 2 }).notNull(),
+  expectedAssists: decimal("expected_assists", { precision: 6, scale: 3 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+// Types for daily projections
+export type InsertTeamProjectionsDaily = typeof teamProjectionsDaily.$inferInsert;
+export type SelectTeamProjectionsDaily = typeof teamProjectionsDaily.$inferSelect;
+export type InsertGoalShareDaily = typeof goalShareDaily.$inferInsert;
+export type SelectGoalShareDaily = typeof goalShareDaily.$inferSelect;
+export type InsertAssistShareDaily = typeof assistShareDaily.$inferInsert;
+export type SelectAssistShareDaily = typeof assistShareDaily.$inferSelect;
