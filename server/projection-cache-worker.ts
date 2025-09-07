@@ -9,6 +9,7 @@ import {
 } from "../shared/schema";
 import { eq, and } from "drizzle-orm";
 import { internalFetch } from "./config";
+import { fplScoringCacheService } from "./fpl-scoring-cache-service";
 
 interface ProjectionData {
   playerId: number;
@@ -72,7 +73,8 @@ class ProjectionCacheWorker {
         this.cacheMinutesProjections(),
         this.cacheDefensiveProjections(),
         this.cacheTeamProjections(),
-        this.cacheGoalAssistShareData()
+        this.cacheGoalAssistShareData(),
+        this.cacheFPLScoringComponents()
       ]);
       
       // Log results
@@ -85,7 +87,7 @@ class ProjectionCacheWorker {
       if (failed > 0) {
         results.forEach((result, index) => {
           if (result.status === 'rejected') {
-            const types = ['Goals', 'Assists', 'Clean Sheets', 'Minutes', 'Defensive', 'Team Projections', 'Goal/Assist Share'];
+            const types = ['Goals', 'Assists', 'Clean Sheets', 'Minutes', 'Defensive', 'Team Projections', 'Goal/Assist Share', 'FPL Scoring Components'];
             console.error(`❌ Failed to cache ${types[index]} projections:`, result.reason);
           }
         });
@@ -508,6 +510,43 @@ class ProjectionCacheWorker {
       console.error(`❌ Failed to get cache stats:`, error);
       return [];
     }
+  }
+
+  /**
+   * Cache all FPL scoring components (saves, goals conceded, cards, bonus)
+   */
+  private async cacheFPLScoringComponents(): Promise<void> {
+    try {
+      console.log(`📊 Caching FPL scoring components...`);
+      await fplScoringCacheService.updateAllCaches();
+      console.log(`✅ FPL scoring components cached successfully`);
+    } catch (error) {
+      console.error(`❌ Failed to cache FPL scoring components:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cache individual FPL scoring components
+   */
+  async cachePlayerSaves(): Promise<void> {
+    await fplScoringCacheService.updateAllCaches(); // Includes saves
+  }
+
+  async cachePlayerGoalsConceded(): Promise<void> {
+    await fplScoringCacheService.updateAllCaches(); // Includes goals conceded
+  }
+
+  async cachePlayerYellowCards(): Promise<void> {
+    await fplScoringCacheService.updateAllCaches(); // Includes yellow cards
+  }
+
+  async cachePlayerRedCards(): Promise<void> {
+    await fplScoringCacheService.updateAllCaches(); // Includes red cards
+  }
+
+  async cachePlayerBonusPoints(): Promise<void> {
+    await fplScoringCacheService.updateAllCaches(); // Includes bonus points
   }
 }
 
