@@ -4088,9 +4088,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return player.xgPer90;
   }
 
-  // Add simple caching for goal share data
+  // OPTION F: Memory-First Approach - Cache frequently used data in memory
   let goalShareCache: { data: any, timestamp: number } | null = null;
+  let bootstrapCache: { data: any, timestamp: number } | null = null;
+  let teamSeasonTotalsCache: { data: any, timestamp: number } | null = null;
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const BOOTSTRAP_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
   // Ultra-fast Goal Share endpoint - bypasses expensive team projections
   app.get("/api/goal-share-season", async (req, res) => {
@@ -4135,11 +4138,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         20: 51.77   // Wolves
       };
 
-      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      if (!bootstrapResponse.ok) {
-        throw new Error("Failed to fetch bootstrap data");
+      // OPTION F: Use cached bootstrap data if available  
+      let bootstrapData;
+      if (bootstrapCache && Date.now() - bootstrapCache.timestamp < BOOTSTRAP_CACHE_DURATION) {
+        bootstrapData = bootstrapCache.data;
+      } else {
+        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        if (!bootstrapResponse.ok) {
+          throw new Error("Failed to fetch bootstrap data");
+        }
+        bootstrapData = await bootstrapResponse.json();
+        bootstrapCache = { data: bootstrapData, timestamp: Date.now() };
       }
-      const bootstrapData = await bootstrapResponse.json();
       
       // OPTION A: Use static totals instead of dynamic calculations
       const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
