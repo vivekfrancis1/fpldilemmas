@@ -5720,10 +5720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const playerShares = [];
     let totalContribution = 0;
 
-    // Get current gameweek for hybrid calculation
-    const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-    const completedGameweeks = currentGameweek - 1;
-    const remainingGameweeks = 38 - completedGameweeks;
+    // Pure projection approach - no gameweek calculations needed since we're only projecting next 12 GWs
 
     // Calculate player contributions using data-driven approach
     const playerContributions: { [playerId: number]: { name: string, position: string, contribution: number, xaPer90: number, expectedMinutes: number } } = {};
@@ -5745,17 +5742,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use actual xA data or fallback to position average
       const xAPer90 = currentYearXAPer90 > 0 ? currentYearXAPer90 : fallbackXA;
       
-      // PERFORMANCE-BASED: Actual assists from completed + projected for remaining
-      const actualAssistsFromCompleted = player.assists || 0;
+      // PURE PROJECTION: Only projected assists for next 12 gameweeks
       const expectedMinutes = calculateExpectedMinutes(player, players);
-      const projectedAssistsFromRemaining = (xAPer90 / 90) * expectedMinutes * (remainingGameweeks / 38);
       
       // SET PIECE TAKER ADJUSTMENT: Add freekicks/corners assists that xA might exclude
       const setPieceAdjustment = getSetPieceTakerAdjustment(playerName, player.id);
       const adjustedXAPer90 = xAPer90 + setPieceAdjustment;
       
-      // HYBRID CALCULATION: Actual assists + projected assists for remaining matches
-      const hybridSeasonAssists = actualAssistsFromCompleted + projectedAssistsFromRemaining;
+      // PURE PROJECTION: Only projected assists for the next 12 gameweeks
+      const projectedSeasonAssists = (adjustedXAPer90 / 90) * expectedMinutes * (12 / 38);
       
       // CONSERVATIVE POSITION MULTIPLIERS (as specified by user)
       let positionMultiplier = 1.0;
@@ -5777,7 +5772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Apply minutes weighting to prevent backup players from dominating
       const maxExpectedMinutes = Math.max(...players.map(p => calculateExpectedMinutes(p, players)), 1);
       const minutesWeight = Math.max(0.1, expectedMinutes / maxExpectedMinutes);
-      const contribution = hybridSeasonAssists * positionMultiplier * minutesWeight;
+      const contribution = projectedSeasonAssists * positionMultiplier * minutesWeight;
       
       playerContributions[player.id] = {
         name: playerName,
