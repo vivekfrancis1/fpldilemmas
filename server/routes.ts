@@ -3573,7 +3573,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      console.log(`DEBUG: Processing all 38 gameweeks for clean sheets, current GW: ${currentGameweek}`);
       
       // Create lookup map for team Goals Against by gameweek for new formula
       const teamGoalsAgainstMap = new Map();
@@ -4397,11 +4396,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      console.log("DEBUG: xG per 90 methodology completed successfully");
       
-      // Skip legacy code completely - new methodology has been applied
-      // LEGACY CODE DISABLED - xG methodology now used exclusively
+      // Generate the response data structure with player details
+      const response = Object.keys(teamSeasonTotals).map(teamIdStr => {
+        const teamId = parseInt(teamIdStr);
+        const team = bootstrapData.teams.find((t: any) => t.id === teamId);
+        const teamData = teamSeasonTotals[teamId];
+        
+        if (!team || !teamData || !teamData.players) return null;
+        
+        const players = Object.keys(teamData.players).map(playerIdStr => {
+          const player = teamData.players[parseInt(playerIdStr)];
+          const goalShare = teamData.expectedGoals > 0 ? (player.projectedGoals / teamData.expectedGoals) * 100 : 0;
+          
+          return {
+            playerId: parseInt(playerIdStr),
+            name: player.name,
+            position: player.position,
+            goalShare: Math.round(goalShare * 10) / 10,
+            projectedGoals: player.projectedGoals
+          };
+        }).sort((a, b) => b.goalShare - a.goalShare);
+        
+        return {
+          gameweek: 0,
+          teamId: teamId,
+          teamName: team.name,
+          teamShort: team.short_name,
+          expectedGoals: Math.round(teamData.expectedGoals * 100) / 100,
+          players: players
+        };
+      }).filter(Boolean);
       
+      // OPTION 7: Response Compression + Caching
+      res.setHeader('Content-Encoding', 'gzip');
+      goalShareCache = { data: response, timestamp: Date.now() };
+      res.json(response);
+      
+    } catch (error) {
+      console.error("Error generating optimized season goal share data:", error);
+      res.status(500).json({ error: "Failed to generate optimized season goal share data" });
+    }
+  });
 
   // Helper function to calculate defensive contribution based on position
   function calculateDefensiveContribution(elementType: number, cbi: number, tackles: number, recoveries: number): number {
@@ -4746,7 +4782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current gameweek to determine future gameweeks only
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
       const nextGameweek = currentGameweek + 1; // Start from next gameweek
-      console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
+
       
       // Create player projections using pure projection methodology
       const playerProjections: any[] = [];
@@ -4908,7 +4944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current gameweek to determine future gameweeks only
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
       const nextGameweek = currentGameweek + 1; // Start from next gameweek
-      console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
+
       
       // Convert assist share data to individual player projections using pure projection methodology
       const allPlayerProjections: any[] = [];
@@ -6925,7 +6961,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const gwRealFixtures = realFixtures.filter((f: any) => f.event === gw);
         
         if (gwRealFixtures.length > 0) {
-          console.log(`DEBUG: GW${gw} has ${gwRealFixtures.length} real fixtures - using projection data for unfinished ones`);
           
           // Process real fixtures with projection data
           gwRealFixtures.forEach((fixture: any) => {
@@ -6938,7 +6973,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (processedFixture) matchOdds.push(processedFixture);
           });
         } else {
-          console.log(`DEBUG: GW${gw} has no real fixtures - generating representative matches using projection data`);
           
           // Generate representative matches to show projection data
           // Create a few sample matchups to display the projection data
@@ -10572,7 +10606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
       const nextGameweek = currentGameweek + 1; // Start from next gameweek
       
-      console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
+
       
       // Get defense tier classifications from MASTER_TEAM_DEFAULTS
       const getDefensiveTier = (teamId: number): string => {
