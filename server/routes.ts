@@ -4056,6 +4056,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (dbData.length > 0) {
         console.log(`✅ Serving goal share data from database (${dbData.length} teams, ultra-fast!)`);
+        
+        // CRITICAL FIX: Populate savedGoalShareData even when serving from database
+        try {
+          const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+          if (bootstrapResponse.ok) {
+            const bootstrapData = await bootstrapResponse.json();
+            savedGoalShareData = {
+              timestamp: Date.now(),
+              bootstrapData: bootstrapData,
+              response: dbData
+            };
+            console.log(`DEBUG: Updated savedGoalShareData with database-served goal share data`);
+          } else {
+            console.error(`Bootstrap API failed with status: ${bootstrapResponse.status}`);
+          }
+        } catch (error) {
+          console.error(`Error fetching bootstrap data for savedGoalShareData:`, error);
+          // Fallback: Set savedGoalShareData without bootstrap data for now
+          savedGoalShareData = {
+            timestamp: Date.now(),
+            bootstrapData: null, // Will be fetched later if needed
+            response: dbData
+          };
+          console.log(`DEBUG: Set savedGoalShareData without bootstrap data (will fetch later)`);
+        }
+        
         return res.json(dbData);
       }
       
@@ -4650,8 +4676,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const teamGoalProjections = await teamGoalProjectionsResponse.json();
-      const bootstrapData = savedGoalShareData.bootstrapData;
-      const goalShareData = savedGoalShareData.response;
+      
+      // Ensure we have bootstrap data - CRITICAL FIX for null errors
+      if (!savedGoalShareData || !savedGoalShareData.bootstrapData) {
+        // Fetch fresh bootstrap data if not available
+        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        if (!bootstrapResponse.ok) {
+          throw new Error("Failed to fetch bootstrap data");
+        }
+        const freshBootstrapData = await bootstrapResponse.json();
+        
+        // Initialize savedGoalShareData if null and update with bootstrap data
+        if (!savedGoalShareData) {
+          throw new Error("No goal share data available and savedGoalShareData is null");
+        }
+        savedGoalShareData.bootstrapData = freshBootstrapData;
+      }
+      
+      // EMERGENCY FIX: Bypass savedGoalShareData dependency entirely
+      let bootstrapData, goalShareData;
+      
+      if (savedGoalShareData && savedGoalShareData.bootstrapData && savedGoalShareData.response) {
+        // Use saved data if available
+        bootstrapData = savedGoalShareData.bootstrapData;
+        goalShareData = savedGoalShareData.response;
+        console.log(`DEBUG: Using saved data from savedGoalShareData`);
+      } else {
+        // EMERGENCY: Fetch fresh data directly
+        console.log(`DEBUG: EMERGENCY - fetching fresh data directly due to null savedGoalShareData`);
+        const [freshBootstrapResponse, freshGoalShareResponse] = await Promise.all([
+          fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+          fetch("http://localhost:5000/api/goal-share-season")
+        ]);
+        
+        if (!freshBootstrapResponse.ok || !freshGoalShareResponse.ok) {
+          throw new Error("Failed to fetch fresh bootstrap or goal share data");
+        }
+        
+        bootstrapData = await freshBootstrapResponse.json();
+        goalShareData = await freshGoalShareResponse.json();
+        console.log(`DEBUG: Emergency fetch successful - ${goalShareData.length} teams`);
+      }
       
       console.log(`DEBUG: Using saved data - ${goalShareData.length} teams with goal share data`);
       
