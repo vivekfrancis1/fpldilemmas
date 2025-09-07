@@ -68,11 +68,10 @@ export default function AdminCacheManagement() {
     setRefreshing(prev => ({ ...prev, [type]: true }));
     
     try {
-      const response = await apiRequest(`/api/admin/cache/refresh/${type}`, {
-        method: 'POST'
-      });
+      const response = await apiRequest('POST', `/api/admin/cache/refresh/${type}`);
+      const data = await response.json();
       
-      if (response.success) {
+      if (data.success) {
         toast({
           title: "Cache Refreshed",
           description: `${cacheTypes.find(c => c.key === type)?.name} cache updated successfully`,
@@ -108,14 +107,13 @@ export default function AdminCacheManagement() {
     
     try {
       const endpoint = operation === 'essential' ? 'refresh-essential' : 'refresh-all';
-      const response = await apiRequest(`/api/admin/cache/${endpoint}`, {
-        method: 'POST'
-      });
+      const response = await apiRequest('POST', `/api/admin/cache/${endpoint}`);
+      const data = await response.json();
       
-      if (response.success) {
+      if (data.success) {
         toast({
           title: "Bulk Refresh Complete",
-          description: response.message,
+          description: data.message,
           variant: "default",
         });
         await fetchCacheStatus(); // Refresh status
