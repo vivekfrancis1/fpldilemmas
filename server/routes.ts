@@ -4394,8 +4394,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           return; // Skip the old historical weighting approach
         }
-      }
+      });
       
+      // OPTION 10: Wait for all teams to process in parallel
+      await Promise.all(teamProcessingPromises);
       
       // Generate the response data structure with player details
       const response = Object.keys(teamSeasonTotals).map(teamIdStr => {
