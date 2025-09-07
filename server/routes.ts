@@ -3087,19 +3087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (!opponent) return null;
           
-          // Use actual data only if the ENTIRE gameweek is complete - PERFECT CONSISTENCY WITH GOALS AGAINST
-          if (completeGameweeks.has(fixture.event)) {
-            // For complete gameweeks, use actual goals scored
-            const actualGoals = isHome ? (fixture.team_h_score || 0) : (fixture.team_a_score || 0);
-            console.log(`DEBUG: Goals Scored - GW${fixture.event} ACTUAL - ${team.short_name} scored: ${actualGoals} goals`);
-            return {
-              gameweek: fixture.event,
-              opponent: opponent.short_name,
-              expectedGoals: actualGoals, // Actual goals for complete gameweeks
-              isHome: isHome,
-              isActual: true // Flag to indicate this is actual data
-            };
-          }
+          // PURE PROJECTIONS ONLY - No hybrid approach needed for next 12 gameweeks
           
           // For unfinished fixtures, use advanced spread betting market-based goal calculation with 8-phase statistical modeling
           // Use ONLY admin configurable defaults instead of hardcoded fallbacks
@@ -4250,12 +4238,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const penaltyAdjustment = getPenaltyTakerAdjustment(player.name, player.id);
             projectedXGPer90 += penaltyAdjustment;
             
-            // HYBRID CALCULATION: Actual goals from completed matches + projected for remaining
-            const actualGoalsFromCompleted = player.actualGoalsScored;
-            const projectedGoalsFromRemaining = (projectedXGPer90 / 90) * calculateExpectedMinutes(player, playersWithXG) * (remainingGameweeks / 38);
-            
-            // Calculate expected minutes with realistic projections
+            // PURE PROJECTION: Only projected goals for next 12 gameweeks
             const expectedMinutes = calculateExpectedMinutes(player, playersWithXG);
+            const projectedSeasonGoals = (projectedXGPer90 / 90) * expectedMinutes * (12 / 38);
             
             // Enhanced position multipliers for better goal distribution
             let positionMultiplier = 1.0;
@@ -4274,17 +4259,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 break;
             }
             
-            // HYBRID CALCULATION: Use actual goals + projected goals for remaining matches
-            const hybridSeasonGoals = actualGoalsFromCompleted + projectedGoalsFromRemaining;
-            
             // Apply expected minutes weighting to prevent backup players from dominating
             const maxExpectedMinutes = Math.max(...playersWithXG.map(p => calculateExpectedMinutes(p, playersWithXG)), 1); // Prevent division by zero
             const minutesWeight = Math.max(0.1, expectedMinutes / maxExpectedMinutes); // Minimum weight of 0.1
-            const contribution = hybridSeasonGoals * positionMultiplier * minutesWeight;
-            
-            if (player.name.includes('Salah') || player.name.includes('Haaland') || player.actualGoalsScored > 2) {
-              console.log(`DEBUG: ${player.name} hybrid calculation - Actual: ${actualGoalsFromCompleted}, Projected remaining: ${projectedGoalsFromRemaining.toFixed(2)}, Total: ${hybridSeasonGoals.toFixed(2)}, Minutes weight: ${minutesWeight.toFixed(2)}`);
-            }
+            const contribution = projectedSeasonGoals * positionMultiplier * minutesWeight;
             
             playerContributions[player.id] = {
               name: player.name,
@@ -4297,94 +4275,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalContribution += contribution;
           }
           
-          // ENHANCED NORMALIZATION - Ensure sum equals team xG
-          console.log(`DEBUG: Team ${team.name} - Total contribution: ${totalContribution.toFixed(3)}, Team xG: ${teamSeasonTotals[teamId].expectedGoals.toFixed(3)}`);
-          
-          // Calculate normalized shares with perfect balance after capping
+          // SIMPLE NORMALIZATION (no perfect balance required)
           const getPositionGoalShareCap = (position: string): number => {
             switch (position?.toLowerCase()) {
               case 'goalkeeper': return 2; // Max 2% share for GKs
               case 'defender': return 18; // Max 18% share for defenders
-              case 'midfielder': return 28; // Max 28% share for midfielders (was 35%)
+              case 'midfielder': return 28; // Max 28% share for midfielders
               case 'forward': return 35; // Max 35% share for forwards
               default: return 25;
             }
           };
           
-          // First pass: Calculate initial normalized shares and identify capped players
-          const playerShares: { [playerId: number]: { data: any, normalizedShare: number, cappedShare: number, wasCapped: boolean } } = {};
-          let totalCappedGoals = 0;
-          let totalUncappedNormalized = 0;
-          let uncappedPlayerIds: number[] = [];
-          
+          // Calculate shares with position caps
           Object.keys(playerContributions).forEach(playerIdStr => {
             const playerId = parseInt(playerIdStr);
             const playerData = playerContributions[playerId];
             
-            // Initial normalized share based on contribution
-            const normalizedShare = totalContribution > 0 ? 
+            // Calculate raw share based on contribution
+            const rawShare = totalContribution > 0 ? 
               (playerData.contribution / totalContribution) * teamSeasonTotals[teamId].expectedGoals : 0;
             
-            // Apply position-based caps
-            // OPTION 6: Position-First Caps - immediate static lookup
-            const STATIC_CAPS = { 1: 2.0, 2: 25.0, 3: 35.0, 4: 25.0 };
-            const positionGoalShareCap = STATIC_CAPS[playerData.element_type] || 25.0;
+            // Apply position cap
+            const positionGoalShareCap = getPositionGoalShareCap(playerData.position);
             const maxProjectedGoals = (positionGoalShareCap / 100) * teamSeasonTotals[teamId].expectedGoals;
-            const cappedShare = Math.min(normalizedShare, maxProjectedGoals);
-            const wasCapped = cappedShare < normalizedShare;
-            
-            if (wasCapped) {
-              console.log(`DEBUG: Capped ${playerData.name} projected goals: ${normalizedShare.toFixed(2)} → ${cappedShare.toFixed(2)} (${playerData.position} cap: ${positionGoalShareCap}%)`);
-            } else {
-              uncappedPlayerIds.push(playerId);
-              totalUncappedNormalized += normalizedShare;
-            }
-            
-            playerShares[playerId] = {
-              data: playerData,
-              normalizedShare,
-              cappedShare,
-              wasCapped
-            };
-            
-            totalCappedGoals += cappedShare;
-          });
-          
-          // Second pass: Redistribute shortfall to uncapped players proportionally
-          const targetTotal = teamSeasonTotals[teamId].expectedGoals;
-          const shortfall = targetTotal - totalCappedGoals;
-          
-          if (Math.abs(shortfall) > 0.001 && uncappedPlayerIds.length > 0 && totalUncappedNormalized > 0) {
-            console.log(`DEBUG: Team ${team.name} redistributing ${shortfall.toFixed(3)} goals to ${uncappedPlayerIds.length} uncapped players`);
-            
-            uncappedPlayerIds.forEach(playerId => {
-              const player = playerShares[playerId];
-              const redistributionShare = player.normalizedShare / totalUncappedNormalized;
-              const additionalGoals = shortfall * redistributionShare;
-              player.cappedShare += additionalGoals;
-              
-              if (Math.abs(additionalGoals) > 0.01) {
-                console.log(`DEBUG: Redistributed ${additionalGoals.toFixed(3)} goals to ${player.data.name}`);
-              }
-            });
-          }
-          
-          // Final assignment with perfect team balance
-          Object.keys(playerShares).forEach(playerIdStr => {
-            const playerId = parseInt(playerIdStr);
-            const player = playerShares[playerId];
+            const cappedGoals = Math.min(rawShare, maxProjectedGoals);
             
             teamSeasonTotals[teamId].players[playerId] = {
-              name: player.data.name,
-              position: player.data.position,
-              projectedGoals: Math.round(player.cappedShare * 100) / 100
+              name: playerData.name,
+              position: playerData.position,
+              projectedGoals: Math.max(0.01, Math.round(cappedGoals * 100) / 100)
             };
           });
-          
-          // SIMPLIFIED: Accept natural balance variances (Option B)
-          const finalTotalGoals = Object.values(teamSeasonTotals[teamId].players)
-            .reduce((sum: number, player: any) => sum + player.projectedGoals, 0);
-          console.log(`DEBUG: Team ${team.name} natural balance: ${finalTotalGoals.toFixed(3)} vs ${targetTotal.toFixed(3)}`);
         }
       }
       
