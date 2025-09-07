@@ -311,7 +311,13 @@ export default function AdminCacheManagement() {
                             Updated {formatTimeAgo(status.lastUpdated)}
                           </span>
                         )}
-                        {!status?.lastUpdated && (
+                        {!status?.lastUpdated && status?.count && Number(status.count) > 0 && (
+                          <span className="flex items-center gap-1 text-green-600">
+                            <CheckCircle className="h-3 w-3" />
+                            Cached
+                          </span>
+                        )}
+                        {(!status?.count || Number(status.count) === 0) && (
                           <span className="flex items-center gap-1 text-orange-600">
                             <AlertCircle className="h-3 w-3" />
                             Never cached
