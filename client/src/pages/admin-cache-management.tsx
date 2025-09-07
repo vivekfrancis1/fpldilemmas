@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, RefreshCw, Database, Clock, CheckCircle, AlertCircle, Zap, Activity } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 
 interface CacheStatus {
@@ -68,7 +67,10 @@ export default function AdminCacheManagement() {
     setRefreshing(prev => ({ ...prev, [type]: true }));
     
     try {
-      const response = await apiRequest('POST', `/api/admin/cache/refresh/${type}`);
+      const response = await fetch(`/api/admin/cache/refresh/${type}`, {
+        method: 'POST',
+        credentials: 'include'
+      });
       const data = await response.json();
       
       if (data.success) {
@@ -107,7 +109,10 @@ export default function AdminCacheManagement() {
     
     try {
       const endpoint = operation === 'essential' ? 'refresh-essential' : 'refresh-all';
-      const response = await apiRequest('POST', `/api/admin/cache/${endpoint}`);
+      const response = await fetch(`/api/admin/cache/${endpoint}`, {
+        method: 'POST',
+        credentials: 'include'
+      });
       const data = await response.json();
       
       if (data.success) {
