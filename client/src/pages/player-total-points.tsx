@@ -597,7 +597,7 @@ export default function PlayerTotalPoints() {
                 <h1>Player Total Points</h1>
               </div>
               <p className="fpl-page-subtitle">
-                Complete FPL points projection combining all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, and bonus points
+                Complete FPL points projection combining all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points
               </p>
             </div>
           </div>
