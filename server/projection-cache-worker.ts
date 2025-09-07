@@ -489,6 +489,12 @@ class ProjectionCacheWorker {
     try {
       const { sql } = await import("drizzle-orm");
       const { 
+        playerGoalsProjections,
+        playerAssistProjections,
+        teamCleanSheetProjections,
+        playerMinutesProjections,
+        playerDefensiveProjections,
+        teamProjections,
         cachedPlayerSaves, 
         cachedPlayerGoalsConceded, 
         cachedPlayerYellowCards, 
