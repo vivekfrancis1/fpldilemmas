@@ -76,7 +76,7 @@ function calculateFastGoals(
   return Math.round(goals * 100) / 100;
 }
 
-// SIMPLIFIED: Basic goal calculation with simple multipliers only
+// Original comprehensive goal calculation function - RESTORED for accuracy
 function calculateComprehensiveGoals(
   team: any, 
   opponent: any, 
@@ -86,10 +86,98 @@ function calculateComprehensiveGoals(
   adminGoalSettings: any, 
   fixturesData: any[]
 ): number {
-  // Simple baseline × venue multiplier only
-  let goals = 1.5; // Simple baseline
-  goals *= isHome ? 1.15 : 0.85; // Simple home/away multiplier
-  return Math.max(0.5, Math.min(3.0, goals)); // Simple bounds
+  // Phase 1: Universal Base xG Foundation
+  let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
+  
+  // Phase 2: Venue Factors
+  const venueMultiplier = isHome ? 
+    adminGoalSettings.homeAdvantageGoalsMultiplier : 
+    adminGoalSettings.awayFactorGoalsMultiplier;
+  baseExpectedGoals *= venueMultiplier;
+  
+  // Phase 3: Defensive Tiers
+  const getDefensiveTier = (teamId: number): string => {
+    const parseTeamArray = (teamData: any): number[] => {
+      if (Array.isArray(teamData)) return teamData;
+      if (typeof teamData === 'string') {
+        try {
+          return JSON.parse(teamData);
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const eliteDefenseTeams = parseTeamArray(adminGoalSettings.eliteDefenseTeams);
+    const strongDefenseTeams = parseTeamArray(adminGoalSettings.strongDefenseTeams);
+    const weakDefenseTeams = parseTeamArray(adminGoalSettings.weakDefenseTeams);
+    const promotedDefenseTeams = parseTeamArray(adminGoalSettings.promotedDefenseTeams);
+
+    if (eliteDefenseTeams.includes(teamId)) return 'elite';
+    if (strongDefenseTeams.includes(teamId)) return 'strong';
+    if (weakDefenseTeams.includes(teamId)) return 'weak';
+    if (promotedDefenseTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+  
+  const opponentDefensiveTier = getDefensiveTier(opponent.id);
+  let opponentDefensiveMultiplier = 1.0;
+  switch (opponentDefensiveTier) {
+    case 'elite': opponentDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier; break;
+    case 'strong': opponentDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier; break;
+    case 'average': opponentDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier; break;
+    case 'weak': opponentDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier; break;
+    case 'promoted': opponentDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier; break;
+  }
+  
+  baseExpectedGoals *= opponentDefensiveMultiplier;
+  
+  // Phase 4: Attacking Tiers
+  const getAttackingTier = (teamId: number) => {
+    const parseTeamArray = (teamData: any): number[] => {
+      if (Array.isArray(teamData)) return teamData;
+      if (typeof teamData === 'string') {
+        try {
+          return JSON.parse(teamData);
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const eliteAttackTeams = parseTeamArray(adminGoalSettings.eliteAttackTeams);
+    const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams);
+    const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams);
+    const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams);
+    
+    if (eliteAttackTeams.includes(teamId)) return 'elite';
+    if (strongAttackTeams.includes(teamId)) return 'strong';
+    if (weakAttackTeams.includes(teamId)) return 'weak';
+    if (promotedAttackTeams.includes(teamId)) return 'promoted';
+    return 'average';
+  };
+  
+  const attackingTier = getAttackingTier(team.id);
+  let attackingTierMultiplier = 1.0;
+  switch (attackingTier) {
+    case 'elite': attackingTierMultiplier = adminGoalSettings.eliteAttackMultiplier; break;
+    case 'strong': attackingTierMultiplier = adminGoalSettings.strongAttackMultiplier; break;
+    case 'average': attackingTierMultiplier = adminGoalSettings.averageAttackMultiplier; break;
+    case 'weak': attackingTierMultiplier = adminGoalSettings.weakAttackMultiplier; break;
+    case 'promoted': attackingTierMultiplier = adminGoalSettings.promotedAttackMultiplier; break;
+  }
+  
+  baseExpectedGoals *= attackingTierMultiplier;
+  
+  // Apply final bounds
+  baseExpectedGoals = Math.max(
+    adminGoalSettings.absoluteMinGoals || 0.3, 
+    Math.min(baseExpectedGoals, adminGoalSettings.absoluteMaxGoals || 4.2)
+  );
+  
+  return Math.round(baseExpectedGoals * 100) / 100;
 }
 
 // Master Default Team Configuration - Single Source of Truth
@@ -3137,7 +3225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Clean Sheet Projections endpoint
   app.get("/api/team-cs-projections", async (req, res) => {
     try {
-      console.log(`DEBUG: Team CS Projections API called - generating next 6 gameweeks only`);
+      console.log(`DEBUG: Team CS Projections API called - generating all 38 gameweeks`);
       
       const [bootstrapResponse, fixturesResponse, goalsAgainstResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -3156,10 +3244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // LIMIT: Process only next 6 gameweeks for performance
-      const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + 6, 38);
-      console.log(`DEBUG: Processing next 6 gameweeks (GW${startGameweek}-${endGameweek}) for clean sheets, current GW: ${currentGameweek}`);
+      console.log(`DEBUG: Processing all 38 gameweeks for clean sheets, current GW: ${currentGameweek}`);
       
       // Create lookup map for team Goals Against by gameweek for new formula
       const teamGoalsAgainstMap = new Map();
@@ -3172,11 +3257,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bettingData = teamService.getBettingData();
       
       const teamProjections = teams.map((team: any) => {
-        // LIMIT: Get fixtures for this team for next 6 gameweeks only
+        // Get all fixtures for this team across all 38 gameweeks
         const allFixtures = fixturesData
           .filter((f: any) => 
             (f.team_h === team.id || f.team_a === team.id) && 
-            f.event >= startGameweek && f.event <= endGameweek
+            f.event >= 1 && f.event <= 38
           );
         
         const projections = allFixtures.map((fixture: any) => {
@@ -3220,13 +3305,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }).filter(Boolean);
         
-        // LIMIT: Calculate totals and averages for next 6 gameweeks only
-        const targetGameweeks = Array.from({ length: endGameweek - startGameweek + 1 }, (_, i) => i + startGameweek);
-        const totalCSProbability = targetGameweeks.reduce((sum, gw) => {
+        // Calculate totals and averages across all 38 gameweeks
+        const allGameweeks = Array.from({ length: 38 }, (_, i) => i + 1);
+        const totalCSProbability = allGameweeks.reduce((sum, gw) => {
           const projection = projections.find((p: any) => p && p.gameweek === gw);
           return sum + (projection ? projection.cleanSheetOdds : 0);
         }, 0);
-        const averageCleanSheetOdds = totalCSProbability / targetGameweeks.length;
+        const averageCleanSheetOdds = totalCSProbability / 38;
         
         // Convert projections array to gameweekProjections object
         const gameweekProjections: { [gameweek: number]: number } = {};
@@ -3234,8 +3319,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameweekProjections[p.gameweek] = p.cleanSheetOdds;
         });
         
-        // SIMPLIFIED: Basic confidence - just use "Medium" for all teams
-        const confidence = 'Medium';
+        // Elite-level confidence calculation using advanced statistical market analysis
+        const teamBettingData = bettingData.teamCleanSheetRates[team.id] || { confidence: 0.70 };
+        const roundedTotalCSProbability = Math.round(totalCSProbability * 10) / 10;
+        let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
+        
+        // Advanced multi-dimensional confidence assessment
+        const marketConfidence = teamBettingData.confidence; // Base market reliability
+        const performanceConsistency = projections.length > 0 ? 
+          Math.max(0, 1 - (Math.max(...projections.map((p: any) => p.cleanSheetOdds)) - Math.min(...projections.map((p: any) => p.cleanSheetOdds))) / 80) : 0;
+        const volumeConfidence = Math.min(1.0, projections.length / 5); // 5+ fixtures for full confidence
+        const qualityBonus = averageCleanSheetOdds >= 35 ? 0.15 : averageCleanSheetOdds >= 25 ? 0.10 : 0;
+        
+        // Sophisticated composite confidence with weighted factors
+        const compositeConfidence = (marketConfidence * 0.4) + // Market data quality
+                                   (performanceConsistency * 0.25) + // Statistical consistency
+                                   (volumeConfidence * 0.20) + // Sample size adequacy
+                                   (qualityBonus * 0.15); // Performance excellence bonus
+        
+        // Confidence based purely on composite score
+        if (compositeConfidence >= 0.80) {
+          confidence = 'High'; // Elite market confidence and statistical reliability
+        } else if (compositeConfidence <= 0.55) {
+          confidence = 'Low';  // Poor market confidence or statistical reliability
+        }
         
         return {
           id: team.id,
@@ -3318,19 +3425,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
             if (!opponent) continue;
             
-            // SIMPLIFIED: Use simple proportional calculation only
-            let projectedGoals = 1.5; // Simple baseline
+            // EXACT same 8-phase calculation as team-goal-projections endpoint
+            const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
+            const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
             
-            // Basic venue adjustment only
-            const venueMultiplier = isHome ? 1.15 : 0.85;
-            projectedGoals *= venueMultiplier;
+            // Phase 1: Core market probability foundation
+            let baseExpectedGoals = teamBettingData.expectedGoalsPerGame;
             
-            // Simple team/opponent adjustment
-            const teamFactor = 1.0 + (team.id - 10) * 0.02;
-            const opponentFactor = 1.0 + (opponent.id - 10) * 0.02;
-            projectedGoals *= Math.max(0.7, Math.min(1.3, teamFactor - opponentFactor * 0.3));
+            // Phase 2: Advanced venue-specific market adjustments using Goals Scored admin settings
+            const venueMultiplier = isHome ? 
+              (adminGoalSettings.homeAdvantageGoalsMultiplier || 1.16) : // Configurable home advantage
+              (adminGoalSettings.awayFactorGoalsMultiplier || 0.84); // Configurable away factor
+            baseExpectedGoals *= venueMultiplier;
             
-            gameweekProjections[gw.toString()] = Math.round(projectedGoals * 100) / 100;
+            // Phase 3: Sophisticated opponent defensive resistance matrix
+            const opponentDefenseStrength = opponentDefenseData.baseCleanSheetRate;
+            const defensiveImpact = Math.pow(opponentDefenseStrength * 2.5, 1.2); // Non-linear scaling
+            const attackingPenetration = 1.25 - (defensiveImpact * 0.65);
+            baseExpectedGoals *= Math.max(0.55, Math.min(1.35, attackingPenetration));
+            
+            // Phase 4: Market-informed tactical context analysis
+            const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
+            const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
+            const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
+                                 (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
+                                 (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13); // Manchester
+            
+            if (isEliteClash) {
+              baseExpectedGoals *= 1.08; // Elite clashes feature quality attacking play
+            } else if (isTopSixBattle) {
+              baseExpectedGoals *= bettingData.contextMultipliers.topSix.goals * 1.02;
+            }
+            if (isRivalryMatch) {
+              baseExpectedGoals *= 1.14; // Rivalry games typically more open and emotional
+            }
+            
+            // Phase 5: Centralized attacking tier performance modeling
+            const tierSeed = (team.id * fixture.event * 13) % 100;
+            const tierMultiplier = teamService.getTierMultiplier(team.id, tierSeed);
+            baseExpectedGoals *= tierMultiplier;
+            
+            // Phase 6: Minimal market momentum and fixture complexity factors (COMPRESSED FOR GOALS AGAINST)
+            const marketMomentum = 0.99 + ((team.id * fixture.event * 17) % 100) / 5000; // 99-101% market sentiment (compressed)
+            const fixtureComplexity = fixture.event <= 10 ? 1.005 : fixture.event <= 20 ? 1.0 : 0.995; // Minimal season stage impact
+            baseExpectedGoals *= marketMomentum * fixtureComplexity;
+            
+            // Phase 7: Minimal variance modeling for tight range (COMPRESSED FOR GOALS AGAINST)
+            const marketVolatility = 0.99 + ((team.id * fixture.event * 19) % 100) / 5000; // 99-101% minimal variation (compressed)
+            const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.95); // Reduced confidence impact
+            const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamBettingData.variance * 0.2; // Reduced variance impact
+            baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
+            
+            // Phase 8: Compressed Premier League goal bounds for tight range (UNIFIED WITH GOALS SCORED)
+            const marketFloor = Math.max(0.6, teamBettingData.expectedGoalsPerGame * 0.6); // Dynamic minimum (compressed)
+            const marketCeiling = Math.min(2.2, teamBettingData.expectedGoalsPerGame * 1.4); // Dynamic maximum (compressed)
+            baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
+            
+            // Final expected goals with market precision
+            const expectedGoals = baseExpectedGoals;
+            gameweekProjections[gw.toString()] = Math.round(expectedGoals * 100) / 100;
           }
         }
         
@@ -5195,10 +5348,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
         
         if (homeTeam && awayTeam) {
-          // SIMPLIFIED: Basic proportional expected goals calculation
-          const homeExpectedGoals = 1.5 * 1.15; // Simple home baseline
+          // Calculate expected goals using same logic as team projections
+          const homeAttackStrength = (homeTeam.strength_attack_home || 1000) / 1000;
+          const awayDefenseStrength = (awayTeam.strength_defence_away || 1000) / 1000;
+          const homeExpectedGoals = (homeAttackStrength * (2.2 - awayDefenseStrength)) * 1.15;
           
-          const awayExpectedGoals = 1.5 * 0.85; // Simple away baseline
+          const awayAttackStrength = (awayTeam.strength_attack_away || 1000) / 1000;
+          const homeDefenseStrength = (homeTeam.strength_defence_home || 1000) / 1000;
+          const awayExpectedGoals = awayAttackStrength * (2.2 - homeDefenseStrength);
           
           // Home team assist share - ensure assists ≤ goals
           const homeMaxAssists = homeExpectedGoals;
@@ -5255,12 +5412,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const playerShares = [];
     let totalShare = 0;
 
-    // SIMPLIFIED: Basic position rates only
+    // Enhanced position-based assist involvement rates from Premier League historical data (2016-2024)
     const positionAssistRates = {
-      'Goalkeeper': { base: 0.5 },
-      'Defender': { base: 15.0 },
-      'Midfielder': { base: 30.0 },
-      'Forward': { base: 20.0 }
+      'Goalkeeper': { base: 0.3, variance: 0.2 },     // 0.3% base, rare penalty assists
+      'Defender': { base: 12.5, variance: 4.0 },      // 12.5% base, fullbacks and attacking CBs
+      'Midfielder': { base: 28.0, variance: 10.0 },   // 28% base, creative mids dominate assists
+      'Forward': { base: 18.0, variance: 6.0 }        // 18% base, assists from deeper forwards
+    };
+
+    // Elite assist providers based on historical Premier League data (2019-2024)
+    const eliteAssistProviders: { [key: string]: number } = {
+      // Top creative midfielders - historically dominant in assists
+      'Kevin De Bruyne': 2.4, 'Bruno Fernandes': 2.1, 'Trent Alexander-Arnold': 2.0,
+      'Mohamed Salah': 1.8, 'Andrew Robertson': 1.7, 'Mason Mount': 1.6,
+      'Martin Ødegaard': 1.6, 'James Maddison': 1.5, 'Cole Palmer': 1.5,
+      'Phil Foden': 1.4, 'Bukayo Saka': 1.4, 'Jack Grealish': 1.4,
+      'Riyad Mahrez': 1.3, 'Lucas Paquetá': 1.3, 'Eberechi Eze': 1.3,
+      'Pascal Groß': 1.25, 'James Ward-Prowse': 1.25, 'Alexis Mac Allister': 1.2,
+      'Bernardo Silva': 1.2, 'Son Heung-min': 1.2, 'Emiliano Buendía': 1.15,
+      
+      // Creative forwards with assist history
+      'Harry Kane': 1.7, 'Roberto Firmino': 1.5, 'Diogo Jota': 1.3,
+      'Gabriel Jesus': 1.25, 'Ollie Watkins': 1.2, 'Darwin Núñez': 1.15,
+      'Ivan Toney': 1.15, 'Callum Wilson': 1.1, 'Alexandre Lacazette': 1.1,
+      
+      // Creative defenders (fullbacks primarily)
+      'João Cancelo': 1.4, 'Reece James': 1.35, 'Ben Chilwell': 1.25,
+      'Kieran Trippier': 1.2, 'Luke Shaw': 1.15, 'Oleksandr Zinchenko': 1.15,
+      'Pervis Estupiñán': 1.1, 'Marc Cucurella': 1.05, 'Tyrick Mitchell': 1.05
+    };
+
+    // Historical assist patterns by player characteristics
+    const historicalAdjustments = {
+      creativity: { 
+        multiplier: 0.035,  // Strong correlation between creativity and assists
+        cap: 2.2 
+      },
+      corners_and_indirect_freekicks_order: { 
+        multiplier: 1.15,   // Set piece takers historically provide more assists
+        cap: 1.3 
+      },
+      penalties_order: { 
+        multiplier: 1.05,   // Penalty takers often creative players
+        cap: 1.1 
+      },
+      ict_index: { 
+        multiplier: 0.015,  // ICT index correlates with creative output
+        cap: 1.8 
+      }
     };
 
     players.forEach(player => {
@@ -5268,35 +5467,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const positionName = position?.singular_name;
       const playerName = getPlayerName(player.id) || `${player.first_name} ${player.second_name}`;
       
-      // SIMPLIFIED: Basic position-based share only
-      const positionRate = positionAssistRates[positionName as keyof typeof positionAssistRates] || { base: 15.0 };
-      let baseShare = positionRate.base;
+      // Get position rates
+      const positionRate = positionAssistRates[positionName as keyof typeof positionAssistRates] || { base: 15.0, variance: 5.0 };
       
-      // Only use current season assists as simple indicator
+      // Deterministic variance based on player ID for consistency
+      const seed = (player.id * 23) % 100;
+      const varianceMultiplier = 1 + ((seed - 50) / 100) * (positionRate.variance / positionRate.base);
+      
+      // Base share from position with deterministic variance
+      let baseShare = positionRate.base * Math.max(0.3, Math.min(1.8, varianceMultiplier));
+      
+      // Elite assist provider boost based on historical data
+      const eliteBoost = eliteAssistProviders[playerName] || 1.0;
+      baseShare *= eliteBoost;
+      
+      // Historical performance adjustments using multiple FPL metrics
+      let performanceScore = 1.0;
+      
+      // Creativity metric (strongest predictor of assists)
+      const creativity = player.creativity || 0;
+      const creativityMultiplier = Math.min(historicalAdjustments.creativity.cap, 
+        1 + (creativity * historicalAdjustments.creativity.multiplier));
+      performanceScore *= creativityMultiplier;
+      
+      // ICT Index correlation
+      const ictIndex = player.ict_index || 0;
+      const ictMultiplier = Math.min(historicalAdjustments.ict_index.cap,
+        1 + (ictIndex * historicalAdjustments.ict_index.multiplier));
+      performanceScore *= ictMultiplier;
+      
+      // Set piece responsibility boost
+      const cornersOrder = parseInt(player.corners_and_indirect_freekicks_order) || 0;
+      if (cornersOrder <= 2 && cornersOrder > 0) {
+        performanceScore *= historicalAdjustments.corners_and_indirect_freekicks_order.multiplier;
+      }
+      
+      // Current season form and assist history
       const currentAssists = player.assists || 0;
-      if (currentAssists > 0) {
-        baseShare *= (1 + currentAssists * 0.1); // Simple boost for current assists
+      const currentForm = parseFloat(player.form) || 0;
+      const minutesPlayed = player.minutes || 0;
+      
+      // Form adjustment (recent performance indicator)
+      const formMultiplier = Math.max(0.6, Math.min(1.4, 1 + (currentForm - 5) / 20));
+      performanceScore *= formMultiplier;
+      
+      // Current assists boost (players who are already assisting)
+      const assistsMultiplier = Math.max(0.7, Math.min(1.6, 1 + (currentAssists * 0.15)));
+      performanceScore *= assistsMultiplier;
+      
+      // Playing time factor (assists require minutes)
+      const minutesMultiplier = Math.max(0.4, Math.min(1.2, minutesPlayed / 1000));
+      performanceScore *= minutesMultiplier;
+      
+      // Historical position-specific adjustments
+      if (positionName === 'Midfielder') {
+        // Midfielders historically dominate assists - additional boost for attacking mids
+        const attackingMidBoost = Math.max(0.8, Math.min(1.3, 1 + (creativity / 200)));
+        performanceScore *= attackingMidBoost;
+      } else if (positionName === 'Defender') {
+        // Fullbacks vs center-backs distinction
+        const isFullback = (player.creativity || 0) > 30; // Creative defenders likely fullbacks
+        if (isFullback) {
+          performanceScore *= 1.4; // Fullbacks provide significantly more assists
+        }
+      } else if (positionName === 'Forward') {
+        // Deeper forwards and false 9s historically provide more assists
+        const deepForwardFactor = Math.max(0.8, Math.min(1.25, (creativity / 80) + 0.7));
+        performanceScore *= deepForwardFactor;
       }
       
-      // Simple add to shares array - no caps, no complex normalization
-      if (baseShare > 0) {
-        playerShares.push({
-          id: player.id,
-          name: playerName,
-          position: positionName,
-          assistShare: baseShare
-        });
-        totalShare += baseShare;
+      // Apply performance multiplier with bounds
+      const performanceMultiplier = Math.max(0.3, Math.min(2.8, performanceScore));
+      
+      // Apply injury/availability factor
+      const availabilityFactor = (player.chance_of_playing_next_round || 100) / 100;
+      const availabilityMultiplier = Math.max(0.2, availabilityFactor);
+      
+      // Calculate final raw share
+      const rawShare = baseShare * performanceMultiplier * availabilityMultiplier;
+      
+      // Apply position-based caps to assist share percentage
+      const getPositionShareCap = (position: string): number => {
+        switch (position?.toLowerCase()) {
+          case 'goalkeeper': return 2; // Max 2% share for GKs
+          case 'defender': return 15; // Max 15% share for defenders
+          case 'midfielder': return 35; // Max 35% share for midfielders
+          case 'forward': return 25; // Max 25% share for forwards
+          default: return 20;
+        }
+      };
+      
+      const positionShareCap = getPositionShareCap(positionName);
+      const cappedRawShare = Math.min(rawShare, positionShareCap);
+      
+      if (cappedRawShare !== rawShare) {
+        console.log(`DEBUG: Capped ${playerName} assist share: ${rawShare.toFixed(1)}% → ${cappedRawShare.toFixed(1)}% (${positionName} cap: ${positionShareCap}%)`);
       }
+      
+      playerShares.push({
+        id: player.id,
+        name: playerName,
+        position: position?.singular_name_short || 'UNK',
+        rawShare: cappedRawShare
+      });
+      
+      totalShare += cappedRawShare;
     });
-    
-    // SIMPLIFIED: Single-pass proportional normalization (no caps, perfect balance)
+
+    // Normalize to 100% with one decimal place
     return playerShares.map(player => ({
-      id: player.id,
-      name: player.name,
-      position: player.position,
-      assistShare: totalShare > 0 ? Math.round((player.assistShare / totalShare) * 100 * 10) / 10 : 0
-    }));
+      ...player,
+      assistShare: Math.round((player.rawShare / totalShare) * 1000) / 10 // One decimal place
+    })).filter(p => p.assistShare > 0).sort((a, b) => b.assistShare - a.assistShare);
   }
 
   // Projected Standings endpoint - calculates final table based on all match results
@@ -6117,15 +6399,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // LIMIT: Generate match projections for next 6 gameweeks only
+      // Generate comprehensive match projections using Team Goal/CS data for ALL gameweeks
       const matchOdds = [];
       const teamIds = Array.from(teamLookup.keys());
       
-      // LIMIT: Process only next 6 gameweeks for performance
-      const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + 6, 38);
-      
-      for (let gw = startGameweek; gw <= endGameweek; gw++) {
+      // Process only future gameweeks (exclude completed and current)
+      for (let gw = currentGameweek + 1; gw <= 38; gw++) {
         // Get real fixtures for this gameweek
         const gwRealFixtures = realFixtures.filter((f: any) => f.event === gw);
         
@@ -10332,17 +10611,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // SIMPLIFIED: Basic BPS helper functions
+  // Helper functions for BPS calculations
   function calculateHistoricBPS(player: any, position: string): number {
-    // Simple BPS calculation - just use total points as baseline
-    const seasonBPS = player.total_points || 0;
-    return Math.max(seasonBPS * 0.5, 5); // Simple conversion
+    // Base BPS from FPL stats
+    const baseBPS = (player.bps || 0) / Math.max(player.minutes || 1, 90) * 90; // Per 90 mins
+    
+    // Position-specific BPS scoring weights
+    const positionMultipliers = {
+      'FWD': 1.2, // Forwards get more BPS per goal/assist
+      'MID': 1.0, // Midfielders balanced
+      'DEF': 0.8, // Defenders get less attacking BPS
+      'GKP': 0.6  // Goalkeepers different BPS profile
+    };
+    
+    const multiplier = positionMultipliers[position as keyof typeof positionMultipliers] || 1.0;
+    
+    // Factor in current season performance
+    const seasonBPS = player.total_points * 0.5; // Rough BPS correlation
+    
+    return Math.max((baseBPS * multiplier + seasonBPS * 0.1), 5); // Minimum 5 BPS baseline
   }
 
   function calculateFormMultiplier(player: any): number {
-    // SIMPLIFIED: Basic form multiplier only
     const form = parseFloat(player.form || "0");
-    return Math.max(0.8, Math.min(1.2, 1.0 + (form - 3) * 0.1)); // Simple form scaling
+    const pointsPerGame = parseFloat(player.points_per_game || "0");
+    
+    // Form-based multiplier (0.8x to 1.4x range)
+    let formMultiplier = 1.0;
+    if (form >= 6) formMultiplier = 1.4;
+    else if (form >= 4) formMultiplier = 1.2;
+    else if (form >= 2) formMultiplier = 1.0;
+    else if (form >= 1) formMultiplier = 0.9;
+    else formMultiplier = 0.8;
+    
+    // PPG adjustment
+    if (pointsPerGame >= 6) formMultiplier *= 1.1;
+    else if (pointsPerGame <= 2) formMultiplier *= 0.9;
+    
+    return formMultiplier;
   }
 
   // Helper function for BPS-based bonus point calculation  
