@@ -5944,12 +5944,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const playerShares = [];
     let totalShare = 0;
 
-    // Enhanced position-based assist involvement rates from Premier League historical data (2016-2024)
-    const positionAssistRates = {
-      'Goalkeeper': { base: 0.3, variance: 0.2 },     // 0.3% base, rare penalty assists
-      'Defender': { base: 12.5, variance: 4.0 },      // 12.5% base, fullbacks and attacking CBs
-      'Midfielder': { base: 28.0, variance: 10.0 },   // 28% base, creative mids dominate assists
-      'Forward': { base: 18.0, variance: 6.0 }        // 18% base, assists from deeper forwards
+    // OPTION 2: Static lookup tables for ultra-fast performance
+    const STATIC_POSITION_RATES = {
+      1: { base: 0.3, variance: 0.2 },     // Goalkeeper: 0.3% base
+      2: { base: 12.5, variance: 4.0 },    // Defender: 12.5% base
+      3: { base: 28.0, variance: 10.0 },   // Midfielder: 28% base
+      4: { base: 18.0, variance: 6.0 }     // Forward: 18% base
+    };
+
+    const STATIC_POSITION_CAPS = {
+      1: 2.0,    // Goalkeeper max 2%
+      2: 25.0,   // Defender max 25%
+      3: 35.0,   // Midfielder max 35%
+      4: 25.0    // Forward max 25%
     };
 
     // SIMPLIFIED: Single unified multiplier calculation (implements Options A, B, C, D)
