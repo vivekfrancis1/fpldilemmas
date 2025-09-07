@@ -6,12 +6,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, RefreshCw, Database, Clock, CheckCircle, AlertCircle, Zap, Activity } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 
-interface CacheStatus {
-  [key: string]: {
-    lastUpdated: string;
-    recordCount: number;
-    status: "fresh" | "stale" | "empty";
-  };
+interface CacheStatusItem {
+  type: string;
+  count: string | number;
+  lastUpdated: string | null;
+  isStale: boolean;
 }
 
 interface CacheRefreshState {
@@ -20,7 +19,7 @@ interface CacheRefreshState {
 
 export default function AdminCacheManagement() {
   const { toast } = useToast();
-  const [cacheStatus, setCacheStatus] = useState<CacheStatus | null>(null);
+  const [cacheStatus, setCacheStatus] = useState<CacheStatusItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState<CacheRefreshState>({});
 
@@ -146,20 +145,53 @@ export default function AdminCacheManagement() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'fresh':
-        return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Fresh</Badge>;
-      case 'stale':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Stale</Badge>;
-      case 'empty':
-        return <Badge variant="destructive" className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" />Empty</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
-    }
+  const mapCacheKeyToType = (key: string): string => {
+    const typeMap: Record<string, string> = {
+      'goals': 'Goals',
+      'assists': 'Assists',
+      'minutes': 'Minutes', 
+      'clean-sheets': 'Team Clean Sheets',
+      'defensive': 'Defensive',
+      'team': 'Team Projections',
+      'goal-assist-share': 'Goal/Assist Share',
+      'total-points': 'Total Points',
+      'saves': 'Player Saves',
+      'goals-conceded': 'Goals Conceded',
+      'yellow-cards': 'Yellow Cards', 
+      'red-cards': 'Red Cards',
+      'bonus-points': 'Bonus Points'
+    };
+    return typeMap[key] || key;
   };
 
-  const formatLastUpdated = (dateString: string) => {
+  const getStatusBadge = (isStale: boolean, count: string | number) => {
+    if (count === 0 || count === '0') {
+      return (
+        <Badge variant="secondary" className="flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          Empty
+        </Badge>
+      );
+    }
+    
+    if (isStale) {
+      return (
+        <Badge variant="destructive" className="flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          Stale
+        </Badge>
+      );
+    }
+    
+    return (
+      <Badge variant="default" className="flex items-center gap-1 bg-green-600">
+        <CheckCircle className="h-3 w-3" />
+        Fresh
+      </Badge>
+    );
+  };
+
+  const formatTimeAgo = (dateString: string) => {
     try {
       const date = new Date(dateString);
       const now = new Date();
@@ -258,21 +290,34 @@ export default function AdminCacheManagement() {
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {cacheTypes.map((cache) => {
-                const status = cacheStatus?.[cache.key];
+                // Find matching cache status by type name
+                const status = cacheStatus?.find(s => {
+                  const mappedType = mapCacheKeyToType(cache.key);
+                  return s.type === mappedType;
+                });
                 return (
                   <div key={cache.key} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-medium">{cache.name}</h3>
-                        {status && getStatusBadge(status.status)}
+                        {status && getStatusBadge(status.isStale, status.count)}
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">{cache.description}</p>
-                      {status && (
-                        <div className="text-xs text-muted-foreground">
-                          <div>Records: {status.recordCount.toLocaleString()}</div>
-                          <div>Updated: {formatLastUpdated(status.lastUpdated)}</div>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>Records: {status?.count?.toLocaleString() || 0}</span>
+                        {status?.lastUpdated && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Updated {formatTimeAgo(status.lastUpdated)}
+                          </span>
+                        )}
+                        {!status?.lastUpdated && (
+                          <span className="flex items-center gap-1 text-orange-600">
+                            <AlertCircle className="h-3 w-3" />
+                            Never cached
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <Button
                       onClick={() => refreshCache(cache.key)}

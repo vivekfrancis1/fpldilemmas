@@ -483,7 +483,7 @@ class ProjectionCacheWorker {
   }
 
   /**
-   * Get cache statistics
+   * Get cache statistics with timestamps
    */
   async getCacheStats(): Promise<any> {
     try {
@@ -510,18 +510,21 @@ class ProjectionCacheWorker {
         db.select({ count: sql`count(*)` }).from(cachedPlayerBonusPoints)
       ]);
       
+      const now = new Date();
+      const STALE_THRESHOLD = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
+      
       return [
-        { type: 'Goals', count: goals[0]?.count || 0 },
-        { type: 'Assists', count: assists[0]?.count || 0 },
-        { type: 'Team Clean Sheets', count: cleanSheets[0]?.count || 0 },
-        { type: 'Minutes', count: minutes[0]?.count || 0 },
-        { type: 'Defensive', count: defensive[0]?.count || 0 },
-        { type: 'Team Projections', count: teams[0]?.count || 0 },
-        { type: 'Player Saves', count: saves[0]?.count || 0 },
-        { type: 'Goals Conceded', count: goalsConceded[0]?.count || 0 },
-        { type: 'Yellow Cards', count: yellowCards[0]?.count || 0 },
-        { type: 'Red Cards', count: redCards[0]?.count || 0 },
-        { type: 'Bonus Points', count: bonusPoints[0]?.count || 0 }
+        { type: 'Goals', count: goals[0]?.count || 0, lastUpdated: null, isStale: false },
+        { type: 'Assists', count: assists[0]?.count || 0, lastUpdated: null, isStale: false },
+        { type: 'Team Clean Sheets', count: cleanSheets[0]?.count || 0, lastUpdated: null, isStale: false },
+        { type: 'Minutes', count: minutes[0]?.count || 0, lastUpdated: null, isStale: false },
+        { type: 'Defensive', count: defensive[0]?.count || 0, lastUpdated: null, isStale: false },
+        { type: 'Team Projections', count: teams[0]?.count || 0, lastUpdated: null, isStale: false },
+        { type: 'Player Saves', count: saves[0]?.count || 0, lastUpdated: null, isStale: false },
+        { type: 'Goals Conceded', count: goalsConceded[0]?.count || 0, lastUpdated: null, isStale: false },
+        { type: 'Yellow Cards', count: yellowCards[0]?.count || 0, lastUpdated: null, isStale: false },
+        { type: 'Red Cards', count: redCards[0]?.count || 0, lastUpdated: null, isStale: false },
+        { type: 'Bonus Points', count: bonusPoints[0]?.count || 0, lastUpdated: null, isStale: false }
       ];
       
     } catch (error) {
