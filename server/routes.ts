@@ -2498,7 +2498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     defaultExpectedGoalsPerGame: MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame,
     globalTierMultiplier: MASTER_TEAM_DEFAULTS.globalTierMultiplier,
     
-    // Venue Multipliers
+    // Venue Multipliers - Updated values
     homeAdvantageGoalsMultiplier: 1.1,
     awayFactorGoalsMultiplier: 0.9,
     
@@ -2674,8 +2674,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         defaultTeamVariance: MASTER_TEAM_DEFAULTS.defaultTeamVariance,
         defaultExpectedGoalsPerGame: MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame,
         globalTierMultiplier: MASTER_TEAM_DEFAULTS.globalTierMultiplier,
-        homeAdvantageGoalsMultiplier: MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier,
-        awayFactorGoalsMultiplier: MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier,
+        homeAdvantageGoalsMultiplier: 1.1,
+        awayFactorGoalsMultiplier: 0.9,
         
         // Attack Multipliers
         eliteAttackMultiplier: MASTER_TEAM_DEFAULTS.eliteAttackMultiplier,
@@ -2916,8 +2916,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       adminGoalSettings = {
         globalTierMultiplier: 1.25,
         // Venue Multipliers
-        homeAdvantageGoalsMultiplier: 1.15,
-        awayFactorGoalsMultiplier: 0.88,
+        homeAdvantageGoalsMultiplier: 1.1,
+        awayFactorGoalsMultiplier: 0.9,
         // Attacking Tier Multipliers
         eliteAttackMultiplier: 1.15,
         strongAttackMultiplier: 1.10,
@@ -3725,8 +3725,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Phase 2: Advanced venue-specific market adjustments using Goals Scored admin settings
             const venueMultiplier = isHome ? 
-              (adminGoalSettings.homeAdvantageGoalsMultiplier || 1.16) : // Configurable home advantage
-              (adminGoalSettings.awayFactorGoalsMultiplier || 0.84); // Configurable away factor
+              (adminGoalSettings.homeAdvantageGoalsMultiplier || 1.1) : // Configurable home advantage
+              (adminGoalSettings.awayFactorGoalsMultiplier || 0.9); // Configurable away factor
             baseExpectedGoals *= venueMultiplier;
             
             // Phase 3: Sophisticated opponent defensive resistance matrix
