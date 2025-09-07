@@ -5715,139 +5715,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return data;
   }
 
-  // Enhanced assist share distribution based on Premier League historical data  
-  function distributeAssistShares(players: any[], positions: any[], historicalData: any = {}) {
+  // DATA-DRIVEN assist share distribution mirroring goals methodology
+  function distributeAssistSharesDataDriven(players: any[], positions: any[], bootstrapData: any) {
     const playerShares = [];
-    let totalShare = 0;
+    let totalContribution = 0;
 
-    // Enhanced position-based assist involvement rates based on Premier League historical data
-    const positionAssistRates = {
-      'Goalkeeper': { base: 0.2, variance: 0.1 },     // 0.2% base, rare but possible
-      'Defender': { base: 8.5, variance: 3.0 },       // 8.5% base, attacking fullbacks get major boost  
-      'Midfielder': { base: 35.0, variance: 12.0 },   // 35% base, creative mids get major boost
-      'Forward': { base: 18.0, variance: 6.0 }        // 18% base, playmaking forwards get boost
-    };
+    // Get current gameweek for hybrid calculation
+    const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+    const completedGameweeks = currentGameweek - 1;
+    const remainingGameweeks = 38 - completedGameweeks;
 
-    // Conservative assist provider boost to match goal projections (reduced from aggressive levels)
-    const eliteAssistBoosts: { [key: string]: number } = {
-      // Elite creative midfielders and playmakers (reduced from 2.1x to 1.35x max)
-      'Kevin De Bruyne': 1.35, 'Bruno Fernandes': 1.3, 'Martin Ødegaard': 1.25,
-      'Cole Palmer': 1.3, 'James Maddison': 1.2, 'Phil Foden': 1.2,
-      'Bukayo Saka': 1.2, 'Mason Mount': 1.15, 'Eberechi Eze': 1.15,
-      'Pascal Groß': 1.2, 'Emile Smith Rowe': 1.1, 'Jack Grealish': 1.1,
-      // Creative fullbacks and wing-backs (reduced from 2.0x to 1.3x max)
-      'Trent Alexander-Arnold': 1.3, 'Andrew Robertson': 1.2, 'Reece James': 1.2,
-      'Ben Chilwell': 1.15, 'Kieran Trippier': 1.2, 'Luke Shaw': 1.1,
-      'João Cancelo': 1.15, 'Kyle Walker': 1.1, 'Pervis Estupiñán': 1.1,
-      // Playmaking forwards and wide players (reduced significantly)
-      'Mohamed Salah': 1.2, 'Son Heung-min': 1.15, 'Diogo Jota': 1.1,
-      'Gabriel Jesus': 1.15, 'Ivan Toney': 1.1, 'Harry Kane': 1.15,
-      'Ollie Watkins': 1.1, 'Alexander Isak': 1.1, 'Darwin Núñez': 1.05,
-      // Key creative defenders (minimal boosts)
-      'Virgil van Dijk': 1.05, 'William Saliba': 1.02, 'Gabriel Magalhães': 1.02,
-      'Thiago Silva': 1.05, 'John Stones': 1.02, 'Rúben Dias': 1.02
-    };
+    // Calculate player contributions using data-driven approach
+    const playerContributions: { [playerId: number]: { name: string, position: string, contribution: number, xaPer90: number, expectedMinutes: number } } = {};
 
     players.forEach(player => {
       const position = positions.find(p => p.id === player.element_type);
       const positionName = position?.singular_name;
       const playerName = getPlayerName(player.id) || `${player.first_name} ${player.second_name}`;
       
-      // Get position rates
-      const positionRate = positionAssistRates[positionName as keyof typeof positionAssistRates] || { base: 15.0, variance: 5.0 };
+      // DATA-DRIVEN FOUNDATION: Use actual xA per 90 instead of arbitrary base rates
+      const currentYearXAPer90 = player.expected_assists_per_90 || 0;
       
-      // Deterministic variance based on player ID (ensures consistency)
-      const seed = (player.id * 23) % 100; // Different seed from goals for variety
-      const varianceMultiplier = 1 + ((seed - 50) / 100) * (positionRate.variance / positionRate.base);
+      // Position-based fallbacks for xA (conservative, realistic values)
+      const fallbackXA = player.element_type === 1 ? 0.005 : // GK: very minimal
+                         player.element_type === 2 ? 0.08 :  // DEF: realistic
+                         player.element_type === 3 ? 0.15 :  // MID: moderate
+                         0.12; // FWD: lower than goals since assists are harder
       
-      // Base share from position with deterministic variance
-      let baseShare = positionRate.base * Math.max(0.3, Math.min(1.8, varianceMultiplier));
+      // Use actual xA data or fallback to position average
+      const xAPer90 = currentYearXAPer90 > 0 ? currentYearXAPer90 : fallbackXA;
       
-      // Elite assist provider boost
-      const assistBoost = eliteAssistBoosts[playerName] || 1.0;
-      baseShare *= assistBoost;
+      // PERFORMANCE-BASED: Actual assists from completed + projected for remaining
+      const actualAssistsFromCompleted = player.assists || 0;
+      const expectedMinutes = calculateExpectedMinutes(player, players);
+      const projectedAssistsFromRemaining = (xAPer90 / 90) * expectedMinutes * (remainingGameweeks / 38);
       
-      // Historical optimization using multiple seasons
-      let historicalMultiplier = 1.0;
-      let totalHistoricalAssists = 0;
-      let seasonsFound = 0;
+      // SET PIECE TAKER ADJUSTMENT: Add freekicks/corners assists that xA might exclude
+      const setPieceAdjustment = getSetPieceTakerAdjustment(playerName, player.id);
+      const adjustedXAPer90 = xAPer90 + setPieceAdjustment;
       
-      // Check multiple seasons for comprehensive historical data
-      Object.values(historicalData).forEach((seasonPlayers: any) => {
-        if (Array.isArray(seasonPlayers)) {
-          const historicalPlayer = seasonPlayers.find((hp: any) => 
-            hp && (
-              (`${hp.first_name || hp.firstName} ${hp.second_name || hp.secondName}` === playerName) ||
-              (hp.web_name === player.web_name && Math.abs((hp.now_cost || hp.nowCost || 0) - player.now_cost) <= 20)
-            )
-          );
-          
-          if (historicalPlayer) {
-            const assists = historicalPlayer.assists || 0;
-            const minutes = historicalPlayer.minutes || 0;
-            if (minutes > 500) { // Only count seasons with meaningful playing time
-              totalHistoricalAssists += assists;
-              seasonsFound++;
-            }
-          }
-        }
-      });
+      // HYBRID CALCULATION: Actual assists + projected assists for remaining matches
+      const hybridSeasonAssists = actualAssistsFromCompleted + projectedAssistsFromRemaining;
       
-      // Conservative historical boost for proven assist providers (reduced from aggressive levels)
-      if (seasonsFound >= 2 && totalHistoricalAssists >= 8) {
-        const avgAssistsPerSeason = totalHistoricalAssists / seasonsFound;
-        // Conservative boost based on historical assist average (reduced from 1.4x max)
-        if (avgAssistsPerSeason >= 6) {
-          historicalMultiplier = 1.2; // Elite historical assist providers (was 1.4x)
-        } else if (avgAssistsPerSeason >= 4) {
-          historicalMultiplier = 1.15; // Very good historical assist providers (was 1.25x)
-        } else if (avgAssistsPerSeason >= 2.5) {
-          historicalMultiplier = 1.1; // Good historical assist providers (was 1.15x)
-        }
+      // CONSERVATIVE POSITION MULTIPLIERS (as specified by user)
+      let positionMultiplier = 1.0;
+      switch (player.element_type) {
+        case 4: // Forward
+          positionMultiplier = 1.05; // Lower than goals since assists are secondary for forwards
+          break;
+        case 3: // Midfielder 
+          positionMultiplier = 1.3; // Highest since they create most assists
+          break;
+        case 2: // Defender
+          positionMultiplier = 0.7; // Higher than goals since attacking fullbacks assist more
+          break;
+        case 1: // Goalkeeper
+          positionMultiplier = 0.15; // Minimal but possible
+          break;
       }
       
-      baseShare *= historicalMultiplier;
+      // Apply minutes weighting to prevent backup players from dominating
+      const maxExpectedMinutes = Math.max(...players.map(p => calculateExpectedMinutes(p, players)), 1);
+      const minutesWeight = Math.max(0.1, expectedMinutes / maxExpectedMinutes);
+      const contribution = hybridSeasonAssists * positionMultiplier * minutesWeight;
       
-      // Conservative ICT creativity boost (reduced from aggressive 1.3x)
-      const creativityBoost = player.creativity_rank <= 50 ? 1.15 : 
-                             player.creativity_rank <= 100 ? 1.1 : 
-                             player.creativity_rank <= 200 ? 1.05 : 1.0;
-      baseShare *= creativityBoost;
-      
-      // Form and injury considerations
-      const formBoost = (player.form || 0) > 6 ? 1.1 : (player.form || 0) < 3 ? 0.9 : 1.0;
-      const availabilityPenalty = (player.chance_of_playing_next_round || 100) < 75 ? 0.8 : 1.0;
-      baseShare *= formBoost * availabilityPenalty;
-      
-      // Conservative price tier boost (reduced from aggressive 1.2x)
-      const priceBoost = player.now_cost >= 90 ? 1.1 : player.now_cost >= 70 ? 1.05 : player.now_cost >= 50 ? 1.02 : 1.0;
-      baseShare *= priceBoost;
-      
-      // Apply position-based caps to assist share percentage
-      const getPositionShareCap = (position: string): number => {
-        switch (position?.toLowerCase()) {
-          case 'goalkeeper': return 2; // Max 2% share for GKs
-          case 'defender': return 12; // Max 12% share for defenders (was 15%)
-          case 'midfielder': return 28; // Max 28% share for midfielders (was 35%)
-          case 'forward': return 20; // Max 20% share for forwards (was 25%)
-          default: return 20;
-        }
-      };
-      
-      const positionShareCap = getPositionShareCap(positionName);
-      const finalShare = Math.max(0.1, Math.min(positionShareCap, baseShare));
-      
-      playerShares.push({
-        id: player.id,
+      playerContributions[player.id] = {
         name: playerName,
         position: positionName,
-        rawShare: finalShare
-      });
+        contribution,
+        xaPer90: adjustedXAPer90,
+        expectedMinutes
+      };
       
-      totalShare += finalShare;
+      totalContribution += contribution;
     });
 
-    return playerShares;
+    // PERFECT TEAM BALANCE NORMALIZATION (matching goals methodology)
+    const getPositionAssistShareCap = (position: string): number => {
+      switch (position?.toLowerCase()) {
+        case 'goalkeeper': return 2; // Max 2% share for GKs
+        case 'defender': return 15; // Conservative cap for defenders
+        case 'midfielder': return 35; // Higher cap since midfielders create most assists
+        case 'forward': return 25; // Moderate cap for forwards
+        default: return 20;
+      }
+    };
+
+    // First pass: Calculate initial normalized shares and identify capped players
+    const playerSharesData: { [playerId: number]: { data: any, normalizedShare: number, cappedShare: number, wasCapped: boolean } } = {};
+    let totalCappedAssists = 0;
+    let totalUncappedNormalized = 0;
+    let uncappedPlayerIds: number[] = [];
+
+    Object.keys(playerContributions).forEach(playerIdStr => {
+      const playerId = parseInt(playerIdStr);
+      const playerData = playerContributions[playerId];
+      
+      // Initial normalized share based on contribution
+      const initialNormalizedShare = totalContribution > 0 ? (playerData.contribution / totalContribution) * 100 : 0;
+      const positionShareCap = getPositionAssistShareCap(playerData.position);
+      
+      if (initialNormalizedShare > positionShareCap) {
+        // Player is capped
+        playerSharesData[playerId] = {
+          data: playerData,
+          normalizedShare: initialNormalizedShare,
+          cappedShare: positionShareCap,
+          wasCapped: true
+        };
+        totalCappedAssists += positionShareCap;
+      } else {
+        // Player is not capped
+        playerSharesData[playerId] = {
+          data: playerData,
+          normalizedShare: initialNormalizedShare,
+          cappedShare: initialNormalizedShare,
+          wasCapped: false
+        };
+        totalUncappedNormalized += initialNormalizedShare;
+        uncappedPlayerIds.push(playerId);
+      }
+    });
+
+    // Second pass: Redistribute excess share from capped players to uncapped players
+    const remainingShareToDistribute = 100 - totalCappedAssists;
+    
+    uncappedPlayerIds.forEach(playerId => {
+      const playerShare = playerSharesData[playerId];
+      if (totalUncappedNormalized > 0) {
+        const redistributionFactor = remainingShareToDistribute / totalUncappedNormalized;
+        playerShare.cappedShare = playerShare.normalizedShare * redistributionFactor;
+      }
+    });
+
+    // Generate final player shares
+    Object.keys(playerSharesData).forEach(playerIdStr => {
+      const playerId = parseInt(playerIdStr);
+      const shareData = playerSharesData[playerId];
+      
+      playerShares.push({
+        id: playerId,
+        name: shareData.data.name,
+        position: shareData.data.position,
+        rawShare: shareData.cappedShare,
+        assistShare: Math.max(0.1, shareData.cappedShare)
+      });
+    });
+
+    return playerShares.sort((a, b) => b.assistShare - a.assistShare);
+  }
+
+  // SET PIECE TAKER ADJUSTMENT FUNCTION (replaces penalty taker for assists)
+  function getSetPieceTakerAdjustment(playerName: string, playerId: number): number {
+    // Known primary freekick and corner takers (more conservative than penalty adjustments)
+    const setPieceTakers: { [key: string]: number } = {
+      // Primary freekick specialists
+      'James Maddison': 0.06, 'Kevin De Bruyne': 0.05, 'Bruno Fernandes': 0.04,
+      'Trent Alexander-Arnold': 0.05, 'Mason Mount': 0.03, 'Pascal Groß': 0.04,
+      
+      // Primary corner takers
+      'Andrew Robertson': 0.03, 'Luke Shaw': 0.02, 'Ben Chilwell': 0.02,
+      'Kieran Trippier': 0.04, 'Reece James': 0.03,
+      
+      // Versatile set piece takers
+      'Cole Palmer': 0.04, 'Martin Ødegaard': 0.03, 'Phil Foden': 0.02,
+      'Bukayo Saka': 0.03, 'Son Heung-min': 0.02
+    };
+    
+    return setPieceTakers[playerName] || 0;
   }
 
 
