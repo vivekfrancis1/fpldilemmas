@@ -4259,94 +4259,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalContribution += contribution;
           }
           
-          // ENHANCED NORMALIZATION - Ensure sum equals team xG
+          // SIMPLE PROPORTIONAL NORMALIZATION - Fast single-phase calculation
           console.log(`DEBUG: Team ${team.name} - Total contribution: ${totalContribution.toFixed(3)}, Team xG: ${teamSeasonTotals[teamId].expectedGoals.toFixed(3)}`);
           
-          // Calculate normalized shares with perfect balance after capping
-          const getPositionGoalShareCap = (position: string): number => {
-            switch (position?.toLowerCase()) {
-              case 'goalkeeper': return 2; // Max 2% share for GKs
-              case 'defender': return 18; // Max 18% share for defenders
-              case 'midfielder': return 35; // Max 35% share for midfielders
-              case 'forward': return 35; // Max 35% share for forwards
-              default: return 25;
-            }
-          };
-          
-          // First pass: Calculate initial normalized shares and identify capped players
-          const playerShares: { [playerId: number]: { data: any, normalizedShare: number, cappedShare: number, wasCapped: boolean } } = {};
-          let totalCappedGoals = 0;
-          let totalUncappedNormalized = 0;
-          let uncappedPlayerIds: number[] = [];
-          
+          // Single-pass proportional calculation (no caps, no redistribution)
           Object.keys(playerContributions).forEach(playerIdStr => {
             const playerId = parseInt(playerIdStr);
             const playerData = playerContributions[playerId];
             
-            // Initial normalized share based on contribution
-            const normalizedShare = totalContribution > 0 ? 
+            // Simple proportional share - fast and accurate
+            const playerShare = totalContribution > 0 ? 
               (playerData.contribution / totalContribution) * teamSeasonTotals[teamId].expectedGoals : 0;
-            
-            // Apply position-based caps
-            const positionGoalShareCap = getPositionGoalShareCap(playerData.position);
-            const maxProjectedGoals = (positionGoalShareCap / 100) * teamSeasonTotals[teamId].expectedGoals;
-            const cappedShare = Math.min(normalizedShare, maxProjectedGoals);
-            const wasCapped = cappedShare < normalizedShare;
-            
-            if (wasCapped) {
-              console.log(`DEBUG: Capped ${playerData.name} projected goals: ${normalizedShare.toFixed(2)} → ${cappedShare.toFixed(2)} (${playerData.position} cap: ${positionGoalShareCap}%)`);
-            } else {
-              uncappedPlayerIds.push(playerId);
-              totalUncappedNormalized += normalizedShare;
-            }
-            
-            playerShares[playerId] = {
-              data: playerData,
-              normalizedShare,
-              cappedShare,
-              wasCapped
-            };
-            
-            totalCappedGoals += cappedShare;
-          });
-          
-          // Second pass: Redistribute shortfall to uncapped players proportionally
-          const targetTotal = teamSeasonTotals[teamId].expectedGoals;
-          const shortfall = targetTotal - totalCappedGoals;
-          
-          if (Math.abs(shortfall) > 0.001 && uncappedPlayerIds.length > 0 && totalUncappedNormalized > 0) {
-            console.log(`DEBUG: Team ${team.name} redistributing ${shortfall.toFixed(3)} goals to ${uncappedPlayerIds.length} uncapped players`);
-            
-            uncappedPlayerIds.forEach(playerId => {
-              const player = playerShares[playerId];
-              const redistributionShare = player.normalizedShare / totalUncappedNormalized;
-              const additionalGoals = shortfall * redistributionShare;
-              player.cappedShare += additionalGoals;
-              
-              if (Math.abs(additionalGoals) > 0.01) {
-                console.log(`DEBUG: Redistributed ${additionalGoals.toFixed(3)} goals to ${player.data.name}`);
-              }
-            });
-          }
-          
-          // Final assignment with perfect team balance
-          Object.keys(playerShares).forEach(playerIdStr => {
-            const playerId = parseInt(playerIdStr);
-            const player = playerShares[playerId];
+            const finalShare = Math.round(playerShare * 100) / 100;
             
             teamSeasonTotals[teamId].players[playerId] = {
-              name: player.data.name,
-              position: player.data.position,
-              projectedGoals: Math.round(player.cappedShare * 100) / 100
+              name: playerData.name,
+              position: playerData.position,
+              projectedGoals: finalShare
             };
           });
           
-          // Verify perfect balance
+          // Quick balance verification (informational only)
           const finalTotalGoals = Object.values(teamSeasonTotals[teamId].players)
             .reduce((sum: number, player: any) => sum + player.projectedGoals, 0);
-          const balanceError = Math.abs(finalTotalGoals - targetTotal);
-          
-          console.log(`DEBUG: Team ${team.name} PERFECT BALANCE: Players=${finalTotalGoals.toFixed(3)} vs Team=${targetTotal.toFixed(3)} (error: ${balanceError.toFixed(6)})`);
+          console.log(`DEBUG: Team ${team.name} PERFECT BALANCE: Players=${finalTotalGoals.toFixed(3)} vs Team=${teamSeasonTotals[teamId].expectedGoals.toFixed(3)}`);
+        
           
           return; // Skip the old historical weighting approach
         }
@@ -5201,61 +5138,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
             
-            // Apply realistic caps based on position to assist share percentage
-            const getPositionShareCap = (position: string): number => {
-              switch (position.toLowerCase()) {
-                case 'goalkeeper': return 2; // Max 2% share for GKs
-                case 'defender': return 18; // Max 18% share for defenders
-                case 'midfielder': return 35; // Max 35% share for midfielders
-                case 'forward': return 25; // Max 25% share for forwards
-                default: return 20;
-              }
-            };
-            
-            const positionShareCap = getPositionShareCap(playerData.position);
-            const cappedAssistShare = Math.min(finalAssistShare, positionShareCap);
-            
-            if (cappedAssistShare !== finalAssistShare) {
-              console.log(`DEBUG: Capped ${playerData.name} assist share: ${finalAssistShare.toFixed(1)}% → ${cappedAssistShare.toFixed(1)}% (${playerData.position} cap: ${positionShareCap}%)`);
-            }
-            
-            if (cappedAssistShare > 0) {
+            // SIMPLE PROPORTIONAL CALCULATION - Fast single-phase approach (no caps, no redistribution)
+            if (finalAssistShare > 0) {
               finalPlayerShares.push({
                 id: playerId,
                 name: playerData.name,
                 position: playerData.position,
-                assistShare: cappedAssistShare
+                assistShare: finalAssistShare
               });
             }
           });
           
-          // Normalize to ensure team totals 100% with reasonable distribution
+          // Single-pass proportional distribution - ultra-fast
           const totalShare = finalPlayerShares.reduce((sum, p) => sum + p.assistShare, 0);
           if (totalShare > 0 && finalPlayerShares.length > 0) {
             finalPlayerShares.forEach(player => {
-              // First normalize to 100%
-              let normalizedShare = (player.assistShare / totalShare) * 100;
-              
-              // Apply position caps again AFTER normalization to prevent unrealistic individual shares
-              const getPositionShareCap = (position: string): number => {
-                switch (position.toLowerCase()) {
-                  case 'goalkeeper': return 2; // Max 2% share for GKs
-                  case 'defender': return 18; // Max 18% share for defenders
-                  case 'midfielder': return 35; // Max 35% share for midfielders
-                  case 'forward': return 25; // Max 25% share for forwards
-                  default: return 20;
-                }
-              };
-              
-              const positionShareCap = getPositionShareCap(player.position);
-              const finalCappedShare = Math.min(normalizedShare, positionShareCap);
-              
-              if (finalCappedShare !== normalizedShare) {
-                console.log(`DEBUG: Post-normalization cap applied to ${player.name}: ${normalizedShare.toFixed(1)}% → ${finalCappedShare.toFixed(1)}% (${player.position} cap: ${positionShareCap}%)`);
-              }
-              
-              player.assistShare = finalCappedShare;
-              const projectedAssists = (teamSeasonTotals[teamId].expectedAssists * player.assistShare / 100);
+              // Simple proportional share - no caps, perfect balance
+              const normalizedSharePercent = (player.assistShare / totalShare) * 100;
+              const projectedAssists = (teamSeasonTotals[teamId].expectedAssists * normalizedSharePercent / 100);
               
               teamSeasonTotals[teamId].players[player.id] = {
                 name: player.name,
@@ -5264,7 +5164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             });
             
-            console.log(`DEBUG: Team ${team.name} distributed assists among ${finalPlayerShares.length} players`);
+            console.log(`DEBUG: Team ${team.name} distributed assists among ${finalPlayerShares.length} players using simple proportional calculation`);
           } else {
             console.log(`DEBUG: No valid assist shares for team ${team.name}`);
           }
