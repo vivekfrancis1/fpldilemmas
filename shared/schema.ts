@@ -1208,6 +1208,31 @@ export type InsertCachedPlayerRedCards = typeof cachedPlayerRedCards.$inferInser
 export type CachedPlayerBonusPoints = typeof cachedPlayerBonusPoints.$inferSelect;
 export type InsertCachedPlayerBonusPoints = typeof cachedPlayerBonusPoints.$inferInsert;
 
+// Pre-computed 2024/25 data cache for fast goal/assist share calculations
+export const cachedHistoricalData = pgTable("cached_historical_data", {
+  id: serial("id").primaryKey(),
+  season: varchar("season", { length: 10 }).notNull(),
+  playerId: integer("player_id").notNull(),
+  teamId: integer("team_id").notNull(),
+  teamName: varchar("team_name", { length: 100 }).notNull(),
+  firstName: varchar("first_name", { length: 50 }).notNull(),
+  secondName: varchar("second_name", { length: 50 }).notNull(),
+  webName: varchar("web_name", { length: 50 }),
+  positionName: varchar("position_name", { length: 20 }).notNull(),
+  goalsScored: integer("goals_scored").default(0),
+  assists: integer("assists").default(0),
+  totalPoints: integer("total_points").default(0),
+  minutes: integer("minutes").default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  index("cached_historical_season_player_idx").on(table.season, table.playerId),
+  index("cached_historical_team_idx").on(table.teamName),
+]);
+
+// Types for cached historical data
+export type CachedHistoricalData = typeof cachedHistoricalData.$inferSelect;
+export type InsertCachedHistoricalData = typeof cachedHistoricalData.$inferInsert;
+
 // Types for spread betting odds cache
 export type CachedSpreadBettingOdds = typeof cachedSpreadBettingOdds.$inferSelect;
 export type InsertCachedSpreadBettingOdds = typeof cachedSpreadBettingOdds.$inferInsert;

@@ -4997,30 +4997,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const historicalData: { [season: string]: any[] } = {};
       historicalData["current"] = currentYearActualData;
       
-      // Fetch historical xA data from 2024/25 PLUS current year actual data for assist share weighting
-      const historicalSeasons = ["2024/25"];
+      // Use pre-computed 2024/25 cache for ultra-fast performance  
+      const { historicalCacheService } = await import("./historical-cache-service");
+      const cached2024Data = await historicalCacheService.getCached2024Data();
+      
+      console.log(`DEBUG: Using cached 2024/25 data (${cached2024Data.length} players) - ultra-fast lookup`);
+      
       const historicalXAData: { [season: string]: any[] } = {};
-      
-      // Optimize: Fetch historical data only once with faster processing
-      const historicalPromises = historicalSeasons.map(async (season) => {
-        try {
-          const startTime = Date.now();
-          const historicalPlayers = await storage.getHistoricalPlayers(season);
-          const endTime = Date.now();
-          
-          if (historicalPlayers && historicalPlayers.length > 0) {
-            console.log(`DEBUG: Found ${historicalPlayers.length} historical players for ${season} (for xA data) - ${endTime - startTime}ms`);
-            historicalData[season] = historicalPlayers;
-            historicalXAData[season] = historicalPlayers; // Also store for xA calculations
-          }
-        } catch (error) {
-          console.warn(`Could not fetch historical data for ${season}:`, (error as Error).message);
-          historicalData[season] = [];
-          historicalXAData[season] = [];
-        }
-      });
-      
-      await Promise.all(historicalPromises);
+      historicalData["2024/25"] = cached2024Data;
+      historicalXAData["2024/25"] = cached2024Data;
       
       // Now distribute assist shares among players for each team using 3-year weighted approach
       Object.keys(teamSeasonTotals).forEach(teamIdStr => {
@@ -5061,7 +5046,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           });
           
-          // Process two data sources with equal weighting (50% each)
+          // Process two data sources with equal weighting (50% each) - using cached 2024/25 data
           const allSeasons = ["current", "2024/25"];
           
           allSeasons.forEach(season => {
