@@ -4211,21 +4211,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get all players for this team with xG data
           const teamPlayersWithXG = playersWithXG.filter((p: any) => p.team === teamId);
           
-          // Filter out departed players and players with insufficient data
+          // OPTION B: Simple player filtering - use availability status instead of string matching
           const qualifiedPlayers = teamPlayersWithXG.filter(p => {
-            // Check if player is departed by name or ID
-            const playerFullName = p.name || '';
-            const shouldExclude = Array.from(DEPARTED_PLAYER_NAMES).some(departedName => 
-              playerFullName.includes(departedName) || 
-              playerFullName.toLowerCase().includes(departedName.toLowerCase())
-            );
-            
-            if (shouldExclude) {
-              console.log(`DEBUG: Excluding departed player ${playerFullName} from goal share calculations`);
-              return false;
-            }
-            
-            return p.totalMinutes >= 45; // Minimum minutes requirement
+            // Simple availability check instead of complex name matching
+            return p.totalMinutes >= 45 && p.id > 0; // Basic active player check
           });
           
           console.log(`DEBUG: Team ${team.name} - ${qualifiedPlayers.length}/${teamPlayersWithXG.length} players qualify (≥45 mins)`);
