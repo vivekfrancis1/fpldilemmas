@@ -55,6 +55,7 @@ export class StaticCacheService {
     if (existing.length === 0) {
       await db.insert(staticProjectionRanges).values({
         rangeName: range.name,
+        projectionType: "player_total_points",
         startGameweek: range.start,
         endGameweek: range.end,
         season: "2025/26",
@@ -136,12 +137,13 @@ export class StaticCacheService {
         }
         
         // Otherwise, filter gameweek breakdown to requested range
-        const filteredBreakdown = {};
-        const breakdown = proj.gameweekBreakdown as any || {};
+        const filteredBreakdown: Record<string, any> = {};
+        const breakdown = (proj.gameweekBreakdown as Record<string, any>) || {};
         
         for (let gw = startGw; gw <= endGw; gw++) {
-          if (breakdown[`gw${gw}`]) {
-            filteredBreakdown[`gw${gw}`] = breakdown[`gw${gw}`];
+          const gwKey = `gw${gw}`;
+          if (breakdown[gwKey]) {
+            filteredBreakdown[gwKey] = breakdown[gwKey];
           }
         }
         

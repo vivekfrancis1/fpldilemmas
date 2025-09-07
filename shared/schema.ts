@@ -1323,6 +1323,36 @@ export const staticCachedProjections = pgTable("static_cached_projections", {
   updatedAt: timestamp("updated_at").defaultNow()
 });
 
+// Static Player Projections - Dedicated table for ultra-fast player projection caching
+export const staticPlayerProjections = pgTable("static_player_projections", {
+  id: serial("id").primaryKey(),
+  rangeId: integer("range_id").references(() => staticProjectionRanges.id).notNull(),
+  
+  // Player identifiers
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name", { length: 100 }).notNull(),
+  position: varchar("position", { length: 20 }).notNull(),
+  team: varchar("team", { length: 50 }).notNull(),
+  
+  // Projection values
+  totalPoints: decimal("total_points", { precision: 6, scale: 2 }).notNull().default("0"),
+  projectedGoals: decimal("projected_goals", { precision: 6, scale: 3 }).notNull().default("0"),
+  projectedAssists: decimal("projected_assists", { precision: 6, scale: 3 }).notNull().default("0"),
+  projectedMinutes: decimal("projected_minutes", { precision: 8, scale: 2 }).notNull().default("0"),
+  projectedCleanSheets: decimal("projected_clean_sheets", { precision: 6, scale: 3 }).notNull().default("0"),
+  projectedBonusPoints: decimal("projected_bonus_points", { precision: 6, scale: 3 }).notNull().default("0"),
+  
+  // Gameweek breakdown
+  gameweekBreakdown: jsonb("gameweek_breakdown"), // {gw4: {goals: 0.5, assists: 0.2, ...}, ...}
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+}, (table) => [
+  index("idx_static_player_projections_range").on(table.rangeId),
+  index("idx_static_player_projections_player").on(table.playerId),
+  index("idx_static_player_projections_total_points").on(table.totalPoints),
+]);
+
 // TODO: Add indexes back after schema is stable
 // export const staticCachedProjectionsRangeIndex = index("static_cached_projections_range_idx").on(staticCachedProjections.rangeId);
 // export const staticCachedProjectionsEntityIndex = index("static_cached_projections_entity_idx").on(staticCachedProjections.entityId, staticCachedProjections.entityType);
@@ -1340,3 +1370,7 @@ export type StaticProjectionRange = typeof staticProjectionRanges.$inferSelect;
 export type InsertStaticProjectionRange = typeof staticProjectionRanges.$inferInsert;
 export type StaticCachedProjection = typeof staticCachedProjections.$inferSelect;
 export type InsertStaticCachedProjection = typeof staticCachedProjections.$inferInsert;
+
+// Types for static player projections
+export type StaticPlayerProjection = typeof staticPlayerProjections.$inferSelect;
+export type InsertStaticPlayerProjection = typeof staticPlayerProjections.$inferInsert;
