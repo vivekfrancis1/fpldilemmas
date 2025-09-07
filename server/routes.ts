@@ -3067,9 +3067,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (gameweekFixtures.length > 0 && finishedFixtures.length === gameweekFixtures.length) {
           completeGameweeks.add(gw);
-          console.log(`DEBUG: Goals Scored - GW${gw} COMPLETE - All ${gameweekFixtures.length} fixtures finished, using ACTUAL data`);
         } else if (gameweekFixtures.length > 0) {
-          console.log(`DEBUG: Goals Scored - GW${gw} INCOMPLETE - ${finishedFixtures.length}/${gameweekFixtures.length} fixtures finished, using PROJECTIONS`);
         }
       }
       
@@ -3091,7 +3089,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (completeGameweeks.has(fixture.event)) {
             // For complete gameweeks, use actual goals scored
             const actualGoals = isHome ? (fixture.team_h_score || 0) : (fixture.team_a_score || 0);
-            console.log(`DEBUG: Goals Scored - GW${fixture.event} ACTUAL - ${team.short_name} scored: ${actualGoals} goals`);
             return {
               gameweek: fixture.event,
               opponent: opponent.short_name,
@@ -4186,7 +4183,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // OPTION 4: Flatten batch results for super-fast processing
       playersWithXG.push(...batchResults.flat());
       
-      console.log(`DEBUG: Processed ${playersWithXG.length} players using bootstrap data`);
       
       // Step 3: Expected minutes and sample size adjustments handled by helper functions
       
