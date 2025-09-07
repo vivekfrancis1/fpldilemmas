@@ -218,24 +218,7 @@ const MASTER_TEAM_DEFAULTS = {
   weakDefenseMultiplier: 1.15,
   promotedDefenseMultiplier: 1.3,
   
-  // Penalty Taker Adjustments (SIGNIFICANTLY INCREASED weightage for Goal Share tool)
-  penaltyTakerAdjustments: {
-    // Primary penalty takers - MAJOR boost for goal share calculations
-    'Mohamed Salah': 0.45,           // High penalty weighting for goal share
-    'Erling Haaland': 0.40,          // High penalty weighting for goal share
-    'Harry Kane': 0.42,              // High penalty weighting for goal share
-    'Bruno Fernandes': 0.50,         // Highest penalty weighting for goal share
-    'Alexander Isak': 0.30,          // Medium-high penalty weighting for goal share
-    'Ivan Toney': 0.38,              // High penalty weighting for goal share
-    'Ollie Watkins': 0.25,           // Medium penalty weighting for goal share
-    'Cole Palmer': 0.42,             // High penalty weighting for goal share
-    'Bukayo Saka': 0.38,             // High penalty weighting for goal share
-    // Secondary penalty takers - MODERATE boost
-    'Son Heung-min': 0.20,           // Medium penalty weighting for goal share
-    'James Ward-Prowse': 0.28,       // Medium penalty weighting for goal share
-    'Pascal Groß': 0.25,             // Medium penalty weighting for goal share
-    'Luka Milivojevic': 0.35,        // Medium-high penalty weighting for goal share
-  },
+  // Dynamic penalty taker adjustment calculation will be used instead of hardcoded list
 
   // Context Multipliers
   derbyGoalsMultiplier: 0.87,
@@ -370,27 +353,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Function to get penalty taker adjustment
-  function getPenaltyTakerAdjustment(playerName: string, playerId: number): number {
-    const adjustments = MASTER_TEAM_DEFAULTS.penaltyTakerAdjustments;
-    
-    // Check by exact name match first
-    if (adjustments[playerName as keyof typeof adjustments]) {
-      console.log(`DEBUG: Penalty adjustment for ${playerName}: +${adjustments[playerName as keyof typeof adjustments]} xG per 90`);
-      return adjustments[playerName as keyof typeof adjustments];
-    }
-    
-    // Check by partial name match for different name formats
-    const playerNameLower = playerName.toLowerCase();
-    for (const [key, value] of Object.entries(adjustments)) {
-      const keyLower = key.toLowerCase();
-      if (playerNameLower.includes(keyLower.split(' ')[0]) && playerNameLower.includes(keyLower.split(' ')[1])) {
-        console.log(`DEBUG: Penalty adjustment for ${playerName} (matched ${key}): +${value} xG per 90`);
-        return value;
+  // Dynamic penalty taker adjustment based on FPL metrics
+  function getPenaltyTakerAdjustment(playerName: string, playerId: number, bootstrapData?: any): number {
+    // Find the player in bootstrap data if available
+    if (bootstrapData?.elements) {
+      const player = bootstrapData.elements.find((p: any) => p.id === playerId);
+      if (player) {
+        const penaltyOrder = player.penalties_order || 99;
+        
+        // Calculate adjustment based on penalty taking order and goals scored
+        let adjustment = 0;
+        if (penaltyOrder === 1) {
+          // Primary penalty taker
+          adjustment = 0.35 + (player.goals_scored || 0) * 0.02; // Base + goals bonus
+        } else if (penaltyOrder === 2) {
+          // Secondary penalty taker
+          adjustment = 0.15 + (player.goals_scored || 0) * 0.015;
+        }
+        
+        // Cap the adjustment
+        adjustment = Math.min(0.5, Math.max(0, adjustment));
+        
+        if (adjustment > 0) {
+          console.log(`DEBUG: Dynamic penalty adjustment for ${playerName}: +${adjustment} xG per 90`);
+        }
+        
+        return adjustment;
       }
     }
     
-    return 0; // No penalty adjustment for this player
+    return 0; // No adjustment if player not found
   }
 
   // Bootstrap data cache (5 minutes)
@@ -5894,26 +5886,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'Forward': { base: 18.0, variance: 6.0 }        // 18% base, assists from deeper forwards
     };
 
-    // Elite assist providers based on historical Premier League data (2019-2024)
-    const eliteAssistProviders: { [key: string]: number } = {
-      // Top creative midfielders - historically dominant in assists
-      'Kevin De Bruyne': 2.4, 'Bruno Fernandes': 2.1, 'Trent Alexander-Arnold': 2.0,
-      'Mohamed Salah': 1.8, 'Andrew Robertson': 1.7, 'Mason Mount': 1.6,
-      'Martin Ødegaard': 1.6, 'James Maddison': 1.5, 'Cole Palmer': 1.5,
-      'Phil Foden': 1.4, 'Bukayo Saka': 1.4, 'Jack Grealish': 1.4,
-      'Riyad Mahrez': 1.3, 'Lucas Paquetá': 1.3, 'Eberechi Eze': 1.3,
-      'Pascal Groß': 1.25, 'James Ward-Prowse': 1.25, 'Alexis Mac Allister': 1.2,
-      'Bernardo Silva': 1.2, 'Son Heung-min': 1.2, 'Emiliano Buendía': 1.15,
+    // Dynamic assist multiplier calculation based on FPL metrics
+    const calculateAssistMultiplier = (player: any, position: any): number => {
+      const positionName = position?.singular_name || 'Forward';
       
-      // Creative forwards with assist history
-      'Harry Kane': 1.7, 'Roberto Firmino': 1.5, 'Diogo Jota': 1.3,
-      'Gabriel Jesus': 1.25, 'Ollie Watkins': 1.2, 'Darwin Núñez': 1.15,
-      'Ivan Toney': 1.15, 'Callum Wilson': 1.1, 'Alexandre Lacazette': 1.1,
+      // Base multiplier by position (from historical data)
+      const positionMultipliers = {
+        'Goalkeeper': 1.0,
+        'Defender': 1.15,   // Fullbacks can be creative
+        'Midfielder': 1.35,  // Primary assist providers
+        'Forward': 1.10     // Some forwards are creative
+      };
       
-      // Creative defenders (fullbacks primarily)
-      'João Cancelo': 1.4, 'Reece James': 1.35, 'Ben Chilwell': 1.25,
-      'Kieran Trippier': 1.2, 'Luke Shaw': 1.15, 'Oleksandr Zinchenko': 1.15,
-      'Pervis Estupiñán': 1.1, 'Marc Cucurella': 1.05, 'Tyrick Mitchell': 1.05
+      let multiplier = positionMultipliers[positionName as keyof typeof positionMultipliers] || 1.0;
+      
+      // Current season assists boost (significant factor)
+      const currentAssists = player.assists || 0;
+      const assistsBoost = Math.min(1.8, 1 + (currentAssists * 0.15)); // Up to 1.8x for high assist players
+      multiplier *= assistsBoost;
+      
+      // Creativity stat boost (key FPL metric)
+      const creativity = player.creativity || 0;
+      const creativityBoost = Math.min(1.6, 1 + (creativity * 0.008)); // Creativity typically 0-150
+      multiplier *= creativityBoost;
+      
+      // ICT index boost (overall FPL performance indicator)
+      const ictIndex = player.ict_index || 0;
+      const ictBoost = Math.min(1.4, 1 + (ictIndex * 0.002)); // ICT typically 0-200
+      multiplier *= ictBoost;
+      
+      // Set piece taker boost
+      const setPieceOrder = (player.corners_and_indirect_freekicks_order || 99) + (player.penalties_order || 99);
+      if (setPieceOrder <= 4) { // First or second choice for set pieces
+        multiplier *= 1.25;
+      }
+      
+      // Cap the final multiplier to prevent extreme values
+      return Math.min(2.5, Math.max(0.8, multiplier));
     };
 
     // Historical assist patterns by player characteristics
@@ -5951,9 +5960,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Base share from position with deterministic variance
       let baseShare = positionRate.base * Math.max(0.3, Math.min(1.8, varianceMultiplier));
       
-      // Elite assist provider boost based on historical data
-      const eliteBoost = eliteAssistProviders[playerName] || 1.0;
-      baseShare *= eliteBoost;
+      // Dynamic assist multiplier based on FPL metrics
+      const assistMultiplier = calculateAssistMultiplier(player, position);
+      baseShare *= assistMultiplier;
       
       // Historical performance adjustments using multiple FPL metrics
       let performanceScore = 1.0;
