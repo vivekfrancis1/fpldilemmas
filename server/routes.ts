@@ -4009,14 +4009,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // 7. Apply injury buffer (15% reduction for realistic expectations)
     const injuryBuffer = 0.85;
     
-    // Calculate final expected minutes with comprehensive factors including tournaments
+    // SIMPLIFIED: Basic expected minutes calculation (3 factors only)
     const finalExpectedMinutes = expectedMinutes * 
                                 availabilityFactor * 
                                 injuryMultiplier * 
-                                seasonalAvailability * 
-                                tournamentAdjustment * 
-                                formFactor * 
-                                injuryBuffer;
+                                seasonalAvailability;
+    // Removed: tournamentAdjustment, formFactor, injuryBuffer for simplicity
     
     // Debug logging for injured/unavailable players or tournament impacts (only for significant issues)
     if ((injuryMultiplier < 0.8 || availabilityFactor < 0.8 || tournamentAdjustment < 0.95) && 
@@ -4027,19 +4025,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.round(Math.max(100, finalExpectedMinutes)); // Minimum 100 minutes (for severely injured players)
   }
   
-  // Sample size regression function
+  // SIMPLIFIED: Sample size function - fast direct calculation
   function adjustForSampleSize(player: any, positionAverage: number): number {
-    const minReliableMinutes = 500; // Minimum for reliable xG per 90
-    
-    if (player.totalMinutes < minReliableMinutes) {
-      // Regress toward position average based on sample size
-      const weight = Math.max(0.2, player.totalMinutes / minReliableMinutes);
-      const adjustedXGPer90 = (player.xgPer90 * weight) + (positionAverage * (1 - weight));
-      
-      console.log(`DEBUG: Sample size adjustment for ${player.name}: ${player.xgPer90.toFixed(3)} → ${adjustedXGPer90.toFixed(3)} (${player.totalMinutes} mins)`);
-      return adjustedXGPer90;
+    // Simple threshold approach - no complex weighting
+    if (player.totalMinutes < 300) {
+      // For very low minutes, use position average
+      return positionAverage;
     }
     
+    // Otherwise use player's actual xG per 90 - no regression
     return player.xgPer90;
   }
 
@@ -5577,25 +5571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'Forward': { base: 18.0, variance: 6.0 }        // 18% base, playmaking forwards get boost
     };
 
-    // Elite assist provider boost based on historical creativity (deterministic)
-    const eliteAssistBoosts: { [key: string]: number } = {
-      // Elite creative midfielders and playmakers
-      'Kevin De Bruyne': 2.1, 'Bruno Fernandes': 1.9, 'Martin Ødegaard': 1.7,
-      'Cole Palmer': 1.8, 'James Maddison': 1.6, 'Phil Foden': 1.5,
-      'Bukayo Saka': 1.6, 'Mason Mount': 1.4, 'Eberechi Eze': 1.4,
-      'Pascal Groß': 1.5, 'Emile Smith Rowe': 1.3, 'Jack Grealish': 1.3,
-      // Creative fullbacks and wing-backs
-      'Trent Alexander-Arnold': 2.0, 'Andrew Robertson': 1.6, 'Reece James': 1.5,
-      'Ben Chilwell': 1.4, 'Kieran Trippier': 1.5, 'Luke Shaw': 1.3,
-      'João Cancelo': 1.4, 'Kyle Walker': 1.2, 'Pervis Estupiñán': 1.2,
-      // Playmaking forwards and wide players
-      'Mohamed Salah': 1.5, 'Son Heung-min': 1.4, 'Diogo Jota': 1.2,
-      'Gabriel Jesus': 1.3, 'Ivan Toney': 1.2, 'Harry Kane': 1.4,
-      'Ollie Watkins': 1.3, 'Alexander Isak': 1.2, 'Darwin Núñez': 1.1,
-      // Key creative defenders
-      'Virgil van Dijk': 1.1, 'William Saliba': 1.05, 'Gabriel Magalhães': 1.05,
-      'Thiago Silva': 1.1, 'John Stones': 1.05, 'Rúben Dias': 1.05
-    };
+    // SIMPLIFIED: No elite player boosts - use basic position rates only
 
     players.forEach(player => {
       const position = positions.find(p => p.id === player.element_type);
@@ -5605,98 +5581,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get position rates
       const positionRate = positionAssistRates[positionName as keyof typeof positionAssistRates] || { base: 15.0, variance: 5.0 };
       
-      // Deterministic variance based on player ID (ensures consistency)
-      const seed = (player.id * 23) % 100; // Different seed from goals for variety
-      const varianceMultiplier = 1 + ((seed - 50) / 100) * (positionRate.variance / positionRate.base);
+      // SIMPLIFIED: Basic position-based share only (no complex factors)
+      let baseShare = positionRate.base;
       
-      // Base share from position with deterministic variance
-      let baseShare = positionRate.base * Math.max(0.3, Math.min(1.8, varianceMultiplier));
-      
-      // Elite assist provider boost
-      const assistBoost = eliteAssistBoosts[playerName] || 1.0;
-      baseShare *= assistBoost;
-      
-      // Historical optimization using multiple seasons
-      let historicalMultiplier = 1.0;
-      let totalHistoricalAssists = 0;
-      let seasonsFound = 0;
-      
-      // Check multiple seasons for comprehensive historical data
-      Object.values(historicalData).forEach((seasonPlayers: any) => {
-        if (Array.isArray(seasonPlayers)) {
-          const historicalPlayer = seasonPlayers.find((hp: any) => 
-            hp && (
-              (`${hp.first_name || hp.firstName} ${hp.second_name || hp.secondName}` === playerName) ||
-              (hp.web_name === player.web_name && Math.abs((hp.now_cost || hp.nowCost || 0) - player.now_cost) <= 20)
-            )
-          );
-          
-          if (historicalPlayer) {
-            const assists = historicalPlayer.assists || 0;
-            const minutes = historicalPlayer.minutes || 0;
-            if (minutes > 500) { // Only count seasons with meaningful playing time
-              totalHistoricalAssists += assists;
-              seasonsFound++;
-            }
-          }
-        }
-      });
-      
-      // Apply historical boost for proven assist providers
-      if (seasonsFound >= 2 && totalHistoricalAssists >= 8) {
-        const avgAssistsPerSeason = totalHistoricalAssists / seasonsFound;
-        // Boost based on historical assist average (elite assisters get major boost)
-        if (avgAssistsPerSeason >= 6) {
-          historicalMultiplier = 1.4; // Elite historical assist providers
-        } else if (avgAssistsPerSeason >= 4) {
-          historicalMultiplier = 1.25; // Very good historical assist providers
-        } else if (avgAssistsPerSeason >= 2.5) {
-          historicalMultiplier = 1.15; // Good historical assist providers
-        }
+      // Only use current season assists as indicator (simple and fast)
+      const currentAssists = player.assists || 0;
+      if (currentAssists > 0) {
+        baseShare *= (1 + currentAssists * 0.1); // Slight boost for current assists
       }
       
-      baseShare *= historicalMultiplier;
-      
-      // ICT creativity boost (assists heavily correlate with creativity)
-      const creativityBoost = player.creativity_rank <= 50 ? 1.3 : 
-                             player.creativity_rank <= 100 ? 1.15 : 
-                             player.creativity_rank <= 200 ? 1.05 : 1.0;
-      baseShare *= creativityBoost;
-      
-      // Form and injury considerations
-      const formBoost = (player.form || 0) > 6 ? 1.1 : (player.form || 0) < 3 ? 0.9 : 1.0;
-      const availabilityPenalty = (player.chance_of_playing_next_round || 100) < 75 ? 0.8 : 1.0;
-      baseShare *= formBoost * availabilityPenalty;
-      
-      // Price tier boost (expensive players often more creative)
-      const priceBoost = player.now_cost >= 90 ? 1.2 : player.now_cost >= 70 ? 1.1 : player.now_cost >= 50 ? 1.05 : 1.0;
-      baseShare *= priceBoost;
-      
-      // Apply position-based caps to assist share percentage
-      const getPositionShareCap = (position: string): number => {
-        switch (position?.toLowerCase()) {
-          case 'goalkeeper': return 2; // Max 2% share for GKs
-          case 'defender': return 15; // Max 15% share for defenders
-          case 'midfielder': return 35; // Max 35% share for midfielders
-          case 'forward': return 25; // Max 25% share for forwards
-          default: return 20;
-        }
-      };
-      
-      const positionShareCap = getPositionShareCap(positionName);
-      const finalShare = Math.max(0.1, Math.min(positionShareCap, baseShare));
-      
-      playerShares.push({
-        id: player.id,
-        name: playerName,
-        position: positionName,
-        rawShare: finalShare
-      });
-      
-      totalShare += finalShare;
+      // Simple add to shares array - no caps, no complex normalization
+      if (baseShare > 0) {
+        playerShares.push({
+          id: player.id,
+          name: playerName,
+          position: positionName,
+          assistShare: baseShare
+        });
+        totalShare += baseShare;
+      }
     });
-
-    return playerShares;
+    
+    // SIMPLIFIED: Single-pass proportional normalization (no caps, perfect balance)
+    return playerShares.map(player => ({
+      id: player.id,
+      name: player.name,
+      position: player.position,
+      assistShare: totalShare > 0 ? Math.round((player.assistShare / totalShare) * 100 * 10) / 10 : 0
+    }));
   }
 
 
@@ -10938,11 +10850,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const playerData = teamPlayers.find(p => p.playerId === player.id);
           
           if (playerData && teamPlayers.length > 0) {
-            // Calculate total BPS for this team in this gameweek
-            const totalTeamBPS = teamPlayers.reduce((sum, p) => sum + p.rawBPS, 0);
-            
-            // Convert to probability as percentage of team's total BPS
-            let probability = totalTeamBPS > 0 ? (playerData.rawBPS / totalTeamBPS) : 0;
+            // SIMPLIFIED: Direct BPS to probability conversion (no team normalization)
+            // Simple conversion: rawBPS directly to probability percentage
+            let probability = playerData.rawBPS > 0 ? Math.min(playerData.rawBPS / 100, 1.0) : 0;
             
             playerBonusProbabilities[`gw${gw}`] = parseFloat(probability.toFixed(3));
             totalProbability += probability;
