@@ -4240,8 +4240,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const currentMinutes = player.minutes || 0;
             
             // PERCENTAGE-BASED minutes restrictions using completed gameweeks
-            const completedGameweeks = 3; // Update this as season progresses
-            const totalPossibleMinutes = 90 * completedGameweeks; // 270 minutes for 3 completed GWs
+            const completedGWs = 3; // Update this as season progresses
+            const totalPossibleMinutes = 90 * completedGWs; // 270 minutes for 3 completed GWs
             const minutesPercentage = (currentMinutes / totalPossibleMinutes) * 100;
             
             let minutesRestriction = 1.0;
@@ -4827,13 +4827,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (const teamData of assistShareData) {
         if (teamData.players && teamData.players.length > 0) {
-          // Find corresponding team assist projections
-          const teamProjections = teamAssistProjections.find((team: any) => team.teamShort === teamData.teamShort);
+          // Find corresponding team assist projections by teamId
+          const teamProjections = teamAssistProjections.find((team: any) => team.id === teamData.teamId);
           
           if (!teamProjections) {
-            console.warn(`DEBUG: No team projections found for ${teamData.teamShort}`);
+            console.warn(`DEBUG: No team projections found for teamId ${teamData.teamId}. Available team IDs: ${teamAssistProjections.map((t: any) => t.id).join(', ')}`);
             continue;
           }
+          
+          console.log(`DEBUG: Successfully matched teamId ${teamData.teamId} with team projections for ${teamProjections.teamShort}`);
           
           for (const playerData of teamData.players) {
             if (playerData && playerData.assistShare && playerData.assistShare > 0) {
@@ -5691,9 +5693,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // ENHANCED minutes weighting to prevent unrealistic projections for bench players
       const currentMinutes = player.minutes || 0;
       
-      // PERCENTAGE-BASED minutes restrictions using completed gameweeks
-      const completedGameweeks = 3; // Update this as season progresses
-      const totalPossibleMinutes = 90 * completedGameweeks; // 270 minutes for 3 completed GWs
+      // PERCENTAGE-BASED minutes restrictions using completed gameweeks  
+      const completedGWsAssist = 3; // Update this as season progresses
+      const totalPossibleMinutes = 90 * completedGWsAssist; // 270 minutes for 3 completed GWs
       const minutesPercentage = (currentMinutes / totalPossibleMinutes) * 100;
       
       let minutesRestriction = 1.0;
