@@ -61,6 +61,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/projected-goals-cs", label: "Goals and CS - Next GW", icon: Target, description: "Projected goals & clean sheets", popular: false },
         { path: "/team-goal-projections", label: "Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
+        { path: "/team-assist-projections", label: "Assists Scored", icon: Zap, description: "Expected team assists", popular: false },
         { path: "/team-cs-projections", label: "Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/team-goals-against-projections", label: "Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
         { path: "/projected-standings", label: "Standings", icon: Trophy, description: "Final league table projection", popular: false }
