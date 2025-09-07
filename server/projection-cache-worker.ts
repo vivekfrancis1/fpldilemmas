@@ -471,6 +471,59 @@ class ProjectionCacheWorker {
               ));
           }
           
+          // ✅ POPULATE CACHE TRACKING TABLES FOR STATUS DISPLAY
+          const { goalShareDaily, assistShareDaily } = await import("@shared/schema");
+          const currentDate = new Date().toISOString().split('T')[0];
+          
+          // Clear existing records for today
+          await db.delete(goalShareDaily).where(eq(goalShareDaily.calculationDate, currentDate));
+          await db.delete(assistShareDaily).where(eq(assistShareDaily.calculationDate, currentDate));
+          
+          // Populate Goal Share tracking table
+          const goalShareRecords: any[] = [];
+          goalShareData.forEach((team: any) => {
+            if (team.players && Array.isArray(team.players)) {
+              team.players.forEach((player: any) => {
+                goalShareRecords.push({
+                  calculationDate: currentDate,
+                  teamId: team.teamId,
+                  playerId: player.id || player.playerId,
+                  playerName: player.name || player.playerName,
+                  goalSharePercentage: player.goalShare?.toString() || '0',
+                  expectedGoals: player.expectedGoals?.toString() || '0'
+                });
+              });
+            }
+          });
+          
+          // Populate Assist Share tracking table
+          const assistShareRecords: any[] = [];
+          assistShareData.forEach((team: any) => {
+            if (team.players && Array.isArray(team.players)) {
+              team.players.forEach((player: any) => {
+                assistShareRecords.push({
+                  calculationDate: currentDate,
+                  teamId: team.teamId,
+                  playerId: player.id || player.playerId,
+                  playerName: player.name || player.playerName,
+                  assistSharePercentage: player.assistShare?.toString() || '0',
+                  expectedAssists: player.expectedAssists?.toString() || '0'
+                });
+              });
+            }
+          });
+          
+          // Insert tracking records
+          if (goalShareRecords.length > 0) {
+            await db.insert(goalShareDaily).values(goalShareRecords);
+            console.log(`📊 Populated goal share tracking table (${goalShareRecords.length} records)`);
+          }
+          
+          if (assistShareRecords.length > 0) {
+            await db.insert(assistShareDaily).values(assistShareRecords);
+            console.log(`📊 Populated assist share tracking table (${assistShareRecords.length} records)`);
+          }
+          
           console.log(`✅ Goal/Assist share data cached successfully`);
         } else {
           console.log(`⚠️ Goal/Assist share APIs returned errors, marking as cached without full data`);
