@@ -5976,24 +5976,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return Math.min(2.5, Math.max(0.8, multiplier));
     };
 
-    // Historical assist patterns by player characteristics
-    const historicalAdjustments = {
-      creativity: { 
-        multiplier: 0.035,  // Strong correlation between creativity and assists
-        cap: 2.2 
-      },
-      corners_and_indirect_freekicks_order: { 
-        multiplier: 1.15,   // Set piece takers historically provide more assists
-        cap: 1.3 
-      },
-      penalties_order: { 
-        multiplier: 1.05,   // Penalty takers often creative players
-        cap: 1.1 
-      },
-      ict_index: { 
-        multiplier: 0.015,  // ICT index correlates with creative output
-        cap: 1.8 
-      }
+    // Simplified position-based caps for assist share distribution
+    const positionAssistCaps = {
+      'Goalkeeper': 2.0,      // Very low assist ceiling
+      'Defender': 25.0,       // Fullbacks can get assists
+      'Midfielder': 35.0,     // Primary creative players
+      'Forward': 25.0         // Some forwards are creative but lower than mids
     };
 
     players.forEach(player => {
@@ -6015,29 +6003,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assistMultiplier = calculateAssistMultiplier(player, position);
       baseShare *= assistMultiplier;
       
-      // Historical performance adjustments using multiple FPL metrics
+      // Simplified performance scoring: Position + Current Season + Last Season
       let performanceScore = 1.0;
       
-      // Creativity metric (strongest predictor of assists)
-      const creativity = player.creativity || 0;
-      const creativityMultiplier = Math.min(historicalAdjustments.creativity.cap, 
-        1 + (creativity * historicalAdjustments.creativity.multiplier));
-      performanceScore *= creativityMultiplier;
+      // Current season assists (primary factor)
+      const currentAssists = player.assists || 0;
+      const currentBoost = Math.min(2.0, 1 + (currentAssists * 0.1)); // Up to 2x for high assists
+      performanceScore *= currentBoost;
       
-      // ICT Index correlation
-      const ictIndex = player.ict_index || 0;
-      const ictMultiplier = Math.min(historicalAdjustments.ict_index.cap,
-        1 + (ictIndex * historicalAdjustments.ict_index.multiplier));
-      performanceScore *= ictMultiplier;
+      // Last season assists (if available - simplified approach)
+      const lastSeasonAssists = player.last_season_assists || 0;
+      const lastSeasonBoost = Math.min(1.5, 1 + (lastSeasonAssists * 0.05)); // Up to 1.5x for last season
+      performanceScore *= lastSeasonBoost;
       
-      // Set piece responsibility boost
+      // Simple set piece boost (basic check)
       const cornersOrder = parseInt(player.corners_and_indirect_freekicks_order) || 0;
       if (cornersOrder <= 2 && cornersOrder > 0) {
-        performanceScore *= historicalAdjustments.corners_and_indirect_freekicks_order.multiplier;
+        performanceScore *= 1.3; // Simple 30% boost for set piece takers
       }
       
-      // Current season form and assist history
-      const currentAssists = player.assists || 0;
+      // Basic current season form (simplified)
       const currentForm = parseFloat(player.form) || 0;
       const minutesPlayed = player.minutes || 0;
       
