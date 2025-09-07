@@ -45,7 +45,6 @@ import TeamAssistProjections from "./pages/team-assist-projections";
 import TeamCSProjections from "./pages/team-cs-projections";
 import SeasonProjections from "./pages/season-projections";
 import AdminGoalProjections from "./pages/admin-goal-projections";
-import AdminAssistProjections from "./pages/admin-assist-projections";
 import AdminUpsetConfig from "./pages/admin-upset-config";
 import Admin from "./pages/admin";
 import AdminDataPopulation from "./pages/admin-data-population";
@@ -141,7 +140,6 @@ function Router() {
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
       <Route path="/season-projections" component={SeasonProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
-      <Route path="/admin-assist-projections" component={AdminAssistProjections} />
       <Route path="/admin-clean-sheet-config" component={AdminCleanSheetConfig} />
       <Route path="/admin-upset-config" component={AdminUpsetConfig} />
       <Route path="/admin-content-creators" component={Admin} />
