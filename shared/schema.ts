@@ -1323,9 +1323,9 @@ export const staticCachedProjections = pgTable("static_cached_projections", {
   updatedAt: timestamp("updated_at").defaultNow()
 });
 
-// Indexes for fast retrieval
-export const staticCachedProjectionsRangeIndex = index("static_cached_projections_range_idx").on(staticCachedProjections.rangeId);
-export const staticCachedProjectionsEntityIndex = index("static_cached_projections_entity_idx").on(staticCachedProjections.entityId, staticCachedProjections.entityType);
+// TODO: Add indexes back after schema is stable
+// export const staticCachedProjectionsRangeIndex = index("static_cached_projections_range_idx").on(staticCachedProjections.rangeId);
+// export const staticCachedProjectionsEntityIndex = index("static_cached_projections_entity_idx").on(staticCachedProjections.entityId, staticCachedProjections.entityType);
 
 // Types for daily projections
 export type InsertTeamProjectionsDaily = typeof teamProjectionsDaily.$inferInsert;
