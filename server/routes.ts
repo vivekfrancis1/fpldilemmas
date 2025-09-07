@@ -8277,8 +8277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await projectionCacheWorker.cacheGoalAssistShareData(); // Uses same data source but for assist share
           break;
         case 'total-points':
-          const projectionService = new ProjectionService();
-          await projectionService.refreshProjections(4, 9); // Current projection range
+          await projectionService.refreshProjections(4, 9); // Use imported instance
           break;
         case 'saves':
           await projectionCacheWorker.cachePlayerSaves();
