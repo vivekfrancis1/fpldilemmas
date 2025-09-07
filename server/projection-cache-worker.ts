@@ -590,6 +590,18 @@ class ProjectionCacheWorker {
           isStale: teams[0]?.lastUpdated ? (now.getTime() - new Date(teams[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
         },
         { 
+          type: 'Goal Share', 
+          count: 0, // Will be dynamically populated when goal share cache is implemented
+          lastUpdated: null,
+          isStale: true
+        },
+        { 
+          type: 'Assist Share', 
+          count: 0, // Will be dynamically populated when assist share cache is implemented
+          lastUpdated: null,
+          isStale: true
+        },
+        { 
           type: 'Player Saves', 
           count: saves[0]?.count || 0, 
           lastUpdated: saves[0]?.lastUpdated || null,

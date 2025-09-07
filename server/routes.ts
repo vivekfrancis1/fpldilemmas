@@ -8242,8 +8242,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'team':
           await projectionCacheWorker.cacheTeamProjections();
           break;
-        case 'goal-assist-share':
-          await projectionCacheWorker.cacheGoalAssistShareData();
+        case 'goal-share':
+          await projectionCacheWorker.cacheGoalAssistShareData(); // Uses same data source but for goal share
+          break;
+        case 'assist-share':
+          await projectionCacheWorker.cacheGoalAssistShareData(); // Uses same data source but for assist share
           break;
         case 'total-points':
           const projectionService = new ProjectionService();
@@ -8267,7 +8270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         default:
           return res.status(400).json({ 
             success: false, 
-            message: `Unknown cache type: ${type}. Available types: goals, assists, minutes, clean-sheets, defensive, team, goal-assist-share, total-points, saves, goals-conceded, yellow-cards, red-cards, bonus-points` 
+            message: `Unknown cache type: ${type}. Available types: goals, assists, minutes, clean-sheets, defensive, team, goal-share, assist-share, total-points, saves, goals-conceded, yellow-cards, red-cards, bonus-points` 
           });
       }
       
