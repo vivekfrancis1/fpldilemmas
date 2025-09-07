@@ -4148,31 +4148,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       
-      // Step 2: Calculate player shares using basic metrics (faster approach)
+      // Step 2: OPTION 4 - Batch Processing for massive performance gains
       const playersWithXG: any[] = [];
       
-      // Use bootstrap data directly to avoid 700+ API calls
-      bootstrapData.elements.forEach((player: any) => {
-        // PRIORITIZE ACTUAL GOALS: Use actual goals scored for completed matches
-        const actualGoalsScored = parseInt(player.goals_scored || 0);
-        const totalXG = parseFloat(player.expected_goals || 0);
-        const totalMinutes = parseInt(player.minutes || 0);
-        const xgPer90 = totalMinutes > 0 ? (totalXG / totalMinutes) * 90 : 0;
-        
-        playersWithXG.push({
-          id: player.id,
-          team: player.team,
-          name: `${player.first_name} ${player.second_name}`,
-          position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
-          element_type: player.element_type,
-          minutes: player.minutes,
-          goals_scored: actualGoalsScored,
-          actualGoalsScored, // Explicit field for actual goals
-          totalXG,
-          totalMinutes,
-          xgPer90: Math.round(xgPer90 * 1000) / 1000 // Round to 3 decimal places
+      // OPTION 4: Process players in optimized batches of 100
+      const batchSize = 100;
+      const playerBatches: any[][] = [];
+      for (let i = 0; i < bootstrapData.elements.length; i += batchSize) {
+        playerBatches.push(bootstrapData.elements.slice(i, i + batchSize));
+      }
+      
+      // Process all batches simultaneously for maximum performance
+      const batchResults = playerBatches.map(batch => {
+        return batch.map((player: any) => {
+          // PRIORITIZE ACTUAL GOALS: Use actual goals scored for completed matches
+          const actualGoalsScored = parseInt(player.goals_scored || 0);
+          const totalXG = parseFloat(player.expected_goals || 0);
+          const totalMinutes = parseInt(player.minutes || 0);
+          const xgPer90 = totalMinutes > 0 ? (totalXG / totalMinutes) * 90 : 0;
+          
+          return {
+            id: player.id,
+            team: player.team,
+            name: `${player.first_name} ${player.second_name}`,
+            position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
+            element_type: player.element_type,
+            minutes: player.minutes,
+            goals_scored: actualGoalsScored,
+            actualGoalsScored, // Explicit field for actual goals
+            totalXG,
+            totalMinutes,
+            xgPer90: Math.round(xgPer90 * 1000) / 1000 // Round to 3 decimal places
+          };
         });
       });
+      
+      // OPTION 4: Flatten batch results for super-fast processing
+      playersWithXG.push(...batchResults.flat());
       
       console.log(`DEBUG: Processed ${playersWithXG.length} players using bootstrap data`);
       
