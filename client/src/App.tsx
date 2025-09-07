@@ -50,6 +50,7 @@ import Admin from "./pages/admin";
 import AdminDataPopulation from "./pages/admin-data-population";
 import AdminGameweekCache from "./pages/admin-gameweek-cache";
 import AdminCleanSheetConfig from "./pages/admin-clean-sheet-config";
+import AdminCacheManagement from "./pages/admin-cache-management";
 import DefensiveContributionProjections from "./pages/defensive-contribution-projections";
 import PlayerDefensiveContributions from "./pages/player-defensive-contributions";
 import ProjectionDocumentation from "./pages/projection-documentation";
@@ -142,6 +143,11 @@ function Router() {
       <Route path="/admin-clean-sheet-config" component={AdminCleanSheetConfig} />
       <Route path="/admin-upset-config" component={AdminUpsetConfig} />
       <Route path="/admin-content-creators" component={Admin} />
+      <Route path="/admin-cache-management">
+        <ProtectedRoute requireAdmin={true}>
+          <AdminCacheManagement />
+        </ProtectedRoute>
+      </Route>
       <Route path="/admin-data-population" component={AdminDataPopulation} />
       <Route path="/admin-gameweek-cache" component={AdminGameweekCache} />
       <Route path="/content-creators" component={ContentCreators} />
