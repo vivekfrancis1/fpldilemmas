@@ -5916,7 +5916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const homeExpectedAssists = Math.min(homeExpectedGoals * 0.8, homeMaxAssists);
           
           const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
-          const homePlayerShares = distributeCurrentSeasonAssistShares(homePlayersInSquad, bootstrapData.element_types);
+          const homePlayerShares = distributeCurrentSeasonAssistShares(homePlayersInSquad, bootstrapData.element_types, bootstrapData);
           const homeExpectedAssistsRounded = Math.round(homeExpectedAssists * 100) / 100;
           
           // Calculate projected assists for each player
@@ -5938,7 +5938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const awayExpectedAssists = Math.min(awayExpectedGoals * 0.8, awayMaxAssists);
           
           const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
-          const awayPlayerShares = distributeCurrentSeasonAssistShares(awayPlayersInSquad, bootstrapData.element_types);
+          const awayPlayerShares = distributeCurrentSeasonAssistShares(awayPlayersInSquad, bootstrapData.element_types, bootstrapData);
           const awayExpectedAssistsRounded = Math.round(awayExpectedAssists * 100) / 100;
           
           // Calculate projected assists for each player
@@ -5961,169 +5961,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return data;
   }
 
-  // Helper function to distribute assist shares among players using historical data analysis (current season)
-  function distributeCurrentSeasonAssistShares(players: any[], positions: any[]) {
+  // DATA-DRIVEN assist share distribution using xA per 90 methodology (mirroring goals approach)
+  function distributeCurrentSeasonAssistShares(players: any[], positions: any[], bootstrapData: any = null) {
+    // If bootstrapData is available, use the new data-driven approach
+    if (bootstrapData) {
+      return distributeAssistSharesDataDriven(players, positions, bootstrapData);
+    }
+    
+    // Fallback to simplified approach if bootstrapData is not available
     const playerShares = [];
-    let totalShare = 0;
-
-    // OPTION 2: Static lookup tables for ultra-fast performance
-    const STATIC_POSITION_RATES = {
-      1: { base: 0.3, variance: 0.2 },     // Goalkeeper: 0.3% base
-      2: { base: 12.5, variance: 4.0 },    // Defender: 12.5% base
-      3: { base: 28.0, variance: 10.0 },   // Midfielder: 28% base
-      4: { base: 18.0, variance: 6.0 }     // Forward: 18% base
-    };
-
-    const STATIC_POSITION_CAPS = {
-      1: 2.0,    // Goalkeeper max 2%
-      2: 25.0,   // Defender max 25%
-      3: 35.0,   // Midfielder max 35%
-      4: 25.0    // Forward max 25%
-    };
-
-    // SIMPLIFIED: Single unified multiplier calculation (implements Options A, B, C, D)
-    const calculateUnifiedAssistMultiplier = (player: any, position: any): number => {
-      const positionName = position?.singular_name || 'Forward';
-      
-      // Option A: Single Unified Multiplier - weighted formula instead of 5 separate boosts
-      const positionWeight = {
-        'Goalkeeper': 0.1,
-        'Defender': 0.4,
-        'Midfielder': 1.0,  // Base multiplier
-        'Forward': 0.6
-      }[positionName] || 0.5;
-      
-      const currentAssists = player.assists || 0;
-      const lastSeasonAssists = player.last_season_assists || 0;
-      const creativity = player.creativity || 0;
-      
-      // Option C: Merge Current + Historical - combined performance score
-      const combinedPerformance = (currentAssists * 0.7) + (lastSeasonAssists * 0.3);
-      
-      // Option B: Remove Redundant Metrics - removed ICT index, keeping only creativity
-      const setPieceOrder = (player.corners_and_indirect_freekicks_order || 99) + (player.penalties_order || 99);
-      const setPieceBonus = setPieceOrder <= 4 ? 1.2 : 1.0;
-      
-      // Single unified formula: weighted combination instead of separate multipliers
-      const unifiedMultiplier = (
-        positionWeight * 0.3 +                    // 30% position importance
-        (combinedPerformance / 10) * 0.4 +        // 40% combined current+historical
-        (creativity / 100) * 0.2 +                // 20% creativity (removed ICT correlation)
-        setPieceBonus * 0.1                       // 10% set pieces
-      );
-      
-      return Math.min(2.0, Math.max(0.5, unifiedMultiplier));
-    };
-
-    // Simplified position-based caps for assist share distribution
-    const positionAssistCaps = {
-      'Goalkeeper': 2.0,      // Very low assist ceiling
-      'Defender': 25.0,       // Fullbacks can get assists
-      'Midfielder': 35.0,     // Primary creative players
-      'Forward': 25.0         // Some forwards are creative but lower than mids
-    };
-
+    
     players.forEach(player => {
       const position = positions.find(p => p.id === player.element_type);
       const positionName = position?.singular_name;
       const playerName = getPlayerName(player.id) || `${player.first_name} ${player.second_name}`;
       
-      // Get position rates
-      const positionRate = positionAssistRates[positionName as keyof typeof positionAssistRates] || { base: 15.0, variance: 5.0 };
+      // Simple fallback calculation (minimal logic for when bootstrapData is not available)
+      let assistShare = 0.1; // Minimum share
       
-      // Deterministic variance based on player ID for consistency
-      const seed = (player.id * 23) % 100;
-      const varianceMultiplier = 1 + ((seed - 50) / 100) * (positionRate.variance / positionRate.base);
-      
-      // Option D: Position-First Approach - apply caps first, then scale within limits
-      const maxPositionShare = positionAssistCaps[positionName] || 15.0;
-      
-      // Calculate base share within position limits from the start
-      let baseShare = Math.min(
-        positionRate.base * Math.max(0.3, Math.min(1.8, varianceMultiplier)),
-        maxPositionShare * 0.8  // Start within 80% of position cap
-      );
-      
-      // Apply simplified unified multiplier
-      const unifiedMultiplier = calculateUnifiedAssistMultiplier(player, position);
-      baseShare *= unifiedMultiplier;
-      
-      // Basic current season form (simplified)
-      const currentForm = parseFloat(player.form) || 0;
-      const minutesPlayed = player.minutes || 0;
-      
-      // Form adjustment (recent performance indicator)
-      const formMultiplier = Math.max(0.6, Math.min(1.4, 1 + (currentForm - 5) / 20));
-      performanceScore *= formMultiplier;
-      
-      // Current assists boost (players who are already assisting)
-      const assistsMultiplier = Math.max(0.7, Math.min(1.6, 1 + (currentAssists * 0.15)));
-      performanceScore *= assistsMultiplier;
-      
-      // Playing time factor (assists require minutes)
-      const minutesMultiplier = Math.max(0.4, Math.min(1.2, minutesPlayed / 1000));
-      performanceScore *= minutesMultiplier;
-      
-      // Historical position-specific adjustments
-      if (positionName === 'Midfielder') {
-        // Midfielders historically dominate assists - additional boost for attacking mids
-        const attackingMidBoost = Math.max(0.8, Math.min(1.3, 1 + (creativity / 200)));
-        performanceScore *= attackingMidBoost;
-      } else if (positionName === 'Defender') {
-        // Fullbacks vs center-backs distinction
-        const isFullback = (player.creativity || 0) > 30; // Creative defenders likely fullbacks
-        if (isFullback) {
-          performanceScore *= 1.4; // Fullbacks provide significantly more assists
-        }
-      } else if (positionName === 'Forward') {
-        // Deeper forwards and false 9s historically provide more assists
-        const deepForwardFactor = Math.max(0.8, Math.min(1.25, (creativity / 80) + 0.7));
-        performanceScore *= deepForwardFactor;
-      }
-      
-      // Apply performance multiplier with bounds
-      const performanceMultiplier = Math.max(0.3, Math.min(2.8, performanceScore));
-      
-      // Apply injury/availability factor
-      const availabilityFactor = (player.chance_of_playing_next_round || 100) / 100;
-      const availabilityMultiplier = Math.max(0.2, availabilityFactor);
-      
-      // Calculate final raw share
-      const rawShare = baseShare * performanceMultiplier * availabilityMultiplier;
-      
-      // Apply position-based caps to assist share percentage
-      const getPositionShareCap = (position: string): number => {
-        switch (position?.toLowerCase()) {
-          case 'goalkeeper': return 2; // Max 2% share for GKs
-          case 'defender': return 12; // Max 12% share for defenders (was 15%)
-          case 'midfielder': return 28; // Max 28% share for midfielders (was 35%)
-          case 'forward': return 20; // Max 20% share for forwards (was 25%)
-          default: return 20;
-        }
-      };
-      
-      const positionShareCap = getPositionShareCap(positionName);
-      const cappedRawShare = Math.min(rawShare, positionShareCap);
-      
-      if (cappedRawShare !== rawShare) {
-        console.log(`DEBUG: Capped ${playerName} assist share: ${rawShare.toFixed(1)}% → ${cappedRawShare.toFixed(1)}% (${positionName} cap: ${positionShareCap}%)`);
+      // Basic position-based assist rates
+      switch (player.element_type) {
+        case 1: // Goalkeeper
+          assistShare = 0.2;
+          break;
+        case 2: // Defender
+          assistShare = 8.0;
+          break;
+        case 3: // Midfielder
+          assistShare = 25.0;
+          break;
+        case 4: // Forward
+          assistShare = 15.0;
+          break;
       }
       
       playerShares.push({
         id: player.id,
         name: playerName,
-        position: position?.singular_name_short || 'UNK',
-        rawShare: cappedRawShare
+        position: positionName,
+        assistShare: assistShare
       });
-      
-      totalShare += cappedRawShare;
     });
-
-    // Normalize to 100% with one decimal place
-    return playerShares.map(player => ({
-      ...player,
-      assistShare: Math.round((player.rawShare / totalShare) * 1000) / 10 // One decimal place
-    })).filter(p => p.assistShare > 0).sort((a, b) => b.assistShare - a.assistShare);
+    
+    return playerShares;
   }
 
   // Projected Standings endpoint - calculates final table based on all match results
