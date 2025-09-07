@@ -40,7 +40,7 @@ export default function PlayerAssistProjections() {
   }, [bootstrapData]);
 
   const nextGameweek = currentGameweek + 1;
-  const defaultEndGameweek = Math.min(nextGameweek + 5, 38); // Next 6 gameweeks or up to GW38
+  const defaultEndGameweek = Math.min(nextGameweek + 5, 15); // Next 6 gameweeks or up to GW15
 
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
@@ -95,7 +95,7 @@ export default function PlayerAssistProjections() {
     playerAssistData.forEach(player => {
       Object.keys(player.gameweekProjections).forEach(gw => {
         const gwNum = parseInt(gw);
-        if (gwNum >= 1) { // Show from gameweek 1 onwards
+        if (gwNum >= 4 && gwNum <= 15) { // Show only GW4-15 (12 gameweeks max)
           gameweeks.add(gwNum);
         }
       });
