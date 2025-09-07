@@ -340,6 +340,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: user.firstName,
         lastName: user.lastName
       };
+      
+      console.log('DEBUG: Session after setting user:', req.session);
+      console.log('DEBUG: Session ID:', req.sessionID);
 
       res.json({ 
         success: true, 
@@ -367,6 +370,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/auth/user", (req: any, res) => {
+    console.log('DEBUG: /api/auth/user - Session:', req.session);
+    console.log('DEBUG: /api/auth/user - Session ID:', req.sessionID);
+    console.log('DEBUG: /api/auth/user - User in session:', req.session?.user);
+    
     if (req.session?.user) {
       res.json(req.session.user);
     } else {
