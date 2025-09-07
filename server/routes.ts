@@ -5785,7 +5785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       totalContribution += contribution;
     });
 
-    // PERFECT TEAM BALANCE NORMALIZATION (matching goals methodology)
+    // SIMPLE NORMALIZATION (no perfect balance required)
     const getPositionAssistShareCap = (position: string): number => {
       switch (position?.toLowerCase()) {
         case 'goalkeeper': return 2; // Max 2% share for GKs
@@ -5796,64 +5796,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     };
 
-    // First pass: Calculate initial normalized shares and identify capped players
-    const playerSharesData: { [playerId: number]: { data: any, normalizedShare: number, cappedShare: number, wasCapped: boolean } } = {};
-    let totalCappedAssists = 0;
-    let totalUncappedNormalized = 0;
-    let uncappedPlayerIds: number[] = [];
-
+    // Calculate shares with position caps
     Object.keys(playerContributions).forEach(playerIdStr => {
       const playerId = parseInt(playerIdStr);
       const playerData = playerContributions[playerId];
       
-      // Initial normalized share based on contribution
-      const initialNormalizedShare = totalContribution > 0 ? (playerData.contribution / totalContribution) * 100 : 0;
-      const positionShareCap = getPositionAssistShareCap(playerData.position);
+      // Calculate raw share based on contribution
+      const rawShare = totalContribution > 0 ? (playerData.contribution / totalContribution) * 100 : 0;
       
-      if (initialNormalizedShare > positionShareCap) {
-        // Player is capped
-        playerSharesData[playerId] = {
-          data: playerData,
-          normalizedShare: initialNormalizedShare,
-          cappedShare: positionShareCap,
-          wasCapped: true
-        };
-        totalCappedAssists += positionShareCap;
-      } else {
-        // Player is not capped
-        playerSharesData[playerId] = {
-          data: playerData,
-          normalizedShare: initialNormalizedShare,
-          cappedShare: initialNormalizedShare,
-          wasCapped: false
-        };
-        totalUncappedNormalized += initialNormalizedShare;
-        uncappedPlayerIds.push(playerId);
-      }
-    });
-
-    // Second pass: Redistribute excess share from capped players to uncapped players
-    const remainingShareToDistribute = 100 - totalCappedAssists;
-    
-    uncappedPlayerIds.forEach(playerId => {
-      const playerShare = playerSharesData[playerId];
-      if (totalUncappedNormalized > 0) {
-        const redistributionFactor = remainingShareToDistribute / totalUncappedNormalized;
-        playerShare.cappedShare = playerShare.normalizedShare * redistributionFactor;
-      }
-    });
-
-    // Generate final player shares
-    Object.keys(playerSharesData).forEach(playerIdStr => {
-      const playerId = parseInt(playerIdStr);
-      const shareData = playerSharesData[playerId];
+      // Apply position cap
+      const positionShareCap = getPositionAssistShareCap(playerData.position);
+      const cappedShare = Math.min(rawShare, positionShareCap);
       
       playerShares.push({
         id: playerId,
-        name: shareData.data.name,
-        position: shareData.data.position,
-        rawShare: shareData.cappedShare,
-        assistShare: Math.max(0.1, shareData.cappedShare)
+        name: playerData.name,
+        position: playerData.position,
+        assistShare: Math.max(0.1, cappedShare)
       });
     });
 
