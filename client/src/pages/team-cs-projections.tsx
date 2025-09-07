@@ -127,7 +127,7 @@ export default function TeamCSProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 35 }, (_, i) => (
+                      {Array.from({ length: 12 }, (_, i) => (
                         <SelectItem key={i + 4} value={(i + 4).toString()}>
                           {i + 4}
                         </SelectItem>
@@ -143,7 +143,7 @@ export default function TeamCSProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 35 }, (_, i) => (
+                      {Array.from({ length: 12 }, (_, i) => (
                         <SelectItem key={i + 4} value={(i + 4).toString()}>
                           {i + 4}
                         </SelectItem>
