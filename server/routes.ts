@@ -4076,21 +4076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.round(Math.max(100, finalExpectedMinutes)); // Minimum 100 minutes (for severely injured players)
   }
   
-  // Sample size regression function
-  function adjustForSampleSize(player: any, positionAverage: number): number {
-    const minReliableMinutes = 500; // Minimum for reliable xG per 90
-    
-    if (player.totalMinutes < minReliableMinutes) {
-      // Regress toward position average based on sample size
-      const weight = Math.max(0.2, player.totalMinutes / minReliableMinutes);
-      const adjustedXGPer90 = (player.xgPer90 * weight) + (positionAverage * (1 - weight));
-      
-      console.log(`DEBUG: Sample size adjustment for ${player.name}: ${player.xgPer90.toFixed(3)} → ${adjustedXGPer90.toFixed(3)} (${player.totalMinutes} mins)`);
-      return adjustedXGPer90;
-    }
-    
-    return player.xgPer90;
-  }
+  // REMOVED: Sample size regression function (Option B simplification)
 
   // Add simple caching for goal share data
   let goalShareCache: { data: any, timestamp: number } | null = null;
@@ -4191,16 +4177,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Step 3: Expected minutes and sample size adjustments handled by helper functions
       
-      // ENHANCED xG per 90 DISTRIBUTION WITH EXPECTED MINUTES
-      console.log("DEBUG: Implementing xG per 90 player distribution with expected minutes");
-      
-      // Calculate position averages for sample size regression
-      const positionAverages = {
-        1: 0.02, // Goalkeeper
-        2: 0.08, // Defender
-        3: 0.15, // Midfielder
-        4: 0.35  // Forward
-      };
+      // SIMPLIFIED xG DISTRIBUTION - No sample size adjustments (Option B)
+      console.log("DEBUG: Using simplified xG distribution - accepting raw data with minor variances");
       
       for (const teamIdStr of Object.keys(teamSeasonTotals)) {
         const teamId = parseInt(teamIdStr);
@@ -4265,14 +4243,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, 2024/25: ${fallback2024.toFixed(3)}${has2024Data ? ' (actual)' : ' (fallback)'}, Average: ${combinedXGPer90.toFixed(3)}`);
             }
             
-            // Apply sample size regression with combined xG data
-            const positionAvg = player.element_type === 1 ? 0.02 : 
-                              player.element_type === 2 ? 0.08 : 
-                              player.element_type === 3 ? 0.15 : 0.35;
-            
-            // Use combined xG for regression calculation
-            const playerForRegression = { ...player, xgPer90: combinedXGPer90 };
-            let projectedXGPer90 = adjustForSampleSize(playerForRegression, positionAvg);
+            // SIMPLIFIED: Use raw xG data without sample size adjustments (Option B)
+            let projectedXGPer90 = combinedXGPer90;
             
             // PENALTY TAKER ADJUSTMENT - Add penalty goals that xG excludes
             const penaltyAdjustment = getPenaltyTakerAdjustment(player.name, player.id);
@@ -4409,14 +4381,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           });
           
-          // Verify perfect balance
-          const finalTotalGoals = Object.values(teamSeasonTotals[teamId].players)
-            .reduce((sum: number, player: any) => sum + player.projectedGoals, 0);
-          const balanceError = Math.abs(finalTotalGoals - targetTotal);
-          
-          console.log(`DEBUG: Team ${team.name} PERFECT BALANCE: Players=${finalTotalGoals.toFixed(3)} vs Team=${targetTotal.toFixed(3)} (error: ${balanceError.toFixed(6)})`);
-          
-          return; // Skip the old historical weighting approach
+          // SIMPLIFIED: Accept minor balance variances (Option B) - no perfect balance calculations
+          console.log(`DEBUG: Team ${team.name} goal distribution completed - accepting natural variance`);
         }
       }
       
