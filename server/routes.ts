@@ -3470,36 +3470,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const teamGoalProjections = await teamGoalResponse.json();
       
-      // REALISTIC assist projections (reduced to be similar to goals totals)
-      const correctAssistTotals: { [teamShort: string]: number } = {
-        "LIV": 42.5,   // Reduced from 66.51 - realistic for top team
-        "MCI": 40.2,   // Reduced from 58.62 - top attacking team
-        "ARS": 38.8,   // Reduced from 62.34 - creative team
-        "CHE": 35.6,   // Reduced from 56.78 - good team
-        "NEW": 28.4,   // Reduced from 43.21 - mid-table
-        "MUN": 34.2,   // Reduced from 52.45 - big team, inconsistent
-        "TOT": 36.1,   // Reduced from 54.32 - attacking style
-        "AVL": 31.5,   // Reduced from 48.67 - solid team
-        "BHA": 30.8,   // Reduced from 46.89 - possession-based
-        "WHU": 26.9,   // Reduced from 41.23 - direct style
-        "WOL": 24.8,   // Reduced from 39.87 - defensive
-        "EVE": 27.3,   // Reduced from 42.56 - inconsistent
-        "BOU": 29.1,   // Reduced from 44.12 - attacking style
-        "FUL": 28.7,   // Reduced from 45.78 - creative
-        "BRE": 27.8,   // Reduced from 43.94 - solid
-        "CRY": 25.6,   // Reduced from 41.67 - defensive
-        "BUR": 22.9,   // Reduced from 37.89 - relegated/promoted
-        "SUN": 23.8,   // Reduced from 38.45 - defensive
-        "LEE": 25.2,   // Reduced from 40.12 - attacking when up
-        "NFO": 26.5    // Reduced from 42.87 - solid team
-      };
-      
-      // Convert goal projections to assist projections using correct totals
+      // FORMULA: Team Assists = 72% of Team Goals (as specified by user)
       const teamAssistProjections = teamGoalProjections.map((team: any) => {
-        const correctTotal = correctAssistTotals[team.teamShort] || 28; // Reduced default from 45 to 28
-        
         // Calculate total goals from gameweek projections if totalGoals is null
         const calculatedTotalGoals = team.totalGoals || Object.values(team.gameweekProjections).reduce((sum: number, goals: any) => sum + (goals || 0), 0);
+        
+        // Apply 72% formula: Team Assists = 0.72 × Team Goals
+        const correctTotal = Math.round(calculatedTotalGoals * 0.72 * 100) / 100;
         const assistMultiplier = correctTotal / calculatedTotalGoals;
         
         // Convert gameweek goals to assists using the team-specific multiplier
@@ -5688,20 +5665,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // PURE PROJECTION: Only projected assists for the next 12 gameweeks
       const projectedSeasonAssists = (adjustedXAPer90 / 90) * expectedMinutes * (12 / 38);
       
-      // REDUCED POSITION MULTIPLIERS (more conservative to match goals scale)
+      // EQUAL POSITION TREATMENT (as specified by user)
       let positionMultiplier = 1.0;
       switch (player.element_type) {
         case 4: // Forward
-          positionMultiplier = 0.8; // Reduced from 1.05 - assists are secondary for forwards
+          positionMultiplier = 1.0; // Equal treatment for forwards
           break;
         case 3: // Midfielder 
-          positionMultiplier = 1.0; // Reduced from 1.3 - still create most assists but realistic
+          positionMultiplier = 1.0; // Equal treatment for midfielders
           break;
         case 2: // Defender
-          positionMultiplier = 0.5; // Reduced from 0.7 - only attacking fullbacks assist regularly
+          positionMultiplier = 1.0; // Equal treatment for defenders
           break;
         case 1: // Goalkeeper
-          positionMultiplier = 0.1; // Reduced from 0.15 - extremely rare
+          positionMultiplier = 0.1; // Minimal for goalkeepers
           break;
       }
       
@@ -5735,14 +5712,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       totalContribution += contribution;
     });
 
-    // SIMPLE NORMALIZATION (no perfect balance required)
+    // PERFECT TEAM BALANCE: Ensure sum of player assists = team assists
     const getPositionAssistShareCap = (position: string): number => {
       switch (position?.toLowerCase()) {
         case 'goalkeeper': return 2; // Max 2% share for GKs
-        case 'defender': return 15; // Conservative cap for defenders
-        case 'midfielder': return 35; // Higher cap since midfielders create most assists
-        case 'forward': return 25; // Moderate cap for forwards
-        default: return 20;
+        case 'defender': return 25; // USER SPECIFIED: 25% max for defenders
+        case 'midfielder': return 25; // USER SPECIFIED: 25% max for midfielders
+        case 'forward': return 25; // USER SPECIFIED: 25% max for forwards
+        default: return 25;
       }
     };
 
@@ -5765,6 +5742,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assistShare: Math.max(0.1, cappedShare)
       });
     });
+
+    // PERFECT BALANCE: Normalize to ensure total = 100%
+    const totalCappedShares = playerShares.reduce((sum, player) => sum + player.assistShare, 0);
+    if (totalCappedShares > 0) {
+      playerShares.forEach(player => {
+        player.assistShare = Math.round((player.assistShare / totalCappedShares) * 100 * 10) / 10;
+      });
+    }
 
     return playerShares.sort((a, b) => b.assistShare - a.assistShare);
   }
