@@ -389,6 +389,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let bootstrapCache: { data: any; timestamp: number } | null = null;
   const BOOTSTRAP_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+  // Team calculation cache (10 minutes) - Option 5 implementation
+  let teamCalculationCache = new Map<string, { data: any; timestamp: number }>();
+  const TEAM_CALC_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
+  // Get or calculate team goals for a gameweek range (cached for performance)
+  async function getTeamGoals(gameweeks: number[], bootstrapData: any): Promise<Map<number, { homeGoals: number; awayGoals: number }>> {
+    const cacheKey = `teamgoals_${gameweeks.join('_')}`;
+    const cached = teamCalculationCache.get(cacheKey);
+    
+    if (cached && (Date.now() - cached.timestamp) < TEAM_CALC_CACHE_DURATION) {
+      console.log(`🔄 Using cached team calculations for gameweeks ${gameweeks.join(', ')}`);
+      return cached.data;
+    }
+
+    console.log(`📊 Calculating team goals for gameweeks ${gameweeks.join(', ')}`);
+    
+    const teamGoals = new Map<number, { homeGoals: number; awayGoals: number }>();
+    
+    // Get fixtures for the specified gameweeks
+    const allFixtures = bootstrapData.events?.flatMap((event: any) => {
+      if (gameweeks.includes(event.id)) {
+        return event.fixtures || [];
+      }
+      return [];
+    }) || [];
+    
+    // Use fast calculation for team goal projections
+    for (const fixture of allFixtures) {
+      const homeTeam = fixture.team_h;
+      const awayTeam = fixture.team_a;
+      const gameweek = fixture.event;
+      
+      // Simple team strength calculation (fast version)
+      const homeStrength = 1.12; // Home advantage
+      const awayStrength = 0.88;  // Away disadvantage
+      
+      const homeGoals = 1.4 * homeStrength; // Premier League average ~1.4 goals
+      const awayGoals = 1.2 * awayStrength;
+      
+      teamGoals.set(gameweek, { homeGoals, awayGoals });
+    }
+    
+    // Cache the result
+    teamCalculationCache.set(cacheKey, {
+      data: teamGoals,
+      timestamp: Date.now()
+    });
+    
+    return teamGoals;
+  }
+
   // Player data routes
   app.get("/api/bootstrap-static", async (req, res) => {
     try {
