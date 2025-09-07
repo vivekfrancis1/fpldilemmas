@@ -4326,9 +4326,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // ENHANCED NORMALIZATION - Ensure sum equals team xG
-          console.log(`DEBUG: Team ${team.name} - Total contribution: ${totalContribution.toFixed(3)}, Team xG: ${teamSeasonTotals[teamId].expectedGoals.toFixed(3)}`);
-          
-          // Calculate normalized shares with perfect balance after capping
+          // OPTION E: Simple proportional distribution - no complex balance calculations
+          totalContribution = Math.max(totalContribution, 0.1);
           const getPositionGoalShareCap = (position: string): number => {
             switch (position?.toLowerCase()) {
               case 'goalkeeper': return 2; // Max 2% share for GKs
@@ -4414,7 +4413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .reduce((sum: number, player: any) => sum + player.projectedGoals, 0);
           const balanceError = Math.abs(finalTotalGoals - targetTotal);
           
-          console.log(`DEBUG: Team ${team.name} PERFECT BALANCE: Players=${finalTotalGoals.toFixed(3)} vs Team=${targetTotal.toFixed(3)} (error: ${balanceError.toFixed(6)})`);
+          // OPTION E: Skip perfect balance verification for performance
           
           return; // Skip the old historical weighting approach
         }
