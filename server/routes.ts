@@ -3029,7 +3029,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.set('Last-Modified', new Date().toUTCString());
     res.set('ETag', `"${Date.now()}"`);
     try {
-      console.log(`DEBUG: Team Goal Projections API called - generating next 6 gameweeks only`);
+      console.log(`DEBUG: Team Goal Projections API called - generating next 12 gameweeks only`);
       
       // Use hardcoded teams for better performance, only fetch what we need from API
       const { PREMIER_LEAGUE_TEAMS } = await import("@shared/schema");
@@ -3054,10 +3054,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamService = await createTeamService();
       const bettingData = teamService.getBettingData();
       
-      // Process all remaining gameweeks for full season final standings
+      // Process next 12 gameweeks only for optimized performance  
       const startGameweek = currentGameweek + 1;
-      const endGameweek = 38; // Full season for projected final standings
-      console.log(`DEBUG: Processing all remaining gameweeks (GW${startGameweek}-${endGameweek}) for full season final standings, current GW: ${currentGameweek}`);
+      const endGameweek = Math.min(currentGameweek + 12, 38); // Next 12 gameweeks only
+      console.log(`DEBUG: Processing next 12 gameweeks (GW${startGameweek}-${endGameweek}) for team goal projections, current GW: ${currentGameweek}`);
       
       // Check which gameweeks are COMPLETELY finished (all 10 fixtures done) - only check relevant range
       const completeGameweeks = new Set();
@@ -4744,7 +4744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Goals Scored Projections endpoint - pure projection methodology for future gameweeks only
   app.get("/api/player-goals-scored-projections", async (req, res) => {
     try {
-      console.log(`DEBUG: Player Goals Scored Projections API called - using pure projections for future gameweeks`);
+      console.log(`DEBUG: Player Goals Scored Projections API called - using pure projections for next 12 gameweeks only`);
       
       // Check if we have saved goal share data from the recent call
       if (!savedGoalShareData || !savedGoalShareData.response || (Date.now() - savedGoalShareData.timestamp) > 300000) {
@@ -4914,7 +4914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Assist Projections endpoint - pure projection methodology for future gameweeks only
   app.get("/api/player-assist-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Assist Projections API called - using pure projections for future gameweeks only");
+      console.log("DEBUG: Player Assist Projections API called - using pure projections for next 12 gameweeks only");
       
       // Fetch assist share season data, team assist projections, and bootstrap data
       const [assistShareResponse, teamAssistResponse, bootstrapResponse] = await Promise.all([
@@ -6552,15 +6552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalExpectedPoints += cleanSheetPointsForGW;
         }
 
-        // Calculate season total (GW4 to GW38)
-        for (let gw = 4; gw <= 38; gw++) {
-          const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
-          
-          if (teamCleanSheetPercent !== undefined) {
-            const expectedCleanSheetPoints = (teamCleanSheetPercent / 100) * probabilityPlays60Plus * cleanSheetPoints;
-            seasonTotalPoints += expectedCleanSheetPoints;
-          }
-        }
+        // REMOVED: Season total calculations (GW4-GW38) per user request for performance
         
         playerCleanSheetProjections.push({
           playerId: player.id,
@@ -6801,7 +6793,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamsGoalsAgainst = new Map();
       teams.forEach((team: any) => {
         const gameweekProjections: any = {};
-        for (let gw = 1; gw <= 38; gw++) {
+        const maxGW = Math.min(bootstrapData.events.find((event: any) => event.is_current)?.id + 12 || 14, 38);
+        for (let gw = 1; gw <= maxGW; gw++) {
           gameweekProjections[gw] = 0;
         }
         
@@ -6825,7 +6818,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check which gameweeks are COMPLETELY finished - EXACT SAME LOGIC AS TEAM GOAL PROJECTIONS
       const completeGameweeks = new Set();
-      for (let gw = 1; gw <= 38; gw++) {
+      const maxGW = Math.min(bootstrapData.events.find((event: any) => event.is_current)?.id + 12 || 14, 38);
+      for (let gw = 1; gw <= maxGW; gw++) {
         const gameweekFixtures = fixturesData.filter((f: any) => f.event === gw);
         const finishedFixtures = gameweekFixtures.filter((f: any) => f.finished);
         
@@ -10257,8 +10251,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const cacheInserts = [];
       for (const playerData of liveData) {
-        for (let gw = 1; gw <= 38; gw++) {
-          // Calculate projected minutes for each gameweek
+        const maxGW = Math.min(playerData.currentGameweek + 12, 38);
+        for (let gw = 1; gw <= maxGW; gw++) {
+          // Calculate projected minutes for each gameweek (next 12 GWs only)
           const minutesPerGame = playerData.projectedMinutesPerGameweek || 0;
           cacheInserts.push({
             playerId: playerData.playerId,
