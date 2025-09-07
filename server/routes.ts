@@ -11440,12 +11440,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/cached/player-assists-projections", async (req, res) => {
     try {
-      // Return cached response if available and fresh
-      const now = Date.now();
-      if (assistsResponseCache && (now - assistsResponseCache.timestamp) < RESPONSE_CACHE_DURATION) {
-        console.log("⚡ Serving assists projections from response cache");
-        return res.json(assistsResponseCache.data);
-      }
+      // FORCE FALLBACK: Return empty to trigger frontend fallback to live data
+      console.log("🔄 FORCING fallback to live assist data due to calculation updates - returning empty cache");
+      return res.json([]);
 
       console.log("📊 Serving cached player assists data from database");
       
