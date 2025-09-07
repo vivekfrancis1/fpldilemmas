@@ -1335,6 +1335,85 @@ export type SelectGoalShareDaily = typeof goalShareDaily.$inferSelect;
 export type InsertAssistShareDaily = typeof assistShareDaily.$inferInsert;
 export type SelectAssistShareDaily = typeof assistShareDaily.$inferSelect;
 
+// Player Assists Configuration Tables for Admin Tool
+export const assistConfigEliteBoosts = pgTable("assist_config_elite_boosts", {
+  id: serial("id").primaryKey(),
+  playerName: varchar("player_name", { length: 100 }).notNull().unique(),
+  boostMultiplier: decimal("boost_multiplier", { precision: 4, scale: 2 }).notNull(),
+  position: varchar("position", { length: 20 }).notNull(), // For categorization
+  isActive: boolean("is_active").default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const assistConfigHistoricalTiers = pgTable("assist_config_historical_tiers", {
+  id: serial("id").primaryKey(),
+  tierName: varchar("tier_name", { length: 50 }).notNull(),
+  minAverageAssists: decimal("min_average_assists", { precision: 4, scale: 2 }).notNull(),
+  multiplier: decimal("multiplier", { precision: 4, scale: 2 }).notNull(),
+  minSeasonsRequired: integer("min_seasons_required").default(2),
+  minTotalAssists: integer("min_total_assists").default(8),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const assistConfigCreativityTiers = pgTable("assist_config_creativity_tiers", {
+  id: serial("id").primaryKey(),
+  tierName: varchar("tier_name", { length: 50 }).notNull(),
+  maxRank: integer("max_rank").notNull(), // Top 50, Top 100, etc.
+  multiplier: decimal("multiplier", { precision: 4, scale: 2 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const assistConfigPriceTiers = pgTable("assist_config_price_tiers", {
+  id: serial("id").primaryKey(),
+  tierName: varchar("tier_name", { length: 50 }).notNull(),
+  minCost: integer("min_cost").notNull(), // FPL price in 10ths (e.g. 90 = £9.0m)
+  multiplier: decimal("multiplier", { precision: 4, scale: 2 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const assistConfigPositionRates = pgTable("assist_config_position_rates", {
+  id: serial("id").primaryKey(),
+  positionName: varchar("position_name", { length: 20 }).notNull().unique(),
+  baseRate: decimal("base_rate", { precision: 5, scale: 2 }).notNull(),
+  varianceRate: decimal("variance_rate", { precision: 5, scale: 2 }).notNull(),
+  shareCapPercentage: decimal("share_cap_percentage", { precision: 5, scale: 2 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const assistConfigGeneral = pgTable("assist_config_general", {
+  id: serial("id").primaryKey(),
+  configKey: varchar("config_key", { length: 50 }).notNull().unique(),
+  configValue: decimal("config_value", { precision: 6, scale: 3 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 30 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+// Types for Player Assists Configuration
+export type AssistConfigEliteBoost = typeof assistConfigEliteBoosts.$inferSelect;
+export type InsertAssistConfigEliteBoost = typeof assistConfigEliteBoosts.$inferInsert;
+export type AssistConfigHistoricalTier = typeof assistConfigHistoricalTiers.$inferSelect;
+export type InsertAssistConfigHistoricalTier = typeof assistConfigHistoricalTiers.$inferInsert;
+export type AssistConfigCreativityTier = typeof assistConfigCreativityTiers.$inferSelect;
+export type InsertAssistConfigCreativityTier = typeof assistConfigCreativityTiers.$inferInsert;
+export type AssistConfigPriceTier = typeof assistConfigPriceTiers.$inferSelect;
+export type InsertAssistConfigPriceTier = typeof assistConfigPriceTiers.$inferInsert;
+export type AssistConfigPositionRate = typeof assistConfigPositionRates.$inferSelect;
+export type InsertAssistConfigPositionRate = typeof assistConfigPositionRates.$inferInsert;
+export type AssistConfigGeneral = typeof assistConfigGeneral.$inferSelect;
+export type InsertAssistConfigGeneral = typeof assistConfigGeneral.$inferInsert;
+
 // Types for comprehensive static cache tables
 export type StaticProjectionRange = typeof staticProjectionRanges.$inferSelect;
 export type InsertStaticProjectionRange = typeof staticProjectionRanges.$inferInsert;
