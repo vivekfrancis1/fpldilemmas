@@ -11341,7 +11341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Use a much shorter timeout to fail fast and serve from cache
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout (reduced)
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout (further reduced)
       
       try {
         const totalPointsResponse = await internalFetch(`api/player-total-points?startGameweek=${start}&endGameweek=${end}`, {
@@ -11367,7 +11367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clearTimeout(timeoutId);
         
         if (fetchError.name === 'AbortError') {
-          console.log("⚠️ Total points calculation timed out after 15s, checking for older cache");
+          console.log("⚠️ Total points calculation timed out after 10s, checking for older cache");
         } else {
           console.error("Error fetching total points:", fetchError);
         }

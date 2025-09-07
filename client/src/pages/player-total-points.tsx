@@ -462,7 +462,7 @@ export default function PlayerTotalPoints() {
     queryKey: ["/api/cached/player-total-points", startGameweek, endGameweek],
     queryFn: async () => {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout (reduced)
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout (matches backend)
       
       try {
         const response = await fetch(`/api/cached/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`, {
