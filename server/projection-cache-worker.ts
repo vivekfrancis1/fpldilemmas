@@ -518,7 +518,7 @@ class ProjectionCacheWorker {
   private async cacheFPLScoringComponents(): Promise<void> {
     try {
       console.log(`📊 Caching FPL scoring components...`);
-      await fplScoringCacheService.updateAllCaches();
+      await fplScoringCacheService.updateAllScoringData();
       console.log(`✅ FPL scoring components cached successfully`);
     } catch (error) {
       console.error(`❌ Failed to cache FPL scoring components:`, error);
@@ -530,23 +530,23 @@ class ProjectionCacheWorker {
    * Cache individual FPL scoring components
    */
   async cachePlayerSaves(): Promise<void> {
-    await fplScoringCacheService.updateAllCaches(); // Includes saves
+    await fplScoringCacheService.updateAllScoringData(); // Includes saves
   }
 
   async cachePlayerGoalsConceded(): Promise<void> {
-    await fplScoringCacheService.updateAllCaches(); // Includes goals conceded
+    await fplScoringCacheService.updateAllScoringData(); // Includes goals conceded
   }
 
   async cachePlayerYellowCards(): Promise<void> {
-    await fplScoringCacheService.updateAllCaches(); // Includes yellow cards
+    await fplScoringCacheService.updateAllScoringData(); // Includes yellow cards
   }
 
   async cachePlayerRedCards(): Promise<void> {
-    await fplScoringCacheService.updateAllCaches(); // Includes red cards
+    await fplScoringCacheService.updateAllScoringData(); // Includes red cards
   }
 
   async cachePlayerBonusPoints(): Promise<void> {
-    await fplScoringCacheService.updateAllCaches(); // Includes bonus points
+    await fplScoringCacheService.updateAllScoringData(); // Includes bonus points
   }
 }
 
