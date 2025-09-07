@@ -461,29 +461,18 @@ export default function PlayerTotalPoints() {
   const { data: totalPointsData, isLoading, error } = useQuery<PlayerTotalPointsData[]>({
     queryKey: ["/api/cached/player-total-points", startGameweek, endGameweek],
     queryFn: async () => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout (matches backend)
+      const response = await fetch(`/api/cached/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       
-      try {
-        const response = await fetch(`/api/cached/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`, {
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to load total points: ${response.status} ${response.statusText}`);
-        }
-        return response.json();
-      } catch (error) {
-        clearTimeout(timeoutId);
-        throw error;
+      if (!response.ok) {
+        throw new Error(`Failed to load total points: ${response.status} ${response.statusText}`);
       }
+      return response.json();
     },
-    staleTime: 60 * 60 * 1000, // 1 hour cache (more aggressive caching)
+    staleTime: 60 * 60 * 1000, // 1 hour cache
     gcTime: 2 * 60 * 60 * 1000, // Keep in cache for 2 hours  
     enabled: startGameweek <= endGameweek,
-    retry: 1, // Only 1 retry for faster failure
-    retryDelay: 2000, // Fixed 2 second retry delay
+    retry: 2, // Increased retries since we removed manual timeout
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000), // Exponential backoff
     networkMode: 'online',
     placeholderData: [], // Show empty table immediately while loading
     refetchOnWindowFocus: false, // Prevent unnecessary refetches
