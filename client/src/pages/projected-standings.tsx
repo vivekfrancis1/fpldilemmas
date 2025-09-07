@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trophy, TrendingUp, Target, Users, RefreshCw, Calendar } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
@@ -35,7 +35,14 @@ export default function ProjectedStandings() {
 
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
   const maxEndGameweek = Math.min(currentGameweek + 12, 38); // Next 12 gameweeks
-  const [selectedEndGameweek, setSelectedEndGameweek] = useState(maxEndGameweek);
+  const [selectedEndGameweek, setSelectedEndGameweek] = useState<number | null>(null);
+  
+  // Initialize selectedEndGameweek when bootstrapData is loaded
+  useEffect(() => {
+    if (bootstrapData && selectedEndGameweek === null) {
+      setSelectedEndGameweek(maxEndGameweek);
+    }
+  }, [bootstrapData, maxEndGameweek, selectedEndGameweek]);
 
   const { data: standingsData, isLoading: standingsLoading } = useQuery<TeamStanding[]>({
     queryKey: ["/api/projected-standings", selectedEndGameweek],
@@ -46,7 +53,7 @@ export default function ProjectedStandings() {
       }
       return response.json();
     },
-    enabled: !!bootstrapData,
+    enabled: !!bootstrapData && selectedEndGameweek !== null,
   });
 
   const handleRefresh = async () => {
@@ -86,7 +93,7 @@ export default function ProjectedStandings() {
     );
   }
 
-  const totalGameweeks = selectedEndGameweek;
+  const totalGameweeks = selectedEndGameweek || maxEndGameweek;
 
   return (
     <div className="fpl-page-container">
@@ -140,14 +147,15 @@ export default function ProjectedStandings() {
                     </Label>
                   </div>
                   <Select
-                    value={selectedEndGameweek.toString()}
+                    value={selectedEndGameweek?.toString() || ""}
                     onValueChange={handleEndGameweekChange}
+                    disabled={!bootstrapData || selectedEndGameweek === null}
                   >
                     <SelectTrigger className="w-24" data-testid="select-end-gameweek">
-                      <SelectValue />
+                      <SelectValue placeholder="Loading..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: maxEndGameweek - currentGameweek }, (_, i) => {
+                      {bootstrapData && Array.from({ length: maxEndGameweek - currentGameweek }, (_, i) => {
                         const gw = currentGameweek + 1 + i;
                         return (
                           <SelectItem key={gw} value={gw.toString()}>
