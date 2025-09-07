@@ -198,11 +198,16 @@ export default function AdminCacheManagement() {
 
   const formatTimeAgo = (dateString: string) => {
     try {
-      const date = new Date(dateString);
+      // Ensure we're parsing the date in UTC to match database timezone
+      const date = new Date(dateString + (dateString.includes('Z') ? '' : 'Z'));
       const now = new Date();
       const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
       
-      if (diffMinutes < 60) {
+      if (diffMinutes < 0) {
+        return 'Just now';
+      } else if (diffMinutes < 1) {
+        return 'Just now';
+      } else if (diffMinutes < 60) {
         return `${diffMinutes}m ago`;
       } else if (diffMinutes < 1440) {
         return `${Math.floor(diffMinutes / 60)}h ago`;
