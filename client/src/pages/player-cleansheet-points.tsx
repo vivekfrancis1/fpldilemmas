@@ -154,7 +154,7 @@ export default function PlayerCleanSheetPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
+                  {Array.from({ length: 12 }, (_, i) => i + 4).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
@@ -168,7 +168,7 @@ export default function PlayerCleanSheetPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 38 }, (_, i) => i + 1).map(gw => (
+                  {Array.from({ length: 12 }, (_, i) => i + 4).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
