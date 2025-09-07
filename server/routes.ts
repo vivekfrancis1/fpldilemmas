@@ -4202,10 +4202,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return false;
             }
             
-            return p.totalMinutes >= 45; // Minimum minutes requirement
+            return true; // SIMPLIFIED: Include all players (Option B)
           });
           
-          console.log(`DEBUG: Team ${team.name} - ${qualifiedPlayers.length}/${teamPlayersWithXG.length} players qualify (≥45 mins)`);
+          console.log(`DEBUG: Team ${team.name} - simplified processing for ${qualifiedPlayers.length} players`);
           
           // Calculate raw contributions using enhanced methodology
           const playerContributions: { [playerId: number]: { name: string, position: string, contribution: number, xgPer90: number, expectedMinutes: number } } = {};
@@ -4243,7 +4243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, 2024/25: ${fallback2024.toFixed(3)}${has2024Data ? ' (actual)' : ' (fallback)'}, Average: ${combinedXGPer90.toFixed(3)}`);
             }
             
-            // SIMPLIFIED: Use raw xG data without sample size adjustments (Option B)
+            // SIMPLIFIED: Use raw xG data without adjustments (Option B)
             let projectedXGPer90 = combinedXGPer90;
             
             // PENALTY TAKER ADJUSTMENT - Add penalty goals that xG excludes
@@ -4381,8 +4381,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           });
           
-          // SIMPLIFIED: Accept minor balance variances (Option B) - no perfect balance calculations
-          console.log(`DEBUG: Team ${team.name} goal distribution completed - accepting natural variance`);
+          // SIMPLIFIED: Accept natural balance variances (Option B)
+          const finalTotalGoals = Object.values(teamSeasonTotals[teamId].players)
+            .reduce((sum: number, player: any) => sum + player.projectedGoals, 0);
+          console.log(`DEBUG: Team ${team.name} natural balance: ${finalTotalGoals.toFixed(3)} vs ${targetTotal.toFixed(3)}`);
         }
       }
       
