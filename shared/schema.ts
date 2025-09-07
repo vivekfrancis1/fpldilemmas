@@ -1273,6 +1273,39 @@ export const assistShareDaily = pgTable("assist_share_daily", {
   updatedAt: timestamp("updated_at").defaultNow()
 });
 
+// Static cache tables for common projection ranges (Option 3)
+export const staticProjectionRanges = pgTable("static_projection_ranges", {
+  id: serial("id").primaryKey(),
+  rangeName: varchar("range_name", { length: 20 }).notNull(), // e.g. "GW4-9", "GW4-15"
+  startGameweek: integer("start_gameweek").notNull(),
+  endGameweek: integer("end_gameweek").notNull(),
+  season: varchar("season", { length: 10 }).notNull().default("2025/26"),
+  lastCalculated: timestamp("last_calculated").defaultNow(),
+  recordCount: integer("record_count").default(0),
+  calculationStatus: varchar("calculation_status", { length: 20 }).default("pending"), // pending, calculating, completed, error
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+// Static cached player projections for instant retrieval
+export const staticPlayerProjections = pgTable("static_player_projections", {
+  id: serial("id").primaryKey(),
+  rangeId: integer("range_id").references(() => staticProjectionRanges.id).notNull(),
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name", { length: 100 }).notNull(),
+  position: varchar("position", { length: 20 }).notNull(),
+  team: varchar("team", { length: 50 }).notNull(),
+  totalPoints: decimal("total_points", { precision: 6, scale: 2 }).notNull(),
+  projectedGoals: decimal("projected_goals", { precision: 6, scale: 2 }).default("0"),
+  projectedAssists: decimal("projected_assists", { precision: 6, scale: 2 }).default("0"),
+  projectedMinutes: decimal("projected_minutes", { precision: 8, scale: 2 }).default("0"),
+  projectedCleanSheets: decimal("projected_clean_sheets", { precision: 6, scale: 2 }).default("0"),
+  projectedBonusPoints: decimal("projected_bonus_points", { precision: 6, scale: 2 }).default("0"),
+  gameweekBreakdown: jsonb("gameweek_breakdown"), // {gw4: {goals: 0.5, assists: 0.2, ...}, ...}
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
 // Types for daily projections
 export type InsertTeamProjectionsDaily = typeof teamProjectionsDaily.$inferInsert;
 export type SelectTeamProjectionsDaily = typeof teamProjectionsDaily.$inferSelect;
@@ -1280,3 +1313,9 @@ export type InsertGoalShareDaily = typeof goalShareDaily.$inferInsert;
 export type SelectGoalShareDaily = typeof goalShareDaily.$inferSelect;
 export type InsertAssistShareDaily = typeof assistShareDaily.$inferInsert;
 export type SelectAssistShareDaily = typeof assistShareDaily.$inferSelect;
+
+// Types for static cache tables
+export type StaticProjectionRange = typeof staticProjectionRanges.$inferSelect;
+export type InsertStaticProjectionRange = typeof staticProjectionRanges.$inferInsert;
+export type StaticPlayerProjection = typeof staticPlayerProjections.$inferSelect;
+export type InsertStaticPlayerProjection = typeof staticPlayerProjections.$inferInsert;
