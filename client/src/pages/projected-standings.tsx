@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trophy, TrendingUp, Target, Users, RefreshCw } from "lucide-react";
+import { Trophy, TrendingUp, Target, Users, RefreshCw, Calendar } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface TeamStanding {
   id: number;
@@ -31,8 +33,20 @@ export default function ProjectedStandings() {
     queryKey: ["/api/bootstrap-static"],
   });
 
+  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
+  const maxEndGameweek = Math.min(currentGameweek + 12, 38); // Next 12 gameweeks
+  const [selectedEndGameweek, setSelectedEndGameweek] = useState(maxEndGameweek);
+
   const { data: standingsData, isLoading: standingsLoading } = useQuery<TeamStanding[]>({
-    queryKey: ["/api/projected-standings"],
+    queryKey: ["/api/projected-standings", selectedEndGameweek],
+    queryFn: async () => {
+      const response = await fetch(`/api/projected-standings?endGameweek=${selectedEndGameweek}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch projected standings');
+      }
+      return response.json();
+    },
+    enabled: !!bootstrapData,
   });
 
   const handleRefresh = async () => {
@@ -40,6 +54,10 @@ export default function ProjectedStandings() {
     await queryClient.invalidateQueries({ queryKey: ["/api/projected-standings"] });
     await queryClient.invalidateQueries({ queryKey: ["/api/bootstrap-static"] });
     setIsRefreshing(false);
+  };
+
+  const handleEndGameweekChange = (value: string) => {
+    setSelectedEndGameweek(parseInt(value));
   };
 
   const getPositionColor = (position: number) => {
@@ -68,9 +86,7 @@ export default function ProjectedStandings() {
     );
   }
 
-  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
-  const endGameweek = Math.min(currentGameweek + 12, 38);
-  const totalGameweeks = endGameweek;
+  const totalGameweeks = selectedEndGameweek;
 
   return (
     <div className="fpl-page-container">
@@ -100,17 +116,47 @@ export default function ProjectedStandings() {
 
       <div className="fpl-section-spacing">
 
-          {/* Current Status */}
+          {/* Filter Controls */}
           <Card className="mb-6 shadow-md border-0">
             <CardContent className="p-6">
-              <div className="flex flex-wrap gap-6 items-center justify-center">
-                <div className="flex items-center gap-3">
-                  <Target className="h-5 w-5 text-purple-600" />
-                  <span className="text-sm font-semibold text-gray-700">Current Gameweek: {currentGameweek}</span>
+              <div className="flex flex-wrap gap-6 items-center justify-between">
+                <div className="flex flex-wrap gap-6 items-center">
+                  <div className="flex items-center gap-3">
+                    <Target className="h-5 w-5 text-purple-600" />
+                    <span className="text-sm font-semibold text-gray-700">Current Gameweek: {currentGameweek}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Users className="h-5 w-5 text-purple-600" />
+                    <span className="text-sm font-semibold text-gray-700">Based on: Actual + Projected Results</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Users className="h-5 w-5 text-purple-600" />
-                  <span className="text-sm font-semibold text-gray-700">Based on: Actual + Projected Results</span>
+                
+                {/* Gameweek Filter */}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-purple-600" />
+                    <Label htmlFor="end-gameweek" className="text-sm font-semibold text-gray-700">
+                      Project to GW:
+                    </Label>
+                  </div>
+                  <Select
+                    value={selectedEndGameweek.toString()}
+                    onValueChange={handleEndGameweekChange}
+                  >
+                    <SelectTrigger className="w-24" data-testid="select-end-gameweek">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: maxEndGameweek - currentGameweek }, (_, i) => {
+                        const gw = currentGameweek + 1 + i;
+                        return (
+                          <SelectItem key={gw} value={gw.toString()}>
+                            {gw}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>

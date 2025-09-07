@@ -6142,10 +6142,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      const endGameweek = Math.min(currentGameweek + 12, 38);
-      console.log(`DEBUG: Processing final standings for next 12 gameweeks (GW${currentGameweek + 1} to GW${endGameweek}), current GW: ${currentGameweek}`);
+      // Accept endGameweek parameter from query, with bounds checking
+      const requestedEndGameweek = parseInt(req.query.endGameweek as string) || Math.min(currentGameweek + 12, 38);
+      const maxAllowedEndGameweek = Math.min(currentGameweek + 12, 38);
+      const endGameweek = Math.min(Math.max(requestedEndGameweek, currentGameweek + 1), maxAllowedEndGameweek);
       
-      // Get fixtures for current + next 12 gameweeks only
+      console.log(`DEBUG: Processing final standings for gameweeks 1 to GW${endGameweek} (user requested: ${requestedEndGameweek}), current GW: ${currentGameweek}`);
+      
+      // Get fixtures from GW1 to selected end gameweek
       const allFixtures = fixturesData.filter((fixture: any) => 
         fixture.event >= 1 && fixture.event <= endGameweek
       );
