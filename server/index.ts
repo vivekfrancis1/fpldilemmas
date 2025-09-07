@@ -121,9 +121,12 @@ app.use((req, res, next) => {
       console.log("✓ FPL scoring cache scheduler started");
       
       // Start daily projections scheduler (runs at 3 AM daily for ultra-fast performance)
-      const { dailyProjectionsScheduler } = await import('./daily-projections-scheduler');
-      dailyProjectionsScheduler.start();
-      console.log("✓ Daily projections scheduler started");
+      import('./daily-projections-scheduler').then(({ dailyProjectionsScheduler }) => {
+        dailyProjectionsScheduler.start();
+        console.log("✓ Daily projections scheduler started");
+      }).catch((error) => {
+        console.error("Failed to start daily projections scheduler:", error);
+      });
     });
 
     // Handle server startup errors

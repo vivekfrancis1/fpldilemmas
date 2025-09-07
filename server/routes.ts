@@ -12354,6 +12354,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return (attackStrength + defenseStrength) / 2;
   }
 
+  // Manual trigger for daily projections (testing/admin endpoint)
+  app.post("/api/daily-projections/trigger", async (req, res) => {
+    try {
+      console.log("🔄 Manual daily projections calculation triggered");
+      const { dailyProjectionsScheduler } = await import('./daily-projections-scheduler');
+      await dailyProjectionsScheduler.runNow();
+      res.json({ 
+        success: true, 
+        message: "Daily projections calculation completed successfully",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("❌ Manual daily projections failed:", error);
+      res.status(500).json({ 
+        error: "Daily projections calculation failed", 
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
