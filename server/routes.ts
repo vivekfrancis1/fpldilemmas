@@ -4041,7 +4041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let goalShareCache: { data: any, timestamp: number } | null = null;
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  // Ultra-fast Goal Share endpoint - bypasses expensive team projections
+  // Ultra-fast Goal Share endpoint - uses cached goal projections for instant response
   app.get("/api/goal-share-season", async (req, res) => {
     try {
       // Check cache first - extend cache duration for better performance
@@ -4051,43 +4051,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(goalShareCache.data);
       }
       
-      console.log("DEBUG: Goal Share Season API - using optimized approach with caching");
+      console.log("DEBUG: Goal Share Season API - using cached approach for instant response");
       
-      // KEEP ORIGINAL LOGIC: Use team projections for accuracy (just optimize with caching)
-      const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
+      // SIMPLIFIED APPROACH: Use cached goal projections instead of expensive team projections
+      console.log(`📊 Building goal share from cached goals projections`);
+      const [bootstrapResponse, cachedGoalsResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        internalFetch("api/team-goal-projections") // Use internal fetch for timeout handling
+        internalFetch("api/cached/player-goals-projections") // Use cached data for speed
       ]);
       
-      if (!bootstrapResponse.ok || !teamProjectionsResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API or Team Goal Projections");
+      if (!bootstrapResponse.ok || !cachedGoalsResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API or cached goals");
       }
       
       const bootstrapData = await bootstrapResponse.json();
-      const teamProjectionsData = await teamProjectionsResponse.json();
+      const cachedGoalsData = await cachedGoalsResponse.json();
       
-      // Step 1: Calculate team season totals from Team Goal Projections (ORIGINAL LOGIC)
+      // Step 1: SIMPLIFIED - Calculate team season totals from cached player goals (ultra-fast)
       const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
       
-      // Aggregate expected goals from Team Goal Projections data (RESTORED)
-      teamProjectionsData.forEach((team: any) => {
-        if (!teamSeasonTotals[team.id]) {
-          teamSeasonTotals[team.id] = {
+      // Sum up player goals by team from cached data - MUCH faster than team projections
+      cachedGoalsData.forEach((player: any) => {
+        const teamId = player.teamId;
+        const totalGoals = (player.gw4 || 0) + (player.gw5 || 0) + (player.gw6 || 0) + 
+                          (player.gw7 || 0) + (player.gw8 || 0) + (player.gw9 || 0);
+        
+        if (!teamSeasonTotals[teamId]) {
+          teamSeasonTotals[teamId] = {
             expectedGoals: 0,
             players: {}
           };
         }
         
-        // Sum all gameweek projections for this team's season total
-        Object.values(team.gameweekProjections || {}).forEach((goals: any) => {
-          if (typeof goals === 'number') {
-            teamSeasonTotals[team.id].expectedGoals += goals;
-          }
-        });
+        teamSeasonTotals[teamId].expectedGoals += totalGoals;
+        teamSeasonTotals[teamId].players[player.playerId] = {
+          name: player.playerName,
+          position: player.position,
+          projectedGoals: totalGoals
+        };
       });
       
-      console.log(`DEBUG: Team totals from Team Projections - LIV: ${teamSeasonTotals[12]?.expectedGoals.toFixed(2)}, MCI: ${teamSeasonTotals[13]?.expectedGoals.toFixed(2)}`);
-      console.log("DEBUG: Using original calculation logic with caching optimization");
+      console.log(`📊 Built goal share for ${Object.keys(teamSeasonTotals).length} teams using cached data`);
+      console.log("DEBUG: Using simplified cached data approach for instant response");
       
       // Step 2: Calculate player shares using basic metrics (faster approach)
       const playersWithXG: any[] = [];
