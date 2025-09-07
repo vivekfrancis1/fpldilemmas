@@ -4259,10 +4259,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 break;
             }
             
-            // Apply expected minutes weighting to prevent backup players from dominating
-            const maxExpectedMinutes = Math.max(...playersWithXG.map(p => calculateExpectedMinutes(p, playersWithXG)), 1); // Prevent division by zero
-            const minutesWeight = Math.max(0.1, expectedMinutes / maxExpectedMinutes); // Minimum weight of 0.1
-            const contribution = projectedSeasonGoals * positionMultiplier * minutesWeight;
+            // ENHANCED minutes weighting to prevent unrealistic projections for bench players
+            const currentMinutes = player.minutes || 0;
+            
+            // Very low minutes players (like Rio Ngumoha) get severely limited projections
+            let minutesRestriction = 1.0;
+            if (currentMinutes < 200) {
+              minutesRestriction = 0.02; // 2% for players with <200 minutes (bench warmers)
+            } else if (currentMinutes < 500) {
+              minutesRestriction = 0.15; // 15% for squad players with <500 minutes
+            } else if (currentMinutes < 1000) {
+              minutesRestriction = 0.4; // 40% for rotation players with <1000 minutes
+            }
+            
+            const maxExpectedMinutes = Math.max(...playersWithXG.map(p => calculateExpectedMinutes(p, playersWithXG)), 1);
+            const basicMinutesWeight = Math.max(0.05, expectedMinutes / maxExpectedMinutes);
+            const finalMinutesWeight = basicMinutesWeight * minutesRestriction;
+            
+            const contribution = projectedSeasonGoals * positionMultiplier * finalMinutesWeight;
             
             playerContributions[player.id] = {
               name: player.name,
@@ -5690,10 +5704,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
       }
       
-      // Apply minutes weighting to prevent backup players from dominating
+      // ENHANCED minutes weighting to prevent unrealistic projections for bench players
+      const currentMinutes = player.minutes || 0;
+      
+      // Very low minutes players get severely limited projections
+      let minutesRestriction = 1.0;
+      if (currentMinutes < 200) {
+        minutesRestriction = 0.02; // 2% for players with <200 minutes (bench warmers)
+      } else if (currentMinutes < 500) {
+        minutesRestriction = 0.15; // 15% for squad players with <500 minutes
+      } else if (currentMinutes < 1000) {
+        minutesRestriction = 0.4; // 40% for rotation players with <1000 minutes
+      }
+      
       const maxExpectedMinutes = Math.max(...players.map(p => calculateExpectedMinutes(p, players)), 1);
-      const minutesWeight = Math.max(0.1, expectedMinutes / maxExpectedMinutes);
-      const contribution = projectedSeasonAssists * positionMultiplier * minutesWeight;
+      const basicMinutesWeight = Math.max(0.05, expectedMinutes / maxExpectedMinutes);
+      const finalMinutesWeight = basicMinutesWeight * minutesRestriction;
+      
+      const contribution = projectedSeasonAssists * positionMultiplier * finalMinutesWeight;
       
       playerContributions[player.id] = {
         name: playerName,
