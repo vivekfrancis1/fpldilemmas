@@ -21,8 +21,8 @@ interface TeamAssistProjection {
 }
 
 export default function TeamAssistProjections() {
-  const [startGameweek, setStartGameweek] = useState<string>("3");
-  const [endGameweek, setEndGameweek] = useState<string>("8");
+  const [startGameweek, setStartGameweek] = useState<string>("4");
+  const [endGameweek, setEndGameweek] = useState<string>("9");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
 
@@ -164,9 +164,9 @@ export default function TeamAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 38 }, (_, i) => (
-                      <SelectItem key={i + 1} value={(i + 1).toString()}>
-                        {i + 1}
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <SelectItem key={i + 4} value={(i + 4).toString()}>
+                        {i + 4}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -182,9 +182,9 @@ export default function TeamAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 38 }, (_, i) => (
-                      <SelectItem key={i + 1} value={(i + 1).toString()}>
-                        {i + 1}
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <SelectItem key={i + 4} value={(i + 4).toString()}>
+                        {i + 4}
                       </SelectItem>
                     ))}
                   </SelectContent>
