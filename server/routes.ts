@@ -3472,7 +3472,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Assist Projections endpoint - using correct assist values based on actual FPL data analysis
   app.get("/api/team-assist-projections", async (req, res) => {
     try {
-      console.log(`DEBUG: Team Assist Projections API called - using correct assist projections`);
       
       // Fetch team goal projections for structure
       const teamGoalResponse = await internalFetch("api/team-goal-projections");
@@ -4111,11 +4110,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check memory cache second
       const EXTENDED_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
       if (goalShareCache && Date.now() - goalShareCache.timestamp < EXTENDED_CACHE_DURATION) {
-        console.log("DEBUG: Returning cached goal share data");
         return res.json(goalShareCache.data);
       }
       
-      console.log("DEBUG: Goal Share Season API - calculating live data (no database/cache available)");
       
       // KEEP ORIGINAL LOGIC: Use team projections for accuracy (just optimize with caching)
       const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
@@ -4150,8 +4147,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
-      console.log(`DEBUG: Team totals from Team Projections - LIV: ${teamSeasonTotals[12]?.expectedGoals.toFixed(2)}, MCI: ${teamSeasonTotals[13]?.expectedGoals.toFixed(2)}`);
-      console.log("DEBUG: Using original calculation logic with caching optimization");
       
       // Step 2: Calculate player shares using basic metrics (faster approach)
       const playersWithXG: any[] = [];
@@ -4415,7 +4410,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Skip legacy code completely - new methodology has been applied
       // LEGACY CODE DISABLED - xG methodology now used exclusively
       
-      console.log("DEBUG: All goal share calculations completed using xG per 90 methodology");
 
   // Helper function to calculate defensive contribution based on position
   function calculateDefensiveContribution(elementType: number, cbi: number, tackles: number, recoveries: number): number {
@@ -4709,7 +4703,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }).filter(Boolean);
       
-      console.log(`DEBUG: Generated season-long goal share data using Team Goal Projections totals for ${response.length} teams`);
       
       // Save the goal share data for use by Player Total Goals tool
       savedGoalShareData = {
