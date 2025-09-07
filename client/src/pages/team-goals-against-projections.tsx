@@ -167,7 +167,7 @@ export default function TeamGoalsAgainstProjections() {
             <h1>Team Goals Conceded Projections</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Goals conceded by each team across all 38 gameweeks - defensive analysis based on opponent expected goals
+            Goals conceded by each team across all upcoming gameweeks
           </p>
         </div>
       </div>
