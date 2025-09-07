@@ -440,7 +440,7 @@ class ProjectionCacheWorker {
   /**
    * Cache goal and assist share data from API
    */
-  private async cacheGoalAssistShareData(): Promise<void> {
+  async cacheGoalAssistShareData(): Promise<void> {
     try {
       console.log(`📊 Caching goal and assist share data...`);
       
