@@ -8249,10 +8249,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const projectionService = new ProjectionService();
           await projectionService.refreshProjections(4, 9); // Current projection range
           break;
+        case 'saves':
+          await projectionCacheWorker.cachePlayerSaves();
+          break;
+        case 'goals-conceded':
+          await projectionCacheWorker.cachePlayerGoalsConceded();
+          break;
+        case 'yellow-cards':
+          await projectionCacheWorker.cachePlayerYellowCards();
+          break;
+        case 'red-cards':
+          await projectionCacheWorker.cachePlayerRedCards();
+          break;
+        case 'bonus-points':
+          await projectionCacheWorker.cachePlayerBonusPoints();
+          break;
         default:
           return res.status(400).json({ 
             success: false, 
-            message: `Unknown cache type: ${type}` 
+            message: `Unknown cache type: ${type}. Available types: goals, assists, minutes, clean-sheets, defensive, team, goal-assist-share, total-points, saves, goals-conceded, yellow-cards, red-cards, bonus-points` 
           });
       }
       

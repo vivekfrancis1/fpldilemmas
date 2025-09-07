@@ -33,7 +33,12 @@ export default function AdminCacheManagement() {
     { key: 'defensive', name: 'Defensive', description: 'Defensive contribution projections' },
     { key: 'team', name: 'Team Projections', description: 'Team-level goal and assist projections' },
     { key: 'goal-assist-share', name: 'Goal/Assist Share', description: 'Player share of team goals/assists' },
-    { key: 'total-points', name: 'Player Total Points', description: 'Complete FPL points projections' }
+    { key: 'total-points', name: 'Player Total Points', description: 'Complete FPL points projections' },
+    { key: 'saves', name: 'Player Saves', description: 'Goalkeeper save projections' },
+    { key: 'goals-conceded', name: 'Goals Conceded', description: 'Player goals conceded projections' },
+    { key: 'yellow-cards', name: 'Yellow Cards', description: 'Player yellow card projections' },
+    { key: 'red-cards', name: 'Red Cards', description: 'Player red card projections' },
+    { key: 'bonus-points', name: 'Bonus Points', description: 'Player bonus point projections' }
   ];
 
   const bulkOperations = [
