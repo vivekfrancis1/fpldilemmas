@@ -3558,7 +3558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Clean Sheet Projections endpoint
   app.get("/api/team-cs-projections", async (req, res) => {
     try {
-      console.log(`DEBUG: Team CS Projections API called - generating all 38 gameweeks`);
+      console.log(`DEBUG: Team CS Projections API called - generating next 12 gameweeks only`);
       
       const [bootstrapResponse, fixturesResponse, goalsAgainstResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -3576,8 +3576,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      const endGameweek = Math.min(currentGameweek + 11, 38); // Next 12 gameweeks only
       
-      console.log(`DEBUG: Processing all 38 gameweeks for clean sheets, current GW: ${currentGameweek}`);
+      console.log(`DEBUG: Processing next 12 gameweeks for clean sheets (GW${currentGameweek + 1} to GW${endGameweek}), current GW: ${currentGameweek}`);
       
       // Create lookup map for team Goals Against by gameweek for new formula
       const teamGoalsAgainstMap = new Map();
@@ -3590,11 +3591,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bettingData = teamService.getBettingData();
       
       const teamProjections = teams.map((team: any) => {
-        // Get all fixtures for this team across all 38 gameweeks
+        // Get fixtures for this team across next 12 gameweeks only
         const allFixtures = fixturesData
           .filter((f: any) => 
             (f.team_h === team.id || f.team_a === team.id) && 
-            f.event >= 1 && f.event <= 38
+            f.event >= currentGameweek + 1 && f.event <= endGameweek
           );
         
         const projections = allFixtures.map((fixture: any) => {
@@ -6944,8 +6945,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const matchOdds = [];
       const teamIds = Array.from(teamLookup.keys());
       
-      // Process only future gameweeks (exclude completed and current)
-      for (let gw = currentGameweek + 1; gw <= 38; gw++) {
+      // Process only next 12 gameweeks (exclude completed and current)
+      const maxGameweek = Math.min(currentGameweek + 12, 38);
+      for (let gw = currentGameweek + 1; gw <= maxGameweek; gw++) {
         // Get real fixtures for this gameweek
         const gwRealFixtures = realFixtures.filter((f: any) => f.event === gw);
         
