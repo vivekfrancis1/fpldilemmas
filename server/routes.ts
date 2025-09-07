@@ -6142,11 +6142,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      console.log(`DEBUG: Processing final standings for all 38 gameweeks, current GW: ${currentGameweek}`);
+      const endGameweek = Math.min(currentGameweek + 12, 38);
+      console.log(`DEBUG: Processing final standings for next 12 gameweeks (GW${currentGameweek + 1} to GW${endGameweek}), current GW: ${currentGameweek}`);
       
-      // Get all fixtures for the full season
+      // Get fixtures for current + next 12 gameweeks only
       const allFixtures = fixturesData.filter((fixture: any) => 
-        fixture.event >= 1 && fixture.event <= 38
+        fixture.event >= 1 && fixture.event <= endGameweek
       );
       
       // Initialize team standings

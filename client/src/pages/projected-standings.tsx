@@ -69,6 +69,8 @@ export default function ProjectedStandings() {
   }
 
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
+  const endGameweek = Math.min(currentGameweek + 12, 38);
+  const totalGameweeks = endGameweek;
 
   return (
     <div className="fpl-page-container">
@@ -80,7 +82,7 @@ export default function ProjectedStandings() {
             <h1>Projected Final Standings</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Final Premier League table based on actual results and projected outcomes for remaining fixtures
+            Premier League table based on actual results and projected outcomes for next 12 gameweeks
           </p>
           <div className="mt-6">
             <Button 
@@ -121,7 +123,7 @@ export default function ProjectedStandings() {
                 <Trophy className="h-6 w-6" />
                 Projected Final Table
                 <Badge className="bg-white/20 text-white border-white/30 ml-auto">
-                  38 gameweeks
+                  {totalGameweeks} gameweeks
                 </Badge>
               </CardTitle>
             </CardHeader>
