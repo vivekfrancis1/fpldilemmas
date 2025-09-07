@@ -4239,14 +4239,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // ENHANCED minutes weighting to prevent unrealistic projections for bench players
             const currentMinutes = player.minutes || 0;
             
-            // Very low minutes players (like Rio Ngumoha) get severely limited projections
+            // ULTRA-AGGRESSIVE minutes restrictions to prevent unrealistic projections (like Rio Ngumoha)
             let minutesRestriction = 1.0;
-            if (currentMinutes < 200) {
-              minutesRestriction = 0.02; // 2% for players with <200 minutes (bench warmers)
+            if (currentMinutes < 50) {
+              minutesRestriction = 0.001; // 0.1% for players with <50 minutes (never play)
+            } else if (currentMinutes < 200) {
+              minutesRestriction = 0.005; // 0.5% for players with <200 minutes (bench warmers)
             } else if (currentMinutes < 500) {
-              minutesRestriction = 0.15; // 15% for squad players with <500 minutes
+              minutesRestriction = 0.05; // 5% for squad players with <500 minutes
             } else if (currentMinutes < 1000) {
-              minutesRestriction = 0.4; // 40% for rotation players with <1000 minutes
+              minutesRestriction = 0.2; // 20% for rotation players with <1000 minutes
             }
             
             const maxExpectedMinutes = Math.max(...playersWithXG.map(p => calculateExpectedMinutes(p, playersWithXG)), 1);
@@ -5685,14 +5687,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // ENHANCED minutes weighting to prevent unrealistic projections for bench players
       const currentMinutes = player.minutes || 0;
       
-      // Very low minutes players get severely limited projections
+      // ULTRA-AGGRESSIVE minutes restrictions to prevent unrealistic projections
       let minutesRestriction = 1.0;
-      if (currentMinutes < 200) {
-        minutesRestriction = 0.02; // 2% for players with <200 minutes (bench warmers)
+      if (currentMinutes < 50) {
+        minutesRestriction = 0.001; // 0.1% for players with <50 minutes (never play)
+      } else if (currentMinutes < 200) {
+        minutesRestriction = 0.005; // 0.5% for players with <200 minutes (bench warmers)
       } else if (currentMinutes < 500) {
-        minutesRestriction = 0.15; // 15% for squad players with <500 minutes
+        minutesRestriction = 0.05; // 5% for squad players with <500 minutes
       } else if (currentMinutes < 1000) {
-        minutesRestriction = 0.4; // 40% for rotation players with <1000 minutes
+        minutesRestriction = 0.2; // 20% for rotation players with <1000 minutes
       }
       
       const maxExpectedMinutes = Math.max(...players.map(p => calculateExpectedMinutes(p, players)), 1);
