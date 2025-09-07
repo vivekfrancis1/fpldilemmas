@@ -8188,6 +8188,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Cache Management Endpoints
+  app.post("/api/admin/cache/refresh-all", requireAdmin, async (req, res) => {
+    try {
+      const { projectionCacheWorker } = await import('./projection-cache-worker');
+      await projectionCacheWorker.cacheAllProjections();
+      res.json({ success: true, message: "All projection caches refreshed successfully" });
+    } catch (error) {
+      console.error("Error refreshing all caches:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Failed to refresh all caches: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      });
+    }
+  });
+
+  app.post("/api/admin/cache/refresh-essential", requireAdmin, async (req, res) => {
+    try {
+      const { projectionCacheWorker } = await import('./projection-cache-worker');
+      await projectionCacheWorker.cacheEssentialProjections();
+      res.json({ success: true, message: "Essential projection caches refreshed successfully" });
+    } catch (error) {
+      console.error("Error refreshing essential caches:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Failed to refresh essential caches: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      });
+    }
+  });
+
+  app.post("/api/admin/cache/refresh/:type", requireAdmin, async (req, res) => {
+    const { type } = req.params;
+    
+    try {
+      const { projectionCacheWorker } = await import('./projection-cache-worker');
+      
+      switch (type) {
+        case 'goals':
+          await projectionCacheWorker.cacheGoalsProjections();
+          break;
+        case 'assists':
+          await projectionCacheWorker.cacheAssistProjections();
+          break;
+        case 'minutes':
+          await projectionCacheWorker.cacheMinutesProjections();
+          break;
+        case 'clean-sheets':
+          await projectionCacheWorker.cacheCleanSheetProjections();
+          break;
+        case 'defensive':
+          await projectionCacheWorker.cacheDefensiveProjections();
+          break;
+        case 'team':
+          await projectionCacheWorker.cacheTeamProjections();
+          break;
+        case 'goal-assist-share':
+          await projectionCacheWorker.cacheGoalAssistShareData();
+          break;
+        case 'total-points':
+          const projectionService = new ProjectionService();
+          await projectionService.refreshProjections(4, 9); // Current projection range
+          break;
+        default:
+          return res.status(400).json({ 
+            success: false, 
+            message: `Unknown cache type: ${type}` 
+          });
+      }
+      
+      res.json({ success: true, message: `${type} cache refreshed successfully` });
+    } catch (error) {
+      console.error(`Error refreshing ${type} cache:`, error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Failed to refresh ${type} cache: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      });
+    }
+  });
+
+  app.get("/api/admin/cache/status", requireAdmin, async (req, res) => {
+    try {
+      const { projectionCacheWorker } = await import('./projection-cache-worker');
+      const stats = await projectionCacheWorker.getCacheStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error getting cache status:", error);
+      res.status(500).json({ error: "Failed to get cache status" });
+    }
+  });
+
   app.get("/api/projection-cache/schedule", async (req, res) => {
     try {
       const { projectionCacheScheduler } = await import('./projection-cache-scheduler');
