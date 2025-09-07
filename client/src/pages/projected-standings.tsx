@@ -121,7 +121,7 @@ export default function ProjectedStandings() {
                 <Trophy className="h-6 w-6" />
                 Projected Final Table
                 <Badge className="bg-white/20 text-white border-white/30 ml-auto">
-                  20 teams
+                  38 gameweeks
                 </Badge>
               </CardTitle>
             </CardHeader>

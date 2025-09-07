@@ -3011,10 +3011,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamService = await createTeamService();
       const bettingData = teamService.getBettingData();
       
-      // Process next 6 gameweeks for focused projections (matches projected standings limit)
+      // Process all remaining gameweeks for full season final standings
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + 6, 38); // Focused 6-gameweek analysis
-      console.log(`DEBUG: Processing next 6 gameweeks (GW${startGameweek}-${endGameweek}) for focused projections, current GW: ${currentGameweek}`);
+      const endGameweek = 38; // Full season for projected final standings
+      console.log(`DEBUG: Processing all remaining gameweeks (GW${startGameweek}-${endGameweek}) for full season final standings, current GW: ${currentGameweek}`);
       
       // Check which gameweeks are COMPLETELY finished (all 10 fixtures done) - only check relevant range
       const completeGameweeks = new Set();
@@ -6074,13 +6074,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Limit to next 6 gameweeks for focused analysis (current GW + 6)
-      const endGameweekForStandings = Math.min(currentGameweek + 6, 38);
-      console.log(`DEBUG: Processing standings through GW${endGameweekForStandings}, current GW: ${currentGameweek}`);
+      console.log(`DEBUG: Processing final standings for all 38 gameweeks, current GW: ${currentGameweek}`);
       
-      // Get fixtures from start of season to current + 6 gameweeks
+      // Get all fixtures for the full season
       const allFixtures = fixturesData.filter((fixture: any) => 
-        fixture.event >= 1 && fixture.event <= endGameweekForStandings
+        fixture.event >= 1 && fixture.event <= 38
       );
       
       // Initialize team standings
