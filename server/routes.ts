@@ -2986,7 +2986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.set('Last-Modified', new Date().toUTCString());
     res.set('ETag', `"${Date.now()}"`);
     try {
-      console.log(`DEBUG: Team Goal Projections API called - generating all 38 gameweeks`);
+      console.log(`DEBUG: Team Goal Projections API called - generating next 6 gameweeks only`);
       
       // Use hardcoded teams for better performance, only fetch what we need from API
       const { PREMIER_LEAGUE_TEAMS } = await import("@shared/schema");
@@ -3011,11 +3011,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamService = await createTeamService();
       const bettingData = teamService.getBettingData();
       
-      console.log(`DEBUG: Processing all 38 gameweeks, current GW: ${currentGameweek}`);
+      // Process only next 6 gameweeks for performance
+      const startGameweek = currentGameweek + 1;
+      const endGameweek = Math.min(currentGameweek + 6, 38);
+      console.log(`DEBUG: Processing next 6 gameweeks (GW${startGameweek}-${endGameweek}), current GW: ${currentGameweek}`);
       
-      // Check which gameweeks are COMPLETELY finished (all 10 fixtures done) - SAME LOGIC AS GOALS AGAINST
+      // Check which gameweeks are COMPLETELY finished (all 10 fixtures done) - only check relevant range
       const completeGameweeks = new Set();
-      for (let gw = 1; gw <= 38; gw++) {
+      for (let gw = startGameweek; gw <= endGameweek; gw++) {
         const gameweekFixtures = fixturesData.filter((f: any) => f.event === gw);
         const finishedFixtures = gameweekFixtures.filter((f: any) => f.finished);
         
@@ -3028,11 +3031,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const teamProjections = teams.map((team: any) => {
-        // Get ALL fixtures for this team across all 38 gameweeks
+        // Get fixtures for this team across next 6 gameweeks only
         const allFixtures = fixturesData
           .filter((f: any) => 
             (f.team_h === team.id || f.team_a === team.id) && 
-            f.event >= 1 && f.event <= 38
+            f.event >= startGameweek && f.event <= endGameweek
           );
         
         const projections = allFixtures.map((fixture: any) => {
@@ -3468,7 +3471,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Object.keys(team.gameweekProjections).forEach(gameweek => {
           const goals = team.gameweekProjections[gameweek];
           // Handle null/undefined goals values by using average goals per game
-          const averageGoalsPerGame = calculatedTotalGoals / 38;
+          const gameweeksCount = Math.max(1, Object.keys(team.gameweekProjections).length);
+          const averageGoalsPerGame = calculatedTotalGoals / gameweeksCount;
           const adjustedGoals = goals !== null && goals !== undefined ? goals : averageGoalsPerGame;
           gameweekProjections[parseInt(gameweek)] = Math.round(adjustedGoals * assistMultiplier * 100) / 100;
         });
