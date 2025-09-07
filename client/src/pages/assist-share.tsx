@@ -168,7 +168,7 @@ export default function AssistShare() {
                       </Badge>
                     </CardTitle>
                     <div className="text-sm opacity-90">
-                      {selectedSeason === "current" ? "Expected" : "Total"} Assists: <span className="font-bold text-lg">{(teamData.expectedAssists || 0).toFixed(0)}</span>
+                      {selectedSeason === "current" ? "Expected" : "Total"} Assists: <span className="font-bold text-lg">{(teamData?.expectedAssists || 0).toFixed(0)}</span>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4">
