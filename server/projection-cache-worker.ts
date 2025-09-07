@@ -503,34 +503,122 @@ class ProjectionCacheWorker {
       } = await import("@shared/schema");
       
       const [goals, assists, cleanSheets, minutes, defensive, teams, saves, goalsConceded, yellowCards, redCards, bonusPoints] = await Promise.all([
-        db.select({ count: sql`count(*)` }).from(playerGoalsProjections),
-        db.select({ count: sql`count(*)` }).from(playerAssistProjections),
-        db.select({ count: sql`count(*)` }).from(teamCleanSheetProjections),
-        db.select({ count: sql`count(*)` }).from(playerMinutesProjections),
-        db.select({ count: sql`count(*)` }).from(playerDefensiveProjections),
-        db.select({ count: sql`count(*)` }).from(teamProjections),
-        db.select({ count: sql`count(*)` }).from(cachedPlayerSaves),
-        db.select({ count: sql`count(*)` }).from(cachedPlayerGoalsConceded),
-        db.select({ count: sql`count(*)` }).from(cachedPlayerYellowCards),
-        db.select({ count: sql`count(*)` }).from(cachedPlayerRedCards),
-        db.select({ count: sql`count(*)` }).from(cachedPlayerBonusPoints)
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(calculated_at)`
+        }).from(playerGoalsProjections),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(calculated_at)`
+        }).from(playerAssistProjections),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(calculated_at)`
+        }).from(teamCleanSheetProjections),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(calculated_at)`
+        }).from(playerMinutesProjections),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(calculated_at)`
+        }).from(playerDefensiveProjections),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(last_updated)`
+        }).from(teamProjections),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(last_updated)`
+        }).from(cachedPlayerSaves),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(last_updated)`
+        }).from(cachedPlayerGoalsConceded),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(last_updated)`
+        }).from(cachedPlayerYellowCards),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(last_updated)`
+        }).from(cachedPlayerRedCards),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(last_updated)`
+        }).from(cachedPlayerBonusPoints)
       ]);
       
       const now = new Date();
       const STALE_THRESHOLD = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
       
       return [
-        { type: 'Goals', count: goals[0]?.count || 0, lastUpdated: null, isStale: false },
-        { type: 'Assists', count: assists[0]?.count || 0, lastUpdated: null, isStale: false },
-        { type: 'Team Clean Sheets', count: cleanSheets[0]?.count || 0, lastUpdated: null, isStale: false },
-        { type: 'Minutes', count: minutes[0]?.count || 0, lastUpdated: null, isStale: false },
-        { type: 'Defensive', count: defensive[0]?.count || 0, lastUpdated: null, isStale: false },
-        { type: 'Team Projections', count: teams[0]?.count || 0, lastUpdated: null, isStale: false },
-        { type: 'Player Saves', count: saves[0]?.count || 0, lastUpdated: null, isStale: false },
-        { type: 'Goals Conceded', count: goalsConceded[0]?.count || 0, lastUpdated: null, isStale: false },
-        { type: 'Yellow Cards', count: yellowCards[0]?.count || 0, lastUpdated: null, isStale: false },
-        { type: 'Red Cards', count: redCards[0]?.count || 0, lastUpdated: null, isStale: false },
-        { type: 'Bonus Points', count: bonusPoints[0]?.count || 0, lastUpdated: null, isStale: false }
+        { 
+          type: 'Goals', 
+          count: goals[0]?.count || 0, 
+          lastUpdated: goals[0]?.lastUpdated || null,
+          isStale: goals[0]?.lastUpdated ? (now.getTime() - new Date(goals[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        },
+        { 
+          type: 'Assists', 
+          count: assists[0]?.count || 0, 
+          lastUpdated: assists[0]?.lastUpdated || null,
+          isStale: assists[0]?.lastUpdated ? (now.getTime() - new Date(assists[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        },
+        { 
+          type: 'Team Clean Sheets', 
+          count: cleanSheets[0]?.count || 0, 
+          lastUpdated: cleanSheets[0]?.lastUpdated || null,
+          isStale: cleanSheets[0]?.lastUpdated ? (now.getTime() - new Date(cleanSheets[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        },
+        { 
+          type: 'Minutes', 
+          count: minutes[0]?.count || 0, 
+          lastUpdated: minutes[0]?.lastUpdated || null,
+          isStale: minutes[0]?.lastUpdated ? (now.getTime() - new Date(minutes[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        },
+        { 
+          type: 'Defensive', 
+          count: defensive[0]?.count || 0, 
+          lastUpdated: defensive[0]?.lastUpdated || null,
+          isStale: defensive[0]?.lastUpdated ? (now.getTime() - new Date(defensive[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        },
+        { 
+          type: 'Team Projections', 
+          count: teams[0]?.count || 0, 
+          lastUpdated: teams[0]?.lastUpdated || null,
+          isStale: teams[0]?.lastUpdated ? (now.getTime() - new Date(teams[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        },
+        { 
+          type: 'Player Saves', 
+          count: saves[0]?.count || 0, 
+          lastUpdated: saves[0]?.lastUpdated || null,
+          isStale: saves[0]?.lastUpdated ? (now.getTime() - new Date(saves[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        },
+        { 
+          type: 'Goals Conceded', 
+          count: goalsConceded[0]?.count || 0, 
+          lastUpdated: goalsConceded[0]?.lastUpdated || null,
+          isStale: goalsConceded[0]?.lastUpdated ? (now.getTime() - new Date(goalsConceded[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        },
+        { 
+          type: 'Yellow Cards', 
+          count: yellowCards[0]?.count || 0, 
+          lastUpdated: yellowCards[0]?.lastUpdated || null,
+          isStale: yellowCards[0]?.lastUpdated ? (now.getTime() - new Date(yellowCards[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        },
+        { 
+          type: 'Red Cards', 
+          count: redCards[0]?.count || 0, 
+          lastUpdated: redCards[0]?.lastUpdated || null,
+          isStale: redCards[0]?.lastUpdated ? (now.getTime() - new Date(redCards[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        },
+        { 
+          type: 'Bonus Points', 
+          count: bonusPoints[0]?.count || 0, 
+          lastUpdated: bonusPoints[0]?.lastUpdated || null,
+          isStale: bonusPoints[0]?.lastUpdated ? (now.getTime() - new Date(bonusPoints[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        }
       ];
       
     } catch (error) {

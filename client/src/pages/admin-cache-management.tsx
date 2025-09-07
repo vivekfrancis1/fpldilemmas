@@ -4,7 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, RefreshCw, Database, Clock, CheckCircle, AlertCircle, Zap, Activity } from "lucide-react";
-import { isUnauthorizedError } from "@/lib/authUtils";
+// Helper function for auth errors
+function isUnauthorizedError(error: Error): boolean {
+  return /^401: .*Unauthorized/.test(error.message);
+}
 
 interface CacheStatusItem {
   type: string;
