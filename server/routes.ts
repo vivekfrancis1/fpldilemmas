@@ -76,7 +76,7 @@ function calculateFastGoals(
   return Math.round(goals * 100) / 100;
 }
 
-// SIMPLIFIED goal calculation function - removes complex 8-phase calculation 
+// Original comprehensive goal calculation function - RESTORED for accuracy
 function calculateComprehensiveGoals(
   team: any, 
   opponent: any, 
@@ -86,17 +86,32 @@ function calculateComprehensiveGoals(
   adminGoalSettings: any, 
   fixturesData: any[]
 ): number {
-  // SIMPLIFIED: Use basic calculation only
-  let goals = 1.5; // Simple baseline
+  // Phase 1: Universal Base xG Foundation
+  let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
   
-  // Basic venue adjustment
-  goals *= isHome ? 1.15 : 0.85;
+  // Phase 2: Venue Factors
+  const venueMultiplier = isHome ? 
+    adminGoalSettings.homeAdvantageGoalsMultiplier : 
+    adminGoalSettings.awayFactorGoalsMultiplier;
+  baseExpectedGoals *= venueMultiplier;
   
-  // Basic team strength (use team ID for simple variation)
-  goals *= 1.0 + (10 - team.id) * 0.03;
-  goals = Math.max(0.7, Math.min(1.3, goals));
-  
-  return Math.round(goals * 100) / 100;
+  // Phase 3: Defensive Tiers
+  const getDefensiveTier = (teamId: number): string => {
+    const parseTeamArray = (teamData: any): number[] => {
+      if (Array.isArray(teamData)) return teamData;
+      if (typeof teamData === 'string') {
+        try {
+          return JSON.parse(teamData);
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const eliteDefenseTeams = parseTeamArray(adminGoalSettings.eliteDefenseTeams);
+    const strongDefenseTeams = parseTeamArray(adminGoalSettings.strongDefenseTeams);
+    const weakDefenseTeams = parseTeamArray(adminGoalSettings.weakDefenseTeams);
     const promotedDefenseTeams = parseTeamArray(adminGoalSettings.promotedDefenseTeams);
 
     if (eliteDefenseTeams.includes(teamId)) return 'elite';
@@ -3043,32 +3058,317 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           }
           
-          // SIMPLIFIED: Use simple proportional calculation instead of complex 8-phase modeling
-          // Simple baseline with basic home/away adjustment only
-          let projectedGoals = 1.5; // Simple baseline goals per game
+          // For unfinished fixtures, use advanced spread betting market-based goal calculation with 8-phase statistical modeling
+          // Use ONLY admin configurable defaults instead of hardcoded fallbacks
+          const teamBettingData = bettingData.teamGoalRates[team.id] || { 
+            expectedGoalsPerGame: adminGoalSettings.defaultExpectedGoalsPerGame, 
+            variance: adminGoalSettings.defaultTeamVariance, 
+ 
+          };
+          const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { 
+            baseCleanSheetRate: 0.25, 
+ 
+          };
           
-          // Basic venue adjustment - simple proportional multiplier
-          const venueMultiplier = isHome ? 1.15 : 0.85; // 15% home advantage, 15% away disadvantage
-          projectedGoals *= venueMultiplier;
+          // Phase 1: Universal Base xG Foundation - Use ONLY admin configurable value
+          // This ensures consistent baseline across all teams with differences created through tier multipliers
+          let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
           
-          // SIMPLIFIED: Basic opponent adjustment - just use team ID for simple variation
-          const opponentAdjustment = 1.0 + (opponent.id - 10) * 0.02; // Simple linear adjustment
-          projectedGoals *= Math.max(0.8, Math.min(1.2, opponentAdjustment)); // Clamp between 0.8-1.2
+          // Phase 2: Venue Factors - Use ONLY admin settings (NO FALLBACKS)
+          const venueMultiplier = isHome ? 
+            adminGoalSettings.homeAdvantageGoalsMultiplier : // Configurable home advantage
+            adminGoalSettings.awayFactorGoalsMultiplier; // Configurable away factor
+          baseExpectedGoals *= venueMultiplier;
           
-          // SIMPLIFIED: Basic team strength adjustment - just use team ID for simple variation  
-          const teamStrengthAdjustment = 1.0 + (10 - team.id) * 0.03; // Simple linear adjustment
-          projectedGoals *= Math.max(0.7, Math.min(1.3, teamStrengthAdjustment)); // Clamp between 0.7-1.3
+          // Phase 3: Defensive Tiers - Apply opponent's defensive tier multiplier using ONLY admin settings
+          const getDefensiveTier = (teamId: number): string => {
+            // Parse defensive team arrays from admin settings (NO HARDCODED VALUES)
+            const parseTeamArray = (teamData: any): number[] => {
+              if (Array.isArray(teamData)) return teamData;
+              if (typeof teamData === 'string') {
+                try {
+                  return JSON.parse(teamData);
+                } catch {
+                  return [];
+                }
+              }
+              return [];
+            };
+
+            const eliteDefenseTeams = parseTeamArray(adminGoalSettings.eliteDefenseTeams);
+            const strongDefenseTeams = parseTeamArray(adminGoalSettings.strongDefenseTeams);
+            const weakDefenseTeams = parseTeamArray(adminGoalSettings.weakDefenseTeams);
+            const promotedDefenseTeams = parseTeamArray(adminGoalSettings.promotedDefenseTeams);
+
+            if (eliteDefenseTeams.includes(teamId)) return 'elite';
+            if (strongDefenseTeams.includes(teamId)) return 'strong';
+            if (weakDefenseTeams.includes(teamId)) return 'weak';
+            if (promotedDefenseTeams.includes(teamId)) return 'promoted';
+            return 'average';
+          };
           
-          // SIMPLIFIED: All complex calculations removed - use final result directly
+          const opponentDefensiveTier = getDefensiveTier(opponent.id);
+          let opponentDefensiveMultiplier = 1.0;
+          switch (opponentDefensiveTier) {
+            case 'elite': opponentDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier; break;
+            case 'strong': opponentDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier; break;
+            case 'average': opponentDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier; break;
+            case 'weak': opponentDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier; break;
+            case 'promoted': opponentDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier; break;
+          }
           
-          // SIMPLIFIED: Basic bounds check
-          const finalGoals = Math.max(0.5, Math.min(3.0, projectedGoals)); // Simple min/max bounds
+          baseExpectedGoals *= opponentDefensiveMultiplier;
+          
+          // Phase 4: Attacking Tiers - Apply team's attacking tier multiplier
+          const getAttackingTier = (teamId: number) => {
+            // Parse attacking team arrays if they come as strings from database
+            const parseTeamArray = (teamData: any): number[] => {
+              if (Array.isArray(teamData)) return teamData;
+              if (typeof teamData === 'string') {
+                try {
+                  return JSON.parse(teamData);
+                } catch {
+                  return [];
+                }
+              }
+              return [];
+            };
+
+            // Use team assignments from Goals Scored admin settings ONLY (NO FALLBACKS)
+            const eliteAttackTeams = parseTeamArray(adminGoalSettings.eliteAttackTeams);
+            const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams);
+            const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams);
+            const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams);
+            
+            if (eliteAttackTeams.includes(teamId)) return 'elite';
+            if (strongAttackTeams.includes(teamId)) return 'strong';
+            if (weakAttackTeams.includes(teamId)) return 'weak';
+            if (promotedAttackTeams.includes(teamId)) return 'promoted';
+            return 'average';
+          };
+          
+          const attackingTier = getAttackingTier(team.id);
+          let attackingTierMultiplier = 1.0;
+          switch (attackingTier) {
+            case 'elite': attackingTierMultiplier = adminGoalSettings.eliteAttackMultiplier; break;
+            case 'strong': attackingTierMultiplier = adminGoalSettings.strongAttackMultiplier; break;
+            case 'average': attackingTierMultiplier = adminGoalSettings.averageAttackMultiplier; break;
+            case 'weak': attackingTierMultiplier = adminGoalSettings.weakAttackMultiplier; break;
+            case 'promoted': attackingTierMultiplier = adminGoalSettings.promotedAttackMultiplier; break;
+          }
+          
+          baseExpectedGoals *= attackingTierMultiplier;
+          
+          // Phase 5: Context Multipliers - Situational adjustments based on match circumstances
+          
+          // Calculate team form based on recent FPL results (last 5 games)
+          const calculateTeamForm = (teamId: number, currentGameweek: number, fixturesData: any[]) => {
+            // Get last 5 completed games for this team
+            const recentGames = fixturesData
+              .filter((f: any) => 
+                f.finished && 
+                f.event < currentGameweek && 
+                (f.team_h === teamId || f.team_a === teamId)
+              )
+              .sort((a: any, b: any) => b.event - a.event) // Most recent first
+              .slice(0, 5); // Last 5 games
+              
+            if (recentGames.length === 0) return 1.00; // Neutral form if no recent games
+            
+            let wins = 0;
+            recentGames.forEach((game: any) => {
+              const isHome = game.team_h === teamId;
+              const teamScore = isHome ? game.team_h_score : game.team_a_score;
+              const opponentScore = isHome ? game.team_a_score : game.team_h_score;
+              
+              if (teamScore > opponentScore) wins++;
+            });
+            
+            // Apply form multiplier based on wins in last 5 games
+            if (wins >= 3) {
+              return adminGoalSettings.teamFormMultiplier || 1.06; // Good form: 3-5 wins
+            } else if (wins <= 1) {
+              return (2 - (adminGoalSettings.teamFormMultiplier || 1.06)); // Poor form: 0-1 wins (inverts multiplier)
+            } else {
+              return 1.00; // Average form: 2 wins
+            }
+          };
+          
+          // Apply team form multiplier
+          const teamFormMultiplier = calculateTeamForm(team.id, fixture.event, fixturesData);
+          baseExpectedGoals *= teamFormMultiplier;
+          
+          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
+          const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
+          const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
+                               (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
+                               (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13); // Manchester
+          const isRelegationBattle = [17, 20, 19, 4, 5].includes(team.id) && [17, 20, 19, 4, 5].includes(opponent.id); // Bottom teams battle
+          
+          // Apply context multipliers from admin settings
+          if (isRivalryMatch) {
+            baseExpectedGoals *= adminGoalSettings.derbyGoalsMultiplier || 0.87; // Derby matches are more defensive
+          } else if (isTopSixBattle) {
+            baseExpectedGoals *= adminGoalSettings.topSixGoalsMultiplier || 1.12; // Top teams create more chances
+          } else if (isRelegationBattle) {
+            baseExpectedGoals *= adminGoalSettings.relegationBattleGoalsMultiplier || 0.83; // Bottom teams play defensively
+          }
+          
+          // Additional contextual factors (these would be applied based on fixture data in real implementation)
+          // For now using gameweek as proxy for timing factors
+          const isEarlyKickoff = (fixture.event + team.id) % 7 === 0; // Simulated early kickoff
+          const isLateKickoff = (fixture.event + team.id) % 7 === 3; // Simulated late kickoff
+          const isMidweekFixture = fixture.event % 4 === 0; // Simulated midweek games
+          const isSeasonFinale = fixture.event >= 37; // Final gameweeks
+          const hasNewManager = (team.id + fixture.event) % 20 === 0; // Simulated new manager bounce
+          
+          if (isEarlyKickoff) {
+            baseExpectedGoals *= adminGoalSettings.earlyKickoffGoalsMultiplier || 0.94;
+          } else if (isLateKickoff) {
+            baseExpectedGoals *= adminGoalSettings.lateKickoffGoalsMultiplier || 1.07;
+          }
+          
+          if (isMidweekFixture) {
+            baseExpectedGoals *= adminGoalSettings.midweekFixtureGoalsMultiplier || 0.91;
+          }
+          
+          if (isSeasonFinale) {
+            baseExpectedGoals *= adminGoalSettings.seasonFinaleGoalsMultiplier || 1.05;
+          }
+          
+          if (hasNewManager) {
+            baseExpectedGoals *= adminGoalSettings.newManagerBounceGoalsMultiplier || 1.08;
+          }
+          
+          // NEW ENHANCED CONTEXT MULTIPLIERS
+          
+          // Fixture Congestion: 3+ games in 7 days
+          const recentFixtures = fixturesData.filter((f: any) => 
+            f.finished && 
+            f.event >= (fixture.event - 1) && 
+            f.event <= fixture.event &&
+            (f.team_h === team.id || f.team_a === team.id)
+          );
+          if (recentFixtures.length >= 3) {
+            baseExpectedGoals *= adminGoalSettings.fixtureCongestionMultiplier || 0.89;
+          }
+          
+          // Injury Crisis: Simulated as teams with poor recent form (0-1 wins in last 5)
+          const injuryCheckGames = fixturesData
+            .filter((f: any) => 
+              f.finished && 
+              f.event < fixture.event && 
+              (f.team_h === team.id || f.team_a === team.id)
+            )
+            .sort((a: any, b: any) => b.event - a.event)
+            .slice(0, 5);
+          
+          const recentWins = injuryCheckGames.filter((game: any) => {
+            const isHome = game.team_h === team.id;
+            const teamScore = isHome ? game.team_h_score : game.team_a_score;
+            const opponentScore = isHome ? game.team_a_score : game.team_h_score;
+            return teamScore > opponentScore;
+          }).length;
+          
+          if (recentWins <= 1) { // Deterministic injury crisis for poor form teams (no random chance)
+            // Convert from 30% chance of 8% reduction to deterministic 2.4% reduction
+            const injuryMultiplier = adminGoalSettings.injuryCrisisMultiplier || 0.92;
+            const deterministicMultiplier = 1 - ((1 - injuryMultiplier) * 0.3); // 1 - (0.08 * 0.3) = 0.976
+            baseExpectedGoals *= deterministicMultiplier;
+          }
+          
+          // European Qualification Push: Teams in positions 4-7 fighting for Europe
+          const isEuropeanPush = [2, 6, 14, 18, 8, 10].includes(team.id) && fixture.event >= 25; // Late season push
+          if (isEuropeanPush) {
+            baseExpectedGoals *= adminGoalSettings.europeanQualificationPushMultiplier || 1.08;
+          }
+          
+          // Nothing to Play For: Mid-table teams with security
+          const isMidTableSafe = [9, 5, 4, 19, 16].includes(team.id) && fixture.event >= 30; // Safe teams late season
+          if (isMidTableSafe) {
+            baseExpectedGoals *= adminGoalSettings.nothingToPlayForMultiplier || 0.94;
+          }
+          
+          // Revenge Factor: Return fixture after heavy defeat (3+ goal margin)
+          const reverseFixture = fixturesData.find((f: any) => 
+            f.finished && 
+            f.team_h === opponent.id && 
+            f.team_a === team.id &&
+            f.event < fixture.event
+          );
+          if (reverseFixture && Math.abs(reverseFixture.team_h_score - reverseFixture.team_a_score) >= 3) {
+            baseExpectedGoals *= adminGoalSettings.revengeFactorMultiplier || 1.05;
+          }
+          
+          // Pressure Match: Must-win scenarios for relegation battle or title race
+          const isPressureMatch = (
+            (isRelegationBattle && fixture.event >= 32) || // Late season relegation
+            ([1, 12, 13].includes(team.id) && fixture.event >= 30) // Title race pressure
+          );
+          if (isPressureMatch) {
+            baseExpectedGoals *= adminGoalSettings.pressureMatchMultiplier || 0.91;
+          }
+          
+          // Home Crowd Boost: Big home games with exceptional atmosphere
+          const isBigHomeGame = isHome && (
+            isTopSixBattle || 
+            isRivalryMatch || 
+            (fixture.event >= 35) || // Final games of season
+            ([1, 12, 13].includes(team.id) && [1, 12, 13].includes(opponent.id)) // Title deciders
+          );
+          if (isBigHomeGame) {
+            baseExpectedGoals *= adminGoalSettings.homeCrowdBoostMultiplier || 1.04;
+          }
+          
+          // NEW ENHANCED CONTEXT MULTIPLIERS
+          
+          // Weather Conditions: Adverse weather reduces shot accuracy and intensity
+          const hasAdverseWeather = (fixture.event + team.id + opponent.id) % 8 === 0; // Simulated adverse weather (rain/cold/wind)
+          if (hasAdverseWeather) {
+            baseExpectedGoals *= adminGoalSettings.weatherConditionsGoalsMultiplier || MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier;
+          }
+          
+          // Referee Influence: Lenient refs allow more open play, strict refs suppress risks
+          const refereeStyle = (fixture.event * 7 + team.id) % 3; // Simulated referee style
+          if (refereeStyle === 0) { // Lenient referee (high fouls/penalties)
+            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || MASTER_TEAM_DEFAULTS.refereeInfluenceMultiplier) * 1.05;
+          } else if (refereeStyle === 1) { // Strict referee (low fouls)
+            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || MASTER_TEAM_DEFAULTS.refereeInfluenceMultiplier) * 0.95;
+          }
+          // refereeStyle === 2 is neutral (1.0 multiplier)
+          
+          // Post-International Break: Travel, jet lag, and squad disruption reduce intensity
+          const isPostInternationalBreak = fixture.event === 4 || fixture.event === 8 || fixture.event === 16 || fixture.event === 29; // Typical break gameweeks
+          if (isPostInternationalBreak) {
+            baseExpectedGoals *= adminGoalSettings.postInternationalBreakMultiplier || MASTER_TEAM_DEFAULTS.postInternationalBreakMultiplier;
+          }
+          
+          // Travel Distance/Fatigue: Long journeys cause fatigue, reducing away xG (away teams only)
+          if (!isHome) { // Apply only to away teams
+            const isLongTrip = (team.id + opponent.id) % 5 === 0; // Simulated long travel distance (>300km)
+            if (isLongTrip) {
+              baseExpectedGoals *= adminGoalSettings.travelDistanceFatigueMultiplier || MASTER_TEAM_DEFAULTS.travelDistanceFatigueMultiplier;
+            }
+          }
+          
+          // Phase 6: Market Bounds - Apply market multiplier constraints to base xG
+          const averageBaseXG = adminGoalSettings.averageBaseXGPerTeamPerGame || 1.5;
+          const marketFloor = averageBaseXG * (adminGoalSettings.marketFloorMultiplier || 0.40);
+          const marketCeiling = averageBaseXG * (adminGoalSettings.marketCeilingMultiplier || 2.0);
+          baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
+          
+          // Phase 7: Confidence Bounds - Confidence multiplier removed from projections
+          
+          // Phase 8: Final Bounds - Absolute min/max limits to ensure realistic ranges
+          const absoluteMin = adminGoalSettings.absoluteMinGoals || 0.0;
+          const absoluteMax = adminGoalSettings.absoluteMaxGoals || 7.0;
+          const expectedGoals = Math.max(absoluteMin, Math.min(absoluteMax, baseExpectedGoals));
           
           return {
             gameweek: fixture.event,
             opponent: opponent.short_name,
             isHome,
-            expectedGoals: Math.round(finalGoals * 100) / 100,
+            expectedGoals: Math.round(expectedGoals * 100) / 100,
             isActual: false // Flag to indicate this is projected data
           };
         }).filter(Boolean);
@@ -3709,12 +4009,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // 7. Apply injury buffer (15% reduction for realistic expectations)
     const injuryBuffer = 0.85;
     
-    // SIMPLIFIED: Basic expected minutes calculation (3 factors only)
+    // Calculate final expected minutes with comprehensive factors including tournaments
     const finalExpectedMinutes = expectedMinutes * 
                                 availabilityFactor * 
                                 injuryMultiplier * 
-                                seasonalAvailability;
-    // Removed: tournamentAdjustment, formFactor, injuryBuffer for simplicity
+                                seasonalAvailability * 
+                                tournamentAdjustment * 
+                                formFactor * 
+                                injuryBuffer;
     
     // Debug logging for injured/unavailable players or tournament impacts (only for significant issues)
     if ((injuryMultiplier < 0.8 || availabilityFactor < 0.8 || tournamentAdjustment < 0.95) && 
@@ -3725,15 +4027,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.round(Math.max(100, finalExpectedMinutes)); // Minimum 100 minutes (for severely injured players)
   }
   
-  // SIMPLIFIED: Sample size function - fast direct calculation
+  // Sample size regression function
   function adjustForSampleSize(player: any, positionAverage: number): number {
-    // Simple threshold approach - no complex weighting
-    if (player.totalMinutes < 300) {
-      // For very low minutes, use position average
-      return positionAverage;
+    const minReliableMinutes = 500; // Minimum for reliable xG per 90
+    
+    if (player.totalMinutes < minReliableMinutes) {
+      // Regress toward position average based on sample size
+      const weight = Math.max(0.2, player.totalMinutes / minReliableMinutes);
+      const adjustedXGPer90 = (player.xgPer90 * weight) + (positionAverage * (1 - weight));
+      
+      console.log(`DEBUG: Sample size adjustment for ${player.name}: ${player.xgPer90.toFixed(3)} → ${adjustedXGPer90.toFixed(3)} (${player.totalMinutes} mins)`);
+      return adjustedXGPer90;
     }
     
-    // Otherwise use player's actual xG per 90 - no regression
     return player.xgPer90;
   }
 
@@ -3741,7 +4047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let goalShareCache: { data: any, timestamp: number } | null = null;
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  // Ultra-fast Goal Share endpoint - uses cached goal projections for instant response
+  // Ultra-fast Goal Share endpoint - bypasses expensive team projections
   app.get("/api/goal-share-season", async (req, res) => {
     try {
       // Check cache first - extend cache duration for better performance
@@ -3751,48 +4057,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(goalShareCache.data);
       }
       
-      console.log("DEBUG: Goal Share Season API - using cached approach for instant response");
+      console.log("DEBUG: Goal Share Season API - using optimized approach with caching");
       
-      // SIMPLIFIED APPROACH: Use cached goal projections instead of expensive team projections
-      console.log(`📊 Building goal share from cached goals projections`);
-      const [bootstrapResponse, cachedGoalsResponse] = await Promise.all([
+      // KEEP ORIGINAL LOGIC: Use team projections for accuracy (just optimize with caching)
+      const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        internalFetch("api/cached/player-goals-projections") // Use cached data for speed
+        internalFetch("api/team-goal-projections") // Use internal fetch for timeout handling
       ]);
       
-      if (!bootstrapResponse.ok || !cachedGoalsResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API or cached goals");
+      if (!bootstrapResponse.ok || !teamProjectionsResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API or Team Goal Projections");
       }
       
       const bootstrapData = await bootstrapResponse.json();
-      const cachedGoalsData = await cachedGoalsResponse.json();
+      const teamProjectionsData = await teamProjectionsResponse.json();
       
-      // Step 1: SIMPLIFIED - Calculate team season totals from cached player goals (ultra-fast)
+      // Step 1: Calculate team season totals from Team Goal Projections (ORIGINAL LOGIC)
       const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
       
-      // Sum up player goals by team from cached data - MUCH faster than team projections
-      cachedGoalsData.forEach((player: any) => {
-        const teamId = player.teamId;
-        const totalGoals = (player.gw4 || 0) + (player.gw5 || 0) + (player.gw6 || 0) + 
-                          (player.gw7 || 0) + (player.gw8 || 0) + (player.gw9 || 0);
-        
-        if (!teamSeasonTotals[teamId]) {
-          teamSeasonTotals[teamId] = {
+      // Aggregate expected goals from Team Goal Projections data (RESTORED)
+      teamProjectionsData.forEach((team: any) => {
+        if (!teamSeasonTotals[team.id]) {
+          teamSeasonTotals[team.id] = {
             expectedGoals: 0,
             players: {}
           };
         }
         
-        teamSeasonTotals[teamId].expectedGoals += totalGoals;
-        teamSeasonTotals[teamId].players[player.playerId] = {
-          name: player.playerName,
-          position: player.position,
-          projectedGoals: totalGoals
-        };
+        // Sum all gameweek projections for this team's season total
+        Object.values(team.gameweekProjections || {}).forEach((goals: any) => {
+          if (typeof goals === 'number') {
+            teamSeasonTotals[team.id].expectedGoals += goals;
+          }
+        });
       });
       
-      console.log(`📊 Built goal share for ${Object.keys(teamSeasonTotals).length} teams using cached data`);
-      console.log("DEBUG: Using simplified cached data approach for instant response");
+      console.log(`DEBUG: Team totals from Team Projections - LIV: ${teamSeasonTotals[12]?.expectedGoals.toFixed(2)}, MCI: ${teamSeasonTotals[13]?.expectedGoals.toFixed(2)}`);
+      console.log("DEBUG: Using original calculation logic with caching optimization");
       
       // Step 2: Calculate player shares using basic metrics (faster approach)
       const playersWithXG: any[] = [];
@@ -3958,31 +4259,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalContribution += contribution;
           }
           
-          // SIMPLE PROPORTIONAL NORMALIZATION - Fast single-phase calculation
+          // ENHANCED NORMALIZATION - Ensure sum equals team xG
           console.log(`DEBUG: Team ${team.name} - Total contribution: ${totalContribution.toFixed(3)}, Team xG: ${teamSeasonTotals[teamId].expectedGoals.toFixed(3)}`);
           
-          // Single-pass proportional calculation (no caps, no redistribution)
+          // Calculate normalized shares with perfect balance after capping
+          const getPositionGoalShareCap = (position: string): number => {
+            switch (position?.toLowerCase()) {
+              case 'goalkeeper': return 2; // Max 2% share for GKs
+              case 'defender': return 18; // Max 18% share for defenders
+              case 'midfielder': return 35; // Max 35% share for midfielders
+              case 'forward': return 35; // Max 35% share for forwards
+              default: return 25;
+            }
+          };
+          
+          // First pass: Calculate initial normalized shares and identify capped players
+          const playerShares: { [playerId: number]: { data: any, normalizedShare: number, cappedShare: number, wasCapped: boolean } } = {};
+          let totalCappedGoals = 0;
+          let totalUncappedNormalized = 0;
+          let uncappedPlayerIds: number[] = [];
+          
           Object.keys(playerContributions).forEach(playerIdStr => {
             const playerId = parseInt(playerIdStr);
             const playerData = playerContributions[playerId];
             
-            // Simple proportional share - fast and accurate
-            const playerShare = totalContribution > 0 ? 
+            // Initial normalized share based on contribution
+            const normalizedShare = totalContribution > 0 ? 
               (playerData.contribution / totalContribution) * teamSeasonTotals[teamId].expectedGoals : 0;
-            const finalShare = Math.round(playerShare * 100) / 100;
+            
+            // Apply position-based caps
+            const positionGoalShareCap = getPositionGoalShareCap(playerData.position);
+            const maxProjectedGoals = (positionGoalShareCap / 100) * teamSeasonTotals[teamId].expectedGoals;
+            const cappedShare = Math.min(normalizedShare, maxProjectedGoals);
+            const wasCapped = cappedShare < normalizedShare;
+            
+            if (wasCapped) {
+              console.log(`DEBUG: Capped ${playerData.name} projected goals: ${normalizedShare.toFixed(2)} → ${cappedShare.toFixed(2)} (${playerData.position} cap: ${positionGoalShareCap}%)`);
+            } else {
+              uncappedPlayerIds.push(playerId);
+              totalUncappedNormalized += normalizedShare;
+            }
+            
+            playerShares[playerId] = {
+              data: playerData,
+              normalizedShare,
+              cappedShare,
+              wasCapped
+            };
+            
+            totalCappedGoals += cappedShare;
+          });
+          
+          // Second pass: Redistribute shortfall to uncapped players proportionally
+          const targetTotal = teamSeasonTotals[teamId].expectedGoals;
+          const shortfall = targetTotal - totalCappedGoals;
+          
+          if (Math.abs(shortfall) > 0.001 && uncappedPlayerIds.length > 0 && totalUncappedNormalized > 0) {
+            console.log(`DEBUG: Team ${team.name} redistributing ${shortfall.toFixed(3)} goals to ${uncappedPlayerIds.length} uncapped players`);
+            
+            uncappedPlayerIds.forEach(playerId => {
+              const player = playerShares[playerId];
+              const redistributionShare = player.normalizedShare / totalUncappedNormalized;
+              const additionalGoals = shortfall * redistributionShare;
+              player.cappedShare += additionalGoals;
+              
+              if (Math.abs(additionalGoals) > 0.01) {
+                console.log(`DEBUG: Redistributed ${additionalGoals.toFixed(3)} goals to ${player.data.name}`);
+              }
+            });
+          }
+          
+          // Final assignment with perfect team balance
+          Object.keys(playerShares).forEach(playerIdStr => {
+            const playerId = parseInt(playerIdStr);
+            const player = playerShares[playerId];
             
             teamSeasonTotals[teamId].players[playerId] = {
-              name: playerData.name,
-              position: playerData.position,
-              projectedGoals: finalShare
+              name: player.data.name,
+              position: player.data.position,
+              projectedGoals: Math.round(player.cappedShare * 100) / 100
             };
           });
           
-          // Quick balance verification (informational only)
+          // Verify perfect balance
           const finalTotalGoals = Object.values(teamSeasonTotals[teamId].players)
             .reduce((sum: number, player: any) => sum + player.projectedGoals, 0);
-          console.log(`DEBUG: Team ${team.name} PERFECT BALANCE: Players=${finalTotalGoals.toFixed(3)} vs Team=${teamSeasonTotals[teamId].expectedGoals.toFixed(3)}`);
-        
+          const balanceError = Math.abs(finalTotalGoals - targetTotal);
+          
+          console.log(`DEBUG: Team ${team.name} PERFECT BALANCE: Players=${finalTotalGoals.toFixed(3)} vs Team=${targetTotal.toFixed(3)} (error: ${balanceError.toFixed(6)})`);
           
           return; // Skip the old historical weighting approach
         }
@@ -4837,24 +5201,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
             
-            // SIMPLE PROPORTIONAL CALCULATION - Fast single-phase approach (no caps, no redistribution)
-            if (finalAssistShare > 0) {
+            // Apply realistic caps based on position to assist share percentage
+            const getPositionShareCap = (position: string): number => {
+              switch (position.toLowerCase()) {
+                case 'goalkeeper': return 2; // Max 2% share for GKs
+                case 'defender': return 18; // Max 18% share for defenders
+                case 'midfielder': return 35; // Max 35% share for midfielders
+                case 'forward': return 25; // Max 25% share for forwards
+                default: return 20;
+              }
+            };
+            
+            const positionShareCap = getPositionShareCap(playerData.position);
+            const cappedAssistShare = Math.min(finalAssistShare, positionShareCap);
+            
+            if (cappedAssistShare !== finalAssistShare) {
+              console.log(`DEBUG: Capped ${playerData.name} assist share: ${finalAssistShare.toFixed(1)}% → ${cappedAssistShare.toFixed(1)}% (${playerData.position} cap: ${positionShareCap}%)`);
+            }
+            
+            if (cappedAssistShare > 0) {
               finalPlayerShares.push({
                 id: playerId,
                 name: playerData.name,
                 position: playerData.position,
-                assistShare: finalAssistShare
+                assistShare: cappedAssistShare
               });
             }
           });
           
-          // Single-pass proportional distribution - ultra-fast
+          // Normalize to ensure team totals 100% with reasonable distribution
           const totalShare = finalPlayerShares.reduce((sum, p) => sum + p.assistShare, 0);
           if (totalShare > 0 && finalPlayerShares.length > 0) {
             finalPlayerShares.forEach(player => {
-              // Simple proportional share - no caps, perfect balance
-              const normalizedSharePercent = (player.assistShare / totalShare) * 100;
-              const projectedAssists = (teamSeasonTotals[teamId].expectedAssists * normalizedSharePercent / 100);
+              // First normalize to 100%
+              let normalizedShare = (player.assistShare / totalShare) * 100;
+              
+              // Apply position caps again AFTER normalization to prevent unrealistic individual shares
+              const getPositionShareCap = (position: string): number => {
+                switch (position.toLowerCase()) {
+                  case 'goalkeeper': return 2; // Max 2% share for GKs
+                  case 'defender': return 18; // Max 18% share for defenders
+                  case 'midfielder': return 35; // Max 35% share for midfielders
+                  case 'forward': return 25; // Max 25% share for forwards
+                  default: return 20;
+                }
+              };
+              
+              const positionShareCap = getPositionShareCap(player.position);
+              const finalCappedShare = Math.min(normalizedShare, positionShareCap);
+              
+              if (finalCappedShare !== normalizedShare) {
+                console.log(`DEBUG: Post-normalization cap applied to ${player.name}: ${normalizedShare.toFixed(1)}% → ${finalCappedShare.toFixed(1)}% (${player.position} cap: ${positionShareCap}%)`);
+              }
+              
+              player.assistShare = finalCappedShare;
+              const projectedAssists = (teamSeasonTotals[teamId].expectedAssists * player.assistShare / 100);
               
               teamSeasonTotals[teamId].players[player.id] = {
                 name: player.name,
@@ -4863,7 +5264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             });
             
-            console.log(`DEBUG: Team ${team.name} distributed assists among ${finalPlayerShares.length} players using simple proportional calculation`);
+            console.log(`DEBUG: Team ${team.name} distributed assists among ${finalPlayerShares.length} players`);
           } else {
             console.log(`DEBUG: No valid assist shares for team ${team.name}`);
           }
@@ -5276,7 +5677,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'Forward': { base: 18.0, variance: 6.0 }        // 18% base, playmaking forwards get boost
     };
 
-    // SIMPLIFIED: No elite player boosts - use basic position rates only
+    // Elite assist provider boost based on historical creativity (deterministic)
+    const eliteAssistBoosts: { [key: string]: number } = {
+      // Elite creative midfielders and playmakers
+      'Kevin De Bruyne': 2.1, 'Bruno Fernandes': 1.9, 'Martin Ødegaard': 1.7,
+      'Cole Palmer': 1.8, 'James Maddison': 1.6, 'Phil Foden': 1.5,
+      'Bukayo Saka': 1.6, 'Mason Mount': 1.4, 'Eberechi Eze': 1.4,
+      'Pascal Groß': 1.5, 'Emile Smith Rowe': 1.3, 'Jack Grealish': 1.3,
+      // Creative fullbacks and wing-backs
+      'Trent Alexander-Arnold': 2.0, 'Andrew Robertson': 1.6, 'Reece James': 1.5,
+      'Ben Chilwell': 1.4, 'Kieran Trippier': 1.5, 'Luke Shaw': 1.3,
+      'João Cancelo': 1.4, 'Kyle Walker': 1.2, 'Pervis Estupiñán': 1.2,
+      // Playmaking forwards and wide players
+      'Mohamed Salah': 1.5, 'Son Heung-min': 1.4, 'Diogo Jota': 1.2,
+      'Gabriel Jesus': 1.3, 'Ivan Toney': 1.2, 'Harry Kane': 1.4,
+      'Ollie Watkins': 1.3, 'Alexander Isak': 1.2, 'Darwin Núñez': 1.1,
+      // Key creative defenders
+      'Virgil van Dijk': 1.1, 'William Saliba': 1.05, 'Gabriel Magalhães': 1.05,
+      'Thiago Silva': 1.1, 'John Stones': 1.05, 'Rúben Dias': 1.05
+    };
 
     players.forEach(player => {
       const position = positions.find(p => p.id === player.element_type);
@@ -5286,34 +5705,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get position rates
       const positionRate = positionAssistRates[positionName as keyof typeof positionAssistRates] || { base: 15.0, variance: 5.0 };
       
-      // SIMPLIFIED: Basic position-based share only (no complex factors)
-      let baseShare = positionRate.base;
+      // Deterministic variance based on player ID (ensures consistency)
+      const seed = (player.id * 23) % 100; // Different seed from goals for variety
+      const varianceMultiplier = 1 + ((seed - 50) / 100) * (positionRate.variance / positionRate.base);
       
-      // Only use current season assists as indicator (simple and fast)
-      const currentAssists = player.assists || 0;
-      if (currentAssists > 0) {
-        baseShare *= (1 + currentAssists * 0.1); // Slight boost for current assists
+      // Base share from position with deterministic variance
+      let baseShare = positionRate.base * Math.max(0.3, Math.min(1.8, varianceMultiplier));
+      
+      // Elite assist provider boost
+      const assistBoost = eliteAssistBoosts[playerName] || 1.0;
+      baseShare *= assistBoost;
+      
+      // Historical optimization using multiple seasons
+      let historicalMultiplier = 1.0;
+      let totalHistoricalAssists = 0;
+      let seasonsFound = 0;
+      
+      // Check multiple seasons for comprehensive historical data
+      Object.values(historicalData).forEach((seasonPlayers: any) => {
+        if (Array.isArray(seasonPlayers)) {
+          const historicalPlayer = seasonPlayers.find((hp: any) => 
+            hp && (
+              (`${hp.first_name || hp.firstName} ${hp.second_name || hp.secondName}` === playerName) ||
+              (hp.web_name === player.web_name && Math.abs((hp.now_cost || hp.nowCost || 0) - player.now_cost) <= 20)
+            )
+          );
+          
+          if (historicalPlayer) {
+            const assists = historicalPlayer.assists || 0;
+            const minutes = historicalPlayer.minutes || 0;
+            if (minutes > 500) { // Only count seasons with meaningful playing time
+              totalHistoricalAssists += assists;
+              seasonsFound++;
+            }
+          }
+        }
+      });
+      
+      // Apply historical boost for proven assist providers
+      if (seasonsFound >= 2 && totalHistoricalAssists >= 8) {
+        const avgAssistsPerSeason = totalHistoricalAssists / seasonsFound;
+        // Boost based on historical assist average (elite assisters get major boost)
+        if (avgAssistsPerSeason >= 6) {
+          historicalMultiplier = 1.4; // Elite historical assist providers
+        } else if (avgAssistsPerSeason >= 4) {
+          historicalMultiplier = 1.25; // Very good historical assist providers
+        } else if (avgAssistsPerSeason >= 2.5) {
+          historicalMultiplier = 1.15; // Good historical assist providers
+        }
       }
       
-      // Simple add to shares array - no caps, no complex normalization
-      if (baseShare > 0) {
-        playerShares.push({
-          id: player.id,
-          name: playerName,
-          position: positionName,
-          assistShare: baseShare
-        });
-        totalShare += baseShare;
-      }
+      baseShare *= historicalMultiplier;
+      
+      // ICT creativity boost (assists heavily correlate with creativity)
+      const creativityBoost = player.creativity_rank <= 50 ? 1.3 : 
+                             player.creativity_rank <= 100 ? 1.15 : 
+                             player.creativity_rank <= 200 ? 1.05 : 1.0;
+      baseShare *= creativityBoost;
+      
+      // Form and injury considerations
+      const formBoost = (player.form || 0) > 6 ? 1.1 : (player.form || 0) < 3 ? 0.9 : 1.0;
+      const availabilityPenalty = (player.chance_of_playing_next_round || 100) < 75 ? 0.8 : 1.0;
+      baseShare *= formBoost * availabilityPenalty;
+      
+      // Price tier boost (expensive players often more creative)
+      const priceBoost = player.now_cost >= 90 ? 1.2 : player.now_cost >= 70 ? 1.1 : player.now_cost >= 50 ? 1.05 : 1.0;
+      baseShare *= priceBoost;
+      
+      // Apply position-based caps to assist share percentage
+      const getPositionShareCap = (position: string): number => {
+        switch (position?.toLowerCase()) {
+          case 'goalkeeper': return 2; // Max 2% share for GKs
+          case 'defender': return 15; // Max 15% share for defenders
+          case 'midfielder': return 35; // Max 35% share for midfielders
+          case 'forward': return 25; // Max 25% share for forwards
+          default: return 20;
+        }
+      };
+      
+      const positionShareCap = getPositionShareCap(positionName);
+      const finalShare = Math.max(0.1, Math.min(positionShareCap, baseShare));
+      
+      playerShares.push({
+        id: player.id,
+        name: playerName,
+        position: positionName,
+        rawShare: finalShare
+      });
+      
+      totalShare += finalShare;
     });
-    
-    // SIMPLIFIED: Single-pass proportional normalization (no caps, perfect balance)
-    return playerShares.map(player => ({
-      id: player.id,
-      name: player.name,
-      position: player.position,
-      assistShare: totalShare > 0 ? Math.round((player.assistShare / totalShare) * 100 * 10) / 10 : 0
-    }));
+
+    return playerShares;
   }
 
 
@@ -10555,9 +11038,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const playerData = teamPlayers.find(p => p.playerId === player.id);
           
           if (playerData && teamPlayers.length > 0) {
-            // SIMPLIFIED: Direct BPS to probability conversion (no team normalization)
-            // Simple conversion: rawBPS directly to probability percentage
-            let probability = playerData.rawBPS > 0 ? Math.min(playerData.rawBPS / 100, 1.0) : 0;
+            // Calculate total BPS for this team in this gameweek
+            const totalTeamBPS = teamPlayers.reduce((sum, p) => sum + p.rawBPS, 0);
+            
+            // Convert to probability as percentage of team's total BPS
+            let probability = totalTeamBPS > 0 ? (playerData.rawBPS / totalTeamBPS) : 0;
             
             playerBonusProbabilities[`gw${gw}`] = parseFloat(probability.toFixed(3));
             totalProbability += probability;
