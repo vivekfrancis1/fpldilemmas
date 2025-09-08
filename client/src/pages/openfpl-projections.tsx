@@ -46,7 +46,8 @@ export default function OpenFPLProjections() {
   const [startGameweek, setStartGameweek] = useState<number>(4); // Default to GW4
   const [endGameweek, setEndGameweek] = useState<number>(9); // Default next 6 GWs (GW4-9)
   const gameweekFilter = "all"; // Always use all available data
-  const [teamFilter, setTeamFilter] = useState("all");
+  const [minOwnership, setMinOwnership] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
   const [activeMetric, setActiveMetric] = useState("predicted_points");
   const [sortBy, setSortBy] = useState<keyof OpenFPLProjection>("predicted_points");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -142,9 +143,11 @@ export default function OpenFPLProjections() {
     
     const matchesPosition = positionFilter === "all" || projection.position === positionFilter;
     
-    const matchesTeam = teamFilter === "all" || projection.team_name === teamFilter;
+    const matchesOwnership = !minOwnership || projection.ownership_percentage >= parseFloat(minOwnership);
     
-    return matchesSearch && matchesPosition && matchesTeam;
+    const matchesPrice = !maxPrice || projection.current_price <= parseFloat(maxPrice) * 10;
+    
+    return matchesSearch && matchesPosition && matchesOwnership && matchesPrice;
   }).sort((a: OpenFPLProjection, b: OpenFPLProjection) => {
     const aValue = a[sortBy];
     const bValue = b[sortBy];
@@ -207,7 +210,8 @@ export default function OpenFPLProjections() {
   };
 
   return (
-    <div className="fpl-page-container">
+    
+      <div className="fpl-page-container">
         {/* Unified Page Header */}
         <div className="fpl-page-header">
           <div className="fpl-page-header-content">
@@ -284,6 +288,8 @@ export default function OpenFPLProjections() {
                     </Select>
                   </div>
                 </div>
+                
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-1">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-600">Position</label>
                     <Select value={positionFilter} onValueChange={setPositionFilter}>
@@ -302,20 +308,34 @@ export default function OpenFPLProjections() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600">Team</label>
-                    <Select value={teamFilter} onValueChange={setTeamFilter}>
-                      <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-team">
-                        <SelectValue placeholder="All Teams" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Teams</SelectItem>
-                        {bootstrapData?.teams?.map(team => (
-                          <SelectItem key={team.id} value={team.name}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <label className="text-xs font-medium text-gray-600">Min Ownership</label>
+                    <Input
+                      placeholder="Min own %"
+                      value={minOwnership}
+                      onChange={(e) => setMinOwnership(e.target.value)}
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="h-10 md:h-12 border-2"
+                      data-testid="input-ownership"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:col-span-1">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600">Max Price</label>
+                    <Input
+                      placeholder="Max £X.Xm"
+                      value={maxPrice}
+                      onChange={(e) => setMaxPrice(e.target.value)}
+                      type="number"
+                      step="0.1"
+                      min="3.9"
+                      max="15.0"
+                      className="h-10 md:h-12 border-2"
+                      data-testid="input-price"
+                    />
                   </div>
                 </div>
               </div>
@@ -634,6 +654,7 @@ export default function OpenFPLProjections() {
             </div>
           )}
         </div>
-    </div>
+      </div>
+    
   );
 }
