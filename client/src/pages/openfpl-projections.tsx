@@ -207,8 +207,7 @@ export default function OpenFPLProjections() {
   };
 
   return (
-    <>
-      <div className="fpl-page-container">
+    <div className="fpl-page-container">
         {/* Unified Page Header */}
         <div className="fpl-page-header">
           <div className="fpl-page-header-content">
@@ -635,7 +634,6 @@ export default function OpenFPLProjections() {
             </div>
           )}
         </div>
-      </div>
-    </>
+    </div>
   );
 }
