@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Brain, BarChart3, Target, AlertTriangle, TrendingUp, Star, Clock, DollarSign, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,7 +43,8 @@ interface OpenFPLProjection {
 export default function OpenFPLProjections() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
-  const [horizonFilter, setHorizonFilter] = useState("6");
+  const [startGameweek, setStartGameweek] = useState<number>(4); // Default to GW4
+  const [endGameweek, setEndGameweek] = useState<number>(9); // Default next 6 GWs (GW4-9)
   const gameweekFilter = "all"; // Always use all available data
   const [minOwnership, setMinOwnership] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -58,15 +59,28 @@ export default function OpenFPLProjections() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch data for all horizons up to the selected one
+  // Calculate current gameweek and set proper defaults
+  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 3;
+  const nextGameweek = currentGameweek + 1;
+  
+  // Update defaults when bootstrap data loads
+  useEffect(() => {
+    if (bootstrapData && startGameweek === 4 && endGameweek === 9) {
+      // Only update if still using initial defaults
+      setStartGameweek(Math.max(nextGameweek, 4));
+      setEndGameweek(Math.max(nextGameweek, 4) + 5); // Default to 6 gameweeks
+    }
+  }, [bootstrapData, nextGameweek, startGameweek, endGameweek]);
+
+  // Fetch data for the selected gameweek range
+  const numberOfGameweeks = Math.max(1, endGameweek - startGameweek + 1);
   const { data: projections, isLoading: isLoadingProjections, error: projectionsError } = useQuery({
-    queryKey: ["/api/openfpl-projections-all-horizons", horizonFilter, gameweekFilter],
+    queryKey: ["/api/openfpl-projections-gameweek-range", startGameweek, endGameweek, gameweekFilter],
     queryFn: async () => {
-      const maxHorizon = parseInt(horizonFilter);
       const allProjections = [];
       
-      // Fetch data for each horizon from 1 to maxHorizon
-      for (let horizon = 1; horizon <= maxHorizon; horizon++) {
+      // Fetch data for each horizon needed to cover the range
+      for (let horizon = 1; horizon <= numberOfGameweeks; horizon++) {
         const params = new URLSearchParams();
         params.append('horizon', horizon.toString());
         params.append('gameweek', gameweekFilter);
@@ -77,6 +91,7 @@ export default function OpenFPLProjections() {
       
       return allProjections;
     },
+    enabled: numberOfGameweeks > 0 && numberOfGameweeks <= 12, // Max 12 gameweeks
     refetchInterval: 300000, // 5 minutes
   });
 
@@ -235,22 +250,46 @@ export default function OpenFPLProjections() {
 
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-1">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600">Horizon</label>
-                    <Select value={horizonFilter} onValueChange={setHorizonFilter}>
-                      <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-horizon">
-                        <SelectValue placeholder="6 GWs" />
+                    <label className="text-xs font-medium text-gray-600">Start GW</label>
+                    <Select value={startGameweek.toString()} onValueChange={(value) => {
+                      const newStart = parseInt(value);
+                      setStartGameweek(newStart);
+                      if (newStart > endGameweek) {
+                        setEndGameweek(Math.min(newStart + 5, Math.min(newStart + 11, 38))); // Default 6 GWs, max 12
+                      }
+                    }}>
+                      <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-start-gw">
+                        <SelectValue placeholder={`GW${startGameweek}`} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">1 GW</SelectItem>
-                        <SelectItem value="2">2 GWs</SelectItem>
-                        <SelectItem value="3">3 GWs</SelectItem>
-                        <SelectItem value="4">4 GWs</SelectItem>
-                        <SelectItem value="5">5 GWs</SelectItem>
-                        <SelectItem value="6">6 GWs</SelectItem>
+                        {Array.from({length: 35}, (_, i) => i + 4).map(gw => (
+                          <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
 
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600">End GW</label>
+                    <Select value={endGameweek.toString()} onValueChange={(value) => {
+                      const newEnd = parseInt(value);
+                      if (newEnd >= startGameweek && (newEnd - startGameweek + 1) <= 12) {
+                        setEndGameweek(newEnd);
+                      }
+                    }}>
+                      <SelectTrigger className="h-10 md:h-12 border-2" data-testid="select-end-gw">
+                        <SelectValue placeholder={`GW${endGameweek}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({length: Math.min(12, 38 - startGameweek + 1)}, (_, i) => startGameweek + i).map(gw => (
+                          <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-1">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-600">Position</label>
                     <Select value={positionFilter} onValueChange={setPositionFilter}>
@@ -267,9 +306,7 @@ export default function OpenFPLProjections() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-1">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-600">Min Ownership</label>
                     <Input
@@ -283,7 +320,9 @@ export default function OpenFPLProjections() {
                       data-testid="input-ownership"
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:col-span-1">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-600">Max Price</label>
                     <Input
@@ -309,9 +348,9 @@ export default function OpenFPLProjections() {
               <div className="fpl-card-title">
                 <Target className="h-5 w-5 text-blue-600" />
                 ML Projections Results
-                {horizonFilter && (
+                {numberOfGameweeks > 0 && (
                   <Badge variant="outline" className="fpl-badge-info text-xs px-2 py-1 ml-2">
-                    {horizonFilter} GW{horizonFilter !== "1" ? "s" : ""} Ahead
+                    GW{startGameweek}-{endGameweek} ({numberOfGameweeks} GW{numberOfGameweeks !== 1 ? "s" : ""})
                   </Badge>
                 )}
               </div>
@@ -371,10 +410,8 @@ export default function OpenFPLProjections() {
                                     Own% {getTableSortIcon("ownership_total")}
                                   </button>
                                 </th>
-                                {Array.from({length: parseInt(horizonFilter)}, (_, i) => {
-                                  // Get current gameweek from bootstrap data, default to 2 if not available
-                                  const currentGW = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
-                                  const actualGW = currentGW + i + 1; // Next gameweek starts from current + 1
+                                {Array.from({length: numberOfGameweeks}, (_, i) => {
+                                  const actualGW = startGameweek + i;
                                   
                                   return (
                                     <th key={i} className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[50px] sm:min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
@@ -422,7 +459,7 @@ export default function OpenFPLProjections() {
                                     };
 
                                     // Calculate individual gameweek values using horizon differences
-                                    const gwValues = Array.from({length: parseInt(horizonFilter)}, (_, i) => {
+                                    const gwValues = Array.from({length: numberOfGameweeks}, (_, i) => {
                                       const gwIndex = i + 1;
                                       let value;
                                       
@@ -439,11 +476,11 @@ export default function OpenFPLProjections() {
                                     });
 
                                     // Total is the highest horizon value (cumulative)
-                                    const total = getHorizonValue(parseInt(horizonFilter));
+                                    const total = getHorizonValue(numberOfGameweeks);
 
                                     // Calculate minutes and ownership totals for additional columns
-                                    const minutesTotal = horizonData[parseInt(horizonFilter)]?.predicted_minutes || 0;
-                                    const ownershipTotal = horizonData[parseInt(horizonFilter)]?.ownership_percentage || 0;
+                                    const minutesTotal = horizonData[numberOfGameweeks]?.predicted_minutes || 0;
+                                    const ownershipTotal = horizonData[numberOfGameweeks]?.ownership_percentage || 0;
 
                                     return { ...group, total, gwValues, minutesTotal, ownershipTotal };
                                   })
@@ -510,7 +547,7 @@ export default function OpenFPLProjections() {
                                           {group.ownershipTotal.toFixed(1)}%
                                         </span>
                                       </td>
-                                      {Array.from({length: parseInt(horizonFilter)}, (_, i) => {
+                                      {Array.from({length: numberOfGameweeks}, (_, i) => {
                                         const value = group.gwValues[i] || 0;
                                         
                                         return (
