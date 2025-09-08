@@ -139,10 +139,27 @@ export default function PlayerGoalProjections() {
   const [sortField, setSortField] = useState<SortField>("projectedGoals");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  const { data: players, isLoading, error } = useQuery({
+  const { data: rawPlayers, isLoading, error } = useQuery({
     queryKey: ["/api/cached/player-goals-projections"],
     staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
   });
+
+  // Transform API data to match component's expected structure
+  const players = useMemo(() => {
+    if (!rawPlayers || !Array.isArray(rawPlayers)) return [];
+    
+    return rawPlayers.map((apiPlayer: any) => ({
+      id: apiPlayer.playerId,
+      name: apiPlayer.playerName || `Player ${apiPlayer.playerId}`,
+      team: apiPlayer.teamName || 'Unknown Team',
+      teamShort: apiPlayer.teamShort || apiPlayer.teamName?.substring(0, 3) || 'UNK',
+      position: apiPlayer.position || 'Unknown',
+      currentPrice: 50, // Default price - API doesn't provide this
+      projectedGoals: apiPlayer.totalProjectedGoals || 0,
+      goalShare: apiPlayer.goalShare || 0,
+      gameweekProjections: apiPlayer.gameweekProjections || {}
+    } as PlayerProjection));
+  }, [rawPlayers]);
 
   if (isLoading) {
     return (
@@ -168,14 +185,14 @@ export default function PlayerGoalProjections() {
   }
 
   // Filter and sort players
-  const filteredPlayers = players?.filter((player: PlayerProjection) => {
+  const filteredPlayers = players.filter((player: PlayerProjection) => {
     const matchesSearch = player.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
                          player.team.toLowerCase().includes(searchFilter.toLowerCase());
     const matchesPosition = positionFilter === "all" || player.position === positionFilter;
     const matchesTeam = teamFilter === "all" || player.team === teamFilter;
     
     return matchesSearch && matchesPosition && matchesTeam;
-  }) || [];
+  });
 
   // Sort players
   const sortedPlayers = [...filteredPlayers].sort((a, b) => {
@@ -240,8 +257,8 @@ export default function PlayerGoalProjections() {
   };
 
   // Get unique values for filters
-  const positions = [...new Set(players?.map((p: PlayerProjection) => p.position) || [])];
-  const teams = [...new Set(players?.map((p: PlayerProjection) => p.team) || [])].sort();
+  const positions = [...new Set(players.map((p: PlayerProjection) => p.position))].filter(p => p && p !== 'Unknown');
+  const teams = [...new Set(players.map((p: PlayerProjection) => p.team))].filter(t => t && t !== 'Unknown Team').sort();
 
   const getPositionBadgeColor = (position: string) => {
     switch (position) {
@@ -353,7 +370,7 @@ export default function PlayerGoalProjections() {
             <div className="flex items-end">
               <div className="text-sm text-gray-600">
                 <p className="font-medium">Showing {sortedPlayers.length} players</p>
-                <p>Total projections: {sortedPlayers.reduce((sum, p) => sum + p.projectedGoals, 0).toFixed(1)} goals</p>
+                <p>Total projections: {sortedPlayers.reduce((sum, p) => sum + (p.projectedGoals || 0), 0).toFixed(1)} goals</p>
               </div>
             </div>
           </div>
@@ -377,7 +394,7 @@ export default function PlayerGoalProjections() {
           <EnhancedTable
             data={sortedPlayers}
             columns={createGoalProjectionsColumns()}
-            onSort={handleSort}
+            onSort={(field) => handleSort(field as SortField)}
             sortField={sortField}
             sortDirection={sortDirection}
             loading={isLoading}
