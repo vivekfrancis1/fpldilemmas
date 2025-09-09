@@ -12746,7 +12746,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Database-based Rankings API - uses only actual stored data, no estimations
+  // Database-based Rankings API - uses only real manager data, no synthetic benchmarks
   app.get('/api/database-rankings/:managerId', async (req, res) => {
     try {
       const { managerId } = req.params;
@@ -12767,41 +12767,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Using data from GW${targetGameweek} for rankings`);
       
-      // Get ranking benchmarks from database
-      const benchmarks = await db.select()
-        .from(rankingBenchmarks)
-        .where(eq(rankingBenchmarks.gameweek, targetGameweek))
-        .orderBy(rankingBenchmarks.rank);
+      // Get real manager data from database (exclude synthetic managerId = 0)
+      const realManagers = await db.select({
+        managerId: leagueManagerSnapshots.managerId,
+        managerName: leagueManagerSnapshots.managerName,
+        overallRank: leagueManagerSnapshots.overallRank,
+        overallPoints: leagueManagerSnapshots.overallPoints,
+        gameweekPoints: leagueManagerSnapshots.gameweekPoints,
+        dataSource: leagueManagerSnapshots.dataSource,
+        gameweek: leagueManagerSnapshots.gameweek
+      })
+        .from(leagueManagerSnapshots)
+        .where(
+          and(
+            eq(leagueManagerSnapshots.gameweek, targetGameweek),
+            not(eq(leagueManagerSnapshots.managerId, 0)) // Exclude synthetic data
+          )
+        )
+        .orderBy(leagueManagerSnapshots.overallRank)
+        .limit(500); // Get diverse sample of real managers
       
-      if (benchmarks.length === 0) {
+      if (realManagers.length === 0) {
         res.json({
           dataPoints: [],
           totalDataPoints: 0,
-          source: 'no-data-available',
-          message: `No ranking benchmarks available for GW${targetGameweek}. Run data collection first.`
+          source: 'no-real-data-available',
+          message: `No real manager data available for GW${targetGameweek}. Run data collection first.`
         });
         return;
       }
       
-      // Convert benchmarks to the expected format for frontend
-      const dataPoints = benchmarks.map(benchmark => ({
-        managerId: 0, // Not applicable for benchmarks
-        overallRank: benchmark.rank,
-        totalPoints: benchmark.pointsRequired,
-        lastGameweekPoints: 0,
-        source: benchmark.dataSource,
-        confidence: benchmark.confidence,
-        gameweek: benchmark.gameweek
+      // Convert real manager data to the expected format for frontend
+      const dataPoints = realManagers.map(manager => ({
+        managerId: manager.managerId,
+        managerName: manager.managerName,
+        overallRank: manager.overallRank,
+        totalPoints: manager.overallPoints,
+        lastGameweekPoints: manager.gameweekPoints || 0,
+        source: manager.dataSource,
+        confidence: '1.00', // Real data = 100% confidence
+        gameweek: manager.gameweek
       }));
       
-      console.log(`Found ${benchmarks.length} ranking benchmarks for GW${targetGameweek}`);
+      console.log(`Found ${realManagers.length} real managers for GW${targetGameweek}`);
       
       res.json({
         dataPoints,
-        totalDataPoints: benchmarks.length,
+        totalDataPoints: realManagers.length,
         gameweek: targetGameweek,
-        source: 'database-benchmarks',
-        dataQuality: 'actual-data-only'
+        source: 'real-manager-data',
+        dataQuality: 'actual-managers-only'
       });
       
     } catch (error) {
