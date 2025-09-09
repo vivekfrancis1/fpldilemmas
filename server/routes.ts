@@ -18,7 +18,8 @@ import {
   cachedPlayerRedCards,
   cachedPlayerBonusPoints,
   teamProjections,
-  users
+  users,
+  contentCreators
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
@@ -12181,6 +12182,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Failed to update spread betting cache",
         details: error instanceof Error ? error.message : "Unknown error"
       });
+    }
+  });
+
+  // Comprehensive Rankings API - combines data from user leagues and content creator leagues
+  app.get('/api/comprehensive-rankings/:managerId', async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      
+      console.log('Fetching comprehensive rankings for manager:', managerId);
+      
+      // Get content creators from database (these are known good manager IDs)
+      const creators = await db.select().from(contentCreators).orderBy(contentCreators.name);
+      
+      const allDataPoints = [];
+      
+      // Get user's manager data first
+      const userManagerResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
+      if (!userManagerResponse.ok) {
+        throw new Error(`User manager API responded with status: ${userManagerResponse.status}`);
+      }
+      const userManagerData = await userManagerResponse.json();
+      
+      // Add user's own data
+      allDataPoints.push({
+        managerId: parseInt(managerId),
+        overallRank: userManagerData.summary_overall_rank,
+        totalPoints: userManagerData.summary_overall_points,
+        lastGameweekPoints: userManagerData.summary_event_points,
+        source: 'user'
+      });
+      
+      // Process content creators only (these are reliable data sources)
+      let creatorsProcessed = 0;
+      const maxCreators = 15; // Limit to prevent rate limiting
+      
+      for (const creator of creators.slice(0, maxCreators)) {
+        if (!creator.managerId) continue;
+        
+        try {
+          // Get creator's manager data
+          const creatorManagerResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/`);
+          if (!creatorManagerResponse.ok) {
+            console.warn(`Creator ${creator.name} API responded with status: ${creatorManagerResponse.status}`);
+            continue;
+          }
+          const creatorManagerData = await creatorManagerResponse.json();
+          
+          // Add creator's data
+          allDataPoints.push({
+            managerId: creator.managerId,
+            overallRank: creatorManagerData.summary_overall_rank,
+            totalPoints: creatorManagerData.summary_overall_points,
+            lastGameweekPoints: creatorManagerData.summary_event_points,
+            source: `creator-${creator.name}`,
+            creatorName: creator.name
+          });
+          
+          creatorsProcessed++;
+          
+          // Small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error(`Error fetching creator ${creator.name} (${creator.managerId}):`, error.message);
+          continue;
+        }
+      }
+      
+      // Add some additional data points from the Overall League (top performers)
+      try {
+        const overallLeagueResponse = await fetch(`https://fantasy.premierleague.com/api/leagues-classic/314/standings/`);
+        if (overallLeagueResponse.ok) {
+          const overallData = await overallLeagueResponse.json();
+          if (overallData.standings?.results) {
+            // Get top 50 managers from Overall League for reference points
+            const topManagers = overallData.standings.results.slice(0, 50);
+            topManagers.forEach((manager: any) => {
+              if (manager.entry && manager.total && manager.rank) {
+                allDataPoints.push({
+                  managerId: manager.entry,
+                  overallRank: manager.rank,
+                  totalPoints: manager.total,
+                  lastGameweekPoints: manager.event_total || 0,
+                  source: 'overall-league-top',
+                  leagueRank: manager.rank
+                });
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('Could not fetch Overall League data:', error.message);
+      }
+      
+      console.log(`Collected ${allDataPoints.length} data points from ${creatorsProcessed} content creators`);
+      
+      res.json({
+        dataPoints: allDataPoints,
+        totalDataPoints: allDataPoints.length,
+        contentCreatorsProcessed: creatorsProcessed,
+        source: 'optimized-approach'
+      });
+      
+    } catch (error) {
+      console.error('Error fetching comprehensive rankings:', error);
+      res.status(500).json({ error: 'Failed to fetch comprehensive rankings' });
     }
   });
 
