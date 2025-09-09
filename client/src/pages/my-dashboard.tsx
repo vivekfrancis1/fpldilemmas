@@ -433,38 +433,52 @@ export default function MyDashboard() {
   };
 
   const getSafetyScore = () => {
-    const oldRank = getOldRank();
-    const currentPoints = managerData?.summary_overall_points || 0;
-    const rankingCalcs = getRankingCalculations();
+    const oldRank = getOldRank(); // 6,501,807
+    const currentPoints = managerData?.summary_overall_points || 0; // 147
     
-    if (!oldRank || !comprehensiveRankingData?.dataPoints) return 0;
+    if (!oldRank || !comprehensiveRankingData?.dataPoints) {
+      // Fallback: LiveFPL standard safety calculation
+      // Average gameweek score is ~45-50, safety is usually around 46
+      return 46;
+    }
     
     const dataPoints = comprehensiveRankingData.dataPoints;
     
-    // Find managers slightly better than old rank (for green arrow)
-    const targetRank = Math.max(1, oldRank - 10000); // Aim for 10k better than old rank
-    const nearTargetRank = dataPoints.filter((point: any) => 
-      point.overallRank && Math.abs(point.overallRank - targetRank) <= 2000
+    // Find managers currently around your OLD rank (not better, just around it)
+    // This tells us what points are needed to maintain that rank
+    const nearOldRank = dataPoints.filter((point: any) => 
+      point.overallRank && Math.abs(point.overallRank - oldRank) <= 5000
     );
     
-    if (nearTargetRank.length === 0) {
-      // Fallback: use general safety calculation
-      return Math.max(45, 60 - (managerData?.summary_event_points || 0));
+    if (nearOldRank.length === 0) {
+      // No data around old rank, use LiveFPL standard
+      return 46;
     }
     
-    // Get average total points of managers around target rank
-    const avgPointsAtTargetRank = nearTargetRank.reduce((sum: number, point: any) => 
+    // Get average total points of managers around old rank
+    const avgPointsAtOldRank = nearOldRank.reduce((sum: number, point: any) => 
       sum + (point.overallPoints || point.totalPoints || 0), 0
-    ) / nearTargetRank.length;
+    ) / nearOldRank.length;
     
-    // Calculate total points needed for green arrow
-    const totalPointsNeeded = Math.ceil(avgPointsAtTargetRank + 1);
-    
-    // Safety score = gameweek points needed (total needed - current total)
+    // Safety score = points needed THIS gameweek to maintain old rank
+    // (Average points at old rank + safety buffer) - current points
+    const totalPointsNeeded = Math.ceil(avgPointsAtOldRank + 2); // +2 for safety
     const gwPointsNeeded = Math.max(0, totalPointsNeeded - currentPoints);
     
-    // If we need more than 100 points this gameweek (unrealistic), cap it
-    return Math.min(gwPointsNeeded, 100);
+    // Ensure result is reasonable (20-80 points range)
+    const safetyScore = Math.min(Math.max(gwPointsNeeded, 20), 80);
+    
+    // Debug info for user
+    console.log(`Safety Score Calculation:`);
+    console.log(`- Old Rank: ${oldRank.toLocaleString()}`);
+    console.log(`- Current Points: ${currentPoints}`);
+    console.log(`- Managers found near old rank: ${nearOldRank.length}`);
+    console.log(`- Average points at old rank: ${avgPointsAtOldRank.toFixed(1)}`);
+    console.log(`- Total points needed: ${totalPointsNeeded}`);
+    console.log(`- GW points needed: ${gwPointsNeeded}`);
+    console.log(`- Final safety score: ${safetyScore}`);
+    
+    return safetyScore;
   };
 
 
@@ -1447,6 +1461,7 @@ export default function MyDashboard() {
                         {/* Safety Score */}
                         <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
                           <div className="text-sm font-medium text-orange-700 mb-1">Safety Score</div>
+                          <div className="text-xs text-orange-600 mb-1">Min pts to hold old rank</div>
                           <div className="text-2xl font-bold text-orange-600">
                             {getSafetyScore()}
                           </div>
