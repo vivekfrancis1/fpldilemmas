@@ -155,10 +155,11 @@ export default function CreatorTeam() {
 
   // Function to get completed gameweeks (1-3 only)
   const getCompletedGameweeks = () => {
-    if (!bootstrapData?.events) return [];
-    return bootstrapData.events
-      .filter((event: any) => event.finished && event.id >= 1 && event.id <= 3)
-      .map((event: any) => event.id);
+    if (!bootstrapData?.events) return [1, 2, 3]; // Default fallback to show 1-3
+    
+    // For now, since we're early in the season, show gameweeks 1-3 regardless of finished status
+    // We can make this more dynamic later when more gameweeks are completed
+    return [1, 2, 3];
   };
 
   // Filter manager history to only show completed gameweeks 1-3
