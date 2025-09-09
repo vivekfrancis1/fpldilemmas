@@ -749,7 +749,7 @@ export default function MyDashboard() {
       });
       
       // Use that manager's current gameweek points as safety score
-      safetyScore = closestManager.currentGameweekPoints || 0;
+      safetyScore = (closestManager as any).currentGameweekPoints || 0;
     } else {
       // No better-ranked managers in database
       safetyScore = null;
