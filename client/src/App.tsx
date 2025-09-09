@@ -35,6 +35,7 @@ import CreatorTeam from "./pages/creator-team";
 import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
 import ResultsProjections from "./pages/results-projections";
+import ResultsAndFixtures from "./pages/results-and-fixtures";
 
 import ProjectedGoalsCS from "./pages/projected-goals-cs";
 import ProjectedStandings from "./pages/projected-standings";
@@ -88,6 +89,7 @@ function Router() {
       <Route path="/projected-standings" component={ProjectedStandings} />
       <Route path="/predicted-scores" component={PredictedScores} />
       <Route path="/results-projections" component={ResultsProjections} />
+      <Route path="/results-and-fixtures" component={ResultsAndFixtures} />
       <Route path="/player-goals-scored-projections">
         <ProtectedRoute requireAdmin={true}>
           <PlayerGoalsScoredProjections />

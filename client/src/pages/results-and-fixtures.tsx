@@ -294,7 +294,7 @@ export default function ResultsAndFixtures() {
 
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">View</label>
-                <Select value={viewMode} onValueChange={setViewMode}>
+                <Select value={viewMode} onValueChange={(value) => setViewMode(value as any)}>
                   <SelectTrigger data-testid="select-view-mode">
                     <SelectValue />
                   </SelectTrigger>
@@ -308,7 +308,7 @@ export default function ResultsAndFixtures() {
 
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">Sort By</label>
-                <Select value={sortBy} onValueChange={setSortBy}>
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
                   <SelectTrigger data-testid="select-sort-by">
                     <SelectValue />
                   </SelectTrigger>
@@ -322,7 +322,7 @@ export default function ResultsAndFixtures() {
 
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">Order</label>
-                <Select value={sortDirection} onValueChange={setSortDirection}>
+                <Select value={sortDirection} onValueChange={(value) => setSortDirection(value as any)}>
                   <SelectTrigger data-testid="select-sort-direction">
                     <SelectValue />
                   </SelectTrigger>
