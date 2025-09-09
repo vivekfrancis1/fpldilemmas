@@ -425,6 +425,37 @@ export default function MyDashboard() {
     return previous.overall_rank - current.overall_rank;
   };
 
+  const getOldRank = () => {
+    if (!historyData?.current || historyData.current.length < 2) return managerData?.summary_overall_rank;
+    
+    const previous = historyData.current[historyData.current.length - 2];
+    return previous.overall_rank;
+  };
+
+  const getSafetyPoints = () => {
+    const oldRank = getOldRank();
+    const currentPoints = managerData?.summary_overall_points || 0;
+    const rankingCalcs = getRankingCalculations();
+    
+    if (!oldRank || !rankingCalcs?.dataPoints) return 0;
+    
+    // Find managers around the old rank to estimate points needed
+    const dataPoints = rankingCalcs.dataPoints;
+    const nearOldRank = dataPoints.filter((point: any) => 
+      point.overallRank && Math.abs(point.overallRank - oldRank) <= 1000
+    );
+    
+    if (nearOldRank.length === 0) return 0;
+    
+    // Get average points of managers around old rank
+    const avgPointsAtOldRank = nearOldRank.reduce((sum: number, point: any) => 
+      sum + (point.totalPoints || 0), 0
+    ) / nearOldRank.length;
+    
+    // Safety points = points needed to maintain at least old rank
+    return Math.max(0, Math.ceil(avgPointsAtOldRank - currentPoints));
+  };
+
 
 
   const getCurrentGameweek = () => {
@@ -1362,51 +1393,59 @@ export default function MyDashboard() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* Current Stats Row */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center">
-                          <div className="text-sm text-gray-600 mb-1">GW{managerData.current_event} Live</div>
-                          <div className="text-3xl font-bold text-green-600">{managerData.summary_event_points}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-sm text-gray-600 mb-1">Total</div>
-                          <div className="text-3xl font-bold text-blue-600">{managerData.summary_overall_points.toLocaleString()}</div>
-                        </div>
-                      </div>
-
-                      {/* Safety and Rank Targets */}
-                      <div className="grid grid-cols-2 gap-4">
+                      {/* Main Stats Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {/* Old Rank */}
                         <div className="text-center p-4 bg-white/70 rounded-lg">
-                          <div className="text-sm text-gray-600 mb-1">Safety</div>
-                          <div className="text-2xl font-bold text-orange-600">
-                            {rankingCalcs ? rankingCalcs.safetyScore : 0}
-                          </div>
-                        </div>
-                        <div className="text-center p-4 bg-white/70 rounded-lg">
-                          <div className="text-sm text-gray-600 mb-1">Off Top 10k</div>
-                          <div className="text-2xl font-bold text-red-600">
-                            {rankingCalcs ? rankingCalcs.pointsNeeded.top10k : 0}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Points Gained Banner */}
-                      <div className="bg-gradient-to-r from-emerald-500 to-green-500 text-white p-4 rounded-lg text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <TrendingUp className="h-5 w-5" />
-                          <span className="font-semibold">Points Gained: +{getRankChange() ? Math.abs(getRankChange()!) : 0}</span>
-                        </div>
-                      </div>
-
-                      {/* Rank Movement Details */}
-                      <div className="flex justify-center">
-                        <div className="text-center">
                           <div className="text-sm font-medium text-gray-700 mb-1">Old Rank</div>
-                          <div className="text-lg font-bold text-gray-600">
-                            {historyData.current && historyData.current.length > 1 
-                              ? formatRank(historyData.current[historyData.current.length - 2]?.overall_rank || managerData.summary_overall_rank)
-                              : formatRank(managerData.summary_overall_rank)
+                          <div className="text-2xl font-bold text-gray-600">
+                            {formatRank(getOldRank() || managerData.summary_overall_rank)}
+                          </div>
+                        </div>
+
+                        {/* Live Rank */}
+                        <div className="text-center p-4 bg-white/70 rounded-lg">
+                          <div className="text-sm font-medium text-gray-700 mb-1">Live Rank</div>
+                          <div className="text-2xl font-bold text-blue-600">
+                            {formatRank(managerData.summary_overall_rank)}
+                          </div>
+                        </div>
+
+                        {/* Rank Gained */}
+                        <div className="text-center p-4 bg-white/70 rounded-lg col-span-2 md:col-span-1">
+                          <div className="text-sm font-medium text-gray-700 mb-1">Rank Gained</div>
+                          <div className={`text-2xl font-bold ${getRankChange() && getRankChange()! > 0 ? 'text-green-600' : getRankChange() && getRankChange()! < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                            {getRankChange() ? 
+                              (getRankChange()! > 0 ? '+' : '') + getRankChange()!.toLocaleString() : 
+                              '0'
                             }
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Secondary Stats Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* This GW Live Points */}
+                        <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                          <div className="text-sm font-medium text-green-700 mb-1">GW{managerData.current_event} Live</div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {managerData.summary_event_points}
+                          </div>
+                        </div>
+
+                        {/* Safety Points */}
+                        <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
+                          <div className="text-sm font-medium text-orange-700 mb-1">Safety Points</div>
+                          <div className="text-2xl font-bold text-orange-600">
+                            {getSafetyPoints()}
+                          </div>
+                        </div>
+
+                        {/* Total Points */}
+                        <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                          <div className="text-sm font-medium text-purple-700 mb-1">Total Points</div>
+                          <div className="text-2xl font-bold text-purple-600">
+                            {managerData.summary_overall_points.toLocaleString()}
                           </div>
                         </div>
                       </div>
