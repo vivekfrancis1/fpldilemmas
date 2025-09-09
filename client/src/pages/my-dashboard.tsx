@@ -432,28 +432,39 @@ export default function MyDashboard() {
     return previous.overall_rank;
   };
 
-  const getSafetyPoints = () => {
+  const getSafetyScore = () => {
     const oldRank = getOldRank();
     const currentPoints = managerData?.summary_overall_points || 0;
     const rankingCalcs = getRankingCalculations();
     
-    if (!oldRank || !rankingCalcs?.dataPoints) return 0;
+    if (!oldRank || !comprehensiveRankingData?.dataPoints) return 0;
     
-    // Find managers around the old rank to estimate points needed
-    const dataPoints = rankingCalcs.dataPoints;
-    const nearOldRank = dataPoints.filter((point: any) => 
-      point.overallRank && Math.abs(point.overallRank - oldRank) <= 1000
+    const dataPoints = comprehensiveRankingData.dataPoints;
+    
+    // Find managers slightly better than old rank (for green arrow)
+    const targetRank = Math.max(1, oldRank - 10000); // Aim for 10k better than old rank
+    const nearTargetRank = dataPoints.filter((point: any) => 
+      point.overallRank && Math.abs(point.overallRank - targetRank) <= 2000
     );
     
-    if (nearOldRank.length === 0) return 0;
+    if (nearTargetRank.length === 0) {
+      // Fallback: use general safety calculation
+      return Math.max(45, 60 - (managerData?.summary_event_points || 0));
+    }
     
-    // Get average points of managers around old rank
-    const avgPointsAtOldRank = nearOldRank.reduce((sum: number, point: any) => 
-      sum + (point.totalPoints || 0), 0
-    ) / nearOldRank.length;
+    // Get average total points of managers around target rank
+    const avgPointsAtTargetRank = nearTargetRank.reduce((sum: number, point: any) => 
+      sum + (point.overallPoints || point.totalPoints || 0), 0
+    ) / nearTargetRank.length;
     
-    // Safety points = points needed to maintain at least old rank
-    return Math.max(0, Math.ceil(avgPointsAtOldRank - currentPoints));
+    // Calculate total points needed for green arrow
+    const totalPointsNeeded = Math.ceil(avgPointsAtTargetRank + 1);
+    
+    // Safety score = gameweek points needed (total needed - current total)
+    const gwPointsNeeded = Math.max(0, totalPointsNeeded - currentPoints);
+    
+    // If we need more than 100 points this gameweek (unrealistic), cap it
+    return Math.min(gwPointsNeeded, 100);
   };
 
 
@@ -609,7 +620,7 @@ export default function MyDashboard() {
     const currentGW = managerData.current_event;
     
     // Only proceed if we have actual database data
-    const hasActualData = comprehensiveRankingData?.dataPoints?.length > 0;
+    const hasActualData = comprehensiveRankingData?.dataPoints && comprehensiveRankingData.dataPoints.length > 0;
     if (!hasActualData) {
       return null; // Return null to show "no data" message instead of estimates
     }
@@ -1433,11 +1444,11 @@ export default function MyDashboard() {
                           </div>
                         </div>
 
-                        {/* Safety Points */}
+                        {/* Safety Score */}
                         <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
-                          <div className="text-sm font-medium text-orange-700 mb-1">Safety Points</div>
+                          <div className="text-sm font-medium text-orange-700 mb-1">Safety Score</div>
                           <div className="text-2xl font-bold text-orange-600">
-                            {getSafetyPoints()}
+                            {getSafetyScore()}
                           </div>
                         </div>
 
