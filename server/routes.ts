@@ -8973,9 +8973,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Raw manager data for ${creator.name}:`, {
             rank: managerData.summary_overall_rank,
             points: managerData.summary_overall_points,
-            squad_value: managerData.last_deadline_value,
-            bank_balance: managerData.last_deadline_bank,
-            total_team_value: (managerData.last_deadline_value || 0) + (managerData.last_deadline_bank || 0)
+            last_deadline_value: managerData.last_deadline_value,
+            last_deadline_bank: managerData.last_deadline_bank
           });
 
           // Add new tracking record with proper data handling
@@ -8986,7 +8985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             overallPoints: managerData.summary_overall_points || null,
             gameweekPoints: managerData.summary_event_points || 0,
             gameweekRank: managerData.summary_event_rank || null,
-            teamValue: (managerData.last_deadline_value || 0) + (managerData.last_deadline_bank || 0) ? parseFloat(((managerData.last_deadline_value || 0) + (managerData.last_deadline_bank || 0)) / 10).toFixed(1) : null, // Convert from pence to pounds (squad value + bank)
+            teamValue: managerData.last_deadline_value ? parseFloat((managerData.last_deadline_value / 10).toFixed(1)) : null, // Convert from pence to pounds
             bank: managerData.last_deadline_bank ? parseFloat((managerData.last_deadline_bank / 10).toFixed(1)) : null,
             totalTransfers: allTimeTransfers,
             freeTransfers: managerData.free_transfers || 1,
