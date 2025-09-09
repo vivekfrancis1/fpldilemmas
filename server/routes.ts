@@ -12382,6 +12382,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Random Manager Collection API - focused collection of random managers only
+  app.post('/api/collect-random-managers/:gameweek', async (req, res) => {
+    try {
+      const { gameweek } = req.params;
+      console.log(`🎯 Starting RANDOM manager collection for GW${gameweek}`);
+      
+      const currentGameweek = parseInt(gameweek);
+      const collectedSnapshots = [];
+      
+      // Helper function for safe internal API calls
+      const safeFetch = async (url: string, description: string) => {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            console.warn(`${description} API responded with status: ${response.status}`);
+            return null;
+          }
+          const text = await response.text();
+          return JSON.parse(text);
+        } catch (error) {
+          console.warn(`Error fetching ${description}:`, error.message);
+          return null;
+        }
+      };
+      
+      // Random Manager Collection (5000 managers)
+      console.log(`📊 Collecting 5000 random managers for comprehensive sample size`);
+      const randomManagerTargets = 5000;
+      const maxManagerId = 11500000; // Based on ~11.6M total players
+      const minManagerId = 1;
+      const randomManagerAttempts = 15000; // Attempt more IDs to account for inactive accounts
+      let randomManagersCollected = 0;
+      const processedRandomManagers = new Set();
+      
+      while (randomManagersCollected < randomManagerTargets && processedRandomManagers.size < randomManagerAttempts) {
+        // Generate random manager ID
+        const randomManagerId = Math.floor(Math.random() * (maxManagerId - minManagerId + 1)) + minManagerId;
+        
+        if (processedRandomManagers.has(randomManagerId)) continue;
+        processedRandomManagers.add(randomManagerId);
+        
+        // Try to fetch manager data
+        const randomManagerData = await safeFetch(`http://localhost:5000/api/manager/${randomManagerId}`, `Random manager ${randomManagerId}`);
+        if (randomManagerData && randomManagerData.summary_overall_rank) {
+          // Get manager history to extract old rank and old points
+          const randomHistoryData = await safeFetch(`http://localhost:5000/api/manager/${randomManagerId}/history`, `Random manager ${randomManagerId} history`);
+          let oldRank = null;
+          let oldPoints = null;
+          let gameweekPointsAfterTransfers = null;
+          
+          if (randomHistoryData?.current && randomHistoryData.current.length > 0) {
+            // Find previous gameweek data
+            const previousGW = randomHistoryData.current.find(gw => gw.event === currentGameweek - 1);
+            if (previousGW) {
+              oldRank = previousGW.overall_rank;
+              oldPoints = previousGW.points;
+            }
+            
+            // Find current gameweek data for points after transfers
+            const currentGW = randomHistoryData.current.find(gw => gw.event === currentGameweek);
+            if (currentGW) {
+              gameweekPointsAfterTransfers = currentGW.points - currentGW.event_transfers_cost;
+            }
+          }
+          
+          const randomSnapshot = {
+            managerId: randomManagerId,
+            managerName: randomManagerData.player_first_name && randomManagerData.player_last_name 
+              ? `${randomManagerData.player_first_name} ${randomManagerData.player_last_name}` 
+              : `Manager ${randomManagerId}`,
+            leagueId: 0, // Special value for random managers
+            leagueName: 'Random Sample',
+            gameweek: currentGameweek,
+            overallRank: randomManagerData.summary_overall_rank, // Current live rank (new rank)
+            overallPoints: randomManagerData.summary_overall_points, // Current live points (new points)
+            oldRank: oldRank, // Rank at start of gameweek
+            oldPoints: oldPoints, // Points at start of gameweek
+            gameweekPoints: randomManagerData.summary_event_points, // Gameweek points before transfers
+            gameweekPointsAfterTransfers: gameweekPointsAfterTransfers, // Gameweek points after transfers
+            gameweekRank: null,
+            teamValue: randomManagerData.value ? (randomManagerData.value / 10) : null,
+            bank: randomManagerData.bank ? (randomManagerData.bank / 10) : null,
+            totalTransfers: randomManagerData.total_transfers,
+            dataSource: 'random-sample',
+            contentCreatorId: null,
+          };
+          
+          collectedSnapshots.push(randomSnapshot);
+          randomManagersCollected++;
+          
+          if (randomManagersCollected % 100 === 0) {
+            console.log(`📊 Random collection progress: ${randomManagersCollected}/${randomManagerTargets} (${processedRandomManagers.size} attempts)`);
+          }
+        }
+        
+        // Rate limiting for random manager collection
+        await new Promise(resolve => setTimeout(resolve, 25));
+      }
+      
+      console.log(`✅ Random manager collection complete: ${randomManagersCollected} managers collected from ${processedRandomManagers.size} attempts`);
+      
+      // Store all collected snapshots in database
+      if (collectedSnapshots.length > 0) {
+        console.log(`💾 Storing ${collectedSnapshots.length} random manager snapshots in database`);
+        
+        // Insert in batches to avoid database limits
+        const batchSize = 50;
+        let insertedCount = 0;
+        
+        for (let i = 0; i < collectedSnapshots.length; i += batchSize) {
+          const batch = collectedSnapshots.slice(i, i + batchSize);
+          try {
+            await db.insert(leagueManagerSnapshots).values(batch).onConflictDoUpdate({
+              target: [leagueManagerSnapshots.managerId, leagueManagerSnapshots.leagueId, leagueManagerSnapshots.gameweek],
+              set: {
+                overallRank: sql`excluded.overall_rank`,
+                overallPoints: sql`excluded.overall_points`,
+                oldRank: sql`excluded.old_rank`,
+                oldPoints: sql`excluded.old_points`,
+                gameweekPoints: sql`excluded.gameweek_points`,
+                gameweekPointsAfterTransfers: sql`excluded.gameweek_points_after_transfers`,
+                gameweekRank: sql`excluded.gameweek_rank`,
+                teamValue: sql`excluded.team_value`,
+                bank: sql`excluded.bank`,
+                totalTransfers: sql`excluded.total_transfers`,
+                collectedAt: sql`excluded.collected_at`,
+              }
+            });
+            insertedCount += batch.length;
+            console.log(`✅ Inserted random batch ${Math.ceil((i + batchSize) / batchSize)} (${insertedCount}/${collectedSnapshots.length})`);
+          } catch (error) {
+            console.error(`❌ Failed to insert random batch ${Math.ceil((i + batchSize) / batchSize)}:`, error.message);
+          }
+        }
+        
+        console.log(`🎉 Random collection complete! Stored ${insertedCount} random manager snapshots for GW${currentGameweek}`);
+        
+        res.json({
+          success: true,
+          gameweek: currentGameweek,
+          randomManagersCollected: insertedCount,
+          totalAttempts: processedRandomManagers.size
+        });
+      } else {
+        res.json({
+          success: false,
+          gameweek: currentGameweek,
+          error: 'No random managers collected'
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error in random manager collection:', error);
+      res.status(500).json({ error: 'Failed to collect random managers', details: error.message });
+    }
+  });
+
   // League Manager Snapshot Collection API - collects and stores actual manager data
   app.post('/api/collect-league-snapshots/:gameweek', async (req, res) => {
     try {
