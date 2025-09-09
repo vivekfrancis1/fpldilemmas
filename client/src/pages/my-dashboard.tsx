@@ -726,28 +726,35 @@ export default function MyDashboard() {
       }
     });
     
-    // Safety score based on actual collected data only (consider only lower/better ranks)
+    // Safety score based on closest better-ranked manager from database
     const totalDataPoints = dataPoints.length;
-    const nearbyManagers = dataPoints.filter((point: any) => 
-      point.overallRank && point.overallRank < currentRank && (currentRank - point.overallRank) <= 5000
-    );
-    const avgNearbyGW = nearbyManagers.length > 0 
-      ? nearbyManagers.reduce((sum: number, point: any) => sum + (point.lastGameweekPoints || 0), 0) / nearbyManagers.length
-      : null;
     
-    // Calculate rank-dependent safety score
+    // Find all managers with better ranks (lower rank numbers)
+    const betterRankedManagers = dataPoints.filter((point: any) => 
+      point.overallRank && point.overallRank < currentRank
+    );
+    
     let safetyScore;
-    if (avgNearbyGW !== null) {
-      // Use actual nearby manager data if available
-      safetyScore = Math.max(0, Math.ceil(avgNearbyGW * 0.9));
+    if (betterRankedManagers.length > 0) {
+      // Find the manager with rank closest to current rank (but still better)
+      const closestManager = betterRankedManagers.reduce((closest: any, manager: any) => {
+        const currentDistance = currentRank - manager.overallRank;
+        const closestDistance = currentRank - closest.overallRank;
+        return currentDistance < closestDistance ? manager : closest;
+      });
+      
+      // Since these are ranking benchmarks (not actual manager data), 
+      // use rank-based safety score calculation
+      const closestRank = closestManager.overallRank;
+      const rankBasedGW = closestRank <= 100000 ? 50 : 
+                         closestRank <= 500000 ? 47 : 
+                         closestRank <= 1000000 ? 45 : 
+                         closestRank <= 2000000 ? 43 : 
+                         closestRank <= 4000000 ? 41 : 39;
+      safetyScore = Math.max(0, Math.ceil(rankBasedGW * 0.9));
     } else {
-      // Rank-dependent fallback: better ranks need higher safety scores
-      const rankTier = currentRank <= 100000 ? 50 : 
-                     currentRank <= 500000 ? 47 : 
-                     currentRank <= 1000000 ? 45 : 
-                     currentRank <= 2000000 ? 43 : 
-                     currentRank <= 4000000 ? 41 : 39;
-      safetyScore = Math.ceil(rankTier * 0.9);
+      // No better-ranked managers in database - use fallback
+      safetyScore = 40;
     }
     
     return {
