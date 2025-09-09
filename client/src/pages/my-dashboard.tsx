@@ -369,8 +369,12 @@ export default function MyDashboard() {
     enabled: !!searchedId,
   });
 
-  // Note: We don't fetch the full 11M manager dataset as it's impractical
-  // Instead, we use statistical estimates based on the manager's actual overall rank
+  // Fetch Overall League (314) data to get accurate ranking thresholds
+  const { data: overallLeagueData } = useQuery({
+    queryKey: [`/api/leagues/314/analyze`],
+    enabled: !!searchedId,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
 
   // Search handlers
   const handleSearch = () => {
@@ -552,64 +556,101 @@ export default function MyDashboard() {
     return historyData.current.reduce((total: number, gw: any) => total + (gw.points || 0), 0);
   };
 
-  // Calculate rankings using statistical estimates based on historical FPL patterns
+  // Calculate rankings using real Overall League data
   const getRankingCalculations = () => {
-    if (!managerData) return null;
+    if (!managerData || !overallLeagueData?.standings) return null;
     
     const currentPoints = managerData.summary_overall_points;
     const currentRank = managerData.summary_overall_rank;
-    const currentGW = managerData.current_event;
+    const standings = overallLeagueData.standings;
     
     // Exact total managers in Overall League
     const totalManagers = 11304765;
     
-    // Statistical estimates based on historical FPL data patterns
-    // These are rough estimates of points typically needed for each tier at different stages of season
-    const gameweekProgress = currentGW / 38;
-    
     // Define all ranking tiers
     const rankingTiers = [
-      { key: 'top1', name: 'Top 1', target: 1, multiplier: 2.5 },
-      { key: 'top10', name: 'Top 10', target: 10, multiplier: 2.2 },
-      { key: 'top100', name: 'Top 100', target: 100, multiplier: 2.0 },
-      { key: 'top1k', name: 'Top 1k', target: 1000, multiplier: 1.8 },
-      { key: 'top5k', name: 'Top 5k', target: 5000, multiplier: 1.6 },
-      { key: 'top10k', name: 'Top 10k', target: 10000, multiplier: 1.5 },
-      { key: 'top25k', name: 'Top 25k', target: 25000, multiplier: 1.4 },
-      { key: 'top50k', name: 'Top 50k', target: 50000, multiplier: 1.3 },
-      { key: 'top100k', name: 'Top 100k', target: 100000, multiplier: 1.25 },
-      { key: 'top250k', name: 'Top 250k', target: 250000, multiplier: 1.2 },
-      { key: 'top500k', name: 'Top 500k', target: 500000, multiplier: 1.15 },
-      { key: 'top1M', name: 'Top 1M', target: 1000000, multiplier: 1.1 },
-      { key: 'top2M', name: 'Top 2M', target: 2000000, multiplier: 1.08 },
-      { key: 'top3M', name: 'Top 3M', target: 3000000, multiplier: 1.06 },
-      { key: 'top5M', name: 'Top 5M', target: 5000000, multiplier: 1.04 },
+      { key: 'top1', name: 'Top 1', target: 1 },
+      { key: 'top10', name: 'Top 10', target: 10 },
+      { key: 'top100', name: 'Top 100', target: 100 },
+      { key: 'top1k', name: 'Top 1k', target: 1000 },
+      { key: 'top5k', name: 'Top 5k', target: 5000 },
+      { key: 'top10k', name: 'Top 10k', target: 10000 },
+      { key: 'top25k', name: 'Top 25k', target: 25000 },
+      { key: 'top50k', name: 'Top 50k', target: 50000 },
+      { key: 'top100k', name: 'Top 100k', target: 100000 },
+      { key: 'top250k', name: 'Top 250k', target: 250000 },
+      { key: 'top500k', name: 'Top 500k', target: 500000 },
+      { key: 'top1M', name: 'Top 1M', target: 1000000 },
+      { key: 'top2M', name: 'Top 2M', target: 2000000 },
+      { key: 'top3M', name: 'Top 3M', target: 3000000 },
+      { key: 'top5M', name: 'Top 5M', target: 5000000 },
     ];
     
-    // Calculate base points needed scaling with season progress
-    const basePointsNeeded = 100 - (gameweekProgress * 70); // More points needed early season
-    const rankFactor = Math.log10(currentRank) / Math.log10(totalManagers);
+    // Create a lookup of actual points for ranks we have data for
+    const actualRankPoints: Record<number, number> = {};
+    standings.forEach((standing: any) => {
+      actualRankPoints[standing.rank] = standing.total;
+    });
+    
+    // Function to get points needed for a specific rank target
+    const getPointsForRank = (targetRank: number): number => {
+      // If we have exact data for this rank, use it
+      if (actualRankPoints[targetRank]) {
+        return actualRankPoints[targetRank];
+      }
+      
+      // Find the closest ranks we have data for
+      const availableRanks = Object.keys(actualRankPoints).map(Number).sort((a, b) => a - b);
+      
+      if (availableRanks.length === 0) {
+        // Fallback if no data available
+        return currentPoints + Math.round(50 * Math.log10(targetRank));
+      }
+      
+      // Find surrounding ranks for interpolation
+      const lowerRank = availableRanks.reverse().find(rank => rank <= targetRank);
+      const higherRank = availableRanks.find(rank => rank >= targetRank);
+      
+      if (lowerRank && higherRank && lowerRank !== higherRank) {
+        // Interpolate between the two ranks
+        const lowerPoints = actualRankPoints[lowerRank];
+        const higherPoints = actualRankPoints[higherRank];
+        const ratio = (targetRank - lowerRank) / (higherRank - lowerRank);
+        return Math.round(lowerPoints - (lowerPoints - higherPoints) * ratio);
+      } else if (lowerRank) {
+        // Extrapolate based on the pattern from lower ranks
+        const lowerPoints = actualRankPoints[lowerRank];
+        const dropRate = targetRank > lowerRank ? 0.1 : -0.1; // Points drop as rank increases
+        return Math.round(lowerPoints - (targetRank - lowerRank) * dropRate);
+      }
+      
+      // Final fallback
+      return currentPoints + Math.round(30 * Math.log10(targetRank));
+    };
     
     // Calculate points needed for each tier
-    const adjustedEstimates: Record<string, number> = {};
+    const pointsNeeded: Record<string, number> = {};
     
     rankingTiers.forEach(tier => {
       if (currentRank <= tier.target) {
-        adjustedEstimates[tier.key] = 0; // Already achieved this rank
+        pointsNeeded[tier.key] = 0; // Already achieved this rank
       } else {
-        const tierPoints = Math.round(basePointsNeeded * tier.multiplier * (1.1 - rankFactor * 0.2));
-        adjustedEstimates[tier.key] = Math.max(0, tierPoints);
+        const targetPoints = getPointsForRank(tier.target);
+        pointsNeeded[tier.key] = Math.max(0, targetPoints - currentPoints);
       }
     });
     
-    // Safety score: estimate points needed to maintain current rank
-    // Based on typical gameweek scoring distribution (average ~45-50 points per GW)
-    const averageGWPoints = 47;
-    const rankVolatility = Math.min(0.15, (currentRank / totalManagers) * 0.2); // Higher ranks are more volatile
-    const safetyScore = Math.max(0, Math.ceil(averageGWPoints * (0.8 + rankVolatility)));
+    // Safety score based on nearby managers in the actual data
+    const nearbyManagers = standings.filter((s: any) => 
+      Math.abs(s.rank - currentRank) <= 1000
+    );
+    const avgNearbyGW = nearbyManagers.length > 0 
+      ? nearbyManagers.reduce((sum: number, s: any) => sum + (s.event_total || 0), 0) / nearbyManagers.length
+      : 45;
+    const safetyScore = Math.max(0, Math.ceil(avgNearbyGW * 0.9));
     
     return {
-      pointsNeeded: adjustedEstimates,
+      pointsNeeded,
       rankingTiers,
       safetyScore,
       totalManagers,
