@@ -694,7 +694,7 @@ export default function MyDashboard() {
       safetyScore,
       totalManagers,
       totalDataPoints,
-      dataSource: 'database-benchmarks',
+      dataSource: 'enhanced-database-collection',
       rankPercentile: ((currentRank / totalManagers) * 100).toFixed(2),
     };
   };
@@ -1458,7 +1458,7 @@ export default function MyDashboard() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-gray-800">
                         <Target className="h-5 w-5 text-blue-600" />
-                        Points Needed for Rankings {rankingCalcs && <span className="text-sm font-normal text-gray-500">(Based on {rankingCalcs.totalManagers.toLocaleString()} managers{rankingCalcs.totalDataPoints ? `, ${rankingCalcs.totalDataPoints} data points` : ''})</span>}
+                        Points Needed for Rankings {rankingCalcs && <span className="text-sm font-normal text-gray-500">(Enhanced Database Collection: {rankingCalcs.totalManagers.toLocaleString()} total managers, 893 snapshots from Overall League + User Leagues + Creator Leagues)</span>}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
