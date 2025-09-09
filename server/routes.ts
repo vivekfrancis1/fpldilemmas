@@ -12665,6 +12665,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Database-based Rankings API - uses only actual stored data, no estimations
+  app.get('/api/database-rankings/:managerId', async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      
+      console.log('Fetching database-based rankings for manager:', managerId);
+      
+      // Get current gameweek from bootstrap
+      const bootstrapData = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/').then(r => r.json());
+      const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
+      
+      // Get the latest gameweek that has been collected
+      const latestCollectedGW = await db.select({ gameweek: leagueManagerSnapshots.gameweek })
+        .from(leagueManagerSnapshots)
+        .orderBy(desc(leagueManagerSnapshots.gameweek))
+        .limit(1);
+      
+      const targetGameweek = latestCollectedGW.length > 0 ? latestCollectedGW[0].gameweek : currentGW;
+      
+      console.log(`Using data from GW${targetGameweek} for rankings`);
+      
+      // Get ranking benchmarks from database
+      const benchmarks = await db.select()
+        .from(rankingBenchmarks)
+        .where(eq(rankingBenchmarks.gameweek, targetGameweek))
+        .orderBy(rankingBenchmarks.rank);
+      
+      if (benchmarks.length === 0) {
+        res.json({
+          dataPoints: [],
+          totalDataPoints: 0,
+          source: 'no-data-available',
+          message: `No ranking benchmarks available for GW${targetGameweek}. Run data collection first.`
+        });
+        return;
+      }
+      
+      // Convert benchmarks to the expected format for frontend
+      const dataPoints = benchmarks.map(benchmark => ({
+        managerId: 0, // Not applicable for benchmarks
+        overallRank: benchmark.rank,
+        totalPoints: benchmark.pointsRequired,
+        lastGameweekPoints: 0,
+        source: benchmark.dataSource,
+        confidence: benchmark.confidence,
+        gameweek: benchmark.gameweek
+      }));
+      
+      console.log(`Found ${benchmarks.length} ranking benchmarks for GW${targetGameweek}`);
+      
+      res.json({
+        dataPoints,
+        totalDataPoints: benchmarks.length,
+        gameweek: targetGameweek,
+        source: 'database-benchmarks',
+        dataQuality: 'actual-data-only'
+      });
+      
+    } catch (error) {
+      console.error('Error fetching database rankings:', error);
+      res.status(500).json({ error: 'Failed to fetch database rankings', details: error.message });
+    }
+  });
+
   // Helper function to get team strength for supremacy calculation
   function getTeamStrength(teamId: number): number {
     const { 

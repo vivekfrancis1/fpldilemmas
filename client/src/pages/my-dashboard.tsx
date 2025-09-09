@@ -23,7 +23,8 @@ import {
   BarChart3,
   ChevronUp,
   ChevronDown,
-  ExternalLink
+  ExternalLink,
+  AlertCircle
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -375,10 +376,10 @@ export default function MyDashboard() {
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes
   });
 
-  // Fetch all leagues data for comprehensive ranking analysis
+  // Fetch database-based ranking data (actual data only, no estimations)
   const { data: comprehensiveRankingData } = useQuery({
-    queryKey: ['/api/comprehensive-rankings', searchedId],
-    enabled: !!searchedId && !!contentCreators,
+    queryKey: ['/api/database-rankings', searchedId],
+    enabled: !!searchedId,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
@@ -562,7 +563,7 @@ export default function MyDashboard() {
     return historyData.current.reduce((total: number, gw: any) => total + (gw.points || 0), 0);
   };
 
-  // Calculate rankings using comprehensive league data with fallback
+  // Calculate rankings using actual database data only (no estimations)
   const getRankingCalculations = () => {
     if (!managerData) return null;
     
@@ -570,9 +571,13 @@ export default function MyDashboard() {
     const currentRank = managerData.summary_overall_rank;
     const currentGW = managerData.current_event;
     
-    // Check if we have comprehensive data available
-    const hasComprehensiveData = comprehensiveRankingData?.dataPoints?.length > 0;
-    const dataPoints = comprehensiveRankingData?.dataPoints || [];
+    // Only proceed if we have actual database data
+    const hasActualData = comprehensiveRankingData?.dataPoints?.length > 0;
+    if (!hasActualData) {
+      return null; // Return null to show "no data" message instead of estimates
+    }
+    
+    const dataPoints = comprehensiveRankingData.dataPoints;
     
     // Exact total managers in Overall League
     const totalManagers = 11304765;
@@ -596,54 +601,13 @@ export default function MyDashboard() {
       { key: 'top5M', name: 'Top 5M', target: 5000000 },
     ];
     
-    // Create a comprehensive lookup of actual points from all league data when available
+    // Create a lookup of actual points from database benchmarks
     const actualRankPoints: Record<number, number> = {};
-    if (hasComprehensiveData) {
-      dataPoints.forEach((point: any) => {
-        // Only use overall ranks (not mini league ranks) for global ranking estimates
-        if (point.overallRank && point.totalPoints) {
-          actualRankPoints[point.overallRank] = point.totalPoints;
-        }
-      });
-    } else {
-      // Use realistic baseline estimates with known data points
-      // Real data point: FPL mate has 171 points at rank 1,646,998
-      // User has ~147 points at current rank
-      const fplMatePoints = 171;
-      const fplMateRank = 1646998;
-      
-      // Calculate points distribution using power law (typical for FPL rankings)
-      // Higher ranks need exponentially more points
-      const calculatePointsForRank = (targetRank: number): number => {
-        if (targetRank >= fplMateRank) {
-          // For ranks worse than FPL mate, interpolate downward
-          const rankRatio = targetRank / fplMateRank;
-          return Math.round(fplMatePoints - (rankRatio - 1) * 15);
-        } else {
-          // For better ranks, use exponential scaling
-          const logCurrentRank = Math.log10(currentRank);
-          const logTargetRank = Math.log10(targetRank);
-          const logFplMateRank = Math.log10(fplMateRank);
-          
-          // Points increase exponentially as rank improves
-          const rankImprovement = (logCurrentRank - logTargetRank) / (logCurrentRank - logFplMateRank);
-          const pointsGap = fplMatePoints - currentPoints;
-          const extraPoints = pointsGap + (rankImprovement * pointsGap * 3); // Exponential scaling
-          
-          return Math.round(currentPoints + extraPoints);
-        }
-      };
-      
-      // Create realistic data points based on FPL mate reference
-      actualRankPoints[1] = calculatePointsForRank(1);
-      actualRankPoints[10] = calculatePointsForRank(10);
-      actualRankPoints[100] = calculatePointsForRank(100);
-      actualRankPoints[1000] = calculatePointsForRank(1000);
-      actualRankPoints[10000] = calculatePointsForRank(10000);
-      actualRankPoints[100000] = calculatePointsForRank(100000);
-      actualRankPoints[1000000] = calculatePointsForRank(1000000);
-      actualRankPoints[fplMateRank] = fplMatePoints; // Anchor point
-    }
+    dataPoints.forEach((point: any) => {
+      if (point.overallRank && point.totalPoints) {
+        actualRankPoints[point.overallRank] = point.totalPoints;
+      }
+    });
     
     // Function to get points needed for a specific rank target
     const getPointsForRank = (targetRank: number): number => {
@@ -693,24 +657,15 @@ export default function MyDashboard() {
       }
     });
     
-    // Safety score based on comprehensive data when available, otherwise use statistical estimates
-    let safetyScore;
+    // Safety score based on actual collected data only
     const totalDataPoints = dataPoints.length;
-    
-    if (hasComprehensiveData) {
-      const nearbyManagers = dataPoints.filter((point: any) => 
-        point.overallRank && Math.abs(point.overallRank - currentRank) <= 2000
-      );
-      const avgNearbyGW = nearbyManagers.length > 0 
-        ? nearbyManagers.reduce((sum: number, point: any) => sum + (point.lastGameweekPoints || 0), 0) / nearbyManagers.length
-        : 45;
-      safetyScore = Math.max(0, Math.ceil(avgNearbyGW * 0.9));
-    } else {
-      // Statistical safety score based on rank position and season progress
-      const baseGWAverage = 47; // Typical GW average
-      const rankVolatility = Math.min(0.15, Math.log10(currentRank) / Math.log10(totalManagers) * 0.2);
-      safetyScore = Math.max(0, Math.ceil(baseGWAverage * (0.85 + rankVolatility)));
-    }
+    const nearbyManagers = dataPoints.filter((point: any) => 
+      point.overallRank && Math.abs(point.overallRank - currentRank) <= 5000
+    );
+    const avgNearbyGW = nearbyManagers.length > 0 
+      ? nearbyManagers.reduce((sum: number, point: any) => sum + (point.lastGameweekPoints || 0), 0) / nearbyManagers.length
+      : 45;
+    const safetyScore = Math.max(0, Math.ceil(avgNearbyGW * 0.9));
     
     return {
       pointsNeeded,
@@ -1486,7 +1441,7 @@ export default function MyDashboard() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {rankingCalcs && (
+                      {rankingCalcs ? (
                         <div className="space-y-6">
                           {/* Elite Tiers */}
                           <div>
@@ -1571,6 +1526,17 @@ export default function MyDashboard() {
                               })}
                             </div>
                           </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">No Ranking Data Available</h3>
+                          <p className="text-gray-600 mb-4">
+                            Ranking benchmarks need to be collected from actual FPL league data.
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Run data collection after each gameweek to get accurate ranking thresholds.
+                          </p>
                         </div>
                       )}
                     </CardContent>
