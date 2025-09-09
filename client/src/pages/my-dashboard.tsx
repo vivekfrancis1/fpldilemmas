@@ -735,7 +735,10 @@ export default function MyDashboard() {
       if (currentRank <= tier.target) {
         pointsNeeded[tier.key] = 0; // Already achieved this rank
       } else {
-        const targetPoints = getPointsForRank(tier.target);
+        // Use rank just BETTER than the tier threshold for more accurate points calculation
+        // E.g., for Top 3M (target: 3,000,000), use rank 2,999,999 to get points needed
+        const targetRankForPoints = Math.max(1, tier.target - 1);
+        const targetPoints = getPointsForRank(targetRankForPoints);
         pointsNeeded[tier.key] = Math.max(0, targetPoints - currentPoints);
       }
     });
