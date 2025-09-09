@@ -726,10 +726,10 @@ export default function MyDashboard() {
       }
     });
     
-    // Safety score based on actual collected data only
+    // Safety score based on actual collected data only (consider only lower/better ranks)
     const totalDataPoints = dataPoints.length;
     const nearbyManagers = dataPoints.filter((point: any) => 
-      point.overallRank && Math.abs(point.overallRank - currentRank) <= 5000
+      point.overallRank && point.overallRank < currentRank && (currentRank - point.overallRank) <= 5000
     );
     const avgNearbyGW = nearbyManagers.length > 0 
       ? nearbyManagers.reduce((sum: number, point: any) => sum + (point.lastGameweekPoints || 0), 0) / nearbyManagers.length
