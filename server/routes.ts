@@ -8908,10 +8908,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const teamData = await teamResponse.json();
               currentTeam = teamData.picks;
               
-              // Extract transfers info from entry_history
-              if (teamData.entry_history) {
-                totalTransfers = teamData.entry_history.total_transfers || 0;
-              }
+              // Note: Transfer data will be fetched separately from transfers API
               
               // Get captain and vice-captain names
               const captainPick = teamData.picks.find((pick: any) => pick.is_captain);
@@ -8931,31 +8928,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Fetch transfer history
           let transfersIn = [];
           let transfersOut = [];
+          let allTimeTransfers = 0;
           
           try {
+            console.log(`🔄 Fetching transfer data for ${creator.name} (ID: ${creator.managerId})...`);
             const transferResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/transfers/`);
+            console.log(`📡 Transfer API response status for ${creator.name}: ${transferResponse.status}`);
+            
             if (transferResponse.ok) {
               const transferData = await transferResponse.json();
+              console.log(`📊 Raw transfer data for ${creator.name}:`, transferData?.length ? `${transferData.length} transfers found` : 'No transfers found');
               
-              // Get transfers for current gameweek
-              const currentGwTransfers = transferData.filter((transfer: any) => transfer.event === currentGameweek);
+              // Count all transfers made this season
+              allTimeTransfers = transferData ? transferData.length : 0;
+              console.log(`✅ ${creator.name} has made ${allTimeTransfers} transfers this season`);
               
-              transfersIn = currentGwTransfers.map((transfer: any) => ({
-                playerId: transfer.element_in,
-                playerName: `Player ${transfer.element_in}`,
-                gameweek: transfer.event,
-                cost: transfer.element_in_cost
-              }));
-              
-              transfersOut = currentGwTransfers.map((transfer: any) => ({
-                playerId: transfer.element_out,
-                playerName: `Player ${transfer.element_out}`,
-                gameweek: transfer.event,
-                cost: transfer.element_out_cost
-              }));
+              if (transferData && transferData.length > 0) {
+                // Get transfers for current gameweek
+                const currentGwTransfers = transferData.filter((transfer: any) => transfer.event === currentGameweek);
+                console.log(`📈 ${creator.name}: ${currentGwTransfers.length} transfers in GW${currentGameweek}`);
+                
+                transfersIn = currentGwTransfers.map((transfer: any) => ({
+                  playerId: transfer.element_in,
+                  playerName: `Player ${transfer.element_in}`,
+                  gameweek: transfer.event,
+                  cost: transfer.element_in_cost
+                }));
+                
+                transfersOut = currentGwTransfers.map((transfer: any) => ({
+                  playerId: transfer.element_out,
+                  playerName: `Player ${transfer.element_out}`,
+                  gameweek: transfer.event,
+                  cost: transfer.element_out_cost
+                }));
+              }
+            } else {
+              console.error(`❌ Transfer API failed for ${creator.name}: ${transferResponse.status} ${transferResponse.statusText}`);
             }
           } catch (error) {
-            console.error(`Error fetching transfer data for ${creator.name}:`, error);
+            console.error(`❌ Error fetching transfer data for ${creator.name}:`, error);
           }
           
           // Log the raw data for debugging
@@ -8976,7 +8987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             gameweekRank: managerData.summary_event_rank || null,
             teamValue: managerData.last_deadline_value ? parseFloat((managerData.last_deadline_value / 10).toFixed(1)) : null, // Convert from pence to pounds
             bank: managerData.last_deadline_bank ? parseFloat((managerData.last_deadline_bank / 10).toFixed(1)) : null,
-            totalTransfers: totalTransfers,
+            totalTransfers: allTimeTransfers,
             freeTransfers: managerData.free_transfers || 1,
             wildcardUsed: false, // Will need to check picks history for chips used
             benchBoostUsed: false,
