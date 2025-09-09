@@ -12399,17 +12399,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
-      // 1. Strategic collection from Overall league (11M+ managers)
-      console.log(`📊 Collecting strategic sample from Overall league (11M+ managers)`);
+      // 1. Top 50 managers from Overall league
+      console.log(`📊 Collecting Top 50 managers from Overall league`);
       
-      // Sample multiple pages from Overall league to get diverse rank ranges
       const overallLeagueId = 314;
-      const pagesToSample = [1, 50, 100, 500, 1000, 5000, 10000, 50000, 100000]; // Strategic sampling across ranks
-      
-      for (const page of pagesToSample) {
-        const overallData = await safeFetch(`http://localhost:5000/api/leagues-classic/${overallLeagueId}/standings?page=${page}`, `Overall league page ${page}`);
-        if (overallData?.standings?.results) {
-          const managers = overallData.standings.results.slice(0, 25); // 25 per page = 225 total from Overall
+      const overallData = await safeFetch(`http://localhost:5000/api/leagues-classic/${overallLeagueId}/standings?page=1`, `Overall league Top 50`);
+      if (overallData?.standings?.results) {
+        const managers = overallData.standings.results.slice(0, 50); // Exactly Top 50 managers
           
           for (const manager of managers) {
             if (manager.entry && manager.total && manager.rank) {
@@ -12465,102 +12461,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
-        
-        // Delay between pages
-        await new Promise(resolve => setTimeout(resolve, 200));
       }
       
-      // 2. Enhanced collection from user's leagues
-      const userLeaguesData = await safeFetch(`http://localhost:5000/api/manager/${managerId}/leagues`, 'User leagues');
-      if (userLeaguesData?.classic) {
-        // Prioritize large leagues for better data coverage
-        const userLeagues = userLeaguesData.classic
-          .filter(league => league.rank_count > 1000) // Focus on larger leagues
-          .slice(0, 8); // Increased from 10 but filtered for quality
-        console.log(`📊 Processing ${userLeagues.length} user leagues (large leagues only)`);
-        
-        for (const league of userLeagues) {
-          if (processedLeagues.has(league.id)) continue;
-          processedLeagues.add(league.id);
-          
-          // Sample multiple pages for larger leagues
-          const pagesToGet = league.rank_count > 10000 ? [1, 2, 5, 10] : [1, 2];
-          
-          for (const page of pagesToGet) {
-            const leagueData = await safeFetch(`http://localhost:5000/api/leagues-classic/${league.id}/standings?page=${page}`, `League ${league.name} page ${page}`);
-            if (leagueData?.standings?.results) {
-              const managers = leagueData.standings.results.slice(0, 30); // Increased from 50
-              
-              for (const manager of managers) {
-                if (manager.entry && manager.total && manager.rank) {
-                  const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Manager ${manager.entry}`);
-                  if (managerData) {
-                    // Get manager history to extract old rank and old points
-                    const historyData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}/history`, `Manager ${manager.entry} history`);
-                    let oldRank = null;
-                    let oldPoints = null;
-                    let gameweekPointsAfterTransfers = null;
-                    
-                    if (historyData?.current && historyData.current.length > 0) {
-                      // Find previous gameweek data
-                      const previousGW = historyData.current.find(gw => gw.event === currentGameweek - 1);
-                      if (previousGW) {
-                        oldRank = previousGW.overall_rank;
-                        oldPoints = previousGW.points;
-                      }
-                      
-                      // Find current gameweek data for points after transfers
-                      const currentGW = historyData.current.find(gw => gw.event === currentGameweek);
-                      if (currentGW) {
-                        gameweekPointsAfterTransfers = currentGW.points - currentGW.event_transfers_cost;
-                      }
-                    }
-                    
-                    const snapshot = {
-                      managerId: manager.entry,
-                      managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
-                      leagueId: league.id,
-                      leagueName: league.name,
-                      gameweek: currentGameweek,
-                      overallRank: managerData.summary_overall_rank, // Current live rank (new rank)
-                      overallPoints: managerData.summary_overall_points, // Current live points (new points)
-                      oldRank: oldRank, // Rank at start of gameweek
-                      oldPoints: oldPoints, // Points at start of gameweek
-                      gameweekPoints: managerData.summary_event_points, // Gameweek points before transfers
-                      gameweekPointsAfterTransfers: gameweekPointsAfterTransfers, // Gameweek points after transfers
-                      gameweekRank: manager.rank,
-                      teamValue: managerData.value ? (managerData.value / 10) : null,
-                      bank: managerData.bank ? (managerData.bank / 10) : null,
-                      totalTransfers: managerData.total_transfers,
-                      dataSource: 'user-league',
-                      contentCreatorId: null,
-                    };
-                    
-                    collectedSnapshots.push(snapshot);
-                    totalCollected++;
-                  }
-                  
-                  // Rate limiting
-                  await new Promise(resolve => setTimeout(resolve, 50));
-                }
-              }
-            }
-            
-            // Delay between pages
-            await new Promise(resolve => setTimeout(resolve, 200));
-          }
-          
-          // Delay between leagues
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
-      }
-      
-      // 3. Enhanced collection from content creator leagues
+      // 2. All FPL Content Creators and their leagues
       const creators = await db.select().from(fplContentCreators).orderBy(fplContentCreators.name);
-      const maxCreators = 25; // Increased from 15
-      console.log(`📊 Processing ${Math.min(maxCreators, creators.length)} content creator leagues`);
+      console.log(`📊 Processing all ${creators.length} FPL content creators and their leagues`);
       
-      for (const creator of creators.slice(0, maxCreators)) {
+      for (const creator of creators) {
         if (!creator.managerId) continue;
         
         // Add creator's own data
@@ -12611,25 +12518,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalCollected++;
         }
         
-        // Get creator's leagues with enhanced collection
+        // Get Top 50 from each of creator's leagues
         const creatorLeaguesData = await safeFetch(`http://localhost:5000/api/manager/${creator.managerId}/leagues`, `Creator ${creator.name} leagues`);
         if (creatorLeaguesData?.classic) {
-          // Prioritize larger leagues and increase collection per creator
-          const creatorLeagues = creatorLeaguesData.classic
-            .filter(league => league.rank_count > 500) // Focus on meaningful leagues
-            .slice(0, 5); // Increased from 3 to 5 per creator
-          
-          for (const league of creatorLeagues) {
+          // Process all creator leagues (no filtering)
+          for (const league of creatorLeaguesData.classic) {
             if (processedLeagues.has(league.id)) continue;
             processedLeagues.add(league.id);
             
-            // Sample multiple pages for larger creator leagues
-            const pagesToGet = league.rank_count > 5000 ? [1, 2, 3] : [1, 2];
-            
-            for (const page of pagesToGet) {
-              const leagueData = await safeFetch(`http://localhost:5000/api/leagues-classic/${league.id}/standings?page=${page}`, `Creator league ${league.name} page ${page}`);
-              if (leagueData?.standings?.results) {
-                const managers = leagueData.standings.results.slice(0, 35); // Increased sample size
+            // Get only Top 50 from each league (page 1 only)
+            const leagueData = await safeFetch(`http://localhost:5000/api/leagues-classic/${league.id}/standings?page=1`, `Creator league ${league.name} Top 50`);
+            if (leagueData?.standings?.results) {
+              const managers = leagueData.standings.results.slice(0, 50); // Exactly Top 50
                 
                 for (const manager of managers) {
                   if (manager.entry && manager.total && manager.rank) {
@@ -12681,18 +12581,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     }
                     
                     // Rate limiting
-                    await new Promise(resolve => setTimeout(resolve, 50)); // Reduced delay for efficiency
+                    await new Promise(resolve => setTimeout(resolve, 50));
                   }
                 }
               }
               
-              // Delay between pages
-              await new Promise(resolve => setTimeout(resolve, 150));
+              // Delay between leagues
+              await new Promise(resolve => setTimeout(resolve, 200));
             }
-            
-            // Delay between leagues
-            await new Promise(resolve => setTimeout(resolve, 200));
-          }
         }
         
         // Delay between creators
