@@ -1,4 +1,5 @@
 import { db } from './db';
+import { collectionAuditLog } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 
 interface FixtureData {
@@ -169,11 +170,14 @@ class MatchMonitor {
 
   private async logCollectionEvent(gameweek: number, totalCollected: number, leaguesProcessed: number, trigger: string) {
     try {
-      await db.execute(sql`
-        INSERT INTO collection_audit_log (gameweek, total_collected, leagues_processed, trigger_type, collected_at)
-        VALUES (${gameweek}, ${totalCollected}, ${leaguesProcessed}, ${trigger}, NOW())
-        ON CONFLICT DO NOTHING
-      `);
+      await db.insert(collectionAuditLog).values({
+        gameweek,
+        totalCollected,
+        leaguesProcessed,
+        triggerType: trigger,
+        success: totalCollected > 0,
+        errorMessage: totalCollected === 0 ? 'No data collected' : null,
+      });
     } catch (error) {
       // Ignore logging errors to not break the main flow
       console.warn('⚠️ Failed to log collection event:', error.message);

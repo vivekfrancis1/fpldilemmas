@@ -127,6 +127,15 @@ app.use((req, res, next) => {
       }).catch((error) => {
         console.error("Failed to start daily projections scheduler:", error);
       });
+
+      // Start match monitor for automated data collection
+      import('./match-monitor').then(({ matchMonitor }) => {
+        return matchMonitor.start();
+      }).then(() => {
+        console.log("✓ Match monitor started");
+      }).catch((error) => {
+        console.warn("⚠️ Failed to start match monitor:", error.message);
+      });
     });
 
     // Handle server startup errors

@@ -12857,6 +12857,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Match Monitor Control Endpoints
+  app.get('/api/match-monitor/status', async (req, res) => {
+    try {
+      const { matchMonitor } = await import('./match-monitor');
+      const status = matchMonitor.getStatus();
+      res.json({
+        ...status,
+        message: status.isRunning ? 'Match monitor is active' : 'Match monitor is stopped'
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to get match monitor status', details: error.message });
+    }
+  });
+
+  app.post('/api/match-monitor/start', async (req, res) => {
+    try {
+      const { matchMonitor } = await import('./match-monitor');
+      await matchMonitor.start();
+      res.json({ 
+        success: true, 
+        message: 'Match monitor started successfully',
+        status: matchMonitor.getStatus()
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to start match monitor', details: error.message });
+    }
+  });
+
+  app.post('/api/match-monitor/stop', async (req, res) => {
+    try {
+      const { matchMonitor } = await import('./match-monitor');
+      await matchMonitor.stop();
+      res.json({ 
+        success: true, 
+        message: 'Match monitor stopped successfully',
+        status: matchMonitor.getStatus()
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to stop match monitor', details: error.message });
+    }
+  });
+
+  // Collection audit log endpoint
+  app.get('/api/collection-audit', async (req, res) => {
+    try {
+      const { limit = 50 } = req.query;
+      const auditLogs = await db.select()
+        .from(collectionAuditLog)
+        .orderBy(desc(collectionAuditLog.collectedAt))
+        .limit(parseInt(limit as string));
+      
+      res.json(auditLogs);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch audit logs', details: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

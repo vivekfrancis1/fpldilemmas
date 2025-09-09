@@ -925,6 +925,25 @@ export const leagueManagerSnapshots = pgTable("league_manager_snapshots", {
 ]);
 
 export type LeagueManagerSnapshot = typeof leagueManagerSnapshots.$inferSelect;
+
+// Collection Audit Log - tracks automated collection events
+export const collectionAuditLog = pgTable("collection_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  gameweek: integer("gameweek").notNull(),
+  totalCollected: integer("total_collected").notNull().default(0),
+  leaguesProcessed: integer("leagues_processed").notNull().default(0),
+  triggerType: varchar("trigger_type", { length: 50 }).notNull(), // 'match-completion', 'manual', 'scheduled'
+  collectedAt: timestamp("collected_at").defaultNow(),
+  duration: integer("duration_ms"), // Collection duration in milliseconds
+  success: boolean("success").default(true),
+  errorMessage: text("error_message"),
+}, (table) => [
+  index("idx_audit_gameweek").on(table.gameweek),
+  index("idx_audit_trigger").on(table.triggerType),
+  index("idx_audit_collected_at").on(table.collectedAt),
+]);
+
+export type CollectionAuditLog = typeof collectionAuditLog.$inferSelect;
 export type InsertLeagueManagerSnapshot = typeof leagueManagerSnapshots.$inferInsert;
 
 export const insertLeagueManagerSnapshotSchema = createInsertSchema(leagueManagerSnapshots);
