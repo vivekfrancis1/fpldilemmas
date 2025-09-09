@@ -12185,24 +12185,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Comprehensive Rankings API - combines data from user leagues and content creator leagues
+  // Comprehensive Rankings API - fetches top 50 from all user and content creator leagues
   app.get('/api/comprehensive-rankings/:managerId', async (req, res) => {
     try {
       const { managerId } = req.params;
       
       console.log('Fetching comprehensive rankings for manager:', managerId);
       
-      // Get content creators from database (these are known good manager IDs)
-      const creators = await db.select().from(contentCreators).orderBy(contentCreators.name);
-      
       const allDataPoints = [];
+      const processedLeagues = new Set();
+      let leaguesProcessed = 0;
+      let managersProcessed = 0;
       
-      // Get user's manager data first
-      const userManagerResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
-      if (!userManagerResponse.ok) {
-        throw new Error(`User manager API responded with status: ${userManagerResponse.status}`);
+      // Helper function to safely fetch and parse JSON
+      const safeFetch = async (url: string, description: string) => {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            console.warn(`${description} API responded with status: ${response.status}`);
+            return null;
+          }
+          
+          const text = await response.text();
+          try {
+            return JSON.parse(text);
+          } catch (parseError) {
+            console.warn(`${description} API returned invalid JSON`);
+            return null;
+          }
+        } catch (error) {
+          console.warn(`Error fetching ${description}:`, error.message);
+          return null;
+        }
+      };
+      
+      // Get user's manager data and leagues
+      const userManagerData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${managerId}/`, 'User manager');
+      if (!userManagerData) {
+        throw new Error('Could not fetch user manager data');
       }
-      const userManagerData = await userManagerResponse.json();
       
       // Add user's own data
       allDataPoints.push({
@@ -12212,81 +12233,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastGameweekPoints: userManagerData.summary_event_points,
         source: 'user'
       });
+      managersProcessed++;
       
-      // Process content creators only (these are reliable data sources)
-      let creatorsProcessed = 0;
-      const maxCreators = 15; // Limit to prevent rate limiting
+      // Get user's leagues
+      const userLeaguesData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${managerId}/leagues/`, 'User leagues');
+      if (userLeaguesData?.classic) {
+        const userLeagues = userLeaguesData.classic.slice(0, 10); // Limit to 10 leagues
+        console.log(`Processing ${userLeagues.length} user leagues`);
+        
+        for (const league of userLeagues) {
+          if (processedLeagues.has(league.id)) continue;
+          processedLeagues.add(league.id);
+          
+          const leagueData = await safeFetch(`https://fantasy.premierleague.com/api/leagues-classic/${league.id}/standings/`, `League ${league.name}`);
+          if (leagueData?.standings?.results) {
+            leaguesProcessed++;
+            const top50 = leagueData.standings.results.slice(0, 50);
+            console.log(`Processing top 50 from user league: ${league.name}`);
+            
+            for (const manager of top50) {
+              if (manager.entry && manager.total) {
+                const managerData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${manager.entry}/`, `Manager ${manager.entry}`);
+                if (managerData) {
+                  allDataPoints.push({
+                    managerId: manager.entry,
+                    overallRank: managerData.summary_overall_rank,
+                    totalPoints: managerData.summary_overall_points,
+                    lastGameweekPoints: managerData.summary_event_points,
+                    source: `user-league-${league.name}`,
+                    leagueId: league.id,
+                    leagueName: league.name
+                  });
+                  managersProcessed++;
+                }
+                
+                // Rate limiting
+                await new Promise(resolve => setTimeout(resolve, 75));
+              }
+            }
+          }
+          
+          // Delay between leagues
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
+      
+      // Get content creators from database
+      const creators = await db.select().from(contentCreators).orderBy(contentCreators.name);
+      const maxCreators = 12; // Limit to prevent excessive requests
+      console.log(`Processing ${Math.min(maxCreators, creators.length)} content creators`);
       
       for (const creator of creators.slice(0, maxCreators)) {
         if (!creator.managerId) continue;
         
-        try {
-          // Get creator's manager data
-          const creatorManagerResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/`);
-          if (!creatorManagerResponse.ok) {
-            console.warn(`Creator ${creator.name} API responded with status: ${creatorManagerResponse.status}`);
-            continue;
-          }
-          const creatorManagerData = await creatorManagerResponse.json();
-          
-          // Add creator's data
+        // Add creator's data
+        const creatorData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/`, `Creator ${creator.name}`);
+        if (creatorData) {
           allDataPoints.push({
             managerId: creator.managerId,
-            overallRank: creatorManagerData.summary_overall_rank,
-            totalPoints: creatorManagerData.summary_overall_points,
-            lastGameweekPoints: creatorManagerData.summary_event_points,
+            overallRank: creatorData.summary_overall_rank,
+            totalPoints: creatorData.summary_overall_points,
+            lastGameweekPoints: creatorData.summary_event_points,
             source: `creator-${creator.name}`,
             creatorName: creator.name
           });
-          
-          creatorsProcessed++;
-          
-          // Small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (error) {
-          console.error(`Error fetching creator ${creator.name} (${creator.managerId}):`, error.message);
-          continue;
+          managersProcessed++;
         }
-      }
-      
-      // Add some additional data points from the Overall League (top performers)
-      try {
-        const overallLeagueResponse = await fetch(`https://fantasy.premierleague.com/api/leagues-classic/314/standings/`);
-        if (overallLeagueResponse.ok) {
-          const overallData = await overallLeagueResponse.json();
-          if (overallData.standings?.results) {
-            // Get top 50 managers from Overall League for reference points
-            const topManagers = overallData.standings.results.slice(0, 50);
-            topManagers.forEach((manager: any) => {
-              if (manager.entry && manager.total && manager.rank) {
-                allDataPoints.push({
-                  managerId: manager.entry,
-                  overallRank: manager.rank,
-                  totalPoints: manager.total,
-                  lastGameweekPoints: manager.event_total || 0,
-                  source: 'overall-league-top',
-                  leagueRank: manager.rank
-                });
+        
+        // Get creator's leagues
+        const creatorLeaguesData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/leagues/`, `Creator ${creator.name} leagues`);
+        if (creatorLeaguesData?.classic) {
+          const creatorLeagues = creatorLeaguesData.classic.slice(0, 3); // Limit to 3 leagues per creator
+          
+          for (const league of creatorLeagues) {
+            if (processedLeagues.has(league.id)) continue;
+            processedLeagues.add(league.id);
+            
+            const leagueData = await safeFetch(`https://fantasy.premierleague.com/api/leagues-classic/${league.id}/standings/`, `Creator league ${league.name}`);
+            if (leagueData?.standings?.results) {
+              leaguesProcessed++;
+              const top50 = leagueData.standings.results.slice(0, 50);
+              console.log(`Processing top 50 from creator league: ${league.name} (${creator.name})`);
+              
+              for (const manager of top50) {
+                if (manager.entry && manager.total) {
+                  const managerData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${manager.entry}/`, `Manager ${manager.entry}`);
+                  if (managerData) {
+                    allDataPoints.push({
+                      managerId: manager.entry,
+                      overallRank: managerData.summary_overall_rank,
+                      totalPoints: managerData.summary_overall_points,
+                      lastGameweekPoints: managerData.summary_event_points,
+                      source: `creator-league-${creator.name}-${league.name}`,
+                      leagueId: league.id,
+                      leagueName: league.name,
+                      creatorName: creator.name
+                    });
+                    managersProcessed++;
+                  }
+                  
+                  // Rate limiting
+                  await new Promise(resolve => setTimeout(resolve, 75));
+                }
               }
-            });
+            }
+            
+            // Delay between leagues
+            await new Promise(resolve => setTimeout(resolve, 200));
           }
         }
-      } catch (error) {
-        console.warn('Could not fetch Overall League data:', error.message);
+        
+        // Delay between creators
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
       
-      console.log(`Collected ${allDataPoints.length} data points from ${creatorsProcessed} content creators`);
+      // Remove duplicates (same manager might be in multiple leagues)
+      const uniqueDataPoints = allDataPoints.filter((point, index, self) => 
+        index === self.findIndex(p => p.managerId === point.managerId)
+      );
+      
+      console.log(`Collected ${uniqueDataPoints.length} unique managers from ${leaguesProcessed} leagues (${managersProcessed} total data points processed)`);
       
       res.json({
-        dataPoints: allDataPoints,
-        totalDataPoints: allDataPoints.length,
-        contentCreatorsProcessed: creatorsProcessed,
-        source: 'optimized-approach'
+        dataPoints: uniqueDataPoints,
+        totalDataPoints: uniqueDataPoints.length,
+        leaguesProcessed,
+        managersProcessed,
+        source: 'comprehensive-top-50-approach'
       });
       
     } catch (error) {
       console.error('Error fetching comprehensive rankings:', error);
-      res.status(500).json({ error: 'Failed to fetch comprehensive rankings' });
+      res.status(500).json({ error: 'Failed to fetch comprehensive rankings', details: error.message });
     }
   });
 
