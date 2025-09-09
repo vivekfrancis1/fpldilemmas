@@ -12307,7 +12307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (creatorLeaguesData?.classic) {
           // Sort leagues by entry count (descending) to get most active leagues first
           const sortedLeagues = creatorLeaguesData.classic
-            .filter(league => league.entry_count && league.entry_count > 10) // Only leagues with 10+ members
+            .filter(league => league.entry_count && league.entry_count >= 3) // Only leagues with 3+ members (more inclusive)
             .sort((a, b) => (b.entry_count || 0) - (a.entry_count || 0));
           
           // Take at least 5 leagues, or all available if less than 5
@@ -12529,7 +12529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (creatorLeaguesData?.classic) {
           // Sort leagues by entry count (descending) to get most active leagues first
           const sortedLeagues = creatorLeaguesData.classic
-            .filter(league => league.entry_count && league.entry_count > 10) // Only leagues with 10+ members
+            .filter(league => league.entry_count && league.entry_count >= 3) // Only leagues with 3+ members (more inclusive)
             .sort((a, b) => (b.entry_count || 0) - (a.entry_count || 0));
           
           // Take at least 5 leagues, or all available if less than 5
