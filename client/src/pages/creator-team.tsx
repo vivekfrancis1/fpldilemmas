@@ -174,6 +174,17 @@ export default function CreatorTeam() {
     return completedGameweeks.includes(gw.gameweek);
   });
 
+  // Helper function to get player data from bootstrap
+  const getPlayerData = (playerId: number) => {
+    if (!bootstrapData?.elements) return null;
+    return bootstrapData.elements.find((p: any) => p.id === playerId);
+  };
+
+  // Helper function to format price
+  const formatPrice = (cost: number) => {
+    return `£${(cost / 10).toFixed(1)}m`;
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -451,12 +462,40 @@ export default function CreatorTeam() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                {player.multiplier > 1 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {player.multiplier}x
-                                  </Badge>
-                                )}
+                              <div className="text-right space-y-1">
+                                {(() => {
+                                  const playerData = getPlayerData(player.element);
+                                  return playerData ? (
+                                    <>
+                                      <p className="font-semibold text-green-600">{formatPrice(playerData.now_cost)}</p>
+                                      {player.is_captain ? (
+                                        <div className="space-y-1">
+                                          <p className="text-sm font-semibold text-amber-600">
+                                            {(playerData.event_points || 0) * 2} GW pts
+                                          </p>
+                                          <p className="text-xs text-gray-500">
+                                            ({playerData.event_points || 0}×2 captain)
+                                          </p>
+                                        </div>
+                                      ) : (
+                                        <p className="text-sm text-gray-600">{playerData.event_points || 0} GW pts</p>
+                                      )}
+                                      {player.multiplier > 1 && (
+                                        <Badge variant="outline" className="text-xs">
+                                          {player.multiplier}x
+                                        </Badge>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      {player.multiplier > 1 && (
+                                        <Badge variant="outline" className="text-xs">
+                                          {player.multiplier}x
+                                        </Badge>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </div>
                             </div>
                           ))}
@@ -501,6 +540,17 @@ export default function CreatorTeam() {
                                       <span className="text-sm font-medium text-gray-700">{player.team_name}</span>
                                     </div>
                                   </div>
+                                </div>
+                                <div className="text-right space-y-1">
+                                  {(() => {
+                                    const playerData = getPlayerData(player.element);
+                                    return playerData ? (
+                                      <>
+                                        <p className="font-semibold text-green-600">{formatPrice(playerData.now_cost)}</p>
+                                        <p className="text-sm text-gray-600">{playerData.event_points || 0} GW pts</p>
+                                      </>
+                                    ) : null;
+                                  })()}
                                 </div>
                               </div>
                             ))}
