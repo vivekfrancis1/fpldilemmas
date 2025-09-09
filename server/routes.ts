@@ -12734,6 +12734,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Manual ranking benchmarks generation endpoint
+  app.post('/api/generate-ranking-benchmarks/:gameweek', async (req, res) => {
+    try {
+      const { gameweek } = req.params;
+      await generateRankingBenchmarks(parseInt(gameweek));
+      res.json({ success: true, gameweek: parseInt(gameweek) });
+    } catch (error) {
+      console.error('Error generating ranking benchmarks:', error);
+      res.status(500).json({ error: 'Failed to generate ranking benchmarks', details: error.message });
+    }
+  });
+
   // Database-based Rankings API - uses only actual stored data, no estimations
   app.get('/api/database-rankings/:managerId', async (req, res) => {
     try {
