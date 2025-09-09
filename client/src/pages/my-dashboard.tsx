@@ -749,6 +749,7 @@ export default function MyDashboard() {
         const targetPoints = getPointsForRank(targetRankForPoints);
         pointsNeeded[tier.key] = Math.max(0, targetPoints - currentPoints);
         if (tier.key === 'top3M') {
+          console.log(`Top 3M Debug Details: targetRankForPoints=${targetRankForPoints}, targetPoints=${targetPoints}, currentPoints=${currentPoints}, calculation=${targetPoints - currentPoints}`);
           console.log(`Top 3M NOT achieved - points needed: ${pointsNeeded[tier.key]}`);
         }
       }
