@@ -744,13 +744,12 @@ export default function MyDashboard() {
       });
       
       // Since these are ranking benchmarks (not actual manager data), 
-      // use rank-based safety score calculation
-      const closestRank = closestManager.overallRank;
-      const rankBasedGW = closestRank <= 100000 ? 50 : 
-                         closestRank <= 500000 ? 47 : 
-                         closestRank <= 1000000 ? 45 : 
-                         closestRank <= 2000000 ? 43 : 
-                         closestRank <= 4000000 ? 41 : 39;
+      // use the current manager's rank to determine safety score
+      const rankBasedGW = currentRank <= 100000 ? 50 : 
+                         currentRank <= 500000 ? 47 : 
+                         currentRank <= 1000000 ? 45 : 
+                         currentRank <= 2000000 ? 43 : 
+                         currentRank <= 4000000 ? 41 : 39;
       safetyScore = Math.max(0, Math.ceil(rankBasedGW * 0.9));
     } else {
       // No better-ranked managers in database - use fallback
