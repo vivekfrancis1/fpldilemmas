@@ -560,30 +560,47 @@ export default function MyDashboard() {
     const currentRank = managerData.summary_overall_rank;
     const currentGW = managerData.current_event;
     
-    // Estimate total managers (FPL typically has 9-11M active managers)
-    const totalManagers = 11000000; // Conservative estimate
+    // Exact total managers in Overall League
+    const totalManagers = 11304765;
     
     // Statistical estimates based on historical FPL data patterns
     // These are rough estimates of points typically needed for each tier at different stages of season
     const gameweekProgress = currentGW / 38;
     
-    // Base estimates that scale with season progress
-    const baseEstimates = {
-      top1k: Math.round(currentPoints + (80 - (gameweekProgress * 60))), // More points needed early season
-      top10k: Math.round(currentPoints + (60 - (gameweekProgress * 45))),
-      top100k: Math.round(currentPoints + (40 - (gameweekProgress * 30))),
-      top1M: Math.round(currentPoints + (20 - (gameweekProgress * 15))),
-    };
+    // Define all ranking tiers
+    const rankingTiers = [
+      { key: 'top1', name: 'Top 1', target: 1, multiplier: 2.5 },
+      { key: 'top10', name: 'Top 10', target: 10, multiplier: 2.2 },
+      { key: 'top100', name: 'Top 100', target: 100, multiplier: 2.0 },
+      { key: 'top1k', name: 'Top 1k', target: 1000, multiplier: 1.8 },
+      { key: 'top5k', name: 'Top 5k', target: 5000, multiplier: 1.6 },
+      { key: 'top10k', name: 'Top 10k', target: 10000, multiplier: 1.5 },
+      { key: 'top25k', name: 'Top 25k', target: 25000, multiplier: 1.4 },
+      { key: 'top50k', name: 'Top 50k', target: 50000, multiplier: 1.3 },
+      { key: 'top100k', name: 'Top 100k', target: 100000, multiplier: 1.25 },
+      { key: 'top250k', name: 'Top 250k', target: 250000, multiplier: 1.2 },
+      { key: 'top500k', name: 'Top 500k', target: 500000, multiplier: 1.15 },
+      { key: 'top1M', name: 'Top 1M', target: 1000000, multiplier: 1.1 },
+      { key: 'top2M', name: 'Top 2M', target: 2000000, multiplier: 1.08 },
+      { key: 'top3M', name: 'Top 3M', target: 3000000, multiplier: 1.06 },
+      { key: 'top5M', name: 'Top 5M', target: 5000000, multiplier: 1.04 },
+    ];
     
-    // Adjust based on current rank to make estimates more realistic
+    // Calculate base points needed scaling with season progress
+    const basePointsNeeded = 100 - (gameweekProgress * 70); // More points needed early season
     const rankFactor = Math.log10(currentRank) / Math.log10(totalManagers);
     
-    const adjustedEstimates = {
-      top1k: Math.max(0, Math.round(baseEstimates.top1k * (1.2 - rankFactor * 0.3))),
-      top10k: Math.max(0, Math.round(baseEstimates.top10k * (1.15 - rankFactor * 0.2))),
-      top100k: Math.max(0, Math.round(baseEstimates.top100k * (1.1 - rankFactor * 0.15))),
-      top1M: Math.max(0, Math.round(baseEstimates.top1M * (1.05 - rankFactor * 0.1))),
-    };
+    // Calculate points needed for each tier
+    const adjustedEstimates: Record<string, number> = {};
+    
+    rankingTiers.forEach(tier => {
+      if (currentRank <= tier.target) {
+        adjustedEstimates[tier.key] = 0; // Already achieved this rank
+      } else {
+        const tierPoints = Math.round(basePointsNeeded * tier.multiplier * (1.1 - rankFactor * 0.2));
+        adjustedEstimates[tier.key] = Math.max(0, tierPoints);
+      }
+    });
     
     // Safety score: estimate points needed to maintain current rank
     // Based on typical gameweek scoring distribution (average ~45-50 points per GW)
@@ -593,6 +610,7 @@ export default function MyDashboard() {
     
     return {
       pointsNeeded: adjustedEstimates,
+      rankingTiers,
       safetyScore,
       totalManagers,
       rankPercentile: ((currentRank / totalManagers) * 100).toFixed(2),
@@ -1362,32 +1380,93 @@ export default function MyDashboard() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
-                          <div className="text-xs font-medium text-amber-700 mb-2">Top 1k</div>
-                          <div className="text-xl font-bold text-amber-900">
-                            {rankingCalcs ? rankingCalcs.pointsNeeded.top1k.toLocaleString() : '-'}
+                      {rankingCalcs && (
+                        <div className="space-y-6">
+                          {/* Elite Tiers */}
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Elite Tiers</h4>
+                            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                              {rankingCalcs.rankingTiers.slice(0, 6).map((tier) => {
+                                const points = rankingCalcs.pointsNeeded[tier.key];
+                                const isAchieved = points === 0;
+                                return (
+                                  <div 
+                                    key={tier.key}
+                                    className={`text-center p-3 rounded-lg border ${
+                                      isAchieved 
+                                        ? 'bg-green-50 border-green-200' 
+                                        : 'bg-amber-50 border-amber-200'
+                                    }`}
+                                  >
+                                    <div className="text-xs font-medium text-gray-700 mb-1">{tier.name}</div>
+                                    <div className={`text-lg font-bold ${
+                                      isAchieved ? 'text-green-900' : 'text-amber-900'
+                                    }`}>
+                                      {isAchieved ? '✓' : points.toLocaleString()}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Good Tiers */}
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Good Tiers</h4>
+                            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                              {rankingCalcs.rankingTiers.slice(6, 12).map((tier) => {
+                                const points = rankingCalcs.pointsNeeded[tier.key];
+                                const isAchieved = points === 0;
+                                return (
+                                  <div 
+                                    key={tier.key}
+                                    className={`text-center p-3 rounded-lg border ${
+                                      isAchieved 
+                                        ? 'bg-green-50 border-green-200' 
+                                        : 'bg-blue-50 border-blue-200'
+                                    }`}
+                                  >
+                                    <div className="text-xs font-medium text-gray-700 mb-1">{tier.name}</div>
+                                    <div className={`text-lg font-bold ${
+                                      isAchieved ? 'text-green-900' : 'text-blue-900'
+                                    }`}>
+                                      {isAchieved ? '✓' : points.toLocaleString()}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Mass Tiers */}
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Mass Tiers</h4>
+                            <div className="grid grid-cols-3 gap-3">
+                              {rankingCalcs.rankingTiers.slice(12).map((tier) => {
+                                const points = rankingCalcs.pointsNeeded[tier.key];
+                                const isAchieved = points === 0;
+                                return (
+                                  <div 
+                                    key={tier.key}
+                                    className={`text-center p-3 rounded-lg border ${
+                                      isAchieved 
+                                        ? 'bg-green-50 border-green-200' 
+                                        : 'bg-purple-50 border-purple-200'
+                                    }`}
+                                  >
+                                    <div className="text-xs font-medium text-gray-700 mb-1">{tier.name}</div>
+                                    <div className={`text-lg font-bold ${
+                                      isAchieved ? 'text-green-900' : 'text-purple-900'
+                                    }`}>
+                                      {isAchieved ? '✓' : points.toLocaleString()}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
-                        <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-                          <div className="text-xs font-medium text-orange-700 mb-2">Top 10k</div>
-                          <div className="text-xl font-bold text-orange-900">
-                            {rankingCalcs ? rankingCalcs.pointsNeeded.top10k.toLocaleString() : '-'}
-                          </div>
-                        </div>
-                        <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                          <div className="text-xs font-medium text-blue-700 mb-2">Top 100k</div>
-                          <div className="text-xl font-bold text-blue-900">
-                            {rankingCalcs ? rankingCalcs.pointsNeeded.top100k.toLocaleString() : '-'}
-                          </div>
-                        </div>
-                        <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                          <div className="text-xs font-medium text-green-700 mb-2">Top 1M</div>
-                          <div className="text-xl font-bold text-green-900">
-                            {rankingCalcs ? rankingCalcs.pointsNeeded.top1M.toLocaleString() : '-'}
-                          </div>
-                        </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 </>);
