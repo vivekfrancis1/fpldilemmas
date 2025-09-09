@@ -369,6 +369,13 @@ export default function MyDashboard() {
     enabled: !!searchedId,
   });
 
+  // Fetch Overall League (314) data for accurate ranking calculations
+  const { data: overallLeagueData } = useQuery({
+    queryKey: [`/api/leagues/314/analyze`],
+    enabled: !!searchedId,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
   // Search handlers
   const handleSearch = () => {
     if (managerId.trim()) {
@@ -547,6 +554,48 @@ export default function MyDashboard() {
   const getTotalPoints = (): number => {
     if (!historyData || !Array.isArray(historyData?.current)) return 0;
     return historyData.current.reduce((total: number, gw: any) => total + (gw.points || 0), 0);
+  };
+
+  // Calculate accurate rankings using Overall League data
+  const getRankingCalculations = () => {
+    if (!overallLeagueData?.standings || !managerData) return null;
+    
+    const standings = overallLeagueData.standings;
+    const totalManagers = standings.length;
+    const currentPoints = managerData.summary_overall_points;
+    const currentRank = managerData.summary_overall_rank;
+    
+    // Find cutoff points for different rankings
+    const top1k = Math.min(1000, totalManagers);
+    const top10k = Math.min(10000, totalManagers);
+    const top100k = Math.min(100000, totalManagers);
+    const top1M = Math.min(1000000, totalManagers);
+    
+    // Get points at these ranks (assuming standings are sorted by rank)
+    const top1kPoints = standings[top1k - 1]?.total || currentPoints;
+    const top10kPoints = standings[top10k - 1]?.total || currentPoints;
+    const top100kPoints = standings[top100k - 1]?.total || currentPoints;
+    const top1MPoints = standings[top1M - 1]?.total || currentPoints;
+    
+    // Calculate safety score (points needed to maintain position)
+    // Look at managers just behind current rank and estimate buffer needed
+    const managersNearRank = standings.filter(s => 
+      Math.abs(s.rank - currentRank) <= 1000
+    );
+    const averageGWPoints = managersNearRank.reduce((sum, s) => sum + (s.event_total || 0), 0) / managersNearRank.length || 0;
+    const safetyScore = Math.max(0, Math.ceil(averageGWPoints * 0.8)); // 80% of average to stay safe
+    
+    return {
+      pointsNeeded: {
+        top1k: Math.max(0, top1kPoints - currentPoints),
+        top10k: Math.max(0, top10kPoints - currentPoints),
+        top100k: Math.max(0, top100kPoints - currentPoints),
+        top1M: Math.max(0, top1MPoints - currentPoints),
+      },
+      safetyScore,
+      totalManagers,
+      rankPercentile: ((currentRank / totalManagers) * 100).toFixed(2),
+    };
   };
 
   const sortPlayersByPosition = (picks: TeamPick[]) => {
@@ -1180,7 +1229,9 @@ export default function MyDashboard() {
 
             {/* Live Rank Tab */}
             <TabsContent value="liverank" className="space-y-6">
-              {managerData && historyData && (
+              {managerData && historyData && (() => {
+                const rankingCalcs = getRankingCalculations();
+                return (
                 <>
                   {/* Main Rank Card */}
                   <Card className="bg-gradient-to-br from-blue-50 via-purple-50 to-green-50 border-0 shadow-xl">
@@ -1195,6 +1246,12 @@ export default function MyDashboard() {
                           <Trophy className="h-4 w-4" />
                           {formatRank(managerData.summary_overall_rank)}
                         </span>
+                        {rankingCalcs && (
+                          <>
+                            <span>•</span>
+                            <span>Top {rankingCalcs.rankPercentile}%</span>
+                          </>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -1225,13 +1282,13 @@ export default function MyDashboard() {
                         <div className="text-center p-4 bg-white/70 rounded-lg">
                           <div className="text-sm text-gray-600 mb-1">Safety</div>
                           <div className="text-2xl font-bold text-orange-600">
-                            {Math.max(0, Math.round((managerData.summary_overall_points * 0.02) - managerData.summary_event_points))}
+                            {rankingCalcs ? rankingCalcs.safetyScore : 0}
                           </div>
                         </div>
                         <div className="text-center p-4 bg-white/70 rounded-lg">
                           <div className="text-sm text-gray-600 mb-1">Off Top 10k</div>
                           <div className="text-2xl font-bold text-red-600">
-                            {Math.max(0, Math.round((managerData.summary_overall_points * 0.15) - managerData.summary_event_points))}
+                            {rankingCalcs ? rankingCalcs.pointsNeeded.top10k : 0}
                           </div>
                         </div>
                       </div>
@@ -1286,9 +1343,9 @@ export default function MyDashboard() {
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="text-sm font-medium text-gray-700 mb-1">Rank %</div>
+                          <div className="text-sm font-medium text-gray-700 mb-1">Total Managers</div>
                           <div className="text-lg font-bold text-indigo-600">
-                            Top {((managerData.summary_overall_rank / 10000000) * 100).toFixed(2)}%
+                            {rankingCalcs ? rankingCalcs.totalManagers.toLocaleString() : '11M+'}
                           </div>
                         </div>
                       </div>
@@ -1300,7 +1357,7 @@ export default function MyDashboard() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-gray-800">
                         <Target className="h-5 w-5 text-blue-600" />
-                        Points Needed for Rankings
+                        Points Needed for Rankings {rankingCalcs && <span className="text-sm font-normal text-gray-500">(Based on {rankingCalcs.totalManagers.toLocaleString()} managers)</span>}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1308,32 +1365,32 @@ export default function MyDashboard() {
                         <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
                           <div className="text-xs font-medium text-amber-700 mb-2">Top 1k</div>
                           <div className="text-xl font-bold text-amber-900">
-                            {Math.max(0, Math.round(managerData.summary_overall_points * 1.2 - managerData.summary_overall_points))}
+                            {rankingCalcs ? rankingCalcs.pointsNeeded.top1k.toLocaleString() : '-'}
                           </div>
                         </div>
                         <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
                           <div className="text-xs font-medium text-orange-700 mb-2">Top 10k</div>
                           <div className="text-xl font-bold text-orange-900">
-                            {Math.max(0, Math.round(managerData.summary_overall_points * 1.15 - managerData.summary_overall_points))}
+                            {rankingCalcs ? rankingCalcs.pointsNeeded.top10k.toLocaleString() : '-'}
                           </div>
                         </div>
                         <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                           <div className="text-xs font-medium text-blue-700 mb-2">Top 100k</div>
                           <div className="text-xl font-bold text-blue-900">
-                            {Math.max(0, Math.round(managerData.summary_overall_points * 1.1 - managerData.summary_overall_points))}
+                            {rankingCalcs ? rankingCalcs.pointsNeeded.top100k.toLocaleString() : '-'}
                           </div>
                         </div>
                         <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
                           <div className="text-xs font-medium text-green-700 mb-2">Top 1M</div>
                           <div className="text-xl font-bold text-green-900">
-                            {Math.max(0, Math.round(managerData.summary_overall_points * 1.05 - managerData.summary_overall_points))}
+                            {rankingCalcs ? rankingCalcs.pointsNeeded.top1M.toLocaleString() : '-'}
                           </div>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                </>
-              )}
+                </>);
+              })()}
               
               {!managerData && searchedId && (
                 <div className="text-center py-8">
