@@ -12305,10 +12305,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get creator's leagues
         const creatorLeaguesData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/leagues/`, `Creator ${creator.name} leagues`);
         if (creatorLeaguesData?.classic) {
-          // Sort leagues by entry count (descending) to get most active leagues first
+          // Sort leagues by member count (descending) to get most active leagues first
+          // Include private leagues (type 'x') and moderately sized public leagues
           const sortedLeagues = creatorLeaguesData.classic
-            .filter(league => league.entry_count && league.entry_count >= 3) // Only leagues with 3+ members (more inclusive)
-            .sort((a, b) => (b.entry_count || 0) - (a.entry_count || 0));
+            .filter(league => 
+              league.rank_count && 
+              ((league.league_type === 'x' && league.rank_count >= 10) || // Private leagues with 10+ members
+               (league.league_type === 's' && league.rank_count >= 100 && league.rank_count <= 100000)) // Public leagues 100-100k members
+            )
+            .sort((a, b) => (b.rank_count || 0) - (a.rank_count || 0));
           
           // Take at least 5 leagues, or all available if less than 5
           const creatorLeagues = sortedLeagues.slice(0, Math.max(5, sortedLeagues.length));
@@ -12527,10 +12532,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get Top 50 from at least 5 leagues per creator
         const creatorLeaguesData = await safeFetch(`http://localhost:5000/api/manager/${creator.managerId}/leagues`, `Creator ${creator.name} leagues`);
         if (creatorLeaguesData?.classic) {
-          // Sort leagues by entry count (descending) to get most active leagues first
+          // Sort leagues by member count (descending) to get most active leagues first
+          // Include private leagues (type 'x') and moderately sized public leagues
           const sortedLeagues = creatorLeaguesData.classic
-            .filter(league => league.entry_count && league.entry_count >= 3) // Only leagues with 3+ members (more inclusive)
-            .sort((a, b) => (b.entry_count || 0) - (a.entry_count || 0));
+            .filter(league => 
+              league.rank_count && 
+              ((league.league_type === 'x' && league.rank_count >= 10) || // Private leagues with 10+ members
+               (league.league_type === 's' && league.rank_count >= 100 && league.rank_count <= 100000)) // Public leagues 100-100k members
+            )
+            .sort((a, b) => (b.rank_count || 0) - (a.rank_count || 0));
           
           // Take at least 5 leagues, or all available if less than 5
           const leaguesToProcess = sortedLeagues.slice(0, Math.max(5, sortedLeagues.length));
