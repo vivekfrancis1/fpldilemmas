@@ -743,17 +743,17 @@ export default function MyDashboard() {
         return currentDistance < closestDistance ? manager : closest;
       });
       
-      // Since these are ranking benchmarks (not actual manager data), 
-      // use the current manager's rank to determine safety score
-      const rankBasedGW = currentRank <= 100000 ? 50 : 
-                         currentRank <= 500000 ? 47 : 
-                         currentRank <= 1000000 ? 45 : 
-                         currentRank <= 2000000 ? 43 : 
-                         currentRank <= 4000000 ? 41 : 39;
-      safetyScore = Math.max(0, Math.ceil(rankBasedGW * 0.9));
+      // Use actual data: calculate safety score based on points gap to closest better rank
+      const pointsGapToClosestBetter = closestManager.totalPoints - currentPoints;
+      const rankGapToClosestBetter = currentRank - closestManager.overallRank;
+      
+      // Safety score = points needed per rank position × realistic safety margin
+      const pointsPerRankPosition = pointsGapToClosestBetter / rankGapToClosestBetter;
+      const safetyMarginRanks = Math.min(50000, rankGapToClosestBetter * 0.1); // 10% safety margin, max 50k ranks
+      safetyScore = Math.max(25, Math.ceil(pointsPerRankPosition * safetyMarginRanks));
     } else {
-      // No better-ranked managers in database - use fallback
-      safetyScore = 40;
+      // No better-ranked managers in database - this shouldn't happen with proper benchmarks
+      safetyScore = null;
     }
     
     return {
