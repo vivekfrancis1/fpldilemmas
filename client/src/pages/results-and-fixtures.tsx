@@ -1,11 +1,13 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Clock, Trophy, Target, Home, Plane, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Calendar, Clock, Trophy, Target, Home, Plane, ArrowUpDown, ArrowUp, ArrowDown, X, User, Shield, Star, Zap } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface Fixture {
   id: number;
@@ -28,11 +30,46 @@ interface Team {
   short_name: string;
 }
 
+interface PlayerStats {
+  playerId: number;
+  playerName: string;
+  teamName: string;
+  position: string;
+  minutes: number;
+  goals_scored: number;
+  assists: number;
+  clean_sheets: number;
+  goals_conceded: number;
+  own_goals: number;
+  penalties_saved: number;
+  penalties_missed: number;
+  yellow_cards: number;
+  red_cards: number;
+  saves: number;
+  bonus: number;
+  bps: number;
+  influence: number;
+  creativity: number;
+  threat: number;
+  ict_index: number;
+  total_points: number;
+}
+
+interface MatchStats {
+  fixture: any;
+  homeTeamStats: PlayerStats[];
+  awayTeamStats: PlayerStats[];
+}
+
 export default function ResultsAndFixtures() {
   const [selectedGameweek, setSelectedGameweek] = useState<"all" | number>("all");
   const [viewMode, setViewMode] = useState<"results" | "fixtures" | "all">("all");
   const [sortBy, setSortBy] = useState<"gameweek" | "date" | "team">("gameweek");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [selectedMatch, setSelectedMatch] = useState<any>(null);
+  const [isMatchStatsOpen, setIsMatchStatsOpen] = useState(false);
+  const [matchStats, setMatchStats] = useState<MatchStats | null>(null);
+  const [isLoadingMatchStats, setIsLoadingMatchStats] = useState(false);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -156,6 +193,128 @@ export default function ResultsAndFixtures() {
         minute: '2-digit'
       })
     };
+  };
+
+  // Fetch match statistics for a specific fixture
+  const fetchMatchStats = async (fixture: any) => {
+    if (!fixture.isResult) return null;
+    
+    setIsLoadingMatchStats(true);
+    try {
+      // Get all players from both teams
+      const homeTeamPlayers = bootstrapData?.elements.filter(p => p.team === fixture.team_h) || [];
+      const awayTeamPlayers = bootstrapData?.elements.filter(p => p.team === fixture.team_a) || [];
+      
+      // Fetch detailed stats for each player
+      const [homeStats, awayStats] = await Promise.all([
+        Promise.all(homeTeamPlayers.map(async (player: any) => {
+          try {
+            const response = await fetch(`/api/element-summary/${player.id}`);
+            if (!response.ok) throw new Error('Failed to fetch player data');
+            const data = await response.json();
+            
+            // Find the specific gameweek data
+            const gameweekData = data.history?.find((h: any) => h.round === fixture.event);
+            
+            if (!gameweekData) return null;
+            
+            return {
+              playerId: player.id,
+              playerName: player.web_name,
+              teamName: fixture.homeTeam?.short_name || 'Home',
+              position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'Unknown',
+              minutes: gameweekData.minutes || 0,
+              goals_scored: gameweekData.goals_scored || 0,
+              assists: gameweekData.assists || 0,
+              clean_sheets: gameweekData.clean_sheets || 0,
+              goals_conceded: gameweekData.goals_conceded || 0,
+              own_goals: gameweekData.own_goals || 0,
+              penalties_saved: gameweekData.penalties_saved || 0,
+              penalties_missed: gameweekData.penalties_missed || 0,
+              yellow_cards: gameweekData.yellow_cards || 0,
+              red_cards: gameweekData.red_cards || 0,
+              saves: gameweekData.saves || 0,
+              bonus: gameweekData.bonus || 0,
+              bps: gameweekData.bps || 0,
+              influence: parseFloat(gameweekData.influence) || 0,
+              creativity: parseFloat(gameweekData.creativity) || 0,
+              threat: parseFloat(gameweekData.threat) || 0,
+              ict_index: parseFloat(gameweekData.ict_index) || 0,
+              total_points: gameweekData.total_points || 0
+            };
+          } catch (error) {
+            console.error(`Error fetching data for player ${player.web_name}:`, error);
+            return null;
+          }
+        })),
+        Promise.all(awayTeamPlayers.map(async (player: any) => {
+          try {
+            const response = await fetch(`/api/element-summary/${player.id}`);
+            if (!response.ok) throw new Error('Failed to fetch player data');
+            const data = await response.json();
+            
+            // Find the specific gameweek data
+            const gameweekData = data.history?.find((h: any) => h.round === fixture.event);
+            
+            if (!gameweekData) return null;
+            
+            return {
+              playerId: player.id,
+              playerName: player.web_name,
+              teamName: fixture.awayTeam?.short_name || 'Away',
+              position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'Unknown',
+              minutes: gameweekData.minutes || 0,
+              goals_scored: gameweekData.goals_scored || 0,
+              assists: gameweekData.assists || 0,
+              clean_sheets: gameweekData.clean_sheets || 0,
+              goals_conceded: gameweekData.goals_conceded || 0,
+              own_goals: gameweekData.own_goals || 0,
+              penalties_saved: gameweekData.penalties_saved || 0,
+              penalties_missed: gameweekData.penalties_missed || 0,
+              yellow_cards: gameweekData.yellow_cards || 0,
+              red_cards: gameweekData.red_cards || 0,
+              saves: gameweekData.saves || 0,
+              bonus: gameweekData.bonus || 0,
+              bps: gameweekData.bps || 0,
+              influence: parseFloat(gameweekData.influence) || 0,
+              creativity: parseFloat(gameweekData.creativity) || 0,
+              threat: parseFloat(gameweekData.threat) || 0,
+              ict_index: parseFloat(gameweekData.ict_index) || 0,
+              total_points: gameweekData.total_points || 0
+            };
+          } catch (error) {
+            console.error(`Error fetching data for player ${player.web_name}:`, error);
+            return null;
+          }
+        }))
+      ]);
+      
+      // Filter out null results and sort by total points
+      const homeTeamStats = homeStats.filter(Boolean).sort((a, b) => b.total_points - a.total_points);
+      const awayTeamStats = awayStats.filter(Boolean).sort((a, b) => b.total_points - a.total_points);
+      
+      return {
+        fixture,
+        homeTeamStats,
+        awayTeamStats
+      };
+    } catch (error) {
+      console.error('Error fetching match stats:', error);
+      return null;
+    } finally {
+      setIsLoadingMatchStats(false);
+    }
+  };
+
+  // Handle match click
+  const handleMatchClick = async (fixture: any) => {
+    if (!fixture.isResult) return; // Only allow clicks on completed matches
+    
+    setSelectedMatch(fixture);
+    setIsMatchStatsOpen(true);
+    
+    const stats = await fetchMatchStats(fixture);
+    setMatchStats(stats);
   };
 
   // Get match status badge
@@ -367,7 +526,16 @@ export default function ResultsAndFixtures() {
                     
                     <div className="grid gap-2">
                       {fixtures.map((fixture) => (
-                        <div key={fixture.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div 
+                          key={fixture.id} 
+                          className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg transition-colors ${
+                            fixture.isResult 
+                              ? 'hover:bg-blue-50 cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500' 
+                              : 'hover:bg-gray-100'
+                          }`}
+                          onClick={() => fixture.isResult && handleMatchClick(fixture)}
+                          title={fixture.isResult ? 'Click to view match statistics' : ''}
+                        >
                           <div className="flex items-center space-x-4 flex-1">
                             {/* Home Team */}
                             <div className="flex items-center space-x-2 min-w-[120px]">
@@ -411,6 +579,13 @@ export default function ResultsAndFixtures() {
                             
                             {/* Status */}
                             {getStatusBadge(fixture)}
+                            
+                            {/* Click indicator for completed matches */}
+                            {fixture.isResult && (
+                              <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
+                                View Stats
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -422,7 +597,16 @@ export default function ResultsAndFixtures() {
               // Single gameweek view
               <div className="grid gap-2">
                 {filteredFixtures.map((fixture) => (
-                  <div key={fixture.id} className="flex items-center justify-between p-4 bg-white border rounded-lg hover:shadow-sm transition-all">
+                  <div 
+                    key={fixture.id} 
+                    className={`flex items-center justify-between p-4 bg-white border rounded-lg transition-all ${
+                      fixture.isResult 
+                        ? 'hover:shadow-md cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500 hover:bg-blue-50' 
+                        : 'hover:shadow-sm'
+                    }`}
+                    onClick={() => fixture.isResult && handleMatchClick(fixture)}
+                    title={fixture.isResult ? 'Click to view match statistics' : ''}
+                  >
                     <div className="flex items-center space-x-6 flex-1">
                       {/* Home Team */}
                       <div className="flex items-center space-x-3 min-w-[140px]">
@@ -466,6 +650,13 @@ export default function ResultsAndFixtures() {
                     <div className="flex items-center space-x-2">
                       {/* Status */}
                       {getStatusBadge(fixture)}
+                      
+                      {/* Click indicator for completed matches */}
+                      {fixture.isResult && (
+                        <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
+                          View Stats
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -481,6 +672,252 @@ export default function ResultsAndFixtures() {
             )}
           </div>
         </div>
+
+        {/* Match Statistics Modal */}
+        <Dialog open={isMatchStatsOpen} onOpenChange={setIsMatchStatsOpen}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                <Trophy className="h-6 w-6 text-blue-600" />
+                {selectedMatch && (
+                  <>
+                    {selectedMatch.homeTeam?.name} {selectedMatch.team_h_score} - {selectedMatch.team_a_score} {selectedMatch.awayTeam?.name}
+                    <Badge variant="outline" className="ml-2">
+                      GW{selectedMatch.event} - {formatDateTime(selectedMatch.kickoff_time).date}
+                    </Badge>
+                  </>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {isLoadingMatchStats ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-600">Loading match statistics...</span>
+              </div>
+            ) : matchStats ? (
+              <div className="space-y-6">
+                {/* Match Summary */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {selectedMatch?.homeTeam?.name}
+                    </div>
+                    <div className="text-3xl font-bold mt-2">
+                      {selectedMatch?.team_h_score}
+                    </div>
+                  </div>
+                  <div className="text-center flex items-center justify-center">
+                    <div className="text-gray-600">Final Score</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">
+                      {selectedMatch?.awayTeam?.name}
+                    </div>
+                    <div className="text-3xl font-bold mt-2">
+                      {selectedMatch?.team_a_score}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Player Statistics Tables */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Home Team Stats */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Home className="h-5 w-5 text-blue-500" />
+                      {selectedMatch?.homeTeam?.name} Players
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-gray-50">
+                            <th className="p-2 text-left">Player</th>
+                            <th className="p-2 text-center">Pts</th>
+                            <th className="p-2 text-center">G</th>
+                            <th className="p-2 text-center">A</th>
+                            <th className="p-2 text-center">Min</th>
+                            <th className="p-2 text-center">YC</th>
+                            <th className="p-2 text-center">RC</th>
+                            <th className="p-2 text-center">Bonus</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {matchStats.homeTeamStats.map((player) => (
+                            <tr key={player.playerId} className="border-b hover:bg-gray-50">
+                              <td className="p-2">
+                                <div>
+                                  <div className="font-medium">{player.playerName}</div>
+                                  <div className="text-xs text-gray-500">{player.position}</div>
+                                </div>
+                              </td>
+                              <td className="p-2 text-center font-bold">{player.total_points}</td>
+                              <td className="p-2 text-center">
+                                {player.goals_scored > 0 && (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                    {player.goals_scored}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
+                                {player.assists > 0 && (
+                                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                                    {player.assists}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center text-gray-600">{player.minutes}'</td>
+                              <td className="p-2 text-center">
+                                {player.yellow_cards > 0 && (
+                                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                                    {player.yellow_cards}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
+                                {player.red_cards > 0 && (
+                                  <Badge variant="secondary" className="bg-red-100 text-red-800">
+                                    {player.red_cards}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
+                                {player.bonus > 0 && (
+                                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                                    {player.bonus}
+                                  </Badge>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Away Team Stats */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Plane className="h-5 w-5 text-gray-500" />
+                      {selectedMatch?.awayTeam?.name} Players
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-gray-50">
+                            <th className="p-2 text-left">Player</th>
+                            <th className="p-2 text-center">Pts</th>
+                            <th className="p-2 text-center">G</th>
+                            <th className="p-2 text-center">A</th>
+                            <th className="p-2 text-center">Min</th>
+                            <th className="p-2 text-center">YC</th>
+                            <th className="p-2 text-center">RC</th>
+                            <th className="p-2 text-center">Bonus</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {matchStats.awayTeamStats.map((player) => (
+                            <tr key={player.playerId} className="border-b hover:bg-gray-50">
+                              <td className="p-2">
+                                <div>
+                                  <div className="font-medium">{player.playerName}</div>
+                                  <div className="text-xs text-gray-500">{player.position}</div>
+                                </div>
+                              </td>
+                              <td className="p-2 text-center font-bold">{player.total_points}</td>
+                              <td className="p-2 text-center">
+                                {player.goals_scored > 0 && (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                    {player.goals_scored}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
+                                {player.assists > 0 && (
+                                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                                    {player.assists}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center text-gray-600">{player.minutes}'</td>
+                              <td className="p-2 text-center">
+                                {player.yellow_cards > 0 && (
+                                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                                    {player.yellow_cards}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
+                                {player.red_cards > 0 && (
+                                  <Badge variant="secondary" className="bg-red-100 text-red-800">
+                                    {player.red_cards}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
+                                {player.bonus > 0 && (
+                                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                                    {player.bonus}
+                                  </Badge>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {matchStats.homeTeamStats.reduce((sum, p) => sum + p.goals_scored, 0) + 
+                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.goals_scored, 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">Total Goals</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {matchStats.homeTeamStats.reduce((sum, p) => sum + p.assists, 0) + 
+                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.assists, 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">Total Assists</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <div className="text-2xl font-bold text-yellow-600">
+                        {matchStats.homeTeamStats.reduce((sum, p) => sum + p.yellow_cards, 0) + 
+                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.yellow_cards, 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">Yellow Cards</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <div className="text-2xl font-bold text-red-600">
+                        {matchStats.homeTeamStats.reduce((sum, p) => sum + p.red_cards, 0) + 
+                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.red_cards, 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">Red Cards</div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No statistics available</h3>
+                <p className="text-gray-600">Unable to load match statistics at this time.</p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
