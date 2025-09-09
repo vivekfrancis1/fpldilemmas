@@ -737,6 +737,9 @@ export default function ResultsAndFixtures() {
                             <th className="p-2 text-center">G</th>
                             <th className="p-2 text-center">A</th>
                             <th className="p-2 text-center">Min</th>
+                            <th className="p-2 text-center">Saves</th>
+                            <th className="p-2 text-center">BPS</th>
+                            <th className="p-2 text-center">ICT</th>
                             <th className="p-2 text-center">YC</th>
                             <th className="p-2 text-center">RC</th>
                             <th className="p-2 text-center">Bonus</th>
@@ -767,6 +770,27 @@ export default function ResultsAndFixtures() {
                                 )}
                               </td>
                               <td className="p-2 text-center text-gray-600">{player.minutes}'</td>
+                              <td className="p-2 text-center">
+                                {player.saves > 0 && (
+                                  <Badge variant="secondary" className="bg-cyan-100 text-cyan-800">
+                                    {player.saves}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
+                                {player.bps > 0 && (
+                                  <Badge variant="secondary" className="bg-indigo-100 text-indigo-800">
+                                    {player.bps}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
+                                {player.ict_index > 0 && (
+                                  <Badge variant="secondary" className="bg-teal-100 text-teal-800">
+                                    {player.ict_index.toFixed(1)}
+                                  </Badge>
+                                )}
+                              </td>
                               <td className="p-2 text-center">
                                 {player.yellow_cards > 0 && (
                                   <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
@@ -810,6 +834,9 @@ export default function ResultsAndFixtures() {
                             <th className="p-2 text-center">G</th>
                             <th className="p-2 text-center">A</th>
                             <th className="p-2 text-center">Min</th>
+                            <th className="p-2 text-center">Saves</th>
+                            <th className="p-2 text-center">BPS</th>
+                            <th className="p-2 text-center">ICT</th>
                             <th className="p-2 text-center">YC</th>
                             <th className="p-2 text-center">RC</th>
                             <th className="p-2 text-center">Bonus</th>
@@ -841,6 +868,27 @@ export default function ResultsAndFixtures() {
                               </td>
                               <td className="p-2 text-center text-gray-600">{player.minutes}'</td>
                               <td className="p-2 text-center">
+                                {player.saves > 0 && (
+                                  <Badge variant="secondary" className="bg-cyan-100 text-cyan-800">
+                                    {player.saves}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
+                                {player.bps > 0 && (
+                                  <Badge variant="secondary" className="bg-indigo-100 text-indigo-800">
+                                    {player.bps}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
+                                {player.ict_index > 0 && (
+                                  <Badge variant="secondary" className="bg-teal-100 text-teal-800">
+                                    {player.ict_index.toFixed(1)}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
                                 {player.yellow_cards > 0 && (
                                   <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
                                     {player.yellow_cards}
@@ -870,7 +918,7 @@ export default function ResultsAndFixtures() {
                 </div>
 
                 {/* Additional Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                   <Card>
                     <CardContent className="p-4 text-center">
                       <div className="text-2xl font-bold text-green-600">
@@ -887,6 +935,33 @@ export default function ResultsAndFixtures() {
                          matchStats.awayTeamStats.reduce((sum, p) => sum + p.assists, 0)}
                       </div>
                       <div className="text-sm text-gray-600">Total Assists</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <div className="text-2xl font-bold text-cyan-600">
+                        {matchStats.homeTeamStats.reduce((sum, p) => sum + p.saves, 0) + 
+                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.saves, 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">Total Saves</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <div className="text-2xl font-bold text-indigo-600">
+                        {matchStats.homeTeamStats.reduce((sum, p) => sum + p.bps, 0) + 
+                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.bps, 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">Total BPS</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <div className="text-2xl font-bold text-teal-600">
+                        {(matchStats.homeTeamStats.reduce((sum, p) => sum + p.ict_index, 0) + 
+                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.ict_index, 0)).toFixed(1)}
+                      </div>
+                      <div className="text-sm text-gray-600">Total ICT</div>
                     </CardContent>
                   </Card>
                   <Card>
