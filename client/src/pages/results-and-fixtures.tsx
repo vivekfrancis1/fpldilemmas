@@ -53,7 +53,6 @@ interface PlayerStats {
   threat: number;
   ict_index: number;
   total_points: number;
-  defensive_contribution?: number; // Calculated based on position
 }
 
 interface MatchStats {
@@ -180,24 +179,6 @@ export default function ResultsAndFixtures() {
       .sort((a, b) => sortDirection === "asc" ? a.gameweek - b.gameweek : b.gameweek - a.gameweek);
   }, [filteredFixtures, sortDirection]);
 
-  // Calculate Defensive Contribution based on position
-  const calculateDefensiveContribution = (player: any, position: string): number => {
-    // For now, using available metrics as a proxy for DC calculation
-    // In a full implementation, this would use CBI + Tackles (+ Recoveries for MID/FWD)
-    const baseContribution = (player.influence + player.creativity) / 20; // Simplified calculation
-    
-    if (position === 'DEF') {
-      // Defenders: CBI + Tackles equivalent
-      return Math.round(baseContribution + (player.clean_sheets * 2));
-    } else if (position === 'MID' || position === 'FWD') {
-      // Midfielders/Forwards: CBI + Tackles + Recoveries equivalent
-      return Math.round(baseContribution + (player.threat / 10));
-    } else {
-      // Goalkeepers: CBI + Tackles equivalent
-      return Math.round(baseContribution + (player.saves / 2));
-    }
-  };
-
   // Format date and time
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -261,15 +242,6 @@ export default function ResultsAndFixtures() {
               ict_index: parseFloat(gameweekData.ict_index) || 0,
               total_points: gameweekData.total_points || 0
             };
-            
-            // Calculate defensive contribution
-            const playerWithDC = {
-              ...playerStats,
-              defensive_contribution: calculateDefensiveContribution(playerStats, playerStats.position)
-            };
-            
-            return playerWithDC
-            };
           } catch (error) {
             console.error(`Error fetching data for player ${player.web_name}:`, error);
             return null;
@@ -309,15 +281,6 @@ export default function ResultsAndFixtures() {
               threat: parseFloat(gameweekData.threat) || 0,
               ict_index: parseFloat(gameweekData.ict_index) || 0,
               total_points: gameweekData.total_points || 0
-            };
-            
-            // Calculate defensive contribution
-            const playerWithDC = {
-              ...playerStats,
-              defensive_contribution: calculateDefensiveContribution(playerStats, playerStats.position)
-            };
-            
-            return playerWithDC
             };
           } catch (error) {
             console.error(`Error fetching data for player ${player.web_name}:`, error);
@@ -776,7 +739,7 @@ export default function ResultsAndFixtures() {
                             <th className="p-2 text-center">Min</th>
                             <th className="p-2 text-center">Saves</th>
                             <th className="p-2 text-center">BPS</th>
-                            <th className="p-2 text-center">DC</th>
+                            <th className="p-2 text-center">ICT</th>
                             <th className="p-2 text-center">YC</th>
                             <th className="p-2 text-center">RC</th>
                             <th className="p-2 text-center">Bonus</th>
@@ -822,9 +785,9 @@ export default function ResultsAndFixtures() {
                                 )}
                               </td>
                               <td className="p-2 text-center">
-                                {(player.defensive_contribution ?? 0) > 0 && (
+                                {player.ict_index > 0 && (
                                   <Badge variant="secondary" className="bg-teal-100 text-teal-800">
-                                    {player.defensive_contribution}
+                                    {player.ict_index.toFixed(1)}
                                   </Badge>
                                 )}
                               </td>
@@ -873,7 +836,7 @@ export default function ResultsAndFixtures() {
                             <th className="p-2 text-center">Min</th>
                             <th className="p-2 text-center">Saves</th>
                             <th className="p-2 text-center">BPS</th>
-                            <th className="p-2 text-center">DC</th>
+                            <th className="p-2 text-center">ICT</th>
                             <th className="p-2 text-center">YC</th>
                             <th className="p-2 text-center">RC</th>
                             <th className="p-2 text-center">Bonus</th>
@@ -919,9 +882,9 @@ export default function ResultsAndFixtures() {
                                 )}
                               </td>
                               <td className="p-2 text-center">
-                                {(player.defensive_contribution ?? 0) > 0 && (
+                                {player.ict_index > 0 && (
                                   <Badge variant="secondary" className="bg-teal-100 text-teal-800">
-                                    {player.defensive_contribution}
+                                    {player.ict_index.toFixed(1)}
                                   </Badge>
                                 )}
                               </td>
