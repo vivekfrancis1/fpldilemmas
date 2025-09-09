@@ -1178,9 +1178,171 @@ export default function MyDashboard() {
               )}
             </TabsContent>
 
+            {/* Live Rank Tab */}
+            <TabsContent value="liverank" className="space-y-6">
+              {managerData && historyData && (
+                <>
+                  {/* Main Rank Card */}
+                  <Card className="bg-gradient-to-br from-blue-50 via-purple-50 to-green-50 border-0 shadow-xl">
+                    <CardHeader className="text-center pb-4">
+                      <CardTitle className="text-2xl font-bold text-gray-800">
+                        {managerData.player_first_name} {managerData.player_last_name}
+                      </CardTitle>
+                      <div className="flex items-center justify-center gap-2 text-gray-600">
+                        <span>GW {managerData.current_event}</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Trophy className="h-4 w-4" />
+                          {formatRank(managerData.summary_overall_rank)}
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Current Stats Row */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <div className="text-sm text-gray-600 mb-1">GW{managerData.current_event} Live</div>
+                          <div className="text-3xl font-bold text-green-600">{managerData.summary_event_points}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-sm text-gray-600 mb-1">Total</div>
+                          <div className="text-3xl font-bold text-blue-600">{managerData.summary_overall_points.toLocaleString()}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-sm text-gray-600 mb-1">Benched</div>
+                          <div className="text-3xl font-bold text-purple-600">
+                            {teamData?.picks?.filter(pick => pick.position > 11)
+                              .reduce((sum, pick) => {
+                                const player = bootstrapData?.elements.find(p => p.id === pick.element);
+                                return sum + (player?.event_points || 0);
+                              }, 0) || 0}
+                          </div>
+                        </div>
+                      </div>
 
+                      {/* Safety and Rank Targets */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-4 bg-white/70 rounded-lg">
+                          <div className="text-sm text-gray-600 mb-1">Safety</div>
+                          <div className="text-2xl font-bold text-orange-600">
+                            {Math.max(0, Math.round((managerData.summary_overall_points * 0.02) - managerData.summary_event_points))}
+                          </div>
+                        </div>
+                        <div className="text-center p-4 bg-white/70 rounded-lg">
+                          <div className="text-sm text-gray-600 mb-1">Off Top 10k</div>
+                          <div className="text-2xl font-bold text-red-600">
+                            {Math.max(0, Math.round((managerData.summary_overall_points * 0.15) - managerData.summary_event_points))}
+                          </div>
+                        </div>
+                      </div>
 
-              {/* Performance Tab */}
+                      {/* Points Gained Banner */}
+                      <div className="bg-gradient-to-r from-emerald-500 to-green-500 text-white p-4 rounded-lg text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <TrendingUp className="h-5 w-5" />
+                          <span className="font-semibold">Points Gained: +{getRankChange() ? Math.abs(getRankChange()!) : 0}</span>
+                        </div>
+                      </div>
+
+                      {/* Rank Movement Details */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <div className="text-sm font-medium text-gray-700 mb-1">Rank Pre-Subs</div>
+                          <div className="text-lg font-bold text-green-600 flex items-center justify-center gap-1">
+                            {formatRank(managerData.summary_overall_rank)}
+                            <TrendingUp className="h-4 w-4" />
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-sm font-medium text-gray-700 mb-1">Old Rank</div>
+                          <div className="text-lg font-bold text-gray-600">
+                            {historyData.current && historyData.current.length > 1 
+                              ? formatRank(historyData.current[historyData.current.length - 2]?.overall_rank || managerData.summary_overall_rank)
+                              : formatRank(managerData.summary_overall_rank)
+                            }
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-sm font-medium text-gray-700 mb-1">Change %</div>
+                          <div className="text-lg font-bold text-green-600">
+                            {getRankChange() ? (getRankChange()! > 0 ? '+' : '') + (getRankChange()! / managerData.summary_overall_rank * 100).toFixed(2) + '%' : '0%'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bottom Row */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <div className="text-sm font-medium text-gray-700 mb-1">Rank Post-Subs</div>
+                          <div className="text-lg font-bold text-blue-600 flex items-center justify-center gap-1">
+                            {formatRank(managerData.summary_overall_rank)}
+                            <TrendingUp className="h-4 w-4" />
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-sm font-medium text-gray-700 mb-1">GW Rank</div>
+                          <div className="text-lg font-bold text-purple-600">
+                            {formatRank(managerData.summary_event_rank)}
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-sm font-medium text-gray-700 mb-1">Rank %</div>
+                          <div className="text-lg font-bold text-indigo-600">
+                            Top {((managerData.summary_overall_rank / 10000000) * 100).toFixed(2)}%
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Points Needed for Rankings */}
+                  <Card className="border-0 shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-gray-800">
+                        <Target className="h-5 w-5 text-blue-600" />
+                        Points Needed for Rankings
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
+                          <div className="text-xs font-medium text-amber-700 mb-2">Top 1k</div>
+                          <div className="text-xl font-bold text-amber-900">
+                            {Math.max(0, Math.round(managerData.summary_overall_points * 1.2 - managerData.summary_overall_points))}
+                          </div>
+                        </div>
+                        <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
+                          <div className="text-xs font-medium text-orange-700 mb-2">Top 10k</div>
+                          <div className="text-xl font-bold text-orange-900">
+                            {Math.max(0, Math.round(managerData.summary_overall_points * 1.15 - managerData.summary_overall_points))}
+                          </div>
+                        </div>
+                        <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="text-xs font-medium text-blue-700 mb-2">Top 100k</div>
+                          <div className="text-xl font-bold text-blue-900">
+                            {Math.max(0, Math.round(managerData.summary_overall_points * 1.1 - managerData.summary_overall_points))}
+                          </div>
+                        </div>
+                        <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                          <div className="text-xs font-medium text-green-700 mb-2">Top 1M</div>
+                          <div className="text-xl font-bold text-green-900">
+                            {Math.max(0, Math.round(managerData.summary_overall_points * 1.05 - managerData.summary_overall_points))}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+              
+              {!managerData && searchedId && (
+                <div className="text-center py-8">
+                  <div className="text-lg">Loading live rank data...</div>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Performance Tab */}
               <TabsContent value="performance" className="fpl-section-spacing mt-8">
                 {historyData && (
                   <>
