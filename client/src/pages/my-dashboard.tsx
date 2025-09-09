@@ -377,7 +377,13 @@ export default function MyDashboard() {
   });
 
   // Fetch database-based ranking data (actual data only, no estimations)
-  const { data: comprehensiveRankingData } = useQuery({
+  const { data: comprehensiveRankingData } = useQuery<{
+    dataPoints: Array<{
+      managerId: number;
+      overallRank: number;
+      totalPoints: number;
+    }>;
+  }>({
     queryKey: ['/api/database-rankings', searchedId],
     enabled: !!searchedId,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -577,7 +583,7 @@ export default function MyDashboard() {
       return null; // Return null to show "no data" message instead of estimates
     }
     
-    const dataPoints = comprehensiveRankingData.dataPoints;
+    const dataPoints = comprehensiveRankingData!.dataPoints;
     
     // Exact total managers in Overall League
     const totalManagers = 11304765;
