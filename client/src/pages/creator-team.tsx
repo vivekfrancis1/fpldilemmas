@@ -135,6 +135,12 @@ export default function CreatorTeam() {
     enabled: !!id,
   });
 
+  // Fetch bootstrap data to get individual player information and gameweek points
+  const { data: bootstrapData } = useQuery<any>({
+    queryKey: ["/api/bootstrap-static"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   const { data: managerHistory, isLoading: historyLoading } = useQuery<ManagerHistory>({
     queryKey: [`/api/manager/${creatorInfo?.managerId}/history`],
     enabled: !!creatorInfo?.managerId,
@@ -193,8 +199,42 @@ export default function CreatorTeam() {
     );
   }
 
-  const startingEleven = teamData?.picks?.slice(0, 11) || [];
-  const substitutes = teamData?.picks?.slice(11) || [];
+  // Process starting eleven with full player data including gameweek points
+  const getStartingEleven = () => {
+    if (!teamData?.picks || !bootstrapData?.elements) return [];
+    return teamData.picks
+      .filter(pick => Number(pick.position) <= 11)
+      .map(pick => {
+        const player = bootstrapData.elements.find((p: any) => p.id === pick.element);
+        return { 
+          ...pick, 
+          player,
+          event_points: Number(player?.event_points || 0), // Current gameweek points
+          total_points: Number(player?.total_points || 0)
+        };
+      })
+      .sort((a, b) => Number(a.position) - Number(b.position));
+  };
+
+  // Process substitutes with full player data including gameweek points  
+  const getSubstitutes = () => {
+    if (!teamData?.picks || !bootstrapData?.elements) return [];
+    return teamData.picks
+      .filter(pick => Number(pick.position) > 11)
+      .map(pick => {
+        const player = bootstrapData.elements.find((p: any) => p.id === pick.element);
+        return { 
+          ...pick, 
+          player,
+          event_points: Number(player?.event_points || 0), // Current gameweek points
+          total_points: Number(player?.total_points || 0)
+        };
+      })
+      .sort((a, b) => Number(a.position) - Number(b.position));
+  };
+
+  const startingEleven = getStartingEleven();
+  const substitutes = getSubstitutes();
 
   const captain = teamData.picks?.find(p => p.is_captain);
   const viceCaptain = teamData.picks?.find(p => p.is_vice_captain);
@@ -425,12 +465,20 @@ export default function CreatorTeam() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                {player.multiplier > 1 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {player.multiplier}x
-                                  </Badge>
-                                )}
+                              <div className="text-right flex flex-col items-end gap-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="text-right">
+                                    <div className="text-lg font-bold text-emerald-600">
+                                      {player.event_points}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">GW Points</div>
+                                  </div>
+                                  {player.multiplier > 1 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {player.multiplier}x
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -475,6 +523,12 @@ export default function CreatorTeam() {
                                       <span className="text-sm font-medium text-gray-700">{player.team_name}</span>
                                     </div>
                                   </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-bold text-blue-600">
+                                    {player.event_points}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">GW Points</div>
                                 </div>
                               </div>
                             ))}
@@ -580,7 +634,7 @@ export default function CreatorTeam() {
                           .sort((a, b) => b.event - a.event)
                           .slice(0, 10)
                           .map((entry, index) => {
-                            const prevEntry = managerHistory.current.find(e => e.event === entry.event - 1);
+                            const prevEntry = managerHistory?.current.find(e => e.event === entry.event - 1);
                             const rankChange = prevEntry ? prevEntry.overall_rank - entry.overall_rank : null;
                             
                             return (
