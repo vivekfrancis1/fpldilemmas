@@ -620,13 +620,33 @@ export default function MyDashboard() {
       const availableRanks = Object.keys(actualRankPoints).map(Number).sort((a, b) => a - b);
       
       if (availableRanks.length === 0) {
-        // Fallback if no data available
+        // No data available - should not happen with proper data collection
         return currentPoints + Math.round(50 * Math.log10(targetRank));
       }
       
+      // Find the closest single rank if no exact match
+      if (availableRanks.length === 1) {
+        const onlyRank = availableRanks[0];
+        const onlyPoints = actualRankPoints[onlyRank];
+        // Simple extrapolation based on rank difference
+        const rankDiff = targetRank - onlyRank;
+        const pointsPerRank = rankDiff > 0 ? -0.01 : 0.01; // Points decrease as rank increases
+        return Math.round(onlyPoints + (rankDiff * pointsPerRank));
+      }
+      
       // Find surrounding ranks for interpolation
-      const lowerRank = availableRanks.reverse().find(rank => rank <= targetRank);
-      const higherRank = availableRanks.find(rank => rank >= targetRank);
+      let lowerRank = null;
+      let higherRank = null;
+      
+      for (const rank of availableRanks) {
+        if (rank <= targetRank) {
+          lowerRank = rank;
+        }
+        if (rank >= targetRank && !higherRank) {
+          higherRank = rank;
+          break;
+        }
+      }
       
       if (lowerRank && higherRank && lowerRank !== higherRank) {
         // Interpolate between the two ranks
@@ -635,13 +655,14 @@ export default function MyDashboard() {
         const ratio = (targetRank - lowerRank) / (higherRank - lowerRank);
         return Math.round(lowerPoints - (lowerPoints - higherPoints) * ratio);
       } else if (lowerRank) {
-        // Extrapolate based on the pattern from lower ranks
-        const lowerPoints = actualRankPoints[lowerRank];
-        const dropRate = targetRank > lowerRank ? 0.1 : -0.1; // Points drop as rank increases
-        return Math.round(lowerPoints - (targetRank - lowerRank) * dropRate);
+        // Use the closest rank (usually means targetRank is beyond our data range)
+        return actualRankPoints[lowerRank];
+      } else if (higherRank) {
+        // Use the closest rank (usually means targetRank is better than our best data)
+        return actualRankPoints[higherRank];
       }
       
-      // Final fallback
+      // This should not happen if we have data, but just in case
       return currentPoints + Math.round(30 * Math.log10(targetRank));
     };
     
@@ -673,7 +694,7 @@ export default function MyDashboard() {
       safetyScore,
       totalManagers,
       totalDataPoints,
-      dataSource: hasComprehensiveData ? 'comprehensive' : 'statistical',
+      dataSource: 'database-benchmarks',
       rankPercentile: ((currentRank / totalManagers) * 100).toFixed(2),
     };
   };
