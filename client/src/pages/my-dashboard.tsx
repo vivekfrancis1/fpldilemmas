@@ -673,8 +673,18 @@ export default function MyDashboard() {
     
     // Function to get points needed for a specific rank target
     const getPointsForRank = (targetRank: number): number => {
+      // Debug logging for Top 3M rank lookup
+      if (targetRank === 2999999) {
+        console.log(`getPointsForRank Debug: Looking for rank ${targetRank}`);
+        console.log(`Available ranks:`, Object.keys(actualRankPoints).map(Number).sort((a,b) => a-b));
+        console.log(`actualRankPoints sample:`, Object.entries(actualRankPoints).slice(0, 5));
+      }
+      
       // If we have exact data for this rank, use it
       if (actualRankPoints[targetRank]) {
+        if (targetRank === 2999999) {
+          console.log(`Found exact data for rank ${targetRank}: ${actualRankPoints[targetRank]} points`);
+        }
         return actualRankPoints[targetRank];
       }
       
@@ -743,13 +753,11 @@ export default function MyDashboard() {
           console.log('Top 3M marked as ACHIEVED (0 points needed)');
         }
       } else {
-        // Use rank just BETTER than the tier threshold for more accurate points calculation
-        // E.g., for Top 3M (target: 3,000,000), use rank 2,999,999 to get points needed
-        const targetRankForPoints = Math.max(1, tier.target - 1);
-        const targetPoints = getPointsForRank(targetRankForPoints);
+        // Use the exact tier target since we have precise database data for these ranks
+        const targetPoints = getPointsForRank(tier.target);
         pointsNeeded[tier.key] = Math.max(0, targetPoints - currentPoints);
         if (tier.key === 'top3M') {
-          console.log(`Top 3M Debug Details: targetRankForPoints=${targetRankForPoints}, targetPoints=${targetPoints}, currentPoints=${currentPoints}, calculation=${targetPoints - currentPoints}`);
+          console.log(`Top 3M Debug Details: tier.target=${tier.target}, targetPoints=${targetPoints}, currentPoints=${currentPoints}, calculation=${targetPoints - currentPoints}`);
           console.log(`Top 3M NOT achieved - points needed: ${pointsNeeded[tier.key]}`);
         }
       }
