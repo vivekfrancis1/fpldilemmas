@@ -12619,7 +12619,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
-      // 3. Store all collected snapshots in database
+      // 3. Random Manager Collection (5000 managers for statistical robustness)
+      console.log(`📊 Collecting 5000 random managers for comprehensive sample size`);
+      const randomManagerTargets = 5000;
+      const maxManagerId = 11500000; // Based on ~11.6M total players
+      const minManagerId = 1;
+      const randomManagerAttempts = 15000; // Attempt more IDs to account for inactive accounts
+      let randomManagersCollected = 0;
+      const processedRandomManagers = new Set();
+      
+      while (randomManagersCollected < randomManagerTargets && processedRandomManagers.size < randomManagerAttempts) {
+        // Generate random manager ID
+        const randomManagerId = Math.floor(Math.random() * (maxManagerId - minManagerId + 1)) + minManagerId;
+        
+        if (processedRandomManagers.has(randomManagerId)) continue;
+        processedRandomManagers.add(randomManagerId);
+        
+        // Try to fetch manager data
+        const randomManagerData = await safeFetch(`http://localhost:5000/api/manager/${randomManagerId}`, `Random manager ${randomManagerId}`);
+        if (randomManagerData && randomManagerData.summary_overall_rank) {
+          // Get manager history to extract old rank and old points
+          const randomHistoryData = await safeFetch(`http://localhost:5000/api/manager/${randomManagerId}/history`, `Random manager ${randomManagerId} history`);
+          let oldRank = null;
+          let oldPoints = null;
+          let gameweekPointsAfterTransfers = null;
+          
+          if (randomHistoryData?.current && randomHistoryData.current.length > 0) {
+            // Find previous gameweek data
+            const previousGW = randomHistoryData.current.find(gw => gw.event === currentGameweek - 1);
+            if (previousGW) {
+              oldRank = previousGW.overall_rank;
+              oldPoints = previousGW.points;
+            }
+            
+            // Find current gameweek data for points after transfers
+            const currentGW = randomHistoryData.current.find(gw => gw.event === currentGameweek);
+            if (currentGW) {
+              gameweekPointsAfterTransfers = currentGW.points - currentGW.event_transfers_cost;
+            }
+          }
+          
+          const randomSnapshot = {
+            managerId: randomManagerId,
+            managerName: randomManagerData.player_first_name && randomManagerData.player_last_name 
+              ? `${randomManagerData.player_first_name} ${randomManagerData.player_last_name}` 
+              : `Manager ${randomManagerId}`,
+            leagueId: 0, // Special value for random managers
+            leagueName: 'Random Sample',
+            gameweek: currentGameweek,
+            overallRank: randomManagerData.summary_overall_rank, // Current live rank (new rank)
+            overallPoints: randomManagerData.summary_overall_points, // Current live points (new points)
+            oldRank: oldRank, // Rank at start of gameweek
+            oldPoints: oldPoints, // Points at start of gameweek
+            gameweekPoints: randomManagerData.summary_event_points, // Gameweek points before transfers
+            gameweekPointsAfterTransfers: gameweekPointsAfterTransfers, // Gameweek points after transfers
+            gameweekRank: null,
+            teamValue: randomManagerData.value ? (randomManagerData.value / 10) : null,
+            bank: randomManagerData.bank ? (randomManagerData.bank / 10) : null,
+            totalTransfers: randomManagerData.total_transfers,
+            dataSource: 'random-sample',
+            contentCreatorId: null,
+          };
+          
+          collectedSnapshots.push(randomSnapshot);
+          totalCollected++;
+          randomManagersCollected++;
+          
+          if (randomManagersCollected % 100 === 0) {
+            console.log(`📊 Random collection progress: ${randomManagersCollected}/${randomManagerTargets} (${processedRandomManagers.size} attempts)`);
+          }
+        }
+        
+        // Rate limiting for random manager collection
+        await new Promise(resolve => setTimeout(resolve, 25));
+      }
+      
+      console.log(`✅ Random manager collection complete: ${randomManagersCollected} managers collected from ${processedRandomManagers.size} attempts`);
+      
+      // 4. Store all collected snapshots in database
       if (collectedSnapshots.length > 0) {
         console.log(`💾 Storing ${collectedSnapshots.length} manager snapshots in database`);
         
