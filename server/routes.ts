@@ -12914,6 +12914,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all content creator leagues endpoint
+  app.get('/api/content-creators/leagues', async (req, res) => {
+    try {
+      const contentCreators = await db.select()
+        .from(fplContentCreators)
+        .where(eq(fplContentCreators.isActive, true));
+
+      const allLeagues = new Set<number>();
+      const errors: string[] = [];
+      const creatorDetails: any[] = [];
+
+      // Fetch leagues for each content creator
+      for (const creator of contentCreators) {
+        try {
+          // Use existing manager/leagues endpoint which works correctly
+          const leaguesResponse = await fetch(
+            `http://localhost:5000/api/manager/${creator.managerId}/leagues`
+          );
+          
+          if (!leaguesResponse.ok) {
+            errors.push(`Failed to fetch leagues for ${creator.name} (ID: ${creator.managerId})`);
+            continue;
+          }
+
+          const leaguesData = await leaguesResponse.json();
+          const creatorLeagues: number[] = [];
+          
+          if (leaguesData.classic && Array.isArray(leaguesData.classic)) {
+            leaguesData.classic.forEach((league: any) => {
+              allLeagues.add(league.id);
+              creatorLeagues.push(league.id);
+            });
+          }
+
+          creatorDetails.push({
+            name: creator.name,
+            managerId: creator.managerId,
+            leagues: creatorLeagues,
+            leagueCount: creatorLeagues.length
+          });
+
+        } catch (error) {
+          errors.push(`Error fetching leagues for ${creator.name}: ${error.message}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        totalCreators: contentCreators.length,
+        totalUniqueLeagues: allLeagues.size,
+        uniqueLeagues: Array.from(allLeagues).sort((a, b) => a - b),
+        creatorDetails,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        error: 'Failed to fetch content creator leagues', 
+        details: error.message 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
