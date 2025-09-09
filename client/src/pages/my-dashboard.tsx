@@ -731,28 +731,22 @@ export default function MyDashboard() {
     
     // Find all managers with better ranks (lower rank numbers)
     const betterRankedManagers = dataPoints.filter((point: any) => 
-      point.overallRank && point.overallRank < currentRank
+      point.newRank && point.newRank < currentRank
     );
     
     let safetyScore;
     if (betterRankedManagers.length > 0) {
-      // Find the manager with rank closest to current rank (but still better)
+      // Find the manager with new rank closest to user's old rank (but still better)
       const closestManager = betterRankedManagers.reduce((closest: any, manager: any) => {
-        const currentDistance = currentRank - manager.overallRank;
-        const closestDistance = currentRank - closest.overallRank;
+        const currentDistance = currentRank - manager.newRank;
+        const closestDistance = currentRank - closest.newRank;
         return currentDistance < closestDistance ? manager : closest;
       });
       
-      // Use actual data: calculate safety score based on points gap to closest better rank
-      const pointsGapToClosestBetter = closestManager.totalPoints - currentPoints;
-      const rankGapToClosestBetter = currentRank - closestManager.overallRank;
-      
-      // Safety score = points needed per rank position × realistic safety margin
-      const pointsPerRankPosition = pointsGapToClosestBetter / rankGapToClosestBetter;
-      const safetyMarginRanks = Math.min(50000, rankGapToClosestBetter * 0.1); // 10% safety margin, max 50k ranks
-      safetyScore = Math.max(25, Math.ceil(pointsPerRankPosition * safetyMarginRanks));
+      // Use that manager's current gameweek points as safety score
+      safetyScore = closestManager.currentGameweekPoints || 0;
     } else {
-      // No better-ranked managers in database - this shouldn't happen with proper benchmarks
+      // No better-ranked managers in database
       safetyScore = null;
     }
     
