@@ -12595,7 +12595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
-      // 3. Store all snapshots in database
+      // 3. Store all collected snapshots in database
       if (collectedSnapshots.length > 0) {
         console.log(`💾 Storing ${collectedSnapshots.length} manager snapshots in database`);
         
