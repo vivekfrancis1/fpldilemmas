@@ -12406,59 +12406,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const overallData = await safeFetch(`http://localhost:5000/api/leagues-classic/${overallLeagueId}/standings?page=1`, `Overall league Top 50`);
       if (overallData?.standings?.results) {
         const managers = overallData.standings.results.slice(0, 50); // Exactly Top 50 managers
-          
-          for (const manager of managers) {
-            if (manager.entry && manager.total && manager.rank) {
-              const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Overall manager ${manager.entry}`);
-              if (managerData) {
-                // Get manager history to extract old rank and old points
-                const historyData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}/history`, `Manager ${manager.entry} history`);
-                let oldRank = null;
-                let oldPoints = null;
-                let gameweekPointsAfterTransfers = null;
-                
-                if (historyData?.current && historyData.current.length > 0) {
-                  // Find previous gameweek data
-                  const previousGW = historyData.current.find(gw => gw.event === currentGameweek - 1);
-                  if (previousGW) {
-                    oldRank = previousGW.overall_rank;
-                    oldPoints = previousGW.points;
-                  }
-                  
-                  // Find current gameweek data for points after transfers
-                  const currentGW = historyData.current.find(gw => gw.event === currentGameweek);
-                  if (currentGW) {
-                    gameweekPointsAfterTransfers = currentGW.points - currentGW.event_transfers_cost;
-                  }
+        
+        for (const manager of managers) {
+          if (manager.entry && manager.total && manager.rank) {
+            const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Overall manager ${manager.entry}`);
+            if (managerData) {
+              // Get manager history to extract old rank and old points
+              const historyData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}/history`, `Manager ${manager.entry} history`);
+              let oldRank = null;
+              let oldPoints = null;
+              let gameweekPointsAfterTransfers = null;
+              
+              if (historyData?.current && historyData.current.length > 0) {
+                // Find previous gameweek data
+                const previousGW = historyData.current.find(gw => gw.event === currentGameweek - 1);
+                if (previousGW) {
+                  oldRank = previousGW.overall_rank;
+                  oldPoints = previousGW.points;
                 }
                 
-                const snapshot = {
-                  managerId: manager.entry,
-                  managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
-                  leagueId: overallLeagueId,
-                  leagueName: 'Overall',
-                  gameweek: currentGameweek,
-                  overallRank: managerData.summary_overall_rank, // Current live rank (new rank)
-                  overallPoints: managerData.summary_overall_points, // Current live points (new points)
-                  oldRank: oldRank, // Rank at start of gameweek
-                  oldPoints: oldPoints, // Points at start of gameweek
-                  gameweekPoints: managerData.summary_event_points, // Gameweek points before transfers
-                  gameweekPointsAfterTransfers: gameweekPointsAfterTransfers, // Gameweek points after transfers
-                  gameweekRank: manager.rank,
-                  teamValue: managerData.value ? (managerData.value / 10) : null,
-                  bank: managerData.bank ? (managerData.bank / 10) : null,
-                  totalTransfers: managerData.total_transfers,
-                  dataSource: 'overall-league',
-                  contentCreatorId: null,
-                };
-                
-                collectedSnapshots.push(snapshot);
-                totalCollected++;
+                // Find current gameweek data for points after transfers
+                const currentGW = historyData.current.find(gw => gw.event === currentGameweek);
+                if (currentGW) {
+                  gameweekPointsAfterTransfers = currentGW.points - currentGW.event_transfers_cost;
+                }
               }
               
-              // Rate limiting
-              await new Promise(resolve => setTimeout(resolve, 50));
+              const snapshot = {
+                managerId: manager.entry,
+                managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
+                leagueId: overallLeagueId,
+                leagueName: 'Overall',
+                gameweek: currentGameweek,
+                overallRank: managerData.summary_overall_rank, // Current live rank (new rank)
+                overallPoints: managerData.summary_overall_points, // Current live points (new points)
+                oldRank: oldRank, // Rank at start of gameweek
+                oldPoints: oldPoints, // Points at start of gameweek
+                gameweekPoints: managerData.summary_event_points, // Gameweek points before transfers
+                gameweekPointsAfterTransfers: gameweekPointsAfterTransfers, // Gameweek points after transfers
+                gameweekRank: manager.rank,
+                teamValue: managerData.value ? (managerData.value / 10) : null,
+                bank: managerData.bank ? (managerData.bank / 10) : null,
+                totalTransfers: managerData.total_transfers,
+                dataSource: 'overall-league',
+                contentCreatorId: null,
+              };
+              
+              collectedSnapshots.push(snapshot);
+              totalCollected++;
             }
+            
+            // Rate limiting
+            await new Promise(resolve => setTimeout(resolve, 50));
           }
         }
       }
