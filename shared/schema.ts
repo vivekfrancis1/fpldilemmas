@@ -901,9 +901,12 @@ export const leagueManagerSnapshots = pgTable("league_manager_snapshots", {
   season: varchar("season", { length: 10 }).notNull().default("2025/26"),
   
   // Manager performance data
-  overallRank: integer("overall_rank").notNull(),
-  overallPoints: integer("overall_points").notNull(),
-  gameweekPoints: integer("gameweek_points"),
+  overallRank: integer("overall_rank").notNull(), // Current live rank (new rank)
+  overallPoints: integer("overall_points").notNull(), // Current live points (new points)
+  oldRank: integer("old_rank"), // Rank at start of gameweek  
+  oldPoints: integer("old_points"), // Points at start of gameweek
+  gameweekPoints: integer("gameweek_points"), // Gameweek points before transfers
+  gameweekPointsAfterTransfers: integer("gameweek_points_after_transfers"), // Gameweek points after transfers
   gameweekRank: integer("gameweek_rank"),
   
   // Additional metrics
