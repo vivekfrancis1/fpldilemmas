@@ -12399,49 +12399,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
-      // 1. Collect from user's leagues using our internal API
+      // 1. Strategic collection from Overall league (11M+ managers)
+      console.log(`📊 Collecting strategic sample from Overall league (11M+ managers)`);
+      
+      // Sample multiple pages from Overall league to get diverse rank ranges
+      const overallLeagueId = 314;
+      const pagesToSample = [1, 50, 100, 500, 1000, 5000, 10000, 50000, 100000]; // Strategic sampling across ranks
+      
+      for (const page of pagesToSample) {
+        const overallData = await safeFetch(`http://localhost:5000/api/leagues-classic/${overallLeagueId}/standings?page=${page}`, `Overall league page ${page}`);
+        if (overallData?.standings?.results) {
+          const managers = overallData.standings.results.slice(0, 25); // 25 per page = 225 total from Overall
+          
+          for (const manager of managers) {
+            if (manager.entry && manager.total && manager.rank) {
+              const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Overall manager ${manager.entry}`);
+              if (managerData) {
+                const snapshot = {
+                  managerId: manager.entry,
+                  managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
+                  leagueId: overallLeagueId,
+                  leagueName: 'Overall',
+                  gameweek: currentGameweek,
+                  overallRank: managerData.summary_overall_rank,
+                  overallPoints: managerData.summary_overall_points,
+                  gameweekPoints: managerData.summary_event_points,
+                  gameweekRank: manager.rank,
+                  teamValue: managerData.value ? (managerData.value / 10) : null,
+                  bank: managerData.bank ? (managerData.bank / 10) : null,
+                  totalTransfers: managerData.total_transfers,
+                  dataSource: 'overall-league',
+                  contentCreatorId: null,
+                };
+                
+                collectedSnapshots.push(snapshot);
+                totalCollected++;
+              }
+              
+              // Rate limiting
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
+          }
+        }
+        
+        // Delay between pages
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      
+      // 2. Enhanced collection from user's leagues
       const userLeaguesData = await safeFetch(`http://localhost:5000/api/manager/${managerId}/leagues`, 'User leagues');
       if (userLeaguesData?.classic) {
-        const userLeagues = userLeaguesData.classic.slice(0, 10); // Limit to prevent overload
-        console.log(`📊 Processing ${userLeagues.length} user leagues`);
+        // Prioritize large leagues for better data coverage
+        const userLeagues = userLeaguesData.classic
+          .filter(league => league.rank_count > 1000) // Focus on larger leagues
+          .slice(0, 8); // Increased from 10 but filtered for quality
+        console.log(`📊 Processing ${userLeagues.length} user leagues (large leagues only)`);
         
         for (const league of userLeagues) {
           if (processedLeagues.has(league.id)) continue;
           processedLeagues.add(league.id);
           
-          const leagueData = await safeFetch(`http://localhost:5000/api/leagues-classic/${league.id}/standings`, `League ${league.name}`);
-          if (leagueData?.standings?.results) {
-            const top50 = leagueData.standings.results.slice(0, 50);
-            
-            for (const manager of top50) {
-              if (manager.entry && manager.total && manager.rank) {
-                const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Manager ${manager.entry}`);
-                if (managerData) {
-                  const snapshot = {
-                    managerId: manager.entry,
-                    managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
-                    leagueId: league.id,
-                    leagueName: league.name,
-                    gameweek: currentGameweek,
-                    overallRank: managerData.summary_overall_rank,
-                    overallPoints: managerData.summary_overall_points,
-                    gameweekPoints: managerData.summary_event_points,
-                    gameweekRank: manager.rank,
-                    teamValue: managerData.value ? (managerData.value / 10) : null, // Convert to £m
-                    bank: managerData.bank ? (managerData.bank / 10) : null, // Convert to £m
-                    totalTransfers: managerData.total_transfers,
-                    dataSource: 'user-league',
-                    contentCreatorId: null,
-                  };
+          // Sample multiple pages for larger leagues
+          const pagesToGet = league.rank_count > 10000 ? [1, 2, 5, 10] : [1, 2];
+          
+          for (const page of pagesToGet) {
+            const leagueData = await safeFetch(`http://localhost:5000/api/leagues-classic/${league.id}/standings?page=${page}`, `League ${league.name} page ${page}`);
+            if (leagueData?.standings?.results) {
+              const managers = leagueData.standings.results.slice(0, 30); // Increased from 50
+              
+              for (const manager of managers) {
+                if (manager.entry && manager.total && manager.rank) {
+                  const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Manager ${manager.entry}`);
+                  if (managerData) {
+                    const snapshot = {
+                      managerId: manager.entry,
+                      managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
+                      leagueId: league.id,
+                      leagueName: league.name,
+                      gameweek: currentGameweek,
+                      overallRank: managerData.summary_overall_rank,
+                      overallPoints: managerData.summary_overall_points,
+                      gameweekPoints: managerData.summary_event_points,
+                      gameweekRank: manager.rank,
+                      teamValue: managerData.value ? (managerData.value / 10) : null,
+                      bank: managerData.bank ? (managerData.bank / 10) : null,
+                      totalTransfers: managerData.total_transfers,
+                      dataSource: 'user-league',
+                      contentCreatorId: null,
+                    };
+                    
+                    collectedSnapshots.push(snapshot);
+                    totalCollected++;
+                  }
                   
-                  collectedSnapshots.push(snapshot);
-                  totalCollected++;
+                  // Rate limiting
+                  await new Promise(resolve => setTimeout(resolve, 50));
                 }
-                
-                // Rate limiting
-                await new Promise(resolve => setTimeout(resolve, 100));
               }
             }
+            
+            // Delay between pages
+            await new Promise(resolve => setTimeout(resolve, 200));
           }
           
           // Delay between leagues
@@ -12449,9 +12507,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // 2. Collect from content creator leagues
+      // 3. Enhanced collection from content creator leagues
       const creators = await db.select().from(fplContentCreators).orderBy(fplContentCreators.name);
-      const maxCreators = 15;
+      const maxCreators = 25; // Increased from 15
       console.log(`📊 Processing ${Math.min(maxCreators, creators.length)} content creator leagues`);
       
       for (const creator of creators.slice(0, maxCreators)) {
@@ -12481,52 +12539,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalCollected++;
         }
         
-        // Get creator's leagues
+        // Get creator's leagues with enhanced collection
         const creatorLeaguesData = await safeFetch(`http://localhost:5000/api/manager/${creator.managerId}/leagues`, `Creator ${creator.name} leagues`);
         if (creatorLeaguesData?.classic) {
-          const creatorLeagues = creatorLeaguesData.classic.slice(0, 3); // Limit per creator
+          // Prioritize larger leagues and increase collection per creator
+          const creatorLeagues = creatorLeaguesData.classic
+            .filter(league => league.rank_count > 500) // Focus on meaningful leagues
+            .slice(0, 5); // Increased from 3 to 5 per creator
           
           for (const league of creatorLeagues) {
             if (processedLeagues.has(league.id)) continue;
             processedLeagues.add(league.id);
             
-            const leagueData = await safeFetch(`http://localhost:5000/api/leagues-classic/${league.id}/standings`, `Creator league ${league.name}`);
-            if (leagueData?.standings?.results) {
-              const top50 = leagueData.standings.results.slice(0, 50);
-              
-              for (const manager of top50) {
-                if (manager.entry && manager.total && manager.rank) {
-                  const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Manager ${manager.entry}`);
-                  if (managerData) {
-                    const snapshot = {
-                      managerId: manager.entry,
-                      managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
-                      leagueId: league.id,
-                      leagueName: league.name,
-                      gameweek: currentGameweek,
-                      overallRank: managerData.summary_overall_rank,
-                      overallPoints: managerData.summary_overall_points,
-                      gameweekPoints: managerData.summary_event_points,
-                      gameweekRank: manager.rank,
-                      teamValue: managerData.value ? (managerData.value / 10) : null,
-                      bank: managerData.bank ? (managerData.bank / 10) : null,
-                      totalTransfers: managerData.total_transfers,
-                      dataSource: 'creator-league',
-                      contentCreatorId: creator.id,
-                    };
+            // Sample multiple pages for larger creator leagues
+            const pagesToGet = league.rank_count > 5000 ? [1, 2, 3] : [1, 2];
+            
+            for (const page of pagesToGet) {
+              const leagueData = await safeFetch(`http://localhost:5000/api/leagues-classic/${league.id}/standings?page=${page}`, `Creator league ${league.name} page ${page}`);
+              if (leagueData?.standings?.results) {
+                const managers = leagueData.standings.results.slice(0, 35); // Increased sample size
+                
+                for (const manager of managers) {
+                  if (manager.entry && manager.total && manager.rank) {
+                    const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Manager ${manager.entry}`);
+                    if (managerData) {
+                      const snapshot = {
+                        managerId: manager.entry,
+                        managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
+                        leagueId: league.id,
+                        leagueName: league.name,
+                        gameweek: currentGameweek,
+                        overallRank: managerData.summary_overall_rank,
+                        overallPoints: managerData.summary_overall_points,
+                        gameweekPoints: managerData.summary_event_points,
+                        gameweekRank: manager.rank,
+                        teamValue: managerData.value ? (managerData.value / 10) : null,
+                        bank: managerData.bank ? (managerData.bank / 10) : null,
+                        totalTransfers: managerData.total_transfers,
+                        dataSource: 'creator-league',
+                        contentCreatorId: creator.id,
+                      };
+                      
+                      collectedSnapshots.push(snapshot);
+                      totalCollected++;
+                    }
                     
-                    collectedSnapshots.push(snapshot);
-                    totalCollected++;
+                    // Rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 50)); // Reduced delay for efficiency
                   }
-                  
-                  // Rate limiting
-                  await new Promise(resolve => setTimeout(resolve, 100));
                 }
               }
+              
+              // Delay between pages
+              await new Promise(resolve => setTimeout(resolve, 150));
             }
             
             // Delay between leagues
-            await new Promise(resolve => setTimeout(resolve, 300));
+            await new Promise(resolve => setTimeout(resolve, 200));
           }
         }
         
