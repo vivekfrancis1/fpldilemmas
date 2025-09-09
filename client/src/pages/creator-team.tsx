@@ -593,21 +593,30 @@ export default function CreatorTeam() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(filteredCreatorHistory?.map(track => ({
-                            event: track.gameweek,
-                            points: track.gameweekPoints,
-                            total_points: track.overallPoints,
-                            overall_rank: track.overallRank,
-                            rank: track.gameweekRank,
-                            value: parseFloat(track.teamValue) * 10,
-                            event_transfers: track.totalTransfers,
-                            event_transfers_cost: track.hitsTaken * 4
-                          })) || filteredManagerHistory || [])
-                          .sort((a, b) => b.event - a.event)
-                          .slice(0, 10)
-                          .map((entry, index) => {
-                            const prevEntry = filteredManagerHistory?.find(e => e.event === entry.event - 1);
-                            const rankChange = prevEntry ? prevEntry.overall_rank - entry.overall_rank : null;
+                        {(() => {
+                          // Use creator history if available and has data, otherwise use manager history
+                          let dataToShow: any[] = [];
+                          if (filteredCreatorHistory && filteredCreatorHistory.length > 0) {
+                            dataToShow = filteredCreatorHistory.map(track => ({
+                              event: track.gameweek,
+                              points: track.gameweekPoints,
+                              total_points: track.overallPoints,
+                              overall_rank: track.overallRank,
+                              rank: track.gameweekRank,
+                              value: parseFloat(track.teamValue) * 10,
+                              event_transfers: track.totalTransfers,
+                              event_transfers_cost: track.hitsTaken * 4
+                            }));
+                          } else if (filteredManagerHistory && filteredManagerHistory.length > 0) {
+                            dataToShow = filteredManagerHistory;
+                          }
+                          
+                          return dataToShow
+                            .sort((a, b) => b.event - a.event)
+                            .slice(0, 10)
+                            .map((entry, index) => {
+                              const prevEntry = filteredManagerHistory?.find(e => e.event === entry.event - 1);
+                              const rankChange = prevEntry ? prevEntry.overall_rank - entry.overall_rank : null;
                             
                             return (
                               <TableRow key={entry.event}>
@@ -651,7 +660,8 @@ export default function CreatorTeam() {
                                 </TableCell>
                               </TableRow>
                             );
-                          })}
+                          });
+                        })()}
                       </TableBody>
                     </Table>
                   </CardContent>
