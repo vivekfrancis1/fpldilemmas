@@ -12383,7 +12383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const processedLeagues = new Set();
       let totalCollected = 0;
       
-      // Helper function for safe API calls
+      // Helper function for safe internal API calls
       const safeFetch = async (url: string, description: string) => {
         try {
           const response = await fetch(url);
@@ -12399,8 +12399,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
-      // 1. Collect from user's leagues
-      const userLeaguesData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${managerId}/leagues/`, 'User leagues');
+      // 1. Collect from user's leagues using our internal API
+      const userLeaguesData = await safeFetch(`http://localhost:5000/api/manager/${managerId}/leagues`, 'User leagues');
       if (userLeaguesData?.classic) {
         const userLeagues = userLeaguesData.classic.slice(0, 10); // Limit to prevent overload
         console.log(`📊 Processing ${userLeagues.length} user leagues`);
@@ -12409,13 +12409,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (processedLeagues.has(league.id)) continue;
           processedLeagues.add(league.id);
           
-          const leagueData = await safeFetch(`https://fantasy.premierleague.com/api/leagues-classic/${league.id}/standings/`, `League ${league.name}`);
+          const leagueData = await safeFetch(`http://localhost:5000/api/leagues-classic/${league.id}/standings`, `League ${league.name}`);
           if (leagueData?.standings?.results) {
             const top50 = leagueData.standings.results.slice(0, 50);
             
             for (const manager of top50) {
               if (manager.entry && manager.total && manager.rank) {
-                const managerData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${manager.entry}/`, `Manager ${manager.entry}`);
+                const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Manager ${manager.entry}`);
                 if (managerData) {
                   const snapshot = {
                     managerId: manager.entry,
@@ -12458,7 +12458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!creator.managerId) continue;
         
         // Add creator's own data
-        const creatorData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/`, `Creator ${creator.name}`);
+        const creatorData = await safeFetch(`http://localhost:5000/api/manager/${creator.managerId}`, `Creator ${creator.name}`);
         if (creatorData) {
           const creatorSnapshot = {
             managerId: creator.managerId,
@@ -12482,7 +12482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Get creator's leagues
-        const creatorLeaguesData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/leagues/`, `Creator ${creator.name} leagues`);
+        const creatorLeaguesData = await safeFetch(`http://localhost:5000/api/manager/${creator.managerId}/leagues`, `Creator ${creator.name} leagues`);
         if (creatorLeaguesData?.classic) {
           const creatorLeagues = creatorLeaguesData.classic.slice(0, 3); // Limit per creator
           
@@ -12490,13 +12490,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (processedLeagues.has(league.id)) continue;
             processedLeagues.add(league.id);
             
-            const leagueData = await safeFetch(`https://fantasy.premierleague.com/api/leagues-classic/${league.id}/standings/`, `Creator league ${league.name}`);
+            const leagueData = await safeFetch(`http://localhost:5000/api/leagues-classic/${league.id}/standings`, `Creator league ${league.name}`);
             if (leagueData?.standings?.results) {
               const top50 = leagueData.standings.results.slice(0, 50);
               
               for (const manager of top50) {
                 if (manager.entry && manager.total && manager.rank) {
-                  const managerData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${manager.entry}/`, `Manager ${manager.entry}`);
+                  const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Manager ${manager.entry}`);
                   if (managerData) {
                     const snapshot = {
                       managerId: manager.entry,
