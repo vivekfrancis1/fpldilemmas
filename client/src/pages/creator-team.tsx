@@ -148,6 +148,31 @@ export default function CreatorTeam() {
     retry: 2,
   });
 
+  // Get bootstrap data to determine completed gameweeks
+  const { data: bootstrapData } = useQuery<any>({
+    queryKey: ['/api/bootstrap-static'],
+  });
+
+  // Function to get completed gameweeks (1-3 only)
+  const getCompletedGameweeks = () => {
+    if (!bootstrapData?.events) return [];
+    return bootstrapData.events
+      .filter((event: any) => event.finished && event.id >= 1 && event.id <= 3)
+      .map((event: any) => event.id);
+  };
+
+  // Filter manager history to only show completed gameweeks 1-3
+  const filteredManagerHistory = managerHistory?.current?.filter((gw: HistoryEntry) => {
+    const completedGameweeks = getCompletedGameweeks();
+    return completedGameweeks.includes(gw.event);
+  });
+
+  // Filter creator history to only show completed gameweeks 1-3
+  const filteredCreatorHistory = creatorHistory?.filter((gw: any) => {
+    const completedGameweeks = getCompletedGameweeks();
+    return completedGameweeks.includes(gw.gameweek);
+  });
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -545,7 +570,7 @@ export default function CreatorTeam() {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : (creatorHistory && creatorHistory.length > 0) || managerHistory?.current ? (
+          ) : (filteredCreatorHistory && filteredCreatorHistory.length > 0) || (filteredManagerHistory && filteredManagerHistory.length > 0) ? (
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-semibold mb-4 flex items-center">
@@ -567,7 +592,7 @@ export default function CreatorTeam() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(creatorHistory?.map(track => ({
+                        {(filteredCreatorHistory?.map(track => ({
                             event: track.gameweek,
                             points: track.gameweekPoints,
                             total_points: track.overallPoints,
@@ -576,11 +601,11 @@ export default function CreatorTeam() {
                             value: parseFloat(track.teamValue) * 10,
                             event_transfers: track.totalTransfers,
                             event_transfers_cost: track.hitsTaken * 4
-                          })) || managerHistory?.current || [])
+                          })) || filteredManagerHistory || [])
                           .sort((a, b) => b.event - a.event)
                           .slice(0, 10)
                           .map((entry, index) => {
-                            const prevEntry = managerHistory.current.find(e => e.event === entry.event - 1);
+                            const prevEntry = filteredManagerHistory?.find(e => e.event === entry.event - 1);
                             const rankChange = prevEntry ? prevEntry.overall_rank - entry.overall_rank : null;
                             
                             return (
@@ -633,22 +658,22 @@ export default function CreatorTeam() {
               </div>
 
               {/* Performance Summary */}
-              {(managerHistory?.current || creatorHistory) && (
+              {(filteredManagerHistory || filteredCreatorHistory) && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-2xl font-bold text-blue-700">
-                            {creatorHistory && creatorHistory.length > 0
+                            {filteredCreatorHistory && filteredCreatorHistory.length > 0
                               ? Math.round(
-                                  creatorHistory.reduce((sum, track) => sum + track.gameweekPoints, 0) / 
-                                  creatorHistory.length
+                                  filteredCreatorHistory.reduce((sum, track) => sum + track.gameweekPoints, 0) / 
+                                  filteredCreatorHistory.length
                                 )
-                              : managerHistory?.current 
+                              : filteredManagerHistory 
                                 ? Math.round(
-                                    managerHistory.current.reduce((sum, entry) => sum + entry.points, 0) / 
-                                    managerHistory.current.length
+                                    filteredManagerHistory.reduce((sum, entry) => sum + entry.points, 0) / 
+                                    filteredManagerHistory.length
                                   )
                                 : 0
                             }
@@ -664,10 +689,10 @@ export default function CreatorTeam() {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-2xl font-bold text-green-700">
-                            {creatorHistory && creatorHistory.length > 0
-                              ? Math.max(...creatorHistory.map(track => track.gameweekPoints))
-                              : managerHistory?.current 
-                                ? Math.max(...managerHistory.current.map(e => e.points))
+                            {filteredCreatorHistory && filteredCreatorHistory.length > 0
+                              ? Math.max(...filteredCreatorHistory.map(track => track.gameweekPoints))
+                              : filteredManagerHistory 
+                                ? Math.max(...filteredManagerHistory.map(e => e.points))
                                 : 0
                             }
                           </div>
@@ -682,10 +707,10 @@ export default function CreatorTeam() {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-2xl font-bold text-purple-700">
-                            #{creatorHistory && creatorHistory.length > 0
-                              ? Math.min(...creatorHistory.map(track => track.overallRank)).toLocaleString()
-                              : managerHistory?.current 
-                                ? Math.min(...managerHistory.current.map(e => e.overall_rank)).toLocaleString()
+                            #{filteredCreatorHistory && filteredCreatorHistory.length > 0
+                              ? Math.min(...filteredCreatorHistory.map(track => track.overallRank)).toLocaleString()
+                              : filteredManagerHistory 
+                                ? Math.min(...filteredManagerHistory.map(e => e.overall_rank)).toLocaleString()
                                 : 'N/A'
                             }
                           </div>
@@ -700,10 +725,10 @@ export default function CreatorTeam() {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-2xl font-bold text-orange-700">
-                            {creatorHistory && creatorHistory.length > 0
-                              ? creatorHistory.filter(track => track.totalTransfers > 0).length
-                              : managerHistory?.current 
-                                ? managerHistory.current.filter(e => e.event_transfers > 0).length
+                            {filteredCreatorHistory && filteredCreatorHistory.length > 0
+                              ? filteredCreatorHistory.filter(track => track.totalTransfers > 0).length
+                              : filteredManagerHistory 
+                                ? filteredManagerHistory.filter(e => e.event_transfers > 0).length
                                 : 0
                             }
                           </div>
