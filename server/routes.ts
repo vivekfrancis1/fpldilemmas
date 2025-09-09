@@ -8900,12 +8900,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let currentTeam = null;
           let captainPlayerName = null;
           let viceCaptainPlayerName = null;
+          let totalTransfers = 0;
           
           try {
             const teamResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/event/${currentGameweek}/picks/`);
             if (teamResponse.ok) {
               const teamData = await teamResponse.json();
               currentTeam = teamData.picks;
+              
+              // Extract transfers info from entry_history
+              if (teamData.entry_history) {
+                totalTransfers = teamData.entry_history.total_transfers || 0;
+              }
               
               // Get captain and vice-captain names
               const captainPick = teamData.picks.find((pick: any) => pick.is_captain);
@@ -8970,7 +8976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             gameweekRank: managerData.summary_event_rank || null,
             teamValue: managerData.last_deadline_value ? parseFloat((managerData.last_deadline_value / 10).toFixed(1)) : null, // Convert from pence to pounds
             bank: managerData.last_deadline_bank ? parseFloat((managerData.last_deadline_bank / 10).toFixed(1)) : null,
-            totalTransfers: managerData.total_transfers || 0,
+            totalTransfers: totalTransfers,
             freeTransfers: managerData.free_transfers || 1,
             wildcardUsed: false, // Will need to check picks history for chips used
             benchBoostUsed: false,
