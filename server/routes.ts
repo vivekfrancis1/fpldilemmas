@@ -12370,6 +12370,301 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // League Manager Snapshot Collection API - collects and stores actual manager data
+  app.post('/api/collect-league-snapshots/:gameweek', async (req, res) => {
+    try {
+      const { gameweek } = req.params;
+      const { managerId } = req.body; // The user's manager ID to collect leagues from
+      
+      console.log(`🔄 Starting league snapshot collection for GW${gameweek} with manager ${managerId}`);
+      
+      const currentGameweek = parseInt(gameweek);
+      const collectedSnapshots = [];
+      const processedLeagues = new Set();
+      let totalCollected = 0;
+      
+      // Helper function for safe API calls
+      const safeFetch = async (url: string, description: string) => {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            console.warn(`${description} API responded with status: ${response.status}`);
+            return null;
+          }
+          const text = await response.text();
+          return JSON.parse(text);
+        } catch (error) {
+          console.warn(`Error fetching ${description}:`, error.message);
+          return null;
+        }
+      };
+      
+      // 1. Collect from user's leagues
+      const userLeaguesData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${managerId}/leagues/`, 'User leagues');
+      if (userLeaguesData?.classic) {
+        const userLeagues = userLeaguesData.classic.slice(0, 10); // Limit to prevent overload
+        console.log(`📊 Processing ${userLeagues.length} user leagues`);
+        
+        for (const league of userLeagues) {
+          if (processedLeagues.has(league.id)) continue;
+          processedLeagues.add(league.id);
+          
+          const leagueData = await safeFetch(`https://fantasy.premierleague.com/api/leagues-classic/${league.id}/standings/`, `League ${league.name}`);
+          if (leagueData?.standings?.results) {
+            const top50 = leagueData.standings.results.slice(0, 50);
+            
+            for (const manager of top50) {
+              if (manager.entry && manager.total && manager.rank) {
+                const managerData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${manager.entry}/`, `Manager ${manager.entry}`);
+                if (managerData) {
+                  const snapshot = {
+                    managerId: manager.entry,
+                    managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
+                    leagueId: league.id,
+                    leagueName: league.name,
+                    gameweek: currentGameweek,
+                    overallRank: managerData.summary_overall_rank,
+                    overallPoints: managerData.summary_overall_points,
+                    gameweekPoints: managerData.summary_event_points,
+                    gameweekRank: manager.rank,
+                    teamValue: managerData.value ? (managerData.value / 10) : null, // Convert to £m
+                    bank: managerData.bank ? (managerData.bank / 10) : null, // Convert to £m
+                    totalTransfers: managerData.total_transfers,
+                    dataSource: 'user-league',
+                    contentCreatorId: null,
+                  };
+                  
+                  collectedSnapshots.push(snapshot);
+                  totalCollected++;
+                }
+                
+                // Rate limiting
+                await new Promise(resolve => setTimeout(resolve, 100));
+              }
+            }
+          }
+          
+          // Delay between leagues
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+      
+      // 2. Collect from content creator leagues
+      const creators = await db.select().from(fplContentCreators).orderBy(fplContentCreators.name);
+      const maxCreators = 15;
+      console.log(`📊 Processing ${Math.min(maxCreators, creators.length)} content creator leagues`);
+      
+      for (const creator of creators.slice(0, maxCreators)) {
+        if (!creator.managerId) continue;
+        
+        // Add creator's own data
+        const creatorData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/`, `Creator ${creator.name}`);
+        if (creatorData) {
+          const creatorSnapshot = {
+            managerId: creator.managerId,
+            managerName: creator.name,
+            leagueId: 0, // Special value for individual creators
+            leagueName: `${creator.name} (Individual)`,
+            gameweek: currentGameweek,
+            overallRank: creatorData.summary_overall_rank,
+            overallPoints: creatorData.summary_overall_points,
+            gameweekPoints: creatorData.summary_event_points,
+            gameweekRank: null,
+            teamValue: creatorData.value ? (creatorData.value / 10) : null,
+            bank: creatorData.bank ? (creatorData.bank / 10) : null,
+            totalTransfers: creatorData.total_transfers,
+            dataSource: 'content-creator',
+            contentCreatorId: creator.id,
+          };
+          
+          collectedSnapshots.push(creatorSnapshot);
+          totalCollected++;
+        }
+        
+        // Get creator's leagues
+        const creatorLeaguesData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/leagues/`, `Creator ${creator.name} leagues`);
+        if (creatorLeaguesData?.classic) {
+          const creatorLeagues = creatorLeaguesData.classic.slice(0, 3); // Limit per creator
+          
+          for (const league of creatorLeagues) {
+            if (processedLeagues.has(league.id)) continue;
+            processedLeagues.add(league.id);
+            
+            const leagueData = await safeFetch(`https://fantasy.premierleague.com/api/leagues-classic/${league.id}/standings/`, `Creator league ${league.name}`);
+            if (leagueData?.standings?.results) {
+              const top50 = leagueData.standings.results.slice(0, 50);
+              
+              for (const manager of top50) {
+                if (manager.entry && manager.total && manager.rank) {
+                  const managerData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${manager.entry}/`, `Manager ${manager.entry}`);
+                  if (managerData) {
+                    const snapshot = {
+                      managerId: manager.entry,
+                      managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
+                      leagueId: league.id,
+                      leagueName: league.name,
+                      gameweek: currentGameweek,
+                      overallRank: managerData.summary_overall_rank,
+                      overallPoints: managerData.summary_overall_points,
+                      gameweekPoints: managerData.summary_event_points,
+                      gameweekRank: manager.rank,
+                      teamValue: managerData.value ? (managerData.value / 10) : null,
+                      bank: managerData.bank ? (managerData.bank / 10) : null,
+                      totalTransfers: managerData.total_transfers,
+                      dataSource: 'creator-league',
+                      contentCreatorId: creator.id,
+                    };
+                    
+                    collectedSnapshots.push(snapshot);
+                    totalCollected++;
+                  }
+                  
+                  // Rate limiting
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                }
+              }
+            }
+            
+            // Delay between leagues
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+        }
+        
+        // Delay between creators
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      // 3. Store all snapshots in database
+      if (collectedSnapshots.length > 0) {
+        console.log(`💾 Storing ${collectedSnapshots.length} manager snapshots in database`);
+        
+        // Insert in batches to avoid database limits
+        const batchSize = 50;
+        let insertedCount = 0;
+        
+        for (let i = 0; i < collectedSnapshots.length; i += batchSize) {
+          const batch = collectedSnapshots.slice(i, i + batchSize);
+          try {
+            await db.insert(leagueManagerSnapshots).values(batch).onConflictDoUpdate({
+              target: [leagueManagerSnapshots.managerId, leagueManagerSnapshots.leagueId, leagueManagerSnapshots.gameweek],
+              set: {
+                overallRank: sql`excluded.overall_rank`,
+                overallPoints: sql`excluded.overall_points`,
+                gameweekPoints: sql`excluded.gameweek_points`,
+                gameweekRank: sql`excluded.gameweek_rank`,
+                teamValue: sql`excluded.team_value`,
+                bank: sql`excluded.bank`,
+                totalTransfers: sql`excluded.total_transfers`,
+                collectedAt: sql`excluded.collected_at`,
+              }
+            });
+            insertedCount += batch.length;
+            console.log(`✅ Inserted batch ${Math.ceil((i + batchSize) / batchSize)} (${insertedCount}/${collectedSnapshots.length})`);
+          } catch (error) {
+            console.error(`❌ Failed to insert batch ${Math.ceil((i + batchSize) / batchSize)}:`, error.message);
+          }
+        }
+        
+        // 4. Generate ranking benchmarks from collected data
+        await generateRankingBenchmarks(currentGameweek);
+        
+        console.log(`🎉 Collection complete! Stored ${insertedCount} manager snapshots for GW${currentGameweek}`);
+        
+        res.json({
+          success: true,
+          gameweek: currentGameweek,
+          totalCollected: insertedCount,
+          leaguesProcessed: processedLeagues.size,
+          dataSource: 'comprehensive-collection'
+        });
+      } else {
+        console.warn(`⚠️ No snapshots collected for GW${currentGameweek}`);
+        res.json({
+          success: false,
+          error: 'No manager snapshots collected',
+          gameweek: currentGameweek
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error collecting league snapshots:', error);
+      res.status(500).json({ error: 'Failed to collect league snapshots', details: error.message });
+    }
+  });
+  
+  // Generate ranking benchmarks from collected snapshot data
+  async function generateRankingBenchmarks(gameweek: number) {
+    try {
+      console.log(`📊 Generating ranking benchmarks for GW${gameweek}`);
+      
+      // Get all unique manager snapshots for this gameweek
+      const snapshots = await db.select({
+        managerId: leagueManagerSnapshots.managerId,
+        overallRank: leagueManagerSnapshots.overallRank,
+        overallPoints: leagueManagerSnapshots.overallPoints,
+      })
+      .from(leagueManagerSnapshots)
+      .where(eq(leagueManagerSnapshots.gameweek, gameweek))
+      .groupBy(leagueManagerSnapshots.managerId, leagueManagerSnapshots.overallRank, leagueManagerSnapshots.overallPoints)
+      .orderBy(leagueManagerSnapshots.overallRank);
+      
+      if (snapshots.length === 0) {
+        console.warn(`No snapshots found for GW${gameweek}`);
+        return;
+      }
+      
+      console.log(`Found ${snapshots.length} unique manager snapshots for benchmarking`);
+      
+      // Define target ranks for benchmarks
+      const targetRanks = [1, 10, 100, 1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2000000, 3000000, 5000000];
+      const benchmarks = [];
+      
+      for (const targetRank of targetRanks) {
+        // Find the closest manager to this rank
+        let closestSnapshot = null;
+        let minDistance = Infinity;
+        
+        for (const snapshot of snapshots) {
+          const distance = Math.abs(snapshot.overallRank - targetRank);
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestSnapshot = snapshot;
+          }
+        }
+        
+        if (closestSnapshot) {
+          const confidence = minDistance === 0 ? 1.0 : Math.max(0.1, 1.0 - (minDistance / targetRank));
+          
+          benchmarks.push({
+            gameweek,
+            rank: targetRank,
+            pointsRequired: closestSnapshot.overallPoints,
+            dataSource: 'league-data',
+            confidence: parseFloat(confidence.toFixed(2))
+          });
+        }
+      }
+      
+      // Insert benchmarks
+      if (benchmarks.length > 0) {
+        await db.insert(rankingBenchmarks).values(benchmarks).onConflictDoUpdate({
+          target: [rankingBenchmarks.gameweek, rankingBenchmarks.rank],
+          set: {
+            pointsRequired: sql`excluded.points_required`,
+            dataSource: sql`excluded.data_source`,
+            confidence: sql`excluded.confidence`,
+            updatedAt: sql`NOW()`
+          }
+        });
+        
+        console.log(`✅ Generated ${benchmarks.length} ranking benchmarks for GW${gameweek}`);
+      }
+      
+    } catch (error) {
+      console.error('Error generating ranking benchmarks:', error);
+    }
+  }
+
   // Helper function to get team strength for supremacy calculation
   function getTeamStrength(teamId: number): number {
     const { 
