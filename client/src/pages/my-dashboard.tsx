@@ -696,32 +696,18 @@ export default function MyDashboard() {
         return Math.round(onlyPoints + (rankDiff * pointsPerRank));
       }
       
-      // Find surrounding ranks for interpolation
+      // Find only the lower rank (best rank we have data for that's still achievable)
       let lowerRank = null;
-      let higherRank = null;
       
       for (const rank of availableRanks) {
         if (rank <= targetRank) {
           lowerRank = rank;
         }
-        if (rank >= targetRank && !higherRank) {
-          higherRank = rank;
-          break;
-        }
       }
       
-      if (lowerRank && higherRank && lowerRank !== higherRank) {
-        // Interpolate between the two ranks
-        const lowerPoints = actualRankPoints[lowerRank];
-        const higherPoints = actualRankPoints[higherRank];
-        const ratio = (targetRank - lowerRank) / (higherRank - lowerRank);
-        return Math.round(lowerPoints - (lowerPoints - higherPoints) * ratio);
-      } else if (lowerRank) {
-        // Use the closest rank (usually means targetRank is beyond our data range)
+      if (lowerRank) {
+        // Use the closest lower rank
         return actualRankPoints[lowerRank];
-      } else if (higherRank) {
-        // Use the closest rank (usually means targetRank is better than our best data)
-        return actualRankPoints[higherRank];
       }
       
       // This should not happen if we have data, but just in case
