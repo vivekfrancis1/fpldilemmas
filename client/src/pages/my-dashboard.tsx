@@ -23,8 +23,7 @@ import {
   BarChart3,
   ChevronUp,
   ChevronDown,
-  ExternalLink,
-  AlertCircle
+  ExternalLink
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -370,25 +369,6 @@ export default function MyDashboard() {
     enabled: !!searchedId,
   });
 
-  // Fetch comprehensive league data from user and content creators
-  const { data: contentCreators } = useQuery({
-    queryKey: ['/api/content-creators'],
-    staleTime: 10 * 60 * 1000, // Cache for 10 minutes
-  });
-
-  // Fetch database-based ranking data (actual data only, no estimations)
-  const { data: comprehensiveRankingData } = useQuery<{
-    dataPoints: Array<{
-      managerId: number;
-      overallRank: number;
-      totalPoints: number;
-    }>;
-  }>({
-    queryKey: ['/api/database-rankings', searchedId],
-    enabled: !!searchedId,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
-
   // Search handlers
   const handleSearch = () => {
     if (managerId.trim()) {
@@ -423,48 +403,6 @@ export default function MyDashboard() {
     const previous = historyData.current[historyData.current.length - 2];
     
     return previous.overall_rank - current.overall_rank;
-  };
-
-  const getOldRank = () => {
-    if (!historyData?.current || historyData.current.length < 2) return managerData?.summary_overall_rank;
-    
-    const previous = historyData.current[historyData.current.length - 2];
-    return previous.overall_rank;
-  };
-
-  const getSafetyScore = () => {
-    const oldRank = getOldRank();
-    const currentPoints = managerData?.summary_overall_points || 0;
-    const rankingCalcs = getRankingCalculations();
-    
-    if (!oldRank || !comprehensiveRankingData?.dataPoints) return 0;
-    
-    const dataPoints = comprehensiveRankingData.dataPoints;
-    
-    // Find managers slightly better than old rank (for green arrow)
-    const targetRank = Math.max(1, oldRank - 10000); // Aim for 10k better than old rank
-    const nearTargetRank = dataPoints.filter((point: any) => 
-      point.overallRank && Math.abs(point.overallRank - targetRank) <= 2000
-    );
-    
-    if (nearTargetRank.length === 0) {
-      // Fallback: use general safety calculation
-      return Math.max(45, 60 - (managerData?.summary_event_points || 0));
-    }
-    
-    // Get average total points of managers around target rank
-    const avgPointsAtTargetRank = nearTargetRank.reduce((sum: number, point: any) => 
-      sum + (point.overallPoints || point.totalPoints || 0), 0
-    ) / nearTargetRank.length;
-    
-    // Calculate total points needed for green arrow
-    const totalPointsNeeded = Math.ceil(avgPointsAtTargetRank + 1);
-    
-    // Safety score = gameweek points needed (total needed - current total)
-    const gwPointsNeeded = Math.max(0, totalPointsNeeded - currentPoints);
-    
-    // If we need more than 100 points this gameweek (unrealistic), cap it
-    return Math.min(gwPointsNeeded, 100);
   };
 
 
@@ -611,148 +549,6 @@ export default function MyDashboard() {
     return historyData.current.reduce((total: number, gw: any) => total + (gw.points || 0), 0);
   };
 
-  // Calculate rankings using actual database data only (no estimations)
-  const getRankingCalculations = () => {
-    if (!managerData) return null;
-    
-    const currentPoints = managerData.summary_overall_points;
-    const currentRank = managerData.summary_overall_rank;
-    const currentGW = managerData.current_event;
-    
-    // Only proceed if we have actual database data
-    const hasActualData = comprehensiveRankingData?.dataPoints && comprehensiveRankingData.dataPoints.length > 0;
-    if (!hasActualData) {
-      return null; // Return null to show "no data" message instead of estimates
-    }
-    
-    const dataPoints = comprehensiveRankingData!.dataPoints;
-    
-    // Exact total managers in Overall League
-    const totalManagers = 11304765;
-    
-    // Define all ranking tiers
-    const rankingTiers = [
-      { key: 'top1', name: 'Top 1', target: 1 },
-      { key: 'top10', name: 'Top 10', target: 10 },
-      { key: 'top100', name: 'Top 100', target: 100 },
-      { key: 'top1k', name: 'Top 1k', target: 1000 },
-      { key: 'top5k', name: 'Top 5k', target: 5000 },
-      { key: 'top10k', name: 'Top 10k', target: 10000 },
-      { key: 'top25k', name: 'Top 25k', target: 25000 },
-      { key: 'top50k', name: 'Top 50k', target: 50000 },
-      { key: 'top100k', name: 'Top 100k', target: 100000 },
-      { key: 'top250k', name: 'Top 250k', target: 250000 },
-      { key: 'top500k', name: 'Top 500k', target: 500000 },
-      { key: 'top1M', name: 'Top 1M', target: 1000000 },
-      { key: 'top2M', name: 'Top 2M', target: 2000000 },
-      { key: 'top3M', name: 'Top 3M', target: 3000000 },
-      { key: 'top5M', name: 'Top 5M', target: 5000000 },
-    ];
-    
-    // Create a lookup of actual points from database benchmarks
-    const actualRankPoints: Record<number, number> = {};
-    dataPoints.forEach((point: any) => {
-      if (point.overallRank && point.totalPoints) {
-        actualRankPoints[point.overallRank] = point.totalPoints;
-      }
-    });
-    
-    // Function to get points needed for a specific rank target
-    const getPointsForRank = (targetRank: number): number => {
-      // Special case: Use real manager data for Top 3M (rank 3,000,000)
-      // Based on shamith c (Manager ID: 8146296) with rank 2,037,157 and 168 points
-      if (targetRank === 3000000) {
-        return 168;
-      }
-      
-      // If we have exact data for this rank, use it
-      if (actualRankPoints[targetRank]) {
-        return actualRankPoints[targetRank];
-      }
-      
-      // Find the closest ranks we have data for
-      const availableRanks = Object.keys(actualRankPoints).map(Number).sort((a, b) => a - b);
-      
-      if (availableRanks.length === 0) {
-        // No data available - should not happen with proper data collection
-        return currentPoints + Math.round(50 * Math.log10(targetRank));
-      }
-      
-      // Find the closest single rank if no exact match
-      if (availableRanks.length === 1) {
-        const onlyRank = availableRanks[0];
-        const onlyPoints = actualRankPoints[onlyRank];
-        // Simple extrapolation based on rank difference
-        const rankDiff = targetRank - onlyRank;
-        const pointsPerRank = rankDiff > 0 ? -0.01 : 0.01; // Points decrease as rank increases
-        return Math.round(onlyPoints + (rankDiff * pointsPerRank));
-      }
-      
-      // Find surrounding ranks for interpolation
-      let lowerRank = null;
-      let higherRank = null;
-      
-      for (const rank of availableRanks) {
-        if (rank <= targetRank) {
-          lowerRank = rank;
-        }
-        if (rank >= targetRank && !higherRank) {
-          higherRank = rank;
-          break;
-        }
-      }
-      
-      if (lowerRank && higherRank && lowerRank !== higherRank) {
-        // Interpolate between the two ranks
-        const lowerPoints = actualRankPoints[lowerRank];
-        const higherPoints = actualRankPoints[higherRank];
-        const ratio = (targetRank - lowerRank) / (higherRank - lowerRank);
-        return Math.round(lowerPoints - (lowerPoints - higherPoints) * ratio);
-      } else if (lowerRank) {
-        // Use the closest rank (usually means targetRank is beyond our data range)
-        return actualRankPoints[lowerRank];
-      } else if (higherRank) {
-        // Use the closest rank (usually means targetRank is better than our best data)
-        return actualRankPoints[higherRank];
-      }
-      
-      // This should not happen if we have data, but just in case
-      return currentPoints + Math.round(30 * Math.log10(targetRank));
-    };
-    
-    // Calculate points needed for each tier
-    const pointsNeeded: Record<string, number> = {};
-    
-    rankingTiers.forEach(tier => {
-      if (currentRank <= tier.target) {
-        pointsNeeded[tier.key] = 0; // Already achieved this rank
-      } else {
-        const targetPoints = getPointsForRank(tier.target);
-        pointsNeeded[tier.key] = Math.max(0, targetPoints - currentPoints);
-      }
-    });
-    
-    // Safety score based on actual collected data only
-    const totalDataPoints = dataPoints.length;
-    const nearbyManagers = dataPoints.filter((point: any) => 
-      point.overallRank && Math.abs(point.overallRank - currentRank) <= 5000
-    );
-    const avgNearbyGW = nearbyManagers.length > 0 
-      ? nearbyManagers.reduce((sum: number, point: any) => sum + (point.lastGameweekPoints || 0), 0) / nearbyManagers.length
-      : 45;
-    const safetyScore = Math.max(0, Math.ceil(avgNearbyGW * 0.9));
-    
-    return {
-      pointsNeeded,
-      rankingTiers,
-      safetyScore,
-      totalManagers,
-      totalDataPoints,
-      dataSource: 'enhanced-database-collection',
-      rankPercentile: ((currentRank / totalManagers) * 100).toFixed(2),
-    };
-  };
-
   const sortPlayersByPosition = (picks: TeamPick[]) => {
     return picks.sort((a, b) => {
       const playerA = getPlayerById(a.element);
@@ -869,7 +665,7 @@ export default function MyDashboard() {
 
             {/* Main Dashboard Tabs */}
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+              <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
                 <TabsTrigger 
                   value="overview" 
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
@@ -881,12 +677,6 @@ export default function MyDashboard() {
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
                 >
                   Team
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="liverank" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
-                >
-                  Live Rank
                 </TabsTrigger>
                 <TabsTrigger 
                   value="performance" 
@@ -1281,7 +1071,7 @@ export default function MyDashboard() {
                                       </div>
                                       <div className="text-right space-y-1">
                                         <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
-                                        <p className="text-sm text-gray-600">{player.form || 0} GW pts</p>
+                                        <p className="text-sm text-gray-600">{player.event_points || 0} GW pts</p>
                                         <div className="text-xs text-gray-500">
                                           <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
                                         </div>
@@ -1382,229 +1172,9 @@ export default function MyDashboard() {
               )}
             </TabsContent>
 
-            {/* Live Rank Tab */}
-            <TabsContent value="liverank" className="space-y-6">
-              {managerData && historyData && (() => {
-                const rankingCalcs = getRankingCalculations();
-                return (
-                <>
-                  {/* Main Rank Card */}
-                  <Card className="bg-gradient-to-br from-blue-50 via-purple-50 to-green-50 border-0 shadow-xl">
-                    <CardHeader className="text-center pb-4">
-                      <CardTitle className="text-2xl font-bold text-gray-800">
-                        {managerData.player_first_name} {managerData.player_last_name}
-                      </CardTitle>
-                      <div className="flex items-center justify-center gap-2 text-gray-600">
-                        <span>GW {managerData.current_event}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <Trophy className="h-4 w-4" />
-                          {formatRank(managerData.summary_overall_rank)}
-                        </span>
-                        {rankingCalcs && (
-                          <>
-                            <span>•</span>
-                            <span>Top {rankingCalcs.rankPercentile}%</span>
-                          </>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      {/* Main Stats Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {/* Old Rank */}
-                        <div className="text-center p-4 bg-white/70 rounded-lg">
-                          <div className="text-sm font-medium text-gray-700 mb-1">Old Rank</div>
-                          <div className="text-2xl font-bold text-gray-600">
-                            {formatRank(getOldRank() || managerData.summary_overall_rank)}
-                          </div>
-                        </div>
 
-                        {/* Live Rank */}
-                        <div className="text-center p-4 bg-white/70 rounded-lg">
-                          <div className="text-sm font-medium text-gray-700 mb-1">Live Rank</div>
-                          <div className="text-2xl font-bold text-blue-600">
-                            {formatRank(managerData.summary_overall_rank)}
-                          </div>
-                        </div>
 
-                        {/* Rank Gained */}
-                        <div className="text-center p-4 bg-white/70 rounded-lg col-span-2 md:col-span-1">
-                          <div className="text-sm font-medium text-gray-700 mb-1">Rank Gained</div>
-                          <div className={`text-2xl font-bold ${getRankChange() && getRankChange()! > 0 ? 'text-green-600' : getRankChange() && getRankChange()! < 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                            {getRankChange() ? 
-                              (getRankChange()! > 0 ? '+' : '') + getRankChange()!.toLocaleString() : 
-                              '0'
-                            }
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Secondary Stats Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* This GW Live Points */}
-                        <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-                          <div className="text-sm font-medium text-green-700 mb-1">GW{managerData.current_event} Live</div>
-                          <div className="text-2xl font-bold text-green-600">
-                            {managerData.summary_event_points}
-                          </div>
-                        </div>
-
-                        {/* Safety Score */}
-                        <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
-                          <div className="text-sm font-medium text-orange-700 mb-1">Safety Score</div>
-                          <div className="text-2xl font-bold text-orange-600">
-                            {getSafetyScore()}
-                          </div>
-                        </div>
-
-                        {/* Total Points */}
-                        <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-                          <div className="text-sm font-medium text-purple-700 mb-1">Total Points</div>
-                          <div className="text-2xl font-bold text-purple-600">
-                            {managerData.summary_overall_points.toLocaleString()}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Bottom Row */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center">
-                          <div className="text-sm font-medium text-gray-700 mb-1">GW Rank</div>
-                          <div className="text-lg font-bold text-purple-600">
-                            {formatRank(managerData.summary_event_rank)}
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-sm font-medium text-gray-700 mb-1">Total Managers</div>
-                          <div className="text-lg font-bold text-indigo-600">
-                            {rankingCalcs ? rankingCalcs.totalManagers.toLocaleString() : '11M+'}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Points Needed for Rankings */}
-                  <Card className="border-0 shadow-lg">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-gray-800">
-                        <Target className="h-5 w-5 text-blue-600" />
-                        Points Needed for Rankings {rankingCalcs && <span className="text-sm font-normal text-gray-500">(Enhanced Database Collection: {rankingCalcs.totalManagers.toLocaleString()} total managers, 893 snapshots from Overall League + User Leagues + Creator Leagues)</span>}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {rankingCalcs ? (
-                        <div className="space-y-6">
-                          {/* Elite Tiers */}
-                          <div>
-                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Elite Tiers</h4>
-                            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                              {rankingCalcs.rankingTiers.slice(0, 6).map((tier) => {
-                                const points = rankingCalcs.pointsNeeded[tier.key];
-                                const isAchieved = points === 0;
-                                return (
-                                  <div 
-                                    key={tier.key}
-                                    className={`text-center p-3 rounded-lg border ${
-                                      isAchieved 
-                                        ? 'bg-green-50 border-green-200' 
-                                        : 'bg-amber-50 border-amber-200'
-                                    }`}
-                                  >
-                                    <div className="text-xs font-medium text-gray-700 mb-1">{tier.name}</div>
-                                    <div className={`text-lg font-bold ${
-                                      isAchieved ? 'text-green-900' : 'text-amber-900'
-                                    }`}>
-                                      {isAchieved ? '✓' : points.toLocaleString()}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* Good Tiers */}
-                          <div>
-                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Good Tiers</h4>
-                            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                              {rankingCalcs.rankingTiers.slice(6, 12).map((tier) => {
-                                const points = rankingCalcs.pointsNeeded[tier.key];
-                                const isAchieved = points === 0;
-                                return (
-                                  <div 
-                                    key={tier.key}
-                                    className={`text-center p-3 rounded-lg border ${
-                                      isAchieved 
-                                        ? 'bg-green-50 border-green-200' 
-                                        : 'bg-blue-50 border-blue-200'
-                                    }`}
-                                  >
-                                    <div className="text-xs font-medium text-gray-700 mb-1">{tier.name}</div>
-                                    <div className={`text-lg font-bold ${
-                                      isAchieved ? 'text-green-900' : 'text-blue-900'
-                                    }`}>
-                                      {isAchieved ? '✓' : points.toLocaleString()}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* Mass Tiers */}
-                          <div>
-                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Mass Tiers</h4>
-                            <div className="grid grid-cols-3 gap-3">
-                              {rankingCalcs.rankingTiers.slice(12).map((tier) => {
-                                const points = rankingCalcs.pointsNeeded[tier.key];
-                                const isAchieved = points === 0;
-                                return (
-                                  <div 
-                                    key={tier.key}
-                                    className={`text-center p-3 rounded-lg border ${
-                                      isAchieved 
-                                        ? 'bg-green-50 border-green-200' 
-                                        : 'bg-purple-50 border-purple-200'
-                                    }`}
-                                  >
-                                    <div className="text-xs font-medium text-gray-700 mb-1">{tier.name}</div>
-                                    <div className={`text-lg font-bold ${
-                                      isAchieved ? 'text-green-900' : 'text-purple-900'
-                                    }`}>
-                                      {isAchieved ? '✓' : points.toLocaleString()}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">No Ranking Data Available</h3>
-                          <p className="text-gray-600 mb-4">
-                            Ranking benchmarks need to be collected from actual FPL league data.
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Run data collection after each gameweek to get accurate ranking thresholds.
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </>);
-              })()}
-              
-              {!managerData && searchedId && (
-                <div className="text-center py-8">
-                  <div className="text-lg">Loading live rank data...</div>
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Performance Tab */}
+              {/* Performance Tab */}
               <TabsContent value="performance" className="fpl-section-spacing mt-8">
                 {historyData && (
                   <>
