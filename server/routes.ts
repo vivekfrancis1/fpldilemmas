@@ -12415,15 +12415,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (manager.entry && manager.total && manager.rank) {
               const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Overall manager ${manager.entry}`);
               if (managerData) {
+                // Get manager history to extract old rank and old points
+                const historyData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}/history`, `Manager ${manager.entry} history`);
+                let oldRank = null;
+                let oldPoints = null;
+                let gameweekPointsAfterTransfers = null;
+                
+                if (historyData?.current && historyData.current.length > 0) {
+                  // Find previous gameweek data
+                  const previousGW = historyData.current.find(gw => gw.event === currentGameweek - 1);
+                  if (previousGW) {
+                    oldRank = previousGW.overall_rank;
+                    oldPoints = previousGW.points;
+                  }
+                  
+                  // Find current gameweek data for points after transfers
+                  const currentGW = historyData.current.find(gw => gw.event === currentGameweek);
+                  if (currentGW) {
+                    gameweekPointsAfterTransfers = currentGW.points - currentGW.event_transfers_cost;
+                  }
+                }
+                
                 const snapshot = {
                   managerId: manager.entry,
                   managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
                   leagueId: overallLeagueId,
                   leagueName: 'Overall',
                   gameweek: currentGameweek,
-                  overallRank: managerData.summary_overall_rank,
-                  overallPoints: managerData.summary_overall_points,
-                  gameweekPoints: managerData.summary_event_points,
+                  overallRank: managerData.summary_overall_rank, // Current live rank (new rank)
+                  overallPoints: managerData.summary_overall_points, // Current live points (new points)
+                  oldRank: oldRank, // Rank at start of gameweek
+                  oldPoints: oldPoints, // Points at start of gameweek
+                  gameweekPoints: managerData.summary_event_points, // Gameweek points before transfers
+                  gameweekPointsAfterTransfers: gameweekPointsAfterTransfers, // Gameweek points after transfers
                   gameweekRank: manager.rank,
                   teamValue: managerData.value ? (managerData.value / 10) : null,
                   bank: managerData.bank ? (managerData.bank / 10) : null,
@@ -12471,15 +12495,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 if (manager.entry && manager.total && manager.rank) {
                   const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Manager ${manager.entry}`);
                   if (managerData) {
+                    // Get manager history to extract old rank and old points
+                    const historyData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}/history`, `Manager ${manager.entry} history`);
+                    let oldRank = null;
+                    let oldPoints = null;
+                    let gameweekPointsAfterTransfers = null;
+                    
+                    if (historyData?.current && historyData.current.length > 0) {
+                      // Find previous gameweek data
+                      const previousGW = historyData.current.find(gw => gw.event === currentGameweek - 1);
+                      if (previousGW) {
+                        oldRank = previousGW.overall_rank;
+                        oldPoints = previousGW.points;
+                      }
+                      
+                      // Find current gameweek data for points after transfers
+                      const currentGW = historyData.current.find(gw => gw.event === currentGameweek);
+                      if (currentGW) {
+                        gameweekPointsAfterTransfers = currentGW.points - currentGW.event_transfers_cost;
+                      }
+                    }
+                    
                     const snapshot = {
                       managerId: manager.entry,
                       managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
                       leagueId: league.id,
                       leagueName: league.name,
                       gameweek: currentGameweek,
-                      overallRank: managerData.summary_overall_rank,
-                      overallPoints: managerData.summary_overall_points,
-                      gameweekPoints: managerData.summary_event_points,
+                      overallRank: managerData.summary_overall_rank, // Current live rank (new rank)
+                      overallPoints: managerData.summary_overall_points, // Current live points (new points)
+                      oldRank: oldRank, // Rank at start of gameweek
+                      oldPoints: oldPoints, // Points at start of gameweek
+                      gameweekPoints: managerData.summary_event_points, // Gameweek points before transfers
+                      gameweekPointsAfterTransfers: gameweekPointsAfterTransfers, // Gameweek points after transfers
                       gameweekRank: manager.rank,
                       teamValue: managerData.value ? (managerData.value / 10) : null,
                       bank: managerData.bank ? (managerData.bank / 10) : null,
@@ -12518,15 +12566,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Add creator's own data
         const creatorData = await safeFetch(`http://localhost:5000/api/manager/${creator.managerId}`, `Creator ${creator.name}`);
         if (creatorData) {
+          // Get creator history to extract old rank and old points
+          const historyData = await safeFetch(`http://localhost:5000/api/manager/${creator.managerId}/history`, `Creator ${creator.name} history`);
+          let oldRank = null;
+          let oldPoints = null;
+          let gameweekPointsAfterTransfers = null;
+          
+          if (historyData?.current && historyData.current.length > 0) {
+            // Find previous gameweek data
+            const previousGW = historyData.current.find(gw => gw.event === currentGameweek - 1);
+            if (previousGW) {
+              oldRank = previousGW.overall_rank;
+              oldPoints = previousGW.points;
+            }
+            
+            // Find current gameweek data for points after transfers
+            const currentGW = historyData.current.find(gw => gw.event === currentGameweek);
+            if (currentGW) {
+              gameweekPointsAfterTransfers = currentGW.points - currentGW.event_transfers_cost;
+            }
+          }
+          
           const creatorSnapshot = {
             managerId: creator.managerId,
             managerName: creator.name,
             leagueId: 0, // Special value for individual creators
             leagueName: `${creator.name} (Individual)`,
             gameweek: currentGameweek,
-            overallRank: creatorData.summary_overall_rank,
-            overallPoints: creatorData.summary_overall_points,
-            gameweekPoints: creatorData.summary_event_points,
+            overallRank: creatorData.summary_overall_rank, // Current live rank (new rank)
+            overallPoints: creatorData.summary_overall_points, // Current live points (new points)
+            oldRank: oldRank, // Rank at start of gameweek
+            oldPoints: oldPoints, // Points at start of gameweek
+            gameweekPoints: creatorData.summary_event_points, // Gameweek points before transfers
+            gameweekPointsAfterTransfers: gameweekPointsAfterTransfers, // Gameweek points after transfers
             gameweekRank: null,
             teamValue: creatorData.value ? (creatorData.value / 10) : null,
             bank: creatorData.bank ? (creatorData.bank / 10) : null,
@@ -12563,15 +12635,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   if (manager.entry && manager.total && manager.rank) {
                     const managerData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}`, `Manager ${manager.entry}`);
                     if (managerData) {
+                      // Get manager history to extract old rank and old points
+                      const historyData = await safeFetch(`http://localhost:5000/api/manager/${manager.entry}/history`, `Manager ${manager.entry} history`);
+                      let oldRank = null;
+                      let oldPoints = null;
+                      let gameweekPointsAfterTransfers = null;
+                      
+                      if (historyData?.current && historyData.current.length > 0) {
+                        // Find previous gameweek data
+                        const previousGW = historyData.current.find(gw => gw.event === currentGameweek - 1);
+                        if (previousGW) {
+                          oldRank = previousGW.overall_rank;
+                          oldPoints = previousGW.points;
+                        }
+                        
+                        // Find current gameweek data for points after transfers
+                        const currentGW = historyData.current.find(gw => gw.event === currentGameweek);
+                        if (currentGW) {
+                          gameweekPointsAfterTransfers = currentGW.points - currentGW.event_transfers_cost;
+                        }
+                      }
+                      
                       const snapshot = {
                         managerId: manager.entry,
                         managerName: manager.player_name || manager.entry_name || `Manager ${manager.entry}`,
                         leagueId: league.id,
                         leagueName: league.name,
                         gameweek: currentGameweek,
-                        overallRank: managerData.summary_overall_rank,
-                        overallPoints: managerData.summary_overall_points,
-                        gameweekPoints: managerData.summary_event_points,
+                        overallRank: managerData.summary_overall_rank, // Current live rank (new rank)
+                        overallPoints: managerData.summary_overall_points, // Current live points (new points)
+                        oldRank: oldRank, // Rank at start of gameweek
+                        oldPoints: oldPoints, // Points at start of gameweek
+                        gameweekPoints: managerData.summary_event_points, // Gameweek points before transfers
+                        gameweekPointsAfterTransfers: gameweekPointsAfterTransfers, // Gameweek points after transfers
                         gameweekRank: manager.rank,
                         teamValue: managerData.value ? (managerData.value / 10) : null,
                         bank: managerData.bank ? (managerData.bank / 10) : null,
@@ -12617,9 +12713,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await db.insert(leagueManagerSnapshots).values(batch).onConflictDoUpdate({
               target: [leagueManagerSnapshots.managerId, leagueManagerSnapshots.leagueId, leagueManagerSnapshots.gameweek],
               set: {
-                overallRank: sql`excluded.overall_rank`,
-                overallPoints: sql`excluded.overall_points`,
-                gameweekPoints: sql`excluded.gameweek_points`,
+                overallRank: sql`excluded.overall_rank`, // Current live rank (new rank)
+                overallPoints: sql`excluded.overall_points`, // Current live points (new points)
+                oldRank: sql`excluded.old_rank`, // Rank at start of gameweek
+                oldPoints: sql`excluded.old_points`, // Points at start of gameweek
+                gameweekPoints: sql`excluded.gameweek_points`, // Gameweek points before transfers
+                gameweekPointsAfterTransfers: sql`excluded.gameweek_points_after_transfers`, // Gameweek points after transfers
                 gameweekRank: sql`excluded.gameweek_rank`,
                 teamValue: sql`excluded.team_value`,
                 bank: sql`excluded.bank`,
