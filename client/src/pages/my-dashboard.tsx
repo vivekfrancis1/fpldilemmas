@@ -732,14 +732,25 @@ export default function MyDashboard() {
     const pointsNeeded: Record<string, number> = {};
     
     rankingTiers.forEach(tier => {
+      // Debug logging for Top 3M specifically
+      if (tier.key === 'top3M') {
+        console.log(`Top 3M Debug: currentRank=${currentRank}, tier.target=${tier.target}, condition=${currentRank <= tier.target}`);
+      }
+      
       if (currentRank <= tier.target) {
         pointsNeeded[tier.key] = 0; // Already achieved this rank
+        if (tier.key === 'top3M') {
+          console.log('Top 3M marked as ACHIEVED (0 points needed)');
+        }
       } else {
         // Use rank just BETTER than the tier threshold for more accurate points calculation
         // E.g., for Top 3M (target: 3,000,000), use rank 2,999,999 to get points needed
         const targetRankForPoints = Math.max(1, tier.target - 1);
         const targetPoints = getPointsForRank(targetRankForPoints);
         pointsNeeded[tier.key] = Math.max(0, targetPoints - currentPoints);
+        if (tier.key === 'top3M') {
+          console.log(`Top 3M NOT achieved - points needed: ${pointsNeeded[tier.key]}`);
+        }
       }
     });
     
