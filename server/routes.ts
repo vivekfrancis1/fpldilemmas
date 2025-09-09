@@ -19,7 +19,9 @@ import {
   cachedPlayerBonusPoints,
   teamProjections,
   users,
-  fplContentCreators
+  fplContentCreators,
+  leagueManagerSnapshots,
+  rankingBenchmarks
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
