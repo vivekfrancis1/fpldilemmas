@@ -199,7 +199,7 @@ export default function CreatorTeam() {
     );
   }
 
-  // Process starting eleven with full player data including gameweek points
+  // Process starting eleven with full player data including gameweek points and current price
   const getStartingEleven = () => {
     if (!teamData?.picks || !bootstrapData?.elements) return [];
     return teamData.picks
@@ -210,13 +210,14 @@ export default function CreatorTeam() {
           ...pick, 
           player,
           event_points: Number(player?.event_points || 0), // Current gameweek points
-          total_points: Number(player?.total_points || 0)
+          total_points: Number(player?.total_points || 0),
+          current_price: player?.now_cost ? (player.now_cost / 10).toFixed(1) : '0.0' // Current price in millions
         };
       })
       .sort((a, b) => Number(a.position) - Number(b.position));
   };
 
-  // Process substitutes with full player data including gameweek points  
+  // Process substitutes with full player data including gameweek points and current price
   const getSubstitutes = () => {
     if (!teamData?.picks || !bootstrapData?.elements) return [];
     return teamData.picks
@@ -227,7 +228,8 @@ export default function CreatorTeam() {
           ...pick, 
           player,
           event_points: Number(player?.event_points || 0), // Current gameweek points
-          total_points: Number(player?.total_points || 0)
+          total_points: Number(player?.total_points || 0),
+          current_price: player?.now_cost ? (player.now_cost / 10).toFixed(1) : '0.0' // Current price in millions
         };
       })
       .sort((a, b) => Number(a.position) - Number(b.position));
@@ -466,12 +468,18 @@ export default function CreatorTeam() {
                                 </div>
                               </div>
                               <div className="text-right flex flex-col items-end gap-2">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-3">
                                   <div className="text-right">
                                     <div className="text-lg font-bold text-emerald-600">
                                       {player.event_points}
                                     </div>
                                     <div className="text-xs text-muted-foreground">GW Points</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-sm font-bold text-blue-600">
+                                      £{player.current_price}m
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">Price</div>
                                   </div>
                                   {player.multiplier > 1 && (
                                     <Badge variant="outline" className="text-xs">
