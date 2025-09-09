@@ -1357,7 +1357,7 @@ export default function MyDashboard() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                       {/* Current Stats Row */}
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="text-center">
                           <div className="text-sm text-gray-600 mb-1">GW{managerData.current_event} Live</div>
                           <div className="text-3xl font-bold text-green-600">{managerData.summary_event_points}</div>
@@ -1365,16 +1365,6 @@ export default function MyDashboard() {
                         <div className="text-center">
                           <div className="text-sm text-gray-600 mb-1">Total</div>
                           <div className="text-3xl font-bold text-blue-600">{managerData.summary_overall_points.toLocaleString()}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-sm text-gray-600 mb-1">Benched</div>
-                          <div className="text-3xl font-bold text-purple-600">
-                            {teamData?.picks?.filter(pick => pick.position > 11)
-                              .reduce((sum, pick) => {
-                                const player = bootstrapData?.elements.find(p => p.id === pick.element);
-                                return sum + (player?.form || 0);
-                              }, 0) || 0}
-                          </div>
                         </div>
                       </div>
 
@@ -1403,14 +1393,7 @@ export default function MyDashboard() {
                       </div>
 
                       {/* Rank Movement Details */}
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <div className="text-sm font-medium text-gray-700 mb-1">Rank Pre-Subs</div>
-                          <div className="text-lg font-bold text-green-600 flex items-center justify-center gap-1">
-                            {formatRank(managerData.summary_overall_rank)}
-                            <TrendingUp className="h-4 w-4" />
-                          </div>
-                        </div>
+                      <div className="flex justify-center">
                         <div className="text-center">
                           <div className="text-sm font-medium text-gray-700 mb-1">Old Rank</div>
                           <div className="text-lg font-bold text-gray-600">
@@ -1420,23 +1403,10 @@ export default function MyDashboard() {
                             }
                           </div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-sm font-medium text-gray-700 mb-1">Change %</div>
-                          <div className="text-lg font-bold text-green-600">
-                            {getRankChange() ? (getRankChange()! > 0 ? '+' : '') + (getRankChange()! / managerData.summary_overall_rank * 100).toFixed(2) + '%' : '0%'}
-                          </div>
-                        </div>
                       </div>
 
                       {/* Bottom Row */}
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <div className="text-sm font-medium text-gray-700 mb-1">Rank Post-Subs</div>
-                          <div className="text-lg font-bold text-blue-600 flex items-center justify-center gap-1">
-                            {formatRank(managerData.summary_overall_rank)}
-                            <TrendingUp className="h-4 w-4" />
-                          </div>
-                        </div>
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="text-center">
                           <div className="text-sm font-medium text-gray-700 mb-1">GW Rank</div>
                           <div className="text-lg font-bold text-purple-600">
