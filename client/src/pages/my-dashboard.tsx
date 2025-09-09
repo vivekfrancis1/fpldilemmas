@@ -733,8 +733,22 @@ export default function MyDashboard() {
     );
     const avgNearbyGW = nearbyManagers.length > 0 
       ? nearbyManagers.reduce((sum: number, point: any) => sum + (point.lastGameweekPoints || 0), 0) / nearbyManagers.length
-      : 45;
-    const safetyScore = Math.max(0, Math.ceil(avgNearbyGW * 0.9));
+      : null;
+    
+    // Calculate rank-dependent safety score
+    let safetyScore;
+    if (avgNearbyGW !== null) {
+      // Use actual nearby manager data if available
+      safetyScore = Math.max(0, Math.ceil(avgNearbyGW * 0.9));
+    } else {
+      // Rank-dependent fallback: better ranks need higher safety scores
+      const rankTier = currentRank <= 100000 ? 50 : 
+                     currentRank <= 500000 ? 47 : 
+                     currentRank <= 1000000 ? 45 : 
+                     currentRank <= 2000000 ? 43 : 
+                     currentRank <= 4000000 ? 41 : 39;
+      safetyScore = Math.ceil(rankTier * 0.9);
+    }
     
     return {
       pointsNeeded,
