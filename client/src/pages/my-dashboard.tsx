@@ -928,9 +928,9 @@ export default function MyDashboard() {
                           <div className="min-w-0 flex-1">
                             <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Current GW Points</p>
                             <p className="text-xl sm:text-2xl font-bold text-orange-900 truncate">
-                              {getCurrentGameweekPoints() !== null ? getCurrentGameweekPoints() : '-'}
+                              {managerData?.summary_event_points || 0}
                             </p>
-                            <p className="text-xs text-orange-600 mt-1 truncate">GW {getCurrentGameweekDashboard()}</p>
+                            <p className="text-xs text-orange-600 mt-1 truncate">GW {managerData?.current_event || getCurrentGameweekDashboard()}</p>
                           </div>
                           <div className="p-1.5 sm:p-2 bg-orange-200 rounded-full flex-shrink-0">
                             <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-orange-700" />
@@ -1071,7 +1071,7 @@ export default function MyDashboard() {
                                       </div>
                                       <div className="text-right space-y-1">
                                         <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
-                                        <p className="text-sm text-gray-600">{player.total_points} pts</p>
+                                        <p className="text-sm text-gray-600">{player.event_points || 0} GW pts</p>
                                         <div className="text-xs text-gray-500">
                                           <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
                                         </div>
