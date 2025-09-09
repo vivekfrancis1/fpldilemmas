@@ -19,7 +19,7 @@ import {
   cachedPlayerBonusPoints,
   teamProjections,
   users,
-  contentCreators
+  fplContentCreators
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
@@ -12279,7 +12279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get content creators from database
-      const creators = await db.select().from(contentCreators).orderBy(contentCreators.name);
+      const creators = await db.select().from(fplContentCreators).orderBy(fplContentCreators.name);
       const maxCreators = 12; // Limit to prevent excessive requests
       console.log(`Processing ${Math.min(maxCreators, creators.length)} content creators`);
       

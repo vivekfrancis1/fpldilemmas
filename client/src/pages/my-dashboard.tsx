@@ -606,19 +606,43 @@ export default function MyDashboard() {
         }
       });
     } else {
-      // Use realistic baseline estimates when comprehensive data is unavailable
-      // Based on typical FPL distribution patterns
-      const gameweekProgress = currentGW / 38;
-      const seasonMultiplier = Math.max(0.3, 1 - gameweekProgress * 0.7);
+      // Use realistic baseline estimates with known data points
+      // Real data point: FPL mate has 171 points at rank 1,646,998
+      // User has ~147 points at current rank
+      const fplMatePoints = 171;
+      const fplMateRank = 1646998;
       
-      // Create synthetic data points based on historical patterns
-      actualRankPoints[1] = Math.round(currentPoints + (150 * seasonMultiplier));
-      actualRankPoints[10] = Math.round(currentPoints + (140 * seasonMultiplier));
-      actualRankPoints[100] = Math.round(currentPoints + (120 * seasonMultiplier));
-      actualRankPoints[1000] = Math.round(currentPoints + (90 * seasonMultiplier));
-      actualRankPoints[10000] = Math.round(currentPoints + (60 * seasonMultiplier));
-      actualRankPoints[100000] = Math.round(currentPoints + (30 * seasonMultiplier));
-      actualRankPoints[1000000] = Math.round(currentPoints + (10 * seasonMultiplier));
+      // Calculate points distribution using power law (typical for FPL rankings)
+      // Higher ranks need exponentially more points
+      const calculatePointsForRank = (targetRank: number): number => {
+        if (targetRank >= fplMateRank) {
+          // For ranks worse than FPL mate, interpolate downward
+          const rankRatio = targetRank / fplMateRank;
+          return Math.round(fplMatePoints - (rankRatio - 1) * 15);
+        } else {
+          // For better ranks, use exponential scaling
+          const logCurrentRank = Math.log10(currentRank);
+          const logTargetRank = Math.log10(targetRank);
+          const logFplMateRank = Math.log10(fplMateRank);
+          
+          // Points increase exponentially as rank improves
+          const rankImprovement = (logCurrentRank - logTargetRank) / (logCurrentRank - logFplMateRank);
+          const pointsGap = fplMatePoints - currentPoints;
+          const extraPoints = pointsGap + (rankImprovement * pointsGap * 3); // Exponential scaling
+          
+          return Math.round(currentPoints + extraPoints);
+        }
+      };
+      
+      // Create realistic data points based on FPL mate reference
+      actualRankPoints[1] = calculatePointsForRank(1);
+      actualRankPoints[10] = calculatePointsForRank(10);
+      actualRankPoints[100] = calculatePointsForRank(100);
+      actualRankPoints[1000] = calculatePointsForRank(1000);
+      actualRankPoints[10000] = calculatePointsForRank(10000);
+      actualRankPoints[100000] = calculatePointsForRank(100000);
+      actualRankPoints[1000000] = calculatePointsForRank(1000000);
+      actualRankPoints[fplMateRank] = fplMatePoints; // Anchor point
     }
     
     // Function to get points needed for a specific rank target
