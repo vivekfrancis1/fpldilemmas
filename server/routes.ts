@@ -24,7 +24,7 @@ import {
   rankingBenchmarks
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte, or, inArray, asc, not } from "drizzle-orm";
 import { SpreadBettingCacheService } from "./spread-betting-cache";
 import { projectionService } from "./projection-service";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
