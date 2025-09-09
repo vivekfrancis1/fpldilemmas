@@ -12305,7 +12305,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get creator's leagues
         const creatorLeaguesData = await safeFetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/leagues/`, `Creator ${creator.name} leagues`);
         if (creatorLeaguesData?.classic) {
-          const creatorLeagues = creatorLeaguesData.classic.slice(0, 3); // Limit to 3 leagues per creator
+          // Sort leagues by entry count (descending) to get most active leagues first
+          const sortedLeagues = creatorLeaguesData.classic
+            .filter(league => league.entry_count && league.entry_count > 10) // Only leagues with 10+ members
+            .sort((a, b) => (b.entry_count || 0) - (a.entry_count || 0));
+          
+          // Take at least 5 leagues, or all available if less than 5
+          const creatorLeagues = sortedLeagues.slice(0, Math.max(5, sortedLeagues.length));
+          console.log(`📊 Processing ${creatorLeagues.length} leagues for creator ${creator.name} (${sortedLeagues.length} total available)`);
           
           for (const league of creatorLeagues) {
             if (processedLeagues.has(league.id)) continue;
@@ -12517,11 +12524,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalCollected++;
         }
         
-        // Get Top 50 from each of creator's leagues
+        // Get Top 50 from at least 5 leagues per creator
         const creatorLeaguesData = await safeFetch(`http://localhost:5000/api/manager/${creator.managerId}/leagues`, `Creator ${creator.name} leagues`);
         if (creatorLeaguesData?.classic) {
-          // Process all creator leagues (no filtering)
-          for (const league of creatorLeaguesData.classic) {
+          // Sort leagues by entry count (descending) to get most active leagues first
+          const sortedLeagues = creatorLeaguesData.classic
+            .filter(league => league.entry_count && league.entry_count > 10) // Only leagues with 10+ members
+            .sort((a, b) => (b.entry_count || 0) - (a.entry_count || 0));
+          
+          // Take at least 5 leagues, or all available if less than 5
+          const leaguesToProcess = sortedLeagues.slice(0, Math.max(5, sortedLeagues.length));
+          console.log(`📊 Processing ${leaguesToProcess.length} leagues for creator ${creator.name} (${sortedLeagues.length} total available)`);
+          
+          for (const league of leaguesToProcess) {
             if (processedLeagues.has(league.id)) continue;
             processedLeagues.add(league.id);
             
