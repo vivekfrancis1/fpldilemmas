@@ -627,11 +627,16 @@ export default function MyDashboard() {
 
   // Calculate rankings using actual database data only (no estimations)
   const getRankingCalculations = () => {
-    if (!managerData) return null;
+    if (!managerData || !historyData) return null;
     
     const currentPoints = managerData.summary_overall_points;
     const currentRank = managerData.summary_overall_rank;
     const currentGW = managerData.current_event;
+    
+    // Get user's old rank from previous gameweek
+    const userOldRank = historyData.current && historyData.current.length >= 2 
+      ? historyData.current[historyData.current.length - 2].overall_rank 
+      : currentRank;
     
     // Only proceed if we have actual database data
     const hasActualData = comprehensiveRankingData?.dataPoints && comprehensiveRankingData.dataPoints.length > 0;
@@ -729,17 +734,17 @@ export default function MyDashboard() {
     // Safety score based on closest better-ranked manager from database
     const totalDataPoints = dataPoints.length;
     
-    // Find all managers with better ranks (lower rank numbers)
+    // Find all managers with better new ranks than user's old rank
     const betterRankedManagers = dataPoints.filter((point: any) => 
-      point.newRank && point.newRank < currentRank
+      point.newRank && point.newRank < userOldRank
     );
     
     let safetyScore;
     if (betterRankedManagers.length > 0) {
       // Find the manager with new rank closest to user's old rank (but still better)
       const closestManager = betterRankedManagers.reduce((closest: any, manager: any) => {
-        const currentDistance = currentRank - manager.newRank;
-        const closestDistance = currentRank - closest.newRank;
+        const currentDistance = userOldRank - manager.newRank;
+        const closestDistance = userOldRank - closest.newRank;
         return currentDistance < closestDistance ? manager : closest;
       });
       
