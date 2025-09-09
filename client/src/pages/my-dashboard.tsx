@@ -659,6 +659,12 @@ export default function MyDashboard() {
     
     // Function to get points needed for a specific rank target
     const getPointsForRank = (targetRank: number): number => {
+      // Special case: Use real manager data for Top 3M (rank 3,000,000)
+      // Based on shamith c (Manager ID: 8146296) with rank 2,037,157 and 168 points
+      if (targetRank === 3000000) {
+        return 168;
+      }
+      
       // If we have exact data for this rank, use it
       if (actualRankPoints[targetRank]) {
         return actualRankPoints[targetRank];
