@@ -12746,88 +12746,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Database-based Rankings API - uses actual manager historical data
+  // Database-based Rankings API - uses only actual stored data, no estimations
   app.get('/api/database-rankings/:managerId', async (req, res) => {
     try {
       const { managerId } = req.params;
       
-      console.log('Fetching historical manager data for safety score calculation:', managerId);
+      console.log('Fetching database-based rankings for manager:', managerId);
       
-      // Get the two most recent gameweeks with collected data
-      const availableGameweeks = await db.select({ gameweek: leagueManagerSnapshots.gameweek })
+      // Get current gameweek from bootstrap
+      const bootstrapData = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/').then(r => r.json());
+      const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
+      
+      // Get the latest gameweek that has been collected
+      const latestCollectedGW = await db.select({ gameweek: leagueManagerSnapshots.gameweek })
         .from(leagueManagerSnapshots)
-        .groupBy(leagueManagerSnapshots.gameweek)
         .orderBy(desc(leagueManagerSnapshots.gameweek))
-        .limit(2);
+        .limit(1);
       
-      if (availableGameweeks.length < 2) {
+      const targetGameweek = latestCollectedGW.length > 0 ? latestCollectedGW[0].gameweek : currentGW;
+      
+      console.log(`Using data from GW${targetGameweek} for rankings`);
+      
+      // Get ranking benchmarks from database
+      const benchmarks = await db.select()
+        .from(rankingBenchmarks)
+        .where(eq(rankingBenchmarks.gameweek, targetGameweek))
+        .orderBy(rankingBenchmarks.rank);
+      
+      if (benchmarks.length === 0) {
         res.json({
           dataPoints: [],
           totalDataPoints: 0,
-          source: 'insufficient-data',
-          message: 'Need at least 2 gameweeks of manager data for safety score calculation'
+          source: 'no-data-available',
+          message: `No ranking benchmarks available for GW${targetGameweek}. Run data collection first.`
         });
         return;
       }
       
-      const newGameweek = availableGameweeks[0].gameweek;
-      const oldGameweek = availableGameweeks[1].gameweek;
+      // Convert benchmarks to the expected format for frontend
+      const dataPoints = benchmarks.map(benchmark => ({
+        managerId: 0, // Not applicable for benchmarks
+        overallRank: benchmark.rank,
+        totalPoints: benchmark.pointsRequired,
+        lastGameweekPoints: 0,
+        source: benchmark.dataSource,
+        confidence: benchmark.confidence,
+        gameweek: benchmark.gameweek
+      }));
       
-      console.log(`Using GW${oldGameweek} as old data, GW${newGameweek} as new data`);
-      
-      // Get managers who have data in both gameweeks
-      const managersWithBothGameweeks = await db.select({
-        managerId: leagueManagerSnapshots.managerId,
-        oldRank: sql<number>`CASE WHEN ${leagueManagerSnapshots.gameweek} = ${oldGameweek} THEN ${leagueManagerSnapshots.overallRank} END`.as('oldRank'),
-        oldPoints: sql<number>`CASE WHEN ${leagueManagerSnapshots.gameweek} = ${oldGameweek} THEN ${leagueManagerSnapshots.overallPoints} END`.as('oldPoints'),
-        newRank: sql<number>`CASE WHEN ${leagueManagerSnapshots.gameweek} = ${newGameweek} THEN ${leagueManagerSnapshots.overallRank} END`.as('newRank'),
-        newPoints: sql<number>`CASE WHEN ${leagueManagerSnapshots.gameweek} = ${newGameweek} THEN ${leagueManagerSnapshots.overallPoints} END`.as('newPoints'),
-        currentGameweekPoints: sql<number>`CASE WHEN ${leagueManagerSnapshots.gameweek} = ${newGameweek} THEN ${leagueManagerSnapshots.gameweekPoints} END`.as('currentGameweekPoints')
-      })
-      .from(leagueManagerSnapshots)
-      .where(
-        and(
-          inArray(leagueManagerSnapshots.gameweek, [oldGameweek, newGameweek]),
-          sql`${leagueManagerSnapshots.managerId} IN (
-            SELECT manager_id 
-            FROM league_manager_snapshots 
-            WHERE gameweek IN (${oldGameweek}, ${newGameweek})
-            GROUP BY manager_id 
-            HAVING COUNT(DISTINCT gameweek) = 2
-          )`
-        )
-      );
-      
-      // Group by manager to get complete old/new data
-      const managerHistoricalData = managersWithBothGameweeks.reduce((acc: any, row: any) => {
-        if (!acc[row.managerId]) {
-          acc[row.managerId] = { managerId: row.managerId };
-        }
-        if (row.oldRank) {
-          acc[row.managerId].oldRank = row.oldRank;
-          acc[row.managerId].oldPoints = row.oldPoints;
-        }
-        if (row.newRank) {
-          acc[row.managerId].newRank = row.newRank;
-          acc[row.managerId].newPoints = row.newPoints;
-          acc[row.managerId].currentGameweekPoints = row.currentGameweekPoints || 0;
-        }
-        return acc;
-      }, {});
-      
-      // Convert to array and filter complete records
-      const dataPoints = Object.values(managerHistoricalData)
-        .filter((manager: any) => manager.oldRank && manager.newRank && manager.oldPoints && manager.newPoints);
-      
-      console.log(`Found ${dataPoints.length} managers with complete historical data`);
+      console.log(`Found ${benchmarks.length} ranking benchmarks for GW${targetGameweek}`);
       
       res.json({
         dataPoints,
-        totalDataPoints: dataPoints.length,
-        oldGameweek,
-        newGameweek,
-        source: 'manager-historical-data',
-        dataQuality: 'actual-manager-performance'
+        totalDataPoints: benchmarks.length,
+        gameweek: targetGameweek,
+        source: 'database-benchmarks',
+        dataQuality: 'actual-data-only'
       });
       
     } catch (error) {
