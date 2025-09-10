@@ -34,7 +34,8 @@ import {
   TrendingDown,
   Calendar,
   BarChart3,
-  Youtube
+  Youtube,
+  ArrowLeftRight
 } from "lucide-react";
 
 type TeamPick = {
@@ -89,6 +90,16 @@ type ManagerHistory = {
   chips: any[];
 };
 
+type Transfer = {
+  element_in: number;
+  element_in_cost: number;
+  element_out: number;
+  element_out_cost: number;
+  entry: number;
+  event: number;
+  time: string;
+};
+
 function getPositionIcon(position: string) {
   switch (position.toLowerCase()) {
     case 'goalkeeper':
@@ -137,6 +148,12 @@ export default function CreatorTeam() {
 
   const { data: managerHistory, isLoading: historyLoading } = useQuery<ManagerHistory>({
     queryKey: [`/api/manager/${creatorInfo?.managerId}/history`],
+    enabled: !!creatorInfo?.managerId,
+    retry: 2,
+  });
+
+  const { data: transfersData, isLoading: isLoadingTransfers } = useQuery<Transfer[]>({
+    queryKey: [`/api/manager/${creatorInfo?.managerId}/transfers`],
     enabled: !!creatorInfo?.managerId,
     retry: 2,
   });
@@ -390,10 +407,14 @@ export default function CreatorTeam() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="team" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 bg-gray-100 rounded-lg p-1">
+        <TabsList className="grid w-full grid-cols-4 bg-gray-100 rounded-lg p-1">
           <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Users className="h-4 w-4" />
             Team
+          </TabsTrigger>
+          <TabsTrigger value="transfers" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <ArrowLeftRight className="h-4 w-4" />
+            Transfers
           </TabsTrigger>
           <TabsTrigger value="performance" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <BarChart3 className="h-4 w-4" />
@@ -611,6 +632,125 @@ export default function CreatorTeam() {
                 </div>
               )}
             </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="transfers" className="space-y-6">
+          {isLoadingTransfers ? (
+            <div className="space-y-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : transfersData && transfersData.length > 0 ? (
+            <Card className="border-0 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-orange-800">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <ArrowLeftRight className="h-5 w-5 text-orange-600" />
+                  </div>
+                  Transfer History
+                </CardTitle>
+                <CardDescription className="text-orange-700">
+                  All transfers made this season with player prices and gameweek details
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {transfersData.slice().reverse().map((transfer, index) => {
+                    const playerIn = bootstrapData?.elements.find((p: any) => p.id === transfer.element_in);
+                    const playerOut = bootstrapData?.elements.find((p: any) => p.id === transfer.element_out);
+                    
+                    return (
+                      <div key={index} className="flex items-center justify-between p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200">
+                        <div className="flex-1">
+                          <div className="text-lg font-semibold text-gray-800 mb-2">Gameweek {transfer.event}</div>
+                          
+                          {/* Transfer Details */}
+                          <div className="space-y-2">
+                            {/* Player In */}
+                            <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                                <TrendingUp className="h-3 w-3 text-green-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-green-800">
+                                    {playerIn ? playerIn.web_name : `Player ${transfer.element_in}`}
+                                  </span>
+                                  <Badge className="bg-green-100 text-green-800 text-xs">
+                                    {formatPrice(transfer.element_in_cost)}
+                                  </Badge>
+                                </div>
+                                {playerIn && (
+                                  <div className="text-sm text-gray-600">
+                                    {bootstrapData?.teams.find((t: any) => t.id === playerIn.team)?.short_name || 'Unknown'} • {bootstrapData?.element_types.find((et: any) => et.id === playerIn.element_type)?.singular_name || 'Unknown'}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Player Out */}
+                            <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                                <TrendingDown className="h-3 w-3 text-red-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-red-800">
+                                    {playerOut ? playerOut.web_name : `Player ${transfer.element_out}`}
+                                  </span>
+                                  <Badge variant="outline" className="border-red-200 text-red-800 text-xs">
+                                    {formatPrice(transfer.element_out_cost)}
+                                  </Badge>
+                                </div>
+                                {playerOut && (
+                                  <div className="text-sm text-gray-600">
+                                    {bootstrapData?.teams.find((t: any) => t.id === playerOut.team)?.short_name || 'Unknown'} • {bootstrapData?.element_types.find((et: any) => et.id === playerOut.element_type)?.singular_name || 'Unknown'}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right ml-4">
+                          <div className="text-sm text-gray-600">
+                            {new Date(transfer.time).toLocaleDateString()}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(transfer.time).toLocaleTimeString()}
+                          </div>
+                          {/* Net amount */}
+                          <div className={`text-sm font-medium mt-1 ${
+                            transfer.element_out_cost - transfer.element_in_cost > 0 
+                              ? 'text-green-600' 
+                              : transfer.element_out_cost - transfer.element_in_cost < 0 
+                              ? 'text-red-600' 
+                              : 'text-gray-600'
+                          }`}>
+                            {transfer.element_out_cost - transfer.element_in_cost > 0 ? '+' : ''}
+                            {formatPrice(transfer.element_out_cost - transfer.element_in_cost)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-0 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg">
+              <CardContent className="text-center py-8">
+                <div className="p-4 bg-orange-100 rounded-full w-fit mx-auto mb-4">
+                  <ArrowLeftRight className="h-8 w-8 text-orange-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">No Transfers Yet</h3>
+                <p className="text-gray-600">
+                  No transfers have been made this season. Transfer history will appear here once transfers are made.
+                </p>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
