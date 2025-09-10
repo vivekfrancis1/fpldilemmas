@@ -766,44 +766,21 @@ export default function Top50ManagerTeam() {
                 <div className="space-y-4">
                   {(() => {
                     const usedChips = managerHistory?.chips?.map((chip: any) => chip.name) || [];
-                    
-                    // Helper function to normalize chip names to match FPL API nomenclature
-                    const getDisplayName = (chipName: string) => {
-                      const normalizedName = chipName.toLowerCase();
-                      switch (normalizedName) {
-                        case 'wildcard':
-                        case 'wildcard 1':
-                        case 'wildcard 2':
-                          return 'wildcard';
-                        case '3xc':
-                        case 'triple captain':
-                          return '3xc';
-                        case 'bboost':
-                        case 'bench boost':
-                          return 'bboost';
-                        case 'freehit':
-                        case 'free hit':
-                          return 'freehit';
-                        default:
-                          return chipName;
-                      }
-                    };
-
                     const allChips = [
-                      { name: 'wildcard', displayName: 'Wildcard', description: 'Transfer entire squad for free', maxUses: 2 },
-                      { name: '3xc', displayName: 'Triple Captain', description: 'Captain gets 3x points instead of 2x', maxUses: 1 },
-                      { name: 'bboost', displayName: 'Bench Boost', description: 'Points from bench players count', maxUses: 1 },
-                      { name: 'freehit', displayName: 'Free Hit', description: 'Make unlimited transfers for one gameweek', maxUses: 1 }
+                      { name: 'Wildcard', description: 'Transfer entire squad for free', maxUses: 2 },
+                      { name: 'Triple Captain', description: 'Captain gets 3x points instead of 2x', maxUses: 1 },
+                      { name: 'Bench Boost', description: 'Points from bench players count', maxUses: 1 },
+                      { name: 'Free Hit', description: 'Make unlimited transfers for one gameweek', maxUses: 1 }
                     ];
                     
                     const remainingChips = allChips.filter(chip => {
-                      const usedCount = usedChips.filter((used: string) => getDisplayName(used) === chip.name).length;
+                      const usedCount = usedChips.filter((used: string) => used === chip.name).length;
                       return usedCount < chip.maxUses;
                     });
 
                     return remainingChips.length > 0 ? (
                       remainingChips.map((chip, idx) => {
-                        const usedCount = usedChips.filter((used: string) => getDisplayName(used) === chip.name).length;
+                        const usedCount = usedChips.filter((used: string) => used === chip.name).length;
                         const remainingCount = chip.maxUses - usedCount;
                         
                         return (
@@ -812,7 +789,7 @@ export default function Top50ManagerTeam() {
                               <div className="flex items-center gap-3">
                                 <Target className="h-5 w-5 text-green-600" />
                                 <div>
-                                  <p className="font-semibold text-gray-900">{chip.displayName}</p>
+                                  <p className="font-semibold text-gray-900">{chip.name}</p>
                                   <p className="text-sm text-gray-600">{chip.description}</p>
                                 </div>
                               </div>
