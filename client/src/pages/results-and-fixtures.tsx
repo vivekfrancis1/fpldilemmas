@@ -62,7 +62,7 @@ interface MatchStats {
 }
 
 export default function ResultsAndFixtures() {
-  const [selectedGameweek, setSelectedGameweek] = useState<"all" | number>("all");
+  const [selectedGameweek, setSelectedGameweek] = useState<"all" | number>(3);
   const [viewMode, setViewMode] = useState<"results" | "fixtures" | "all">("all");
   const [sortBy, setSortBy] = useState<"gameweek" | "date" | "team">("gameweek");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
