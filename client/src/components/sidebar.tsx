@@ -54,8 +54,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/results-and-fixtures", label: "Results and Fixtures", icon: Trophy, description: "Complete Premier League schedule with results", popular: false },
         { path: "/recent-price-changes", label: "Recent Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
         { path: "/predicted-price-changes", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false },
-        { path: "/content-creators", label: "FPL Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false, new: true },
-        { path: "/top25-managers", label: "Top 25 FPL Managers", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false, new: true }
+        { path: "/content-creators", label: "Top Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false, new: true },
+        { path: "/top25-managers", label: "Top 25 Managers", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false, new: true }
       ]
     },
     {
