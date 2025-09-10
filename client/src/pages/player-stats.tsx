@@ -26,6 +26,10 @@ export default function PlayerStats() {
   const [selectedSeason, setSelectedSeason] = useState<string>("current");
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Comparison state
+  const [compareList, setCompareList] = useState<any[]>([]);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
 
   // Get available seasons
   const { data: seasons } = useQuery<string[]>({
@@ -71,6 +75,37 @@ export default function PlayerStats() {
     setIsModalOpen(false);
     setSelectedPlayer(null);
   };
+
+  // Handle player comparison
+  const handlePlayerCompareClick = (player: any) => {
+    const isPlayerInList = compareList.some(p => p.id === player.id);
+    
+    if (isPlayerInList) {
+      // Remove player from comparison list
+      setCompareList(prev => prev.filter(p => p.id !== player.id));
+    } else {
+      // Add player to comparison list (max 5)
+      if (compareList.length < 5) {
+        const teamName = bootstrapData?.teams.find(t => t.id === player.team)?.short_name || 'Unknown';
+        setCompareList(prev => [...prev, { ...player, team_name: teamName }]);
+      }
+    }
+  };
+
+  // Handle compare modal open
+  const handleCompareModalOpen = () => {
+    if (compareList.length >= 2) {
+      setIsCompareModalOpen(true);
+    }
+  };
+
+  // Handle compare modal close
+  const handleCompareModalClose = () => {
+    setIsCompareModalOpen(false);
+  };
+
+  // Check if max compare reached
+  const maxCompareReached = compareList.length >= 5;
   
 
 
@@ -174,8 +209,49 @@ export default function PlayerStats() {
               isLoading={isLoading}
               season={selectedSeason}
               onPlayerDetailsClick={selectedSeason === "current" ? handlePlayerDetailsClick : undefined}
+              onPlayerCompareClick={selectedSeason === "current" ? handlePlayerCompareClick : undefined}
+              compareList={compareList}
+              maxCompareReached={maxCompareReached}
             />
           </div>
+
+          {/* Comparison Panel */}
+          {compareList.length > 0 && (
+            <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-40 max-w-xs">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-900">Compare Players ({compareList.length}/5)</h3>
+                <button
+                  onClick={() => setCompareList([])}
+                  className="text-gray-400 hover:text-gray-600 text-sm"
+                  title="Clear all"
+                >
+                  Clear
+                </button>
+              </div>
+              <div className="space-y-2 mb-3">
+                {compareList.map(player => (
+                  <div key={player.id} className="flex items-center justify-between text-sm">
+                    <span className="truncate">{player.web_name}</span>
+                    <button
+                      onClick={() => handlePlayerCompareClick(player)}
+                      className="text-red-500 hover:text-red-700 ml-2"
+                      title="Remove"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={handleCompareModalOpen}
+                disabled={compareList.length < 2}
+                className="w-full bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                data-testid="button-open-comparison"
+              >
+                Compare {compareList.length < 2 ? `(Need ${2 - compareList.length} more)` : ''}
+              </button>
+            </div>
+          )}
 
           {isLoading && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="loading-state">
