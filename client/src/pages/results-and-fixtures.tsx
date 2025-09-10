@@ -63,9 +63,6 @@ interface MatchStats {
 
 export default function ResultsAndFixtures() {
   const [selectedGameweek, setSelectedGameweek] = useState<"all" | number>(3);
-  const [viewMode, setViewMode] = useState<"results" | "fixtures" | "all">("all");
-  const [sortBy, setSortBy] = useState<"gameweek" | "date" | "team">("gameweek");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const [isMatchStatsOpen, setIsMatchStatsOpen] = useState(false);
   const [matchStats, setMatchStats] = useState<MatchStats | null>(null);
@@ -138,7 +135,7 @@ export default function ResultsAndFixtures() {
     });
   }, [fixturesData, bootstrapData]);
 
-  // Filter fixtures based on selected gameweek and view mode
+  // Filter fixtures based on selected gameweek
   const filteredFixtures = useMemo(() => {
     let filtered = processedFixtures;
 
@@ -147,39 +144,15 @@ export default function ResultsAndFixtures() {
       filtered = filtered.filter(f => f.event === selectedGameweek);
     }
 
-    // Filter by view mode
-    if (viewMode === "results") {
-      filtered = filtered.filter(f => f.isResult);
-    } else if (viewMode === "fixtures") {
-      filtered = filtered.filter(f => f.isUpcoming || f.isLive);
-    }
-
-    // Sort fixtures
+    // Sort by gameweek and kickoff time
     return filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "gameweek":
-          if (a.event !== b.event) {
-            return sortDirection === "asc" ? a.event - b.event : b.event - a.event;
-          }
-          // Secondary sort by date within gameweek
-          return sortDirection === "asc" 
-            ? new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime()
-            : new Date(b.kickoff_time).getTime() - new Date(a.kickoff_time).getTime();
-        case "date":
-          return sortDirection === "asc" 
-            ? new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime()
-            : new Date(b.kickoff_time).getTime() - new Date(a.kickoff_time).getTime();
-        case "team":
-          const teamA = a.homeTeam?.short_name || "";
-          const teamB = b.homeTeam?.short_name || "";
-          return sortDirection === "asc" 
-            ? teamA.localeCompare(teamB)
-            : teamB.localeCompare(teamA);
-        default:
-          return 0;
+      if (a.event !== b.event) {
+        return a.event - b.event;
       }
+      // Secondary sort by date within gameweek
+      return new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime();
     });
-  }, [processedFixtures, selectedGameweek, viewMode, sortBy, sortDirection]);
+  }, [processedFixtures, selectedGameweek]);
 
   // Group fixtures by gameweek for organized display
   const fixturesByGameweek = useMemo(() => {
@@ -199,8 +172,8 @@ export default function ResultsAndFixtures() {
           new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime()
         )
       }))
-      .sort((a, b) => sortDirection === "asc" ? a.gameweek - b.gameweek : b.gameweek - a.gameweek);
-  }, [filteredFixtures, sortDirection]);
+      .sort((a, b) => a.gameweek - b.gameweek);
+  }, [filteredFixtures]);
 
   // Format date and time
   const formatDateTime = (dateString: string) => {
@@ -688,99 +661,49 @@ export default function ResultsAndFixtures() {
           </Card>
         </div>
 
-        {/* Filters */}
+        {/* Gameweek Navigation */}
         <div className="fpl-filters">
-          <div className="fpl-card-header">
-            <div className="fpl-card-title">
-              <Target className="h-5 w-5 text-blue-600" />
-              Filters & Controls
-            </div>
-          </div>
           <div className="fpl-card-content">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">Gameweek</label>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePreviousGameweek()}
-                    disabled={selectedGameweek === "all" || selectedGameweek === Math.min(...availableGameweeks)}
-                    className="px-2"
-                    data-testid="button-previous-gameweek"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  
-                  <Select value={selectedGameweek.toString()} onValueChange={(value) => 
-                    setSelectedGameweek(value === "all" ? "all" : parseInt(value))
-                  }>
-                    <SelectTrigger data-testid="select-gameweek" className="flex-1">
-                      <SelectValue placeholder="All Gameweeks" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Gameweeks</SelectItem>
-                      {availableGameweeks.map(gw => (
-                        <SelectItem key={gw} value={gw.toString()}>
-                          GW{gw} {gw === currentGameweek ? "(Current)" : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleNextGameweek()}
-                    disabled={selectedGameweek === "all" || selectedGameweek === Math.max(...availableGameweeks)}
-                    className="px-2"
-                    data-testid="button-next-gameweek"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">View</label>
-                <Select value={viewMode} onValueChange={(value) => setViewMode(value as any)}>
-                  <SelectTrigger data-testid="select-view-mode">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Matches</SelectItem>
-                    <SelectItem value="results">Results Only</SelectItem>
-                    <SelectItem value="fixtures">Fixtures Only</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">Sort By</label>
-                <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
-                  <SelectTrigger data-testid="select-sort-by">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gameweek">Gameweek</SelectItem>
-                    <SelectItem value="date">Date</SelectItem>
-                    <SelectItem value="team">Team</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">Order</label>
-                <Select value={sortDirection} onValueChange={(value) => setSortDirection(value as any)}>
-                  <SelectTrigger data-testid="select-sort-direction">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="asc">Ascending</SelectItem>
-                    <SelectItem value="desc">Descending</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="flex items-center justify-center space-x-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePreviousGameweek()}
+                disabled={selectedGameweek === "all" || selectedGameweek === Math.min(...availableGameweeks)}
+                className="px-3"
+                data-testid="button-previous-gameweek"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              
+              <Select value={selectedGameweek.toString()} onValueChange={(value) => 
+                setSelectedGameweek(value === "all" ? "all" : parseInt(value))
+              }>
+                <SelectTrigger data-testid="select-gameweek" className="w-48">
+                  <SelectValue placeholder="All Gameweeks" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Gameweeks</SelectItem>
+                  {availableGameweeks.map(gw => (
+                    <SelectItem key={gw} value={gw.toString()}>
+                      GW{gw} {gw === currentGameweek ? "(Current)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleNextGameweek()}
+                disabled={selectedGameweek === "all" || selectedGameweek === Math.max(...availableGameweeks)}
+                className="px-3"
+                data-testid="button-next-gameweek"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
             </div>
           </div>
         </div>
