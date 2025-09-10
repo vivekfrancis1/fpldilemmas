@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Clock, Trophy, Target, Home, Plane, ArrowUpDown, ArrowUp, ArrowDown, X, User, Shield, Star, Zap } from "lucide-react";
+import { Calendar, Clock, Trophy, Target, Home, Plane, ArrowUpDown, ArrowUp, ArrowDown, X, User, Shield, Star, Zap, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +70,9 @@ export default function ResultsAndFixtures() {
   const [isMatchStatsOpen, setIsMatchStatsOpen] = useState(false);
   const [matchStats, setMatchStats] = useState<MatchStats | null>(null);
   const [isLoadingMatchStats, setIsLoadingMatchStats] = useState(false);
+  const [isTeamStatsOpen, setIsTeamStatsOpen] = useState(false);
+  const [teamStats, setTeamStats] = useState<any>(null);
+  const [isLoadingTeamStats, setIsLoadingTeamStats] = useState(false);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -306,6 +309,66 @@ export default function ResultsAndFixtures() {
     }
   };
 
+  // Fetch team statistics for a specific fixture
+  const fetchTeamStats = async (fixture: any) => {
+    setIsLoadingTeamStats(true);
+    try {
+      // Get all players from both teams
+      const homeTeamPlayers = bootstrapData?.elements.filter(p => p.team === fixture.team_h) || [];
+      const awayTeamPlayers = bootstrapData?.elements.filter(p => p.team === fixture.team_a) || [];
+      
+      // Calculate aggregated team stats
+      const homeTeamStats = {
+        name: fixture.homeTeam?.name || 'Home Team',
+        totalPlayers: homeTeamPlayers.length,
+        totalPoints: homeTeamPlayers.reduce((sum, p) => sum + (p.total_points || 0), 0),
+        averagePrice: homeTeamPlayers.reduce((sum, p) => sum + (p.now_cost || 0), 0) / homeTeamPlayers.length / 10,
+        totalValue: homeTeamPlayers.reduce((sum, p) => sum + (p.now_cost || 0), 0) / 10,
+        form: (homeTeamPlayers.reduce((sum, p) => sum + parseFloat(p.form || '0'), 0) / homeTeamPlayers.length).toFixed(1),
+        selectedBy: (homeTeamPlayers.reduce((sum, p) => sum + parseFloat(p.selected_by_percent || '0'), 0) / homeTeamPlayers.length).toFixed(1),
+        playersByPosition: {
+          GKP: homeTeamPlayers.filter(p => p.element_type === 1).length,
+          DEF: homeTeamPlayers.filter(p => p.element_type === 2).length,
+          MID: homeTeamPlayers.filter(p => p.element_type === 3).length,
+          FWD: homeTeamPlayers.filter(p => p.element_type === 4).length,
+        },
+        topScorer: homeTeamPlayers.reduce((max, p) => (p.total_points || 0) > (max.total_points || 0) ? p : max, homeTeamPlayers[0] || {}),
+        mostExpensive: homeTeamPlayers.reduce((max, p) => (p.now_cost || 0) > (max.now_cost || 0) ? p : max, homeTeamPlayers[0] || {}),
+        bestForm: homeTeamPlayers.reduce((max, p) => parseFloat(p.form || '0') > parseFloat(max.form || '0') ? p : max, homeTeamPlayers[0] || {}),
+      };
+
+      const awayTeamStats = {
+        name: fixture.awayTeam?.name || 'Away Team',
+        totalPlayers: awayTeamPlayers.length,
+        totalPoints: awayTeamPlayers.reduce((sum, p) => sum + (p.total_points || 0), 0),
+        averagePrice: awayTeamPlayers.reduce((sum, p) => sum + (p.now_cost || 0), 0) / awayTeamPlayers.length / 10,
+        totalValue: awayTeamPlayers.reduce((sum, p) => sum + (p.now_cost || 0), 0) / 10,
+        form: (awayTeamPlayers.reduce((sum, p) => sum + parseFloat(p.form || '0'), 0) / awayTeamPlayers.length).toFixed(1),
+        selectedBy: (awayTeamPlayers.reduce((sum, p) => sum + parseFloat(p.selected_by_percent || '0'), 0) / awayTeamPlayers.length).toFixed(1),
+        playersByPosition: {
+          GKP: awayTeamPlayers.filter(p => p.element_type === 1).length,
+          DEF: awayTeamPlayers.filter(p => p.element_type === 2).length,
+          MID: awayTeamPlayers.filter(p => p.element_type === 3).length,
+          FWD: awayTeamPlayers.filter(p => p.element_type === 4).length,
+        },
+        topScorer: awayTeamPlayers.reduce((max, p) => (p.total_points || 0) > (max.total_points || 0) ? p : max, awayTeamPlayers[0] || {}),
+        mostExpensive: awayTeamPlayers.reduce((max, p) => (p.now_cost || 0) > (max.now_cost || 0) ? p : max, awayTeamPlayers[0] || {}),
+        bestForm: awayTeamPlayers.reduce((max, p) => parseFloat(p.form || '0') > parseFloat(max.form || '0') ? p : max, awayTeamPlayers[0] || {}),
+      };
+      
+      return {
+        fixture,
+        homeTeamStats,
+        awayTeamStats
+      };
+    } catch (error) {
+      console.error('Error fetching team stats:', error);
+      return null;
+    } finally {
+      setIsLoadingTeamStats(false);
+    }
+  };
+
   // Handle match click
   const handleMatchClick = async (fixture: any) => {
     if (!fixture.isResult) return; // Only allow clicks on completed matches
@@ -315,6 +378,17 @@ export default function ResultsAndFixtures() {
     
     const stats = await fetchMatchStats(fixture);
     setMatchStats(stats);
+  };
+
+  // Handle team stats click
+  const handleTeamStatsClick = async (fixture: any, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent triggering match click
+    
+    setSelectedMatch(fixture);
+    setIsTeamStatsOpen(true);
+    
+    const stats = await fetchTeamStats(fixture);
+    setTeamStats(stats);
   };
 
   // Get match status badge
@@ -580,12 +654,26 @@ export default function ResultsAndFixtures() {
                             {/* Status */}
                             {getStatusBadge(fixture)}
                             
-                            {/* Click indicator for completed matches */}
-                            {fixture.isResult && (
-                              <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
-                                View Stats
-                              </Badge>
-                            )}
+                            {/* Action buttons */}
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs px-2 py-1"
+                                onClick={(e) => handleTeamStatsClick(fixture, e)}
+                                data-testid={`team-stats-${fixture.id}`}
+                              >
+                                <Users className="h-3 w-3 mr-1" />
+                                Team Stats
+                              </Button>
+                              
+                              {/* Click indicator for completed matches */}
+                              {fixture.isResult && (
+                                <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
+                                  View Stats
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -651,12 +739,26 @@ export default function ResultsAndFixtures() {
                       {/* Status */}
                       {getStatusBadge(fixture)}
                       
-                      {/* Click indicator for completed matches */}
-                      {fixture.isResult && (
-                        <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
-                          View Stats
-                        </Badge>
-                      )}
+                      {/* Action buttons */}
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs px-2 py-1"
+                          onClick={(e) => handleTeamStatsClick(fixture, e)}
+                          data-testid={`team-stats-${fixture.id}`}
+                        >
+                          <Users className="h-3 w-3 mr-1" />
+                          Team Stats
+                        </Button>
+                        
+                        {/* Click indicator for completed matches */}
+                        {fixture.isResult && (
+                          <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
+                            View Stats
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -964,6 +1066,223 @@ export default function ResultsAndFixtures() {
                 <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No statistics available</h3>
                 <p className="text-gray-600">Unable to load match statistics at this time.</p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Team Statistics Modal */}
+        <Dialog open={isTeamStatsOpen} onOpenChange={setIsTeamStatsOpen}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                <Users className="h-6 w-6 text-blue-600" />
+                Team Statistics Comparison
+                {selectedMatch && (
+                  <Badge variant="outline" className="ml-2">
+                    {selectedMatch.homeTeam?.short_name} vs {selectedMatch.awayTeam?.short_name} - GW{selectedMatch.event}
+                  </Badge>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {isLoadingTeamStats ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-600">Loading team statistics...</span>
+              </div>
+            ) : teamStats ? (
+              <div className="space-y-6">
+                {/* Team Overview */}
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Home Team */}
+                  <Card>
+                    <CardHeader className="bg-blue-50">
+                      <CardTitle className="flex items-center gap-2">
+                        <Home className="h-5 w-5 text-blue-600" />
+                        {teamStats.homeTeamStats.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">{teamStats.homeTeamStats.totalPoints}</div>
+                          <div className="text-sm text-gray-600">Total Points</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">£{teamStats.homeTeamStats.totalValue.toFixed(1)}m</div>
+                          <div className="text-sm text-gray-600">Total Value</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">£{teamStats.homeTeamStats.averagePrice.toFixed(1)}m</div>
+                          <div className="text-sm text-gray-600">Avg Price</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-orange-600">{teamStats.homeTeamStats.form}</div>
+                          <div className="text-sm text-gray-600">Avg Form</div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-gray-700">Squad Composition</h4>
+                        <div className="grid grid-cols-4 gap-2 text-sm">
+                          <div className="text-center p-2 bg-gray-100 rounded">
+                            <div className="font-bold">{teamStats.homeTeamStats.playersByPosition.GKP}</div>
+                            <div className="text-xs text-gray-600">GKP</div>
+                          </div>
+                          <div className="text-center p-2 bg-gray-100 rounded">
+                            <div className="font-bold">{teamStats.homeTeamStats.playersByPosition.DEF}</div>
+                            <div className="text-xs text-gray-600">DEF</div>
+                          </div>
+                          <div className="text-center p-2 bg-gray-100 rounded">
+                            <div className="font-bold">{teamStats.homeTeamStats.playersByPosition.MID}</div>
+                            <div className="text-xs text-gray-600">MID</div>
+                          </div>
+                          <div className="text-center p-2 bg-gray-100 rounded">
+                            <div className="font-bold">{teamStats.homeTeamStats.playersByPosition.FWD}</div>
+                            <div className="text-xs text-gray-600">FWD</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-gray-700">Key Players</h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Top Scorer:</span>
+                            <span className="font-medium">{teamStats.homeTeamStats.topScorer.web_name} ({teamStats.homeTeamStats.topScorer.total_points} pts)</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Most Expensive:</span>
+                            <span className="font-medium">{teamStats.homeTeamStats.mostExpensive.web_name} (£{(teamStats.homeTeamStats.mostExpensive.now_cost / 10).toFixed(1)}m)</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Best Form:</span>
+                            <span className="font-medium">{teamStats.homeTeamStats.bestForm.web_name} ({teamStats.homeTeamStats.bestForm.form})</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Away Team */}
+                  <Card>
+                    <CardHeader className="bg-gray-50">
+                      <CardTitle className="flex items-center gap-2">
+                        <Plane className="h-5 w-5 text-gray-600" />
+                        {teamStats.awayTeamStats.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">{teamStats.awayTeamStats.totalPoints}</div>
+                          <div className="text-sm text-gray-600">Total Points</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">£{teamStats.awayTeamStats.totalValue.toFixed(1)}m</div>
+                          <div className="text-sm text-gray-600">Total Value</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">£{teamStats.awayTeamStats.averagePrice.toFixed(1)}m</div>
+                          <div className="text-sm text-gray-600">Avg Price</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-orange-600">{teamStats.awayTeamStats.form}</div>
+                          <div className="text-sm text-gray-600">Avg Form</div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-gray-700">Squad Composition</h4>
+                        <div className="grid grid-cols-4 gap-2 text-sm">
+                          <div className="text-center p-2 bg-gray-100 rounded">
+                            <div className="font-bold">{teamStats.awayTeamStats.playersByPosition.GKP}</div>
+                            <div className="text-xs text-gray-600">GKP</div>
+                          </div>
+                          <div className="text-center p-2 bg-gray-100 rounded">
+                            <div className="font-bold">{teamStats.awayTeamStats.playersByPosition.DEF}</div>
+                            <div className="text-xs text-gray-600">DEF</div>
+                          </div>
+                          <div className="text-center p-2 bg-gray-100 rounded">
+                            <div className="font-bold">{teamStats.awayTeamStats.playersByPosition.MID}</div>
+                            <div className="text-xs text-gray-600">MID</div>
+                          </div>
+                          <div className="text-center p-2 bg-gray-100 rounded">
+                            <div className="font-bold">{teamStats.awayTeamStats.playersByPosition.FWD}</div>
+                            <div className="text-xs text-gray-600">FWD</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-gray-700">Key Players</h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Top Scorer:</span>
+                            <span className="font-medium">{teamStats.awayTeamStats.topScorer.web_name} ({teamStats.awayTeamStats.topScorer.total_points} pts)</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Most Expensive:</span>
+                            <span className="font-medium">{teamStats.awayTeamStats.mostExpensive.web_name} (£{(teamStats.awayTeamStats.mostExpensive.now_cost / 10).toFixed(1)}m)</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Best Form:</span>
+                            <span className="font-medium">{teamStats.awayTeamStats.bestForm.web_name} ({teamStats.awayTeamStats.bestForm.form})</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Comparison Summary */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-green-600" />
+                      Head-to-Head Comparison
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                        <div className="text-lg font-bold text-blue-600">
+                          {teamStats.homeTeamStats.totalPoints > teamStats.awayTeamStats.totalPoints ? 
+                            teamStats.homeTeamStats.name : teamStats.awayTeamStats.name}
+                        </div>
+                        <div className="text-sm text-gray-600">Higher Total Points</div>
+                      </div>
+                      <div className="text-center p-4 bg-green-50 rounded-lg">
+                        <div className="text-lg font-bold text-green-600">
+                          {teamStats.homeTeamStats.totalValue > teamStats.awayTeamStats.totalValue ? 
+                            teamStats.homeTeamStats.name : teamStats.awayTeamStats.name}
+                        </div>
+                        <div className="text-sm text-gray-600">Higher Squad Value</div>
+                      </div>
+                      <div className="text-center p-4 bg-purple-50 rounded-lg">
+                        <div className="text-lg font-bold text-purple-600">
+                          {teamStats.homeTeamStats.averagePrice > teamStats.awayTeamStats.averagePrice ? 
+                            teamStats.homeTeamStats.name : teamStats.awayTeamStats.name}
+                        </div>
+                        <div className="text-sm text-gray-600">Higher Avg Price</div>
+                      </div>
+                      <div className="text-center p-4 bg-orange-50 rounded-lg">
+                        <div className="text-lg font-bold text-orange-600">
+                          {parseFloat(teamStats.homeTeamStats.form) > parseFloat(teamStats.awayTeamStats.form) ? 
+                            teamStats.homeTeamStats.name : teamStats.awayTeamStats.name}
+                        </div>
+                        <div className="text-sm text-gray-600">Better Form</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No team statistics available</h3>
+                <p className="text-gray-600">Unable to load team statistics at this time.</p>
               </div>
             )}
           </DialogContent>
