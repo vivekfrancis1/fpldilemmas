@@ -127,8 +127,33 @@ const TOP_25_MANAGERS = [
   { rank: 25, name: "Louis Reddington", managerId: 121680 },
 ];
 
-function getPositionIcon(position: string) {
-  switch (position.toLowerCase()) {
+function getPositionName(elementType: number) {
+  switch (elementType) {
+    case 1:
+      return 'Goalkeeper';
+    case 2:
+      return 'Defender';
+    case 3:
+      return 'Midfielder';
+    case 4:
+      return 'Forward';
+    default:
+      return 'Unknown';
+  }
+}
+
+function getPositionIcon(position: string | number | undefined) {
+  let posStr: string;
+  
+  if (typeof position === 'number') {
+    posStr = getPositionName(position);
+  } else if (typeof position === 'string') {
+    posStr = position;
+  } else {
+    posStr = 'Unknown';
+  }
+  
+  switch (posStr.toLowerCase()) {
     case 'goalkeeper':
       return <Shield className="h-4 w-4" />;
     case 'defender':
@@ -234,6 +259,13 @@ export default function Top25ManagerTeam() {
   const getPlayerData = (playerId: number) => {
     if (!bootstrapData?.elements) return null;
     return bootstrapData.elements.find((p: any) => p.id === playerId);
+  };
+
+  // Helper function to get position name from element_type
+  const getPositionFromElementType = (elementType: number) => {
+    if (!bootstrapData?.element_types) return 'Unknown';
+    const position = bootstrapData.element_types.find((et: any) => et.id === elementType);
+    return position ? position.singular_name : 'Unknown';
   };
 
   // Helper function to format price
@@ -510,9 +542,9 @@ export default function Top25ManagerTeam() {
                                   </div>
                                   <div className="flex items-center gap-2 mt-1">
                                     <span className="text-sm font-medium text-gray-700">{player.team_name}</span>
-                                    <Badge className={`text-xs ${getPositionColor(player.position)}`}>
-                                      {getPositionIcon(player.position)}
-                                      <span className="ml-1">{player.position.slice(0, 3).toUpperCase()}</span>
+                                    <Badge className={`text-xs ${getPositionColor(getPositionFromElementType(player.element_type))}`}>
+                                      {getPositionIcon(getPositionFromElementType(player.element_type))}
+                                      <span className="ml-1">{getPositionFromElementType(player.element_type).slice(0, 3).toUpperCase()}</span>
                                     </Badge>
                                   </div>
                                 </div>
@@ -589,7 +621,7 @@ export default function Top25ManagerTeam() {
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                       <span className="font-semibold text-gray-800">{player.player_name || 'Unknown Player'}</span>
-                                      <Badge variant="outline" className="text-xs px-2 py-1">{player.position.slice(0, 3).toUpperCase()}</Badge>
+                                      <Badge variant="outline" className="text-xs px-2 py-1">{getPositionFromElementType(player.element_type).slice(0, 3).toUpperCase()}</Badge>
                                     </div>
                                     <div className="flex items-center gap-2 mt-1">
                                       <span className="text-sm font-medium text-gray-700">{player.team_name}</span>
@@ -634,8 +666,8 @@ export default function Top25ManagerTeam() {
                         <p className="font-medium">{captain.player_name || 'Unknown Player'}</p>
                         <p className="text-sm text-muted-foreground">{captain.team_name}</p>
                       </div>
-                      <Badge className={getPositionColor(captain.position)}>
-                        {captain.position}
+                      <Badge className={getPositionColor(getPositionFromElementType(captain.element_type))}>
+                        {getPositionFromElementType(captain.element_type)}
                       </Badge>
                     </div>
                   </CardContent>
@@ -656,8 +688,8 @@ export default function Top25ManagerTeam() {
                         <p className="font-medium">{viceCaptain.player_name || 'Unknown Player'}</p>
                         <p className="text-sm text-muted-foreground">{viceCaptain.team_name}</p>
                       </div>
-                      <Badge className={getPositionColor(viceCaptain.position)}>
-                        {viceCaptain.position}
+                      <Badge className={getPositionColor(getPositionFromElementType(viceCaptain.element_type))}>
+                        {getPositionFromElementType(viceCaptain.element_type)}
                       </Badge>
                     </div>
                   </CardContent>
