@@ -722,14 +722,34 @@ export default function Top50ManagerTeam() {
                     {(() => {
                       const usedChips = managerHistory?.chips?.map((chip: any) => chip.name) || [];
                       const allChips = [
-                        { name: 'Wildcard', description: 'Transfer entire squad for free', maxUses: 2 },
-                        { name: 'Triple Captain', description: 'Captain gets 3x points instead of 2x', maxUses: 2 },
-                        { name: 'Bench Boost', description: 'Points from bench players count', maxUses: 2 },
-                        { name: 'Free Hit', description: 'Make unlimited transfers for one gameweek', maxUses: 2 }
+                        { 
+                          name: 'Wildcard', 
+                          apiNames: ['wildcard'], 
+                          description: 'Transfer entire squad for free', 
+                          maxUses: 2 
+                        },
+                        { 
+                          name: 'Triple Captain', 
+                          apiNames: ['3xc'], 
+                          description: 'Captain gets 3x points instead of 2x', 
+                          maxUses: 2 
+                        },
+                        { 
+                          name: 'Bench Boost', 
+                          apiNames: ['bboost'], 
+                          description: 'Points from bench players count', 
+                          maxUses: 2 
+                        },
+                        { 
+                          name: 'Free Hit', 
+                          apiNames: ['freehit'], 
+                          description: 'Make unlimited transfers for one gameweek', 
+                          maxUses: 2 
+                        }
                       ];
 
                       return allChips.map((chip, idx) => {
-                        const usedCount = usedChips.filter((used: string) => used === chip.name).length;
+                        const usedCount = usedChips.filter((used: string) => chip.apiNames.includes(used)).length;
                         const remainingCount = chip.maxUses - usedCount;
                         
                         return (
