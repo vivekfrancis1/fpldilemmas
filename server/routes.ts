@@ -1168,6 +1168,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get manager transfers
+  app.get("/api/manager/:managerId/transfers", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+      
+      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ message: "Manager transfers not found" });
+        }
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error(`Error fetching manager transfers for ID ${req.params.managerId}:`, error);
+      res.status(500).json({
+        error: "Failed to fetch manager transfers",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Price tracking endpoints
   
   // Debug endpoint to check database connection and data
