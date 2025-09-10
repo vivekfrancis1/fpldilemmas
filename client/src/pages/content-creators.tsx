@@ -160,11 +160,6 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
           </div>
         </div>
       </TableCell>
-      <TableCell className="text-center">
-        <span className="font-mono text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-          {creator.managerId}
-        </span>
-      </TableCell>
       <TableCell className="text-left">
         <span className="text-sm font-medium">
           {creator.playerName || 'N/A'}
@@ -272,10 +267,6 @@ export default function ContentCreators() {
         valueA = a.name.toLowerCase();
         valueB = b.name.toLowerCase();
         break;
-      case "managerId":
-        valueA = a.managerId;
-        valueB = b.managerId;
-        break;
       default:
         return 0;
     }
@@ -372,13 +363,6 @@ export default function ContentCreators() {
                 <TableHeader>
               <TableRow>
                 <TableHead className="w-[300px]">Creator</TableHead>
-                <TableHead 
-                  className="text-center cursor-pointer hover:bg-muted/50" 
-                  onClick={() => handleSort('managerId')}
-                >
-                  Manager ID 
-                  {sortBy === 'managerId' && <ArrowUpDown className="h-4 w-4 inline ml-1" />}
-                </TableHead>
                 <TableHead className="text-left">Player Name</TableHead>
                 <TableHead 
                   className="text-right cursor-pointer hover:bg-muted/50" 

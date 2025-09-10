@@ -117,14 +117,8 @@ function ManagerTableRow({ manager }: { manager: Top25Manager }) {
           </div>
           <div>
             <div className="font-medium">{manager.name}</div>
-            <div className="text-xs text-muted-foreground">Manager ID: {manager.managerId}</div>
           </div>
         </div>
-      </TableCell>
-      <TableCell>
-        <Badge variant="outline" className="font-mono">
-          {manager.managerId}
-        </Badge>
       </TableCell>
       <TableCell>
         {manager.latestTracking?.overallRank !== undefined && manager.latestTracking?.overallRank !== null ? (
@@ -307,7 +301,6 @@ export default function Top25Managers() {
             <TableHeader>
               <TableRow>
                 <TableHead>Manager</TableHead>
-                <TableHead>Manager ID</TableHead>
                 <TableHead>Current Rank</TableHead>
                 <TableHead className="text-right">Total Points</TableHead>
                 <TableHead className="text-right">GW Points</TableHead>
