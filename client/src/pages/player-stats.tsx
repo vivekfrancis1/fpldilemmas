@@ -5,6 +5,7 @@ import StatsCards from "../components/stats-cards";
 import FiltersPanel from "../components/filters-panel";
 import PlayerStatsTable from "../components/player-stats-table";
 import PlayerGameweekModal from "../components/player-gameweek-modal";
+import PlayerComparisonModal from "../components/player-comparison-modal";
 import { FilterState, SortState } from "@/lib/types";
 import { BootstrapData } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -271,6 +272,14 @@ export default function PlayerStats() {
             onClose={handleModalClose}
             data={playerDetailData}
             isLoading={isLoadingPlayerDetail}
+          />
+
+          {/* Player Comparison Modal */}
+          <PlayerComparisonModal
+            players={compareList}
+            isOpen={isCompareModalOpen}
+            onClose={handleCompareModalClose}
+            currentSeasonData={bootstrapData}
           />
         </div>
       </div>
