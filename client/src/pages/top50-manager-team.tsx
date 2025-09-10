@@ -251,6 +251,13 @@ export default function Top50ManagerTeam() {
     return `£${(cost / 10).toFixed(1)}m`;
   };
 
+  // Helper function to get player name from player ID
+  const getPlayerName = (playerId: number) => {
+    if (!bootstrapData?.elements) return `Player ${playerId}`;
+    const player = bootstrapData.elements.find((p: any) => p.id === playerId);
+    return player ? `${player.first_name} ${player.second_name}` : `Player ${playerId}`;
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -668,10 +675,10 @@ export default function Top50ManagerTeam() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm">
-                          <span className="text-red-600">Out:</span> Player {transfer.element_out} (£{(transfer.element_out_cost / 10).toFixed(1)}m)
+                          <span className="text-red-600">Out:</span> {getPlayerName(transfer.element_out)} (£{(transfer.element_out_cost / 10).toFixed(1)}m)
                         </p>
                         <p className="text-sm">
-                          <span className="text-green-600">In:</span> Player {transfer.element_in} (£{(transfer.element_in_cost / 10).toFixed(1)}m)
+                          <span className="text-green-600">In:</span> {getPlayerName(transfer.element_in)} (£{(transfer.element_in_cost / 10).toFixed(1)}m)
                         </p>
                       </div>
                     </div>
