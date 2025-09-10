@@ -4,6 +4,7 @@ import { BarChart3, Calendar } from "lucide-react";
 import StatsCards from "../components/stats-cards";
 import FiltersPanel from "../components/filters-panel";
 import PlayerStatsTable from "../components/player-stats-table";
+import PlayerGameweekModal from "../components/player-gameweek-modal";
 import { FilterState, SortState } from "@/lib/types";
 import { BootstrapData } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,6 +24,8 @@ export default function PlayerStats() {
   });
 
   const [selectedSeason, setSelectedSeason] = useState<string>("current");
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Get available seasons
   const { data: seasons } = useQuery<string[]>({
@@ -47,6 +50,27 @@ export default function PlayerStats() {
 
   const isLoading = selectedSeason === "current" ? currentLoading : historicalLoading;
   const error = selectedSeason === "current" ? currentError : historicalError;
+
+  // Fetch detailed player data when a player is selected
+  const { data: playerDetailData, isLoading: isLoadingPlayerDetail } = useQuery<any>({
+    queryKey: ["/api/element-summary", selectedPlayer?.id],
+    enabled: !!selectedPlayer?.id && selectedSeason === "current",
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Handle player details click
+  const handlePlayerDetailsClick = (player: any) => {
+    // Add team name to player data for the modal
+    const teamName = bootstrapData?.teams.find(t => t.id === player.team)?.short_name || 'Unknown';
+    setSelectedPlayer({ ...player, team_name: teamName });
+    setIsModalOpen(true);
+  };
+
+  // Handle modal close
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedPlayer(null);
+  };
   
 
 
@@ -149,6 +173,7 @@ export default function PlayerStats() {
               setSort={setSort}
               isLoading={isLoading}
               season={selectedSeason}
+              onPlayerDetailsClick={selectedSeason === "current" ? handlePlayerDetailsClick : undefined}
             />
           </div>
 
@@ -162,6 +187,15 @@ export default function PlayerStats() {
               </div>
             </div>
           )}
+
+          {/* Player Gameweek Details Modal */}
+          <PlayerGameweekModal
+            player={selectedPlayer}
+            isOpen={isModalOpen}
+            onClose={handleModalClose}
+            data={playerDetailData}
+            isLoading={isLoadingPlayerDetail}
+          />
         </div>
       </div>
     
