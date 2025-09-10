@@ -73,6 +73,9 @@ export default function ResultsAndFixtures() {
   const [isTeamStatsOpen, setIsTeamStatsOpen] = useState(false);
   const [teamStats, setTeamStats] = useState<any>(null);
   const [isLoadingTeamStats, setIsLoadingTeamStats] = useState(false);
+  const [isMatchTeamStatsOpen, setIsMatchTeamStatsOpen] = useState(false);
+  const [matchTeamStats, setMatchTeamStats] = useState<any>(null);
+  const [isLoadingMatchTeamStats, setIsLoadingMatchTeamStats] = useState(false);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -293,8 +296,8 @@ export default function ResultsAndFixtures() {
       ]);
       
       // Filter out null results and sort by total points
-      const homeTeamStats = homeStats.filter(Boolean).sort((a, b) => b.total_points - a.total_points);
-      const awayTeamStats = awayStats.filter(Boolean).sort((a, b) => b.total_points - a.total_points);
+      const homeTeamStats = homeStats.filter(Boolean).sort((a, b) => (b?.total_points || 0) - (a?.total_points || 0));
+      const awayTeamStats = awayStats.filter(Boolean).sort((a, b) => (b?.total_points || 0) - (a?.total_points || 0));
       
       return {
         fixture,
@@ -380,6 +383,127 @@ export default function ResultsAndFixtures() {
     setMatchStats(stats);
   };
 
+  // Fetch match-specific team statistics for a completed fixture
+  const fetchMatchTeamStats = async (fixture: any) => {
+    if (!fixture.isResult) return null;
+    
+    setIsLoadingMatchTeamStats(true);
+    try {
+      // Get all players from both teams
+      const homeTeamPlayers = bootstrapData?.elements.filter(p => p.team === fixture.team_h) || [];
+      const awayTeamPlayers = bootstrapData?.elements.filter(p => p.team === fixture.team_a) || [];
+      
+      // Fetch detailed match stats for each player
+      const [homeMatchStats, awayMatchStats] = await Promise.all([
+        Promise.all(homeTeamPlayers.map(async (player: any) => {
+          try {
+            const response = await fetch(`/api/element-summary/${player.id}`);
+            if (!response.ok) throw new Error('Failed to fetch player data');
+            const data = await response.json();
+            
+            // Find the specific gameweek data for this match
+            const gameweekData = data.history?.find((h: any) => h.round === fixture.event);
+            return gameweekData ? {
+              playerId: player.id,
+              playerName: player.web_name,
+              position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'Unknown',
+              minutes: gameweekData.minutes || 0,
+              goals_scored: gameweekData.goals_scored || 0,
+              assists: gameweekData.assists || 0,
+              clean_sheets: gameweekData.clean_sheets || 0,
+              goals_conceded: gameweekData.goals_conceded || 0,
+              saves: gameweekData.saves || 0,
+              yellow_cards: gameweekData.yellow_cards || 0,
+              red_cards: gameweekData.red_cards || 0,
+              bonus: gameweekData.bonus || 0,
+              total_points: gameweekData.total_points || 0
+            } : null;
+          } catch (error) {
+            console.error(`Error fetching match data for player ${player.web_name}:`, error);
+            return null;
+          }
+        })),
+        Promise.all(awayTeamPlayers.map(async (player: any) => {
+          try {
+            const response = await fetch(`/api/element-summary/${player.id}`);
+            if (!response.ok) throw new Error('Failed to fetch player data');
+            const data = await response.json();
+            
+            // Find the specific gameweek data for this match
+            const gameweekData = data.history?.find((h: any) => h.round === fixture.event);
+            return gameweekData ? {
+              playerId: player.id,
+              playerName: player.web_name,
+              position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'Unknown',
+              minutes: gameweekData.minutes || 0,
+              goals_scored: gameweekData.goals_scored || 0,
+              assists: gameweekData.assists || 0,
+              clean_sheets: gameweekData.clean_sheets || 0,
+              goals_conceded: gameweekData.goals_conceded || 0,
+              saves: gameweekData.saves || 0,
+              yellow_cards: gameweekData.yellow_cards || 0,
+              red_cards: gameweekData.red_cards || 0,
+              bonus: gameweekData.bonus || 0,
+              total_points: gameweekData.total_points || 0
+            } : null;
+          } catch (error) {
+            console.error(`Error fetching match data for player ${player.web_name}:`, error);
+            return null;
+          }
+        }))
+      ]);
+      
+      // Filter out null results and calculate team aggregates
+      const homeStats = homeMatchStats.filter(Boolean);
+      const awayStats = awayMatchStats.filter(Boolean);
+      
+      const homeTeamMatchStats = {
+        name: fixture.homeTeam?.name || 'Home Team',
+        totalPoints: homeStats.reduce((sum, p) => sum + p.total_points, 0),
+        totalGoals: homeStats.reduce((sum, p) => sum + p.goals_scored, 0),
+        totalAssists: homeStats.reduce((sum, p) => sum + p.assists, 0),
+        totalMinutes: homeStats.reduce((sum, p) => sum + p.minutes, 0),
+        totalSaves: homeStats.reduce((sum, p) => sum + p.saves, 0),
+        totalGoalsConceded: homeStats.reduce((sum, p) => sum + p.goals_conceded, 0),
+        totalYellowCards: homeStats.reduce((sum, p) => sum + p.yellow_cards, 0),
+        totalRedCards: homeStats.reduce((sum, p) => sum + p.red_cards, 0),
+        totalBonus: homeStats.reduce((sum, p) => sum + p.bonus, 0),
+        cleanSheets: homeStats.some(p => p.clean_sheets > 0),
+        playersUsed: homeStats.filter(p => p.minutes > 0).length,
+        topScorer: homeStats.reduce((max, p) => p.total_points > max.total_points ? p : max, homeStats[0] || {}),
+        topGoalScorer: homeStats.reduce((max, p) => p.goals_scored > max.goals_scored ? p : max, homeStats[0] || {}),
+      };
+
+      const awayTeamMatchStats = {
+        name: fixture.awayTeam?.name || 'Away Team',
+        totalPoints: awayStats.reduce((sum, p) => sum + p.total_points, 0),
+        totalGoals: awayStats.reduce((sum, p) => sum + p.goals_scored, 0),
+        totalAssists: awayStats.reduce((sum, p) => sum + p.assists, 0),
+        totalMinutes: awayStats.reduce((sum, p) => sum + p.minutes, 0),
+        totalSaves: awayStats.reduce((sum, p) => sum + p.saves, 0),
+        totalGoalsConceded: awayStats.reduce((sum, p) => sum + p.goals_conceded, 0),
+        totalYellowCards: awayStats.reduce((sum, p) => sum + p.yellow_cards, 0),
+        totalRedCards: awayStats.reduce((sum, p) => sum + p.red_cards, 0),
+        totalBonus: awayStats.reduce((sum, p) => sum + p.bonus, 0),
+        cleanSheets: awayStats.some(p => p.clean_sheets > 0),
+        playersUsed: awayStats.filter(p => p.minutes > 0).length,
+        topScorer: awayStats.reduce((max, p) => p.total_points > max.total_points ? p : max, awayStats[0] || {}),
+        topGoalScorer: awayStats.reduce((max, p) => p.goals_scored > max.goals_scored ? p : max, awayStats[0] || {}),
+      };
+      
+      return {
+        fixture,
+        homeTeamMatchStats,
+        awayTeamMatchStats
+      };
+    } catch (error) {
+      console.error('Error fetching match team stats:', error);
+      return null;
+    } finally {
+      setIsLoadingMatchTeamStats(false);
+    }
+  };
+
   // Handle team stats click
   const handleTeamStatsClick = async (fixture: any, event: React.MouseEvent) => {
     event.stopPropagation(); // Prevent triggering match click
@@ -389,6 +513,19 @@ export default function ResultsAndFixtures() {
     
     const stats = await fetchTeamStats(fixture);
     setTeamStats(stats);
+  };
+
+  // Handle match team stats click (for completed matches only)
+  const handleMatchTeamStatsClick = async (fixture: any, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent triggering match click
+    
+    if (!fixture.isResult) return; // Only for completed matches
+    
+    setSelectedMatch(fixture);
+    setIsMatchTeamStatsOpen(true);
+    
+    const stats = await fetchMatchTeamStats(fixture);
+    setMatchTeamStats(stats);
   };
 
   // Get match status badge
@@ -667,6 +804,20 @@ export default function ResultsAndFixtures() {
                                 Team Stats
                               </Button>
                               
+                              {/* Match Stats button for completed matches only */}
+                              {fixture.isResult && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs px-2 py-1"
+                                  onClick={(e) => handleMatchTeamStatsClick(fixture, e)}
+                                  data-testid={`match-stats-${fixture.id}`}
+                                >
+                                  <Trophy className="h-3 w-3 mr-1" />
+                                  Match Stats
+                                </Button>
+                              )}
+                              
                               {/* Click indicator for completed matches */}
                               {fixture.isResult && (
                                 <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
@@ -751,6 +902,20 @@ export default function ResultsAndFixtures() {
                           <Users className="h-3 w-3 mr-1" />
                           Team Stats
                         </Button>
+                        
+                        {/* Match Stats button for completed matches only */}
+                        {fixture.isResult && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs px-2 py-1"
+                            onClick={(e) => handleMatchTeamStatsClick(fixture, e)}
+                            data-testid={`match-stats-${fixture.id}`}
+                          >
+                            <Trophy className="h-3 w-3 mr-1" />
+                            Match Stats
+                          </Button>
+                        )}
                         
                         {/* Click indicator for completed matches */}
                         {fixture.isResult && (
@@ -1283,6 +1448,275 @@ export default function ResultsAndFixtures() {
                 <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No team statistics available</h3>
                 <p className="text-gray-600">Unable to load team statistics at this time.</p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Match Team Statistics Modal */}
+        <Dialog open={isMatchTeamStatsOpen} onOpenChange={setIsMatchTeamStatsOpen}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                <Trophy className="h-6 w-6 text-blue-600" />
+                Match Team Performance
+                {selectedMatch && (
+                  <Badge variant="outline" className="ml-2">
+                    {selectedMatch.homeTeam?.short_name} {selectedMatch.team_h_score} - {selectedMatch.team_a_score} {selectedMatch.awayTeam?.short_name} (GW{selectedMatch.event})
+                  </Badge>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {isLoadingMatchTeamStats ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-600">Loading match team statistics...</span>
+              </div>
+            ) : matchTeamStats ? (
+              <div className="space-y-6">
+                {/* Match Score Summary */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-center">Final Score</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-center space-x-8 text-4xl font-bold">
+                      <div className="text-center">
+                        <div className="text-blue-600">{matchTeamStats.homeTeamMatchStats.name}</div>
+                        <div className="text-6xl mt-2">{selectedMatch?.team_h_score}</div>
+                      </div>
+                      <div className="text-gray-400">-</div>
+                      <div className="text-center">
+                        <div className="text-gray-600">{matchTeamStats.awayTeamMatchStats.name}</div>
+                        <div className="text-6xl mt-2">{selectedMatch?.team_a_score}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Team Performance Comparison */}
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Home Team Match Stats */}
+                  <Card>
+                    <CardHeader className="bg-blue-50">
+                      <CardTitle className="flex items-center gap-2">
+                        <Home className="h-5 w-5 text-blue-600" />
+                        {matchTeamStats.homeTeamMatchStats.name} Performance
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">{matchTeamStats.homeTeamMatchStats.totalPoints}</div>
+                          <div className="text-sm text-gray-600">FPL Points</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">{matchTeamStats.homeTeamMatchStats.totalGoals}</div>
+                          <div className="text-sm text-gray-600">Goals</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">{matchTeamStats.homeTeamMatchStats.totalAssists}</div>
+                          <div className="text-sm text-gray-600">Assists</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-orange-600">{matchTeamStats.homeTeamMatchStats.playersUsed}</div>
+                          <div className="text-sm text-gray-600">Players Used</div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-gray-700">Match Details</h4>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Total Minutes:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalMinutes}'</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Clean Sheet:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.cleanSheets ? 'Yes' : 'No'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Yellow Cards:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalYellowCards}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Red Cards:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalRedCards}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Saves:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalSaves}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Bonus Points:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalBonus}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-gray-700">Star Performers</h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Top FPL Scorer:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.topScorer?.playerName} ({matchTeamStats.homeTeamMatchStats.topScorer?.total_points} pts)</span>
+                          </div>
+                          {matchTeamStats.homeTeamMatchStats.topGoalScorer?.goals_scored > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Top Goal Scorer:</span>
+                              <span className="font-medium">{matchTeamStats.homeTeamMatchStats.topGoalScorer?.playerName} ({matchTeamStats.homeTeamMatchStats.topGoalScorer?.goals_scored} goals)</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Away Team Match Stats */}
+                  <Card>
+                    <CardHeader className="bg-gray-50">
+                      <CardTitle className="flex items-center gap-2">
+                        <Plane className="h-5 w-5 text-gray-600" />
+                        {matchTeamStats.awayTeamMatchStats.name} Performance
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">{matchTeamStats.awayTeamMatchStats.totalPoints}</div>
+                          <div className="text-sm text-gray-600">FPL Points</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">{matchTeamStats.awayTeamMatchStats.totalGoals}</div>
+                          <div className="text-sm text-gray-600">Goals</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">{matchTeamStats.awayTeamMatchStats.totalAssists}</div>
+                          <div className="text-sm text-gray-600">Assists</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-orange-600">{matchTeamStats.awayTeamMatchStats.playersUsed}</div>
+                          <div className="text-sm text-gray-600">Players Used</div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-gray-700">Match Details</h4>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Total Minutes:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalMinutes}'</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Clean Sheet:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.cleanSheets ? 'Yes' : 'No'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Yellow Cards:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalYellowCards}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Red Cards:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalRedCards}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Saves:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalSaves}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Bonus Points:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalBonus}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-gray-700">Star Performers</h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Top FPL Scorer:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.topScorer?.playerName} ({matchTeamStats.awayTeamMatchStats.topScorer?.total_points} pts)</span>
+                          </div>
+                          {matchTeamStats.awayTeamMatchStats.topGoalScorer?.goals_scored > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Top Goal Scorer:</span>
+                              <span className="font-medium">{matchTeamStats.awayTeamMatchStats.topGoalScorer?.playerName} ({matchTeamStats.awayTeamMatchStats.topGoalScorer?.goals_scored} goals)</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Match Summary Comparison */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-green-600" />
+                      Match Performance Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                        <div className="text-lg font-bold text-blue-600">
+                          {matchTeamStats.homeTeamMatchStats.totalPoints > matchTeamStats.awayTeamMatchStats.totalPoints ? 
+                            matchTeamStats.homeTeamMatchStats.name : 
+                            matchTeamStats.awayTeamMatchStats.totalPoints > matchTeamStats.homeTeamMatchStats.totalPoints ?
+                            matchTeamStats.awayTeamMatchStats.name : 'Tie'}
+                        </div>
+                        <div className="text-sm text-gray-600">More FPL Points</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {matchTeamStats.homeTeamMatchStats.totalPoints} - {matchTeamStats.awayTeamMatchStats.totalPoints}
+                        </div>
+                      </div>
+                      <div className="text-center p-4 bg-green-50 rounded-lg">
+                        <div className="text-lg font-bold text-green-600">
+                          {matchTeamStats.homeTeamMatchStats.totalGoals > matchTeamStats.awayTeamMatchStats.totalGoals ? 
+                            matchTeamStats.homeTeamMatchStats.name : 
+                            matchTeamStats.awayTeamMatchStats.totalGoals > matchTeamStats.homeTeamMatchStats.totalGoals ?
+                            matchTeamStats.awayTeamMatchStats.name : 'Tie'}
+                        </div>
+                        <div className="text-sm text-gray-600">More Goals</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {matchTeamStats.homeTeamMatchStats.totalGoals} - {matchTeamStats.awayTeamMatchStats.totalGoals}
+                        </div>
+                      </div>
+                      <div className="text-center p-4 bg-purple-50 rounded-lg">
+                        <div className="text-lg font-bold text-purple-600">
+                          {matchTeamStats.homeTeamMatchStats.totalAssists > matchTeamStats.awayTeamMatchStats.totalAssists ? 
+                            matchTeamStats.homeTeamMatchStats.name : 
+                            matchTeamStats.awayTeamMatchStats.totalAssists > matchTeamStats.homeTeamMatchStats.totalAssists ?
+                            matchTeamStats.awayTeamMatchStats.name : 'Tie'}
+                        </div>
+                        <div className="text-sm text-gray-600">More Assists</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {matchTeamStats.homeTeamMatchStats.totalAssists} - {matchTeamStats.awayTeamMatchStats.totalAssists}
+                        </div>
+                      </div>
+                      <div className="text-center p-4 bg-orange-50 rounded-lg">
+                        <div className="text-lg font-bold text-orange-600">
+                          {matchTeamStats.homeTeamMatchStats.totalBonus > matchTeamStats.awayTeamMatchStats.totalBonus ? 
+                            matchTeamStats.homeTeamMatchStats.name : 
+                            matchTeamStats.awayTeamMatchStats.totalBonus > matchTeamStats.homeTeamMatchStats.totalBonus ?
+                            matchTeamStats.awayTeamMatchStats.name : 'Tie'}
+                        </div>
+                        <div className="text-sm text-gray-600">More Bonus Points</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {matchTeamStats.homeTeamMatchStats.totalBonus} - {matchTeamStats.awayTeamMatchStats.totalBonus}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No match statistics available</h3>
+                <p className="text-gray-600">Unable to load match team statistics at this time.</p>
               </div>
             )}
           </DialogContent>
