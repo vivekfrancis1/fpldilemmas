@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { BootstrapData, Player, Team, ElementType } from "@shared/schema";
 import { FilterState, SortState, SortableField } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ interface PlayerStatsTableProps {
   setSort: (sort: SortState) => void;
   isLoading: boolean;
   season?: string;
+  onPlayerDetailsClick?: (player: any) => void;
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -25,7 +26,8 @@ export default function PlayerStatsTable({
   sort, 
   setSort, 
   isLoading,
-  season 
+  season,
+  onPlayerDetailsClick 
 }: PlayerStatsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -306,6 +308,9 @@ export default function PlayerStatsTable({
               <th className="px-2 sm:px-3 py-2 sm:py-3 text-left min-w-[120px] sm:min-w-[160px] font-semibold text-gray-900 text-xs sm:text-sm sticky left-0 bg-gray-50 z-10 border-r border-gray-200">
                 Player
               </th>
+              <th className="px-2 py-3 text-center min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
+                Details
+              </th>
               {/* Priority columns first */}
               <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[60px] sm:min-w-[80px]">
                 <SortableHeader field="now_cost" label="Price" />
@@ -483,6 +488,18 @@ export default function PlayerStatsTable({
                         </Badge>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-2 py-4 text-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onPlayerDetailsClick?.(player)}
+                      className="h-7 w-7 p-0 hover:bg-blue-50 hover:border-blue-300"
+                      title="View detailed gameweek statistics"
+                      data-testid={`button-player-details-${player.id}`}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
                   </td>
                   {/* Priority columns first */}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-gray-900">
