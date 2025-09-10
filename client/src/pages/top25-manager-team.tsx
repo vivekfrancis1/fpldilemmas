@@ -142,7 +142,11 @@ function getPositionIcon(position: string) {
   }
 }
 
-function getPositionColor(position: string) {
+function getPositionColor(position: string | undefined) {
+  if (!position || typeof position !== 'string') {
+    return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+  
   switch (position.toLowerCase()) {
     case 'goalkeeper':
       return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -154,6 +158,30 @@ function getPositionColor(position: string) {
       return 'bg-red-100 text-red-800 border-red-200';
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+}
+
+function getRankChangeDisplay(rankChange: number) {
+  if (rankChange > 0) {
+    return (
+      <span className="text-green-600 text-xs font-medium flex items-center">
+        <TrendingUp className="h-3 w-3 mr-1" />
+        +{rankChange.toLocaleString()}
+      </span>
+    );
+  } else if (rankChange < 0) {
+    return (
+      <span className="text-red-600 text-xs font-medium flex items-center">
+        <TrendingDown className="h-3 w-3 mr-1" />
+        {rankChange.toLocaleString()}
+      </span>
+    );
+  } else {
+    return (
+      <span className="text-gray-500 text-xs">
+        -
+      </span>
+    );
   }
 }
 
@@ -468,11 +496,11 @@ export default function Top25ManagerTeam() {
                             >
                               <div className="flex items-center gap-3 flex-1">
                                 <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
-                                  {player.player_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                  {player.player_name ? player.player_name.split(' ').map(n => n[0]).join('').slice(0, 2) : '??'}
                                 </div>
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-gray-900">{player.player_name}</span>
+                                    <span className="font-semibold text-gray-900">{player.player_name || 'Unknown Player'}</span>
                                     {player.is_captain && (
                                       <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2 py-1">C</Badge>
                                     )}
@@ -556,11 +584,11 @@ export default function Top25ManagerTeam() {
                                     {idx + 1}
                                   </div>
                                   <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
-                                    {player.player_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                    {player.player_name ? player.player_name.split(' ').map(n => n[0]).join('').slice(0, 2) : '??'}
                                   </div>
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2">
-                                      <span className="font-semibold text-gray-800">{player.player_name}</span>
+                                      <span className="font-semibold text-gray-800">{player.player_name || 'Unknown Player'}</span>
                                       <Badge variant="outline" className="text-xs px-2 py-1">{player.position.slice(0, 3).toUpperCase()}</Badge>
                                     </div>
                                     <div className="flex items-center gap-2 mt-1">
@@ -603,7 +631,7 @@ export default function Top25ManagerTeam() {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">{captain.player_name}</p>
+                        <p className="font-medium">{captain.player_name || 'Unknown Player'}</p>
                         <p className="text-sm text-muted-foreground">{captain.team_name}</p>
                       </div>
                       <Badge className={getPositionColor(captain.position)}>
@@ -625,7 +653,7 @@ export default function Top25ManagerTeam() {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">{viceCaptain.player_name}</p>
+                        <p className="font-medium">{viceCaptain.player_name || 'Unknown Player'}</p>
                         <p className="text-sm text-muted-foreground">{viceCaptain.team_name}</p>
                       </div>
                       <Badge className={getPositionColor(viceCaptain.position)}>
