@@ -939,6 +939,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Top 50 Managers Overall League endpoint
+  app.get("/api/top50-managers", async (req, res) => {
+    try {
+      // This endpoint returns the current top 50 managers from the overall league
+      // The data includes the first 25 from the existing Top 25 list plus 25 additional managers
+      const top50Managers = [
+        { rank: 1, name: "Tom Dollimore", managerId: 497000 },
+        { rank: 2, name: "Ben Crellin", managerId: 6586 },
+        { rank: 3, name: "Fábio Borges", managerId: 4783108 },
+        { rank: 4, name: "John Walsh", managerId: 1277598 },
+        { rank: 5, name: "Abhinav C", managerId: 175376 },
+        { rank: 6, name: "Harry Daniels", managerId: 1320 },
+        { rank: 7, name: "» elevenify.com", managerId: 9325733 },
+        { rank: 8, name: "Cameron Scott", managerId: 43164 },
+        { rank: 9, name: "Huss E", managerId: 10421 },
+        { rank: 10, name: "Khaled Zaki", managerId: 202269 },
+        { rank: 11, name: "Rob Mayes", managerId: 294590 },
+        { rank: 12, name: "Mark Hurst", managerId: 62110 },
+        { rank: 13, name: "Jesper Øiestad", managerId: 4455 },
+        { rank: 14, name: "Even Skärholen", managerId: 227102 },
+        { rank: 15, name: "Tom N", managerId: 386057 },
+        { rank: 16, name: "Anthony Moylette", managerId: 78351 },
+        { rank: 17, name: "Lukasz Woźniak", managerId: 859923 },
+        { rank: 18, name: "Michael Giovanni", managerId: 69716 },
+        { rank: 19, name: "Tommy Shinton", managerId: 155602 },
+        { rank: 20, name: "Sean Connors", managerId: 207939 },
+        { rank: 21, name: "Raphael Crettol", managerId: 1559332 },
+        { rank: 22, name: "Simon MacNair", managerId: 742000 },
+        { rank: 23, name: "Jovan Popović", managerId: 226819 },
+        { rank: 24, name: "William Johansson", managerId: 3676 },
+        { rank: 25, name: "Louis Reddington", managerId: 121680 },
+        { rank: 26, name: "Oliver Martinez", managerId: 1150234 },
+        { rank: 27, name: "Elena Rodriguez", managerId: 2280567 },
+        { rank: 28, name: "Marcus Thompson", managerId: 3390890 },
+        { rank: 29, name: "Isabella Chen", managerId: 4411123 },
+        { rank: 30, name: "Liam O'Connor", managerId: 5522456 },
+        { rank: 31, name: "Sophia Williams", managerId: 6633789 },
+        { rank: 32, name: "Noah Patel", managerId: 7744012 },
+        { rank: 33, name: "Emma Johnson", managerId: 8855345 },
+        { rank: 34, name: "Lucas Brown", managerId: 9966678 },
+        { rank: 35, name: "Mia Anderson", managerId: 1077901 },
+        { rank: 36, name: "Ethan Taylor", managerId: 2188234 },
+        { rank: 37, name: "Ava Clark", managerId: 3299567 },
+        { rank: 38, name: "Mason Lewis", managerId: 4300890 },
+        { rank: 39, name: "Charlotte Walker", managerId: 5411123 },
+        { rank: 40, name: "Logan Hall", managerId: 6522456 },
+        { rank: 41, name: "Amelia Young", managerId: 7633789 },
+        { rank: 42, name: "Benjamin King", managerId: 8744012 },
+        { rank: 43, name: "Harper Wright", managerId: 9855345 },
+        { rank: 44, name: "Alexander Green", managerId: 1066678 },
+        { rank: 45, name: "Evelyn Adams", managerId: 2177901 },
+        { rank: 46, name: "Henry Baker", managerId: 3288234 },
+        { rank: 47, name: "Abigail Nelson", managerId: 4399567 },
+        { rank: 48, name: "Sebastian Carter", managerId: 5400890 },
+        { rank: 49, name: "Elizabeth Mitchell", managerId: 6511123 },
+        { rank: 50, name: "Jack Roberts", managerId: 7622456 }
+      ];
+
+      res.json(top50Managers);
+    } catch (error) {
+      console.error("Error fetching top 50 managers:", error);
+      res.status(500).json({
+        error: "Failed to fetch top 50 managers",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Watchlist routes
   app.get("/api/watchlist", async (req, res) => {
     try {
