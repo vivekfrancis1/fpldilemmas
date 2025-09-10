@@ -691,125 +691,80 @@ export default function Top50ManagerTeam() {
         </TabsContent>
 
         <TabsContent value="chips" className="space-y-6">
-          {/* Chips Used */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Star className="h-5 w-5" />
-                Chips Used
+                Chip Usage Summary
               </CardTitle>
               <CardDescription>
-                FPL chips activated by this manager
+                Complete overview of FPL chip usage for this manager
               </CardDescription>
             </CardHeader>
             <CardContent>
               {historyLoading ? (
                 <div className="space-y-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              ) : managerHistory?.chips && managerHistory.chips.length > 0 ? (
-                <div className="space-y-4">
-                  {managerHistory.chips.map((chip: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
-                      <div className="flex items-center gap-4">
-                        <Badge variant="outline" className="border-purple-300 text-purple-700">
-                          GW{chip.event}
-                        </Badge>
-                        <div className="flex items-center gap-3">
-                          <Star className="h-5 w-5 text-purple-600" />
-                          <div>
-                            <p className="font-semibold text-gray-900">{chip.name}</p>
-                            <p className="text-sm text-gray-600">
-                              {new Date(chip.time).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge className="bg-purple-600 hover:bg-purple-700 text-white">
-                          Activated
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Star className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No chips used yet this season</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Chips Remaining */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Chips Remaining
-              </CardTitle>
-              <CardDescription>
-                Available chips for the rest of the season
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {historyLoading ? (
-                <div className="space-y-4">
-                  {Array.from({ length: 2 }).map((_, i) => (
+                  {Array.from({ length: 4 }).map((_, i) => (
                     <Skeleton key={i} className="h-16 w-full" />
                   ))}
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {(() => {
-                    const usedChips = managerHistory?.chips?.map((chip: any) => chip.name) || [];
-                    const allChips = [
-                      { name: 'Wildcard', description: 'Transfer entire squad for free', maxUses: 2 },
-                      { name: 'Triple Captain', description: 'Captain gets 3x points instead of 2x', maxUses: 2 },
-                      { name: 'Bench Boost', description: 'Points from bench players count', maxUses: 2 },
-                      { name: 'Free Hit', description: 'Make unlimited transfers for one gameweek', maxUses: 2 }
-                    ];
-                    
-                    const remainingChips = allChips.filter(chip => {
-                      const usedCount = usedChips.filter((used: string) => used === chip.name).length;
-                      return usedCount < chip.maxUses;
-                    });
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-2/5">Chip & Description</TableHead>
+                      <TableHead className="text-center">Total Available</TableHead>
+                      <TableHead className="text-center">Used</TableHead>
+                      <TableHead className="text-center">Remaining</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(() => {
+                      const usedChips = managerHistory?.chips?.map((chip: any) => chip.name) || [];
+                      const allChips = [
+                        { name: 'Wildcard', description: 'Transfer entire squad for free', maxUses: 2 },
+                        { name: 'Triple Captain', description: 'Captain gets 3x points instead of 2x', maxUses: 2 },
+                        { name: 'Bench Boost', description: 'Points from bench players count', maxUses: 2 },
+                        { name: 'Free Hit', description: 'Make unlimited transfers for one gameweek', maxUses: 2 }
+                      ];
 
-                    return remainingChips.length > 0 ? (
-                      remainingChips.map((chip, idx) => {
+                      return allChips.map((chip, idx) => {
                         const usedCount = usedChips.filter((used: string) => used === chip.name).length;
                         const remainingCount = chip.maxUses - usedCount;
                         
                         return (
-                          <div key={idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-3">
-                                <Target className="h-5 w-5 text-green-600" />
-                                <div>
-                                  <p className="font-semibold text-gray-900">{chip.name}</p>
-                                  <p className="text-sm text-gray-600">{chip.description}</p>
-                                </div>
+                          <TableRow key={idx}>
+                            <TableCell>
+                              <div>
+                                <p className="font-semibold text-gray-900">{chip.name}</p>
+                                <p className="text-sm text-gray-600">{chip.description}</p>
                               </div>
-                            </div>
-                            <div className="text-right">
-                              <Badge className="bg-green-600 hover:bg-green-700 text-white">
-                                {remainingCount} remaining
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="font-semibold">
+                                {chip.maxUses}
                               </Badge>
-                            </div>
-                          </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge 
+                                className={usedCount > 0 ? "bg-red-100 text-red-800 hover:bg-red-200" : "bg-gray-100 text-gray-500"}
+                              >
+                                {usedCount}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge 
+                                className={remainingCount > 0 ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-gray-100 text-gray-500"}
+                              >
+                                {remainingCount}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
                         );
-                      })
-                    ) : (
-                      <div className="text-center py-8">
-                        <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-500">All chips have been used this season</p>
-                      </div>
-                    );
-                  })()}
-                </div>
+                      });
+                    })()}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>
