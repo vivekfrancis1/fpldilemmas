@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Clock, Trophy, Target, Home, Plane, ArrowUpDown, ArrowUp, ArrowDown, X, User, Shield, Star, Zap, Users } from "lucide-react";
+import { Calendar, Clock, Trophy, Target, Home, Plane, ArrowUpDown, ArrowUp, ArrowDown, X, User, Shield, Star, Zap, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +94,23 @@ export default function ResultsAndFixtures() {
       .map(event => event.id)
       .sort((a, b) => a - b);
   }, [bootstrapData]);
+
+  // Navigation functions for gameweek
+  const handlePreviousGameweek = () => {
+    if (selectedGameweek === "all") return;
+    const currentIndex = availableGameweeks.indexOf(selectedGameweek as number);
+    if (currentIndex > 0) {
+      setSelectedGameweek(availableGameweeks[currentIndex - 1]);
+    }
+  };
+
+  const handleNextGameweek = () => {
+    if (selectedGameweek === "all") return;
+    const currentIndex = availableGameweeks.indexOf(selectedGameweek as number);
+    if (currentIndex < availableGameweeks.length - 1) {
+      setSelectedGameweek(availableGameweeks[currentIndex + 1]);
+    }
+  };
 
   // Get current gameweek for context
   const currentGameweek = useMemo(() => {
@@ -683,21 +700,45 @@ export default function ResultsAndFixtures() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">Gameweek</label>
-                <Select value={selectedGameweek.toString()} onValueChange={(value) => 
-                  setSelectedGameweek(value === "all" ? "all" : parseInt(value))
-                }>
-                  <SelectTrigger data-testid="select-gameweek">
-                    <SelectValue placeholder="All Gameweeks" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Gameweeks</SelectItem>
-                    {availableGameweeks.map(gw => (
-                      <SelectItem key={gw} value={gw.toString()}>
-                        GW{gw} {gw === currentGameweek ? "(Current)" : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePreviousGameweek()}
+                    disabled={selectedGameweek === "all" || selectedGameweek === Math.min(...availableGameweeks)}
+                    className="px-2"
+                    data-testid="button-previous-gameweek"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  <Select value={selectedGameweek.toString()} onValueChange={(value) => 
+                    setSelectedGameweek(value === "all" ? "all" : parseInt(value))
+                  }>
+                    <SelectTrigger data-testid="select-gameweek" className="flex-1">
+                      <SelectValue placeholder="All Gameweeks" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Gameweeks</SelectItem>
+                      {availableGameweeks.map(gw => (
+                        <SelectItem key={gw} value={gw.toString()}>
+                          GW{gw} {gw === currentGameweek ? "(Current)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleNextGameweek()}
+                    disabled={selectedGameweek === "all" || selectedGameweek === Math.max(...availableGameweeks)}
+                    className="px-2"
+                    data-testid="button-next-gameweek"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-1">
