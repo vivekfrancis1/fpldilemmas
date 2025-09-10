@@ -372,7 +372,6 @@ export default function Top25ManagerTeam() {
               <Crown className="h-3 w-3" />
               Rank #{managerInfo.rank}
             </Badge>
-            <span className="text-sm text-muted-foreground">Manager ID: {managerInfo.managerId}</span>
           </div>
         </div>
       </div>

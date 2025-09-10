@@ -190,7 +190,7 @@ export default function Top25Managers() {
         const latestTracking = await fetchManagerData(manager.managerId);
         return {
           ...manager,
-          latestTracking,
+          latestTracking: latestTracking || undefined,
         };
       })
     );
