@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye, UserPlus, UserMinus } from "lucide-react";
 import { BootstrapData, Player, Team, ElementType } from "@shared/schema";
 import { FilterState, SortState, SortableField } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ interface PlayerStatsTableProps {
   isLoading: boolean;
   season?: string;
   onPlayerDetailsClick?: (player: any) => void;
+  onPlayerCompareClick?: (player: any) => void;
+  compareList?: any[];
+  maxCompareReached?: boolean;
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -27,7 +30,10 @@ export default function PlayerStatsTable({
   setSort, 
   isLoading,
   season,
-  onPlayerDetailsClick 
+  onPlayerDetailsClick,
+  onPlayerCompareClick,
+  compareList = [],
+  maxCompareReached = false
 }: PlayerStatsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -311,6 +317,11 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
                 Details
               </th>
+              {onPlayerCompareClick && (
+                <th className="px-2 py-3 text-center min-w-[70px] font-semibold text-gray-900 text-xs sm:text-sm">
+                  Compare
+                </th>
+              )}
               {/* Priority columns first */}
               <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[60px] sm:min-w-[80px]">
                 <SortableHeader field="now_cost" label="Price" />
@@ -501,6 +512,34 @@ export default function PlayerStatsTable({
                       <Eye className="h-3 w-3" />
                     </Button>
                   </td>
+                  {onPlayerCompareClick && (
+                    <td className="px-2 py-4 text-center">
+                      {compareList.some(p => p.id === player.id) ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onPlayerCompareClick?.(player)}
+                          className="h-7 w-7 p-0 hover:bg-red-50 hover:border-red-300 border-red-300 text-red-600"
+                          title="Remove from comparison"
+                          data-testid={`button-player-remove-compare-${player.id}`}
+                        >
+                          <UserMinus className="h-3 w-3" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onPlayerCompareClick?.(player)}
+                          className="h-7 w-7 p-0 hover:bg-green-50 hover:border-green-300"
+                          title="Add to comparison"
+                          disabled={maxCompareReached}
+                          data-testid={`button-player-add-compare-${player.id}`}
+                        >
+                          <UserPlus className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </td>
+                  )}
                   {/* Priority columns first */}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-gray-900">
                     <span className="text-xs sm:text-sm font-medium">£{((player.now_cost || player.end_cost || 0) / 10).toFixed(1)}m</span>
