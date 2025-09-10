@@ -768,9 +768,9 @@ export default function Top50ManagerTeam() {
                     const usedChips = managerHistory?.chips?.map((chip: any) => chip.name) || [];
                     const allChips = [
                       { name: 'Wildcard', description: 'Transfer entire squad for free', maxUses: 2 },
-                      { name: 'Triple Captain', description: 'Captain gets 3x points instead of 2x', maxUses: 1 },
-                      { name: 'Bench Boost', description: 'Points from bench players count', maxUses: 1 },
-                      { name: 'Free Hit', description: 'Make unlimited transfers for one gameweek', maxUses: 1 }
+                      { name: 'Triple Captain', description: 'Captain gets 3x points instead of 2x', maxUses: 2 },
+                      { name: 'Bench Boost', description: 'Points from bench players count', maxUses: 2 },
+                      { name: 'Free Hit', description: 'Make unlimited transfers for one gameweek', maxUses: 2 }
                     ];
                     
                     const remainingChips = allChips.filter(chip => {
