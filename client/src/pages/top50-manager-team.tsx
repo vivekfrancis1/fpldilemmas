@@ -749,7 +749,10 @@ export default function Top50ManagerTeam() {
                       ];
 
                       return allChips.map((chip, idx) => {
-                        const usedCount = usedChips.filter((used: string) => chip.apiNames.includes(used)).length;
+                        const usedChipsDetails = managerHistory?.chips?.filter((usedChip: any) => 
+                          chip.apiNames.includes(usedChip.name)
+                        ) || [];
+                        const usedCount = usedChipsDetails.length;
                         const remainingCount = chip.maxUses - usedCount;
                         
                         return (
@@ -766,11 +769,24 @@ export default function Top50ManagerTeam() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-center">
-                              <Badge 
-                                className={usedCount > 0 ? "bg-red-100 text-red-800 hover:bg-red-200" : "bg-gray-100 text-gray-500"}
-                              >
-                                {usedCount}
-                              </Badge>
+                              {usedCount > 0 ? (
+                                <div className="space-y-1">
+                                  {usedChipsDetails.map((usedChip: any, chipIdx: number) => (
+                                    <div key={chipIdx} className="text-sm">
+                                      <Badge className="bg-red-100 text-red-800 hover:bg-red-200 mb-1">
+                                        GW{usedChip.event}
+                                      </Badge>
+                                      <p className="text-xs text-gray-600">
+                                        {new Date(usedChip.time).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <Badge className="bg-gray-100 text-gray-500">
+                                  0
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell className="text-center">
                               <Badge 
