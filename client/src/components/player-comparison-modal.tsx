@@ -42,10 +42,14 @@ export default function PlayerComparisonModal({
       
       setLoadingSeasons(prev => [...prev, season]);
       try {
-        const response = await fetch(`/api/players/historical/${season}`);
+        // Encode the season parameter to handle forward slashes properly
+        const encodedSeason = encodeURIComponent(season);
+        const response = await fetch(`/api/players/historical/${encodedSeason}`);
         if (response.ok) {
           const data = await response.json();
           setHistoricalData(prev => ({ ...prev, [season]: data }));
+        } else {
+          console.error(`Failed to fetch data for ${season}: ${response.status} ${response.statusText}`);
         }
       } catch (error) {
         console.error(`Failed to fetch data for ${season}:`, error);
