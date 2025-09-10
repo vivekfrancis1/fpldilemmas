@@ -480,9 +480,9 @@ export default function Top50ManagerTeam() {
             <ArrowLeftRight className="h-4 w-4" />
             Transfers
           </TabsTrigger>
-          <TabsTrigger value="performance" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <BarChart3 className="h-4 w-4" />
-            Performance
+          <TabsTrigger value="chips" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <Star className="h-4 w-4" />
+            Chips
           </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Calendar className="h-4 w-4" />
@@ -690,19 +690,56 @@ export default function Top50ManagerTeam() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="performance" className="space-y-6">
+        <TabsContent value="chips" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Performance Analysis
+                <Star className="h-5 w-5" />
+                Chips Used
               </CardTitle>
               <CardDescription>
-                Detailed performance metrics and trends
+                FPL chips activated by this manager
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-500 text-center py-8">Performance analysis coming soon</p>
+              {historyLoading ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : managerHistory?.chips && managerHistory.chips.length > 0 ? (
+                <div className="space-y-4">
+                  {managerHistory.chips.map((chip: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                      <div className="flex items-center gap-4">
+                        <Badge variant="outline" className="border-purple-300 text-purple-700">
+                          GW{chip.event}
+                        </Badge>
+                        <div className="flex items-center gap-3">
+                          <Star className="h-5 w-5 text-purple-600" />
+                          <div>
+                            <p className="font-semibold text-gray-900">{chip.name}</p>
+                            <p className="text-sm text-gray-600">
+                              {new Date(chip.time).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge className="bg-purple-600 hover:bg-purple-700 text-white">
+                          Activated
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Star className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No chips used yet this season</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
