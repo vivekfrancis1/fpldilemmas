@@ -859,7 +859,7 @@ export default function ResultsAndFixtures() {
                               {/* Click indicator for completed matches */}
                               {fixture.isResult && (
                                 <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
-                                  View Stats
+                                  Play Stats
                                 </Badge>
                               )}
                             </div>
@@ -958,7 +958,7 @@ export default function ResultsAndFixtures() {
                         {/* Click indicator for completed matches */}
                         {fixture.isResult && (
                           <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
-                            View Stats
+                            Play Stats
                           </Badge>
                         )}
                       </div>
