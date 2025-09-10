@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X, Users, Trophy, TrendingUp, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,25 +22,54 @@ export default function PlayerComparisonModal({
 }: PlayerComparisonModalProps) {
   const [activeTab, setActiveTab] = useState("current");
 
-  // Get last season data for all players
-  const { data: lastSeasonData, isLoading: isLoadingLastSeason } = useQuery<any[]>({
-    queryKey: ["/api/players/historical", "2024-25"],
-    staleTime: 30 * 60 * 1000, // 30 minutes
+  // Get available seasons
+  const { data: seasons } = useQuery<string[]>({
+    queryKey: ["/api/seasons"],
+    staleTime: 60 * 60 * 1000, // 1 hour
     enabled: isOpen && players.length > 0,
-    retry: 1,
   });
+
+  // State to hold historical season data
+  const [historicalData, setHistoricalData] = useState<{[season: string]: any[]}>({});
+  const [loadingSeasons, setLoadingSeasons] = useState<string[]>([]);
+
+  // Fetch historical data when seasons are available
+  useEffect(() => {
+    if (!seasons || !isOpen || players.length === 0) return;
+
+    const fetchSeasonData = async (season: string) => {
+      if (historicalData[season]) return; // Already loaded
+      
+      setLoadingSeasons(prev => [...prev, season]);
+      try {
+        const response = await fetch(`/api/players/historical/${season}`);
+        if (response.ok) {
+          const data = await response.json();
+          setHistoricalData(prev => ({ ...prev, [season]: data }));
+        }
+      } catch (error) {
+        console.error(`Failed to fetch data for ${season}:`, error);
+      } finally {
+        setLoadingSeasons(prev => prev.filter(s => s !== season));
+      }
+    };
+
+    // Fetch data for all seasons
+    seasons.forEach(fetchSeasonData);
+  }, [seasons, isOpen, players.length]);
 
   if (!isOpen || players.length === 0) return null;
 
-  // Get last season stats for selected players
-  const getLastSeasonStats = (playerId: number) => {
-    if (!lastSeasonData) return null;
+  // Get historical season stats for selected players
+  const getHistoricalSeasonStats = (playerId: number, season: string) => {
+    const seasonData = historicalData[season];
+    if (!seasonData) return null;
     
     // Find player by matching first_name and second_name since IDs might change
     const currentPlayer = players.find(p => p.id === playerId);
     if (!currentPlayer) return null;
     
-    return lastSeasonData.find(p => 
+    return seasonData.find(p => 
       p.first_name === currentPlayer.first_name && 
       p.second_name === currentPlayer.second_name
     );
@@ -114,15 +143,17 @@ export default function PlayerComparisonModal({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className={`grid w-full ${seasons ? `grid-cols-${Math.min(seasons.length + 1, 6)}` : 'grid-cols-1'}`}>
             <TabsTrigger value="current" className="flex items-center gap-2">
               <Trophy className="h-4 w-4" />
               2025-26 Season
             </TabsTrigger>
-            <TabsTrigger value="last" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              2024-25 Season
-            </TabsTrigger>
+            {seasons?.sort((a, b) => b.localeCompare(a)).map((season) => (
+              <TabsTrigger key={season} value={season} className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                {season}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <TabsContent value="current" className="mt-6">
@@ -173,72 +204,75 @@ export default function PlayerComparisonModal({
             </div>
           </TabsContent>
 
-          <TabsContent value="last" className="mt-6">
-            {isLoadingLastSeason ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="ml-3 text-gray-600">Loading 2024-25 season data...</span>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Player Headers */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {players.map(player => {
-                    const lastSeasonPlayer = getLastSeasonStats(player.id);
-                    return (
-                      <div key={player.id} className="text-center p-4 bg-gray-50 rounded-lg">
-                        <h3 className="font-semibold text-gray-900">{player.web_name}</h3>
-                        <p className="text-sm text-gray-600">{player.team_name}</p>
-                        {lastSeasonPlayer ? (
-                          <Badge variant="outline" className="mt-2 bg-green-100 text-green-800 border-green-200">
-                            Available
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="mt-2 bg-yellow-100 text-yellow-800 border-yellow-200">
-                            Not Found
-                          </Badge>
-                        )}
-                      </div>
-                    );
-                  })}
+          {/* Historical Season Tabs */}
+          {seasons?.map((season) => (
+            <TabsContent key={season} value={season} className="mt-6">
+              {loadingSeasons.includes(season) ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">Loading {season} season data...</span>
                 </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Player Headers */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {players.map(player => {
+                      const historicalPlayer = getHistoricalSeasonStats(player.id, season);
+                      return (
+                        <div key={player.id} className="text-center p-4 bg-gray-50 rounded-lg">
+                          <h3 className="font-semibold text-gray-900">{player.web_name}</h3>
+                          <p className="text-sm text-gray-600">{player.team_name}</p>
+                          {historicalPlayer ? (
+                            <Badge variant="outline" className="mt-2 bg-green-100 text-green-800 border-green-200">
+                              Available
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="mt-2 bg-yellow-100 text-yellow-800 border-yellow-200">
+                              Not Found
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
 
-                {/* Last Season Stats Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-3 font-semibold">Statistic</th>
-                        {players.map(player => (
-                          <th key={player.id} className="text-center p-3 font-semibold">
-                            {player.web_name}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(statLabels).map(([key, label]) => (
-                        <tr key={key} className="border-b hover:bg-gray-50">
-                          <td className="p-3 font-medium">{label}</td>
-                          {players.map(player => {
-                            const lastSeasonPlayer = getLastSeasonStats(player.id);
-                            return (
-                              <td key={player.id} className="p-3 text-center">
-                                {lastSeasonPlayer 
-                                  ? formatStatValue(key, lastSeasonPlayer[key as keyof typeof lastSeasonPlayer])
-                                  : "N/A"
-                                }
-                              </td>
-                            );
-                          })}
+                  {/* Historical Season Stats Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-3 font-semibold">Statistic</th>
+                          {players.map(player => (
+                            <th key={player.id} className="text-center p-3 font-semibold">
+                              {player.web_name}
+                            </th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {Object.entries(statLabels).map(([key, label]) => (
+                          <tr key={key} className="border-b hover:bg-gray-50">
+                            <td className="p-3 font-medium">{label}</td>
+                            {players.map(player => {
+                              const historicalPlayer = getHistoricalSeasonStats(player.id, season);
+                              return (
+                                <td key={player.id} className="p-3 text-center">
+                                  {historicalPlayer 
+                                    ? formatStatValue(key, historicalPlayer[key as keyof typeof historicalPlayer])
+                                    : "N/A"
+                                  }
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            )}
-          </TabsContent>
+              )}
+            </TabsContent>
+          ))}
         </Tabs>
 
         <div className="flex justify-end pt-4 border-t">
