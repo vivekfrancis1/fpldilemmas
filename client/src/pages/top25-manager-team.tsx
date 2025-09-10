@@ -318,11 +318,25 @@ export default function Top25ManagerTeam() {
     );
   }
 
-  const startingEleven = teamData?.picks?.slice(0, 11) || [];
-  const substitutes = teamData?.picks?.slice(11) || [];
+  // Enrich picks with player data from bootstrap
+  const enrichedPicks = teamData?.picks?.map(pick => {
+    const playerData = getPlayerData(pick.element);
+    const teamData = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    return {
+      ...pick,
+      player_name: playerData ? `${playerData.first_name} ${playerData.second_name}` : 'Unknown Player',
+      team_name: teamData?.name || 'Unknown Team',
+      now_cost: playerData?.now_cost || 0,
+      event_points: playerData?.event_points || 0,
+      element_type: playerData?.element_type || 1,
+    };
+  }) || [];
 
-  const captain = teamData.picks?.find(p => p.is_captain);
-  const viceCaptain = teamData.picks?.find(p => p.is_vice_captain);
+  const startingEleven = enrichedPicks.slice(0, 11);
+  const substitutes = enrichedPicks.slice(11);
+
+  const captain = enrichedPicks.find(p => p.is_captain);
+  const viceCaptain = enrichedPicks.find(p => p.is_vice_captain);
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
