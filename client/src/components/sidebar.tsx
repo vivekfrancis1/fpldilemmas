@@ -54,7 +54,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       ]
     },
     {
-      section: "Most Popular",
+      section: "Basic Tools",
       items: [
         { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
         { path: "/fixtures", label: "Fixture Difficulty Rating", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
