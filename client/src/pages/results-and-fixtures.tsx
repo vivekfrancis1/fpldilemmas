@@ -412,10 +412,18 @@ export default function ResultsAndFixtures() {
               assists: gameweekData.assists || 0,
               clean_sheets: gameweekData.clean_sheets || 0,
               goals_conceded: gameweekData.goals_conceded || 0,
+              own_goals: gameweekData.own_goals || 0,
+              penalties_saved: gameweekData.penalties_saved || 0,
+              penalties_missed: gameweekData.penalties_missed || 0,
               saves: gameweekData.saves || 0,
               yellow_cards: gameweekData.yellow_cards || 0,
               red_cards: gameweekData.red_cards || 0,
               bonus: gameweekData.bonus || 0,
+              bps: gameweekData.bps || 0,
+              influence: parseFloat(gameweekData.influence) || 0,
+              creativity: parseFloat(gameweekData.creativity) || 0,
+              threat: parseFloat(gameweekData.threat) || 0,
+              ict_index: parseFloat(gameweekData.ict_index) || 0,
               total_points: gameweekData.total_points || 0
             } : null;
           } catch (error) {
@@ -440,10 +448,18 @@ export default function ResultsAndFixtures() {
               assists: gameweekData.assists || 0,
               clean_sheets: gameweekData.clean_sheets || 0,
               goals_conceded: gameweekData.goals_conceded || 0,
+              own_goals: gameweekData.own_goals || 0,
+              penalties_saved: gameweekData.penalties_saved || 0,
+              penalties_missed: gameweekData.penalties_missed || 0,
               saves: gameweekData.saves || 0,
               yellow_cards: gameweekData.yellow_cards || 0,
               red_cards: gameweekData.red_cards || 0,
               bonus: gameweekData.bonus || 0,
+              bps: gameweekData.bps || 0,
+              influence: parseFloat(gameweekData.influence) || 0,
+              creativity: parseFloat(gameweekData.creativity) || 0,
+              threat: parseFloat(gameweekData.threat) || 0,
+              ict_index: parseFloat(gameweekData.ict_index) || 0,
               total_points: gameweekData.total_points || 0
             } : null;
           } catch (error) {
@@ -459,36 +475,58 @@ export default function ResultsAndFixtures() {
       
       const homeTeamMatchStats = {
         name: fixture.homeTeam?.name || 'Home Team',
-        totalPoints: homeStats.reduce((sum, p) => sum + p.total_points, 0),
-        totalGoals: homeStats.reduce((sum, p) => sum + p.goals_scored, 0),
-        totalAssists: homeStats.reduce((sum, p) => sum + p.assists, 0),
-        totalMinutes: homeStats.reduce((sum, p) => sum + p.minutes, 0),
-        totalSaves: homeStats.reduce((sum, p) => sum + p.saves, 0),
-        totalGoalsConceded: homeStats.reduce((sum, p) => sum + p.goals_conceded, 0),
-        totalYellowCards: homeStats.reduce((sum, p) => sum + p.yellow_cards, 0),
-        totalRedCards: homeStats.reduce((sum, p) => sum + p.red_cards, 0),
-        totalBonus: homeStats.reduce((sum, p) => sum + p.bonus, 0),
-        cleanSheets: homeStats.some(p => p.clean_sheets > 0),
-        playersUsed: homeStats.filter(p => p.minutes > 0).length,
-        topScorer: homeStats.reduce((max, p) => p.total_points > max.total_points ? p : max, homeStats[0] || {}),
-        topGoalScorer: homeStats.reduce((max, p) => p.goals_scored > max.goals_scored ? p : max, homeStats[0] || {}),
+        totalPoints: homeStats.reduce((sum, p) => sum + (p?.total_points || 0), 0),
+        totalGoals: homeStats.reduce((sum, p) => sum + (p?.goals_scored || 0), 0),
+        totalAssists: homeStats.reduce((sum, p) => sum + (p?.assists || 0), 0),
+        totalMinutes: homeStats.reduce((sum, p) => sum + (p?.minutes || 0), 0),
+        totalSaves: homeStats.reduce((sum, p) => sum + (p?.saves || 0), 0),
+        totalGoalsConceded: homeStats.reduce((sum, p) => sum + (p?.goals_conceded || 0), 0),
+        totalYellowCards: homeStats.reduce((sum, p) => sum + (p?.yellow_cards || 0), 0),
+        totalRedCards: homeStats.reduce((sum, p) => sum + (p?.red_cards || 0), 0),
+        totalBonus: homeStats.reduce((sum, p) => sum + (p?.bonus || 0), 0),
+        totalBPS: homeStats.reduce((sum, p) => sum + (p?.bps || 0), 0),
+        totalInfluence: homeStats.reduce((sum, p) => sum + (p?.influence || 0), 0),
+        totalCreativity: homeStats.reduce((sum, p) => sum + (p?.creativity || 0), 0),
+        totalThreat: homeStats.reduce((sum, p) => sum + (p?.threat || 0), 0),
+        totalICTIndex: homeStats.reduce((sum, p) => sum + (p?.ict_index || 0), 0),
+        totalOwnGoals: homeStats.reduce((sum, p) => sum + (p?.own_goals || 0), 0),
+        totalPenaltiesSaved: homeStats.reduce((sum, p) => sum + (p?.penalties_saved || 0), 0),
+        totalPenaltiesMissed: homeStats.reduce((sum, p) => sum + (p?.penalties_missed || 0), 0),
+        cleanSheets: homeStats.some(p => (p?.clean_sheets || 0) > 0),
+        playersUsed: homeStats.filter(p => (p?.minutes || 0) > 0).length,
+        averageBPS: homeStats.length > 0 ? homeStats.reduce((sum, p) => sum + (p?.bps || 0), 0) / homeStats.length : 0,
+        averageICT: homeStats.length > 0 ? homeStats.reduce((sum, p) => sum + (p?.ict_index || 0), 0) / homeStats.length : 0,
+        topScorer: homeStats.reduce((max, p) => (p?.total_points || 0) > (max?.total_points || 0) ? p : max, homeStats[0] || {}),
+        topGoalScorer: homeStats.reduce((max, p) => (p?.goals_scored || 0) > (max?.goals_scored || 0) ? p : max, homeStats[0] || {}),
+        topBPSPlayer: homeStats.reduce((max, p) => (p?.bps || 0) > (max?.bps || 0) ? p : max, homeStats[0] || {}),
       };
 
       const awayTeamMatchStats = {
         name: fixture.awayTeam?.name || 'Away Team',
-        totalPoints: awayStats.reduce((sum, p) => sum + p.total_points, 0),
-        totalGoals: awayStats.reduce((sum, p) => sum + p.goals_scored, 0),
-        totalAssists: awayStats.reduce((sum, p) => sum + p.assists, 0),
-        totalMinutes: awayStats.reduce((sum, p) => sum + p.minutes, 0),
-        totalSaves: awayStats.reduce((sum, p) => sum + p.saves, 0),
-        totalGoalsConceded: awayStats.reduce((sum, p) => sum + p.goals_conceded, 0),
-        totalYellowCards: awayStats.reduce((sum, p) => sum + p.yellow_cards, 0),
-        totalRedCards: awayStats.reduce((sum, p) => sum + p.red_cards, 0),
-        totalBonus: awayStats.reduce((sum, p) => sum + p.bonus, 0),
-        cleanSheets: awayStats.some(p => p.clean_sheets > 0),
-        playersUsed: awayStats.filter(p => p.minutes > 0).length,
-        topScorer: awayStats.reduce((max, p) => p.total_points > max.total_points ? p : max, awayStats[0] || {}),
-        topGoalScorer: awayStats.reduce((max, p) => p.goals_scored > max.goals_scored ? p : max, awayStats[0] || {}),
+        totalPoints: awayStats.reduce((sum, p) => sum + (p?.total_points || 0), 0),
+        totalGoals: awayStats.reduce((sum, p) => sum + (p?.goals_scored || 0), 0),
+        totalAssists: awayStats.reduce((sum, p) => sum + (p?.assists || 0), 0),
+        totalMinutes: awayStats.reduce((sum, p) => sum + (p?.minutes || 0), 0),
+        totalSaves: awayStats.reduce((sum, p) => sum + (p?.saves || 0), 0),
+        totalGoalsConceded: awayStats.reduce((sum, p) => sum + (p?.goals_conceded || 0), 0),
+        totalYellowCards: awayStats.reduce((sum, p) => sum + (p?.yellow_cards || 0), 0),
+        totalRedCards: awayStats.reduce((sum, p) => sum + (p?.red_cards || 0), 0),
+        totalBonus: awayStats.reduce((sum, p) => sum + (p?.bonus || 0), 0),
+        totalBPS: awayStats.reduce((sum, p) => sum + (p?.bps || 0), 0),
+        totalInfluence: awayStats.reduce((sum, p) => sum + (p?.influence || 0), 0),
+        totalCreativity: awayStats.reduce((sum, p) => sum + (p?.creativity || 0), 0),
+        totalThreat: awayStats.reduce((sum, p) => sum + (p?.threat || 0), 0),
+        totalICTIndex: awayStats.reduce((sum, p) => sum + (p?.ict_index || 0), 0),
+        totalOwnGoals: awayStats.reduce((sum, p) => sum + (p?.own_goals || 0), 0),
+        totalPenaltiesSaved: awayStats.reduce((sum, p) => sum + (p?.penalties_saved || 0), 0),
+        totalPenaltiesMissed: awayStats.reduce((sum, p) => sum + (p?.penalties_missed || 0), 0),
+        cleanSheets: awayStats.some(p => (p?.clean_sheets || 0) > 0),
+        playersUsed: awayStats.filter(p => (p?.minutes || 0) > 0).length,
+        averageBPS: awayStats.length > 0 ? awayStats.reduce((sum, p) => sum + (p?.bps || 0), 0) / awayStats.length : 0,
+        averageICT: awayStats.length > 0 ? awayStats.reduce((sum, p) => sum + (p?.ict_index || 0), 0) / awayStats.length : 0,
+        topScorer: awayStats.reduce((max, p) => (p?.total_points || 0) > (max?.total_points || 0) ? p : max, awayStats[0] || {}),
+        topGoalScorer: awayStats.reduce((max, p) => (p?.goals_scored || 0) > (max?.goals_scored || 0) ? p : max, awayStats[0] || {}),
+        topBPSPlayer: awayStats.reduce((max, p) => (p?.bps || 0) > (max?.bps || 0) ? p : max, awayStats[0] || {}),
       };
       
       return {
@@ -1552,6 +1590,56 @@ export default function ResultsAndFixtures() {
                             <span className="text-gray-600">Bonus Points:</span>
                             <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalBonus}</span>
                           </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Own Goals:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalOwnGoals}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Penalties Saved:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalPenaltiesSaved}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Penalties Missed:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalPenaltiesMissed}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Goals Conceded:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalGoalsConceded}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-gray-700">Performance Metrics</h4>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Total BPS:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalBPS}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Avg BPS:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.averageBPS.toFixed(1)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Total ICT Index:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalICTIndex.toFixed(1)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Avg ICT:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.averageICT.toFixed(1)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Influence:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalInfluence.toFixed(1)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Creativity:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalCreativity.toFixed(1)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Threat:</span>
+                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalThreat.toFixed(1)}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -1566,6 +1654,12 @@ export default function ResultsAndFixtures() {
                             <div className="flex justify-between">
                               <span className="text-gray-600">Top Goal Scorer:</span>
                               <span className="font-medium">{matchTeamStats.homeTeamMatchStats.topGoalScorer?.playerName} ({matchTeamStats.homeTeamMatchStats.topGoalScorer?.goals_scored} goals)</span>
+                            </div>
+                          )}
+                          {matchTeamStats.homeTeamMatchStats.topBPSPlayer?.bps > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Top BPS Player:</span>
+                              <span className="font-medium">{matchTeamStats.homeTeamMatchStats.topBPSPlayer?.playerName} ({matchTeamStats.homeTeamMatchStats.topBPSPlayer?.bps} BPS)</span>
                             </div>
                           )}
                         </div>
@@ -1628,6 +1722,56 @@ export default function ResultsAndFixtures() {
                             <span className="text-gray-600">Bonus Points:</span>
                             <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalBonus}</span>
                           </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Own Goals:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalOwnGoals}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Penalties Saved:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalPenaltiesSaved}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Penalties Missed:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalPenaltiesMissed}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Goals Conceded:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalGoalsConceded}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-gray-700">Performance Metrics</h4>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Total BPS:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalBPS}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Avg BPS:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.averageBPS.toFixed(1)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Total ICT Index:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalICTIndex.toFixed(1)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Avg ICT:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.averageICT.toFixed(1)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Influence:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalInfluence.toFixed(1)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Creativity:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalCreativity.toFixed(1)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Threat:</span>
+                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalThreat.toFixed(1)}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -1642,6 +1786,12 @@ export default function ResultsAndFixtures() {
                             <div className="flex justify-between">
                               <span className="text-gray-600">Top Goal Scorer:</span>
                               <span className="font-medium">{matchTeamStats.awayTeamMatchStats.topGoalScorer?.playerName} ({matchTeamStats.awayTeamMatchStats.topGoalScorer?.goals_scored} goals)</span>
+                            </div>
+                          )}
+                          {matchTeamStats.awayTeamMatchStats.topBPSPlayer?.bps > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Top BPS Player:</span>
+                              <span className="font-medium">{matchTeamStats.awayTeamMatchStats.topBPSPlayer?.playerName} ({matchTeamStats.awayTeamMatchStats.topBPSPlayer?.bps} BPS)</span>
                             </div>
                           )}
                         </div>
@@ -1659,7 +1809,7 @@ export default function ResultsAndFixtures() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                       <div className="text-center p-4 bg-blue-50 rounded-lg">
                         <div className="text-lg font-bold text-blue-600">
                           {matchTeamStats.homeTeamMatchStats.totalPoints > matchTeamStats.awayTeamMatchStats.totalPoints ? 
@@ -1706,6 +1856,30 @@ export default function ResultsAndFixtures() {
                         <div className="text-sm text-gray-600">More Bonus Points</div>
                         <div className="text-xs text-gray-500 mt-1">
                           {matchTeamStats.homeTeamMatchStats.totalBonus} - {matchTeamStats.awayTeamMatchStats.totalBonus}
+                        </div>
+                      </div>
+                      <div className="text-center p-4 bg-indigo-50 rounded-lg">
+                        <div className="text-lg font-bold text-indigo-600">
+                          {matchTeamStats.homeTeamMatchStats.totalBPS > matchTeamStats.awayTeamMatchStats.totalBPS ? 
+                            matchTeamStats.homeTeamMatchStats.name : 
+                            matchTeamStats.awayTeamMatchStats.totalBPS > matchTeamStats.homeTeamMatchStats.totalBPS ?
+                            matchTeamStats.awayTeamMatchStats.name : 'Tie'}
+                        </div>
+                        <div className="text-sm text-gray-600">Higher BPS</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {matchTeamStats.homeTeamMatchStats.totalBPS} - {matchTeamStats.awayTeamMatchStats.totalBPS}
+                        </div>
+                      </div>
+                      <div className="text-center p-4 bg-teal-50 rounded-lg">
+                        <div className="text-lg font-bold text-teal-600">
+                          {matchTeamStats.homeTeamMatchStats.totalICTIndex > matchTeamStats.awayTeamMatchStats.totalICTIndex ? 
+                            matchTeamStats.homeTeamMatchStats.name : 
+                            matchTeamStats.awayTeamMatchStats.totalICTIndex > matchTeamStats.homeTeamMatchStats.totalICTIndex ?
+                            matchTeamStats.awayTeamMatchStats.name : 'Tie'}
+                        </div>
+                        <div className="text-sm text-gray-600">Higher ICT Index</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {matchTeamStats.homeTeamMatchStats.totalICTIndex.toFixed(1)} - {matchTeamStats.awayTeamMatchStats.totalICTIndex.toFixed(1)}
                         </div>
                       </div>
                     </div>
