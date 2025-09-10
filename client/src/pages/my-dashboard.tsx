@@ -1287,16 +1287,16 @@ export default function MyDashboard() {
                                   <div className="text-xs text-gray-500">
                                     {new Date(transfer.time).toLocaleTimeString()}
                                   </div>
-                                  {/* Net spend */}
+                                  {/* Net amount */}
                                   <div className={`text-sm font-medium mt-1 ${
-                                    transfer.element_in_cost - transfer.element_out_cost > 0 
-                                      ? 'text-red-600' 
-                                      : transfer.element_in_cost - transfer.element_out_cost < 0 
+                                    transfer.element_out_cost - transfer.element_in_cost > 0 
                                       ? 'text-green-600' 
+                                      : transfer.element_out_cost - transfer.element_in_cost < 0 
+                                      ? 'text-red-600' 
                                       : 'text-gray-600'
                                   }`}>
-                                    {transfer.element_in_cost - transfer.element_out_cost > 0 ? '+' : ''}
-                                    {formatPrice(transfer.element_in_cost - transfer.element_out_cost)}
+                                    {transfer.element_out_cost - transfer.element_in_cost > 0 ? '+' : ''}
+                                    {formatPrice(transfer.element_out_cost - transfer.element_in_cost)}
                                   </div>
                                 </div>
                               </div>
