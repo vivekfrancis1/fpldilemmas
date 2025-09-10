@@ -669,8 +669,7 @@ export default function Top50ManagerTeam() {
                       <div className="flex items-center gap-4">
                         <Badge variant="outline">GW{transfer.event}</Badge>
                         <div className="text-sm">
-                          <span className="font-medium">Transfer {idx + 1}</span>
-                          <p className="text-gray-600 text-xs">{new Date(transfer.time).toLocaleDateString()}</p>
+                          <p className="text-gray-600 font-medium">{new Date(transfer.time).toLocaleDateString()}</p>
                         </div>
                       </div>
                       <div className="text-right">
