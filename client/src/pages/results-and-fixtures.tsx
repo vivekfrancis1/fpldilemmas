@@ -831,16 +831,19 @@ export default function ResultsAndFixtures() {
                             
                             {/* Action buttons */}
                             <div className="flex items-center space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-xs px-2 py-1"
-                                onClick={(e) => handleTeamStatsClick(fixture, e)}
-                                data-testid={`team-stats-${fixture.id}`}
-                              >
-                                <Users className="h-3 w-3 mr-1" />
-                                Team Stats
-                              </Button>
+                              {/* Team Stats button for upcoming matches only */}
+                              {!fixture.isResult && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs px-2 py-1"
+                                  onClick={(e) => handleTeamStatsClick(fixture, e)}
+                                  data-testid={`team-stats-${fixture.id}`}
+                                >
+                                  <Users className="h-3 w-3 mr-1" />
+                                  Team Stats
+                                </Button>
+                              )}
                               
                               {/* Match Stats button for completed matches only */}
                               {fixture.isResult && (
@@ -930,16 +933,19 @@ export default function ResultsAndFixtures() {
                       
                       {/* Action buttons */}
                       <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs px-2 py-1"
-                          onClick={(e) => handleTeamStatsClick(fixture, e)}
-                          data-testid={`team-stats-${fixture.id}`}
-                        >
-                          <Users className="h-3 w-3 mr-1" />
-                          Team Stats
-                        </Button>
+                        {/* Team Stats button for upcoming matches only */}
+                        {!fixture.isResult && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs px-2 py-1"
+                            onClick={(e) => handleTeamStatsClick(fixture, e)}
+                            data-testid={`team-stats-${fixture.id}`}
+                          >
+                            <Users className="h-3 w-3 mr-1" />
+                            Team Stats
+                          </Button>
+                        )}
                         
                         {/* Match Stats button for completed matches only */}
                         {fixture.isResult && (
