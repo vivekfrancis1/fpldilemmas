@@ -35,7 +35,7 @@ import {
   ExternalLink,
   ArrowLeftRight
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Link } from "wouter";
 
 
 
@@ -213,10 +213,6 @@ interface LeagueStanding {
   entry_name: string;
 }
 
-interface LeagueAnalysisProps {
-  leagueId: number;
-  managerId: string;
-}
 
 interface Transfer {
   element_in: number;
@@ -232,104 +228,6 @@ export default function MyDashboard() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
 
-  // League Analysis Component
-  const LeagueAnalysis = ({ leagueId, managerId }: LeagueAnalysisProps) => {
-    const { data: leagueData, isLoading, error } = useQuery({
-      queryKey: [`/api/leagues-classic/${leagueId}/standings`],
-      enabled: !!leagueId
-    });
-
-    const { data: leagueAnalysisData } = useQuery({
-      queryKey: [`/api/leagues/${leagueId}/analyze`],
-      enabled: !!leagueId
-    });
-
-    if (isLoading) {
-      return (
-        <div className="space-y-4">
-          <div className="animate-pulse space-y-3">
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-12 bg-gray-100 rounded"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (error || !leagueData) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Failed to load league data</p>
-        </div>
-      );
-    }
-
-    const currentManagerEntry = (leagueData as any).standings?.results?.find(
-      (entry: any) => entry.entry.toString() === managerId
-    );
-
-    // Show top 50 or all entries if less than 50
-    const allEntries = (leagueData as any).standings?.results || [];
-    const topEntries = allEntries.length > 50 ? allEntries.slice(0, 50) : allEntries;
-    
-    return (
-      <div className="space-y-6">
-        {/* League Standings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              League Standings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {topEntries.map((entry: any, index: number) => {
-                const isCurrentManager = entry.entry.toString() === managerId;
-                return (
-                  <div 
-                    key={entry.entry} 
-                    className={`flex items-center justify-between p-3 rounded-lg border ${
-                      isCurrentManager ? 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
-                        index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                        index === 1 ? 'bg-gray-100 text-gray-800' :
-                        index === 2 ? 'bg-orange-100 text-orange-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {entry.rank}
-                      </div>
-                      <div>
-                        <p className="font-medium">
-                          {entry.player_name}
-                          {isCurrentManager && <span className="text-blue-600 ml-2 text-sm">(You)</span>}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{entry.entry_name}</p>
-                        <p className="text-xs text-gray-500">Manager ID: {entry.entry}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold">{entry.total?.toLocaleString()} pts</p>
-                      {entry.event_total && (
-                        <p className="text-sm text-muted-foreground">GW: {entry.event_total}</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
 
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
@@ -849,26 +747,14 @@ export default function MyDashboard() {
                                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
                                   #{league.entry_rank.toLocaleString()}
                                 </div>
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" className="text-xs">
-                                      <ExternalLink className="h-3 w-3 mr-1" />
-                                      View League
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" aria-describedby="league-analysis-description">
-                                    <DialogHeader>
-                                      <DialogTitle className="flex items-center gap-2">
-                                        <Trophy className="h-5 w-5" />
-                                        {league.name}
-                                      </DialogTitle>
-                                      <p id="league-analysis-description" className="text-sm text-muted-foreground sr-only">
-                                        Detailed analysis and standings for {league.name}
-                                      </p>
-                                    </DialogHeader>
-                                    <LeagueAnalysis leagueId={league.id} managerId={managerId} />
-                                  </DialogContent>
-                                </Dialog>
+                                <Link
+                                  href={`/league-analysis?leagueId=${league.id}&managerId=${managerId}&leagueName=${encodeURIComponent(league.name)}`}
+                                >
+                                  <Button variant="outline" size="sm" className="text-xs">
+                                    <ExternalLink className="h-3 w-3 mr-1" />
+                                    View League
+                                  </Button>
+                                </Link>
                               </div>
                             </div>
                           );
