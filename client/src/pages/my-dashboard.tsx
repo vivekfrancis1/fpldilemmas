@@ -750,6 +750,7 @@ export default function MyDashboard() {
                                 </div>
                                 <Link
                                   href={`/league-analysis?leagueId=${league.id}&managerId=${searchedId}&leagueName=${encodeURIComponent(league.name)}`}
+                                  onClick={() => console.log('League clicked:', { leagueId: league.id, managerId: searchedId, leagueName: league.name })}
                                 >
                                   <Button variant="outline" size="sm" className="text-xs">
                                     <ExternalLink className="h-3 w-3 mr-1" />

@@ -29,6 +29,9 @@ export default function LeagueAnalysisPage() {
   const leagueId = params.get('leagueId');
   const managerId = params.get('managerId');
   const leagueName = params.get('leagueName') || 'League Analysis';
+  
+  console.log('League Analysis Page - URL:', location);
+  console.log('League Analysis Page - Params:', { leagueId, managerId, leagueName });
 
   if (!leagueId) {
     return (
