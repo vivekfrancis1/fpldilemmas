@@ -82,6 +82,10 @@ type FPLCreatorTracking = {
   teamValue: number;
   totalTransfers: number;
   recordedAt: string;
+  wildcardUsed?: boolean;
+  benchBoostUsed?: boolean;
+  freeHitUsed?: boolean;
+  tripleCaptainUsed?: boolean;
 };
 
 type CreatorWithLatestData = FPLCreator;
@@ -183,6 +187,14 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
       </TableCell>
       <TableCell className="text-right font-mono">
         £{latest?.teamValue || 'N/A'}m
+      </TableCell>
+      <TableCell className="text-right font-mono">
+        {latest ? (
+          (latest.wildcardUsed ? 1 : 0) + 
+          (latest.benchBoostUsed ? 1 : 0) + 
+          (latest.freeHitUsed ? 1 : 0) + 
+          (latest.tripleCaptainUsed ? 1 : 0)
+        ) : "N/A"}
       </TableCell>
       <TableCell className="text-right font-mono">
         {latest?.totalTransfers !== undefined && latest?.totalTransfers !== null ? latest.totalTransfers : "N/A"}
@@ -372,6 +384,7 @@ export default function ContentCreators() {
                   {sortBy === 'gw_points' && <ArrowUpDown className="h-4 w-4 inline ml-1" />}
                 </TableHead>
                 <TableHead className="text-right">Team Value</TableHead>
+                <TableHead className="text-right">Chips</TableHead>
                 <TableHead className="text-right">Transfers</TableHead>
                 </TableRow>
                 </TableHeader>
