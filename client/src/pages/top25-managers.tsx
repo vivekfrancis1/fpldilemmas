@@ -316,6 +316,22 @@ export default function Top25Managers() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Footer */}
+      <div className="text-center py-4 border-t border-gray-200">
+        <p className="text-sm text-gray-600">
+          Data based on{' '}
+          <a 
+            href="https://www.fplresearch.com/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 underline"
+          >
+            FPL Research
+          </a>{' '}
+          as on September 10, 2025
+        </p>
+      </div>
     </div>
   );
 }
