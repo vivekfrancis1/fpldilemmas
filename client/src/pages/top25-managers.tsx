@@ -222,7 +222,7 @@ const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
 export default function Top25Managers() {
   const [managersWithData, setManagersWithData] = useState<Top25Manager[]>(TOP_25_MANAGERS);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [sortField, setSortField] = useState<string>('latestTracking.overallRank');
+  const [sortField, setSortField] = useState<string>('rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [, navigate] = useLocation();
 
