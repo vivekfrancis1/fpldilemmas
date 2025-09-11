@@ -531,9 +531,26 @@ export default function MyDashboard() {
                   className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                   data-testid="input-manager-id"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Find your ID in the FPL app under "Points" → "Gameweek History"
-                </p>
+                <div className="text-xs text-gray-500 mt-1 space-y-2">
+                  <p className="font-medium">To find your Manager ID (also referred to as your Team ID):</p>
+                  <ol className="list-decimal list-inside space-y-1 ml-2">
+                    <li><strong>Log in to FPL:</strong> Go to fantasy.premierleague.com and sign in to your account.</li>
+                    <li><strong>Navigate to the Points or Pick Team Tab:</strong>
+                      <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                        <li><strong>Option 1:</strong> Click on the Points tab. Then, click on Gameweek History (usually found in the right sidebar on desktop or by scrolling down on mobile).</li>
+                        <li><strong>Option 2:</strong> Click on the Pick Team tab, then select Transfer History (often located on the left side under sections like "Points and Rankings").</li>
+                      </ul>
+                    </li>
+                    <li><strong>Check the URL:</strong> Once you're on the Gameweek History or Transfer History page, look at the URL in your browser's address bar. Your Manager ID is the number between "entry" and "history" or "transfers" in the URL. For example, in https://fantasy.premierleague.com/en/statistics/entry/123456/history, the Manager ID is 123456.</li>
+                  </ol>
+                  <div className="mt-2 p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
+                    <p className="font-medium text-yellow-800">Note:</p>
+                    <ul className="list-disc list-inside ml-2 text-yellow-700">
+                      <li>You cannot find your Manager ID directly in the official FPL mobile app. You'll need to use a web browser (e.g., Chrome or Safari) on your mobile device or a computer.</li>
+                      <li>Your FPL Manager ID changes each season, so ensure you're checking for the current season.</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
               <Button 
                 onClick={handleSearch} 
@@ -1451,9 +1468,26 @@ export default function MyDashboard() {
                 <Trophy className="h-12 w-12 text-purple-600" />
               </div>
               <h2 className="fpl-heading-card mb-4">Enter Your Manager ID</h2>
-              <p className="fpl-text-body mb-4">
-                Find your Manager ID in the FPL app under "Points" → "Gameweek History" or in your team URL.
-              </p>
+              <div className="fpl-text-body mb-4 space-y-3">
+                <p className="font-medium">To find your Manager ID (also referred to as your Team ID) in Fantasy Premier League (FPL), follow these steps:</p>
+                <ol className="list-decimal list-inside space-y-2 ml-2">
+                  <li><strong>Log in to FPL:</strong> Go to fantasy.premierleague.com and sign in to your account.</li>
+                  <li><strong>Navigate to the Points or Pick Team Tab:</strong>
+                    <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                      <li><strong>Option 1:</strong> Click on the Points tab. Then, click on Gameweek History (usually found in the right sidebar on desktop or by scrolling down on mobile).</li>
+                      <li><strong>Option 2:</strong> Click on the Pick Team tab, then select Transfer History (often located on the left side under sections like "Points and Rankings").</li>
+                    </ul>
+                  </li>
+                  <li><strong>Check the URL:</strong> Once you're on the Gameweek History or Transfer History page, look at the URL in your browser's address bar. Your Manager ID is the number between "entry" and "history" or "transfers" in the URL. For example, in https://fantasy.premierleague.com/en/statistics/entry/123456/history, the Manager ID is 123456.</li>
+                </ol>
+                <div className="mt-3 p-3 bg-yellow-50 rounded border-l-4 border-yellow-400">
+                  <p className="font-medium text-yellow-800">Note:</p>
+                  <ul className="list-disc list-inside ml-2 text-yellow-700 space-y-1">
+                    <li>You cannot find your Manager ID directly in the official FPL mobile app. You'll need to use a web browser (e.g., Chrome or Safari) on your mobile device or a computer.</li>
+                    <li>Your FPL Manager ID changes each season, so ensure you're checking for the current season.</li>
+                  </ul>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
