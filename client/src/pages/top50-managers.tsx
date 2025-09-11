@@ -185,7 +185,7 @@ export default function Top50Managers() {
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <Trophy className="h-8 w-8" />
-              <h1>Top 25 (Current)</h1>
+              <h1>Top 25 FPL Managers (Current)</h1>
             </div>
             <p className="fpl-page-subtitle">
               Current top 25 Fantasy Premier League managers from the overall league
@@ -212,15 +212,6 @@ export default function Top50Managers() {
 
       {/* Managers Table */}
       <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-green-600" />
-            Current Top 25 FPL Managers
-          </CardTitle>
-          <CardDescription>
-            Track the performance and teams of the current top 25 Fantasy Premier League managers
-          </CardDescription>
-        </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
