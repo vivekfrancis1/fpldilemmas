@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import {
@@ -82,10 +82,7 @@ type FPLCreatorTracking = {
   teamValue: number;
   totalTransfers: number;
   recordedAt: string;
-  wildcardUsed?: boolean;
-  benchBoostUsed?: boolean;
-  freeHitUsed?: boolean;
-  tripleCaptainUsed?: boolean;
+  chipsUsed?: number;
 };
 
 type CreatorWithLatestData = FPLCreator;
@@ -122,10 +119,32 @@ function getRankChangeDisplay(change: number | undefined) {
 function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
   const latest = creator.latestTracking;
   const [, setLocation] = useLocation();
+  const [chipsUsed, setChipsUsed] = useState<number | null>(null);
 
   const handleViewTeam = (creatorId: number) => {
     setLocation(`/content-creators/${creatorId}/team`);
   };
+
+  // Fetch chip data for this creator
+  useEffect(() => {
+    const fetchChipData = async () => {
+      if (creator.managerId) {
+        try {
+          const response = await fetch(`/api/manager/${creator.managerId}/history`);
+          if (response.ok) {
+            const historyData = await response.json();
+            const chipCount = historyData.chips ? historyData.chips.length : 0;
+            setChipsUsed(chipCount);
+          }
+        } catch (error) {
+          console.error(`Failed to fetch chip data for ${creator.name}:`, error);
+          setChipsUsed(0);
+        }
+      }
+    };
+    
+    fetchChipData();
+  }, [creator.managerId, creator.name]);
 
   return (
     <TableRow 
@@ -189,12 +208,7 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
         £{latest?.teamValue || 'N/A'}m
       </TableCell>
       <TableCell className="text-right font-mono">
-        {latest ? (
-          (latest.wildcardUsed ? 1 : 0) + 
-          (latest.benchBoostUsed ? 1 : 0) + 
-          (latest.freeHitUsed ? 1 : 0) + 
-          (latest.tripleCaptainUsed ? 1 : 0)
-        ) : "N/A"}
+        {chipsUsed !== null ? chipsUsed : "N/A"}
       </TableCell>
       <TableCell className="text-right font-mono">
         {latest?.totalTransfers !== undefined && latest?.totalTransfers !== null ? latest.totalTransfers : "N/A"}
