@@ -271,7 +271,7 @@ export default function Top25TeamAnalysis() {
 
     return Object.values(playerOwnership)
       .sort((a, b) => b.count - a.count)
-      .slice(0, 15)
+      .slice(0, 50)
       .map(item => ({
         ...item.player,
         ownership: item.count,
