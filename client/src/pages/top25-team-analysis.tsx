@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
@@ -68,6 +68,28 @@ interface TeamData {
   };
 }
 
+// API response types
+interface Top25TeamResponse {
+  managerId: number;
+  name: string;
+  rank: number;
+  teamData: TeamData | null;
+  success: boolean;
+  error: string | null;
+}
+
+interface Top25BatchResponse {
+  teams: Top25TeamResponse[];
+  metadata: {
+    totalRequested: number;
+    totalSuccessful: number;
+    totalFailed: number;
+    gameweek: number;
+    fetchedAt: string;
+    cacheExpiresAt: string;
+  };
+}
+
 interface Player {
   id: number;
   first_name: string;
@@ -107,8 +129,8 @@ interface ManagerTeamData {
   name: string;
   rank: number;
   teamData: TeamData | null;
-  isLoading: boolean;
-  error: boolean;
+  success: boolean;
+  error: string | null;
 }
 
 // Constants
@@ -176,70 +198,59 @@ function formatPrice(price: number): string {
 }
 
 export default function Top25TeamAnalysis() {
-  const [managersData, setManagersData] = useState<ManagerTeamData[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
   // Fetch bootstrap data
   const { data: bootstrapData, isLoading: bootstrapLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Initialize managers data structure
-  useEffect(() => {
-    setManagersData(
-      TOP_25_MANAGERS.map(manager => ({
+  // Fetch Top 25 teams data using batch endpoint with React Query
+  const { 
+    data: top25Response, 
+    isLoading: teamsLoading, 
+    error: teamsError,
+    refetch: refetchTeams,
+    isFetching: isRefreshing
+  } = useQuery<Top25BatchResponse>({
+    queryKey: ["/api/top25/teams"],
+    staleTime: 1 * 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes (renamed from cacheTime in v5)
+    retry: 2,
+    refetchOnWindowFocus: false,
+  });
+
+  // Transform the API response to match the expected data structure
+  const managersData: ManagerTeamData[] = useMemo(() => {
+    if (!top25Response?.teams) {
+      return TOP_25_MANAGERS.map(manager => ({
         ...manager,
         teamData: null,
-        isLoading: true,
-        error: false
-      }))
-    );
-  }, []);
-
-  // Function to fetch individual team data
-  const fetchTeamData = async (managerId: number): Promise<TeamData | null> => {
-    try {
-      const response = await fetch(`/api/manager/${managerId}/team`);
-      if (!response.ok) throw new Error(`Failed to fetch team data for ${managerId}`);
-      return await response.json();
-    } catch (error) {
-      console.error(`Error fetching team data for manager ${managerId}:`, error);
-      return null;
+        success: false,
+        error: null
+      }));
     }
-  };
-
-  // Function to refresh all team data
-  const refreshAllData = async () => {
-    setIsRefreshing(true);
     
-    const updatedData = await Promise.all(
-      managersData.map(async (manager) => {
-        const teamData = await fetchTeamData(manager.managerId);
-        return {
-          ...manager,
-          teamData,
-          isLoading: false,
-          error: teamData === null
-        };
-      })
-    );
+    return top25Response.teams.map(team => ({
+      managerId: team.managerId,
+      name: team.name,
+      rank: team.rank,
+      teamData: team.teamData,
+      success: team.success,
+      error: team.error
+    }));
+  }, [top25Response]);
 
-    setManagersData(updatedData);
-    setIsRefreshing(false);
+  // Helper functions for analysis (memoized for performance)
+  const validTeams = useMemo(() => 
+    managersData.filter(m => m.teamData && m.success),
+    [managersData]
+  );
+
+  const refreshAllData = () => {
+    refetchTeams();
   };
 
-  // Load data on component mount
-  useEffect(() => {
-    if (managersData.length > 0 && managersData[0].isLoading) {
-      refreshAllData();
-    }
-  }, [managersData.length]);
-
-  // Helper functions for analysis
-  const getValidTeams = () => managersData.filter(m => m.teamData && !m.error);
-
-  const getMostOwnedPlayers = () => {
-    const validTeams = getValidTeams();
+  const getMostOwnedPlayers = useMemo(() => {
     if (!validTeams.length || !bootstrapData) return [];
 
     const playerOwnership: { [key: number]: { count: number; player: Player } } = {};
@@ -266,10 +277,9 @@ export default function Top25TeamAnalysis() {
         ownership: item.count,
         ownershipPercent: Math.round((item.count / validTeams.length) * 100)
       }));
-  };
+  }, [validTeams, bootstrapData]);
 
-  const getCaptaincyAnalysis = () => {
-    const validTeams = getValidTeams();
+  const getCaptaincyAnalysis = useMemo(() => {
     if (!validTeams.length || !bootstrapData) return [];
 
     const captaincy: { [key: number]: { count: number; player: Player } } = {};
@@ -308,10 +318,9 @@ export default function Top25TeamAnalysis() {
       }));
 
     return captains;
-  };
+  }, [validTeams, bootstrapData]);
 
-  const getFormationAnalysis = () => {
-    const validTeams = getValidTeams();
+  const getFormationAnalysis = useMemo(() => {
     if (!validTeams.length || !bootstrapData) return [];
 
     const formations: { [key: string]: number } = {};
@@ -348,10 +357,9 @@ export default function Top25TeamAnalysis() {
         count,
         percentage: Math.round((count / validTeams.length) * 100)
       }));
-  };
+  }, [validTeams, bootstrapData]);
 
-  const getChipAnalysis = () => {
-    const validTeams = getValidTeams();
+  const getChipAnalysis = useMemo(() => {
     if (!validTeams.length) return { activeChips: [], totalActive: 0, noChipCount: 0 };
 
     const activeChips: { [key: string]: number } = {};
@@ -374,32 +382,31 @@ export default function Top25TeamAnalysis() {
       totalActive,
       noChipCount: validTeams.length - totalActive
     };
-  };
+  }, [validTeams]);
 
-  const getBudgetAnalysis = () => {
-    const validTeams = getValidTeams();
+  const getBudgetAnalysis = useMemo(() => {
     if (!validTeams.length) return { avgValue: 0, maxValue: 0, minValue: 0, avgBank: 0 };
 
     const values = validTeams
-      .map(m => m.teamData?.entry_history?.value || 0)
-      .filter(v => v > 0);
+      .map((m: ManagerTeamData) => m.teamData?.entry_history?.value || 0)
+      .filter((v: number) => v > 0);
     
     const banks = validTeams
-      .map(m => m.teamData?.entry_history?.bank || 0);
+      .map((m: ManagerTeamData) => m.teamData?.entry_history?.bank || 0);
 
     if (values.length === 0) return { avgValue: 0, maxValue: 0, minValue: 0, avgBank: 0 };
 
     return {
-      avgValue: Math.round(values.reduce((a, b) => a + b, 0) / values.length) / 10,
+      avgValue: Math.round(values.reduce((a: number, b: number) => a + b, 0) / values.length) / 10,
       maxValue: Math.max(...values) / 10,
       minValue: Math.min(...values) / 10,
-      avgBank: Math.round(banks.reduce((a, b) => a + b, 0) / banks.length) / 10
+      avgBank: Math.round(banks.reduce((a: number, b: number) => a + b, 0) / banks.length) / 10
     };
-  };
+  }, [validTeams]);
 
-  const validTeamsCount = getValidTeams().length;
-  const loadingTeamsCount = managersData.filter(m => m.isLoading).length;
-  const errorTeamsCount = managersData.filter(m => m.error).length;
+  const validTeamsCount = validTeams.length;
+  const errorTeamsCount = managersData.filter((m: ManagerTeamData) => !m.success).length;
+  const loadingTeamsCount = teamsLoading ? 25 - validTeamsCount - errorTeamsCount : 0;
 
   if (bootstrapLoading) {
     return (
@@ -526,7 +533,7 @@ export default function Top25TeamAnalysis() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {getMostOwnedPlayers().slice(0, 8).map((player, index) => (
+                      {getMostOwnedPlayers.slice(0, 8).map((player, index) => (
                         <div key={player.id} className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
@@ -562,7 +569,7 @@ export default function Top25TeamAnalysis() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {getFormationAnalysis().slice(0, 5).map((formation, index) => (
+                      {getFormationAnalysis.slice(0, 5).map((formation, index) => (
                         <div key={formation.formation}>
                           <div className="flex justify-between items-center mb-2">
                             <span className="font-medium">{formation.formation}</span>
@@ -590,7 +597,7 @@ export default function Top25TeamAnalysis() {
                   </CardHeader>
                   <CardContent>
                     {(() => {
-                      const chipData = getChipAnalysis();
+                      const chipData = getChipAnalysis;
                       return (
                         <div className="space-y-3">
                           {chipData.activeChips.length > 0 ? (
@@ -639,7 +646,7 @@ export default function Top25TeamAnalysis() {
                   </CardHeader>
                   <CardContent>
                     {(() => {
-                      const budgetData = getBudgetAnalysis();
+                      const budgetData = getBudgetAnalysis;
                       return (
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
@@ -697,7 +704,7 @@ export default function Top25TeamAnalysis() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getMostOwnedPlayers().map((player, index) => (
+                      {getMostOwnedPlayers.map((player, index) => (
                         <TableRow key={player.id} data-testid={`row-player-${player.id}`}>
                           <TableCell>
                             <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
@@ -758,7 +765,7 @@ export default function Top25TeamAnalysis() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getCaptaincyAnalysis().map((player) => (
+                      {getCaptaincyAnalysis.map((player) => (
                         <TableRow key={player.id} data-testid={`row-captain-${player.id}`}>
                           <TableCell>
                             <div className="font-medium">{player.web_name}</div>
@@ -814,7 +821,7 @@ export default function Top25TeamAnalysis() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {getFormationAnalysis().map((formation, index) => (
+                      {getFormationAnalysis.map((formation, index) => (
                         <div key={formation.formation} className="p-4 border rounded-lg">
                           <div className="flex justify-between items-center mb-3">
                             <div className="flex items-center gap-2">
@@ -850,7 +857,7 @@ export default function Top25TeamAnalysis() {
                   </CardHeader>
                   <CardContent>
                     {(() => {
-                      const formations = getFormationAnalysis();
+                      const formations = getFormationAnalysis;
                       const totalManagers = formations.reduce((sum, f) => sum + f.count, 0);
                       const mostPopular = formations[0];
                       const diversity = formations.length;
@@ -905,7 +912,7 @@ export default function Top25TeamAnalysis() {
                   </CardHeader>
                   <CardContent>
                     {(() => {
-                      const budgetData = getBudgetAnalysis();
+                      const budgetData = getBudgetAnalysis;
                       return (
                         <div className="space-y-6">
                           <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
@@ -953,7 +960,7 @@ export default function Top25TeamAnalysis() {
                   </CardHeader>
                   <CardContent>
                     {(() => {
-                      const budgetData = getBudgetAnalysis();
+                      const budgetData = getBudgetAnalysis;
                       return (
                         <div className="space-y-6">
                           <div className="text-center p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">

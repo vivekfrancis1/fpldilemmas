@@ -1227,6 +1227,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Top 25 managers batch endpoint with caching
+  const TOP_25_MANAGERS = [
+    { rank: 1, name: "Tom Dollimore", managerId: 497000 },
+    { rank: 2, name: "Ben Crellin", managerId: 6586 },
+    { rank: 3, name: "Fábio Borges", managerId: 4783108 },
+    { rank: 4, name: "John Walsh", managerId: 1277598 },
+    { rank: 5, name: "Abhinav C", managerId: 175376 },
+    { rank: 6, name: "Harry Daniels", managerId: 1320 },
+    { rank: 7, name: "» elevenify.com", managerId: 9325733 },
+    { rank: 8, name: "Cameron Scott", managerId: 43164 },
+    { rank: 9, name: "Huss E", managerId: 10421 },
+    { rank: 10, name: "Khaled Zaki", managerId: 202269 },
+    { rank: 11, name: "Rob Mayes", managerId: 294590 },
+    { rank: 12, name: "Mark Hurst", managerId: 62110 },
+    { rank: 13, name: "Jesper Øiestad", managerId: 4455 },
+    { rank: 14, name: "Even Skärholen", managerId: 227102 },
+    { rank: 15, name: "Tom N", managerId: 386057 },
+    { rank: 16, name: "Anthony Moylette", managerId: 78351 },
+    { rank: 17, name: "Lukasz Woźniak", managerId: 859923 },
+    { rank: 18, name: "Michael Giovanni", managerId: 69716 },
+    { rank: 19, name: "Tommy Shinton", managerId: 155602 },
+    { rank: 20, name: "Sean Connors", managerId: 207939 },
+    { rank: 21, name: "Raphael Crettol", managerId: 1559332 },
+    { rank: 22, name: "Simon MacNair", managerId: 742000 },
+    { rank: 23, name: "Jovan Popović", managerId: 226819 },
+    { rank: 24, name: "William Johansson", managerId: 3676 },
+    { rank: 25, name: "Louis Reddington", managerId: 121680 },
+  ];
+
+  // Server-side cache for Top 25 teams (2-minute cache)
+  let top25TeamsCache: { 
+    data: any; 
+    timestamp: number; 
+    gameweek: number;
+  } | null = null;
+  const TOP25_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+
+  // Batch endpoint to fetch all Top 25 managers' team data
+  app.get("/api/top25/teams", async (req, res) => {
+    try {
+      console.log("🚀 Fetching Top 25 managers' team data...");
+      
+      // Get current gameweek
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      let currentGameweek = 1; // fallback
+      
+      if (bootstrapResponse.ok) {
+        const bootstrapData = await bootstrapResponse.json();
+        currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      }
+      
+      // Check cache first
+      const now = Date.now();
+      if (top25TeamsCache && 
+          (now - top25TeamsCache.timestamp) < TOP25_CACHE_DURATION &&
+          top25TeamsCache.gameweek === currentGameweek) {
+        console.log("🔄 Serving Top 25 teams from cache");
+        return res.json(top25TeamsCache.data);
+      }
+
+      // Fetch all team data in parallel using Promise.allSettled
+      const teamPromises = TOP_25_MANAGERS.map(async (manager) => {
+        try {
+          const response = await fetch(
+            `https://fantasy.premierleague.com/api/entry/${manager.managerId}/event/${currentGameweek}/picks/`
+          );
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const teamData = await response.json();
+          return {
+            managerId: manager.managerId,
+            name: manager.name,
+            rank: manager.rank,
+            teamData,
+            success: true,
+            error: null
+          };
+        } catch (error) {
+          console.warn(`Failed to fetch team for manager ${manager.managerId} (${manager.name}):`, 
+                      error instanceof Error ? error.message : error);
+          return {
+            managerId: manager.managerId,
+            name: manager.name,
+            rank: manager.rank,
+            teamData: null,
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error"
+          };
+        }
+      });
+
+      // Wait for all requests to complete
+      const results = await Promise.allSettled(teamPromises);
+      
+      // Process results - extract fulfilled values, handle rejected promises
+      const teams = results.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          // Handle rejected promise (should rarely happen due to internal try-catch)
+          const manager = TOP_25_MANAGERS[index];
+          return {
+            managerId: manager.managerId,
+            name: manager.name,
+            rank: manager.rank,
+            teamData: null,
+            success: false,
+            error: "Request failed"
+          };
+        }
+      });
+
+      // Calculate statistics
+      const successful = teams.filter(team => team.success);
+      const failed = teams.filter(team => !team.success);
+
+      const responseData = {
+        teams,
+        metadata: {
+          totalRequested: TOP_25_MANAGERS.length,
+          totalSuccessful: successful.length,
+          totalFailed: failed.length,
+          gameweek: currentGameweek,
+          fetchedAt: new Date().toISOString(),
+          cacheExpiresAt: new Date(now + TOP25_CACHE_DURATION).toISOString()
+        }
+      };
+
+      // Cache the result
+      top25TeamsCache = {
+        data: responseData,
+        timestamp: now,
+        gameweek: currentGameweek
+      };
+
+      console.log(`✅ Top 25 batch fetch complete: ${successful.length}/${TOP_25_MANAGERS.length} successful`);
+      
+      res.json(responseData);
+      
+    } catch (error) {
+      console.error("❌ Error in Top 25 batch endpoint:", error);
+      res.status(500).json({
+        error: "Failed to fetch Top 25 managers' teams",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Price tracking endpoints
   
   // Debug endpoint to check database connection and data
