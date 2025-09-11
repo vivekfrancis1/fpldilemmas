@@ -39,7 +39,6 @@ import {
   Users,
   Activity,
   PieChart,
-  ArrowLeft,
 } from "lucide-react";
 
 // Types
@@ -424,29 +423,8 @@ export default function Top25TeamAnalysis() {
   return (
     <div className="fpl-page-wrapper">
       <div className="fpl-container fpl-content-area">
-        {/* Page Header */}
-        <div className="fpl-page-header">
-          <div className="fpl-page-header-content">
-            <div className="fpl-page-title">
-              <BarChart3 className="h-8 w-8" />
-              <h1>Top 25 Team Analysis</h1>
-            </div>
-            <p className="fpl-page-subtitle">
-              Comprehensive analysis of all Top 25 FPL managers' teams
-            </p>
-          </div>
-        </div>
-
         {/* Controls and Status */}
         <div className="fpl-controls">
-          <div className="fpl-controls-left">
-            <Link href="/top25-managers">
-              <Button variant="outline" className="hover:bg-blue-50" data-testid="button-back-managers">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Managers
-              </Button>
-            </Link>
-          </div>
           <div className="fpl-controls-right">
             <Button
               onClick={refreshAllData}

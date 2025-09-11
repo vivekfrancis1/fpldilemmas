@@ -21,7 +21,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  ArrowLeft,
   Crown,
   DollarSign,
   Shield,
@@ -262,12 +261,6 @@ export default function Top50ManagerTeam() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Link href="/top50-managers">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Top 25
-            </Button>
-          </Link>
           <Skeleton className="h-8 w-48" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -283,12 +276,6 @@ export default function Top50ManagerTeam() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Link href="/top50-managers">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Top 25
-            </Button>
-          </Link>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8">
@@ -328,12 +315,6 @@ export default function Top50ManagerTeam() {
       {/* Header */}
       <div className="flex flex-col space-y-4">
         <div className="flex items-center gap-4">
-          <Link href="/top50-managers">
-            <Button variant="outline" size="sm" className="hover:bg-blue-50">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Top 25
-            </Button>
-          </Link>
         </div>
         
         <div className="space-y-2">
