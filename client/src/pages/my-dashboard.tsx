@@ -4,7 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   TrendingUp, 
@@ -681,7 +690,7 @@ export default function MyDashboard() {
 
             {/* Main Dashboard Tabs */}
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+              <TabsList className="grid w-full grid-cols-5 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
                 <TabsTrigger 
                   value="overview" 
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
@@ -705,6 +714,12 @@ export default function MyDashboard() {
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
                 >
                   Performance
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="chips" 
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
+                >
+                  Chips
                 </TabsTrigger>
               </TabsList>
 
@@ -1421,6 +1436,127 @@ export default function MyDashboard() {
                     </Card>
                   )}
                 </>
+              )}
+            </TabsContent>
+
+            {/* Chips Tab */}
+            <TabsContent value="chips" className="fpl-section-spacing mt-8">
+              {historyData && (
+                <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="fpl-heading-card flex items-center gap-2 text-amber-800">
+                      <div className="p-2 bg-amber-100 rounded-lg">
+                        <Star className="h-5 w-5 text-amber-600" />
+                      </div>
+                      Chip Usage Summary
+                    </CardTitle>
+                    <CardDescription>
+                      Complete overview of FPL chip usage for this season
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-2/5">Chip & Description</TableHead>
+                          <TableHead className="text-center">Total Available</TableHead>
+                          <TableHead className="text-center">Used</TableHead>
+                          <TableHead className="text-center">Remaining</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(() => {
+                          const usedChips = historyData?.chips?.map((chip: any) => chip.name) || [];
+                          const allChips = [
+                            { 
+                              name: 'Wildcard', 
+                              apiNames: ['wildcard'], 
+                              description: 'Transfer entire squad for free', 
+                              maxUses: 2 
+                            },
+                            { 
+                              name: 'Triple Captain', 
+                              apiNames: ['3xc'], 
+                              description: 'Captain gets 3x points instead of 2x', 
+                              maxUses: 2 
+                            },
+                            { 
+                              name: 'Bench Boost', 
+                              apiNames: ['bboost'], 
+                              description: 'Points from bench players count', 
+                              maxUses: 2 
+                            },
+                            { 
+                              name: 'Free Hit', 
+                              apiNames: ['freehit'], 
+                              description: 'Make unlimited transfers for one gameweek', 
+                              maxUses: 2 
+                            }
+                          ];
+
+                          return allChips.map((chip, idx) => {
+                            const usedChipsDetails = historyData?.chips?.filter((usedChip: any) => 
+                              chip.apiNames.includes(usedChip.name)
+                            ) || [];
+                            const usedCount = usedChipsDetails.length;
+                            const remainingCount = chip.maxUses - usedCount;
+                            
+                            return (
+                              <TableRow key={idx}>
+                                <TableCell>
+                                  <div>
+                                    <p className="font-semibold text-gray-900">{chip.name}</p>
+                                    <p className="text-sm text-gray-600">{chip.description}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Badge variant="outline" className="font-semibold">
+                                    {chip.maxUses}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {usedCount > 0 ? (
+                                    <div className="space-y-1">
+                                      {usedChipsDetails.map((usedChip: any, chipIdx: number) => (
+                                        <div key={chipIdx} className="text-sm">
+                                          <Badge className="bg-red-100 text-red-800 hover:bg-red-200 mb-1">
+                                            GW{usedChip.event}
+                                          </Badge>
+                                          <p className="text-xs text-gray-600">
+                                            {new Date(usedChip.time).toLocaleDateString()}
+                                          </p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <Badge className="bg-gray-100 text-gray-500">
+                                      0
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Badge 
+                                    className={remainingCount > 0 ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-gray-100 text-gray-500"}
+                                  >
+                                    {remainingCount}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          });
+                        })()}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {!historyData && searchedId && (
+                <div className="space-y-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
               )}
             </TabsContent>
             </Tabs>
