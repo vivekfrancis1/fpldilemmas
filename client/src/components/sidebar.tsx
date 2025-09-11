@@ -217,9 +217,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                             <p className={`text-xs sm:text-sm font-medium truncate ${isCurrentPage ? 'text-white' : 'group-hover:text-white'}`}>
                               {item.label}
                             </p>
-                            <p className={`text-xs hidden sm:block ${isCurrentPage ? 'text-purple-200' : 'text-purple-400 group-hover:text-purple-300'}`}>
-                              {item.description}
-                            </p>
                           </div>
                         </div>
                         {item.popular && (
