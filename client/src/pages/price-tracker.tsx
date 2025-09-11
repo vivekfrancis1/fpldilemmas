@@ -339,8 +339,6 @@ export default function PriceTracker() {
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="text-left p-3 font-medium">Player</th>
-                          <th className="text-left p-3 font-medium">Team</th>
-                          <th className="text-left p-3 font-medium">Position</th>
                           <th className="text-right p-3 font-medium">Price Change</th>
                           <th className="text-right p-3 font-medium">Current Price</th>
                           <th className="text-right p-3 font-medium">Transfer Activity</th>
@@ -363,21 +361,8 @@ export default function PriceTracker() {
                                 ) : (
                                   <BarChart3 className="h-4 w-4 text-blue-600" />
                                 )}
-                                <PlayerNameCell 
-                                  name={change.player_name}
-                                  position={change.position}
-                                  team={change.team_name}
-                                  compact={true}
-                                  showOwnership={true}
-                                  ownership={change.ownership}
-                                />
+                                <span className="font-medium">{change.player_name}</span>
                               </div>
-                            </td>
-                            <td className="p-3 text-sm">
-                              <TeamBadge team={change.team_name} compact={true} />
-                            </td>
-                            <td className="p-3 text-sm">
-                              <PositionBadge position={change.position} compact={true} />
                             </td>
                             <td className="p-3 text-right">
                               {change.price_change !== 0 ? (
