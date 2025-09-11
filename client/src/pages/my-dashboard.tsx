@@ -128,6 +128,7 @@ interface Player {
   total_points: number;
   form: string;
   selected_by_percent: string;
+  event_points?: number;
 }
 
 interface BootstrapData {
