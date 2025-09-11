@@ -833,14 +833,6 @@ export default function MyDashboard() {
                           return a.entry_rank - b.entry_rank;
                         })
                         .map((league, index: number) => {
-                          let leagueTypeLabel = 'Classic League';
-                          
-                          if (league.id === 314) {
-                            leagueTypeLabel = 'Overall League';
-                          } else if (league.name.toLowerCase().includes('india')) {
-                            leagueTypeLabel = 'Country League';
-                          }
-
                           return (
                             <div key={league.id} className="flex items-center justify-between p-4 rounded-xl bg-white/70 border-0 shadow-sm hover:shadow-md transition-all duration-200">
                               <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -849,17 +841,7 @@ export default function MyDashboard() {
                                     {league.name}
                                   </div>
                                   <div className="text-sm text-gray-600">
-                                    {leagueTypeLabel} • {league.rank_count?.toLocaleString()} managers
-                                    {league.rank_count && league.entry_rank && (
-                                      <span> • {(() => {
-                                        const percentile = Math.round(((league.rank_count - league.entry_rank) / league.rank_count) * 100);
-                                        const suffix = percentile % 100 >= 11 && percentile % 100 <= 13 ? 'th' : 
-                                                      percentile % 10 === 1 ? 'st' : 
-                                                      percentile % 10 === 2 ? 'nd' : 
-                                                      percentile % 10 === 3 ? 'rd' : 'th';
-                                        return `${percentile}${suffix}`;
-                                      })()} percentile</span>
-                                    )}
+                                    {league.rank_count?.toLocaleString()} managers
                                   </div>
                                 </div>
                               </div>
