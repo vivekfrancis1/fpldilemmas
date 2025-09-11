@@ -208,10 +208,10 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
         £{latest?.teamValue || 'N/A'}m
       </TableCell>
       <TableCell className="text-right font-mono">
-        {chipsUsed !== null ? chipsUsed : "N/A"}
+        {latest?.totalTransfers !== undefined && latest?.totalTransfers !== null ? latest.totalTransfers : "N/A"}
       </TableCell>
       <TableCell className="text-right font-mono">
-        {latest?.totalTransfers !== undefined && latest?.totalTransfers !== null ? latest.totalTransfers : "N/A"}
+        {chipsUsed !== null ? chipsUsed : "N/A"}
       </TableCell>
     </TableRow>
   );
@@ -398,8 +398,8 @@ export default function ContentCreators() {
                   {sortBy === 'gw_points' && <ArrowUpDown className="h-4 w-4 inline ml-1" />}
                 </TableHead>
                 <TableHead className="text-right">Team Value</TableHead>
-                <TableHead className="text-right">Chips</TableHead>
                 <TableHead className="text-right">Transfers</TableHead>
+                <TableHead className="text-right">Chips</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
