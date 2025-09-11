@@ -84,7 +84,7 @@ function Router() {
       <Route path="/watchlist" component={Watchlist} />
       <Route path="/my-team" component={MyTeam} />
       <Route path="/my-leagues" component={MyLeagues} />
-      <Route path="/league-analysis" component={LeagueAnalysisPage} />
+      <Route path="/league-analysis/:leagueId/:leagueName/:managerId" component={LeagueAnalysisPage} />
       <Route path="/price-tracker" component={PriceTracker} />
       <Route path="/recent-price-changes" component={RecentPriceChanges} />
       <Route path="/predicted-price-changes" component={TransferTracker} />

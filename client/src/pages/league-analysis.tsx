@@ -25,13 +25,11 @@ interface LeagueAnalysisProps {
 
 export default function LeagueAnalysisPage() {
   const [location] = useLocation();
-  const params = new URLSearchParams(location.split('?')[1] || '');
-  const leagueId = params.get('leagueId');
-  const managerId = params.get('managerId');
-  const leagueName = params.get('leagueName') || 'League Analysis';
+  const pathParts = location.split('/').filter(part => part);
+  const leagueId = pathParts[1]; // league-analysis/:leagueId/:leagueName/:managerId
+  const leagueName = pathParts[2] ? decodeURIComponent(pathParts[2]) : 'League Analysis';
+  const managerId = pathParts[3];
   
-  console.log('League Analysis Page - URL:', location);
-  console.log('League Analysis Page - Params:', { leagueId, managerId, leagueName });
 
   if (!leagueId) {
     return (

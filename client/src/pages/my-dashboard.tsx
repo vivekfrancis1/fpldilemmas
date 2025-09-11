@@ -754,10 +754,7 @@ export default function MyDashboard() {
                                   size="sm" 
                                   className="text-xs"
                                   onClick={() => {
-                                    console.log('League clicked:', { leagueId: league.id, managerId: searchedId, leagueName: league.name });
-                                    const url = `/league-analysis?leagueId=${league.id}&managerId=${searchedId}&leagueName=${encodeURIComponent(league.name)}`;
-                                    console.log('Navigating to:', url);
-                                    setLocation(url);
+                                    setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
                                   }}
                                 >
                                   <ExternalLink className="h-3 w-3 mr-1" />
