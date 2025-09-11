@@ -399,28 +399,6 @@ export default function RecentPriceChanges() {
                         </div>
                       </th>
                       <th 
-                        className="text-left p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
-                        onClick={() => handleSort('team_name')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Team
-                          {sortField === 'team_name' && (
-                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-left p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
-                        onClick={() => handleSort('position')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Position
-                          {sortField === 'position' && (
-                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                          )}
-                        </div>
-                      </th>
-                      <th 
                         className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('old_price')}
                       >
@@ -466,7 +444,7 @@ export default function RecentPriceChanges() {
                         <React.Fragment key={`${change.player_id}-${index}`}>
                           {isNewDateGroup && index > 0 && (
                             <tr>
-                              <td colSpan={7} className="p-0">
+                              <td colSpan={5} className="p-0">
                                 <div className="border-t-2 border-gray-200 dark:border-gray-700"></div>
                               </td>
                             </tr>
@@ -493,12 +471,6 @@ export default function RecentPriceChanges() {
                               <p className="font-medium">{change.player_name}</p>
                             </div>
                           </div>
-                        </td>
-                        <td className="p-3">
-                          <div className="font-medium text-sm">{change.team_name}</div>
-                        </td>
-                        <td className="p-3">
-                          <div className="text-sm text-muted-foreground">{change.position}</div>
                         </td>
                         <td className="p-3 text-right font-medium">
                           {formatPrice(change.old_price)}
