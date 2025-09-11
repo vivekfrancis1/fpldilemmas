@@ -1,8 +1,10 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, TrendingUp, Target, Award, Shield, Clock, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface GameweekData {
   round: number;
@@ -52,6 +54,8 @@ export default function PlayerGameweekModal({
   data, 
   isLoading 
 }: PlayerGameweekModalProps) {
+  const isMobile = useIsMobile();
+  
   if (!player) return null;
 
   const gameweekHistory = data?.history || [];
@@ -113,103 +117,149 @@ export default function PlayerGameweekModal({
     gameweeksPlayed: 0
   });
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-lg">
-            <Calendar className="h-6 w-6 text-blue-600" />
-            <div className="flex items-center gap-2">
-              <span>{player.web_name}</span>
-              <Badge className={`text-xs font-medium ${getPositionColor(player.element_type)}`}>
-                {getPositionName(player.element_type)}
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                {player.team_name || 'Unknown Team'}
-              </Badge>
+  // Mobile-responsive content component
+  const GameweekContent = () => (
+    <>
+      {isLoading ? (
+        <div className="space-y-4">
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-4'}`}>
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Summary Stats */}
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-4'}`}>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <Award className="h-4 w-4 text-blue-600" />
+                <span className="text-xs font-medium text-blue-700">Total Points</span>
+              </div>
+              <div className="text-xl font-bold text-blue-900">{totalStats.totalPoints}</div>
+              <div className="text-xs text-blue-600">
+                {totalStats.gameweeksPlayed > 0 ? (totalStats.totalPoints / totalStats.gameweeksPlayed).toFixed(1) : '0.0'} avg
+              </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="ml-auto"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </DialogTitle>
-        </DialogHeader>
 
-        {isLoading ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-20 w-full" />
-              ))}
+            <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <Target className="h-4 w-4 text-green-600" />
+                <span className="text-xs font-medium text-green-700">Goals + Assists</span>
+              </div>
+              <div className="text-xl font-bold text-green-900">{totalStats.totalGoals + totalStats.totalAssists}</div>
+              <div className="text-xs text-green-600">
+                {totalStats.totalGoals}G / {totalStats.totalAssists}A
+              </div>
             </div>
-            <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
+
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <Clock className="h-4 w-4 text-purple-600" />
+                <span className="text-xs font-medium text-purple-700">Minutes</span>
+              </div>
+              <div className="text-xl font-bold text-purple-900">{totalStats.totalMinutes}</div>
+              <div className="text-xs text-purple-600">
+                {totalStats.gameweeksPlayed > 0 ? (totalStats.totalMinutes / totalStats.gameweeksPlayed).toFixed(0) : '0'} avg
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className="h-4 w-4 text-orange-600" />
+                <span className="text-xs font-medium text-orange-700">Clean Sheets</span>
+              </div>
+              <div className="text-xl font-bold text-orange-900">{totalStats.totalCleanSheets}</div>
+              <div className="text-xs text-orange-600">
+                {totalStats.totalBonus} bonus pts
+              </div>
             </div>
           </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <Award className="h-4 w-4 text-blue-600" />
-                  <span className="text-xs font-medium text-blue-700">Total Points</span>
-                </div>
-                <div className="text-xl font-bold text-blue-900">{totalStats.totalPoints}</div>
-                <div className="text-xs text-blue-600">
-                  {totalStats.gameweeksPlayed > 0 ? (totalStats.totalPoints / totalStats.gameweeksPlayed).toFixed(1) : '0.0'} avg
-                </div>
-              </div>
 
-              <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <Target className="h-4 w-4 text-green-600" />
-                  <span className="text-xs font-medium text-green-700">Goals + Assists</span>
-                </div>
-                <div className="text-xl font-bold text-green-900">{totalStats.totalGoals + totalStats.totalAssists}</div>
-                <div className="text-xs text-green-600">
-                  {totalStats.totalGoals}G / {totalStats.totalAssists}A
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock className="h-4 w-4 text-purple-600" />
-                  <span className="text-xs font-medium text-purple-700">Minutes</span>
-                </div>
-                <div className="text-xl font-bold text-purple-900">{totalStats.totalMinutes}</div>
-                <div className="text-xs text-purple-600">
-                  {totalStats.gameweeksPlayed > 0 ? (totalStats.totalMinutes / totalStats.gameweeksPlayed).toFixed(0) : '0'} avg
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <Shield className="h-4 w-4 text-orange-600" />
-                  <span className="text-xs font-medium text-orange-700">Clean Sheets</span>
-                </div>
-                <div className="text-xl font-bold text-orange-900">{totalStats.totalCleanSheets}</div>
-                <div className="text-xs text-orange-600">
-                  {totalStats.totalBonus} bonus pts
-                </div>
-              </div>
+          {/* Gameweek by Gameweek Performance */}
+          <div className="bg-white rounded-lg border">
+            <div className="px-4 py-3 bg-gray-50 border-b">
+              <h3 className="font-semibold text-gray-900">Gameweek Performance</h3>
+              <p className="text-xs text-gray-600 mt-1">
+                {sortedHistory.length} gameweeks • {totalStats.gameweeksPlayed} appearances
+              </p>
             </div>
-
-            {/* Gameweek by Gameweek Table */}
-            <div className="bg-white rounded-lg border">
-              <div className="px-4 py-3 bg-gray-50 border-b">
-                <h3 className="font-semibold text-gray-900">Gameweek Performance</h3>
-                <p className="text-xs text-gray-600 mt-1">
-                  {sortedHistory.length} gameweeks • {totalStats.gameweeksPlayed} appearances
-                </p>
+            
+            {isMobile ? (
+              <div className="divide-y divide-gray-100">
+                {sortedHistory.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-gray-500">
+                    No gameweek data available for this player
+                  </div>
+                ) : (
+                  sortedHistory.map((gw, index) => (
+                    <div key={gw.round} className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="font-semibold text-gray-900">GW{gw.round}</div>
+                        <div className={`text-lg font-bold ${getPointsColor(gw.total_points)}`}>
+                          {gw.total_points} pts
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Minutes</div>
+                          <div className="font-medium">{gw.minutes}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Goals</div>
+                          <div className="font-medium text-green-600">{gw.goals_scored}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Assists</div>
+                          <div className="font-medium text-blue-600">{gw.assists}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-3 text-sm">
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">CS</div>
+                          <div className="font-medium text-green-600">{gw.clean_sheets}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">GC</div>
+                          <div className="font-medium text-red-600">{gw.goals_conceded}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Saves</div>
+                          <div className="font-medium">{gw.saves}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Bonus</div>
+                          <div className="font-medium text-purple-600">{gw.bonus}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">ICT Index</div>
+                          <div className="font-medium">{formatValue(gw.ict_index)}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Value</div>
+                          <div className="font-medium">{formatValue((gw.value || 0) / 10)}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Selected</div>
+                          <div className="font-medium">{formatValue(gw.selected || 0, 'percentage')}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-              
+            ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead className="bg-gray-50 border-b">
@@ -285,10 +335,67 @@ export default function PlayerGameweekModal({
                   </tbody>
                 </table>
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={isOpen} onOpenChange={onClose}>
+        <DrawerContent className="max-h-[95vh] overflow-y-auto">
+          <DrawerHeader className="pb-4">
+            <DrawerTitle className="flex items-center gap-3 text-lg">
+              <Calendar className="h-6 w-6 text-blue-600" />
+              <div className="flex items-center gap-2 flex-wrap">
+                <span>{player.web_name}</span>
+                <Badge className={`text-xs font-medium ${getPositionColor(player.element_type)}`}>
+                  {getPositionName(player.element_type)}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {player.team_name || 'Unknown Team'}
+                </Badge>
+              </div>
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4">
+            <GameweekContent />
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3 text-lg">
+            <Calendar className="h-6 w-6 text-blue-600" />
+            <div className="flex items-center gap-2">
+              <span>{player.web_name}</span>
+              <Badge className={`text-xs font-medium ${getPositionColor(player.element_type)}`}>
+                {getPositionName(player.element_type)}
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                {player.team_name || 'Unknown Team'}
+              </Badge>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="ml-auto min-h-[44px]"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogTitle>
+        </DialogHeader>
+        <GameweekContent />
       </DialogContent>
     </Dialog>
   );
+
 }

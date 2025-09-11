@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X, Users, Trophy, TrendingUp, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BootstrapData } from "@shared/schema";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PlayerComparisonModalProps {
   players: any[];
@@ -21,6 +23,7 @@ export default function PlayerComparisonModal({
   currentSeasonData 
 }: PlayerComparisonModalProps) {
   const [activeTab, setActiveTab] = useState("current");
+  const isMobile = useIsMobile();
 
   // Get available seasons
   const { data: seasons } = useQuery<string[]>({
@@ -136,41 +139,56 @@ export default function PlayerComparisonModal({
     return position?.singular_name_short || "Unknown";
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Player Comparison ({players.length} players)
-          </DialogTitle>
-        </DialogHeader>
+  // Production-safe grid column mapping to avoid dynamic class interpolation
+  const getGridColsClass = (tabCount: number) => {
+    const gridColsMap: { [key: number]: string } = {
+      1: 'grid-cols-1',
+      2: 'grid-cols-2', 
+      3: 'grid-cols-3',
+      4: 'grid-cols-4', 
+      5: 'grid-cols-5',
+      6: 'grid-cols-6'
+    };
+    return gridColsMap[Math.min(tabCount, 6)] || 'grid-cols-4';
+  };
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${seasons ? `grid-cols-${Math.min(seasons.length + 1, 6)}` : 'grid-cols-1'}`}>
-            <TabsTrigger value="current" className="flex items-center gap-2">
-              <Trophy className="h-4 w-4" />
-              2025-26 Season
+  // Mobile-responsive content component
+  const ComparisonContent = () => (
+    <>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className={`${isMobile ? 'grid grid-cols-1 gap-1 h-auto p-1' : `grid w-full ${seasons ? getGridColsClass(seasons.length + 1) : 'grid-cols-1'}`}`}>
+          <TabsTrigger 
+            value="current" 
+            className={`flex items-center gap-2 ${isMobile ? 'justify-start py-3 px-4' : ''}`}
+          >
+            <Trophy className="h-4 w-4" />
+            2025-26 Season
+          </TabsTrigger>
+          {seasons?.sort((a, b) => b.localeCompare(a)).map((season) => (
+            <TabsTrigger 
+              key={season} 
+              value={season} 
+              className={`flex items-center gap-2 ${isMobile ? 'justify-start py-3 px-4' : ''}`}
+            >
+              <TrendingUp className="h-4 w-4" />
+              {season}
             </TabsTrigger>
-            {seasons?.sort((a, b) => b.localeCompare(a)).map((season) => (
-              <TabsTrigger key={season} value={season} className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                {season}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          ))}
+        </TabsList>
 
           <TabsContent value="current" className="mt-6">
             <div className="space-y-6">
               {/* Player Headers */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'}`}>
                 {players.map(player => (
-                  <div key={player.id} className="text-center p-4 bg-gray-50 rounded-lg">
-                    <h3 className="font-semibold text-gray-900">{player.web_name}</h3>
-                    <p className="text-sm text-gray-600">{player.team_name}</p>
+                  <div key={player.id} className={`text-center p-4 bg-gray-50 rounded-lg ${isMobile ? 'flex items-center gap-4 text-left' : ''}`}>
+                    <div className={isMobile ? 'flex-1' : ''}>
+                      <h3 className="font-semibold text-gray-900">{player.web_name}</h3>
+                      <p className="text-sm text-gray-600">{player.team_name}</p>
+                    </div>
                     <Badge 
                       variant="outline" 
-                      className={`mt-2 ${getPositionColor(player.element_type)}`}
+                      className={`mt-2 ${getPositionColor(player.element_type)} ${isMobile ? 'mt-0 flex-shrink-0' : ''}`}
                     >
                       {getPositionName(player.element_type)}
                     </Badge>
@@ -179,32 +197,52 @@ export default function PlayerComparisonModal({
               </div>
 
               {/* Current Season Stats Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-3 font-semibold">Statistic</th>
-                      {players.map(player => (
-                        <th key={player.id} className="text-center p-3 font-semibold">
-                          {player.web_name}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(statLabels).map(([key, label]) => (
-                      <tr key={key} className="border-b hover:bg-gray-50">
-                        <td className="p-3 font-medium">{label}</td>
+              {isMobile ? (
+                <div className="space-y-4">
+                  {Object.entries(statLabels).map(([key, label]) => (
+                    <div key={key} className="bg-white border rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-3">{label}</h4>
+                      <div className="space-y-2">
                         {players.map(player => (
-                          <td key={player.id} className="p-3 text-center">
-                            {formatStatValue(key, player[key as keyof typeof player])}
-                          </td>
+                          <div key={player.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                            <span className="font-medium text-sm">{player.web_name}</span>
+                            <span className="text-sm">
+                              {formatStatValue(key, player[key as keyof typeof player])}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-3 font-semibold">Statistic</th>
+                        {players.map(player => (
+                          <th key={player.id} className="text-center p-3 font-semibold">
+                            {player.web_name}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {Object.entries(statLabels).map(([key, label]) => (
+                        <tr key={key} className="border-b hover:bg-gray-50">
+                          <td className="p-3 font-medium">{label}</td>
+                          {players.map(player => (
+                            <td key={player.id} className="p-3 text-center">
+                              {formatStatValue(key, player[key as keyof typeof player])}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -219,19 +257,21 @@ export default function PlayerComparisonModal({
               ) : (
                 <div className="space-y-6">
                   {/* Player Headers */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'}`}>
                     {players.map(player => {
                       const historicalPlayer = getHistoricalSeasonStats(player.id, season);
                       return (
-                        <div key={player.id} className="text-center p-4 bg-gray-50 rounded-lg">
-                          <h3 className="font-semibold text-gray-900">{player.web_name}</h3>
-                          <p className="text-sm text-gray-600">{player.team_name}</p>
+                        <div key={player.id} className={`text-center p-4 bg-gray-50 rounded-lg ${isMobile ? 'flex items-center gap-4 text-left' : ''}`}>
+                          <div className={isMobile ? 'flex-1' : ''}>
+                            <h3 className="font-semibold text-gray-900">{player.web_name}</h3>
+                            <p className="text-sm text-gray-600">{player.team_name}</p>
+                          </div>
                           {historicalPlayer ? (
-                            <Badge variant="outline" className="mt-2 bg-green-100 text-green-800 border-green-200">
+                            <Badge variant="outline" className={`mt-2 bg-green-100 text-green-800 border-green-200 ${isMobile ? 'mt-0 flex-shrink-0' : ''}`}>
                               Available
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="mt-2 bg-yellow-100 text-yellow-800 border-yellow-200">
+                            <Badge variant="outline" className={`mt-2 bg-yellow-100 text-yellow-800 border-yellow-200 ${isMobile ? 'mt-0 flex-shrink-0' : ''}`}>
                               Not Found
                             </Badge>
                           )}
@@ -241,49 +281,106 @@ export default function PlayerComparisonModal({
                   </div>
 
                   {/* Historical Season Stats Table */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left p-3 font-semibold">Statistic</th>
-                          {players.map(player => (
-                            <th key={player.id} className="text-center p-3 font-semibold">
-                              {player.web_name}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(statLabels).map(([key, label]) => (
-                          <tr key={key} className="border-b hover:bg-gray-50">
-                            <td className="p-3 font-medium">{label}</td>
+                  {isMobile ? (
+                    <div className="space-y-4">
+                      {Object.entries(statLabels).map(([key, label]) => (
+                        <div key={key} className="bg-white border rounded-lg p-4">
+                          <h4 className="font-semibold text-gray-900 mb-3">{label}</h4>
+                          <div className="space-y-2">
                             {players.map(player => {
                               const historicalPlayer = getHistoricalSeasonStats(player.id, season);
                               return (
-                                <td key={player.id} className="p-3 text-center">
-                                  {historicalPlayer 
-                                    ? formatStatValue(key, historicalPlayer[key as keyof typeof historicalPlayer])
-                                    : "N/A"
-                                  }
-                                </td>
+                                <div key={player.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                                  <span className="font-medium text-sm">{player.web_name}</span>
+                                  <span className="text-sm">
+                                    {historicalPlayer 
+                                      ? formatStatValue(key, historicalPlayer[key as keyof typeof historicalPlayer])
+                                      : "N/A"
+                                    }
+                                  </span>
+                                </div>
                               );
                             })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left p-3 font-semibold">Statistic</th>
+                            {players.map(player => (
+                              <th key={player.id} className="text-center p-3 font-semibold">
+                                {player.web_name}
+                              </th>
+                            ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {Object.entries(statLabels).map(([key, label]) => (
+                            <tr key={key} className="border-b hover:bg-gray-50">
+                              <td className="p-3 font-medium">{label}</td>
+                              {players.map(player => {
+                                const historicalPlayer = getHistoricalSeasonStats(player.id, season);
+                                return (
+                                  <td key={player.id} className="p-3 text-center">
+                                    {historicalPlayer 
+                                      ? formatStatValue(key, historicalPlayer[key as keyof typeof historicalPlayer])
+                                      : "N/A"
+                                    }
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
             </TabsContent>
           ))}
-        </Tabs>
+      </Tabs>
 
-        <div className="flex justify-end pt-4 border-t">
-          <Button onClick={onClose} variant="outline">
-            Close
-          </Button>
-        </div>
+      <div className="flex justify-end pt-4 border-t">
+        <Button onClick={onClose} variant="outline" className="min-h-[44px] px-6">
+          Close
+        </Button>
+      </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={isOpen} onOpenChange={onClose}>
+        <DrawerContent className="max-h-[95vh] overflow-y-auto">
+          <DrawerHeader className="pb-4">
+            <DrawerTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Player Comparison ({players.length} players)
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4">
+            <ComparisonContent />
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Player Comparison ({players.length} players)
+          </DialogTitle>
+        </DialogHeader>
+        <ComparisonContent />
       </DialogContent>
     </Dialog>
   );

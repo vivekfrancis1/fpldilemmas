@@ -93,7 +93,7 @@ export default function FiltersPanel({
                 placeholder="Search by player name..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
-                className="pl-10 h-12 border-2 text-base mobile-form-input"
+                className="pl-10"
                 data-testid="input-search"
               />
             </div>
@@ -103,11 +103,11 @@ export default function FiltersPanel({
         {/* Filters Section */}
         <div className="space-y-4">
           <div className="text-sm font-medium text-gray-700 mb-4">Filter Options</div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mobile-filter-grid">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600">Position</label>
               <Select value={filters.position} onValueChange={(value) => handleFilterChange("position", value)}>
-                <SelectTrigger className="h-12 border-2 text-base mobile-form-input" data-testid="select-position">
+                <SelectTrigger data-testid="select-position">
                   <SelectValue placeholder="All Positions" />
                 </SelectTrigger>
                 <SelectContent>
@@ -124,7 +124,7 @@ export default function FiltersPanel({
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600">Team</label>
               <Select value={filters.team} onValueChange={(value) => handleFilterChange("team", value)}>
-                <SelectTrigger className="h-12 border-2 text-base mobile-form-input" data-testid="select-team">
+                <SelectTrigger data-testid="select-team">
                   <SelectValue placeholder="All Teams" />
                 </SelectTrigger>
                 <SelectContent>
@@ -141,7 +141,7 @@ export default function FiltersPanel({
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600">Max Price</label>
               <Select value={filters.maxPrice} onValueChange={(value) => handleFilterChange("maxPrice", value)}>
-                <SelectTrigger className="h-12 border-2 text-base" data-testid="select-max-price">
+                <SelectTrigger data-testid="select-max-price">
                   <SelectValue placeholder="Any Price" />
                 </SelectTrigger>
                 <SelectContent>
@@ -180,7 +180,7 @@ export default function FiltersPanel({
           <Button 
             variant="outline" 
             onClick={clearFilters}
-            className="h-10 px-4 text-sm font-medium"
+            className="min-h-[44px] px-6 text-base md:text-sm"
             data-testid="button-clear-filters"
           >
             <RotateCcw className="h-4 w-4 mr-2" />
