@@ -105,12 +105,13 @@ function getRankChangeDisplay(change: number | undefined) {
 // Column configuration for ResponsiveTable
 const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
   {
-    key: 'name',
+    key: 'rank',
     header: 'Manager',
     priority: 'essential',
     align: 'left',
     mobileLabel: 'Manager',
     cardOrder: 1,
+    sortable: true,
     render: (value, manager) => (
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -291,6 +292,8 @@ export default function Top25Managers() {
     const sorted = [...managersWithData].sort((a, b) => {
       const getValue = (manager: Top25Manager, field: string) => {
         switch (field) {
+          case 'rank':
+            return manager.rank;
           case 'latestTracking.overallRank':
             return manager.latestTracking?.overallRank || Number.MAX_SAFE_INTEGER;
           case 'latestTracking.overallPoints':
@@ -299,6 +302,10 @@ export default function Top25Managers() {
             return manager.latestTracking?.gameweekPoints || 0;
           case 'latestTracking.teamValue':
             return manager.latestTracking?.teamValue || 0;
+          case 'latestTracking.totalTransfers':
+            return manager.latestTracking?.totalTransfers || 0;
+          case 'latestTracking.chipsUsed':
+            return manager.latestTracking?.chipsUsed || 0;
           case 'name':
             return manager.name;
           default:
