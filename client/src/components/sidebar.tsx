@@ -58,8 +58,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Top Managers",
       items: [
-        { path: "/top25-managers", label: "Top 25 (Last 10 years)", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false },
-        { path: "/top50-managers", label: "Top 50 (Current)", icon: Trophy, description: "Current top 50 managers from the overall FPL league", popular: false },
+        { path: "/top25-managers", label: "Top 25 (Last 10 Seasons)", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false },
+        { path: "/top50-managers", label: "Top 50 (Current Season)", icon: Trophy, description: "Current top 50 managers from the overall FPL league", popular: false },
         { path: "/content-creators", label: "Top Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false }
       ]
     },
