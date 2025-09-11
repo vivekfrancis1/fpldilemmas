@@ -1019,4 +1019,115 @@ input, select, textarea {
   .border-fpl-pink {
     border-color: var(--fpl-pink);
   }
+
+  /* ===== RESPONSIVE TABLE UTILITIES ===== */
+  
+  /* Column priority visibility utilities */
+  .column-essential {
+    /* Always visible */
+  }
+  
+  .column-important {
+    @apply hidden sm:table-cell;
+  }
+  
+  .column-secondary {
+    @apply hidden md:table-cell;
+  }
+  
+  .column-optional {
+    @apply hidden lg:table-cell;
+  }
+
+  /* Mobile card optimizations */
+  .responsive-table-mobile-container {
+    @apply w-full max-w-full overflow-x-hidden;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .responsive-table-mobile-card {
+    @apply w-full;
+    min-width: 0;
+    word-break: break-word;
+  }
+
+  .responsive-table-mobile-card .collapsible-trigger {
+    @apply min-h-[44px] w-full;
+    touch-action: manipulation;
+  }
+
+  /* Desktop table optimizations */
+  .responsive-table-container {
+    @apply bg-white rounded-lg border shadow-sm overflow-hidden;
+    border-color: var(--fpl-border);
+  }
+
+  .responsive-table-scroll {
+    @apply w-full;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--fpl-text-muted) var(--fpl-bg-muted);
+  }
+
+  .responsive-table-scroll::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .responsive-table-scroll::-webkit-scrollbar-track {
+    background: var(--fpl-bg-muted);
+    border-radius: 4px;
+  }
+
+  .responsive-table-scroll::-webkit-scrollbar-thumb {
+    background: var(--fpl-text-muted);
+    border-radius: 4px;
+  }
+
+  .responsive-table-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--fpl-text-secondary);
+  }
+
+  /* Table cell improvements */
+  .responsive-table-head {
+    @apply font-semibold text-gray-700 border-b;
+    border-color: var(--fpl-border);
+    white-space: nowrap;
+  }
+
+  .responsive-table-cell {
+    @apply text-sm text-gray-900 border-b;
+    border-color: var(--fpl-border);
+  }
+
+  .responsive-table-row {
+    @apply border-b hover:bg-gray-50/50;
+    border-color: var(--fpl-border);
+  }
+
+  .responsive-table-row:last-child {
+    border-bottom: none;
+  }
+
+  /* Sticky column styles */
+  .responsive-table-sticky-column {
+    @apply sticky left-0 bg-white z-10;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Loading states */
+  .responsive-table-loading {
+    @apply flex items-center justify-center py-16;
+  }
+
+  .responsive-table-skeleton {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+
+  /* Mobile touch targets */
+  .responsive-table-touch-target {
+    @apply min-h-[44px] min-w-[44px];
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  }
 }
