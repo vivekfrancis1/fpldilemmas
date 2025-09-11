@@ -43,6 +43,10 @@ type Top25Manager = {
     gameweekRank?: number;
     teamValue: number;
     totalTransfers: number;
+    wildcardUsed?: boolean;
+    benchBoostUsed?: boolean;
+    freeHitUsed?: boolean;
+    tripleCaptainUsed?: boolean;
   };
 };
 
@@ -147,6 +151,17 @@ function ManagerTableRow({ manager }: { manager: Top25Manager }) {
           ? `£${(manager.latestTracking.teamValue / 10).toFixed(1)}m` 
           : "N/A"}
       </TableCell>
+      <TableCell className="text-right font-mono">
+        {manager.latestTracking?.totalTransfers !== undefined && manager.latestTracking?.totalTransfers !== null ? manager.latestTracking.totalTransfers : "N/A"}
+      </TableCell>
+      <TableCell className="text-right font-mono">
+        {manager.latestTracking ? (
+          (manager.latestTracking.wildcardUsed ? 1 : 0) + 
+          (manager.latestTracking.benchBoostUsed ? 1 : 0) + 
+          (manager.latestTracking.freeHitUsed ? 1 : 0) + 
+          (manager.latestTracking.tripleCaptainUsed ? 1 : 0)
+        ) : "N/A"}
+      </TableCell>
     </TableRow>
   );
 }
@@ -239,6 +254,8 @@ export default function Top25Managers() {
                 <TableHead className="text-right">Total Points</TableHead>
                 <TableHead className="text-right">GW Points</TableHead>
                 <TableHead className="text-right">Team Value</TableHead>
+                <TableHead className="text-right">Transfers</TableHead>
+                <TableHead className="text-right">Chips</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
