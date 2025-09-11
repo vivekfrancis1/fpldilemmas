@@ -516,11 +516,11 @@ export default function MyDashboard() {
         {/* Manager Search Section */}
         <Card className="mb-8 border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
           <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center max-w-2xl mx-auto">
-              <div className="flex-1 w-full">
-                <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
-                  Manager ID
-                </label>
+            <div className="max-w-2xl mx-auto">
+              <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
+                Manager ID
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-stretch">
                 <Input
                   id="manager-id"
                   type="text"
@@ -528,31 +528,31 @@ export default function MyDashboard() {
                   value={managerId}
                   onChange={(e) => setManagerId(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                  className="flex-1 border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                   data-testid="input-manager-id"
                 />
-                <div className="text-xs text-gray-500 mt-1 space-y-2">
-                  <p className="font-medium">To find your Manager ID, follow these steps:</p>
-                  <ol className="list-decimal list-inside space-y-1 ml-2">
-                    <li>Go to fantasy.premierleague.com and sign in to your account.</li>
-                    <li>Click on the Points tab.</li>
-                    <li>Check the URL in your browser's address bar. Your Manager ID is the number after "entry". For example, in https://fantasy.premierleague.com/entry/123456/event/3, the Manager ID is 123456.</li>
-                  </ol>
-                  <div className="mt-2 p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
-                    <p className="font-medium text-yellow-800">Note:</p>
-                    <p className="text-yellow-700">You cannot find your Manager ID directly in the official FPL mobile app. You'll need to use a web browser (e.g., Chrome or Safari) on your mobile device or a computer.</p>
-                  </div>
+                <Button 
+                  onClick={handleSearch} 
+                  disabled={!managerId.trim()}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200 whitespace-nowrap"
+                  data-testid="button-search-manager"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Search Manager
+                </Button>
+              </div>
+              <div className="text-xs text-gray-500 mt-3 space-y-2">
+                <p className="font-medium">To find your Manager ID, follow these steps:</p>
+                <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>Go to fantasy.premierleague.com and sign in to your account.</li>
+                  <li>Click on the Points tab.</li>
+                  <li>Check the URL in your browser's address bar. Your Manager ID is the number after "entry". For example, in https://fantasy.premierleague.com/entry/123456/event/3, the Manager ID is 123456.</li>
+                </ol>
+                <div className="mt-2 p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
+                  <p className="font-medium text-yellow-800">Note:</p>
+                  <p className="text-yellow-700">You cannot find your Manager ID directly in the official FPL mobile app. You'll need to use a web browser (e.g., Chrome or Safari) on your mobile device or a computer.</p>
                 </div>
               </div>
-              <Button 
-                onClick={handleSearch} 
-                disabled={!managerId.trim()}
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200 whitespace-nowrap"
-                data-testid="button-search-manager"
-              >
-                <Search className="h-4 w-4 mr-2" />
-                Search Manager
-              </Button>
             </div>
           </CardContent>
         </Card>
