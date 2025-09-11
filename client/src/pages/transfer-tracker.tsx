@@ -392,9 +392,6 @@ export default function TransferTracker() {
                       <th className="text-left py-2 px-3 sticky left-0 bg-gray-50/80 dark:bg-gray-800/50 z-10 border-r border-gray-200 dark:border-gray-700 min-w-[120px]">
                         <div className="font-semibold text-gray-900 dark:text-gray-100">Player</div>
                       </th>
-                      <th className="text-left py-2 px-2 min-w-[80px]">
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">Team/Pos</div>
-                      </th>
                       <th className="text-right py-2 px-2 min-w-[60px]">
                         <div className="font-semibold text-gray-900 dark:text-gray-100">Price</div>
                       </th>
@@ -480,9 +477,6 @@ export default function TransferTracker() {
                               ownership={transfer.ownership_percentage}
                             />
                           </div>
-                        </td>
-                        <td className="py-2 px-2">
-                          <TeamBadge team={transfer.team_name} compact={true} />
                         </td>
                         <td className="py-2 px-2 text-right">
                           <span className="font-semibold text-gray-900 dark:text-gray-100">
