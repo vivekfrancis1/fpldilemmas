@@ -1,6 +1,11 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Target, TrendingUp, Filter, BarChart3, Trophy } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
+import { MobileChartWrapper } from "@/components/ui/mobile-chart-wrapper";
+import { useChartResponsive, getResponsiveChartMargin, getResponsiveFontSizes } from "@/hooks/use-chart-responsive";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -69,6 +74,34 @@ export default function TeamGoalProjections() {
         }
       });
   }, [projectionsData, selectedTeam, sortBy]);
+
+  // Chart data preparation
+  const chartData = useMemo(() => {
+    if (!filteredProjections.length) return [];
+    
+    const startGW = parseInt(startGameweek);
+    const endGW = parseInt(endGameweek);
+    
+    return filteredProjections.slice(0, 15).map(team => ({
+      teamShort: team.teamShort,
+      goals: Object.keys(team.gameweekProjections)
+        .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
+        .reduce((sum, gw) => sum + (team.gameweekProjections[parseInt(gw)] || 0), 0),
+      averageGoals: team.averageGoalsPerGame,
+      confidence: team.confidence
+    }));
+  }, [filteredProjections, startGameweek, endGameweek]);
+
+  const chartConfig = {
+    goals: {
+      label: "Expected Goals",
+      color: "#2563eb",
+    },
+    averageGoals: {
+      label: "Average Goals",
+      color: "#dc2626",
+    }
+  };
 
   const totalGoals = useMemo(() => {
     if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, seasonTotal: 0, averagePerGame: 0 };
@@ -377,7 +410,101 @@ export default function TeamGoalProjections() {
             </CardContent>
           </Card>
 
-
+          {/* Chart Visualization with Performance Optimizations */}
+          <MobileChartWrapper
+            title="Team Goal Projections Chart"
+            description={`Expected goals visualization for GW${startGameweek}-GW${endGameweek} (${chartData.length} teams)`}
+            collapsible={true}
+            performanceMode={true}
+            showMetadata={true}
+            metadata={{
+              lastUpdated: "Live data",
+              dataPoints: chartData.length,
+              confidence: "High"
+            }}
+            className="mt-6"
+            data-testid="team-goal-projections-chart"
+          >
+            <ChartContainer 
+              config={chartConfig}
+              mobileAspectRatio="portrait"
+              enableMobileOptimizations={true}
+              enablePerformanceOptimizations={true}
+              showMobileLegend={true}
+            >
+              {((performanceProps?: any) => {
+                const isMobile = useIsMobile()
+                const { isCompact } = useChartResponsive()
+                const margins = getResponsiveChartMargin(isMobile, isCompact)
+                const fontSizes = getResponsiveFontSizes(isMobile, isCompact)
+                
+                // Apply performance optimizations - reduce data points on mobile/low-performance devices
+                const optimizedData = performanceProps && performanceProps.maxDataPoints < chartData.length
+                  ? chartData.slice(0, performanceProps.maxDataPoints)
+                  : chartData
+                
+                return (
+                  <BarChart
+                    data={optimizedData}
+                    margin={margins}
+                    barCategoryGap={isMobile ? "15%" : "20%"}
+                  >
+                    {/* Conditionally render grid based on performance */}
+                    {(!performanceProps || performanceProps.showGrid) && (
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    )}
+                    <XAxis 
+                      dataKey="teamShort"
+                      fontSize={fontSizes.axis}
+                      tick={{ fontSize: fontSizes.axis }}
+                      tickLine={false}
+                      axisLine={false}
+                      interval={performanceProps?.shouldSimplify ? 1 : 0}
+                    />
+                    <YAxis 
+                      fontSize={fontSizes.axis}
+                      tick={{ fontSize: fontSizes.axis }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    
+                    {/* Conditionally render tooltip based on performance */}
+                    {(!performanceProps || performanceProps.enableTooltips) && (
+                      <ChartTooltip 
+                        content={<ChartTooltipContent 
+                          mobilePosition="top"
+                          compactMode={isCompact}
+                          formatter={(value, name) => [
+                            typeof value === 'number' ? value.toFixed(2) : value,
+                            name
+                          ]}
+                        />}
+                      />
+                    )}
+                    
+                    {/* Conditionally render legend based on performance */}
+                    {(!performanceProps || performanceProps.enableLegend) && !isCompact && (
+                      <ChartLegend 
+                        content={<ChartLegendContent 
+                          mobileLayout="horizontal"
+                          collapsible={false}
+                        />}
+                      />
+                    )}
+                    
+                    <Bar
+                      dataKey="goals"
+                      fill="var(--color-goals)"
+                      radius={[2, 2, 0, 0]}
+                      maxBarSize={isMobile ? 40 : 60}
+                      animationDuration={performanceProps?.animationDuration ?? 300}
+                      isAnimationActive={performanceProps ? performanceProps.animationDuration > 0 : true}
+                    />
+                  </BarChart>
+                )
+              }) as any}
+            </ChartContainer>
+          </MobileChartWrapper>
 
           {/* Info Panel */}
           <Card className="mt-6">

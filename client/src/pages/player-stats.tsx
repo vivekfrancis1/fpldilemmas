@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Calendar } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
+import { MobileChartWrapper } from "@/components/ui/mobile-chart-wrapper";
+import { useChartResponsive, getResponsiveChartMargin, getResponsiveFontSizes } from "@/hooks/use-chart-responsive";
+import { useIsMobile } from "@/hooks/use-mobile";
 import StatsCards from "../components/stats-cards";
 import FiltersPanel from "../components/filters-panel";
 import PlayerStatsTable from "../components/player-stats-table";
@@ -107,6 +112,34 @@ export default function PlayerStats() {
 
   // Check if max compare reached
   const maxCompareReached = compareList.length >= 5;
+
+  // Chart data preparation - top performing players for visualization
+  const chartData = (() => {
+    const players = selectedSeason === "current" ? bootstrapData?.elements : historicalData;
+    if (!players) return [];
+    
+    return players
+      .slice(0, 20)
+      .map((player: any) => ({
+        name: player.web_name || player.player_name,
+        points: player.total_points || 0,
+        price: player.now_cost ? player.now_cost / 10 : 0,
+        form: player.form ? parseFloat(player.form) : 0
+      }))
+      .sort((a, b) => b.points - a.points)
+      .slice(0, 15);
+  })();
+
+  const chartConfig = {
+    points: {
+      label: "Total Points",
+      color: "#2563eb",
+    },
+    form: {
+      label: "Form",
+      color: "#dc2626",
+    }
+  };
   
 
 
@@ -215,6 +248,112 @@ export default function PlayerStats() {
               maxCompareReached={maxCompareReached}
             />
           </div>
+
+          {/* Player Performance Chart with Performance Optimizations */}
+          {chartData.length > 0 && (
+            <MobileChartWrapper
+              title="Top Player Performance"
+              description={`Points vs Form analysis for ${selectedSeason === "current" ? "current season" : selectedSeason} (${chartData.length} players)`}
+              collapsible={true}
+              performanceMode={true}
+              showMetadata={true}
+              metadata={{
+                lastUpdated: "Live data",
+                dataPoints: chartData.length,
+                confidence: "High"
+              }}
+              className="mt-6"
+              data-testid="player-performance-chart"
+            >
+              <ChartContainer 
+                config={chartConfig}
+                mobileAspectRatio="auto"
+                enableMobileOptimizations={true}
+                enablePerformanceOptimizations={true}
+                showMobileLegend={true}
+              >
+                {((performanceProps?: any) => {
+                  const isMobile = useIsMobile()
+                  const { isCompact } = useChartResponsive()
+                  const margins = getResponsiveChartMargin(isMobile, isCompact)
+                  const fontSizes = getResponsiveFontSizes(isMobile, isCompact)
+                  
+                  // Apply performance optimizations - reduce data points on mobile/low-performance devices
+                  const optimizedData = performanceProps && performanceProps.maxDataPoints < chartData.length
+                    ? chartData.slice(0, performanceProps.maxDataPoints)
+                    : chartData
+                  
+                  return (
+                    <LineChart
+                      data={optimizedData}
+                      margin={margins}
+                    >
+                      {/* Conditionally render grid based on performance */}
+                      {(!performanceProps || performanceProps.showGrid) && (
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                      )}
+                      <XAxis 
+                        dataKey="name"
+                        fontSize={fontSizes.axis}
+                        tick={{ fontSize: fontSizes.axis }}
+                        tickLine={false}
+                        axisLine={false}
+                        interval={performanceProps?.shouldSimplify ? 1 : 0}
+                      />
+                      <YAxis 
+                        fontSize={fontSizes.axis}
+                        tick={{ fontSize: fontSizes.axis }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      
+                      {/* Conditionally render tooltip based on performance */}
+                      {(!performanceProps || performanceProps.enableTooltips) && (
+                        <ChartTooltip 
+                          content={<ChartTooltipContent 
+                            mobilePosition="auto"
+                            compactMode={isCompact}
+                            formatter={(value, name) => [
+                              typeof value === 'number' ? value.toFixed(1) : value,
+                              name
+                            ]}
+                          />}
+                        />
+                      )}
+                      
+                      {/* Conditionally render legend based on performance */}
+                      {(!performanceProps || performanceProps.enableLegend) && !isCompact && (
+                        <ChartLegend 
+                          content={<ChartLegendContent 
+                            mobileLayout="horizontal"
+                            collapsible={false}
+                          />}
+                        />
+                      )}
+                      
+                      <Line
+                        type="monotone"
+                        dataKey="points"
+                        stroke="var(--color-points)"
+                        strokeWidth={performanceProps?.strokeWidth ?? (isMobile ? 3 : 2)}
+                        animationDuration={performanceProps?.animationDuration ?? 300}
+                        isAnimationActive={performanceProps ? performanceProps.animationDuration > 0 : true}
+                        dot={{ 
+                          fill: "var(--color-points)",
+                          strokeWidth: 2,
+                          r: performanceProps?.dotSize ?? (isMobile ? 5 : 4)
+                        }}
+                        activeDot={{ 
+                          r: (performanceProps?.dotSize ?? (isMobile ? 5 : 4)) + 2,
+                          strokeWidth: 0
+                        }}
+                      />
+                    </LineChart>
+                  )
+                }) as any}
+              </ChartContainer>
+            </MobileChartWrapper>
+          )}
 
           {/* Comparison Panel */}
           {compareList.length > 0 && (
