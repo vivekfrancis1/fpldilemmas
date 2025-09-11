@@ -473,8 +473,6 @@ export default function TransferTracker() {
                               position={transfer.position}
                               team={transfer.team_name}
                               compact={true}
-                              showOwnership={true}
-                              ownership={transfer.ownership_percentage}
                             />
                           </div>
                         </td>
