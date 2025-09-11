@@ -20,6 +20,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   Crown,
   DollarSign,
   Home,
@@ -29,7 +35,9 @@ import {
   TrendingUp,
   Users,
   ArrowUpDown,
+  BarChart3,
 } from "lucide-react";
+import Top25TeamAnalysis from "./top25-team-analysis";
 
 type Top25Manager = {
   rank: number;
@@ -229,62 +237,80 @@ export default function Top25Managers() {
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="fpl-controls">
-          <div className="fpl-controls-right">
-            <Button
-              onClick={refreshAllData}
-              disabled={isRefreshing}
-              variant="outline"
-              className="hover:bg-blue-50"
-              data-testid="button-refresh-data"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
-            </Button>
-          </div>
-        </div>
+        <Tabs defaultValue="managers" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="managers" data-testid="tab-managers">
+              <Crown className="h-4 w-4 mr-2" />
+              Managers
+            </TabsTrigger>
+            <TabsTrigger value="team-analysis" data-testid="tab-team-analysis">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Team Analysis
+            </TabsTrigger>
+          </TabsList>
 
+          <TabsContent value="managers">
+            {/* Controls */}
+            <div className="fpl-controls">
+              <div className="fpl-controls-right">
+                <Button
+                  onClick={refreshAllData}
+                  disabled={isRefreshing}
+                  variant="outline"
+                  className="hover:bg-blue-50"
+                  data-testid="button-refresh-data"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                </Button>
+              </div>
+            </div>
 
-      {/* Managers Table */}
-      <Card className="border-0 shadow-lg">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Manager</TableHead>
-                <TableHead>Current Rank</TableHead>
-                <TableHead className="text-right">Total Points</TableHead>
-                <TableHead className="text-right">GW Points</TableHead>
-                <TableHead className="text-right">Team Value</TableHead>
-                <TableHead className="text-right">Transfers</TableHead>
-                <TableHead className="text-right">Chips</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {managersWithData.map((manager) => (
-                <ManagerTableRow key={manager.rank} manager={manager} />
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            {/* Managers Table */}
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Manager</TableHead>
+                      <TableHead>Current Rank</TableHead>
+                      <TableHead className="text-right">Total Points</TableHead>
+                      <TableHead className="text-right">GW Points</TableHead>
+                      <TableHead className="text-right">Team Value</TableHead>
+                      <TableHead className="text-right">Transfers</TableHead>
+                      <TableHead className="text-right">Chips</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {managersWithData.map((manager) => (
+                      <ManagerTableRow key={manager.rank} manager={manager} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
 
-        {/* Footer */}
-        <div className="text-center py-4 border-t border-gray-200">
-          <p className="text-sm text-gray-600">
-            Data based on{' '}
-            <a 
-              href="https://www.fplresearch.com/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 underline"
-            >
-              FPL Research
-            </a>{' '}
-            as on September 10, 2025
-          </p>
-        </div>
+            {/* Footer */}
+            <div className="text-center py-4 border-t border-gray-200">
+              <p className="text-sm text-gray-600">
+                Data based on{' '}
+                <a 
+                  href="https://www.fplresearch.com/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  FPL Research
+                </a>{' '}
+                as on September 10, 2025
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="team-analysis">
+            <Top25TeamAnalysis />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
