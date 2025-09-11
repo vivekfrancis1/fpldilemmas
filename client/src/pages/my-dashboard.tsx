@@ -752,9 +752,21 @@ export default function MyDashboard() {
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
+                                <div className="text-lg font-bold text-gray-800">
                                   #{league.entry_rank.toLocaleString()}
                                 </div>
+                                {league.entry_last_rank && league.entry_last_rank !== league.entry_rank && (
+                                  <div className={`text-sm font-medium ${
+                                    league.entry_last_rank > league.entry_rank 
+                                      ? 'text-green-600' 
+                                      : 'text-red-600'
+                                  }`}>
+                                    {league.entry_last_rank > league.entry_rank 
+                                      ? `↑${(league.entry_last_rank - league.entry_rank).toLocaleString()}` 
+                                      : `↓${(league.entry_rank - league.entry_last_rank).toLocaleString()}`
+                                    }
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
