@@ -203,7 +203,7 @@ export default function Top25Managers() {
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <Crown className="h-8 w-8" />
-              <h1>Top 25 FPL Managers</h1>
+              <h1>Top 25 FPL Managers (Last 10 years)</h1>
             </div>
             <p className="fpl-page-subtitle">
               Elite Fantasy Premier League managers and their current standings
@@ -230,15 +230,6 @@ export default function Top25Managers() {
 
       {/* Managers Table */}
       <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-amber-600" />
-            Elite FPL Managers
-          </CardTitle>
-          <CardDescription>
-            Track the performance and teams of the top Fantasy Premier League managers
-          </CardDescription>
-        </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
