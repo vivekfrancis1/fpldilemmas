@@ -35,6 +35,7 @@ import ContentCreators from "./pages/content-creators";
 import CreatorTeam from "./pages/creator-team";
 import Top25Managers from "./pages/top25-managers";
 import Top25ManagerTeam from "./pages/top25-manager-team";
+import ManagerTeam from "./pages/manager-team";
 import Top50Managers from "./pages/top50-managers";
 import Top50ManagerTeam from "./pages/top50-manager-team";
 import LeagueComparison from "./pages/league-comparison";
@@ -164,6 +165,7 @@ function Router() {
       <Route path="/top25-managers/:rank/team" component={Top25ManagerTeam} />
       <Route path="/top50-managers" component={Top50Managers} />
       <Route path="/top50-managers/:rank/team" component={Top50ManagerTeam} />
+      <Route path="/manager-team/:managerId" component={ManagerTeam} />
       <Route path="/projection-docs" component={ProjectionDocumentation} />
       <Route path="/login" component={Login} />
 

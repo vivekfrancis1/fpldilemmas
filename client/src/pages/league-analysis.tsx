@@ -143,12 +143,16 @@ export default function LeagueAnalysisPage() {
               {topEntries.map((entry: any, index: number) => {
                 const isCurrentManager = entry.entry.toString() === managerId;
                 return (
-                  <div 
-                    key={entry.entry} 
-                    className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${
-                      isCurrentManager ? 'bg-blue-50 border-blue-200 shadow-md' : 'hover:bg-gray-50 hover:shadow-sm'
-                    }`}
+                  <Link 
+                    key={entry.entry}
+                    href={`/manager-team/${entry.entry}`}
+                    className="block"
                   >
+                    <div 
+                      className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-200 cursor-pointer ${
+                        isCurrentManager ? 'bg-blue-50 border-blue-200 shadow-md' : 'hover:bg-gray-50 hover:shadow-sm'
+                      }`}
+                    >
                     <div className="flex items-center gap-3">
                       <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
                         index === 0 ? 'bg-yellow-100 text-yellow-800' :
@@ -170,7 +174,8 @@ export default function LeagueAnalysisPage() {
                       <p className="font-semibold">{entry.total?.toLocaleString()} pts</p>
                       <p className="text-sm text-muted-foreground">GW: {entry.event_total || 0}</p>
                     </div>
-                  </div>
+                    </div>
+                  </Link>
                 );
               })}
             </div>
