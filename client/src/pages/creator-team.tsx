@@ -407,7 +407,7 @@ export default function CreatorTeam() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="team" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-gray-100 rounded-lg p-1">
+        <TabsList className="grid w-full grid-cols-5 bg-gray-100 rounded-lg p-1">
           <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Users className="h-4 w-4" />
             Team
@@ -423,6 +423,10 @@ export default function CreatorTeam() {
           <TabsTrigger value="history" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Calendar className="h-4 w-4" />
             History
+          </TabsTrigger>
+          <TabsTrigger value="chips" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <Star className="h-4 w-4" />
+            Chips
           </TabsTrigger>
         </TabsList>
 
@@ -1061,6 +1065,122 @@ export default function CreatorTeam() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="chips" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-5 w-5" />
+                Chip Usage Summary
+              </CardTitle>
+              <CardDescription>
+                Complete overview of FPL chip usage for this content creator
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {historyLoading ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-2/5">Chip & Description</TableHead>
+                      <TableHead className="text-center">Total Available</TableHead>
+                      <TableHead className="text-center">Used</TableHead>
+                      <TableHead className="text-center">Remaining</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(() => {
+                      const usedChips = managerHistory?.chips?.map((chip: any) => chip.name) || [];
+                      const allChips = [
+                        { 
+                          name: 'Wildcard', 
+                          apiNames: ['wildcard'], 
+                          description: 'Transfer entire squad for free', 
+                          maxUses: 2 
+                        },
+                        { 
+                          name: 'Triple Captain', 
+                          apiNames: ['3xc'], 
+                          description: 'Captain gets 3x points instead of 2x', 
+                          maxUses: 2 
+                        },
+                        { 
+                          name: 'Bench Boost', 
+                          apiNames: ['bboost'], 
+                          description: 'Points from bench players count', 
+                          maxUses: 2 
+                        },
+                        { 
+                          name: 'Free Hit', 
+                          apiNames: ['freehit'], 
+                          description: 'Make unlimited transfers for one gameweek', 
+                          maxUses: 2 
+                        }
+                      ];
+
+                      return allChips.map((chip, idx) => {
+                        const usedChipsDetails = managerHistory?.chips?.filter((usedChip: any) => 
+                          chip.apiNames.includes(usedChip.name)
+                        ) || [];
+                        const usedCount = usedChipsDetails.length;
+                        const remainingCount = chip.maxUses - usedCount;
+                        
+                        return (
+                          <TableRow key={idx}>
+                            <TableCell>
+                              <div>
+                                <p className="font-semibold text-gray-900">{chip.name}</p>
+                                <p className="text-sm text-gray-600">{chip.description}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="font-semibold">
+                                {chip.maxUses}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {usedCount > 0 ? (
+                                <div className="space-y-1">
+                                  {usedChipsDetails.map((usedChip: any, chipIdx: number) => (
+                                    <div key={chipIdx} className="text-sm">
+                                      <Badge className="bg-red-100 text-red-800 hover:bg-red-200 mb-1">
+                                        GW{usedChip.event}
+                                      </Badge>
+                                      <p className="text-xs text-gray-600">
+                                        {new Date(usedChip.time).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <Badge className="bg-gray-100 text-gray-500">
+                                  0
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge 
+                                className={remainingCount > 0 ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-gray-100 text-gray-500"}
+                              >
+                                {remainingCount}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      });
+                    })()}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
