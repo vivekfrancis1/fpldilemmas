@@ -26,7 +26,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -36,8 +38,15 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [location] = useLocation();
   const { isAdmin } = useAuth();
+  const isMobile = useIsMobile();
 
   const isActive = (path: string) => location === path;
+
+  const handleNavItemClick = () => {
+    if (isMobile) {
+      onToggle(); // Close sidebar on mobile when item is clicked
+    }
+  };
 
   const navItems = [
     {
@@ -151,22 +160,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   // Combine public and admin navigation items
   const allNavItems = isAdmin ? [...navItems, ...adminNavItems] : navItems;
 
-  return (
-    <>
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={onToggle}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside 
-        className={`fixed left-0 top-0 h-full bg-fpl-purple text-white z-50 transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 lg:static lg:z-auto w-64 sm:w-72 md:w-80 max-w-[90vw] sm:max-w-[85vw] md:max-w-80 overflow-y-auto`}
-      >
+  // Sidebar content component (reused for mobile and desktop)
+  const SidebarContent = ({ className = "" }: { className?: string }) => (
+    <div className={`h-full bg-fpl-purple text-white overflow-y-auto ${className}`}>
         {/* Header */}
         <div className="p-3 sm:p-4 md:p-6 border-b border-purple-400/20">
           <div className="flex items-center justify-between">
@@ -208,7 +204,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     <Link 
                       key={item.path} 
                       href={item.path}
-                      onClick={() => onToggle()}
+                      onClick={handleNavItemClick}
                     >
                       <div className={`group flex items-center justify-between px-2 sm:px-3 py-2 sm:py-3 rounded-lg transition-all duration-200 cursor-pointer ${
                         isCurrentPage 
@@ -256,7 +252,31 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             </p>
           </div>
         </div>
-      </aside>
-    </>
+    </div>
+  );
+
+  // Render mobile sheet or desktop sidebar based on screen size
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onToggle}>
+        <SheetContent 
+          side="left" 
+          className="p-0 w-80 max-w-[85vw] bg-fpl-purple border-none"
+          data-testid="mobile-sidebar-sheet"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Navigation Menu</SheetTitle>
+          </SheetHeader>
+          <SidebarContent />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop sidebar
+  return (
+    <aside className="w-64 lg:w-80 flex-shrink-0 hidden lg:block" data-testid="desktop-sidebar">
+      <SidebarContent className="fixed left-0 top-0 h-full w-64 lg:w-80" />
+    </aside>
   );
 }

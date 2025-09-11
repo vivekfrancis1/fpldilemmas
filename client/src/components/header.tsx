@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
+import { useIsMobile } from "@/hooks/use-mobile";
 import RefreshButton from "@/components/refresh-button";
 
 interface HeaderProps {
@@ -15,6 +16,7 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const handleLogout = async () => {
     try {
@@ -46,21 +48,26 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 shadow-sm">
+    <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30">
       <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3">
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onSidebarToggle}
-            className="text-fpl-purple hover:bg-fpl-purple/10 p-1 sm:p-2 flex-shrink-0 lg:hidden"
-            data-testid="button-sidebar-toggle"
-          >
-            <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
-          </Button>
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onSidebarToggle}
+              className="text-fpl-purple hover:bg-fpl-purple/10 p-1 sm:p-2 flex-shrink-0 min-h-[44px] min-w-[44px] touch-manipulation"
+              data-testid="button-sidebar-toggle"
+              aria-label="Toggle navigation menu"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
           <div className="min-w-0">
             <h1 className="text-sm sm:text-lg font-bold text-fpl-purple truncate">FPL Dilemmas</h1>
-            <p className="text-xs text-gray-600 hidden sm:block">Advanced FPL Analytics Platform</p>
+            {!isMobile && (
+              <p className="text-xs text-gray-600">Advanced FPL Analytics Platform</p>
+            )}
           </div>
         </div>
         
@@ -70,19 +77,21 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
             <>
               {isAuthenticated ? (
                 <div className="flex items-center space-x-2">
-                  <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-600">
-                    <User className="h-4 w-4" />
-                    <span>{user?.email}</span>
-                  </div>
+                  {!isMobile && (
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <User className="h-4 w-4" />
+                      <span className="truncate max-w-[120px]">{user?.email}</span>
+                    </div>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleLogout}
-                    className="text-red-600 border-red-600 hover:bg-red-50"
+                    className="text-red-600 border-red-600 hover:bg-red-50 min-h-[44px] min-w-[44px] touch-manipulation"
                     data-testid="button-logout"
                   >
                     <LogOut className="h-4 w-4" />
-                    <span className="hidden sm:ml-2 sm:inline">Logout</span>
+                    {!isMobile && <span className="ml-2">Logout</span>}
                   </Button>
                 </div>
               ) : (
@@ -90,11 +99,11 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
                   variant="outline"
                   size="sm"
                   onClick={handleLogin}
-                  className="text-fpl-purple border-fpl-purple hover:bg-fpl-purple/10"
+                  className="text-fpl-purple border-fpl-purple hover:bg-fpl-purple/10 min-h-[44px] min-w-[44px] touch-manipulation"
                   data-testid="button-login"
                 >
                   <LogIn className="h-4 w-4" />
-                  <span className="hidden sm:ml-2 sm:inline">Login</span>
+                  {!isMobile && <span className="ml-2">Login</span>}
                 </Button>
               )}
             </>

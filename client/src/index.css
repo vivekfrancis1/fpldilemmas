@@ -15,14 +15,16 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Better touch targets for mobile */
-button, a, input, select, textarea {
-  min-height: 44px;
-  min-width: 44px;
-}
+/* Better touch targets for mobile - MOVED TO MOBILE MEDIA QUERY */
 
 /* Mobile-specific optimizations */
 @media (max-width: 640px) {
+  /* Better touch targets for mobile - moved from global scope */
+  button, a, input, select, textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
   .fpl-table-cell {
     @apply px-1 py-2 text-xs;
   }
@@ -487,6 +489,179 @@ button, a, input, select, textarea {
 
 .fpl-border-gradient > * {
   @apply bg-white rounded-2xl;
+}
+
+/* ====== MOBILE SHELL ENHANCEMENTS ====== */
+
+/* Enhanced mobile overflow prevention */
+.mobile-shell-container {
+  @apply w-full max-w-full overflow-x-hidden;
+  box-sizing: border-box;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Mobile-safe viewport handling */
+.mobile-viewport-safe {
+  width: 100vw;
+  width: 100dvw; /* Dynamic viewport width */
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* Touch-optimized components */
+.mobile-touch-target {
+  @apply min-h-[48px] min-w-[48px];
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile drawer/sheet enhancements */
+.mobile-drawer-overlay {
+  @apply fixed inset-0 z-50;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.mobile-drawer-content {
+  @apply h-full overflow-y-auto overscroll-contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mobile-drawer-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Enhanced mobile header */
+.mobile-header-sticky {
+  @apply sticky top-0 z-40;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+/* Prevent zoom on inputs (iOS Safari) */
+input, select, textarea {
+  font-size: 16px !important;
+  transform: scale(1);
+}
+
+/* iOS-specific safe area adjustments */
+@supports (padding: env(safe-area-inset-left)) {
+  .mobile-safe-insets {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .mobile-safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .mobile-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Enhanced mobile table handling */
+.mobile-table-responsive {
+  @apply w-full overflow-x-auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+}
+
+/* Mobile navigation improvements */
+.mobile-nav-enhanced {
+  @apply fixed bottom-0 left-0 right-0 z-50;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Accessibility enhancements for mobile */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-reduced-motion * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .mobile-high-contrast {
+    border: 2px solid;
+    background: high-contrast;
+  }
+}
+
+/* Mobile landscape optimizations */
+@media screen and (max-height: 480px) and (orientation: landscape) {
+  .mobile-landscape-compact {
+    @apply py-2;
+  }
+  
+  .mobile-landscape-header {
+    @apply py-1;
+  }
+}
+
+/* Specific mobile width breakpoints */
+@media screen and (max-width: 320px) {
+  .mobile-xs-compact {
+    @apply px-2 text-xs;
+  }
+}
+
+@media screen and (min-width: 321px) and (max-width: 375px) {
+  .mobile-sm-optimized {
+    @apply px-3 text-sm;
+  }
+}
+
+@media screen and (min-width: 376px) and (max-width: 414px) {
+  .mobile-md-enhanced {
+    @apply px-4;
+  }
+}
+
+/* Force hardware acceleration for smooth animations */
+.mobile-hardware-accelerated {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* Enhanced mobile form inputs */
+.mobile-form-optimized input,
+.mobile-form-optimized select,
+.mobile-form-optimized textarea {
+  @apply text-base p-3 border-2;
+  font-size: 16px !important; /* Prevent iOS zoom */
+  border-radius: 8px;
+  transition: border-color 0.2s ease;
+}
+
+.mobile-form-optimized input:focus,
+.mobile-form-optimized select:focus,
+.mobile-form-optimized textarea:focus {
+  @apply outline-none border-fpl-purple;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Mobile card improvements */
+.mobile-card-enhanced {
+  @apply rounded-lg shadow-sm border;
+  margin: 0.75rem;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
 }
 
 /* Mobile-optimized table scrolling */
