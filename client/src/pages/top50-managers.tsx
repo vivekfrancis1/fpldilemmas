@@ -628,7 +628,7 @@ export default function Top50Managers() {
         </Card>
           </TabsContent>
 
-          {/* Team Analysis */}
+          {/* Team Analysis Tab */}
           <TabsContent value="analysis">
             {teamsLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -660,825 +660,213 @@ export default function Top50Managers() {
                 </CardContent>
               </Card>
             ) : (
-              <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="overview" className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" />
-                    Overview
-                  </TabsTrigger>
-                  <TabsTrigger value="players" className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Players
-                  </TabsTrigger>
-                  <TabsTrigger value="captains" className="flex items-center gap-2">
-                    <Crown className="h-4 w-4" />
-                    Captains
-                  </TabsTrigger>
-                  <TabsTrigger value="formations" className="flex items-center gap-2">
-                    <Target className="h-4 w-4" />
-                    Formations
-                  </TabsTrigger>
-                  <TabsTrigger value="budget" className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    Budget
-                  </TabsTrigger>
-                </TabsList>
-
-                {/* Overview Tab */}
-                <TabsContent value="overview">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {/* Teams Analyzed */}
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Teams Analyzed</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{validTeamsCount}</div>
-                        <p className="text-xs text-muted-foreground">
-                          out of 50 managers
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* Average Team Value */}
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Avg Team Value</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-blue-600">
-                          £{getBudgetAnalysis.avgValue.toFixed(1)}m
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Range: £{getBudgetAnalysis.minValue.toFixed(1)}m - £{getBudgetAnalysis.maxValue.toFixed(1)}m
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* Average Bank */}
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Avg In Bank</CardTitle>
-                        <PieChart className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-green-600">
-                          £{getBudgetAnalysis.avgBank.toFixed(1)}m
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Available funds
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* Most Popular Formation */}
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Top Formation</CardTitle>
-                        <Target className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-purple-600">
-                          {getFormationAnalysis[0]?.formation || 'N/A'}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {getFormationAnalysis[0]?.percentage || 0}% of managers
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                    {/* Popular Players Preview */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Star className="h-5 w-5" />
-                          Most Owned Players
-                        </CardTitle>
-                        <CardDescription>
-                          Top picks among the 50 managers
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {getMostOwnedPlayers.slice(0, 5).map((player, idx) => (
-                            <div key={player.id} className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                  {idx + 1}
-                                </div>
-                                <div>
-                                  <div className="font-medium">{player.web_name}</div>
-                                  <div className="text-sm text-gray-600">
-                                    {bootstrapData?.teams.find(t => t.id === player.team)?.short_name || 'Unknown'} • {formatPrice(player.now_cost)}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="font-bold">{player.ownershipPercent}%</div>
-                                <div className="text-xs text-gray-600">{player.ownership}/{validTeamsCount}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Formation Overview */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Target className="h-5 w-5" />
-                          Formation Distribution
-                        </CardTitle>
-                        <CardDescription>
-                          Popular tactical setups
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {getFormationAnalysis.slice(0, 5).map((formation, index) => (
-                            <div key={formation.formation}>
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="font-medium">{formation.formation}</span>
-                                <span className="text-sm text-gray-600">
-                                  {formation.count} managers ({formation.percentage}%)
-                                </span>
-                              </div>
-                              <Progress value={formation.percentage} className="h-2" />
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
-
-                {/* Players Tab */}
-                <TabsContent value="players">
+              <div className="space-y-6">
+                {/* Overview Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <Card>
-                    <CardHeader>
-                      <CardTitle>Player Ownership Analysis</CardTitle>
-                      <CardDescription>
-                        All players owned by Top 50 managers, sorted by popularity
-                      </CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Teams Analyzed</CardTitle>
+                      <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent className="p-0">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Rank</TableHead>
-                            <TableHead>Player</TableHead>
-                            <TableHead>Position</TableHead>
-                            <TableHead>Team</TableHead>
-                            <TableHead>Price</TableHead>
-                            <TableHead>Ownership</TableHead>
-                            <TableHead>%</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {getMostOwnedPlayers.map((player, index) => (
-                            <TableRow key={player.id} data-testid={`row-player-${player.id}`}>
-                              <TableCell>
-                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                  {index + 1}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="font-medium">{player.web_name}</div>
-                                <div className="text-sm text-gray-600">
-                                  {player.first_name} {player.second_name}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={getPositionColor(player.element_type)}>
-                                  {getPositionIcon(player.element_type)}
-                                  <span className="ml-1">{getPositionName(player.element_type)}</span>
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {bootstrapData?.teams.find(t => t.id === player.team)?.short_name || 'Unknown'}
-                              </TableCell>
-                              <TableCell className="font-mono">{formatPrice(player.now_cost)}</TableCell>
-                              <TableCell className="font-semibold">{player.ownership}/{validTeamsCount}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Progress value={player.ownershipPercent} className="h-2 flex-1" />
-                                  <span className="text-sm font-semibold w-10">{player.ownershipPercent}%</span>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{validTeamsCount}</div>
+                      <p className="text-xs text-muted-foreground">
+                        out of 50 managers
+                      </p>
                     </CardContent>
                   </Card>
-                </TabsContent>
-
-                {/* Captains Tab */}
-                <TabsContent value="captains">
                   <Card>
-                    <CardHeader>
-                      <CardTitle>Captaincy Analysis</CardTitle>
-                      <CardDescription>
-                        Captain and vice-captain choices among Top 50 managers
-                      </CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Avg Team Value</CardTitle>
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent className="p-0">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Player</TableHead>
-                            <TableHead>Position</TableHead>
-                            <TableHead>Team</TableHead>
-                            <TableHead>Price</TableHead>
-                            <TableHead>Captain</TableHead>
-                            <TableHead>Vice Captain</TableHead>
-                            <TableHead>Total</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {getCaptaincyAnalysis.map((player) => (
-                            <TableRow key={player.id} data-testid={`row-captain-${player.id}`}>
-                              <TableCell>
-                                <div className="font-medium">{player.web_name}</div>
-                                <div className="text-sm text-gray-600">
-                                  {player.first_name} {player.second_name}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={getPositionColor(player.element_type)}>
-                                  {getPositionIcon(player.element_type)}
-                                  <span className="ml-1">{getPositionName(player.element_type)}</span>
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {bootstrapData?.teams.find(t => t.id === player.team)?.short_name || 'Unknown'}
-                              </TableCell>
-                              <TableCell className="font-mono">{formatPrice(player.now_cost)}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Crown className="h-4 w-4 text-yellow-500" />
-                                  <span className="font-semibold">{player.captainCount}</span>
-                                  <span className="text-sm text-gray-600">({player.captainPercent}%)</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Star className="h-4 w-4 text-gray-400" />
-                                  <span className="font-semibold">{player.viceCaptainCount}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="font-bold text-blue-600">
-                                  {player.captainCount + player.viceCaptainCount}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        £{getBudgetAnalysis.avgValue.toFixed(1)}m
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Range: £{getBudgetAnalysis.minValue.toFixed(1)}m - £{getBudgetAnalysis.maxValue.toFixed(1)}m
+                      </p>
                     </CardContent>
                   </Card>
-                </TabsContent>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Avg Bank</CardTitle>
+                      <PieChart className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        £{getBudgetAnalysis.avgBank.toFixed(1)}m
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Money in the bank
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
 
-                {/* Formations Tab */}
-                <TabsContent value="formations">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Formation Analysis</CardTitle>
-                        <CardDescription>
-                          Tactical preferences of Top 50 managers
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {getFormationAnalysis.slice(0, 5).map((formation, index) => (
-                            <div key={formation.formation}>
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="font-medium">{formation.formation}</span>
-                                <span className="text-sm text-gray-600">
-                                  {formation.count} managers ({formation.percentage}%)
-                                </span>
-                              </div>
-                              <Progress value={formation.percentage} className="h-2" />
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Activity className="h-5 w-5" />
-                          Active Chips
-                        </CardTitle>
-                        <CardDescription>
-                          Chip usage in current gameweek
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {getChipAnalysis.activeChips.length > 0 ? (
-                            getChipAnalysis.activeChips.map((chip: { chip: string; count: number; percentage: number }) => (
-                              <div key={chip.chip} className="flex justify-between items-center">
-                                <span className="font-medium capitalize">{chip.chip.replace('_', ' ')}</span>
-                                <div className="text-right">
-                                  <div className="font-semibold">{chip.count} managers</div>
-                                  <div className="text-xs text-gray-600">{chip.percentage}%</div>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-center text-gray-600">
-                              <Star className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                              <p>No active chips this gameweek</p>
-                            </div>
-                          )}
-                          <div className="border-t pt-3 mt-3">
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium">No Chip</span>
-                              <div className="text-right">
-                                <div className="font-bold">
-                                  {Math.round((getChipAnalysis.noChipCount / validTeamsCount) * 100)}%
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {getChipAnalysis.noChipCount} managers
-                                </div>
+                {/* Most Owned Players */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Star className="h-5 w-5" />
+                      Most Owned Players
+                    </CardTitle>
+                    <CardDescription>
+                      Popular picks among the top 50 managers
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {getMostOwnedPlayers.slice(0, 10).map((player, idx) => (
+                        <div key={player.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center">
+                              {idx + 1}
+                            </Badge>
+                            <div>
+                              <div className="font-medium">{player.web_name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {formatPrice(player.now_cost)}
                               </div>
                             </div>
                           </div>
+                          <div className="text-right">
+                            <div className="font-bold">{player.ownershipPercent}%</div>
+                            <div className="text-sm text-muted-foreground">
+                              {player.ownership}/{validTeamsCount}
+                            </div>
+                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
-
-                {/* Team Analysis */}
-                <TabsContent value="analysis">
-                  {teamsLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <Card key={i}>
-                          <CardHeader>
-                            <Skeleton className="h-6 w-40" />
-                          </CardHeader>
-                          <CardContent>
-                            <Skeleton className="h-20 w-full" />
-                          </CardContent>
-                        </Card>
                       ))}
                     </div>
-                  ) : teamsError ? (
-                    <Card>
-                      <CardContent className="p-8 text-center">
-                        <div className="text-red-600 mb-4">
-                          <Activity className="h-12 w-12 mx-auto mb-2" />
-                          <h3 className="text-lg font-semibold">Failed to Load Team Data</h3>
-                        </div>
-                        <p className="text-muted-foreground mb-4">
-                          Unable to fetch team analysis data. Please try refreshing.
-                        </p>
-                        <Button onClick={refreshTeamData} variant="outline">
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Retry
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ) : validTeamsCount === 0 ? (
-                    <Card>
-                      <CardContent className="p-8 text-center">
-                        <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                        <h3 className="text-lg font-semibold mb-2">Loading Team Data...</h3>
-                        <p className="text-gray-600 mb-4">
-                          Fetching team information for all managers. This may take a moment.
-                        </p>
-                        <Button onClick={refreshTeamData} variant="outline" disabled={isTeamDataRefreshing}>
-                          <RefreshCw className={`h-4 w-4 mr-2 ${isTeamDataRefreshing ? 'animate-spin' : ''}`} />
-                          {isTeamDataRefreshing ? 'Loading...' : 'Retry Loading'}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="overview" className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" />
-                    Overview
-                  </TabsTrigger>
-                  <TabsTrigger value="players" className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Players
-                  </TabsTrigger>
-                  <TabsTrigger value="captains" className="flex items-center gap-2">
-                    <Crown className="h-4 w-4" />
-                    Captains
-                  </TabsTrigger>
-                  <TabsTrigger value="formations" className="flex items-center gap-2">
-                    <Target className="h-4 w-4" />
-                    Formations
-                  </TabsTrigger>
-                  <TabsTrigger value="budget" className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    Budget
-                  </TabsTrigger>
-                </TabsList>
+                  </CardContent>
+                </Card>
 
-                {/* Overview Tab */}
-                <TabsContent value="overview">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Teams Status */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Activity className="h-5 w-5" />
-                          Analysis Status
-                        </CardTitle>
-                        <CardDescription>
-                          Data loading progress for all Top 50 managers
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <span className="text-green-600 font-medium">Teams Loaded</span>
-                            <Badge variant="outline" className="text-green-600 border-green-200">
-                              {validTeamsCount}
+                {/* Captaincy Analysis */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Crown className="h-5 w-5" />
+                      Captaincy Choices
+                    </CardTitle>
+                    <CardDescription>
+                      Most popular captain picks this gameweek
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {getCaptaincyAnalysis.map((player, idx) => (
+                        <div key={player.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center">
+                              {idx + 1}
                             </Badge>
+                            <div>
+                              <div className="font-medium">{player.web_name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {formatPrice(player.now_cost)}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-red-600 font-medium">Load Errors</span>
-                            <Badge variant="outline" className="text-red-600 border-red-200">
-                              {50 - validTeamsCount}
-                            </Badge>
-                          </div>
-                          <div className="pt-2">
-                            <Progress value={(validTeamsCount / 50) * 100} className="h-2" />
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {Math.round((validTeamsCount / 50) * 100)}% complete
-                            </p>
+                          <div className="text-right">
+                            <div className="font-bold">{player.captainPercent}%</div>
+                            <div className="text-sm text-muted-foreground">
+                              C: {player.captainCount} | VC: {player.viceCaptainCount}
+                            </div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                    {/* Most Popular Players */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Users className="h-5 w-5" />
-                          Most Popular Players
-                        </CardTitle>
-                        <CardDescription>
-                          Players owned by the most Top 50 managers
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {getMostOwnedPlayers.slice(0, 8).map((player, index) => (
-                            <div key={player.id} className="flex items-center justify-between">
+                {/* Formation Analysis */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="h-5 w-5" />
+                        Formation Analysis
+                      </CardTitle>
+                      <CardDescription>
+                        Most popular formations used
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {getFormationAnalysis.map((formation, idx) => (
+                          <div key={formation.formation} className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center">
+                                {idx + 1}
+                              </Badge>
+                              <span className="font-medium">{formation.formation}</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold">{formation.percentage}%</div>
+                              <div className="text-sm text-muted-foreground">
+                                {formation.count} teams
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Activity className="h-5 w-5" />
+                        Active Chips
+                      </CardTitle>
+                      <CardDescription>
+                        Chips being used this gameweek
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {getChipAnalysis.activeChips.length > 0 ? (
+                          getChipAnalysis.activeChips.map((chip, idx) => (
+                            <div key={chip.chip} className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                  {index + 1}
-                                </div>
-                                <div>
-                                  <div className="font-medium">{player.web_name}</div>
-                                  <div className="text-xs text-gray-600">
-                                    {bootstrapData?.teams.find(t => t.id === player.team)?.short_name} • {formatPrice(player.now_cost)}
-                                  </div>
-                                </div>
+                                <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center">
+                                  {idx + 1}
+                                </Badge>
+                                <span className="font-medium capitalize">{chip.chip}</span>
                               </div>
                               <div className="text-right">
-                                <div className="font-semibold">{player.ownershipPercent}%</div>
-                                <div className="text-xs text-gray-600">{player.ownership}/50</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Formation Analysis */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <PieChart className="h-5 w-5" />
-                          Popular Formations
-                        </CardTitle>
-                        <CardDescription>
-                          Formation preferences among Top 50 managers
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {getFormationAnalysis.slice(0, 5).map((formation, index) => (
-                            <div key={formation.formation}>
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="font-medium">{formation.formation}</span>
-                                <span className="text-sm text-gray-600">
-                                  {formation.count} managers ({formation.percentage}%)
-                                </span>
-                              </div>
-                              <Progress value={formation.percentage} className="h-2" />
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                  </div>
-                </TabsContent>
-
-                {/* Players Tab */}
-                <TabsContent value="players">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
-                        Player Ownership Analysis
-                      </CardTitle>
-                      <CardDescription>
-                        All players owned by Top 50 managers with ownership percentages
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Rank</TableHead>
-                            <TableHead>Player</TableHead>
-                            <TableHead>Team</TableHead>
-                            <TableHead>Position</TableHead>
-                            <TableHead>Price</TableHead>
-                            <TableHead className="text-right">Ownership</TableHead>
-                            <TableHead className="text-right">Count</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {getMostOwnedPlayers.map((player, index) => (
-                            <TableRow key={player.id}>
-                              <TableCell>
-                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                  {index + 1}
+                                <div className="font-bold">{chip.percentage}%</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {chip.count} managers
                                 </div>
-                              </TableCell>
-                              <TableCell className="font-medium">{player.web_name}</TableCell>
-                              <TableCell>
-                                {bootstrapData?.teams.find(t => t.id === player.team)?.short_name}
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={getPositionColor(player.element_type)}>
-                                  {getPositionIcon(player.element_type)}
-                                  <span className="ml-1">{getPositionName(player.element_type)}</span>
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{formatPrice(player.now_cost)}</TableCell>
-                              <TableCell className="text-right font-bold">{player.ownershipPercent}%</TableCell>
-                              <TableCell className="text-right">{player.ownership}/50</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-muted-foreground text-center py-4">
+                            No active chips this gameweek
+                          </p>
+                        )}
+                        {getChipAnalysis.noChipCount > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">No Chip</span>
+                            <div className="text-right">
+                              <div className="font-bold">
+                                {Math.round((getChipAnalysis.noChipCount / validTeamsCount) * 100)}%
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {getChipAnalysis.noChipCount} managers
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
-                </TabsContent>
-
-                {/* Captains Tab */}
-                <TabsContent value="captains">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Crown className="h-5 w-5" />
-                        Captaincy Analysis
-                      </CardTitle>
-                      <CardDescription>
-                        Most popular captain and vice-captain choices among Top 50 managers
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Rank</TableHead>
-                            <TableHead>Player</TableHead>
-                            <TableHead>Team</TableHead>
-                            <TableHead>Position</TableHead>
-                            <TableHead>Price</TableHead>
-                            <TableHead className="text-right">Captain %</TableHead>
-                            <TableHead className="text-right">Captain Count</TableHead>
-                            <TableHead className="text-right">Vice Count</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {getCaptaincyAnalysis.map((player, index) => (
-                            <TableRow key={player.id}>
-                              <TableCell>
-                                <div className="w-6 h-6 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                  {index + 1}
-                                </div>
-                              </TableCell>
-                              <TableCell className="font-medium">{player.web_name}</TableCell>
-                              <TableCell>
-                                {bootstrapData?.teams.find(t => t.id === player.team)?.short_name}
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={getPositionColor(player.element_type)}>
-                                  {getPositionIcon(player.element_type)}
-                                  <span className="ml-1">{getPositionName(player.element_type)}</span>
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{formatPrice(player.now_cost)}</TableCell>
-                              <TableCell className="text-right font-bold">{player.captainPercent}%</TableCell>
-                              <TableCell className="text-right">
-                                <Badge variant="outline">{player.captainCount}</Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Badge variant="secondary">{player.viceCaptainCount || 0}</Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Formations Tab */}
-                <TabsContent value="formations">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Target className="h-5 w-5" />
-                          Formation Analysis
-                        </CardTitle>
-                        <CardDescription>
-                          Formation preferences among Top 50 managers
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {getFormationAnalysis.map((formation, index) => (
-                            <div key={formation.formation} className="space-y-2">
-                              <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                    {index + 1}
-                                  </div>
-                                  <span className="font-medium text-lg">{formation.formation}</span>
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-bold text-lg">{formation.percentage}%</div>
-                                  <div className="text-xs text-muted-foreground">{formation.count} managers</div>
-                                </div>
-                              </div>
-                              <Progress value={formation.percentage} className="h-3" />
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <PieChart className="h-5 w-5" />
-                          Formation Insights
-                        </CardTitle>
-                        <CardDescription>
-                          Strategic analysis of formation trends
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                            <h4 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">
-                              Most Popular: {getFormationAnalysis[0]?.formation}
-                            </h4>
-                            <p className="text-sm text-blue-700 dark:text-blue-300">
-                              {getFormationAnalysis[0]?.count} managers ({getFormationAnalysis[0]?.percentage}%) prefer this formation
-                            </p>
-                          </div>
-                          <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                            <h4 className="font-semibold mb-2 text-green-900 dark:text-green-100">
-                              Formation Diversity
-                            </h4>
-                            <p className="text-sm text-green-700 dark:text-green-300">
-                              {getFormationAnalysis.length} different formations used by Top 50 managers
-                            </p>
-                          </div>
-                          {validTeamsCount > 40 && (
-                            <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                              <h4 className="font-semibold mb-2 text-purple-900 dark:text-purple-100">
-                                Strategic Balance
-                              </h4>
-                              <p className="text-sm text-purple-700 dark:text-purple-300">
-                                Top managers show varied tactical approaches with balanced formations
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
-
-                {/* Budget Tab */}
-                <TabsContent value="budget">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Team Values */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <DollarSign className="h-5 w-5" />
-                          Team Values
-                        </CardTitle>
-                        <CardDescription>
-                          Squad valuation analysis across Top 50 managers
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                              <div className="text-2xl font-bold text-blue-600">£{getBudgetAnalysis.avgValue.toFixed(1)}m</div>
-                              <div className="text-sm text-blue-700 dark:text-blue-300">Average Value</div>
-                            </div>
-                            <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                              <div className="text-2xl font-bold text-green-600">£{getBudgetAnalysis.maxValue.toFixed(1)}m</div>
-                              <div className="text-sm text-green-700 dark:text-green-300">Highest Value</div>
-                            </div>
-                            <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                              <div className="text-2xl font-bold text-orange-600">£{getBudgetAnalysis.minValue.toFixed(1)}m</div>
-                              <div className="text-sm text-orange-700 dark:text-orange-300">Lowest Value</div>
-                            </div>
-                            <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                              <div className="text-2xl font-bold text-purple-600">£{getBudgetAnalysis.avgBank.toFixed(1)}m</div>
-                              <div className="text-sm text-purple-700 dark:text-purple-300">Average Bank</div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Budget Management */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <TrendingUp className="h-5 w-5" />
-                          Budget Management
-                        </CardTitle>
-                        <CardDescription>
-                          Financial strategy insights from Top 50 managers
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
-                            <h4 className="font-semibold mb-2">Squad Value Range</h4>
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-sm">£{getBudgetAnalysis.minValue.toFixed(1)}m</span>
-                              <span className="text-sm">£{getBudgetAnalysis.maxValue.toFixed(1)}m</span>
-                            </div>
-                            <Progress 
-                              value={((getBudgetAnalysis.avgValue - getBudgetAnalysis.minValue) / (getBudgetAnalysis.maxValue - getBudgetAnalysis.minValue)) * 100} 
-                              className="h-2" 
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Average: £{getBudgetAnalysis.avgValue.toFixed(1)}m
-                            </p>
-                          </div>
-                          
-                          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                            <h4 className="font-semibold mb-2 text-yellow-900 dark:text-yellow-100">
-                              Budget Utilization
-                            </h4>
-                            <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                              Top 50 managers keep an average of £{getBudgetAnalysis.avgBank.toFixed(1)}m in the bank
-                            </p>
-                          </div>
-                          
-                          {validTeamsCount > 40 && (
-                            <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-                              <h4 className="font-semibold mb-2 text-indigo-900 dark:text-indigo-100">
-                                Elite Strategy
-                              </h4>
-                              <p className="text-sm text-indigo-700 dark:text-indigo-300">
-                                Balanced approach between premium players and squad depth
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
-              </Tabs>
+                </div>
+              </div>
             )}
           </TabsContent>
         </Tabs>
