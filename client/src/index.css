@@ -78,6 +78,87 @@ html {
     white-space: nowrap;
   }
   
+  /* Mobile dashboard optimizations */
+  .mobile-dashboard-card {
+    @apply p-3 rounded-xl shadow-sm;
+  }
+  
+  .mobile-dashboard-header {
+    @apply px-4 py-3 text-center;
+  }
+  
+  .mobile-dashboard-title {
+    @apply text-lg font-bold leading-tight;
+  }
+  
+  .mobile-dashboard-subtitle {
+    @apply text-sm text-gray-600 mt-1;
+  }
+  
+  /* Mobile tab optimizations */
+  .mobile-tabs-list {
+    @apply grid grid-cols-3 gap-1 p-1 bg-white/50 backdrop-blur-sm rounded-xl shadow-lg;
+  }
+  
+  .mobile-tabs-trigger {
+    @apply px-2 py-3 text-xs font-medium rounded-lg transition-all duration-200 min-h-[44px] flex flex-col items-center justify-center gap-1;
+  }
+  
+  .mobile-tabs-trigger[data-state="active"] {
+    @apply bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg;
+  }
+  
+  /* Mobile team display */
+  .mobile-team-player {
+    @apply flex items-center gap-3 p-3 border-b border-gray-100 last:border-b-0;
+  }
+  
+  .mobile-team-player-info {
+    @apply flex-1 min-w-0;
+  }
+  
+  .mobile-team-player-name {
+    @apply font-semibold text-sm truncate;
+  }
+  
+  .mobile-team-player-details {
+    @apply text-xs text-gray-600 space-y-1 mt-1;
+  }
+  
+  .mobile-team-player-stats {
+    @apply text-right flex-shrink-0;
+  }
+  
+  /* Mobile fixture display */
+  .mobile-fixture-list {
+    @apply flex gap-1 flex-wrap;
+  }
+  
+  .mobile-fixture-item {
+    @apply px-2 py-1 rounded text-xs font-medium whitespace-nowrap;
+  }
+  
+  /* Mobile league item */
+  .mobile-league-item {
+    @apply flex items-center justify-between p-3 rounded-lg bg-white/70 border-0 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+  
+  .mobile-league-info {
+    @apply flex-1 min-w-0 mr-3;
+  }
+  
+  .mobile-league-name {
+    @apply font-semibold text-sm truncate;
+  }
+  
+  .mobile-league-details {
+    @apply text-xs text-gray-600;
+  }
+  
+  .mobile-league-rank {
+    @apply text-right flex-shrink-0;
+  }
+  
   /* Mobile form improvements */
   .mobile-form-group {
     @apply space-y-3;

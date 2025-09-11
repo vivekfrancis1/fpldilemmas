@@ -128,6 +128,7 @@ export default function PlayerGoalProjections() {
   const [teamFilter, setTeamFilter] = useState("all");
   const [startGameweek, setStartGameweek] = useState(nextGameweek);
   const [endGameweek, setEndGameweek] = useState(defaultEndGameweek);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // Update start and end gameweeks when bootstrap data loads
   useMemo(() => {
@@ -146,10 +147,12 @@ export default function PlayerGoalProjections() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading player goal projections...</p>
+      <div className="fpl-page-wrapper">
+        <div className="fpl-container fpl-content-area">
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading player goal projections...</p>
+          </div>
         </div>
       </div>
     );
@@ -157,12 +160,14 @@ export default function PlayerGoalProjections() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-red-600">Error loading player goal projections. Please try again.</p>
-          </CardContent>
-        </Card>
+      <div className="fpl-page-wrapper">
+        <div className="fpl-container fpl-content-area">
+          <Card className="border-0 bg-red-50 shadow-lg">
+            <CardContent className="pt-6">
+              <p className="text-red-600 text-center">Error loading player goal projections. Please try again.</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }

@@ -105,21 +105,24 @@ export function EnhancedTable<T = any>({
       {/* Scroll Controls - Mobile Optimized */}
       <div className="flex justify-between items-center px-2 sm:px-4 py-2 bg-gray-50 border-b">
         <div className="flex gap-1 sm:gap-2">
-          <Button variant="outline" size="sm" onClick={scrollToStart} className="text-xs mobile-button">
+          <Button variant="outline" size="sm" onClick={scrollToStart} className="text-xs mobile-button" data-testid="button-scroll-start">
             <span className="hidden sm:inline">⏮ Start</span>
             <span className="sm:hidden">⏮</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={scrollLeft} className="text-xs mobile-button">
+          <Button variant="outline" size="sm" onClick={scrollLeft} className="text-xs mobile-button" data-testid="button-scroll-left">
             <span className="hidden sm:inline">← Left</span>
             <span className="sm:hidden">←</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={scrollRight} className="text-xs mobile-button">
+          <Button variant="outline" size="sm" onClick={scrollRight} className="text-xs mobile-button" data-testid="button-scroll-right">
             <span className="hidden sm:inline">Right →</span>
             <span className="sm:hidden">→</span>
           </Button>
         </div>
-        <span className="text-xs text-gray-500 hidden md:block">Use scrollbar, buttons, or arrow keys to navigate</span>
-        <span className="text-xs text-gray-500 md:hidden">Scroll table →</span>
+        <div className="flex flex-col items-end">
+          <span className="text-xs text-gray-500 hidden md:block">Use scrollbar, buttons, or arrow keys to navigate</span>
+          <span className="text-xs text-gray-500 md:hidden">Swipe or scroll →</span>
+          <span className="text-xs text-gray-400 mt-1">{data.length} {data.length === 1 ? 'item' : 'items'}</span>
+        </div>
       </div>
       <div 
         ref={scrollContainerRef}

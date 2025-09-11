@@ -52,7 +52,32 @@ const ChartContainer = React.forwardRef<
         data-chart={chartId}
         ref={ref}
         className={cn(
-          "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-none [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-sector]:outline-none [&_.recharts-surface]:outline-none",
+          "flex justify-center",
+          // Mobile-first responsive aspect ratios
+          "aspect-[4/3] sm:aspect-video", // Taller aspect ratio on mobile for better readability
+          // Mobile-optimized text sizing
+          "text-xs sm:text-sm",
+          // Recharts styling with mobile optimizations
+          "[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-axis-tick_text]:text-xs sm:[&_.recharts-cartesian-axis-tick_text]:text-sm",
+          "[&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50",
+          "[&_.recharts-curve.recharts-tooltip-cursor]:stroke-border",
+          "[&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-dot]:cursor-pointer",
+          "[&_.recharts-layer]:outline-none",
+          "[&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border",
+          "[&_.recharts-radial-bar-background-sector]:fill-muted",
+          "[&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted",
+          "[&_.recharts-reference-line_[stroke='#ccc']]:stroke-border",
+          "[&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-sector]:outline-none [&_.recharts-sector]:cursor-pointer",
+          "[&_.recharts-surface]:outline-none",
+          // Mobile-friendly legend styling
+          "[&_.recharts-legend-wrapper]:text-xs sm:[&_.recharts-legend-wrapper]:text-sm",
+          "[&_.recharts-legend-item]:cursor-pointer [&_.recharts-legend-item]:p-1 sm:[&_.recharts-legend-item]:p-0",
+          // Mobile tooltip optimizations
+          "[&_.recharts-tooltip-wrapper]:text-xs sm:[&_.recharts-tooltip-wrapper]:text-sm",
+          "[&_.recharts-tooltip-wrapper]:pointer-events-auto",
+          // Mobile-friendly axis labels
+          "[&_.recharts-xAxis_.recharts-cartesian-axis-tick]:text-xs sm:[&_.recharts-xAxis_.recharts-cartesian-axis-tick]:text-sm",
+          "[&_.recharts-yAxis_.recharts-cartesian-axis-tick]:text-xs sm:[&_.recharts-yAxis_.recharts-cartesian-axis-tick]:text-sm",
           className
         )}
         {...props}
@@ -179,7 +204,10 @@ const ChartTooltipContent = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-          "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl",
+          "grid min-w-[8rem] max-w-[90vw] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl",
+          // Mobile tooltip optimizations
+          "sm:min-w-[10rem] text-xs sm:text-sm",
+          "z-50", // Ensure tooltips appear above other content
           className
         )}
       >

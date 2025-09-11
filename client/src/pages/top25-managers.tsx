@@ -387,6 +387,7 @@ export default function Top25Managers() {
                   className="hover:shadow-sm"
                   stickyHeader={true}
                   enableHorizontalScroll={true}
+                  getRowTestId={(manager, index) => `row-manager-${manager.rank || index}`}
                   data-testid="top25-managers-table"
                 />
               </CardContent>

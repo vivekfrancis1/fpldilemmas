@@ -599,36 +599,47 @@ export default function MyDashboard() {
 
             {/* Main Dashboard Tabs */}
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-5 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+              {/* Mobile: Show only 3 main tabs */}
+              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg sm:mobile-tabs-list">
                 <TabsTrigger 
                   value="overview" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger"
+                  data-testid="tab-overview"
                 >
-                  Overview
+                  <Activity className="h-4 w-4 sm:hidden" />
+                  <span className="hidden sm:inline">Overview</span>
+                  <span className="sm:hidden text-xs">Overview</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="team" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger"
+                  data-testid="tab-team"
                 >
-                  Team
+                  <Users className="h-4 w-4 sm:hidden" />
+                  <span className="hidden sm:inline">Team</span>
+                  <span className="sm:hidden text-xs">Team</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="more" 
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger sm:hidden"
+                  data-testid="tab-more"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span className="text-xs">More</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="transfers" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger hidden sm:flex"
+                  data-testid="tab-transfers"
                 >
                   Transfers
                 </TabsTrigger>
                 <TabsTrigger 
                   value="performance" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger hidden sm:flex"
+                  data-testid="tab-performance"
                 >
                   Performance
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="chips" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 tab-trigger-mobile"
-                >
-                  Chips
                 </TabsTrigger>
               </TabsList>
 
@@ -636,27 +647,27 @@ export default function MyDashboard() {
               <TabsContent value="overview" className="fpl-section-spacing mt-8">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                   {/* Total Points */}
-                  <Card className="border-0 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-4 sm:p-6">
+                  <Card className="border-0 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg hover:shadow-xl transition-all duration-300 mobile-dashboard-card" data-testid="card-total-points">
+                    <CardContent className="p-3 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-blue-600 mb-1">Total Points</p>
-                          <p className="text-lg sm:text-xl font-bold text-blue-900">{managerData.summary_overall_points.toLocaleString()}</p>
+                          <p className="text-xl sm:text-2xl font-bold text-blue-900">{managerData.summary_overall_points.toLocaleString()}</p>
                         </div>
-                        <div className="p-1.5 bg-blue-100 rounded-full flex-shrink-0">
-                          <Target className="h-4 w-4 text-blue-600" />
+                        <div className="p-2 bg-blue-100 rounded-full flex-shrink-0">
+                          <Target className="h-5 w-5 text-blue-600" />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Overall Rank */}
-                  <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-4 sm:p-6">
+                  <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg hover:shadow-xl transition-all duration-300 mobile-dashboard-card" data-testid="card-overall-rank">
+                    <CardContent className="p-3 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-amber-600 mb-1">Overall Rank</p>
-                          <p className="text-lg sm:text-xl font-bold text-amber-900">{formatRank(managerData.summary_overall_rank)}</p>
+                          <p className="text-xl sm:text-2xl font-bold text-amber-900">{formatRank(managerData.summary_overall_rank)}</p>
                           {getRankChange() !== null && (
                             <div className={`flex items-center text-xs mt-1 ${getRankChange()! > 0 ? 'text-green-600' : getRankChange()! < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                               {getRankChange()! > 0 ? (
@@ -664,47 +675,47 @@ export default function MyDashboard() {
                               ) : getRankChange()! < 0 ? (
                                 <TrendingDown className="h-3 w-3 mr-1 flex-shrink-0" />
                               ) : null}
-                              <span>
+                              <span className="font-medium">
                                 {getRankChange()! > 0 ? '+' : ''}{formatRank(getRankChange()!)}
                               </span>
                             </div>
                           )}
                         </div>
-                        <div className="p-1.5 bg-amber-100 rounded-full flex-shrink-0">
-                          <Trophy className="h-4 w-4 text-amber-600" />
+                        <div className="p-2 bg-amber-100 rounded-full flex-shrink-0">
+                          <Trophy className="h-5 w-5 text-amber-600" />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Gameweek Points */}
-                  <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-4 sm:p-6">
+                  <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg hover:shadow-xl transition-all duration-300 mobile-dashboard-card" data-testid="card-gameweek-points">
+                    <CardContent className="p-3 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-green-600 mb-1">GW Points</p>
-                          <p className="text-lg sm:text-xl font-bold text-green-900">{managerData.summary_event_points}</p>
+                          <p className="text-xl sm:text-2xl font-bold text-green-900">{managerData.summary_event_points}</p>
                           <p className="text-xs text-green-600 font-medium mt-1">
                             GW{managerData.current_event}
                           </p>
                         </div>
-                        <div className="p-1.5 bg-green-100 rounded-full flex-shrink-0">
-                          <Activity className="h-4 w-4 text-green-600" />
+                        <div className="p-2 bg-green-100 rounded-full flex-shrink-0">
+                          <Activity className="h-5 w-5 text-green-600" />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Gameweek Rank */}
-                  <Card className="border-0 bg-gradient-to-br from-purple-50 to-violet-50 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-4 sm:p-6">
+                  <Card className="border-0 bg-gradient-to-br from-purple-50 to-violet-50 shadow-lg hover:shadow-xl transition-all duration-300 mobile-dashboard-card" data-testid="card-gameweek-rank">
+                    <CardContent className="p-3 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-purple-600 mb-1">GW Rank</p>
-                          <p className="text-lg sm:text-xl font-bold text-purple-900">{formatRank(managerData.summary_event_rank)}</p>
+                          <p className="text-xl sm:text-2xl font-bold text-purple-900">{formatRank(managerData.summary_event_rank)}</p>
                         </div>
-                        <div className="p-1.5 bg-purple-100 rounded-full flex-shrink-0">
-                          <Calendar className="h-4 w-4 text-purple-600" />
+                        <div className="p-2 bg-purple-100 rounded-full flex-shrink-0">
+                          <Calendar className="h-5 w-5 text-purple-600" />
                         </div>
                       </div>
                     </CardContent>
@@ -713,17 +724,17 @@ export default function MyDashboard() {
 
                 {/* My Leagues */}
                 {leaguesData && leaguesData.classic && (
-                  <Card className="border-0 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg">
-                    <CardHeader>
-                      <CardTitle className="fpl-heading-card flex items-center gap-2 text-indigo-800">
+                  <Card className="border-0 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg mobile-dashboard-card" data-testid="card-leagues">
+                    <CardHeader className="mobile-dashboard-header">
+                      <CardTitle className="fpl-heading-card flex items-center gap-2 text-indigo-800 mobile-dashboard-title">
                         <div className="p-2 bg-indigo-100 rounded-lg">
                           <Trophy className="h-5 w-5 text-indigo-600" />
                         </div>
                         My Leagues
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                    <div className="space-y-3">
+                    <CardContent className="p-3 sm:p-6">
+                    <div className="space-y-2 sm:space-y-3">
                       {leaguesData.classic
                         .filter(league => {
                           // Show only: Overall League (id=314), Country leagues (India), and classic leagues
@@ -745,12 +756,13 @@ export default function MyDashboard() {
                           return (
                             <div 
                               key={league.id} 
-                              className="flex items-center justify-between p-4 rounded-xl bg-white/70 border-0 shadow-sm hover:shadow-md hover:bg-white/90 transition-all duration-200 cursor-pointer"
+                              className="mobile-league-item cursor-pointer"
                               onClick={() => {
                                 setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
                               }}
+                              data-testid={`league-item-${league.id}`}
                             >
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="mobile-league-info">
                                 <div className="min-w-0 flex-1">
                                   <div className="font-semibold text-gray-800 truncate" title={league.name}>
                                     {league.name}
@@ -784,6 +796,91 @@ export default function MyDashboard() {
                   </CardContent>
                 </Card>
               )}
+            </TabsContent>
+
+            {/* More Tab (Mobile Only) */}
+            <TabsContent value="more" className="fpl-section-spacing mt-8 sm:hidden">
+              <div className="space-y-6">
+                {/* Quick Stats */}
+                <Card className="border-0 bg-gradient-to-br from-gray-50 to-slate-50 shadow-lg mobile-dashboard-card" data-testid="card-quick-stats">
+                  <CardHeader className="mobile-dashboard-header">
+                    <CardTitle className="mobile-dashboard-title text-gray-800">Quick Stats</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-3 bg-white rounded-lg">
+                        <div className="text-sm text-gray-600">Team Value</div>
+                        <div className="text-lg font-bold text-green-600">£{getTeamValue().toFixed(1)}m</div>
+                      </div>
+                      <div className="text-center p-3 bg-white rounded-lg">
+                        <div className="text-sm text-gray-600">Bank</div>
+                        <div className="text-lg font-bold text-blue-600">
+                          £{teamData?.entry_history ? (teamData.entry_history.bank / 10).toFixed(1) : '0.0'}m
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Recent Transfers */}
+                {transfersData && transfersData.length > 0 && (
+                  <Card className="border-0 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg mobile-dashboard-card" data-testid="card-recent-transfers">
+                    <CardHeader className="mobile-dashboard-header">
+                      <CardTitle className="mobile-dashboard-title text-orange-800 flex items-center gap-2 justify-center">
+                        <ArrowLeftRight className="h-5 w-5" />
+                        Recent Transfers
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3">
+                      <div className="space-y-3 max-h-48 overflow-y-auto">
+                        {transfersData.slice(-3).reverse().map((transfer, index) => {
+                          const playerIn = bootstrapData?.elements.find(p => p.id === transfer.element_in);
+                          const playerOut = bootstrapData?.elements.find(p => p.id === transfer.element_out);
+                          
+                          return (
+                            <div key={index} className="bg-white/70 rounded-lg p-3 space-y-2">
+                              <div className="text-xs font-medium text-gray-700">GW{transfer.event}</div>
+                              <div className="flex items-center gap-2 text-sm">
+                                <span className="text-green-700 font-medium">+{playerIn?.web_name || 'Unknown'}</span>
+                                <ArrowLeftRight className="h-3 w-3 text-gray-400" />
+                                <span className="text-red-700 font-medium">-{playerOut?.web_name || 'Unknown'}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Performance Summary */}
+                {historyData?.current && (
+                  <Card className="border-0 bg-gradient-to-br from-emerald-50 to-green-50 shadow-lg mobile-dashboard-card" data-testid="card-performance-summary">
+                    <CardHeader className="mobile-dashboard-header">
+                      <CardTitle className="mobile-dashboard-title text-emerald-800 flex items-center gap-2 justify-center">
+                        <Activity className="h-5 w-5" />
+                        Recent Performance
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3">
+                      <div className="space-y-2">
+                        {historyData.current.slice(-3).reverse().map((gw) => (
+                          <div key={gw.event} className="flex items-center justify-between p-2 bg-white/70 rounded-lg">
+                            <div>
+                              <div className="font-medium text-sm">GW{gw.event}</div>
+                              <div className="text-xs text-gray-600">{gw.event_transfers || 0} transfers</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold text-emerald-700">{gw.points || 0} pts</div>
+                              <div className="text-xs text-gray-600">#{formatRank(gw.overall_rank || 0)}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </TabsContent>
 
             {/* Team Tab */}

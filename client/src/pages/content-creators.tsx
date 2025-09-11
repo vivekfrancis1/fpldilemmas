@@ -793,6 +793,7 @@ export default function ContentCreators() {
                 className="hover:shadow-sm"
                 stickyHeader={true}
                 enableHorizontalScroll={true}
+                getRowTestId={(creator, index) => `row-creator-${creator.id || index}`}
                 data-testid="content-creators-table"
               />
             </div>
