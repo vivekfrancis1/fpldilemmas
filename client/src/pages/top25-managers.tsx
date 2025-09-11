@@ -237,53 +237,6 @@ export default function Top25Managers() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-amber-500 bg-gradient-to-r from-amber-50 to-white">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-amber-700">25</div>
-                <div className="text-sm text-muted-foreground">Elite Managers</div>
-              </div>
-              <Crown className="h-8 w-8 text-amber-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-blue-700">Live</div>
-                <div className="text-sm text-muted-foreground">Tracking</div>
-              </div>
-              <TrendingUp className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-green-700">Real-time</div>
-                <div className="text-sm text-muted-foreground">Updates</div>
-              </div>
-              <RefreshCw className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-purple-700">Teams</div>
-                <div className="text-sm text-muted-foreground">Analysis</div>
-              </div>
-              <Users className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Managers Table */}
       <Card className="border-0 shadow-lg">
