@@ -89,10 +89,7 @@ function ManagerTableRow({ manager }: { manager: Top50Manager }) {
       title="Click to view team details"
     >
       <TableCell>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-sm">#{manager.rank}</span>
-          </div>
+        <div className="flex items-center">
           <div>
             <div className="font-medium">{manager.name}</div>
           </div>
