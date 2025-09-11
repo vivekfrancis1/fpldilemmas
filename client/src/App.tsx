@@ -89,6 +89,7 @@ function Router() {
       <Route path="/price-tracker" component={PriceTracker} />
       <Route path="/recent-price-changes" component={RecentPriceChanges} />
       <Route path="/predicted-price-changes" component={TransferTracker} />
+      <Route path="/transfer-tracker" component={TransferTracker} />
       <Route path="/league-comparison" component={LeagueComparison} />
       <Route path="/player-statistics" component={PlayerStats} />
 
