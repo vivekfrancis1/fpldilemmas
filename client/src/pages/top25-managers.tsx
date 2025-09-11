@@ -43,10 +43,7 @@ type Top25Manager = {
     gameweekRank?: number;
     teamValue: number;
     totalTransfers: number;
-    wildcardUsed?: boolean;
-    benchBoostUsed?: boolean;
-    freeHitUsed?: boolean;
-    tripleCaptainUsed?: boolean;
+    chipsUsed?: number;
   };
 };
 
@@ -155,12 +152,7 @@ function ManagerTableRow({ manager }: { manager: Top25Manager }) {
         {manager.latestTracking?.totalTransfers !== undefined && manager.latestTracking?.totalTransfers !== null ? manager.latestTracking.totalTransfers : "N/A"}
       </TableCell>
       <TableCell className="text-right font-mono">
-        {manager.latestTracking ? (
-          (manager.latestTracking.wildcardUsed ? 1 : 0) + 
-          (manager.latestTracking.benchBoostUsed ? 1 : 0) + 
-          (manager.latestTracking.freeHitUsed ? 1 : 0) + 
-          (manager.latestTracking.tripleCaptainUsed ? 1 : 0)
-        ) : "N/A"}
+        {manager.latestTracking?.chipsUsed !== undefined ? manager.latestTracking.chipsUsed : "N/A"}
       </TableCell>
     </TableRow>
   );
@@ -173,16 +165,27 @@ export default function Top25Managers() {
   // Fetch latest tracking data for all managers
   const fetchManagerData = async (managerId: number) => {
     try {
-      const response = await fetch(`/api/manager/${managerId}`);
-      if (response.ok) {
-        const data = await response.json();
+      // Fetch basic manager data
+      const [managerResponse, historyResponse] = await Promise.all([
+        fetch(`/api/manager/${managerId}`),
+        fetch(`/api/manager/${managerId}/history`)
+      ]);
+      
+      if (managerResponse.ok && historyResponse.ok) {
+        const managerData = await managerResponse.json();
+        const historyData = await historyResponse.json();
+        
+        // Count chips used
+        const chipsUsed = historyData.chips ? historyData.chips.length : 0;
+        
         return {
-          gameweek: data.current_event || 0,
-          overallRank: data.summary_overall_rank,
-          overallPoints: data.summary_overall_points,
-          gameweekPoints: data.summary_event_points,
-          teamValue: data.last_deadline_value,
-          totalTransfers: data.last_deadline_total_transfers,
+          gameweek: managerData.current_event || 0,
+          overallRank: managerData.summary_overall_rank,
+          overallPoints: managerData.summary_overall_points,
+          gameweekPoints: managerData.summary_event_points,
+          teamValue: managerData.last_deadline_value,
+          totalTransfers: managerData.last_deadline_total_transfers,
+          chipsUsed: chipsUsed,
         };
       }
     } catch (error) {
