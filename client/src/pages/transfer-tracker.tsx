@@ -415,7 +415,6 @@ export default function TransferTracker() {
                       <th></th>
                       <th></th>
                       <th></th>
-                      <th></th>
                       
                       {/* Gameweek Sub-headers */}
                       <th className="text-right py-1 px-2 border-l border-green-200 dark:border-green-700 min-w-[80px]">
