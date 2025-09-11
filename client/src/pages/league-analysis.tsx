@@ -29,7 +29,6 @@ export default function LeagueAnalysisPage() {
   const leagueId = pathParts[1]; // league-analysis/:leagueId/:leagueName/:managerId
   const leagueName = pathParts[2] ? decodeURIComponent(pathParts[2]) : 'League Analysis';
   const managerId = pathParts[3];
-  
 
   if (!leagueId) {
     return (
