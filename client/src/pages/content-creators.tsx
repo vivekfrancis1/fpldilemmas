@@ -167,11 +167,6 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
           </div>
         </div>
       </TableCell>
-      <TableCell className="text-left">
-        <span className="text-sm font-medium">
-          {creator.playerName || 'N/A'}
-        </span>
-      </TableCell>
       <TableCell className="text-right">
         <div className="flex flex-col items-end">
           <Badge variant={getRankBadgeVariant(latest?.overallRank)} className="mb-1">
@@ -184,12 +179,7 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
         {latest?.overallPoints !== undefined && latest?.overallPoints !== null ? latest.overallPoints : "N/A"}
       </TableCell>
       <TableCell className="text-right">
-        <div className="flex flex-col items-end">
-          <span className="font-mono font-bold">{latest?.gameweekPoints !== undefined && latest?.gameweekPoints !== null ? latest.gameweekPoints : "N/A"}</span>
-          {latest?.gameweekRank && (
-            <span className="text-xs text-muted-foreground">#{latest.gameweekRank.toLocaleString()}</span>
-          )}
-        </div>
+        <span className="font-mono font-bold">{latest?.gameweekPoints !== undefined && latest?.gameweekPoints !== null ? latest.gameweekPoints : "N/A"}</span>
       </TableCell>
       <TableCell className="text-right font-mono">
         £{latest?.teamValue || 'N/A'}m
@@ -360,7 +350,6 @@ export default function ContentCreators() {
                 <TableHeader>
               <TableRow>
                 <TableHead className="w-[300px]">Creator</TableHead>
-                <TableHead className="text-left">Player Name</TableHead>
                 <TableHead 
                   className="text-right cursor-pointer hover:bg-muted/50" 
                   onClick={() => handleSort('rank')}
