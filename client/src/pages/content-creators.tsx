@@ -124,7 +124,11 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
   };
 
   return (
-    <TableRow className="hover:bg-muted/50">
+    <TableRow 
+      className="hover:bg-muted/50 cursor-pointer transition-colors" 
+      onClick={() => handleViewTeam(creator.id)}
+      data-testid={`row-creator-${creator.id}`}
+    >
       <TableCell>
         <div className="flex items-center gap-3">
           <Users className="h-4 w-4 text-blue-600" />
@@ -141,6 +145,7 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
                   rel="noopener noreferrer"
                   className="text-xs text-blue-600 hover:underline"
                   data-testid={`link-creator-twitter-${creator.id}`}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {creator.twitterHandle}
                 </a>
@@ -152,6 +157,7 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
                   rel="noopener noreferrer"
                   className="text-xs text-red-600 hover:underline break-all"
                   data-testid={`link-creator-youtube-${creator.id}`}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {creator.youtubeUrl.split('/').pop() || 'YouTube'}
                 </a>
@@ -189,16 +195,6 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
       </TableCell>
       <TableCell className="text-right font-mono">
         {latest?.totalTransfers !== undefined && latest?.totalTransfers !== null ? latest.totalTransfers : "N/A"}
-      </TableCell>
-      <TableCell className="text-center">
-        <Button
-          size="default"
-          onClick={() => handleViewTeam(creator.id)}
-          className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white"
-          title="View Team"
-        >
-          View Team
-        </Button>
       </TableCell>
     </TableRow>
   );
@@ -387,7 +383,6 @@ export default function ContentCreators() {
                 </TableHead>
                 <TableHead className="text-right">Team Value</TableHead>
                 <TableHead className="text-right">Transfers</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>

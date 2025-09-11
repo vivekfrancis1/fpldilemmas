@@ -81,7 +81,11 @@ function ManagerTableRow({ manager }: { manager: Top50Manager }) {
   };
 
   return (
-    <TableRow className="hover:bg-muted/50">
+    <TableRow 
+      className="hover:bg-muted/50 cursor-pointer transition-colors" 
+      onClick={() => handleViewTeam(manager.rank)}
+      data-testid={`row-manager-${manager.rank}`}
+    >
       <TableCell>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center">
@@ -113,18 +117,6 @@ function ManagerTableRow({ manager }: { manager: Top50Manager }) {
         {manager.latestTracking?.teamValue !== undefined && manager.latestTracking?.teamValue !== null 
           ? `£${(manager.latestTracking.teamValue / 10).toFixed(1)}m` 
           : "N/A"}
-      </TableCell>
-      <TableCell className="text-center">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleViewTeam(manager.rank)}
-          className="hover:bg-blue-50"
-          data-testid={`button-view-team-${manager.rank}`}
-        >
-          <Users className="h-4 w-4 mr-1" />
-          View Team
-        </Button>
       </TableCell>
     </TableRow>
   );
@@ -240,7 +232,6 @@ export default function Top50Managers() {
                 <TableHead className="text-right">Total Points</TableHead>
                 <TableHead className="text-right">GW Points</TableHead>
                 <TableHead className="text-right">Team Value</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -256,7 +247,6 @@ export default function Top50Managers() {
                     <TableCell><Skeleton className="h-6 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-24" /></TableCell>
                   </TableRow>
                 ))
               )}
