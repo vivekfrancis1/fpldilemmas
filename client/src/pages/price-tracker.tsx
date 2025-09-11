@@ -464,7 +464,6 @@ export default function PriceTracker() {
                       <thead>
                         <tr className="border-b bg-muted/20">
                           <th className="text-left p-3 font-medium">Player</th>
-                          <th className="text-left p-3 font-medium">Team/Pos</th>
                           <th className="text-right p-3 font-medium">Current Price</th>
                           <th className="text-center p-3 font-medium">Change</th>
                           <th className="text-right p-3 font-medium">Ownership</th>
@@ -490,12 +489,6 @@ export default function PriceTracker() {
                                   <BarChart3 className="h-3 w-3 text-gray-400 flex-shrink-0" />
                                 )}
                                 <span className="font-medium">{prediction.player_name}</span>
-                              </div>
-                            </td>
-                            <td className="p-3">
-                              <div>
-                                <div className="font-medium text-xs">{prediction.team_name}</div>
-                                <div className="text-xs text-muted-foreground">{prediction.position}</div>
                               </div>
                             </td>
                             <td className="p-3 text-right font-medium">
