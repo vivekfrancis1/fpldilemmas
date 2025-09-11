@@ -597,7 +597,7 @@ export default function Top25TeamAnalysis() {
                   </CardHeader>
                   <CardContent>
                     {(() => {
-                      const chipData = getChipAnalysis();
+                      const chipData = getChipAnalysis;
                       return (
                         <div className="space-y-3">
                           {chipData.activeChips.length > 0 ? (
@@ -646,7 +646,7 @@ export default function Top25TeamAnalysis() {
                   </CardHeader>
                   <CardContent>
                     {(() => {
-                      const budgetData = getBudgetAnalysis();
+                      const budgetData = getBudgetAnalysis;
                       return (
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
@@ -912,7 +912,7 @@ export default function Top25TeamAnalysis() {
                   </CardHeader>
                   <CardContent>
                     {(() => {
-                      const budgetData = getBudgetAnalysis();
+                      const budgetData = getBudgetAnalysis;
                       return (
                         <div className="space-y-6">
                           <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
@@ -960,7 +960,7 @@ export default function Top25TeamAnalysis() {
                   </CardHeader>
                   <CardContent>
                     {(() => {
-                      const budgetData = getBudgetAnalysis();
+                      const budgetData = getBudgetAnalysis;
                       return (
                         <div className="space-y-6">
                           <div className="text-center p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
