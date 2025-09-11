@@ -265,6 +265,7 @@ export function ResponsiveTable<T = any>({
   maxHeight,
   highlightRow,
   onRowClick,
+  getRowTestId,
 }: ResponsiveTableProps<T>) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
@@ -325,6 +326,7 @@ export function ResponsiveTable<T = any>({
                 title={mobileCardTitle ? mobileCardTitle(item) : undefined}
                 onRowClick={onRowClick}
                 highlightRow={highlightRow}
+                getRowTestId={getRowTestId}
               />
             ))}
           </div>
