@@ -734,7 +734,13 @@ export default function MyDashboard() {
                         })
                         .map((league, index: number) => {
                           return (
-                            <div key={league.id} className="flex items-center justify-between p-4 rounded-xl bg-white/70 border-0 shadow-sm hover:shadow-md transition-all duration-200">
+                            <div 
+                              key={league.id} 
+                              className="flex items-center justify-between p-4 rounded-xl bg-white/70 border-0 shadow-sm hover:shadow-md hover:bg-white/90 transition-all duration-200 cursor-pointer"
+                              onClick={() => {
+                                setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
+                              }}
+                            >
                               <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <div className="min-w-0 flex-1">
                                   <div className="font-semibold text-gray-800 truncate" title={league.name}>
@@ -745,21 +751,10 @@ export default function MyDashboard() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-right flex items-center gap-3">
+                              <div className="text-right">
                                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
                                   #{league.entry_rank.toLocaleString()}
                                 </div>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="text-xs"
-                                  onClick={() => {
-                                    setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
-                                  }}
-                                >
-                                  <ExternalLink className="h-3 w-3 mr-1" />
-                                  View League
-                                </Button>
                               </div>
                             </div>
                           );
