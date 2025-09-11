@@ -134,7 +134,7 @@ export default function Top50Managers() {
   const [managersWithData, setManagersWithData] = useState<Top50Manager[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch top 50 managers data from API
+  // Fetch top 25 managers data from API
   const { data: top50Data } = useQuery<Top50Manager[]>({
     queryKey: ['/api/top50-managers'],
     retry: 2,
@@ -196,10 +196,10 @@ export default function Top50Managers() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-                  Current Top 50 Managers
+                  Current Top 25 Managers
                 </h1>
                 <p className="text-muted-foreground text-lg">
-                  Current top 50 Fantasy Premier League managers from the overall league
+                  Current top 25 Fantasy Premier League managers from the overall league
                 </p>
               </div>
             </div>
@@ -225,7 +225,7 @@ export default function Top50Managers() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-green-700">50</div>
+                <div className="text-2xl font-bold text-green-700">25</div>
                 <div className="text-sm text-muted-foreground">Top Managers</div>
               </div>
               <Crown className="h-8 w-8 text-green-500" />
@@ -272,10 +272,10 @@ export default function Top50Managers() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-green-600" />
-            Current Top 50 FPL Managers
+            Current Top 25 FPL Managers
           </CardTitle>
           <CardDescription>
-            Track the performance and teams of the current top 50 Fantasy Premier League managers
+            Track the performance and teams of the current top 25 Fantasy Premier League managers
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">

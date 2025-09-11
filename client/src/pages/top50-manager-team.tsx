@@ -265,7 +265,7 @@ export default function Top50ManagerTeam() {
           <Link href="/top50-managers">
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Top 50
+              Back to Top 25
             </Button>
           </Link>
           <Skeleton className="h-8 w-48" />
@@ -286,7 +286,7 @@ export default function Top50ManagerTeam() {
           <Link href="/top50-managers">
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Top 50
+              Back to Top 25
             </Button>
           </Link>
         </div>
@@ -331,7 +331,7 @@ export default function Top50ManagerTeam() {
           <Link href="/top50-managers">
             <Button variant="outline" size="sm" className="hover:bg-blue-50">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Top 50
+              Back to Top 25
             </Button>
           </Link>
         </div>

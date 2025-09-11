@@ -939,10 +939,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Top 50 Managers Overall League endpoint
+  // Top 25 Managers Overall League endpoint
   app.get("/api/top50-managers", async (req, res) => {
     try {
-      // Fetch the current top 50 managers from the FPL Overall league (ID: 314)
+      // Fetch the current top 25 managers from the FPL Overall league (ID: 314)
       // This league contains all 11+ million FPL managers ranked by total points
       const response = await fetch("https://fantasy.premierleague.com/api/leagues-classic/314/standings/?page_standings=1");
       
@@ -952,18 +952,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const data = await response.json();
       
-      // Extract the top 50 managers from the results
-      const top50Managers = data.standings.results.slice(0, 50).map((manager: any, index: number) => ({
+      // Extract the top 25 managers from the results
+      const top25Managers = data.standings.results.slice(0, 25).map((manager: any, index: number) => ({
         rank: index + 1,
         name: manager.player_name,
         managerId: manager.entry
       }));
 
-      res.json(top50Managers);
+      res.json(top25Managers);
     } catch (error) {
-      console.error("Error fetching top 50 managers from Overall league:", error);
+      console.error("Error fetching top 25 managers from Overall league:", error);
       res.status(500).json({
-        error: "Failed to fetch top 50 managers from Overall league",
+        error: "Failed to fetch top 25 managers from Overall league",
         message: error instanceof Error ? error.message : "Unknown error",
       });
     }
