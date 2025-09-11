@@ -178,26 +178,24 @@ export default function Top50Managers() {
   }, [top50Data]);
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-green-400 to-blue-500 rounded-xl">
-                <Crown className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-                  Current Top 25 Managers
-                </h1>
-                <p className="text-muted-foreground text-lg">
-                  Current top 25 Fantasy Premier League managers from the overall league
-                </p>
-              </div>
+    <div className="fpl-page-wrapper">
+      <div className="fpl-container fpl-content-area">
+        {/* Page Header */}
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Trophy className="h-8 w-8" />
+              <h1>Top 25 (Current)</h1>
             </div>
+            <p className="fpl-page-subtitle">
+              Current top 25 Fantasy Premier League managers from the overall league
+            </p>
           </div>
-          <div className="flex items-center gap-3">
+        </div>
+
+        {/* Controls */}
+        <div className="fpl-controls">
+          <div className="fpl-controls-right">
             <Button
               onClick={refreshAllData}
               disabled={isRefreshing}
@@ -210,7 +208,6 @@ export default function Top50Managers() {
             </Button>
           </div>
         </div>
-      </div>
 
 
       {/* Managers Table */}
@@ -254,7 +251,8 @@ export default function Top50Managers() {
             </TableBody>
           </Table>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }

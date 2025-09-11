@@ -196,26 +196,24 @@ export default function Top25Managers() {
   }, []);
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl">
-                <Crown className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-                  Top 25 FPL Managers
-                </h1>
-                <p className="text-muted-foreground text-lg">
-                  Elite Fantasy Premier League managers and their current standings
-                </p>
-              </div>
+    <div className="fpl-page-wrapper">
+      <div className="fpl-container fpl-content-area">
+        {/* Page Header */}
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Crown className="h-8 w-8" />
+              <h1>Top 25 FPL Managers</h1>
             </div>
+            <p className="fpl-page-subtitle">
+              Elite Fantasy Premier League managers and their current standings
+            </p>
           </div>
-          <div className="flex items-center gap-3">
+        </div>
+
+        {/* Controls */}
+        <div className="fpl-controls">
+          <div className="fpl-controls-right">
             <Button
               onClick={refreshAllData}
               disabled={isRefreshing}
@@ -228,7 +226,6 @@ export default function Top25Managers() {
             </Button>
           </div>
         </div>
-      </div>
 
 
       {/* Managers Table */}
@@ -262,20 +259,21 @@ export default function Top25Managers() {
         </CardContent>
       </Card>
 
-      {/* Footer */}
-      <div className="text-center py-4 border-t border-gray-200">
-        <p className="text-sm text-gray-600">
-          Data based on{' '}
-          <a 
-            href="https://www.fplresearch.com/" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:text-blue-800 underline"
-          >
-            FPL Research
-          </a>{' '}
-          as on September 10, 2025
-        </p>
+        {/* Footer */}
+        <div className="text-center py-4 border-t border-gray-200">
+          <p className="text-sm text-gray-600">
+            Data based on{' '}
+            <a 
+              href="https://www.fplresearch.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              FPL Research
+            </a>{' '}
+            as on September 10, 2025
+          </p>
+        </div>
       </div>
     </div>
   );
