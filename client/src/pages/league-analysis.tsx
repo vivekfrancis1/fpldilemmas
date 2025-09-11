@@ -30,12 +30,12 @@ export default function LeagueAnalysisPage() {
   const managerId = params.get('managerId');
   const leagueName = params.get('leagueName') || 'League Analysis';
 
-  if (!leagueId || !managerId) {
+  if (!leagueId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center py-8">
-            <p className="text-muted-foreground">Missing league or manager information</p>
+            <p className="text-muted-foreground">Missing league information</p>
             <Link href="/">
               <Button variant="outline" className="mt-4">
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -100,9 +100,9 @@ export default function LeagueAnalysisPage() {
     (entry: any) => entry.entry.toString() === managerId
   );
 
-  // Show top 50 or all entries if less than 50
+  // Show top 100 or all entries if less than 100
   const allEntries = (leagueData as any).standings?.results || [];
-  const topEntries = allEntries.length > 50 ? allEntries.slice(0, 50) : allEntries;
+  const topEntries = allEntries.length > 100 ? allEntries.slice(0, 100) : allEntries;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
@@ -131,11 +131,11 @@ export default function LeagueAnalysisPage() {
           <CardHeader>
             <CardTitle className="fpl-heading-card flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              League Standings
+              Top 100 League Managers
             </CardTitle>
             <p className="text-muted-foreground">
-              Showing {topEntries.length === 50 ? 'top 50' : 'all'} entries
-              {allEntries.length > 50 && ` of ${allEntries.length} total members`}
+              Showing {topEntries.length === 100 ? 'top 100' : 'all'} managers
+              {allEntries.length > 100 && ` of ${allEntries.length} total members`}
             </p>
           </CardHeader>
           <CardContent>
@@ -164,14 +164,11 @@ export default function LeagueAnalysisPage() {
                           {isCurrentManager && <Badge className="ml-2 bg-blue-600">You</Badge>}
                         </p>
                         <p className="text-sm text-muted-foreground">{entry.entry_name}</p>
-                        <p className="text-xs text-gray-500">Manager ID: {entry.entry}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">{entry.total?.toLocaleString()} pts</p>
-                      {entry.event_total && (
-                        <p className="text-sm text-muted-foreground">GW: {entry.event_total}</p>
-                      )}
+                      <p className="text-sm text-muted-foreground">GW: {entry.event_total || 0}</p>
                     </div>
                   </div>
                 );

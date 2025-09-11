@@ -749,7 +749,7 @@ export default function MyDashboard() {
                                   #{league.entry_rank.toLocaleString()}
                                 </div>
                                 <Link
-                                  href={`/league-analysis?leagueId=${league.id}&managerId=${managerId}&leagueName=${encodeURIComponent(league.name)}`}
+                                  href={`/league-analysis?leagueId=${league.id}&managerId=${searchedId}&leagueName=${encodeURIComponent(league.name)}`}
                                 >
                                   <Button variant="outline" size="sm" className="text-xs">
                                     <ExternalLink className="h-3 w-3 mr-1" />
