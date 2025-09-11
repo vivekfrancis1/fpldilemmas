@@ -12,14 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { ResponsiveTable, ResponsiveTableColumn } from "@/components/ui/responsive-table";
 import {
   Tabs,
   TabsContent,
@@ -211,63 +204,123 @@ function getRankChangeDisplay(change: number | undefined) {
   }
 }
 
-// Manager Table Row Component
-function ManagerTableRow({ manager }: { manager: Top50Manager }) {
-  const [, setLocation] = useLocation();
-
-  const handleViewTeam = (rank: number) => {
-    setLocation(`/top50-managers/${rank}/team`);
-  };
-
-  return (
-    <TableRow 
-      className="hover:bg-green-50 hover:shadow-md cursor-pointer transition-all duration-200 hover:border-l-4 hover:border-l-green-500" 
-      onClick={() => handleViewTeam(manager.rank)}
-      data-testid={`row-manager-${manager.rank}`}
-      title="Click to view team details"
-    >
-      <TableCell>
-        <div className="flex items-center">
-          <div>
-            <div className="font-medium">{manager.name}</div>
-          </div>
-        </div>
-      </TableCell>
-      <TableCell>
-        {manager.latestTracking?.overallRank !== undefined && manager.latestTracking?.overallRank !== null ? (
+// Column configuration for ResponsiveTable
+const getTop50ManagerColumns = (): ResponsiveTableColumn<Top50Manager>[] => [
+  {
+    key: 'name',
+    header: 'Manager',
+    priority: 'essential',
+    align: 'left',
+    mobileLabel: 'Manager',
+    cardOrder: 1,
+    render: (value, manager) => (
+      <div className="flex items-center">
+        <div className="font-medium">{manager.name}</div>
+      </div>
+    )
+  },
+  {
+    key: 'latestTracking.overallRank',
+    header: 'Current Rank',
+    priority: 'important',
+    align: 'left',
+    mobileLabel: 'Rank',
+    cardOrder: 2,
+    sortable: true,
+    render: (value, manager) => {
+      const rank = manager.latestTracking?.overallRank;
+      if (rank !== undefined && rank !== null) {
+        return (
           <div className="space-y-1">
-            <Badge variant={getRankBadgeVariant(manager.latestTracking.overallRank)} className="font-mono">
-              #{manager.latestTracking.overallRank.toLocaleString()}
+            <Badge variant={getRankBadgeVariant(rank)} className="font-mono">
+              #{rank.toLocaleString()}
             </Badge>
           </div>
-        ) : (
-          <span className="text-muted-foreground text-sm">Loading...</span>
-        )}
-      </TableCell>
-      <TableCell className="text-right font-mono">
-        {manager.latestTracking?.overallPoints !== undefined && manager.latestTracking?.overallPoints !== null ? manager.latestTracking.overallPoints : "N/A"}
-      </TableCell>
-      <TableCell className="text-right font-mono">
-        {manager.latestTracking?.gameweekPoints !== undefined && manager.latestTracking?.gameweekPoints !== null ? manager.latestTracking.gameweekPoints : "N/A"}
-      </TableCell>
-      <TableCell className="text-right font-mono">
-        {manager.latestTracking?.teamValue !== undefined && manager.latestTracking?.teamValue !== null 
-          ? `£${(manager.latestTracking.teamValue / 10).toFixed(1)}m` 
-          : "N/A"}
-      </TableCell>
-      <TableCell className="text-right font-mono">
-        {manager.latestTracking?.totalTransfers !== undefined && manager.latestTracking?.totalTransfers !== null ? manager.latestTracking.totalTransfers : "N/A"}
-      </TableCell>
-      <TableCell className="text-right font-mono">
-        {manager.latestTracking?.chipsUsed !== undefined ? manager.latestTracking.chipsUsed : "N/A"}
-      </TableCell>
-    </TableRow>
-  );
-}
+        );
+      }
+      return <span className="text-muted-foreground text-sm">Loading...</span>;
+    }
+  },
+  {
+    key: 'latestTracking.overallPoints',
+    header: 'Total Points',
+    priority: 'important',
+    align: 'right',
+    mobileLabel: 'Points',
+    cardOrder: 3,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, manager) => {
+      const points = manager.latestTracking?.overallPoints;
+      return points !== undefined && points !== null ? points : "N/A";
+    }
+  },
+  {
+    key: 'latestTracking.gameweekPoints',
+    header: 'GW Points',
+    priority: 'secondary',
+    align: 'right',
+    mobileLabel: 'GW Points',
+    cardOrder: 4,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, manager) => {
+      const gwPoints = manager.latestTracking?.gameweekPoints;
+      return gwPoints !== undefined && gwPoints !== null ? gwPoints : "N/A";
+    }
+  },
+  {
+    key: 'latestTracking.teamValue',
+    header: 'Team Value',
+    priority: 'secondary',
+    align: 'right',
+    mobileLabel: 'Value',
+    cardOrder: 5,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, manager) => {
+      const teamValue = manager.latestTracking?.teamValue;
+      return teamValue !== undefined && teamValue !== null 
+        ? `£${(teamValue / 10).toFixed(1)}m` 
+        : "N/A";
+    }
+  },
+  {
+    key: 'latestTracking.totalTransfers',
+    header: 'Transfers',
+    priority: 'optional',
+    align: 'right',
+    mobileLabel: 'Transfers',
+    cardOrder: 6,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, manager) => {
+      const transfers = manager.latestTracking?.totalTransfers;
+      return transfers !== undefined && transfers !== null ? transfers : "N/A";
+    }
+  },
+  {
+    key: 'latestTracking.chipsUsed',
+    header: 'Chips',
+    priority: 'optional',
+    align: 'right',
+    mobileLabel: 'Chips',
+    cardOrder: 7,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, manager) => {
+      const chips = manager.latestTracking?.chipsUsed;
+      return chips !== undefined ? chips : "N/A";
+    }
+  }
+];
 
 export default function Top50Managers() {
   const [managersWithData, setManagersWithData] = useState<Top50Manager[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [sortField, setSortField] = useState<string>('latestTracking.overallRank');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [, navigate] = useLocation();
 
   // Fetch top 50 managers data from API
   const { data: top50Data } = useQuery<Top50Manager[]>({
@@ -532,6 +585,53 @@ export default function Top50Managers() {
     }
   }, [top50Data]);
 
+  // Sorting logic
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sort the managers data
+  const sortedManagersData = useMemo(() => {
+    const sorted = [...managersWithData].sort((a, b) => {
+      const getValue = (manager: Top50Manager, field: string) => {
+        switch (field) {
+          case 'latestTracking.overallRank':
+            return manager.latestTracking?.overallRank || Number.MAX_SAFE_INTEGER;
+          case 'latestTracking.overallPoints':
+            return manager.latestTracking?.overallPoints || 0;
+          case 'latestTracking.gameweekPoints':
+            return manager.latestTracking?.gameweekPoints || 0;
+          case 'latestTracking.teamValue':
+            return manager.latestTracking?.teamValue || 0;
+          case 'name':
+            return manager.name;
+          default:
+            return 0;
+        }
+      };
+
+      const aVal = getValue(a, sortField);
+      const bVal = getValue(b, sortField);
+      
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return sortDirection === 'asc' 
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+      
+      return sortDirection === 'asc' 
+        ? (aVal as number) - (bVal as number)
+        : (bVal as number) - (aVal as number);
+    });
+
+    return sorted;
+  }, [managersWithData, sortField, sortDirection]);
+
   return (
     <div className="fpl-page-wrapper">
       <div className="fpl-container fpl-content-area">
@@ -592,38 +692,24 @@ export default function Top50Managers() {
             {/* Managers Table */}
       <Card className="border-0 shadow-lg">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Manager</TableHead>
-                <TableHead>Current Rank</TableHead>
-                <TableHead className="text-right">Total Points</TableHead>
-                <TableHead className="text-right">GW Points</TableHead>
-                <TableHead className="text-right">Team Value</TableHead>
-                <TableHead className="text-right">Transfers</TableHead>
-                <TableHead className="text-right">Chips</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {managersWithData.length > 0 ? (
-                managersWithData.map((manager) => (
-                  <ManagerTableRow key={manager.rank} manager={manager} />
-                ))
-              ) : (
-                Array.from({ length: 10 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-8 w-48" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-12" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-12" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-12" /></TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <ResponsiveTable
+            data={sortedManagersData}
+            columns={getTop50ManagerColumns()}
+            enableMobileCards={true}
+            mobileCardTitle={(manager) => manager.name}
+            loading={managersWithData.length === 0}
+            emptyMessage="No manager data available"
+            onRowClick={(manager) => {
+              navigate(`/top50-managers/${manager.rank}/team`);
+            }}
+            onSort={handleSort}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            className="hover:shadow-sm"
+            stickyHeader={true}
+            enableHorizontalScroll={true}
+            data-testid="top50-managers-table"
+          />
         </CardContent>
         </Card>
           </TabsContent>

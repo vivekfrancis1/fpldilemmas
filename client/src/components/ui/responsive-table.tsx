@@ -64,6 +64,9 @@ export interface ResponsiveTableProps<T = any> {
   
   // Events
   onRowClick?: (item: T, index: number) => void;
+  
+  // Row Test IDs
+  getRowTestId?: (item: T, index: number) => string;
 }
 
 // Mobile Card Component
@@ -74,7 +77,8 @@ function MobileCard<T>({
   title,
   onRowClick,
   highlightRow,
-  className 
+  className,
+  getRowTestId
 }: {
   item: T;
   index: number;
@@ -83,6 +87,7 @@ function MobileCard<T>({
   onRowClick?: (item: T, index: number) => void;
   highlightRow?: (item: T, index: number) => boolean;
   className?: string;
+  getRowTestId?: (item: T, index: number) => string;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -143,7 +148,7 @@ function MobileCard<T>({
         className
       )}
       onClick={handleCardClick}
-      data-testid={`mobile-card-${index}`}
+      data-testid={getRowTestId ? getRowTestId(item, index).replace('row-', 'mobile-card-') : `mobile-card-${index}`}
     >
       <CardContent className="p-4">
         {/* Card Title */}
@@ -472,7 +477,7 @@ export function ResponsiveTable<T = any>({
                     highlightRow && highlightRow(item, index) && "bg-blue-50 hover:bg-blue-100"
                   )}
                   onClick={() => onRowClick && onRowClick(item, index)}
-                  data-testid={`row-${index}`}
+                  data-testid={getRowTestId ? getRowTestId(item, index) : `row-${index}`}
                 >
                   {columns.map((column, columnIndex) => {
                     const value = item[column.key as keyof T];

@@ -31,14 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { ResponsiveTable, ResponsiveTableColumn } from "@/components/ui/responsive-table";
 import {
   Tabs,
   TabsContent,
@@ -254,112 +247,156 @@ function getRankChangeDisplay(change: number | undefined) {
   }
 }
 
-// Creator Table Row Component
-function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
-  const latest = creator.latestTracking;
-  const [, setLocation] = useLocation();
-  const [chipsUsed, setChipsUsed] = useState<number | null>(null);
-
-  const handleViewTeam = (creatorId: number) => {
-    setLocation(`/content-creators/${creatorId}/team`);
-  };
-
-  // Fetch chip data for this creator
-  useEffect(() => {
-    const fetchChipData = async () => {
-      if (creator.managerId) {
-        try {
-          const response = await fetch(`/api/manager/${creator.managerId}/history`);
-          if (response.ok) {
-            const historyData = await response.json();
-            const chipCount = historyData.chips ? historyData.chips.length : 0;
-            setChipsUsed(chipCount);
-          }
-        } catch (error) {
-          console.error(`Failed to fetch chip data for ${creator.name}:`, error);
-          setChipsUsed(0);
-        }
-      }
-    };
-    
-    fetchChipData();
-  }, [creator.managerId, creator.name]);
-
-  return (
-    <TableRow 
-      className="hover:bg-emerald-50 hover:shadow-md cursor-pointer transition-all duration-200 hover:border-l-4 hover:border-l-emerald-500" 
-      onClick={() => handleViewTeam(creator.id)}
-      data-testid={`row-creator-${creator.id}`}
-      title="Click to view team details"
-    >
-      <TableCell>
-        <div className="flex items-center gap-3">
-          <Users className="h-4 w-4 text-blue-600" />
-          <div>
-            <div className="font-medium">{creator.name}</div>
-            {creator.description && (
-              <div className="text-xs text-muted-foreground mt-1 max-w-xs">{creator.description}</div>
+// Column configuration for ResponsiveTable
+const getContentCreatorColumns = (): ResponsiveTableColumn<CreatorWithLatestData>[] => [
+  {
+    key: 'name',
+    header: 'Creator',
+    priority: 'essential',
+    align: 'left',
+    mobileLabel: 'Creator',
+    cardOrder: 1,
+    width: '300px',
+    render: (value, creator) => (
+      <div className="flex items-center gap-3">
+        <Users className="h-4 w-4 text-blue-600" />
+        <div>
+          <div className="font-medium">{creator.name}</div>
+          {creator.description && (
+            <div className="text-xs text-muted-foreground mt-1 max-w-xs">{creator.description}</div>
+          )}
+          <div className="flex flex-wrap gap-3 mt-2">
+            {creator.twitterHandle && (
+              <a
+                href={`https://x.com/${creator.twitterHandle.replace('@', '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:underline"
+                data-testid={`link-creator-twitter-${creator.id}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {creator.twitterHandle}
+              </a>
             )}
-            <div className="flex flex-wrap gap-3 mt-2">
-              {creator.twitterHandle && (
-                <a
-                  href={`https://x.com/${creator.twitterHandle.replace('@', '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:underline"
-                  data-testid={`link-creator-twitter-${creator.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {creator.twitterHandle}
-                </a>
-              )}
-              {creator.youtubeUrl && (
-                <a
-                  href={creator.youtubeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-red-600 hover:underline break-all"
-                  data-testid={`link-creator-youtube-${creator.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {creator.youtubeUrl.split('/').pop() || 'YouTube'}
-                </a>
-              )}
-            </div>
+            {creator.youtubeUrl && (
+              <a
+                href={creator.youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-red-600 hover:underline break-all"
+                data-testid={`link-creator-youtube-${creator.id}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {creator.youtubeUrl.split('/').pop() || 'YouTube'}
+              </a>
+            )}
           </div>
         </div>
-      </TableCell>
-      <TableCell className="text-right">
+      </div>
+    )
+  },
+  {
+    key: 'latestTracking.overallRank',
+    header: 'Overall Rank',
+    priority: 'important',
+    align: 'right',
+    mobileLabel: 'Rank',
+    cardOrder: 2,
+    sortable: true,
+    render: (value, creator) => {
+      const latest = creator.latestTracking;
+      return (
         <div className="flex flex-col items-end">
           <Badge variant={getRankBadgeVariant(latest?.overallRank)} className="mb-1">
             {latest?.overallRank ? `#${latest.overallRank.toLocaleString()}` : "N/A"}
           </Badge>
           {getRankChangeDisplay(creator.rankChange)}
         </div>
-      </TableCell>
-      <TableCell className="text-right font-mono">
-        {latest?.overallPoints !== undefined && latest?.overallPoints !== null ? latest.overallPoints : "N/A"}
-      </TableCell>
-      <TableCell className="text-right">
-        <span className="font-mono font-bold">{latest?.gameweekPoints !== undefined && latest?.gameweekPoints !== null ? latest.gameweekPoints : "N/A"}</span>
-      </TableCell>
-      <TableCell className="text-right font-mono">
-        £{latest?.teamValue || 'N/A'}m
-      </TableCell>
-      <TableCell className="text-right font-mono">
-        {latest?.totalTransfers !== undefined && latest?.totalTransfers !== null ? latest.totalTransfers : "N/A"}
-      </TableCell>
-      <TableCell className="text-right font-mono">
-        {chipsUsed !== null ? chipsUsed : "N/A"}
-      </TableCell>
-    </TableRow>
-  );
-}
+      );
+    }
+  },
+  {
+    key: 'latestTracking.overallPoints',
+    header: 'Total Points',
+    priority: 'important',
+    align: 'right',
+    mobileLabel: 'Points',
+    cardOrder: 3,
+    className: 'font-mono',
+    sortable: true,
+    render: (value, creator) => {
+      const points = creator.latestTracking?.overallPoints;
+      return points !== undefined && points !== null ? points : "N/A";
+    }
+  },
+  {
+    key: 'latestTracking.gameweekPoints',
+    header: 'GW Points',
+    priority: 'secondary',
+    align: 'right',
+    mobileLabel: 'GW Points',
+    cardOrder: 4,
+    sortable: true,
+    render: (value, creator) => {
+      const gwPoints = creator.latestTracking?.gameweekPoints;
+      return (
+        <span className="font-mono font-bold">
+          {gwPoints !== undefined && gwPoints !== null ? gwPoints : "N/A"}
+        </span>
+      );
+    }
+  },
+  {
+    key: 'latestTracking.teamValue',
+    header: 'Team Value',
+    priority: 'secondary',
+    align: 'right',
+    mobileLabel: 'Value',
+    cardOrder: 5,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, creator) => {
+      const teamValue = creator.latestTracking?.teamValue;
+      return teamValue !== undefined && teamValue !== null 
+        ? `£${(teamValue / 10).toFixed(1)}m` 
+        : "N/A";
+    }
+  },
+  {
+    key: 'latestTracking.totalTransfers',
+    header: 'Transfers',
+    priority: 'optional',
+    align: 'right',
+    mobileLabel: 'Transfers',
+    cardOrder: 6,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, creator) => {
+      const transfers = creator.latestTracking?.totalTransfers;
+      return transfers !== undefined && transfers !== null ? transfers : "N/A";
+    }
+  },
+  {
+    key: 'chipsUsed',
+    header: 'Chips',
+    priority: 'optional',
+    align: 'right',
+    mobileLabel: 'Chips',
+    cardOrder: 7,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, creator) => {
+      const chips = creator.latestTracking?.chipsUsed;
+      return chips !== undefined ? chips : "N/A";
+    }
+  }
+];
 
 // Main Content Creators Component
 export default function ContentCreators() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
 
   const [sortBy, setSortBy] = useState<string>("rank");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -720,56 +757,45 @@ export default function ContentCreators() {
           {/* Content Creators Tab */}
           <TabsContent value="creators">
             {/* Content Creators Table */}
-            {sortedCreators && sortedCreators.length > 0 ? (
-              <div className="fpl-table-container">
-                <div className="fpl-table-scroll">
-                  <Table>
-                    <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[300px]">Creator</TableHead>
-                      <TableHead 
-                        className="text-right cursor-pointer hover:bg-muted/50" 
-                        onClick={() => handleSort('rank')}
-                      >
-                        Overall Rank 
-                        {sortBy === 'rank' && <ArrowUpDown className="h-4 w-4 inline ml-1" />}
-                      </TableHead>
-                      <TableHead 
-                        className="text-right cursor-pointer hover:bg-muted/50" 
-                        onClick={() => handleSort('points')}
-                      >
-                        Total Points 
-                        {sortBy === 'points' && <ArrowUpDown className="h-4 w-4 inline ml-1" />}
-                      </TableHead>
-                      <TableHead 
-                        className="text-right cursor-pointer hover:bg-muted/50" 
-                        onClick={() => handleSort('gw_points')}
-                      >
-                        GW Points 
-                        {sortBy === 'gw_points' && <ArrowUpDown className="h-4 w-4 inline ml-1" />}
-                      </TableHead>
-                      <TableHead className="text-right">Team Value</TableHead>
-                      <TableHead className="text-right">Transfers</TableHead>
-                      <TableHead className="text-right">Chips</TableHead>
-                      </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                      {sortedCreators.map((creator) => (
-                        <CreatorTableRow key={creator.id} creator={creator} />
-                      ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              ) : (
-                <div className="fpl-empty">
-                  <Users className="fpl-empty-icon" />
-                  <h3 className="fpl-empty-title">No Content Creators Found</h3>
-                  <p className="fpl-empty-message">
-                    Get started by adding some FPL content creators to track their performance.
-                  </p>
-                </div>
-              )}
+            <div className="fpl-table-container">
+              <ResponsiveTable
+                data={sortedCreators || []}
+                columns={getContentCreatorColumns()}
+                enableMobileCards={true}
+                mobileCardTitle={(creator) => creator.name}
+                loading={isLoading}
+                emptyMessage="No content creators available"
+                onRowClick={(creator) => {
+                  navigate(`/content-creators/${creator.id}/team`);
+                }}
+                onSort={(field) => {
+                  // Map ResponsiveTable field names to our sort keys
+                  const sortKeyMap: Record<string, string> = {
+                    'latestTracking.overallRank': 'rank',
+                    'latestTracking.overallPoints': 'points',
+                    'latestTracking.gameweekPoints': 'gw_points',
+                    'name': 'name'
+                  };
+                  const mappedField = sortKeyMap[field] || field;
+                  handleSort(mappedField);
+                }}
+                sortField={(() => {
+                  // Map our sort keys back to ResponsiveTable field names
+                  const fieldMap: Record<string, string> = {
+                    'rank': 'latestTracking.overallRank',
+                    'points': 'latestTracking.overallPoints',
+                    'gw_points': 'latestTracking.gameweekPoints',
+                    'name': 'name'
+                  };
+                  return fieldMap[sortBy] || sortBy;
+                })()}
+                sortDirection={sortOrder}
+                className="hover:shadow-sm"
+                stickyHeader={true}
+                enableHorizontalScroll={true}
+                data-testid="content-creators-table"
+              />
+            </div>
           </TabsContent>
 
           {/* Team Analysis Tab */}
