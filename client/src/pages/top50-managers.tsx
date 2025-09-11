@@ -82,9 +82,10 @@ function ManagerTableRow({ manager }: { manager: Top50Manager }) {
 
   return (
     <TableRow 
-      className="hover:bg-muted/50 cursor-pointer transition-colors" 
+      className="hover:bg-green-50 hover:shadow-md cursor-pointer transition-all duration-200 hover:border-l-4 hover:border-l-green-500" 
       onClick={() => handleViewTeam(manager.rank)}
       data-testid={`row-manager-${manager.rank}`}
+      title="Click to view team details"
     >
       <TableCell>
         <div className="flex items-center gap-3">

@@ -125,9 +125,10 @@ function CreatorTableRow({ creator }: { creator: CreatorWithLatestData }) {
 
   return (
     <TableRow 
-      className="hover:bg-muted/50 cursor-pointer transition-colors" 
+      className="hover:bg-emerald-50 hover:shadow-md cursor-pointer transition-all duration-200 hover:border-l-4 hover:border-l-emerald-500" 
       onClick={() => handleViewTeam(creator.id)}
       data-testid={`row-creator-${creator.id}`}
+      title="Click to view team details"
     >
       <TableCell>
         <div className="flex items-center gap-3">
