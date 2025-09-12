@@ -4787,16 +4787,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, 2024/25: ${fallback2024.toFixed(3)}${has2024Data ? ' (actual)' : ' (fallback)'}, Average: ${combinedXGPer90.toFixed(3)}`);
             }
             
-            // SIMPLIFIED: Use raw xG data without adjustments (Option B)
+            // SIMPLIFIED: Use raw xG data without adjustments (adjustments now applied in cache generation)
             let projectedXGPer90 = combinedXGPer90;
             
-            // PENALTY TAKER ADJUSTMENT - Add penalty goals that xG excludes
-            const penaltyAdjustment = getPenaltyTakerAdjustment(player.name, player.id);
-            projectedXGPer90 += penaltyAdjustment;
-            
-            // DIRECT FREEKICK TAKER ADJUSTMENT - Add freekick goals
-            const freekickAdjustment = getDirectFreekickAdjustment(player.name, player.id);
-            projectedXGPer90 += freekickAdjustment;
+            // NOTE: Set piece adjustments (penalty/freekick) are now applied during cache generation
+            // in projection-cache-worker.ts to prevent double-counting
             
             // PURE PROJECTION: Only projected goals for next 12 gameweeks
             const expectedMinutes = calculateExpectedMinutes(player, playersWithXG);
@@ -6292,9 +6287,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // PURE PROJECTION: Only projected assists for next 12 gameweeks
       const expectedMinutes = calculateExpectedMinutes(player, players);
       
-      // SET PIECE TAKER ADJUSTMENT: Add freekicks/corners assists that xA might exclude
-      const setPieceAdjustment = getSetPieceTakerAdjustment(playerName, player.id, bootstrapData);
-      const adjustedXAPer90 = xAPer90 + setPieceAdjustment;
+      // NOTE: Set piece adjustments (corner/freekick) are now applied during cache generation
+      // in projection-cache-worker.ts to prevent double-counting
+      const adjustedXAPer90 = xAPer90;
       
       // PURE PROJECTION: Only projected assists for the next 12 gameweeks
       const projectedSeasonAssists = (adjustedXAPer90 / 90) * expectedMinutes * (12 / 38);

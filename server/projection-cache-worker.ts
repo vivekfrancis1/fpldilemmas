@@ -10,6 +10,11 @@ import {
 import { eq, and } from "drizzle-orm";
 import { internalFetch } from "./config";
 import { fplScoringCacheService } from "./fpl-scoring-cache-service";
+import { 
+  applyGoalAdjustments, 
+  applyAssistAdjustments,
+  getPlayerNameForDebug
+} from "./projection-adjustments";
 
 interface ProjectionData {
   playerId: number;
@@ -100,36 +105,63 @@ class ProjectionCacheWorker {
   }
   
   /**
-   * Cache goals projections from API
+   * Cache goals projections from API with set piece adjustments applied
    */
   private async cacheGoalsProjections(): Promise<void> {
     try {
-      console.log(`📊 Caching goals projections...`);
-      const response = await internalFetch('api/player-goals-scored-projections');
+      console.log(`📊 Caching goals projections with set piece adjustments...`);
       
-      if (!response.ok) {
-        throw new Error(`Goals API returned ${response.status}`);
+      // Fetch base projections and bootstrap data in parallel
+      const [projResponse, bootstrapResponse] = await Promise.all([
+        internalFetch('api/player-goals-scored-projections'),
+        fetch('https://fantasy.premierleague.com/api/bootstrap-static/')
+      ]);
+      
+      if (!projResponse.ok) {
+        throw new Error(`Goals API returned ${projResponse.status}`);
+      }
+      if (!bootstrapResponse.ok) {
+        throw new Error(`Bootstrap API returned ${bootstrapResponse.status}`);
       }
       
-      const data: ProjectionData[] = await response.json();
+      const data: ProjectionData[] = await projResponse.json();
+      const bootstrapData = await bootstrapResponse.json();
       console.log(`📥 Retrieved ${data.length} goal projections`);
       
       // Clear existing data for this season
       await db.delete(playerGoalsProjections)
         .where(eq(playerGoalsProjections.season, '2025/26'));
       
-      // Prepare records for batch insert
+      // Apply adjustments and prepare records for batch insert
       const records = [];
+      let adjustmentCount = 0;
+      
       for (const player of data) {
         if (player.gameweekProjections) {
+          const playerName = getPlayerNameForDebug(player.playerId, bootstrapData);
+          
           for (let gw = 4; gw <= 9; gw++) {
-            const goals = player.gameweekProjections[gw] || player.gameweekProjections[`gw${gw}`] || 0;
-            if (goals > 0) { // Only insert non-zero projections
+            const baseGoals = player.gameweekProjections[gw] || player.gameweekProjections[`gw${gw}`] || 0;
+            
+            if (baseGoals > 0) {
+              // Apply set piece adjustments
+              const adjustedGoals = applyGoalAdjustments(
+                player.playerId,
+                playerName,
+                baseGoals,
+                bootstrapData,
+                true // Enable debug logging
+              );
+              
+              if (adjustedGoals !== baseGoals) {
+                adjustmentCount++;
+              }
+              
               records.push({
                 playerId: player.playerId,
                 gameweek: gw,
                 season: '2025/26',
-                goals: Number(goals),
+                goals: Number(adjustedGoals),
                 calculatedAt: new Date()
               });
             }
@@ -144,7 +176,7 @@ class ProjectionCacheWorker {
         console.log(`📊 Inserted goals batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(records.length / this.BATCH_SIZE)}`);
       }
       
-      console.log(`✅ Goals projections cached successfully (${records.length} records)`);
+      console.log(`✅ Goals projections cached successfully (${records.length} records, ${adjustmentCount} adjustments applied)`);
       
     } catch (error) {
       console.error(`❌ Failed to cache goals projections:`, error);
@@ -153,36 +185,63 @@ class ProjectionCacheWorker {
   }
   
   /**
-   * Cache assist projections from API
+   * Cache assist projections from API with set piece adjustments applied
    */
   private async cacheAssistProjections(): Promise<void> {
     try {
-      console.log(`📊 Caching assist projections...`);
-      const response = await internalFetch('api/player-assist-projections?startGameweek=4&endGameweek=9');
+      console.log(`📊 Caching assist projections with set piece adjustments...`);
       
-      if (!response.ok) {
-        throw new Error(`Assists API returned ${response.status}`);
+      // Fetch base projections and bootstrap data in parallel
+      const [projResponse, bootstrapResponse] = await Promise.all([
+        internalFetch('api/player-assist-projections?startGameweek=4&endGameweek=9'),
+        fetch('https://fantasy.premierleague.com/api/bootstrap-static/')
+      ]);
+      
+      if (!projResponse.ok) {
+        throw new Error(`Assists API returned ${projResponse.status}`);
+      }
+      if (!bootstrapResponse.ok) {
+        throw new Error(`Bootstrap API returned ${bootstrapResponse.status}`);
       }
       
-      const data: ProjectionData[] = await response.json();
+      const data: ProjectionData[] = await projResponse.json();
+      const bootstrapData = await bootstrapResponse.json();
       console.log(`📥 Retrieved ${data.length} assist projections`);
       
       // Clear existing data for this season
       await db.delete(playerAssistProjections)
         .where(eq(playerAssistProjections.season, '2025/26'));
       
-      // Prepare records for batch insert
+      // Apply adjustments and prepare records for batch insert
       const records = [];
+      let adjustmentCount = 0;
+      
       for (const player of data) {
         if (player.gameweekProjections) {
+          const playerName = getPlayerNameForDebug(player.playerId, bootstrapData);
+          
           for (let gw = 4; gw <= 9; gw++) {
-            const assists = player.gameweekProjections[gw] || player.gameweekProjections[`gw${gw}`] || 0;
-            if (assists > 0) {
+            const baseAssists = player.gameweekProjections[gw] || player.gameweekProjections[`gw${gw}`] || 0;
+            
+            if (baseAssists > 0) {
+              // Apply set piece adjustments
+              const adjustedAssists = applyAssistAdjustments(
+                player.playerId,
+                playerName,
+                baseAssists,
+                bootstrapData,
+                true // Enable debug logging
+              );
+              
+              if (adjustedAssists !== baseAssists) {
+                adjustmentCount++;
+              }
+              
               records.push({
                 playerId: player.playerId,
                 gameweek: gw,
                 season: '2025/26',
-                assists: Number(assists),
+                assists: Number(adjustedAssists),
                 calculatedAt: new Date()
               });
             }
@@ -197,7 +256,7 @@ class ProjectionCacheWorker {
         console.log(`📊 Inserted assists batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(records.length / this.BATCH_SIZE)}`);
       }
       
-      console.log(`✅ Assist projections cached successfully (${records.length} records)`);
+      console.log(`✅ Assist projections cached successfully (${records.length} records, ${adjustmentCount} adjustments applied)`);
       
     } catch (error) {
       console.error(`❌ Failed to cache assist projections:`, error);
