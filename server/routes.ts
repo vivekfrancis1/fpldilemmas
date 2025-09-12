@@ -614,8 +614,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         teamGoalShares[teamName].totalGoals += goals;
         teamGoalShares[teamName].players.push({
-          id: player.id || player.playerId,
-          name: `${player.firstName || ''} ${player.secondName || ''}`.trim(),
+          playerId: player.id || player.playerId,
+          playerName: `${player.firstName || ''} ${player.secondName || ''}`.trim(),
           position: player.position || 'Unknown',
           goals: goals,
           minutes: player.minutes || 0,
@@ -630,8 +630,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (team.totalGoals > 0) {
           // Calculate goal share for each player
           const playersWithShares = team.players.map(player => ({
-            id: player.id,
-            name: player.name,
+            playerId: player.playerId ?? player.id,
+            playerName: player.playerName ?? player.name,
             position: player.position,
             goalShare: team.totalGoals > 0 ? Math.round((player.goals / team.totalGoals) * 1000) / 10 : 0.0,
             projectedGoals: player.goals, // Actual goals for historical data
@@ -5223,6 +5223,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const player of teamData.players) {
           if (player.goalShare < 0.1) continue; // Skip players with minimal goal share
           
+          // Get consistent identifiers with fallbacks
+          const playerId = player.id || player.playerId;
+          const playerName = player.name || player.playerName;
+          
+          
           const gameweekProjections: { [gameweek: number]: number } = {};
           let totalProjectedGoals = 0;
           
@@ -5237,7 +5242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const projectedTeamGoals = (typeof teamGoals === 'number') ? teamGoals : 0;
             const playerGoalsForGW = projectedTeamGoals * (player.goalShare / 100);
             
-            console.log(`DEBUG: Goals Scored - GW${gameweek} PROJECTION - ${team.short_name} projected: ${projectedTeamGoals.toFixed(2)} goals, ${player.name}: ${playerGoalsForGW.toFixed(2)}`);
+            console.log(`DEBUG: Goals Scored - GW${gameweek} PROJECTION - ${team.short_name} projected: ${projectedTeamGoals.toFixed(2)} goals, ${playerName}: ${playerGoalsForGW.toFixed(2)}`);
             
             gameweekProjections[gameweek] = Math.round(playerGoalsForGW * 100) / 100;
             totalProjectedGoals += playerGoalsForGW;
@@ -5250,8 +5255,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const seasonTotal = totalProjectedGoals;
           
           playerProjections.push({
-            playerId: player.id,
-            playerName: player.name,
+            playerId: playerId,
+            playerName: playerName,
             teamName: team.name,
             teamShort: team.short_name,
             position: player.position,
@@ -5906,8 +5911,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (team.totalAssists > 0) {
           // Calculate assist share for each player
           const playersWithShares = team.players.map(player => ({
-            id: player.id,
-            name: player.name,
+            playerId: player.playerId ?? player.id,
+            playerName: player.playerName ?? player.name,
             position: player.position,
             assistShare: team.totalAssists > 0 ? Math.round((player.assists / team.totalAssists) * 1000) / 10 : 0.0,
             projectedAssists: player.assists // For historical data, this is actual assists
