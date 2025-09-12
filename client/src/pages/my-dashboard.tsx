@@ -773,15 +773,22 @@ export default function MyDashboard() {
                                   #{league.entry_rank.toLocaleString()}
                                 </div>
                                 {league.entry_last_rank && league.entry_last_rank !== league.entry_rank && (
-                                  <div className={`text-sm font-medium ${
+                                  <div className={`inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${
                                     league.entry_last_rank > league.entry_rank 
-                                      ? 'text-green-600' 
-                                      : 'text-red-600'
+                                      ? 'text-green-700 bg-green-50' 
+                                      : 'text-red-700 bg-red-50'
                                   }`}>
-                                    {league.entry_last_rank > league.entry_rank 
-                                      ? `↑${(league.entry_last_rank - league.entry_rank).toLocaleString()}` 
-                                      : `↓${(league.entry_rank - league.entry_last_rank).toLocaleString()}`
-                                    }
+                                    {league.entry_last_rank > league.entry_rank ? (
+                                      <>
+                                        <TrendingUp className="h-3 w-3" />
+                                        <span>{(league.entry_last_rank - league.entry_rank).toLocaleString()}</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <TrendingDown className="h-3 w-3" />
+                                        <span>{(league.entry_rank - league.entry_last_rank).toLocaleString()}</span>
+                                      </>
+                                    )}
                                   </div>
                                 )}
                               </div>
