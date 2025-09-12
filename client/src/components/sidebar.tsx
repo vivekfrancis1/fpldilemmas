@@ -82,7 +82,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/projected-standings", label: "Standings", icon: Trophy, description: "Final league table projection", popular: false }
       ]
     },
-    ...(isAdmin ? [{
+    {
       section: "Player Projections", 
       items: [
         { path: "/player-goals-scored-projections", label: "Goals Scored", icon: Trophy, description: "Individual player goal projections", popular: false },
@@ -92,7 +92,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         // { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
         // { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false }
       ]
-    }] : []),
+    },
     {
       section: "Third Party Projection Tools", 
       items: [
