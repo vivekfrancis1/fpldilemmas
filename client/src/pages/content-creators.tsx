@@ -59,7 +59,7 @@ import {
   Activity,
   PieChart,
 } from "lucide-react";
-import { SiInstagram, SiTiktok } from "react-icons/si";
+import { SiInstagram, SiTiktok, SiX, SiYoutube } from "react-icons/si";
 
 type FPLCreator = {
   id: number;
@@ -270,10 +270,11 @@ const getContentCreatorColumns = (): ResponsiveTableColumn<CreatorWithLatestData
                 href={`https://x.com/${creator.twitterHandle.replace('@', '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-blue-600 hover:underline"
+                className="text-xs text-blue-600 hover:underline flex items-center gap-1"
                 data-testid={`link-creator-twitter-${creator.id}`}
                 onClick={(e) => e.stopPropagation()}
               >
+                <SiX className="h-3 w-3" />
                 {creator.twitterHandle}
               </a>
             )}
@@ -282,10 +283,11 @@ const getContentCreatorColumns = (): ResponsiveTableColumn<CreatorWithLatestData
                 href={creator.youtubeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-red-600 hover:underline break-all"
+                className="text-xs text-red-600 hover:underline break-all flex items-center gap-1"
                 data-testid={`link-creator-youtube-${creator.id}`}
                 onClick={(e) => e.stopPropagation()}
               >
+                <SiYoutube className="h-3 w-3" />
                 {creator.youtubeUrl.split('/').pop() || 'YouTube'}
               </a>
             )}
