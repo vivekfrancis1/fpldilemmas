@@ -259,7 +259,6 @@ const getContentCreatorColumns = (): ResponsiveTableColumn<CreatorWithLatestData
     width: '300px',
     render: (value, creator) => (
       <div className="flex items-center gap-3">
-        <Users className="h-4 w-4 text-blue-600 hidden md:block" />
         <div>
           <div className="font-medium">{creator.name}</div>
           {creator.description && (
