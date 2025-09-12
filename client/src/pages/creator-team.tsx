@@ -129,6 +129,21 @@ function getPositionColor(position: string) {
   }
 }
 
+function getPositionShortName(position: string) {
+  switch (position.toLowerCase()) {
+    case 'goalkeeper':
+      return 'GKP';
+    case 'defender':
+      return 'DEF';
+    case 'midfielder':
+      return 'MID';
+    case 'forward':
+      return 'FWD';
+    default:
+      return position.slice(0, 3).toUpperCase();
+  }
+}
+
 
 
 export default function CreatorTeam() {
@@ -456,7 +471,7 @@ export default function CreatorTeam() {
                                     <span className="text-sm font-medium text-gray-700">{player.team_name}</span>
                                     <Badge className={`text-xs ${getPositionColor(player.position)}`}>
                                       {getPositionIcon(player.position)}
-                                      <span className="ml-1">{player.position.slice(0, 3).toUpperCase()}</span>
+                                      <span className="ml-1">{getPositionShortName(player.position)}</span>
                                     </Badge>
                                   </div>
                                 </div>
@@ -530,7 +545,7 @@ export default function CreatorTeam() {
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                       <span className="font-semibold text-gray-800">{player.player_name}</span>
-                                      <Badge variant="outline" className="text-xs px-2 py-1">{player.position.slice(0, 3).toUpperCase()}</Badge>
+                                      <Badge variant="outline" className="text-xs px-2 py-1">{getPositionShortName(player.position)}</Badge>
                                     </div>
                                     <div className="flex items-center gap-2 mt-1">
                                       <span className="text-sm font-medium text-gray-700">{player.team_name}</span>

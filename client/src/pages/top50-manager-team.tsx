@@ -257,6 +257,22 @@ export default function Top50ManagerTeam() {
     return player ? `${player.first_name} ${player.second_name}` : `Player ${playerId}`;
   };
 
+  // Helper function to get position short name
+  const getPositionShortName = (position: string) => {
+    switch (position.toLowerCase()) {
+      case 'goalkeeper':
+        return 'GKP';
+      case 'defender':
+        return 'DEF';
+      case 'midfielder':
+        return 'MID';
+      case 'forward':
+        return 'FWD';
+      default:
+        return position.slice(0, 3).toUpperCase();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -520,7 +536,7 @@ export default function Top50ManagerTeam() {
                                     <span className="text-sm font-medium text-gray-700">{player.team_name}</span>
                                     <Badge className={`text-xs ${getPositionColor(getPositionFromElementType(player.element_type))}`}>
                                       {getPositionIcon(getPositionFromElementType(player.element_type))}
-                                      <span className="ml-1">{getPositionFromElementType(player.element_type).slice(0, 3).toUpperCase()}</span>
+                                      <span className="ml-1">{getPositionShortName(getPositionFromElementType(player.element_type))}</span>
                                     </Badge>
                                   </div>
                                 </div>
@@ -589,7 +605,7 @@ export default function Top50ManagerTeam() {
                                     <span className="text-sm text-gray-600">{player.team_name}</span>
                                     <Badge className={`text-xs ${getPositionColor(getPositionFromElementType(player.element_type))}`}>
                                       {getPositionIcon(getPositionFromElementType(player.element_type))}
-                                      <span className="ml-1">{getPositionFromElementType(player.element_type).slice(0, 3).toUpperCase()}</span>
+                                      <span className="ml-1">{getPositionShortName(getPositionFromElementType(player.element_type))}</span>
                                     </Badge>
                                   </div>
                                 </div>
