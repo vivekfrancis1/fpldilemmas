@@ -259,13 +259,13 @@ const getContentCreatorColumns = (): ResponsiveTableColumn<CreatorWithLatestData
     width: '300px',
     render: (value, creator) => (
       <div className="flex items-center gap-3">
-        <Users className="h-4 w-4 text-blue-600" />
+        <Users className="h-4 w-4 text-blue-600 hidden md:block" />
         <div>
           <div className="font-medium">{creator.name}</div>
           {creator.description && (
-            <div className="text-xs text-muted-foreground mt-1 max-w-xs">{creator.description}</div>
+            <div className="text-xs text-muted-foreground mt-1 max-w-xs hidden md:block">{creator.description}</div>
           )}
-          <div className="flex flex-wrap gap-3 mt-2">
+          <div className="flex flex-wrap gap-3 mt-2 hidden md:flex">
             {creator.twitterHandle && (
               <a
                 href={`https://x.com/${creator.twitterHandle.replace('@', '')}`}
