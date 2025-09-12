@@ -506,9 +506,6 @@ export default function Top50ManagerTeam() {
                               }`}
                             >
                               <div className="flex items-center gap-3 flex-1">
-                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
-                                  {player.player_name ? player.player_name.split(' ').map(n => n[0]).join('').slice(0, 2) : '??'}
-                                </div>
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
                                     <span className="font-semibold text-gray-900">{player.player_name || 'Unknown Player'}</span>
@@ -537,14 +534,14 @@ export default function Top50ManagerTeam() {
                                       {player.is_captain ? (
                                         <div className="space-y-1">
                                           <p className="text-sm font-semibold text-amber-600">
-                                            {(playerData.event_points || 0) * 2} GW pts
+                                            {(playerData.event_points || 0) * 2} pts
                                           </p>
                                           <p className="text-xs text-gray-500">
                                             ({playerData.event_points || 0}×2 captain)
                                           </p>
                                         </div>
                                       ) : (
-                                        <p className="text-sm text-gray-600">{playerData.event_points || 0} GW pts</p>
+                                        <p className="text-sm text-gray-600">{playerData.event_points || 0} pts</p>
                                       )}
                                       {player.multiplier > 1 && (
                                         <Badge variant="outline" className="text-xs">
@@ -584,9 +581,6 @@ export default function Top50ManagerTeam() {
                               className="flex items-center justify-between p-4 border-l-4 border-gray-200 hover:bg-gray-50 transition-colors"
                             >
                               <div className="flex items-center gap-3 flex-1">
-                                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-semibold text-gray-600">
-                                  {player.player_name ? player.player_name.split(' ').map(n => n[0]).join('').slice(0, 2) : '??'}
-                                </div>
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
                                     <span className="font-medium text-gray-900">{player.player_name || 'Unknown Player'}</span>
@@ -606,7 +600,7 @@ export default function Top50ManagerTeam() {
                                   return playerData ? (
                                     <>
                                       <p className="font-semibold text-green-600 text-sm">{formatPrice(playerData.now_cost)}</p>
-                                      <p className="text-sm text-gray-600">{playerData.event_points || 0} GW pts</p>
+                                      <p className="text-sm text-gray-600">{playerData.event_points || 0} pts</p>
                                     </>
                                   ) : (
                                     <p className="text-sm text-gray-500">N/A</p>
