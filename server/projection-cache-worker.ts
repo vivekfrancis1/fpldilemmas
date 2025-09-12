@@ -178,6 +178,137 @@ class ProjectionCacheWorker {
         }
       }
       
+      // TEAM-LEVEL NORMALIZATION: Ensure individual player projections sum to team totals
+      console.log(`🔄 Applying team-level normalization...`);
+      
+      // Fetch team goal projections for comparison
+      const teamGoalsResponse = await internalFetch('api/team-goal-projections');
+      if (!teamGoalsResponse.ok) {
+        throw new Error(`Team goals API returned ${teamGoalsResponse.status}`);
+      }
+      const teamGoalsData = await teamGoalsResponse.json();
+      
+      // Group individual player projections by team and gameweek for normalization
+      const teamTotals = new Map<string, { individual: number, team: number }>();
+      
+      // First pass: Calculate individual player totals per team per gameweek
+      for (const record of records) {
+        const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+        if (!player) continue;
+        
+        const teamId = player.team;
+        const key = `${teamId}-${record.gameweek}`;
+        
+        if (!teamTotals.has(key)) {
+          teamTotals.set(key, { individual: 0, team: 0 });
+        }
+        teamTotals.get(key)!.individual += record.goals;
+      }
+      
+      // Second pass: Match with team projections with robust team ID handling
+      let totalTeamGwKeys = 0;
+      let matchesFound = 0;
+      let arsenalMatches = 0;
+      
+      for (const team of teamGoalsData) {
+        // ROBUST TEAM ID RESOLUTION: Handle both team.id and team.teamId
+        const tId = team.id ?? team.teamId;
+        
+        if (!tId) {
+          console.warn(`⚠️ TEAM ID MISSING: Team object missing both .id and .teamId fields:`, JSON.stringify(team, null, 2));
+          continue;
+        }
+        
+        if (team.gameweekProjections) {
+          for (let gw = 4; gw <= 9; gw++) {
+            const teamGoal = team.gameweekProjections[gw.toString()];
+            if (teamGoal > 0) {
+              totalTeamGwKeys++;
+              const key = `${tId}-${gw}`;
+              
+              if (teamTotals.has(key)) {
+                teamTotals.get(key)!.team = teamGoal;
+                matchesFound++;
+                
+                // Special tracking for Arsenal (team ID 1)
+                if (tId === 1) {
+                  arsenalMatches++;
+                  console.log(`🔍 ARSENAL MATCH - GW${gw}: Team projection ${teamGoal}, Individual total: ${teamTotals.get(key)!.individual}`);
+                }
+              } else {
+                console.log(`⚠️ NO MATCH FOUND for team ${tId} (${team.team || team.name || 'unknown'}) GW${gw} - key: ${key}`);
+              }
+            }
+          }
+        }
+      }
+      
+      console.log(`📊 NORMALIZATION MATCHING: ${matchesFound}/${totalTeamGwKeys} team-gameweek keys matched (Arsenal: ${arsenalMatches})`);
+      
+      if (matchesFound === 0) {
+        console.warn(`⚠️ WARNING: No team projections matched - normalization will not be applied!`);
+      }
+      
+      // Third pass: Apply normalization to records with comprehensive tracking
+      let normalizedCount = 0;
+      let totalApplications = 0;
+      let arsenalNormalizationFactor = 0;
+      let arsenalTotalBefore = 0;
+      let arsenalTotalAfter = 0;
+      
+      // Calculate Arsenal total before normalization
+      for (const record of records) {
+        const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+        if (player && player.team === 1) { // Arsenal team ID is 1
+          arsenalTotalBefore += record.goals;
+        }
+      }
+      
+      for (const record of records) {
+        const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+        if (!player) continue;
+        
+        const teamId = player.team;
+        const key = `${teamId}-${record.gameweek}`;
+        const totals = teamTotals.get(key);
+        
+        if (totals && totals.individual > 0 && totals.team > 0) {
+          const normalizationFactor = totals.team / totals.individual;
+          const originalGoals = record.goals;
+          record.goals = Number((record.goals * normalizationFactor).toFixed(4));
+          totalApplications++;
+          
+          // Arsenal-specific tracking
+          if (teamId === 1) {
+            arsenalNormalizationFactor = normalizationFactor;
+            console.log(`🔍 ARSENAL NORMALIZATION - Player ${record.playerId} GW${record.gameweek}: ${originalGoals} → ${record.goals} (factor: ${normalizationFactor.toFixed(4)})`);
+          }
+          
+          // Debug log for significant normalization
+          if (Math.abs(normalizationFactor - 1) > 0.1) {
+            const playerName = getPlayerNameForDebug(record.playerId, bootstrapData);
+            console.log(`📊 NORMALIZATION - ${playerName} GW${record.gameweek}: ${originalGoals} → ${record.goals} (factor: ${normalizationFactor.toFixed(2)})`);
+            normalizedCount++;
+          }
+        }
+      }
+      
+      // Calculate Arsenal total after normalization
+      for (const record of records) {
+        const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+        if (player && player.team === 1) { // Arsenal team ID is 1
+          arsenalTotalAfter += record.goals;
+        }
+      }
+      
+      console.log(`📊 NORMALIZATION SUMMARY:`);
+      console.log(`   - Total records processed: ${records.length}`);
+      console.log(`   - Normalization applications: ${totalApplications}`);
+      console.log(`   - Significant adjustments (>10%): ${normalizedCount}`);
+      console.log(`   - Arsenal normalization factor: ${arsenalNormalizationFactor.toFixed(4)}`);
+      console.log(`   - Arsenal total: ${arsenalTotalBefore.toFixed(2)} → ${arsenalTotalAfter.toFixed(2)}`);
+      console.log(`✅ Team-level normalization completed (${normalizedCount} significant adjustments)`);
+      
       // Insert in batches
       for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
         const batch = records.slice(i, i + this.BATCH_SIZE);
