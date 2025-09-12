@@ -208,7 +208,7 @@ export default function ProjectedGoalsCS() {
             <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Target className="h-4 w-4" />
-                Match Projections
+                Goals and Clean Sheet Projections
                 <Badge className="bg-white/20 text-white border-white/30 ml-auto text-xs">
                   {filteredProjections.length} matches
                 </Badge>
