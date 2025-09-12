@@ -106,21 +106,28 @@ function getRankChangeDisplay(change: number | undefined) {
 const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
   {
     key: 'rank',
+    header: 'Rank',
+    priority: 'essential',
+    align: 'center',
+    mobileLabel: 'Rank',
+    cardOrder: 1,
+    sortable: true,
+    render: (value, manager) => (
+      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto">
+        <span className="text-white font-bold text-sm">#{manager.rank}</span>
+      </div>
+    )
+  },
+  {
+    key: 'name',
     header: 'Manager',
     priority: 'essential',
     align: 'left',
     mobileLabel: 'Manager',
-    cardOrder: 1,
+    cardOrder: 2,
     sortable: true,
     render: (value, manager) => (
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-          <span className="text-white font-bold text-sm">#{manager.rank}</span>
-        </div>
-        <div>
-          <div className="font-medium">{manager.name}</div>
-        </div>
-      </div>
+      <div className="font-medium">{manager.name}</div>
     )
   },
   {
@@ -128,8 +135,8 @@ const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
     header: 'Current Rank',
     priority: 'important',
     align: 'left',
-    mobileLabel: 'Rank',
-    cardOrder: 2,
+    mobileLabel: 'Current Rank',
+    cardOrder: 3,
     sortable: true,
     render: (value, manager) => {
       const rank = manager.latestTracking?.overallRank;
@@ -151,7 +158,7 @@ const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
     priority: 'important',
     align: 'right',
     mobileLabel: 'Points',
-    cardOrder: 3,
+    cardOrder: 4,
     sortable: true,
     className: 'font-mono',
     render: (value, manager) => {
@@ -165,7 +172,7 @@ const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
     priority: 'secondary',
     align: 'right',
     mobileLabel: 'GW Points',
-    cardOrder: 4,
+    cardOrder: 5,
     sortable: true,
     className: 'font-mono',
     render: (value, manager) => {
@@ -179,7 +186,7 @@ const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
     priority: 'secondary',
     align: 'right',
     mobileLabel: 'Value',
-    cardOrder: 5,
+    cardOrder: 6,
     sortable: true,
     className: 'font-mono',
     render: (value, manager) => {
@@ -195,7 +202,7 @@ const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
     priority: 'optional',
     align: 'right',
     mobileLabel: 'Transfers',
-    cardOrder: 6,
+    cardOrder: 7,
     sortable: true,
     className: 'font-mono',
     render: (value, manager) => {
@@ -209,7 +216,7 @@ const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
     priority: 'optional',
     align: 'right',
     mobileLabel: 'Chips',
-    cardOrder: 7,
+    cardOrder: 8,
     sortable: true,
     className: 'font-mono',
     render: (value, manager) => {
