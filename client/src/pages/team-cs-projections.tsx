@@ -105,7 +105,7 @@ export default function TeamCSProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Shield className="h-8 w-8" />
-            <h1>Team CS Projections</h1>
+            <h1>Team Clean Sheet Projections</h1>
           </div>
           <p className="fpl-page-subtitle">
             Clean sheet probabilities for each team across all upcoming gameweeks
@@ -176,7 +176,7 @@ export default function TeamCSProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="average">Period CS/Game</SelectItem>
+                      <SelectItem value="average">Period Clean Sheet/Game</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
                       {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
                         const gwNumber = parseInt(startGameweek) + i;
@@ -196,7 +196,7 @@ export default function TeamCSProjections() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Team CS Projections: Gameweeks {startGameweek}-{endGameweek}
+                Team Clean Sheet Projections: Gameweeks {startGameweek}-{endGameweek}
                 <Badge variant="outline" className="ml-2">
                   {filteredProjections.length} teams
                 </Badge>
@@ -234,7 +234,7 @@ export default function TeamCSProjections() {
                         onClick={() => setSortBy('average')}
                       >
                         <div className="flex items-center justify-center gap-1">
-                          Period CS/Game
+                          Period Clean Sheet/Game
                           {sortBy === 'average' && <TrendingUp className="h-3 w-3" />}
                         </div>
                       </th>
