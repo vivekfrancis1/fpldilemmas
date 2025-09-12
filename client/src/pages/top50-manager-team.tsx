@@ -465,9 +465,9 @@ export default function Top50ManagerTeam() {
             <Star className="h-4 w-4" />
             Chips
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <Calendar className="h-4 w-4" />
-            History
+          <TabsTrigger value="performance" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <BarChart3 className="h-4 w-4" />
+            Performance
           </TabsTrigger>
         </TabsList>
 
@@ -787,68 +787,110 @@ export default function Top50ManagerTeam() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="history" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Gameweek History
-              </CardTitle>
-              <CardDescription>
-                Performance across completed gameweeks (GW1-3)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {historyLoading ? (
-                <div className="space-y-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              ) : filteredManagerHistory && filteredManagerHistory.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Gameweek</TableHead>
-                      <TableHead>Points</TableHead>
-                      <TableHead>Overall Rank</TableHead>
-                      <TableHead>Rank Change</TableHead>
-                      <TableHead>Team Value</TableHead>
-                      <TableHead>Transfers</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredManagerHistory.map((gw: HistoryEntry, idx: number) => {
-                      const prevGw = idx > 0 ? filteredManagerHistory[idx - 1] : null;
-                      const rankChange = prevGw ? prevGw.overall_rank - gw.overall_rank : 0;
-                      
-                      return (
-                        <TableRow key={gw.event}>
-                          <TableCell>
-                            <Badge variant="outline">GW{gw.event}</Badge>
-                          </TableCell>
-                          <TableCell className="font-semibold">{gw.points}</TableCell>
-                          <TableCell>#{gw.overall_rank.toLocaleString()}</TableCell>
-                          <TableCell>{getRankChangeDisplay(rankChange)}</TableCell>
-                          <TableCell>£{(gw.value / 10).toFixed(1)}m</TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div>{gw.event_transfers} transfers</div>
-                              {gw.event_transfers_cost > 0 && (
-                                <div className="text-xs text-red-600">-{gw.event_transfers_cost} pts</div>
-                              )}
-                            </div>
-                          </TableCell>
+        <TabsContent value="performance" className="space-y-6">
+          {historyLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Gameweek History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Gameweek History
+                  </CardTitle>
+                  <CardDescription>
+                    Performance across completed gameweeks (GW1-3)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {filteredManagerHistory && filteredManagerHistory.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Gameweek</TableHead>
+                          <TableHead>Points</TableHead>
+                          <TableHead>Overall Rank</TableHead>
+                          <TableHead>Rank Change</TableHead>
+                          <TableHead>Team Value</TableHead>
+                          <TableHead>Transfers</TableHead>
                         </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              ) : (
-                <p className="text-gray-500 text-center py-8">No gameweek history available</p>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredManagerHistory.map((gw: HistoryEntry, idx: number) => {
+                          const prevGw = idx > 0 ? filteredManagerHistory[idx - 1] : null;
+                          const rankChange = prevGw ? prevGw.overall_rank - gw.overall_rank : 0;
+                          
+                          return (
+                            <TableRow key={gw.event}>
+                              <TableCell>
+                                <Badge variant="outline">GW{gw.event}</Badge>
+                              </TableCell>
+                              <TableCell className="font-semibold">{gw.points}</TableCell>
+                              <TableCell>#{gw.overall_rank.toLocaleString()}</TableCell>
+                              <TableCell>{getRankChangeDisplay(rankChange)}</TableCell>
+                              <TableCell>£{(gw.value / 10).toFixed(1)}m</TableCell>
+                              <TableCell>
+                                <div className="space-y-1">
+                                  <div>{gw.event_transfers} transfers</div>
+                                  {gw.event_transfers_cost > 0 && (
+                                    <div className="text-xs text-red-600">-{gw.event_transfers_cost} pts</div>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-gray-500 text-center py-8">No gameweek history available</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Season History */}
+              {managerHistory?.past && managerHistory.past.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5" />
+                      Season History
+                    </CardTitle>
+                    <CardDescription>
+                      Historical performance across previous seasons
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Season</TableHead>
+                          <TableHead>Total Points</TableHead>
+                          <TableHead>Overall Rank</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {managerHistory.past
+                          .sort((a, b) => parseInt(b.season_name.split('/')[0]) - parseInt(a.season_name.split('/')[0]))
+                          .map((season) => (
+                            <TableRow key={season.season_name}>
+                              <TableCell className="font-medium">{season.season_name}</TableCell>
+                              <TableCell>{season.total_points.toLocaleString()}</TableCell>
+                              <TableCell>#{season.rank.toLocaleString()}</TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
