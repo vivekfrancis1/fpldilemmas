@@ -338,7 +338,7 @@ export default function Top25Managers() {
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <Crown className="h-8 w-8" />
-              <h1>Top 25 FPL Managers (Last 10 years)</h1>
+              <h1>Top 25 Managers (All Time)</h1>
             </div>
             <p className="fpl-page-subtitle">
               Elite Fantasy Premier League managers and their current standings
