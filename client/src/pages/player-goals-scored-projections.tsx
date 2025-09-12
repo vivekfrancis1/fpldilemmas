@@ -87,7 +87,7 @@ export default function PlayerGoalsScoredProjections() {
       .filter(player => {
         if (selectedTeam !== "all" && player.teamShort !== selectedTeam) return false;
         if (selectedPosition !== "all" && player.position !== selectedPosition) return false;
-        if (searchQuery && !player.playerName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+        if (searchQuery && player.playerName && !player.playerName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
         return true;
       })
       .sort((a, b) => {
