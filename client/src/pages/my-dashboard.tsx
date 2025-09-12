@@ -1103,14 +1103,14 @@ export default function MyDashboard() {
                                         {pick.is_captain ? (
                                           <div className="space-y-1">
                                             <p className="text-sm font-semibold text-amber-600">
-                                              {(player.event_points || 0) * 2} GW pts
+                                              {(player.event_points || 0) * 2} pts
                                             </p>
                                             <p className="text-xs text-gray-500">
                                               ({player.event_points || 0}×2 captain)
                                             </p>
                                           </div>
                                         ) : (
-                                          <p className="text-sm text-gray-600">{player.event_points || 0} GW pts</p>
+                                          <p className="text-sm text-gray-600">{player.event_points || 0} pts</p>
                                         )}
                                         <div className="text-xs text-gray-500">
                                           <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
