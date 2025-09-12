@@ -4784,8 +4784,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const getPositionGoalShareCap = (position: string): number => {
             switch (position?.toLowerCase()) {
               case 'goalkeeper': return 2; // Max 2% share for GKs
-              case 'defender': return 18; // Max 18% share for defenders
-              case 'midfielder': return 28; // Max 28% share for midfielders
+              case 'defender': return 10; // Max 10% share for defenders
+              case 'midfielder': return 35; // Max 35% share for midfielders
               case 'forward': return 35; // Max 35% share for forwards
               default: return 25;
             }
@@ -5724,15 +5724,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const getPositionShareCap = (position: string): number => {
               switch (position.toLowerCase()) {
                 case 'goalkeeper': return 2; // Max 2% share for GKs
-                case 'defender': return 18; // Max 18% share for defenders
-                case 'midfielder': return 28; // Max 28% share for midfielders (was 35%)
-                case 'forward': return 20; // Max 20% share for forwards (was 25%)
+                case 'defender': return 20; // Max 20% share for defenders (ASSIST)
+                case 'midfielder': return 35; // Max 35% share for midfielders (ASSIST)
+                case 'forward': return 25; // Max 25% share for forwards (ASSIST)
                 default: return 20;
               }
             };
             
             // OPTION 6: Position-First Caps for assists - immediate static lookup  
-            const STATIC_ASSIST_CAPS = { 1: 2.0, 2: 25.0, 3: 35.0, 4: 25.0 };
+            const STATIC_ASSIST_CAPS = { 1: 2.0, 2: 20.0, 3: 35.0, 4: 25.0 };
             const positionShareCap = STATIC_ASSIST_CAPS[playerData.element_type] || 25.0;
             const cappedAssistShare = Math.min(finalAssistShare, positionShareCap);
             
@@ -5761,9 +5761,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const getPositionShareCap = (position: string): number => {
                 switch (position.toLowerCase()) {
                   case 'goalkeeper': return 2; // Max 2% share for GKs
-                  case 'defender': return 18; // Max 18% share for defenders
-                  case 'midfielder': return 28; // Max 28% share for midfielders (was 35%)
-                  case 'forward': return 20; // Max 20% share for forwards (was 25%)
+                  case 'defender': return 20; // Max 20% share for defenders (ASSIST)
+                  case 'midfielder': return 35; // Max 35% share for midfielders (ASSIST)
+                  case 'forward': return 25; // Max 25% share for forwards (ASSIST)
                   default: return 20;
                 }
               };
@@ -6075,15 +6075,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const getPositionGoalShareCap = (position: string): number => {
         switch (position?.toLowerCase()) {
           case 'goalkeeper': return 2; // Max 2% share for GKs
-          case 'defender': return 25; // Max 25% share for defenders
-          case 'midfielder': return 28; // Max 28% share for midfielders (was 35%)
+          case 'defender': return 10; // Max 10% share for defenders
+          case 'midfielder': return 35; // Max 35% share for midfielders
           case 'forward': return 35; // Max 35% share for forwards
           default: return 25;
         }
       };
       
       // OPTION 6: Position-First Caps - static lookup by element_type
-      const STATIC_CAPS = { 1: 2.0, 2: 25.0, 3: 35.0, 4: 25.0 };
+      const STATIC_CAPS = { 1: 2.0, 2: 10.0, 3: 35.0, 4: 35.0 };
       const positionGoalShareCap = STATIC_CAPS[elementType] || 25.0;
       const cappedAdjustedShare = Math.min(adjustedShare, positionGoalShareCap);
       
