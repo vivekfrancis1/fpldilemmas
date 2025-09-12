@@ -541,16 +541,12 @@ export default function MyDashboard() {
                   Search Manager
                 </Button>
               </div>
-              <div className="text-xs text-gray-500 mt-3 space-y-2">
+              <div className="text-xs text-gray-500 mt-3">
                 <p className="font-medium">To find your Manager ID, follow these steps:</p>
-                <ol className="list-decimal list-inside space-y-1 ml-2">
-                  <li>Go to fantasy.premierleague.com and sign in to your account.</li>
-                  <li>Click on the Points tab.</li>
-                  <li>Check the URL in your browser's address bar. Your Manager ID is the number after "entry". For example, in https://fantasy.premierleague.com/entry/123456/event/3, the Manager ID is 123456.</li>
-                </ol>
-                <div className="mt-2 p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
-                  <p className="font-medium text-yellow-800">Note:</p>
-                  <p className="text-yellow-700">You cannot find your Manager ID directly in the official FPL mobile app. You'll need to use a web browser (e.g., Chrome or Safari) on your mobile device or a computer.</p>
+                <div className="mt-2 space-y-1">
+                  <p>Visit fantasy.premierleague.com from your web browser (Chrome or Safari, not the mobile app) and sign in to your account.</p>
+                  <p>Click on the Points tab.</p>
+                  <p>Check the URL in your browser's address bar. Your Manager ID is the number in the URL after "entry". For example, in https://fantasy.premierleague.com/entry/123456/event/3, the Manager ID is 123456.</p>
                 </div>
               </div>
             </div>
