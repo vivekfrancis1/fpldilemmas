@@ -543,11 +543,11 @@ export default function MyDashboard() {
               </div>
               <div className="text-xs text-gray-500 mt-3">
                 <p className="font-medium">To find your Manager ID, follow these steps:</p>
-                <div className="mt-2 space-y-1">
-                  <p>Visit fantasy.premierleague.com from your web browser (Chrome or Safari, not the mobile app) and sign in to your account.</p>
-                  <p>Click on the Points tab.</p>
-                  <p>Check the URL in your browser's address bar. Your Manager ID is the number in the URL after "entry". For example, in https://fantasy.premierleague.com/entry/123456/event/3, the Manager ID is 123456.</p>
-                </div>
+                <ol className="list-decimal list-inside space-y-1 mt-2 ml-2">
+                  <li>Visit fantasy.premierleague.com from your web browser (not the mobile app) and sign in to your account.</li>
+                  <li>Click on the Points tab.</li>
+                  <li>Check the URL in your browser's address bar. Your Manager ID is the number in the URL after "entry". For example, in https://fantasy.premierleague.com/entry/123456/event/3, the Manager ID is 123456.</li>
+                </ol>
               </div>
             </div>
           </CardContent>
