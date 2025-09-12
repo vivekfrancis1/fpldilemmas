@@ -364,15 +364,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate adjustment based on penalty taking order and goals scored
         let adjustment = 0;
         if (penaltyOrder === 1) {
-          // Primary penalty taker
-          adjustment = 0.35 + (player.goals_scored || 0) * 0.02; // Base + goals bonus
+          // Primary penalty taker - INCREASED for stronger penalty advantage
+          adjustment = 0.6 + (player.goals_scored || 0) * 0.03; // Base + goals bonus
         } else if (penaltyOrder === 2) {
-          // Secondary penalty taker
-          adjustment = 0.15 + (player.goals_scored || 0) * 0.015;
+          // Secondary penalty taker - INCREASED for stronger penalty advantage
+          adjustment = 0.3 + (player.goals_scored || 0) * 0.025;
         }
         
-        // Cap the adjustment
-        adjustment = Math.min(0.5, Math.max(0, adjustment));
+        // Cap the adjustment - INCREASED ceiling
+        adjustment = Math.min(0.8, Math.max(0, adjustment));
         
         if (adjustment > 0) {
           console.log(`DEBUG: Dynamic penalty adjustment for ${playerName}: +${adjustment} xG per 90`);
