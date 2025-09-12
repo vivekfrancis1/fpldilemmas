@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 
+// Current season constant - update this for each new season
+export const CURRENT_SEASON = '2025/26';
+
 // Hardcoded Premier League Teams Data
 export const PREMIER_LEAGUE_TEAMS = [
   { id: 1, name: "Arsenal", short_name: "ARS", code: 3 },

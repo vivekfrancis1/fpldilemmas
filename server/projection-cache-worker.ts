@@ -5,7 +5,8 @@ import {
   teamCleanSheetProjections, 
   playerMinutesProjections, 
   playerDefensiveProjections,
-  teamProjections
+  teamProjections,
+  CURRENT_SEASON
 } from "../shared/schema";
 import { eq, and } from "drizzle-orm";
 import { internalFetch } from "./config";
@@ -130,7 +131,7 @@ class ProjectionCacheWorker {
       
       // Clear existing data for this season
       await db.delete(playerGoalsProjections)
-        .where(eq(playerGoalsProjections.season, '2025/26'));
+        .where(eq(playerGoalsProjections.season, CURRENT_SEASON));
       
       // Apply adjustments and prepare records for batch insert
       const records = [];
@@ -141,30 +142,38 @@ class ProjectionCacheWorker {
           const playerName = getPlayerNameForDebug(player.playerId, bootstrapData);
           
           for (let gw = 4; gw <= 9; gw++) {
-            const baseGoals = player.gameweekProjections[gw] || player.gameweekProjections[`gw${gw}`] || 0;
+            // Enhanced key lookup with fallbacks for robust parsing
+            const baseGoals = player.gameweekProjections[gw] || 
+                            player.gameweekProjections[`gw${gw}`] || 
+                            player.gameweekProjections[String(gw)] || 0;
             
-            if (baseGoals > 0) {
-              // Apply set piece adjustments
-              const adjustedGoals = applyGoalAdjustments(
-                player.playerId,
-                playerName,
-                baseGoals,
-                bootstrapData,
-                true // Enable debug logging
-              );
-              
-              if (adjustedGoals !== baseGoals) {
-                adjustmentCount++;
-              }
-              
-              records.push({
-                playerId: player.playerId,
-                gameweek: gw,
-                season: '2025/26',
-                goals: Number(adjustedGoals),
-                calculatedAt: new Date()
-              });
+            // ROBUSTNESS FIX: Remove baseGoals > 0 guard to allow adjustments even on zero base
+            // Apply set piece adjustments (penalty takers get boosts even if base projection is low/zero)
+            const adjustedGoals = applyGoalAdjustments(
+              player.playerId,
+              playerName,
+              baseGoals,
+              bootstrapData,
+              true // Enable debug logging
+            );
+            
+            // Debug log for Salah specifically (playerId 430)
+            if (player.playerId === 430) {
+              console.log(`🔍 SALAH DEBUG - GW${gw}: Base ${baseGoals} → Adjusted ${adjustedGoals} (penalty adjustment applied)`);
             }
+            
+            if (adjustedGoals !== baseGoals) {
+              adjustmentCount++;
+            }
+            
+            // Always record projections (even if zero) for complete data integrity
+            records.push({
+              playerId: player.playerId,
+              gameweek: gw,
+              season: CURRENT_SEASON,
+              goals: Number(adjustedGoals),
+              calculatedAt: new Date()
+            });
           }
         }
       }
@@ -210,7 +219,7 @@ class ProjectionCacheWorker {
       
       // Clear existing data for this season
       await db.delete(playerAssistProjections)
-        .where(eq(playerAssistProjections.season, '2025/26'));
+        .where(eq(playerAssistProjections.season, CURRENT_SEASON));
       
       // Apply adjustments and prepare records for batch insert
       const records = [];
@@ -221,7 +230,10 @@ class ProjectionCacheWorker {
           const playerName = getPlayerNameForDebug(player.playerId, bootstrapData);
           
           for (let gw = 4; gw <= 9; gw++) {
-            const baseAssists = player.gameweekProjections[gw] || player.gameweekProjections[`gw${gw}`] || 0;
+            // Enhanced key lookup with fallbacks for robust parsing
+            const baseAssists = player.gameweekProjections[gw] || 
+                              player.gameweekProjections[`gw${gw}`] || 
+                              player.gameweekProjections[String(gw)] || 0;
             
             if (baseAssists > 0) {
               // Apply set piece adjustments
