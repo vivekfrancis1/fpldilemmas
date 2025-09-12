@@ -73,6 +73,9 @@ interface AdminSettings {
   pressureMatchMultiplier: number;
   homeCrowdBoostMultiplier: number;
   weatherConditionsGoalsMultiplier: number;
+  refereeInfluenceMultiplier: number;
+  postInternationalBreakMultiplier: number;
+  travelDistanceFatigueMultiplier: number;
   marketFloorMultiplier: number;
   marketCeilingMultiplier: number;
   absoluteMinGoals: number;
@@ -85,9 +88,9 @@ interface AdminSettings {
 const DEFAULT_TEAM_TIERS = {
   // ATTACK TEAMS
   eliteAttackTeams: [12, 13], // Liverpool, Man City
-  strongAttackTeams: [1, 7, 15, 18, 2], // Arsenal, Chelsea, Newcastle, Spurs, Aston Villa
-  averageAttackTeams: [6, 14, 4, 5, 10], // Brighton, Man Utd, Bournemouth, Brentford, Fulham
-  weakAttackTeams: [8, 9, 16, 19, 20], // Crystal Palace, Everton, Nott'm Forest, West Ham, Wolves
+  strongAttackTeams: [1, 7, 15, 18], // Arsenal, Chelsea, Newcastle, Spurs
+  averageAttackTeams: [6, 14, 4, 5, 10, 2, 9], // Brighton, Man Utd, Bournemouth, Brentford, Fulham, Aston Villa, Everton
+  weakAttackTeams: [8, 16, 19, 20], // Crystal Palace, Nott'm Forest, West Ham, Wolves
   promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
   // DEFENSE TEAMS  
   eliteDefenseTeams: [1], // Arsenal
@@ -172,9 +175,9 @@ export default function AdminGoalProjections() {
   // Default team tier assignments - Updated per user specifications
   const DEFAULT_TEAM_TIERS = {
     eliteAttackTeams: [12, 13], // Liverpool, Man City
-    strongAttackTeams: [1, 7, 15, 18, 2], // Arsenal, Chelsea, Newcastle, Spurs, Aston Villa
-    averageAttackTeams: [6, 14, 4, 5, 10, 8], // Brighton, Man Utd, Bournemouth, Brentford, Fulham, Crystal Palace
-    weakAttackTeams: [9, 16, 19, 20], // Everton, Nott'm Forest, West Ham, Wolves
+    strongAttackTeams: [1, 7, 15, 18], // Arsenal, Chelsea, Newcastle, Spurs
+    averageAttackTeams: [6, 14, 4, 5, 10, 8, 2, 9], // Brighton, Man Utd, Bournemouth, Brentford, Fulham, Crystal Palace, Aston Villa, Everton
+    weakAttackTeams: [16, 19, 20], // Nott'm Forest, West Ham, Wolves
     promotedAttackTeams: [17, 11, 3], // Sunderland, Leeds, Burnley
   };
 
