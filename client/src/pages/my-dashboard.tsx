@@ -1110,7 +1110,7 @@ export default function MyDashboard() {
                                           <p className="text-sm text-gray-600">{player.event_points || 0} pts</p>
                                         )}
                                         <div className="text-xs text-gray-500">
-                                          <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                                          <div>Own: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
                                         </div>
                                       </div>
                                     </div>
@@ -1186,7 +1186,7 @@ export default function MyDashboard() {
                                   <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
                                   <p className="text-sm text-gray-600">{player.total_points} pts</p>
                                   <div className="text-xs text-gray-500">
-                                    <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                                    <div>Own: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
                                   </div>
                                 </div>
                               </div>
