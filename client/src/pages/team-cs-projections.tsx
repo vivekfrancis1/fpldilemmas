@@ -176,7 +176,7 @@ export default function TeamCSProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="average">Period Clean Sheet/Game</SelectItem>
+                      <SelectItem value="average">Avg</SelectItem>
                       <SelectItem value="position">League Position</SelectItem>
                       {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
                         const gwNumber = parseInt(startGameweek) + i;
@@ -234,7 +234,7 @@ export default function TeamCSProjections() {
                         onClick={() => setSortBy('average')}
                       >
                         <div className="flex items-center justify-center gap-1">
-                          Period Clean Sheet/Game
+                          Avg
                           {sortBy === 'average' && <TrendingUp className="h-3 w-3" />}
                         </div>
                       </th>
