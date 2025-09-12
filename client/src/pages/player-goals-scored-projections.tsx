@@ -47,7 +47,7 @@ export default function PlayerGoalsScoredProjections() {
 
   // Use fast cached endpoint with robust error handling
   const { data: playerGoalData, isLoading: playerGoalLoading, error } = useQuery<PlayerGoalProjection[]>({
-    queryKey: ["/api/goals-projections-cached"],
+    queryKey: ["/api/cached/player-goals-projections"],
     staleTime: 30 * 60 * 1000, // 30 minute cache
     gcTime: 2 * 60 * 60 * 1000, // Keep in cache for 2 hours
     refetchOnMount: false,
