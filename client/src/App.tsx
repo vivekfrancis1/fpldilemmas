@@ -78,7 +78,7 @@ function Router() {
   
   return (
     <Switch>
-      <Route path="/" component={MyDashboard} />
+      <Route path="/" component={ProjectedGoalsCS} />
       <Route path="/live-rank" component={LiveRank} />
       <Route path="/my-dashboard" component={MyDashboard} />
       <Route path="/fixtures" component={Fixtures} />

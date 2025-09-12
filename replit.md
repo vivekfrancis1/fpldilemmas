@@ -7,7 +7,7 @@ FPL Dilemmas is an analytics application for Fantasy Premier League (FPL) manage
 Preferred communication style: Simple, everyday language.
 **Development Protocol**: Always ask permission before making any changes to logic, calculations, or functionality. No unauthorized modifications are permitted.
 Site tagline: Previously used "Analytical tools to beat the deadline blues" - removed from all tool headers per user request. Now uses "Advanced FPL Analytics Platform" in sidebar and home page.
-Navigation priority: My Dashboard as default landing page (home route '/'), with side navigation for all tools.
+Navigation priority: Goals and Clean Sheets as default landing page (home route '/'), with side navigation for all tools.
 Manager ID caching: All FPL manager tools (My Live Rank, My Team, My Leagues) now automatically save and pre-load the last searched Manager ID using localStorage for seamless cross-tool experience.
 Projection Tools Limit: All projection tools (Player Projections, Match Projections, Team Goal/CS Projections, Goal Share, Assist Share) now limited to next 6 gameweeks only for focused analysis with updated dropdowns and defaults. Updated to show only future gameweeks excluding current/finished gameweeks for better forward-looking analysis. Match Projections now dynamically adapts to exclude started gameweeks. Goal Share and Assist Share successfully extended to display data for all 6 gameweeks with proper API integration.
 Most popular tools: Player Statistics, My Live Rank, and Fixture Analyzer.
@@ -20,7 +20,7 @@ Player Total Points Critical Fixes (Sept 6, 2025): Resolved major database field
 
 ### Frontend Architecture
 - **Framework**: React with TypeScript, using Vite for building.
-- **Routing**: Wouter for client-side routing; My Live Rank is the default route.
+- **Routing**: Wouter for client-side routing; Goals and Clean Sheets is the default route.
 - **State Management**: TanStack Query for server state.
 - **UI Library**: shadcn/ui components built on Radix UI primitives.
 - **Styling**: Tailwind CSS with a custom FPL-themed design system.
