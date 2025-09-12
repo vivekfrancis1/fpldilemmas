@@ -935,6 +935,9 @@ export default function MyDashboard() {
                             <p className="text-xl sm:text-2xl font-bold text-blue-900 truncate">
                               {teamData.entry_history?.event_transfers || 0}/1
                             </p>
+                            <p className="text-xs text-gray-600 mt-0.5 truncate">
+                              {teamData.entry_history?.event_transfers || 0} made / 1 free
+                            </p>
                             {teamData.entry_history?.event_transfers_cost && teamData.entry_history.event_transfers_cost > 0 && (
                               <p className="text-xs text-red-600 mt-1 truncate">
                                 Cost: -{teamData.entry_history.event_transfers_cost} pts
