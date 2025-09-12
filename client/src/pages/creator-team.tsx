@@ -388,7 +388,7 @@ export default function CreatorTeam() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="team" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 bg-gray-100 rounded-lg p-1">
+        <TabsList className="grid w-full grid-cols-4 bg-gray-100 rounded-lg p-1">
           <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Users className="h-4 w-4" />
             Team
@@ -400,10 +400,6 @@ export default function CreatorTeam() {
           <TabsTrigger value="performance" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <BarChart3 className="h-4 w-4" />
             Performance
-          </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <Calendar className="h-4 w-4" />
-            History
           </TabsTrigger>
           <TabsTrigger value="chips" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Star className="h-4 w-4" />
@@ -751,7 +747,7 @@ export default function CreatorTeam() {
               <div>
                 <h2 className="text-xl font-semibold mb-4 flex items-center">
                   <BarChart3 className="h-5 w-5 mr-2" />
-                  Gameweek Performance
+                  Gameweek History
                 </h2>
                 <Card>
                   <CardContent className="p-0">
@@ -926,31 +922,9 @@ export default function CreatorTeam() {
                   </Card>
                 </div>
               )}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-8">
-                <Calendar className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Performance Data</h3>
-                <p className="text-gray-500 text-center max-w-md">
-                  Performance history is not available for this creator.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
 
-        <TabsContent value="history" className="space-y-6">
-          {historyLoading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full" />
-              ))}
-            </div>
-          ) : managerHistory ? (
-            <div className="space-y-6">
               {/* Season History */}
-              {managerHistory.past && managerHistory.past.length > 0 && (
+              {managerHistory?.past && managerHistory.past.length > 0 && (
                 <div>
                   <h2 className="text-xl font-semibold mb-4 flex items-center">
                     <Trophy className="h-5 w-5 mr-2" />
@@ -982,71 +956,20 @@ export default function CreatorTeam() {
                   </Card>
                 </div>
               )}
-
-              {/* Chips Used */}
-              {managerHistory.chips && managerHistory.chips.length > 0 && (
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Chips Used This Season</h2>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {managerHistory.chips.map((chip) => (
-                      <Card key={chip.name}>
-                        <CardContent className="p-4 text-center">
-                          <div className="text-lg font-bold capitalize">{chip.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {chip.time ? `GW${chip.event}` : 'Not Used'}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Current Season Summary */}
-              {managerHistory.current && managerHistory.current.length > 0 && (
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Current Season Summary</h2>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <div className="text-2xl font-bold">
-                          {managerHistory.current.length}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Gameweeks Played</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <div className="text-2xl font-bold">
-                          {managerHistory.current.reduce((sum, entry) => sum + entry.event_transfers, 0)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Total Transfers</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <div className="text-2xl font-bold">
-                          {managerHistory.current.reduce((sum, entry) => sum + entry.event_transfers_cost, 0)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Transfer Cost</div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              )}
             </div>
           ) : (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8">
                 <Calendar className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Historical Data</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Performance Data</h3>
                 <p className="text-gray-500 text-center max-w-md">
-                  Historical data is not available for this creator.
+                  Performance history is not available for this creator.
                 </p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
+
 
         <TabsContent value="chips" className="space-y-6">
           <Card>
