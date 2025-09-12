@@ -661,9 +661,6 @@ export default function Top25TeamAnalysis() {
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">{player.web_name}</div>
-                            <div className="text-sm text-gray-600">
-                              {player.first_name} {player.second_name}
-                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge className={getPositionColor(player.element_type)}>
@@ -719,9 +716,6 @@ export default function Top25TeamAnalysis() {
                         <TableRow key={player.id} data-testid={`row-captain-${player.id}`}>
                           <TableCell>
                             <div className="font-medium">{player.web_name}</div>
-                            <div className="text-sm text-gray-600">
-                              {player.first_name} {player.second_name}
-                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge className={getPositionColor(player.element_type)}>
