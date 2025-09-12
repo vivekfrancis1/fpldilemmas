@@ -439,37 +439,6 @@ export default function Top25TeamAnalysis() {
           </div>
         </div>
 
-        {/* Status Overview */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{validTeamsCount}</div>
-                <div className="text-sm text-gray-600">Teams Loaded</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{loadingTeamsCount}</div>
-                <div className="text-sm text-gray-600">Loading</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{errorTeamsCount}</div>
-                <div className="text-sm text-gray-600">Errors</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">25</div>
-                <div className="text-sm text-gray-600">Total Managers</div>
-              </div>
-            </div>
-            {validTeamsCount > 0 && (
-              <div className="mt-4">
-                <Progress value={(validTeamsCount / 25) * 100} className="h-2" />
-                <p className="text-sm text-gray-600 mt-1 text-center">
-                  Analysis based on {validTeamsCount} of 25 teams
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {validTeamsCount === 0 ? (
           <Card>
