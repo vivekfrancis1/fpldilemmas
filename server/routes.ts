@@ -385,6 +385,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return 0; // No adjustment if player not found
   }
 
+  // Direct freekick taker adjustment for goals (slightly higher goal share)
+  function getDirectFreekickAdjustment(playerName: string, playerId: number, bootstrapData?: any): number {
+    if (bootstrapData?.elements) {
+      const player = bootstrapData.elements.find((p: any) => p.id === playerId);
+      if (player) {
+        const freekickOrder = player.direct_freekicks_order || 99;
+        
+        let adjustment = 0;
+        if (freekickOrder === 1) {
+          // Primary direct freekick taker - slight goal advantage
+          adjustment = 0.25 + (player.goals_scored || 0) * 0.02;
+        } else if (freekickOrder === 2) {
+          // Secondary direct freekick taker
+          adjustment = 0.15 + (player.goals_scored || 0) * 0.015;
+        } else if (freekickOrder === 3) {
+          // Tertiary direct freekick taker
+          adjustment = 0.1 + (player.goals_scored || 0) * 0.01;
+        }
+        
+        // Cap the adjustment
+        adjustment = Math.min(0.4, Math.max(0, adjustment));
+        
+        if (adjustment > 0) {
+          console.log(`DEBUG: Direct freekick adjustment for ${playerName}: +${adjustment} xG per 90`);
+        }
+        
+        return adjustment;
+      }
+    }
+    
+    return 0;
+  }
+
+  // Corner/indirect freekick taker adjustment for assists (much higher assist share)
+  function getCornerFreekickAdjustment(playerName: string, playerId: number, bootstrapData?: any): number {
+    if (bootstrapData?.elements) {
+      const player = bootstrapData.elements.find((p: any) => p.id === playerId);
+      if (player) {
+        const cornerOrder = player.corners_and_indirect_freekicks_order || 99;
+        
+        let adjustment = 0;
+        if (cornerOrder === 1) {
+          // Primary corner/indirect freekick taker - much higher assist advantage
+          adjustment = 0.8 + (player.assists || 0) * 0.04;
+        } else if (cornerOrder === 2) {
+          // Secondary corner/indirect freekick taker
+          adjustment = 0.5 + (player.assists || 0) * 0.03;
+        } else if (cornerOrder === 3) {
+          // Tertiary corner/indirect freekick taker  
+          adjustment = 0.3 + (player.assists || 0) * 0.02;
+        }
+        
+        // Cap the adjustment higher for assists
+        adjustment = Math.min(1.2, Math.max(0, adjustment));
+        
+        if (adjustment > 0) {
+          console.log(`DEBUG: Corner/indirect freekick adjustment for ${playerName}: +${adjustment} xA per 90`);
+        }
+        
+        return adjustment;
+      }
+    }
+    
+    return 0;
+  }
+
+  // Set piece taker adjustment wrapper for assists (used in assist projections)
+  function getSetPieceTakerAdjustment(playerName: string, playerId: number, bootstrapData?: any): number {
+    return getCornerFreekickAdjustment(playerName, playerId, bootstrapData);
+  }
+
   // Bootstrap data cache (5 minutes)
   let bootstrapCache: { data: any; timestamp: number } | null = null;
   const BOOTSTRAP_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -4723,6 +4794,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const penaltyAdjustment = getPenaltyTakerAdjustment(player.name, player.id);
             projectedXGPer90 += penaltyAdjustment;
             
+            // DIRECT FREEKICK TAKER ADJUSTMENT - Add freekick goals
+            const freekickAdjustment = getDirectFreekickAdjustment(player.name, player.id);
+            projectedXGPer90 += freekickAdjustment;
+            
             // PURE PROJECTION: Only projected goals for next 12 gameweeks
             const expectedMinutes = calculateExpectedMinutes(player, playersWithXG);
             const projectedSeasonGoals = (projectedXGPer90 / 90) * expectedMinutes * (12 / 38);
@@ -6218,7 +6293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expectedMinutes = calculateExpectedMinutes(player, players);
       
       // SET PIECE TAKER ADJUSTMENT: Add freekicks/corners assists that xA might exclude
-      const setPieceAdjustment = getSetPieceTakerAdjustment(playerName, player.id);
+      const setPieceAdjustment = getSetPieceTakerAdjustment(playerName, player.id, bootstrapData);
       const adjustedXAPer90 = xAPer90 + setPieceAdjustment;
       
       // PURE PROJECTION: Only projected assists for the next 12 gameweeks
