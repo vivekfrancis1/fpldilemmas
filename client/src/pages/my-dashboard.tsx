@@ -596,7 +596,7 @@ export default function MyDashboard() {
             {/* Main Dashboard Tabs */}
             <Tabs defaultValue="overview" className="w-full">
               {/* Mobile: Show only 3 main tabs */}
-              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg sm:mobile-tabs-list">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg sm:mobile-tabs-list">
                 <TabsTrigger 
                   value="overview" 
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger"
@@ -614,14 +614,6 @@ export default function MyDashboard() {
                   <Users className="h-4 w-4 sm:hidden" />
                   <span className="hidden sm:inline">Team</span>
                   <span className="sm:hidden text-xs">Team</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="more" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger sm:hidden"
-                  data-testid="tab-more"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  <span className="text-xs">More</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="transfers" 
@@ -801,90 +793,6 @@ export default function MyDashboard() {
               )}
             </TabsContent>
 
-            {/* More Tab (Mobile Only) */}
-            <TabsContent value="more" className="fpl-section-spacing mt-8 sm:hidden">
-              <div className="space-y-6">
-                {/* Quick Stats */}
-                <Card className="border-0 bg-gradient-to-br from-gray-50 to-slate-50 shadow-lg mobile-dashboard-card" data-testid="card-quick-stats">
-                  <CardHeader className="mobile-dashboard-header">
-                    <CardTitle className="mobile-dashboard-title text-gray-800">Quick Stats</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center p-3 bg-white rounded-lg">
-                        <div className="text-sm text-gray-600">Team Value</div>
-                        <div className="text-lg font-bold text-green-600">£{getTeamValue().toFixed(1)}m</div>
-                      </div>
-                      <div className="text-center p-3 bg-white rounded-lg">
-                        <div className="text-sm text-gray-600">Bank</div>
-                        <div className="text-lg font-bold text-blue-600">
-                          £{teamData?.entry_history ? (teamData.entry_history.bank / 10).toFixed(1) : '0.0'}m
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Recent Transfers */}
-                {transfersData && transfersData.length > 0 && (
-                  <Card className="border-0 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg mobile-dashboard-card" data-testid="card-recent-transfers">
-                    <CardHeader className="mobile-dashboard-header">
-                      <CardTitle className="mobile-dashboard-title text-orange-800 flex items-center gap-2 justify-center">
-                        <ArrowLeftRight className="h-5 w-5" />
-                        Recent Transfers
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-3">
-                      <div className="space-y-3 max-h-48 overflow-y-auto">
-                        {transfersData.slice(-3).reverse().map((transfer, index) => {
-                          const playerIn = bootstrapData?.elements.find(p => p.id === transfer.element_in);
-                          const playerOut = bootstrapData?.elements.find(p => p.id === transfer.element_out);
-                          
-                          return (
-                            <div key={index} className="bg-white/70 rounded-lg p-3 space-y-2">
-                              <div className="text-xs font-medium text-gray-700">GW{transfer.event}</div>
-                              <div className="flex items-center gap-2 text-sm">
-                                <span className="text-green-700 font-medium">+{playerIn?.web_name || 'Unknown'}</span>
-                                <ArrowLeftRight className="h-3 w-3 text-gray-400" />
-                                <span className="text-red-700 font-medium">-{playerOut?.web_name || 'Unknown'}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Performance Summary */}
-                {historyData?.current && (
-                  <Card className="border-0 bg-gradient-to-br from-emerald-50 to-green-50 shadow-lg mobile-dashboard-card" data-testid="card-performance-summary">
-                    <CardHeader className="mobile-dashboard-header">
-                      <CardTitle className="mobile-dashboard-title text-emerald-800 flex items-center gap-2 justify-center">
-                        <Activity className="h-5 w-5" />
-                        Recent Performance
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-3">
-                      <div className="space-y-2">
-                        {historyData.current.slice(-3).reverse().map((gw) => (
-                          <div key={gw.event} className="flex items-center justify-between p-2 bg-white/70 rounded-lg">
-                            <div>
-                              <div className="font-medium text-sm">GW{gw.event}</div>
-                              <div className="text-xs text-gray-600">{gw.event_transfers || 0} transfers</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-bold text-emerald-700">{gw.points || 0} pts</div>
-                              <div className="text-xs text-gray-600">#{formatRank(gw.overall_rank || 0)}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </TabsContent>
 
             {/* Team Tab */}
             <TabsContent value="team" className="space-y-6">
