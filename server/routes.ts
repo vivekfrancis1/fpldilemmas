@@ -5242,7 +5242,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const projectedTeamGoals = (typeof teamGoals === 'number') ? teamGoals : 0;
             const playerGoalsForGW = projectedTeamGoals * (player.goalShare / 100);
             
-            console.log(`DEBUG: Goals Scored - GW${gameweek} PROJECTION - ${team.short_name} projected: ${projectedTeamGoals.toFixed(2)} goals, ${playerName}: ${playerGoalsForGW.toFixed(2)}`);
             
             gameweekProjections[gameweek] = Math.round(playerGoalsForGW * 100) / 100;
             totalProjectedGoals += playerGoalsForGW;
