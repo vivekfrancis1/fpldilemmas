@@ -627,8 +627,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const season = req.params.season;
       console.log(`DEBUG: Historical Goal Share API called for season ${season}`);
       
-      // Fetch historical player data for the specified season
-      const historicalPlayers = await storage.getHistoricalPlayers(season);
+      // Fetch historical player data and current FPL bootstrap data in parallel for enrichment
+      const [historicalPlayers, bootstrapResponse] = await Promise.all([
+        storage.getHistoricalPlayers(season),
+        fetch('https://fantasy.premierleague.com/api/bootstrap-static/')
+      ]);
+      
+      let bootstrapData = null;
+      if (bootstrapResponse.ok) {
+        bootstrapData = await bootstrapResponse.json();
+        console.log(`DEBUG: Retrieved current bootstrap data to enrich historical names and positions`);
+      } else {
+        console.warn(`WARNING: Could not fetch current bootstrap data for enrichment`);
+      }
+      
+      // Helper function to get enriched player data
+      const getEnrichedPlayerData = (player: any) => {
+        // Try to match with current FPL player data by name or previous ID
+        let currentPlayer = null;
+        if (bootstrapData?.elements) {
+          currentPlayer = bootstrapData.elements.find((p: any) => 
+            (p.first_name === player.firstName && p.second_name === player.secondName) ||
+            p.id === player.id || p.id === player.playerId
+          );
+        }
+        
+        return {
+          playerId: player.id || player.playerId || currentPlayer?.id,
+          playerName: currentPlayer ? 
+            `${currentPlayer.first_name} ${currentPlayer.second_name}`.trim() :
+            `${player.firstName || ''} ${player.secondName || ''}`.trim() || 'Unknown Player',
+          position: currentPlayer?.element_type ? 
+            ['GKP', 'DEF', 'MID', 'FWD'][currentPlayer.element_type - 1] :
+            (player.position || 'Unknown'),
+          goals: player.goalsScored || 0,
+          minutes: player.minutes || 0,
+          totalPoints: player.totalPoints || 0
+        };
+      };
       
       // DEPARTED_PLAYER_NAMES is already imported at the top of the file
       
@@ -684,14 +720,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         teamGoalShares[teamName].totalGoals += goals;
-        teamGoalShares[teamName].players.push({
-          playerId: player.id || player.playerId,
-          playerName: `${player.firstName || ''} ${player.secondName || ''}`.trim(),
-          position: player.position || 'Unknown',
-          goals: goals,
-          minutes: player.minutes || 0,
-          totalPoints: player.totalPoints || 0
-        });
+        
+        // Use enriched player data with current FPL information
+        const enrichedPlayer = getEnrichedPlayerData(player);
+        teamGoalShares[teamName].players.push(enrichedPlayer);
       });
       
       // Calculate goal share percentages and format response
@@ -732,7 +764,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (historicalGoalShareData.length > 0) {
         historicalGoalShareData.slice(0, 3).forEach(team => {
           team.players.slice(0, 2).forEach((player: any) => {
-            console.log(`HISTORICAL_GOAL_SHARE ${season} ${player.name}: goalShare=${player.goalShare}%, actualGoals=${player.projectedGoals}, teamGoals=${team.expectedGoals}`);
+            console.log(`HISTORICAL_GOAL_SHARE ${season} ${player.playerName}: goalShare=${player.goalShare}%, actualGoals=${player.projectedGoals}, teamGoals=${team.expectedGoals}`);
           });
         });
       }

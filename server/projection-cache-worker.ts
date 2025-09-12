@@ -14,7 +14,9 @@ import { fplScoringCacheService } from "./fpl-scoring-cache-service";
 import { 
   applyGoalAdjustments, 
   applyAssistAdjustments,
-  getPlayerNameForDebug
+  getPlayerNameForDebug,
+  enforcePositionCaps,
+  TeamPlayerShare
 } from "./projection-adjustments";
 
 interface ProjectionData {
@@ -25,6 +27,19 @@ interface ProjectionData {
 
 class ProjectionCacheWorker {
   private readonly BATCH_SIZE = 50;
+  
+  /**
+   * Helper function to get position name from element type
+   */
+  private getPositionName(elementType: number): string {
+    switch (elementType) {
+      case 1: return 'goalkeeper';
+      case 2: return 'defender';
+      case 3: return 'midfielder';
+      case 4: return 'forward';
+      default: return 'midfielder';
+    }
+  }
   
   /**
    * Cache only essential projections for faster light updates
@@ -109,6 +124,7 @@ class ProjectionCacheWorker {
    * Cache goals projections from API with set piece adjustments applied
    */
   private async cacheGoalsProjections(): Promise<void> {
+    console.log(`🚀 GOALS CACHER: position caps enabled`);
     try {
       console.log(`📊 Caching goals projections with set piece adjustments...`);
       
@@ -137,11 +153,27 @@ class ProjectionCacheWorker {
       const records = [];
       let adjustmentCount = 0;
       
+      // Determine gameweek range dynamically from projection data
+      const gameweekRange = new Set<number>();
+      for (const player of data) {
+        if (player.gameweekProjections) {
+          Object.keys(player.gameweekProjections).forEach(key => {
+            const gw = parseInt(key.replace('gw', ''));
+            if (!isNaN(gw) && gw >= 1 && gw <= 38) {
+              gameweekRange.add(gw);
+            }
+          });
+        }
+      }
+      
+      const gameweeks = Array.from(gameweekRange).sort((a, b) => a - b);
+      console.log(`📅 Dynamic gameweek range detected: GW${gameweeks[0]}-${gameweeks[gameweeks.length - 1]} (${gameweeks.length} gameweeks)`);
+      
       for (const player of data) {
         if (player.gameweekProjections) {
           const playerName = getPlayerNameForDebug(player.playerId, bootstrapData);
           
-          for (let gw = 4; gw <= 9; gw++) {
+          for (const gw of gameweeks) {
             // Enhanced key lookup with fallbacks for robust parsing
             const baseGoals = player.gameweekProjections[gw] || 
                             player.gameweekProjections[`gw${gw}`] || 
@@ -308,6 +340,99 @@ class ProjectionCacheWorker {
       console.log(`   - Arsenal normalization factor: ${arsenalNormalizationFactor.toFixed(4)}`);
       console.log(`   - Arsenal total: ${arsenalTotalBefore.toFixed(2)} → ${arsenalTotalAfter.toFixed(2)}`);
       console.log(`✅ Team-level normalization completed (${normalizedCount} significant adjustments)`);
+      
+      // POSITION-BASED CAPPING: Apply position caps to prevent unrealistic shares
+      console.log(`🔄 Applying position-based capping to goal shares...`);
+      
+      // Position capping uses class method this.getPositionName()
+      
+      // Group records by team-gameweek for position capping
+      const teamGameweekGroups = new Map<string, typeof records>();
+      for (const record of records) {
+        const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+        if (!player) continue;
+        
+        const key = `${player.team}-${record.gameweek}`;
+        if (!teamGameweekGroups.has(key)) {
+          teamGameweekGroups.set(key, []);
+        }
+        teamGameweekGroups.get(key)!.push(record);
+      }
+      
+      let totalCappingApplications = 0;
+      let brunoFernandesCapped = false;
+      
+      // Apply position capping to each team-gameweek group
+      for (const [key, teamRecords] of teamGameweekGroups.entries()) {
+        const [teamId, gameweek] = key.split('-');
+        const teamTotal = teamRecords.reduce((sum, r) => sum + r.goals, 0);
+        
+        if (teamTotal === 0) continue;
+        
+        // Build TeamPlayerShare objects
+        const teamPlayerShares: TeamPlayerShare[] = teamRecords.map(record => {
+          const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+          if (!player) return null;
+          
+          const goalShare = (record.goals / teamTotal) * 100;
+          const position = this.getPositionName(player.element_type);
+          
+          return {
+            id: record.playerId,
+            name: `${player.first_name} ${player.second_name}`,
+            position: position,
+            goalShare: goalShare,
+            projectedGoals: record.goals
+          };
+        }).filter(p => p !== null) as TeamPlayerShare[];
+        
+        if (teamPlayerShares.length === 0) continue;
+        
+        // Apply position caps with debug logging for specific players
+        const cappedShares = enforcePositionCaps(teamPlayerShares, 'goals', true);
+        
+        // Convert capped shares back to goals and update records
+        let hadCapping = false;
+        for (let i = 0; i < teamRecords.length; i++) {
+          const record = teamRecords[i];
+          const cappedPlayer = cappedShares.find(p => p.id === record.playerId);
+          
+          if (cappedPlayer && cappedPlayer.goalShare !== undefined) {
+            const newGoals = (cappedPlayer.goalShare / 100) * teamTotal;
+            const originalGoals = record.goals;
+            
+            // Check if this is Bruno Fernandes (player ID 284)
+            if (record.playerId === 284) {
+              const originalShare = (originalGoals / teamTotal) * 100;
+              console.log(`🔍 BRUNO FERNANDES CAPPING - GW${gameweek}: Original ${originalShare.toFixed(1)}% (${originalGoals.toFixed(3)} goals) → Capped ${cappedPlayer.goalShare.toFixed(1)}% (${newGoals.toFixed(3)} goals)`);
+              if (originalShare > 30.1) {
+                brunoFernandesCapped = true;
+              }
+            }
+            
+            // Log significant capping events
+            if (Math.abs(newGoals - originalGoals) > 0.01) {
+              hadCapping = true;
+              const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+              const playerName = player ? `${player.first_name} ${player.second_name}` : `Player ${record.playerId}`;
+              const originalShare = (originalGoals / teamTotal) * 100;
+              console.log(`📊 POSITION CAPPING - ${playerName} (${cappedPlayer.position}) GW${gameweek}: ${originalShare.toFixed(1)}% → ${cappedPlayer.goalShare.toFixed(1)}% (${originalGoals.toFixed(3)} → ${newGoals.toFixed(3)} goals)`);
+            }
+            
+            record.goals = Number(newGoals.toFixed(4));
+          }
+        }
+        
+        if (hadCapping) {
+          totalCappingApplications++;
+        }
+      }
+      
+      console.log(`📊 POSITION CAPPING SUMMARY:`);
+      console.log(`   - Team-gameweek groups processed: ${teamGameweekGroups.size}`);
+      console.log(`   - Groups with capping applied: ${totalCappingApplications}`);
+      console.log(`   - Bruno Fernandes capped: ${brunoFernandesCapped ? 'YES' : 'NO'}`);
+      console.log(`✅ Position-based capping completed`);
       
       // Insert in batches
       for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
@@ -590,6 +715,97 @@ class ProjectionCacheWorker {
       console.log(`   - Arsenal normalization factor: ${arsenalNormalizationFactor.toFixed(4)}`);
       console.log(`   - Arsenal total: ${arsenalTotalBefore.toFixed(2)} → ${arsenalTotalAfter.toFixed(2)}`);
       console.log(`✅ Team-level assist normalization completed (${normalizedCount} significant adjustments)`);
+      
+      // POSITION-BASED CAPPING: Apply position caps to prevent unrealistic assist shares
+      console.log(`🔄 Applying position-based capping to assist shares...`);
+      
+      // Group records by team-gameweek for position capping
+      const assistTeamGameweekGroups = new Map<string, typeof records>();
+      for (const record of records) {
+        const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+        if (!player) continue;
+        
+        const key = `${player.team}-${record.gameweek}`;
+        if (!assistTeamGameweekGroups.has(key)) {
+          assistTeamGameweekGroups.set(key, []);
+        }
+        assistTeamGameweekGroups.get(key)!.push(record);
+      }
+      
+      let totalAssistCappingApplications = 0;
+      let keyPlayersCapped = [];
+      
+      // Apply position capping to each team-gameweek group
+      for (const [key, teamRecords] of assistTeamGameweekGroups.entries()) {
+        const [teamId, gameweek] = key.split('-');
+        const teamTotal = teamRecords.reduce((sum, r) => sum + r.assists, 0);
+        
+        if (teamTotal === 0) continue;
+        
+        // Build TeamPlayerShare objects
+        // Store method reference to avoid context issues
+        const getPositionName = this.getPositionName.bind(this);
+        const teamPlayerShares: TeamPlayerShare[] = teamRecords.map(record => {
+          const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+          if (!player) return null;
+          
+          const assistShare = (record.assists / teamTotal) * 100;
+          const position = getPositionName(player.element_type);
+          
+          return {
+            id: record.playerId,
+            name: `${player.first_name} ${player.second_name}`,
+            position: position,
+            assistShare: assistShare,
+            projectedAssists: record.assists
+          };
+        }).filter(p => p !== null) as TeamPlayerShare[];
+        
+        if (teamPlayerShares.length === 0) continue;
+        
+        // Apply position caps with debug logging for specific players
+        const cappedShares = enforcePositionCaps(teamPlayerShares, 'assists', true);
+        
+        // Convert capped shares back to assists and update records
+        let hadCapping = false;
+        for (let i = 0; i < teamRecords.length; i++) {
+          const record = teamRecords[i];
+          const cappedPlayer = cappedShares.find(p => p.id === record.playerId);
+          
+          if (cappedPlayer && cappedPlayer.assistShare !== undefined) {
+            const newAssists = (cappedPlayer.assistShare / 100) * teamTotal;
+            const originalAssists = record.assists;
+            
+            // Check if this is a key playmaker who might get capped
+            const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+            const playerName = player ? `${player.first_name} ${player.second_name}` : `Player ${record.playerId}`;
+            const originalShare = (originalAssists / teamTotal) * 100;
+            
+            // Log significant capping events
+            if (Math.abs(newAssists - originalAssists) > 0.01) {
+              hadCapping = true;
+              console.log(`📊 ASSIST POSITION CAPPING - ${playerName} (${cappedPlayer.position}) GW${gameweek}: ${originalShare.toFixed(1)}% → ${cappedPlayer.assistShare.toFixed(1)}% (${originalAssists.toFixed(3)} → ${newAssists.toFixed(3)} assists)`);
+              
+              // Track key players who get capped significantly
+              if (originalShare > 30) {
+                keyPlayersCapped.push(`${playerName} (${originalShare.toFixed(1)}% → ${cappedPlayer.assistShare.toFixed(1)}%)`);
+              }
+            }
+            
+            record.assists = Number(newAssists.toFixed(4));
+          }
+        }
+        
+        if (hadCapping) {
+          totalAssistCappingApplications++;
+        }
+      }
+      
+      console.log(`📊 ASSIST POSITION CAPPING SUMMARY:`);
+      console.log(`   - Team-gameweek groups processed: ${assistTeamGameweekGroups.size}`);
+      console.log(`   - Groups with capping applied: ${totalAssistCappingApplications}`);
+      console.log(`   - Key players capped: ${keyPlayersCapped.length > 0 ? keyPlayersCapped.join(', ') : 'None'}`);
+      console.log(`✅ Position-based assist capping completed`);
       
       // Insert in batches
       for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
