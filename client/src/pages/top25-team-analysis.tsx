@@ -456,12 +456,12 @@ export default function Top25TeamAnalysis() {
           </Card>
         ) : (
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
-              <TabsTrigger value="players" data-testid="tab-players">Players</TabsTrigger>
-              <TabsTrigger value="captains" data-testid="tab-captains">Captains</TabsTrigger>
-              <TabsTrigger value="formations" data-testid="tab-formations">Formations</TabsTrigger>
-              <TabsTrigger value="budget" data-testid="tab-budget">Budget</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1 h-auto p-1">
+              <TabsTrigger value="overview" data-testid="tab-overview" className="text-xs sm:text-sm px-2 py-2">Overview</TabsTrigger>
+              <TabsTrigger value="players" data-testid="tab-players" className="text-xs sm:text-sm px-2 py-2">Players</TabsTrigger>
+              <TabsTrigger value="captains" data-testid="tab-captains" className="text-xs sm:text-sm px-2 py-2">Captains</TabsTrigger>
+              <TabsTrigger value="formations" data-testid="tab-formations" className="text-xs sm:text-sm px-2 py-2">Forms</TabsTrigger>
+              <TabsTrigger value="budget" data-testid="tab-budget" className="text-xs sm:text-sm px-2 py-2">Budget</TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
@@ -638,8 +638,9 @@ export default function Top25TeamAnalysis() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
                       <TableRow>
                         <TableHead>Rank</TableHead>
                         <TableHead>Player</TableHead>
@@ -685,6 +686,7 @@ export default function Top25TeamAnalysis() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -699,8 +701,9 @@ export default function Top25TeamAnalysis() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
                       <TableRow>
                         <TableHead>Player</TableHead>
                         <TableHead>Position</TableHead>
@@ -752,6 +755,7 @@ export default function Top25TeamAnalysis() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
