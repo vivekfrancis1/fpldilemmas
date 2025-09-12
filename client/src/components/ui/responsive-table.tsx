@@ -108,14 +108,6 @@ function MobileCard<T>({
       });
   }, [columns]);
 
-  // Split columns into primary and secondary for mobile cards
-  const primaryColumns = sortedColumns.filter(col => 
-    col.priority === 'essential' || col.priority === 'important'
-  );
-  const secondaryColumns = sortedColumns.filter(col => 
-    col.priority === 'secondary' || col.priority === 'optional'
-  );
-
   const formatValueForCard = (column: ResponsiveTableColumn<T>, value: any) => {
     if (column.render) {
       return column.render(value, item, index);
@@ -158,9 +150,9 @@ function MobileCard<T>({
           </div>
         )}
 
-        {/* Primary Data - Always Visible */}
-        <div className="space-y-2 mb-3">
-          {primaryColumns.map((column) => {
+        {/* All Columns - Always Visible */}
+        <div className="space-y-2">
+          {sortedColumns.map((column) => {
             const value = item[column.key as keyof T];
             const formattedValue = formatValueForCard(column, value);
             
@@ -180,50 +172,6 @@ function MobileCard<T>({
             );
           })}
         </div>
-
-        {/* Secondary Data - Collapsible */}
-        {secondaryColumns.length > 0 && (
-          <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-            <CollapsibleTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full justify-between p-2 h-auto text-xs"
-                data-testid="card-expand-toggle"
-              >
-                <span>
-                  {isExpanded ? 'Less details' : 'More details'}
-                </span>
-                {isExpanded ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-2 pt-2 border-t">
-              {secondaryColumns.map((column) => {
-                const value = item[column.key as keyof T];
-                const formattedValue = formatValueForCard(column, value);
-                
-                return (
-                  <div 
-                    key={column.key} 
-                    className="flex justify-between items-center"
-                    data-testid={`card-field-${column.key}`}
-                  >
-                    <span className="text-xs text-gray-500">
-                      {column.mobileLabel || column.header}:
-                    </span>
-                    <span className="text-xs text-gray-700">
-                      {formattedValue as React.ReactNode}
-                    </span>
-                  </div>
-                );
-              })}
-            </CollapsibleContent>
-          </Collapsible>
-        )}
       </CardContent>
     </Card>
   );
