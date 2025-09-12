@@ -164,10 +164,10 @@ const TOP_25_MANAGERS = [
 // Helper functions
 function getPositionName(elementType: number): string {
   const positions: { [key: number]: string } = {
-    1: "Goalkeeper",
-    2: "Defender",
-    3: "Midfielder",
-    4: "Forward"
+    1: "GKP",
+    2: "DEF",
+    3: "MID",
+    4: "FWD"
   };
   return positions[elementType] || "Unknown";
 }
