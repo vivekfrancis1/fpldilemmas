@@ -1057,9 +1057,6 @@ export default function MyDashboard() {
                                       }`}
                                     >
                                       <div className="flex items-center gap-3 flex-1">
-                                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
-                                          {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                        </div>
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2">
                                             <span className="font-semibold text-gray-900">{player.web_name}</span>
@@ -1151,9 +1148,6 @@ export default function MyDashboard() {
                                 <div className="flex items-center gap-3 flex-1">
                                   <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
                                     {pick.position - 11}
-                                  </div>
-                                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
-                                    {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                                   </div>
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2">
