@@ -1080,7 +1080,7 @@ class ProjectionCacheWorker {
             await db.update(teamProjections)
               .set({
                 goalShareData: teamGoals.goalShareData || {},
-                assistShareData: teamAssists?.assistShareData || {}
+                assistShareData: teamAssists?.players || []
               })
               .where(and(
                 eq(teamProjections.teamId, teamGoals.teamId),
