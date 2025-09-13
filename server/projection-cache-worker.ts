@@ -1333,8 +1333,9 @@ class ProjectionCacheWorker {
   private async getPlayerTotalPointsStatus(): Promise<{ type: string; count: number; lastUpdated: string | null; isStale: boolean }> {
     try {
       // Import the totalPointsCache from routes.ts
-      const routesModule = await import('./routes');
-      const totalPointsCache = (routesModule as any).totalPointsCache;
+      const { totalPointsCache } = await import('./routes');
+      
+      console.log(`🔍 DEBUG: Checking totalPointsCache - exists: ${!!totalPointsCache}, size: ${totalPointsCache?.size || 0}`);
       
       const now = new Date();
       const STALE_THRESHOLD = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
@@ -1345,10 +1346,15 @@ class ProjectionCacheWorker {
       let isStale = true;
       
       if (totalPointsCache && totalPointsCache.size > 0) {
+        console.log(`🔍 DEBUG: Found cache with ${totalPointsCache.size} entries`);
+        
         // Count total cached players across all gameweek ranges
         for (const [key, value] of totalPointsCache.entries()) {
+          console.log(`🔍 DEBUG: Cache entry key: ${key}, value type: ${typeof value}, has data: ${!!value?.data}`);
+          
           if (value && value.data && Array.isArray(value.data)) {
             totalCount += value.data.length;
+            console.log(`🔍 DEBUG: Added ${value.data.length} players from key ${key}, total now: ${totalCount}`);
             
             // Find the most recent timestamp
             if (value.timestamp) {
@@ -1364,7 +1370,11 @@ class ProjectionCacheWorker {
         if (lastUpdated) {
           isStale = (now.getTime() - new Date(lastUpdated).getTime()) > STALE_THRESHOLD;
         }
+      } else {
+        console.log(`🔍 DEBUG: No totalPointsCache or cache is empty`);
       }
+      
+      console.log(`🔍 DEBUG: Final result - count: ${totalCount}, lastUpdated: ${lastUpdated}, isStale: ${isStale}`);
       
       return {
         type: 'Player Total Points',
@@ -1373,7 +1383,7 @@ class ProjectionCacheWorker {
         isStale
       };
     } catch (error) {
-      console.error('Error getting Player Total Points cache status:', error);
+      console.error('❌ Error getting Player Total Points cache status:', error);
       return {
         type: 'Player Total Points',
         count: 0,

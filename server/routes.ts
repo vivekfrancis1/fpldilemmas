@@ -8063,7 +8063,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log("✓ OpenFPL Projection routes registered successfully");
 
   // Player Total Points - Optimized with intelligent caching
-  const totalPointsCache = new Map();
   const TOTAL_POINTS_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
   
   app.get("/api/player-total-points", async (req, res) => {
