@@ -54,6 +54,19 @@ export default function AdminCacheManagement() {
       if (response.ok) {
         const data = await response.json();
         setCacheStatus(data);
+      } else if (response.status === 403) {
+        // Handle authentication error
+        toast({
+          title: "Authentication Required",
+          description: "Please log in as admin to view cache status",
+          variant: "destructive",
+        });
+        // Redirect to login page
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 2000);
+      } else {
+        console.error("Cache status API error:", response.status, response.statusText);
       }
     } catch (error) {
       console.error("Error fetching cache status:", error);
