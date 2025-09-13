@@ -4014,13 +4014,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // League scaling will be applied after teamProjections array is created
         
+        // Add the total goals and average calculations back to the response
+        const roundedTotalGoals = Math.round(totalGoals * 100) / 100;
+        const averageGoalsPerGame = Math.round((totalGoals / Math.max(1, projections.length)) * 100) / 100;
+        
         return {
           id: team.id,
           team: team.short_name,
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections,
-          // Removed totalProjectedGoals and averageGoalsPerGame
+          totalGoals: roundedTotalGoals,
+          expectedGoals: roundedTotalGoals, // Alias for consistency with Goal Share tool
+          averageGoalsPerGame: averageGoalsPerGame,
           confidence,
           position: 0 // Will be set after sorting
         };
@@ -4371,12 +4377,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
+        // Calculate total goals from gameweek projections
+        const totalGoals = Object.values(gameweekProjections).reduce((sum: number, goals: any) => sum + (goals || 0), 0);
+        const roundedTotalGoals = Math.round(totalGoals * 100) / 100;
+        
         teamProjections.push({
           id: team.id,
           team: team.short_name,
           teamShort: team.short_name,
           teamName: team.name,
-          gameweekProjections
+          gameweekProjections,
+          totalGoals: roundedTotalGoals,
+          expectedGoals: roundedTotalGoals // Alias for consistency
           });
         });
         
@@ -6186,7 +6198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // OPTION 6: Position-First Caps - static lookup by element_type
       const STATIC_CAPS = { 1: 2.0, 2: 10.0, 3: 30.0, 4: 40.0 };
-      const positionGoalShareCap = STATIC_CAPS[elementType] || 25.0;
+      const positionGoalShareCap = STATIC_CAPS[player.element_type] || 25.0;
       const cappedAdjustedShare = Math.min(adjustedShare, positionGoalShareCap);
       
       if (cappedAdjustedShare !== adjustedShare) {
