@@ -11975,10 +11975,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/cached/player-assists-projections", async (req, res) => {
     try {
-      // FORCE FALLBACK: Return empty to trigger frontend fallback to live data
-      console.log("🔄 FORCING fallback to live assist data due to calculation updates - returning empty cache");
-      return res.json([]);
-
       console.log("📊 Serving cached player assists data from database");
       
       // Fetch cached data with optimized query - only essential fields
