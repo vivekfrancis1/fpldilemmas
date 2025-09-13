@@ -173,7 +173,7 @@ export default function AssistShare() {
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="space-y-3">
-                      {teamData.players.slice(0, 8).map((player, playerIndex) => (
+                      {(teamData.players || []).slice(0, 8).map((player, playerIndex) => (
                         <div key={player.id} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -204,9 +204,9 @@ export default function AssistShare() {
                           </div>
                         </div>
                       ))}
-                      {teamData.players.length > 8 && (
+                      {(teamData.players || []).length > 8 && (
                         <div className="text-xs text-gray-500 text-center pt-2 border-t">
-                          +{teamData.players.length - 8} more players with smaller shares
+                          +{(teamData.players || []).length - 8} more players with smaller shares
                         </div>
                       )}
                     </div>
