@@ -159,7 +159,7 @@ export default function AdminCacheManagement() {
       'team': 'Team Projections',
       'goal-share': 'Goal Share',
       'assist-share': 'Assist Share',
-      'total-points': 'Total Points',
+      'total-points': 'Player Total Points',
       'saves': 'Player Saves',
       'goals-conceded': 'Goals Conceded',
       'yellow-cards': 'Yellow Cards', 
