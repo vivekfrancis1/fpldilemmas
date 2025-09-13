@@ -1328,43 +1328,52 @@ class ProjectionCacheWorker {
   }
 
   /**
-   * Get Player Total Points cache status from ResultCacheService (aligned with refresh operations)
+   * Get Player Total Points cache status from the actual totalPointsCache Map (aligned with API)
    */
   private async getPlayerTotalPointsStatus(): Promise<{ type: string; count: number; lastUpdated: string | null; isStale: boolean }> {
     try {
-      // Import ResultCacheService to read from the same source that refresh writes to
-      const { resultCache } = await import('./result-cache-service');
+      // Import the actual totalPointsCache that the Player Total Points API uses
+      const { totalPointsCache } = await import('./routes');
       
       const now = new Date();
-      const STALE_THRESHOLD = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
-      
-      // Check for the default GW range used by the UI (GW4-9)
-      const cachedData = resultCache.getCachedPlayerProjections('total-points', 4, 9);
+      const STALE_THRESHOLD = 15 * 60 * 1000; // 15 minutes (same as API cache duration)
       
       let totalCount = 0;
       let lastUpdated: string | null = null;
       let isStale = true;
       
-      console.log(`🔍 DEBUG: Checking ResultCacheService for player-total-points`);
+      console.log(`🔍 DEBUG: Checking actual totalPointsCache Map - exists: ${!!totalPointsCache}, size: ${totalPointsCache?.size || 0}`);
       
-      if (cachedData && Array.isArray(cachedData)) {
-        totalCount = cachedData.length;
-        lastUpdated = new Date().toISOString(); // ResultCache doesn't store timestamps per entry
-        isStale = false; // If we found cached data, it's fresh (within TTL)
+      if (totalPointsCache && totalPointsCache.size > 0) {
+        console.log(`🔍 DEBUG: Found totalPointsCache with ${totalPointsCache.size} entries`);
         
-        console.log(`🔍 DEBUG: Found cached total points - count: ${totalCount}`);
-      } else {
-        console.log(`🔍 DEBUG: No cached data found in ResultCacheService`);
-        
-        // Get overall cache stats to see if anything exists
-        const cacheStats = resultCache.getStats();
-        console.log(`🔍 DEBUG: Overall cache stats - size: ${cacheStats.size}, types:`, cacheStats.types);
-        
-        // Check if there are any player projection cache entries
-        const playerCacheCount = cacheStats.types['player-total-points'] || 0;
-        if (playerCacheCount > 0) {
-          console.log(`🔍 DEBUG: Found ${playerCacheCount} player-total-points cache entries`);
+        // Count total cached players across all gameweek ranges
+        for (const [key, value] of totalPointsCache.entries()) {
+          console.log(`🔍 DEBUG: Cache entry key: ${key}, value type: ${typeof value}, has data: ${!!value?.data}`);
+          
+          if (value && value.data && Array.isArray(value.data)) {
+            totalCount += value.data.length;
+            console.log(`🔍 DEBUG: Added ${value.data.length} players from key ${key}, total now: ${totalCount}`);
+            
+            // Find the most recent timestamp
+            if (value.timestamp) {
+              const cacheTime = new Date(value.timestamp).toISOString();
+              if (!lastUpdated || cacheTime > lastUpdated) {
+                lastUpdated = cacheTime;
+              }
+              
+              // Check if this entry is stale
+              const entryAge = now.getTime() - value.timestamp;
+              if (entryAge <= STALE_THRESHOLD) {
+                isStale = false; // At least one entry is fresh
+              }
+            }
+          }
         }
+        
+        console.log(`🔍 DEBUG: Most recent cache timestamp: ${lastUpdated}`);
+      } else {
+        console.log(`🔍 DEBUG: No totalPointsCache or cache is empty`);
       }
       
       console.log(`🔍 DEBUG: Final result - count: ${totalCount}, lastUpdated: ${lastUpdated}, isStale: ${isStale}`);
