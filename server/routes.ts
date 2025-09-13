@@ -1010,7 +1010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid entry ID" });
       }
       
-      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${entryId}/`);
+      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${entryId}/`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -1039,7 +1039,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid entry ID or event ID" });
       }
       
-      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${entryId}/event/${eventId}/picks/`);
+      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${entryId}/event/${eventId}/picks/`);
       
       if (!response.ok) {
         throw new Error(`FPL API responded with status: ${response.status}`);
@@ -1211,7 +1211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(cached.data);
       }
       
-      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
+      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -1245,7 +1245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid manager ID" });
       }
       
-      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`);
+      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -1278,7 +1278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current gameweek if not specified
       let currentGameweek = gameweek;
       if (!currentGameweek) {
-        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
         if (bootstrapResponse.ok) {
           const bootstrapData = await bootstrapResponse.json();
           currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
@@ -1287,7 +1287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
+      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -1317,7 +1317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get manager data which includes leagues
-      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
+      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -1354,7 +1354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid manager ID" });
       }
       
-      const response = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`);
+      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`);
       
       if (!response.ok) {
         if (response.status === 404) {
