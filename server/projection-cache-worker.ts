@@ -1240,18 +1240,8 @@ class ProjectionCacheWorker {
       const STALE_THRESHOLD = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
       
       return [
-        { 
-          type: 'Goals', 
-          count: goals[0]?.count || 0, 
-          lastUpdated: goals[0]?.lastUpdated || null,
-          isStale: goals[0]?.lastUpdated ? (now.getTime() - new Date(goals[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
-        },
-        { 
-          type: 'Assists', 
-          count: assists[0]?.count || 0, 
-          lastUpdated: assists[0]?.lastUpdated || null,
-          isStale: assists[0]?.lastUpdated ? (now.getTime() - new Date(assists[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
-        },
+        await this.getPlayerGoalsStatus(),
+        await this.getPlayerAssistsStatus(),
         { 
           type: 'Team Clean Sheets', 
           count: cleanSheets[0]?.count || 0, 
@@ -1324,6 +1314,96 @@ class ProjectionCacheWorker {
     } catch (error) {
       console.error(`❌ Failed to get cache stats:`, error);
       return [];
+    }
+  }
+
+  /**
+   * Get Player Goals cache status from API functionality (aligned with actual API)
+   */
+  private async getPlayerGoalsStatus(): Promise<{ type: string; count: number; lastUpdated: string | null; isStale: boolean }> {
+    try {
+      console.log(`🔍 DEBUG: Checking Player Goals API status...`);
+      
+      // Test if the Player Goals API is working by calling it
+      const startTime = Date.now();
+      const response = await fetch("http://localhost:5000/api/player-goals-scored-projections?startGameweek=4&endGameweek=9");
+      const duration = Date.now() - startTime;
+      
+      if (response.ok) {
+        const data = await response.json();
+        const count = data.length || 0;
+        const lastUpdated = new Date().toISOString();
+        
+        console.log(`🔍 DEBUG: Player Goals API working - ${count} players, ${duration}ms response time`);
+        
+        return {
+          type: 'Goals',
+          count,
+          lastUpdated,
+          isStale: false
+        };
+      } else {
+        console.log(`🔍 DEBUG: Player Goals API failed with status ${response.status}`);
+        return {
+          type: 'Goals',
+          count: 0,
+          lastUpdated: null,
+          isStale: true
+        };
+      }
+    } catch (error) {
+      console.error(`❌ Failed to check Player Goals API status:`, error);
+      return {
+        type: 'Goals',
+        count: 0,
+        lastUpdated: null,
+        isStale: true
+      };
+    }
+  }
+
+  /**
+   * Get Player Assists cache status from API functionality (aligned with actual API)
+   */
+  private async getPlayerAssistsStatus(): Promise<{ type: string; count: number; lastUpdated: string | null; isStale: boolean }> {
+    try {
+      console.log(`🔍 DEBUG: Checking Player Assists API status...`);
+      
+      // Test if the Player Assists API is working by calling it
+      const startTime = Date.now();
+      const response = await fetch("http://localhost:5000/api/player-assist-projections?startGameweek=4&endGameweek=9");
+      const duration = Date.now() - startTime;
+      
+      if (response.ok) {
+        const data = await response.json();
+        const count = data.length || 0;
+        const lastUpdated = new Date().toISOString();
+        
+        console.log(`🔍 DEBUG: Player Assists API working - ${count} players, ${duration}ms response time`);
+        
+        return {
+          type: 'Assists',
+          count,
+          lastUpdated,
+          isStale: false
+        };
+      } else {
+        console.log(`🔍 DEBUG: Player Assists API failed with status ${response.status}`);
+        return {
+          type: 'Assists',
+          count: 0,
+          lastUpdated: null,
+          isStale: true
+        };
+      }
+    } catch (error) {
+      console.error(`❌ Failed to check Player Assists API status:`, error);
+      return {
+        type: 'Assists',
+        count: 0,
+        lastUpdated: null,
+        isStale: true
+      };
     }
   }
 
