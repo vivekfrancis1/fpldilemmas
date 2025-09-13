@@ -12426,12 +12426,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Transform the cached data to match expected format
-      const assistShareData = cachedData.map(team => ({
-        teamId: team.teamId,
-        teamName: team.teamName,
-        assistShareData: team.assistShareData,
-        totalAssists: Object.values(team.goalProjections as any).reduce((sum: number, val: any) => sum + (val * 0.72), 0)
-      }));
+      const assistShareData = cachedData.map(team => {
+        const assistSharePlayers = team.assistShareData || [];
+        const expectedAssists = Object.values(team.goalProjections as any || {}).reduce((sum: number, val: any) => sum + (val * 0.72), 0);
+        
+        return {
+          gameweek: 0, // Season-long data
+          teamId: team.teamId,
+          teamName: team.teamName,
+          teamShort: team.teamName,
+          expectedAssists: Math.round(expectedAssists * 100) / 100,
+          players: Array.isArray(assistSharePlayers) ? assistSharePlayers : []
+        };
+      });
       
       res.json(assistShareData);
     } catch (error) {
