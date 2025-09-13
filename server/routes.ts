@@ -5556,18 +5556,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Season-long Assist Share endpoint - uses Team Assist Projections totals with historical assist data
   app.get("/api/assist-share-season", async (req, res) => {
     try {
-      console.log("DEBUG: Assist Share Season API - checking database first");
+      console.log("DEBUG: Assist Share Season API - BYPASSING DATABASE CACHE - calculating live assist shares with corrected logic...");
       
-      // Check database first for ultra-fast response
-      const { dailyProjectionsService } = await import('./daily-projections-job');
-      const dbData = await dailyProjectionsService.getAssistShareFromDB();
+      // TEMPORARY FIX: Skip database cache and force live calculation with corrected logic
+      // This ensures our position caps, inclusion criteria, and epsilon floor are applied
       
-      if (dbData.length > 0) {
-        console.log(`✅ Serving assist share data from database (${dbData.length} teams, ultra-fast!)`);
-        return res.json(dbData);
-      }
-      
-      console.log("🔄 No database data found, calculating live assist shares...");
+      console.log("🔄 Calculating live assist shares with corrected data quality fixes...");
       
       const [bootstrapResponse, teamAssistProjectionsResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -5630,26 +5624,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const historicalData: { [season: string]: any[] } = {};
       historicalData["current"] = currentYearActualData;
       
-      // Use pre-computed 2024/25 cache for ultra-fast performance  
+      // Use DYNAMIC previous season cache for ultra-fast performance  
       const { historicalCacheService } = await import("./historical-cache-service");
-      const cached2024Data = await historicalCacheService.getCached2024Data();
+      const previousSeason = "2024/25"; // TODO: Make this dynamic based on current season
+      const cachedPreviousSeasonData = await historicalCacheService.getCached2024Data(); // TODO: Replace with getCachedSeasonData(previousSeason)
       
-      console.log(`DEBUG: Using cached 2024/25 data (${cached2024Data.length} players) - ultra-fast lookup`);
+      console.log(`DEBUG: Using cached ${previousSeason} data (${cachedPreviousSeasonData.length} players) - ultra-fast lookup`);
       
       const historicalXAData: { [season: string]: any[] } = {};
-      historicalData["2024/25"] = cached2024Data;
-      historicalXAData["2024/25"] = cached2024Data;
+      historicalData[previousSeason] = cachedPreviousSeasonData;
+      historicalXAData[previousSeason] = cachedPreviousSeasonData;
       
-      // Now distribute assist shares among players for each team using 3-year weighted approach
-      Object.keys(teamSeasonTotals).forEach(teamIdStr => {
+      // Now use the CORRECTED distributeAssistSharesDataDriven function for all teams
+      const response = Object.keys(teamSeasonTotals).map(teamIdStr => {
         const teamId = parseInt(teamIdStr);
         const team = bootstrapData.teams.find((t: any) => t.id === teamId);
         
-        if (team && teamSeasonTotals[teamId].expectedAssists > 0) {
-          // Get all players for this team
-          const teamPlayers = bootstrapData.elements.filter((p: any) => p.team === teamId);
-          
-          // Calculate weighted assist shares using equal weighting (33.33% each year) WITH EXPECTED MINUTES
+        if (!team || teamSeasonTotals[teamId].expectedAssists <= 0) return null;
+        
+        // Get team players
+        const teamPlayers = bootstrapData.elements.filter((p: any) => p.team === teamId);
+        const positions = bootstrapData.element_types;
+        
+        console.log(`DEBUG: Using CORRECTED logic for team ${team.name} with ${teamPlayers.length} players and ${teamSeasonTotals[teamId].expectedAssists} expected assists`);
+        
+        // Call our corrected distribution function that includes position caps, inclusion criteria, and epsilon floor
+        const distributedPlayers = distributeAssistSharesDataDriven(teamPlayers, positions, bootstrapData);
+        
+        if (!distributedPlayers || distributedPlayers.length === 0) {
+          console.log(`DEBUG: No valid assist shares generated for team ${team.name}`);
+          return null;
+        }
+        
+        // Scale the assist shares to match team's expected assists
+        const scaledPlayers = distributedPlayers.map(player => {
+          const projectedAssists = (teamSeasonTotals[teamId].expectedAssists * player.assistShare / 100);
+          return {
+            id: player.id,
+            name: player.name,
+            position: player.position,
+            assistShare: Math.round(player.assistShare * 10) / 10,
+            projectedAssists: Math.round(projectedAssists * 100) / 100
+          };
+        }).filter(player => player.assistShare > 0);
+        
+        console.log(`DEBUG: Team ${team.name} distributed assists among ${scaledPlayers.length} players using CORRECTED logic`);
+        
+        return {
+          teamId: teamId,
+          teamName: team.name,
+          teamShort: team.short_name,
+          expectedAssists: teamSeasonTotals[teamId].expectedAssists,
+          players: scaledPlayers.sort((a, b) => b.assistShare - a.assistShare)
+        };
+      }).filter(team => team !== null);
+      
+      console.log(`DEBUG: Successfully generated CORRECTED assist share data for ${response.length} teams`);
+      res.json(response);
+    } catch (error) {
+      console.error("Error generating season assist share data:", error);
+      res.status(500).json({ error: "Failed to generate season assist share data" });
+    }
+  });
           const weightedPlayerShares: { [playerId: number]: { name: string, position: string, totalWeightedShare: number, totalWeight: number, expectedMinutes: number } } = {};
           
           // Initialize all current players (excluding departed players)
@@ -5679,8 +5715,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           });
           
-          // Process two data sources with equal weighting (50% each) - using cached 2024/25 data
-          const allSeasons = ["current", "2024/25"];
+          // Process two data sources with equal weighting (50% each) - using cached previous season data
+          const allSeasons = ["current", previousSeason];
           
           allSeasons.forEach(season => {
             const seasonData = historicalData[season];
@@ -5916,7 +5952,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const players = Object.keys(teamData.players).map(playerIdStr => {
           const playerId = parseInt(playerIdStr);
           const player = teamData.players[playerId];
-          const assistShare = (player.projectedAssists / teamData.expectedAssists) * 100;
+          // EPSILON FLOOR: Prevent spikes when team totals are very small
+          const teamTotal = Math.max(teamData.expectedAssists, 0.3); // Minimum 0.3 assists to prevent spikes
+          const assistShare = (player.projectedAssists / teamTotal) * 100;
           
           return {
             id: playerId,
@@ -6358,20 +6396,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // ENHANCED minutes weighting to prevent unrealistic projections for bench players
       const currentMinutes = player.minutes || 0;
       
-      // PERCENTAGE-BASED minutes restrictions using completed gameweeks  
+      // RELAXED INCLUSION CRITERIA: Ensure ≥8 players per team for better coverage
       const completedGWsAssist = 3; // Update this as season progresses
       const totalPossibleMinutes = 90 * completedGWsAssist; // 270 minutes for 3 completed GWs
       const minutesPercentage = (currentMinutes / totalPossibleMinutes) * 100;
       
+      // Much more lenient minutes restrictions to ensure proper player coverage
       let minutesRestriction = 1.0;
-      if (minutesPercentage < 1) {
-        minutesRestriction = 0.001; // 0.1% for players with <1% of total possible minutes
+      if (minutesPercentage < 0.1) {
+        minutesRestriction = 0.01; // 1% for players with minimal minutes (instead of 0.1%)
+      } else if (minutesPercentage < 1) {
+        minutesRestriction = 0.1; // 10% for players with very few minutes (instead of 0.5%)
       } else if (minutesPercentage < 5) {
-        minutesRestriction = 0.005; // 0.5% for players with <5% (extreme bench warmers)
+        minutesRestriction = 0.3; // 30% for squad players (instead of 5%)
       } else if (minutesPercentage < 15) {
-        minutesRestriction = 0.05; // 5% for players with <15% (squad players)
-      } else if (minutesPercentage < 30) {
-        minutesRestriction = 0.2; // 20% for players with <30% (rotation players)
+        minutesRestriction = 0.6; // 60% for rotation players (instead of 20%)
       }
       
       const maxExpectedMinutes = Math.max(...players.map(p => calculateExpectedMinutes(p, players)), 1);
@@ -6402,7 +6441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     };
 
-    // Calculate shares with position caps
+    // Calculate shares with PROPER position caps and normalization
     Object.keys(playerContributions).forEach(playerIdStr => {
       const playerId = parseInt(playerIdStr);
       const playerData = playerContributions[playerId];
@@ -6410,25 +6449,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate raw share based on contribution
       const rawShare = totalContribution > 0 ? (playerData.contribution / totalContribution) * 100 : 0;
       
-      // Apply position cap
-      const positionShareCap = getPositionAssistShareCap(playerData.position);
-      const cappedShare = Math.min(rawShare, positionShareCap);
-      
-      playerShares.push({
-        id: playerId,
-        name: playerData.name,
-        position: playerData.position,
-        assistShare: Math.max(0.1, cappedShare)
-      });
+      // Only include players with meaningful contribution (≥0.01% to ensure coverage)
+      if (rawShare >= 0.01) {
+        playerShares.push({
+          id: playerId,
+          name: playerData.name,
+          position: playerData.position,
+          assistShare: rawShare // Store raw share initially
+        });
+      }
     });
 
-    // PERFECT BALANCE: Normalize to ensure total = 100%
-    const totalCappedShares = playerShares.reduce((sum, player) => sum + player.assistShare, 0);
-    if (totalCappedShares > 0) {
-      playerShares.forEach(player => {
-        player.assistShare = Math.round((player.assistShare / totalCappedShares) * 100 * 10) / 10;
+    // IMPROVED CAP-THEN-RENORMALIZE FLOW: Apply caps first, then redistribute properly
+    let totalExcess = 0;
+    const cappedShares = playerShares.map(player => {
+      const positionCap = getPositionAssistShareCap(player.position);
+      const cappedShare = Math.min(player.assistShare, positionCap);
+      const excess = player.assistShare - cappedShare;
+      
+      if (excess > 0) {
+        totalExcess += excess;
+        console.log(`📊 POSITION CAPPING - ${player.name} (${player.position}): ${player.assistShare.toFixed(1)}% → ${cappedShare.toFixed(1)}% (cap: ${positionCap}%)`);
+      }
+      
+      return {
+        ...player,
+        assistShare: cappedShare
+      };
+    });
+    
+    // Redistribute excess proportionally among non-capped players (but don't exceed caps)
+    if (totalExcess > 0) {
+      const eligiblePlayers = cappedShares.filter(player => {
+        const positionCap = getPositionAssistShareCap(player.position);
+        return player.assistShare < positionCap;
+      });
+      
+      if (eligiblePlayers.length > 0) {
+        const totalEligibleShare = eligiblePlayers.reduce((sum, player) => sum + player.assistShare, 0);
+        
+        eligiblePlayers.forEach(player => {
+          const positionCap = getPositionAssistShareCap(player.position);
+          const redistributionPortion = totalEligibleShare > 0 ? (player.assistShare / totalEligibleShare) * totalExcess : 0;
+          const newShare = Math.min(player.assistShare + redistributionPortion, positionCap);
+          player.assistShare = newShare;
+        });
+      }
+    }
+    
+    // Final normalization to ensure total = 100% (but preserve caps)
+    const finalTotal = cappedShares.reduce((sum, player) => sum + player.assistShare, 0);
+    if (finalTotal > 0) {
+      cappedShares.forEach(player => {
+        player.assistShare = Math.round((player.assistShare / finalTotal) * 100 * 10) / 10;
       });
     }
+    
+    // Replace original array with capped and normalized shares
+    playerShares.length = 0;
+    playerShares.push(...cappedShares);
 
     return playerShares.sort((a, b) => b.assistShare - a.assistShare);
   }
@@ -12513,8 +12592,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate assist shares as percentages
       Object.values(teamAssistData).forEach((team: any) => {
         team.players.forEach((player: any) => {
+          // EPSILON FLOOR: Prevent spikes when team totals are very small
+          const teamTotal = Math.max(team.expectedAssists, 0.3); // Minimum 0.3 assists to prevent spikes
           player.assistShare = team.expectedAssists > 0 
-            ? Math.round((player.projectedAssists / team.expectedAssists) * 100 * 100) / 100
+            ? Math.round((player.projectedAssists / teamTotal) * 100 * 100) / 100
             : 0;
         });
         
