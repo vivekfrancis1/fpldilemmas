@@ -12463,7 +12463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // For gameweek-specific data, we need to use assist projections from the database
       // Use the main assist projections endpoint which supports gameweek ranges
-      const assistsResponse = await internalFetch(`api/assists-projections-cached`);
+      const assistsResponse = await internalFetch(`api/assist-projections-cached`);
       if (!assistsResponse.ok) {
         throw new Error("Failed to fetch cached assists");
       }
