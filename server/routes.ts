@@ -250,6 +250,9 @@ const MASTER_TEAM_DEFAULTS = {
   absoluteMaxGoals: 7
 };
 
+// Export totalPointsCache for access from other modules
+export const totalPointsCache = new Map();
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configure session middleware
   const pgStore = connectPg(session);

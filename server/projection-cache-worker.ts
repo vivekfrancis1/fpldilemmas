@@ -1181,7 +1181,7 @@ class ProjectionCacheWorker {
         cachedPlayerBonusPoints 
       } = await import("@shared/schema");
       
-      const [goals, assists, cleanSheets, minutes, defensive, teams, goalShare, assistShare, totalPoints, saves, goalsConceded, yellowCards, redCards, bonusPoints] = await Promise.all([
+      const [goals, assists, cleanSheets, minutes, defensive, teams, goalShare, assistShare, saves, goalsConceded, yellowCards, redCards, bonusPoints] = await Promise.all([
         db.select({ 
           count: sql`count(*)`,
           lastUpdated: sql`MAX(calculated_at)`
@@ -1214,10 +1214,6 @@ class ProjectionCacheWorker {
           count: sql`count(*)`,
           lastUpdated: sql`MAX(updated_at)`
         }).from(assistShareDaily),
-        db.select({ 
-          count: sql`count(*)`,
-          lastUpdated: sql`MAX(last_updated)`
-        }).from(playerProjections),
         db.select({ 
           count: sql`count(*)`,
           lastUpdated: sql`MAX(last_updated)`
@@ -1292,12 +1288,7 @@ class ProjectionCacheWorker {
           lastUpdated: assistShare[0]?.lastUpdated || null,
           isStale: assistShare[0]?.lastUpdated ? (now.getTime() - new Date(assistShare[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
         },
-        { 
-          type: 'Player Total Points', 
-          count: totalPoints[0]?.count || 0, 
-          lastUpdated: totalPoints[0]?.lastUpdated || null,
-          isStale: totalPoints[0]?.lastUpdated ? (now.getTime() - new Date(totalPoints[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
-        },
+        await this.getPlayerTotalPointsStatus(),
         { 
           type: 'Player Saves', 
           count: saves[0]?.count || 0, 
@@ -1333,6 +1324,62 @@ class ProjectionCacheWorker {
     } catch (error) {
       console.error(`❌ Failed to get cache stats:`, error);
       return [];
+    }
+  }
+
+  /**
+   * Get Player Total Points cache status from in-memory cache
+   */
+  private async getPlayerTotalPointsStatus(): Promise<{ type: string; count: number; lastUpdated: string | null; isStale: boolean }> {
+    try {
+      // Import the totalPointsCache from routes.ts
+      const routesModule = await import('./routes');
+      const totalPointsCache = (routesModule as any).totalPointsCache;
+      
+      const now = new Date();
+      const STALE_THRESHOLD = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
+      
+      // Check if cache exists and get the most recent entry
+      let totalCount = 0;
+      let lastUpdated: string | null = null;
+      let isStale = true;
+      
+      if (totalPointsCache && totalPointsCache.size > 0) {
+        // Count total cached players across all gameweek ranges
+        for (const [key, value] of totalPointsCache.entries()) {
+          if (value && value.data && Array.isArray(value.data)) {
+            totalCount += value.data.length;
+            
+            // Find the most recent timestamp
+            if (value.timestamp) {
+              const cacheTime = new Date(value.timestamp).toISOString();
+              if (!lastUpdated || cacheTime > lastUpdated) {
+                lastUpdated = cacheTime;
+              }
+            }
+          }
+        }
+        
+        // Check if stale based on most recent entry
+        if (lastUpdated) {
+          isStale = (now.getTime() - new Date(lastUpdated).getTime()) > STALE_THRESHOLD;
+        }
+      }
+      
+      return {
+        type: 'Player Total Points',
+        count: totalCount,
+        lastUpdated,
+        isStale
+      };
+    } catch (error) {
+      console.error('Error getting Player Total Points cache status:', error);
+      return {
+        type: 'Player Total Points',
+        count: 0,
+        lastUpdated: null,
+        isStale: true
+      };
     }
   }
 
