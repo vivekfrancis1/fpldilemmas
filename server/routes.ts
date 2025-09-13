@@ -10575,10 +10575,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Insert in batches
+      // Insert in batches with conflict resolution
       for (let i = 0; i < cacheInserts.length; i += 100) {
         const batch = cacheInserts.slice(i, i + 100);
-        await db.insert(playerGoalsProjections).values(batch);
+        await db.insert(playerGoalsProjections)
+          .values(batch)
+          .onConflictDoUpdate({
+            target: [playerGoalsProjections.playerId, playerGoalsProjections.gameweek],
+            set: {
+              goals: sql`excluded.goals`,
+              season: sql`excluded.season`,
+              calculatedAt: sql`now()`
+            }
+          });
       }
       
       console.log(`DEBUG: Cached ${cacheInserts.length} goal projection records`);
