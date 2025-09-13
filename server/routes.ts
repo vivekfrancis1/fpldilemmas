@@ -32,6 +32,47 @@ import connectPg from "connect-pg-simple";
 import { internalFetch, getApiBaseUrl } from "./config";
 import { resultCache } from "./result-cache-service";
 
+// Helper function for FPL API requests with retry logic
+const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
+  for (let i = 0; i < retries; i++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; FPL-Analytics/1.0)',
+          'Accept': 'application/json',
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        return response;
+      }
+      
+      console.warn(`FPL API ${url} returned ${response.status}${i < retries - 1 ? ', retrying...' : ''}`);
+      
+      if (i === retries - 1) {
+        throw new Error(`FPL API returned ${response.status} after ${retries} attempts`);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (i === retries - 1) throw error;
+      
+      const errorMsg = error instanceof Error && error.name === 'AbortError' 
+        ? 'timeout' 
+        : String(error);
+      console.warn(`FPL API ${url} failed: ${errorMsg}${i < retries - 1 ? ', retrying...' : ''}`);
+      await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+    }
+  }
+};
+
 // Pre-calculated team multipliers for ultra-fast lookups (no parsing needed)
 const TEAM_MULTIPLIERS = {
   // Attack multipliers
@@ -524,7 +565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(bootstrapCache.data);
       }
 
-      const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const response = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
       if (!response.ok) {
         console.error(`FPL API responded with status: ${response.status}`);
         return res.status(500).json({ error: "Failed to fetch bootstrap data" });
@@ -6992,36 +7033,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper function for FPL API requests with retry logic
-  const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const response = await fetch(url, {
-          timeout: 15000,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; FPL-Analytics/1.0)',
-            'Accept': 'application/json',
-          }
-        });
-        
-        if (response.ok) {
-          return response;
-        }
-        
-        console.warn(`FPL API ${url} returned ${response.status}${i < retries - 1 ? ', retrying...' : ''}`);
-        
-        if (i === retries - 1) {
-          throw new Error(`FPL API returned ${response.status} after ${retries} attempts`);
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
-      } catch (error) {
-        if (i === retries - 1) throw error;
-        console.warn(`FPL API ${url} failed: ${error}${i < retries - 1 ? ', retrying...' : ''}`);
-        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
-      }
-    }
-  };
 
 
   // Team Goals Against Projections endpoint - PERFECT MIRROR IMAGE
