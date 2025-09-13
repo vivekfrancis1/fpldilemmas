@@ -12409,48 +12409,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cached Assist Share data - fallback to live API if cache not ready
+  // Response cache for assist share data with gameweek range support
+  let assistShareResponseCache: { data: any[]; timestamp: number; cacheKey?: string } | null = null;
+  const ASSIST_SHARE_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+  // Cached Assist Share data - ultra-fast cached response with gameweek range support
   app.get("/api/cached/assist-share", async (req, res) => {
     try {
-      console.log("📊 Serving cached assist share data from database");
-      const cachedData = await db.select().from(teamProjections)
-        .where(eq(teamProjections.season, '2025/26'))
-        .orderBy(teamProjections.teamId);
+      // Extract gameweek range parameters
+      const startGw = parseInt(req.query.startGw as string) || null;
+      const endGw = parseInt(req.query.endGw as string) || null;
       
-      // If no cached data, fallback to live API
-      if (!cachedData || cachedData.length === 0) {
-        console.log("📊 No cached data found, falling back to live Assist Share API");
-        const response = await fetch('http://localhost:5000/api/assist-share-season');
-        const liveData = await response.json();
-        return res.json(liveData);
+      // Get current gameweek for defaults
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      const bootstrapData = await bootstrapResponse.json();
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
+      const nextGameweek = currentGameweek + 1;
+      
+      // Set defaults: next 6 gameweeks if no parameters provided
+      const defaultStartGw = nextGameweek;
+      const defaultEndGw = Math.min(nextGameweek + 5, 38);
+      
+      const finalStartGw = startGw || defaultStartGw;
+      const finalEndGw = endGw || defaultEndGw;
+      
+      // Validate gameweek range
+      if (finalStartGw > finalEndGw) {
+        return res.status(400).json({ error: "Start gameweek must be <= end gameweek" });
+      }
+      if (finalEndGw - finalStartGw + 1 > 12) {
+        return res.status(400).json({ error: "Gameweek range cannot exceed 12 gameweeks" });
+      }
+      if (finalStartGw < nextGameweek) {
+        return res.status(400).json({ error: `Start gameweek must be >= ${nextGameweek} (next gameweek)` });
       }
       
-      // Transform the cached data to match expected format
-      const assistShareData = cachedData.map(team => {
-        const assistSharePlayers = team.assistShareData || [];
-        const expectedAssists = Object.values(team.goalProjections as any || {}).reduce((sum: number, val: any) => sum + (val * 0.72), 0);
-        
-        return {
-          gameweek: 0, // Season-long data
-          teamId: team.teamId,
-          teamName: team.teamName,
-          teamShort: team.teamName,
-          expectedAssists: Math.round(expectedAssists * 100) / 100,
-          players: Array.isArray(assistSharePlayers) ? assistSharePlayers : []
-        };
-      });
+      // Create cache key that includes gameweek range
+      const cacheKey = `assist-share-${finalStartGw}-${finalEndGw}`;
       
+      // Check if we have cached response for this specific range
+      const now = Date.now();
+      if (assistShareResponseCache && assistShareResponseCache.cacheKey === cacheKey && 
+          (now - assistShareResponseCache.timestamp) < ASSIST_SHARE_CACHE_DURATION) {
+        console.log(`⚡ Serving assist share from response cache for GW${finalStartGw}-${finalEndGw}`);
+        return res.json(assistShareResponseCache.data);
+      }
+      
+      console.log(`📊 Building assist share from cached assist projections for GW${finalStartGw}-${finalEndGw}`);
+
+      
+      // For gameweek-specific data, we need to use assist projections from the database
+      // Use the main assist projections endpoint which supports gameweek ranges
+      const assistsResponse = await internalFetch(`api/assists-projections-cached`);
+      if (!assistsResponse.ok) {
+        throw new Error("Failed to fetch cached assists");
+      }
+      const assistsData = await assistsResponse.json();
+
+      // Use optimized metadata cache for team info
+      const playerMetadata = await getPlayerMetadata();
+
+      // Group by team and calculate shares
+      const teamAssistData: Record<string, any> = {};
+      
+      assistsData.forEach((player: any) => {
+        const metadata = playerMetadata.get(player.playerId);
+        const teamName = metadata?.teamName || player.teamName;
+        const teamShort = metadata?.teamShort || player.teamShort;
+        
+        if (!teamAssistData[teamName]) {
+          teamAssistData[teamName] = {
+            gameweek: 0,
+            teamId: Object.keys(teamAssistData).length + 1,
+            teamName: teamName,
+            teamShort: teamShort,
+            expectedAssists: 0,
+            players: []
+          };
+        }
+
+        // Calculate assists for the specific gameweek range
+        let playerAssistsForRange = 0;
+        if (player.gameweekProjections) {
+          for (let gw = finalStartGw; gw <= finalEndGw; gw++) {
+            playerAssistsForRange += player.gameweekProjections[gw] || 0;
+          }
+        }
+        
+        teamAssistData[teamName].expectedAssists += playerAssistsForRange;
+        teamAssistData[teamName].players.push({
+          id: player.playerId,
+          name: player.playerName,
+          position: metadata?.position || 'MID',
+          assistShare: 0, // Will calculate after team totals
+          projectedAssists: playerAssistsForRange,
+          xaPer90: playerAssistsForRange / (finalEndGw - finalStartGw + 1) * 1.5 // Estimate per 90 for the range
+        });
+      });
+
+      // Calculate assist shares as percentages
+      Object.values(teamAssistData).forEach((team: any) => {
+        team.players.forEach((player: any) => {
+          player.assistShare = team.expectedAssists > 0 
+            ? Math.round((player.projectedAssists / team.expectedAssists) * 100 * 100) / 100
+            : 0;
+        });
+        
+        // Sort players by projected assists
+        team.players.sort((a: any, b: any) => b.projectedAssists - a.projectedAssists);
+      });
+
+      const assistShareData = Object.values(teamAssistData);
+      
+      // Cache the processed response with the specific gameweek range
+      assistShareResponseCache = { 
+        data: assistShareData, 
+        timestamp: now, 
+        cacheKey: cacheKey 
+      };
+      
+      console.log(`📊 Built assist share for ${assistShareData.length} teams using cached data for GW${finalStartGw}-${finalEndGw}`);
       res.json(assistShareData);
     } catch (error) {
-      console.error("Error fetching cached assist share data:", error);
-      // Fallback to live API on error
-      try {
-        const response = await fetch('http://localhost:5000/api/assist-share-season');
-        const liveData = await response.json();
-        res.json(liveData);
-      } catch (fallbackError) {
-        res.status(500).json({ error: "Failed to fetch assist share data" });
-      }
+      console.error("Error building cached assist share:", error);
+      res.status(500).json({ error: "Failed to build assist share data" });
     }
   });
 

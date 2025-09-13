@@ -1,23 +1,23 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, TrendingUp, Calendar, Trophy, Filter, Zap } from "lucide-react";
+import { Users, TrendingUp, Calendar, Trophy, Filter, Zap, Target } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
 interface SeasonAssistShareData {
-  gameweek: number; // Always 0 for season-long data
+  gameweek: number; // 0 for season-long data, or specific gameweek for range data
   teamId: number;
   teamName: string;
   teamShort: string;
-  expectedAssists: number; // Season total
+  expectedAssists: number; // Total assists for the gameweek range
   players: {
     id: number;
     name: string;
     position: string;
-    assistShare: number; // Percentage of team's season assists
-    projectedAssists: number; // Season total projected assists
+    assistShare: number; // Percentage of team's assists for the range
+    projectedAssists: number; // Total projected assists for the range
     xaPer90?: number; // xA per 90 minutes (enhanced methodology)
   }[];
 }
@@ -31,6 +31,35 @@ export default function AssistShare() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Calculate current gameweek and gameweek range defaults
+  const { currentGameweek, nextGameweek, defaultEndGameweek } = useMemo(() => {
+    if (!bootstrapData?.events) return { currentGameweek: 3, nextGameweek: 4, defaultEndGameweek: 9 };
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    const current = currentEvent ? currentEvent.id : 3;
+    const next = current + 1;
+    const defaultEnd = Math.min(next + 5, 38); // Next 6 gameweeks or up to GW38
+    return { currentGameweek: current, nextGameweek: next, defaultEndGameweek: defaultEnd };
+  }, [bootstrapData]);
+
+  // Gameweek range state (only for current season)
+  const [startGameweek, setStartGameweek] = useState<number>(4); // Will be updated in useEffect
+  const [endGameweek, setEndGameweek] = useState<number>(9); // Will be updated in useEffect
+
+  // Update gameweek defaults when bootstrap data loads
+  useEffect(() => {
+    if (bootstrapData && nextGameweek) {
+      setStartGameweek(nextGameweek);
+      setEndGameweek(defaultEndGameweek);
+    }
+  }, [bootstrapData, nextGameweek, defaultEndGameweek]);
+
+  // Validation for gameweek range
+  const isValidGameweekRange = useMemo(() => {
+    if (selectedSeason !== "current") return true; // No validation needed for historical
+    const range = endGameweek - startGameweek + 1;
+    return startGameweek <= endGameweek && range <= 12 && startGameweek >= nextGameweek;
+  }, [startGameweek, endGameweek, selectedSeason, nextGameweek]);
+
   // Fetch available seasons
   const { data: seasonsData } = useQuery<string[]>({
     queryKey: ["/api/seasons"],
@@ -39,8 +68,19 @@ export default function AssistShare() {
 
   // Fetch assist share data from cached database for ultra-fast loading
   const { data: assistShareData, isLoading: assistShareLoading } = useQuery<SeasonAssistShareData[]>({
-    queryKey: selectedSeason === "current" ? ["/api/cached/assist-share"] : ["/api/assist-share-historical", selectedSeason],
-    enabled: selectedSeason === "current" || (selectedSeason !== "current" && !!selectedSeason),
+    queryKey: selectedSeason === "current" 
+      ? ["/api/cached/assist-share", startGameweek, endGameweek] 
+      : ["/api/assist-share-historical", selectedSeason],
+    queryFn: selectedSeason === "current" 
+      ? async () => {
+          const response = await fetch(`/api/cached/assist-share?startGw=${startGameweek}&endGw=${endGameweek}`);
+          if (!response.ok) throw new Error('Failed to fetch assist share data');
+          return response.json();
+        }
+      : undefined, // Use default queryFn for historical data
+    enabled: selectedSeason === "current" 
+      ? Boolean(isValidGameweekRange && startGameweek && endGameweek)
+      : Boolean(selectedSeason !== "current" && selectedSeason),
     staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
   });
 
@@ -95,11 +135,13 @@ export default function AssistShare() {
               <Zap className="h-8 w-8 text-green-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              {selectedSeason === "current" ? "Season Assist Share Projections" : `${selectedSeason} Assist Share Analysis`}
+              {selectedSeason === "current" 
+                ? `Assist Share Projections for GW${startGameweek}-${endGameweek}` 
+                : `${selectedSeason} Assist Share Analysis`}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
               {selectedSeason === "current" 
-                ? "Each player's percentage share of their team's expected assists for the entire remaining season, optimized using historical patterns"
+                ? `Each player's percentage share of their team's expected assists for gameweeks ${startGameweek}-${endGameweek} using deterministic xA per 90 methodology with real-time FPL data`
                 : `Each player's percentage share of their team's actual assists provided in the ${selectedSeason} season`
               }
             </p>
@@ -117,7 +159,7 @@ export default function AssistShare() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="current">2025-26 Projections</SelectItem>
+                      <SelectItem value="current">2025-26 (Projected)</SelectItem>
                       {seasonsData?.sort((a, b) => b.localeCompare(a)).map(season => (
                         <SelectItem key={season} value={season}>{season}</SelectItem>
                       ))}
@@ -141,6 +183,75 @@ export default function AssistShare() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Gameweek Range Controls - Only for Current Season */}
+                {selectedSeason === "current" && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Target className="h-5 w-5 text-green-600" />
+                      <label className="text-sm font-medium text-gray-700">Start GW:</label>
+                      <Select 
+                        value={startGameweek.toString()} 
+                        onValueChange={(value) => {
+                          const newStart = parseInt(value);
+                          setStartGameweek(newStart);
+                          // Ensure end gameweek is valid and within 12 gameweek limit
+                          if (endGameweek < newStart) {
+                            setEndGameweek(Math.min(newStart + 5, Math.min(newStart + 11, 38)));
+                          } else if (endGameweek - newStart + 1 > 12) {
+                            setEndGameweek(newStart + 11);
+                          }
+                        }}
+                        data-testid="select-start-gameweek"
+                      >
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 12 }, (_, i) => {
+                            const gw = nextGameweek + i;
+                            return gw <= 38 ? (
+                              <SelectItem key={gw} value={gw.toString()}>
+                                {gw}
+                              </SelectItem>
+                            ) : null;
+                          }).filter(Boolean)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5 text-green-600" />
+                      <label className="text-sm font-medium text-gray-700">End GW:</label>
+                      <Select 
+                        value={endGameweek.toString()} 
+                        onValueChange={(value) => setEndGameweek(parseInt(value))}
+                        data-testid="select-end-gameweek"
+                      >
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: Math.min(12, 38 - startGameweek + 1) }, (_, i) => {
+                            const gw = startGameweek + i;
+                            return gw <= 38 ? (
+                              <SelectItem key={gw} value={gw.toString()}>
+                                {gw}
+                              </SelectItem>
+                            ) : null;
+                          }).filter(Boolean)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Validation Warning */}
+                    {!isValidGameweekRange && (
+                      <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md border border-red-200">
+                        ⚠️ Range: {endGameweek - startGameweek + 1} GWs (max 12). Start must be ≥ GW{nextGameweek}.
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -164,11 +275,11 @@ export default function AssistShare() {
                         <span>{teamData.teamShort}</span>
                       </div>
                       <Badge variant="secondary" className="bg-white text-teal-600">
-                        {selectedSeason === "current" ? "Season Projection" : selectedSeason}
+                        {selectedSeason === "current" ? `GW${startGameweek}-${endGameweek}` : selectedSeason}
                       </Badge>
                     </CardTitle>
                     <div className="text-sm opacity-90">
-                      {selectedSeason === "current" ? "Expected" : "Total"} Assists: <span className="font-bold text-lg">{(teamData?.expectedAssists || 0).toFixed(0)}</span>
+                      {selectedSeason === "current" ? "Expected" : "Total"} Assists: <span className="font-bold text-lg">{(teamData?.expectedAssists || 0).toFixed(1)}</span>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4">
