@@ -37,7 +37,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [location] = useLocation();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isAuthenticated } = useAuth();
   const isMobile = useIsMobile();
 
   const isActive = (path: string) => location === path;
@@ -157,8 +157,17 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   ];
 
-  // Combine public and admin navigation items
-  const allNavItems = isAdmin ? [...navItems, ...adminNavItems] : navItems;
+  // Filter player projection tools for logged out users
+  const filteredNavItems = navItems.filter(section => {
+    // Hide "Player Projections" section for logged out users
+    if (section.section === "Player Projections" && !isAuthenticated) {
+      return false;
+    }
+    return true;
+  });
+
+  // Combine filtered public and admin navigation items
+  const allNavItems = isAdmin ? [...filteredNavItems, ...adminNavItems] : filteredNavItems;
 
   // Sidebar content component (reused for mobile and desktop)
   const SidebarContent = ({ className = "" }: { className?: string }) => (
