@@ -12270,24 +12270,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Response cache for goal share data
-  let goalShareResponseCache: { data: any[]; timestamp: number } | null = null;
+  // Response cache for goal share data with gameweek range support
+  let goalShareResponseCache: { data: any[]; timestamp: number; cacheKey?: string } | null = null;
   const GOAL_SHARE_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
-  // Cached Goal Share data - ultra-fast cached response
+  // Cached Goal Share data - ultra-fast cached response with gameweek range support
   app.get("/api/cached/goal-share", async (req, res) => {
     try {
-      // Return cached response if available and fresh
+      // Extract gameweek range parameters
+      const startGw = parseInt(req.query.startGw as string) || null;
+      const endGw = parseInt(req.query.endGw as string) || null;
+      
+      // Get current gameweek for defaults
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      const bootstrapData = await bootstrapResponse.json();
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
+      const nextGameweek = currentGameweek + 1;
+      
+      // Set defaults: next 6 gameweeks if no parameters provided
+      const defaultStartGw = nextGameweek;
+      const defaultEndGw = Math.min(nextGameweek + 5, 38);
+      
+      const finalStartGw = startGw || defaultStartGw;
+      const finalEndGw = endGw || defaultEndGw;
+      
+      // Validate gameweek range
+      if (finalStartGw > finalEndGw) {
+        return res.status(400).json({ error: "Start gameweek must be <= end gameweek" });
+      }
+      if (finalEndGw - finalStartGw + 1 > 12) {
+        return res.status(400).json({ error: "Gameweek range cannot exceed 12 gameweeks" });
+      }
+      if (finalStartGw < nextGameweek) {
+        return res.status(400).json({ error: `Start gameweek must be >= ${nextGameweek} (next gameweek)` });
+      }
+      
+      // Create cache key that includes gameweek range
+      const cacheKey = `goal-share-${finalStartGw}-${finalEndGw}`;
+      
+      // Check if we have cached response for this specific range
       const now = Date.now();
-      if (goalShareResponseCache && (now - goalShareResponseCache.timestamp) < GOAL_SHARE_CACHE_DURATION) {
-        console.log("⚡ Serving goal share from response cache");
+      if (goalShareResponseCache && goalShareResponseCache.cacheKey === cacheKey && 
+          (now - goalShareResponseCache.timestamp) < GOAL_SHARE_CACHE_DURATION) {
+        console.log(`⚡ Serving goal share from response cache for GW${finalStartGw}-${finalEndGw}`);
         return res.json(goalShareResponseCache.data);
       }
-
-      console.log("📊 Building goal share from cached goals projections");
       
-      // Use cached goals data to create simplified goal share
-      const goalsResponse = await internalFetch(`api/cached/player-goals-projections`);
+      console.log(`📊 Building goal share from cached goals projections for GW${finalStartGw}-${finalEndGw}`);
+
+      
+      // For gameweek-specific data, we need to use gameweek projections from the database
+      // Use the main goals projections endpoint which supports gameweek ranges
+      const goalsResponse = await internalFetch(`api/goals-projections-cached`);
       if (!goalsResponse.ok) {
         throw new Error("Failed to fetch cached goals");
       }
@@ -12315,14 +12352,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
 
-        teamGoalData[teamName].expectedGoals += player.totalProjectedGoals || 0;
+        // Calculate goals for the specific gameweek range
+        let playerGoalsForRange = 0;
+        if (player.gameweekProjections) {
+          for (let gw = finalStartGw; gw <= finalEndGw; gw++) {
+            playerGoalsForRange += player.gameweekProjections[gw] || 0;
+          }
+        }
+        
+        teamGoalData[teamName].expectedGoals += playerGoalsForRange;
         teamGoalData[teamName].players.push({
           id: player.playerId,
           name: player.playerName,
           position: metadata?.position || 'MID',
           goalShare: 0, // Will calculate after team totals
-          projectedGoals: player.totalProjectedGoals || 0,
-          xgPer90: (player.totalProjectedGoals || 0) / 6 * 1.5 // Estimate
+          projectedGoals: playerGoalsForRange,
+          xgPer90: playerGoalsForRange / (finalEndGw - finalStartGw + 1) * 1.5 // Estimate per 90 for the range
         });
       });
 
@@ -12340,10 +12385,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const goalShareData = Object.values(teamGoalData);
       
-      // Cache the processed response
-      goalShareResponseCache = { data: goalShareData, timestamp: now };
+      // Cache the processed response with the specific gameweek range
+      goalShareResponseCache = { 
+        data: goalShareData, 
+        timestamp: now, 
+        cacheKey: cacheKey 
+      };
       
-      console.log(`📊 Built goal share for ${goalShareData.length} teams using cached data`);
+      console.log(`📊 Built goal share for ${goalShareData.length} teams using cached data for GW${finalStartGw}-${finalEndGw}`);
       res.json(goalShareData);
     } catch (error) {
       console.error("Error building cached goal share:", error);

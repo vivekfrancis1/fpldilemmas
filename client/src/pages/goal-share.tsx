@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Target, Users, TrendingUp, Calendar, Trophy, Filter } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
@@ -7,17 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 
 interface SeasonGoalShareData {
-  gameweek: number; // Always 0 for season-long data
+  gameweek: number; // 0 for season-long data, or specific gameweek for range data
   teamId: number;
   teamName: string;
   teamShort: string;
-  expectedGoals: number; // Season total
+  expectedGoals: number; // Total goals for the gameweek range
   players: {
     id: number;
     name: string;
     position: string;
-    goalShare: number; // Percentage of team's season goals
-    projectedGoals: number; // Season total projected goals
+    goalShare: number; // Percentage of team's goals for the range
+    projectedGoals: number; // Total projected goals for the range
     xgPer90?: number; // xG per 90 minutes (enhanced methodology)
   }[];
 }
@@ -31,6 +31,35 @@ export default function GoalShare() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Calculate current gameweek and gameweek range defaults
+  const { currentGameweek, nextGameweek, defaultEndGameweek } = useMemo(() => {
+    if (!bootstrapData?.events) return { currentGameweek: 3, nextGameweek: 4, defaultEndGameweek: 9 };
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    const current = currentEvent ? currentEvent.id : 3;
+    const next = current + 1;
+    const defaultEnd = Math.min(next + 5, 38); // Next 6 gameweeks or up to GW38
+    return { currentGameweek: current, nextGameweek: next, defaultEndGameweek: defaultEnd };
+  }, [bootstrapData]);
+
+  // Gameweek range state (only for current season)
+  const [startGameweek, setStartGameweek] = useState<number>(4); // Will be updated in useEffect
+  const [endGameweek, setEndGameweek] = useState<number>(9); // Will be updated in useEffect
+
+  // Update gameweek defaults when bootstrap data loads
+  useEffect(() => {
+    if (bootstrapData && nextGameweek) {
+      setStartGameweek(nextGameweek);
+      setEndGameweek(defaultEndGameweek);
+    }
+  }, [bootstrapData, nextGameweek, defaultEndGameweek]);
+
+  // Validation for gameweek range
+  const isValidGameweekRange = useMemo(() => {
+    if (selectedSeason !== "current") return true; // No validation needed for historical
+    const range = endGameweek - startGameweek + 1;
+    return startGameweek <= endGameweek && range <= 12 && startGameweek >= nextGameweek;
+  }, [startGameweek, endGameweek, selectedSeason, nextGameweek]);
+
   // Fetch available seasons
   const { data: seasonsData } = useQuery<string[]>({
     queryKey: ["/api/seasons"],
@@ -39,8 +68,19 @@ export default function GoalShare() {
 
   // Fetch goal share data from cached database for ultra-fast loading
   const { data: goalShareData, isLoading: goalShareLoading } = useQuery<SeasonGoalShareData[]>({
-    queryKey: selectedSeason === "current" ? ["/api/cached/goal-share"] : ["/api/goal-share-historical", selectedSeason],
-    enabled: selectedSeason === "current" || (selectedSeason !== "current" && !!selectedSeason),
+    queryKey: selectedSeason === "current" 
+      ? ["/api/cached/goal-share", startGameweek, endGameweek] 
+      : ["/api/goal-share-historical", selectedSeason],
+    queryFn: selectedSeason === "current" 
+      ? async () => {
+          const response = await fetch(`/api/cached/goal-share?startGw=${startGameweek}&endGw=${endGameweek}`);
+          if (!response.ok) throw new Error('Failed to fetch goal share data');
+          return response.json();
+        }
+      : undefined, // Use default queryFn for historical data
+    enabled: selectedSeason === "current" 
+      ? Boolean(isValidGameweekRange && startGameweek && endGameweek)
+      : Boolean(selectedSeason !== "current" && selectedSeason),
     staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
   });
 
@@ -95,11 +135,13 @@ export default function GoalShare() {
               <Target className="h-8 w-8 text-blue-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              {selectedSeason === "current" ? "Season Goal Share Projections" : `${selectedSeason} Goal Share Analysis`}
+              {selectedSeason === "current" 
+                ? `Goal Share Projections for GW${startGameweek}-${endGameweek}` 
+                : `${selectedSeason} Goal Share Analysis`}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
               {selectedSeason === "current" 
-                ? "Each player's percentage share of their team's expected goals using deterministic xG per 90 methodology with real-time FPL data and position-specific projections"
+                ? `Each player's percentage share of their team's expected goals for gameweeks ${startGameweek}-${endGameweek} using deterministic xG per 90 methodology with real-time FPL data`
                 : `Each player's percentage share of their team's actual goals scored in the ${selectedSeason} season`
               }
             </p>
@@ -141,6 +183,77 @@ export default function GoalShare() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Gameweek Range Controls - Only for Current Season */}
+                {selectedSeason === "current" && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Target className="h-5 w-5 text-green-600" />
+                      <label className="text-sm font-medium text-gray-700">Start GW:</label>
+                      <Select 
+                        value={startGameweek.toString()} 
+                        onValueChange={(value) => {
+                          const newStart = parseInt(value);
+                          setStartGameweek(newStart);
+                          // Ensure end gameweek is valid and within 12 gameweek limit
+                          if (endGameweek < newStart) {
+                            setEndGameweek(Math.min(newStart + 5, Math.min(newStart + 11, 38)));
+                          } else if (endGameweek - newStart + 1 > 12) {
+                            setEndGameweek(newStart + 11);
+                          }
+                        }}
+                        data-testid="select-start-gameweek"
+                      >
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 12 }, (_, i) => {
+                            const gw = nextGameweek + i;
+                            return gw <= 38 ? (
+                              <SelectItem key={gw} value={gw.toString()}>
+                                {gw}
+                              </SelectItem>
+                            ) : null;
+                          }).filter(Boolean)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5 text-green-600" />
+                      <label className="text-sm font-medium text-gray-700">End GW:</label>
+                      <Select 
+                        value={endGameweek.toString()} 
+                        onValueChange={(value) => setEndGameweek(parseInt(value))}
+                        data-testid="select-end-gameweek"
+                      >
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: Math.min(12, 38 - startGameweek + 1) }, (_, i) => {
+                            const gw = startGameweek + i;
+                            return gw <= 38 ? (
+                              <SelectItem key={gw} value={gw.toString()}>
+                                {gw}
+                              </SelectItem>
+                            ) : null;
+                          }).filter(Boolean)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Validation Warning */}
+                    {!isValidGameweekRange && (
+                      <div className="col-span-full">
+                        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                          ⚠️ Invalid gameweek range. Please ensure: Start ≤ End, Range ≤ 12 gameweeks, Start ≥ GW{nextGameweek}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -178,7 +291,7 @@ export default function GoalShare() {
                         <div>
                           <CardTitle className="text-xl font-bold text-gray-900">{team.teamName}</CardTitle>
                           <p className="text-sm text-gray-500">
-                            {selectedSeason === "current" ? "Expected Goals:" : "Actual Goals:"} 
+                            {selectedSeason === "current" ? `Expected Goals (GW${startGameweek}-${endGameweek}):` : "Actual Goals:"} 
                             <span className="font-semibold text-gray-700">{selectedSeason === "current" ? team.expectedGoals.toFixed(2) : team.expectedGoals.toFixed(0)}</span>
                           </p>
                         </div>
