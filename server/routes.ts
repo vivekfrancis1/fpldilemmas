@@ -5504,6 +5504,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           for (const playerData of teamData.players) {
             if (playerData && playerData.assistShare && playerData.assistShare > 0) {
+              // FIELD CONTRACT FIX: Consistent identifier extraction with fallbacks
+              const playerId = playerData.id || playerData.playerId;
+              const playerName = playerData.name || playerData.playerName || `Player ${playerId}`;
+              
               const gameweekProjections: { [gameweek: number]: number } = {};
               let totalProjectedAssists = 0;
               
@@ -5518,7 +5522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const projectedTeamAssists = (typeof teamAssists === 'number') ? teamAssists : 0;
                 const playerAssistsForGW = projectedTeamAssists * (playerData.assistShare / 100);
                 
-                console.log(`DEBUG: Assists - GW${gameweek} PROJECTION - ${teamData.teamShort} projected: ${projectedTeamAssists.toFixed(2)} assists, ${playerData.name}: ${playerAssistsForGW.toFixed(2)}`);
+                console.log(`DEBUG: Assists - GW${gameweek} PROJECTION - ${teamData.teamShort} projected: ${projectedTeamAssists.toFixed(2)} assists, ${playerName}: ${playerAssistsForGW.toFixed(2)}`);
                 
                 gameweekProjections[gameweek] = Math.round(playerAssistsForGW * 100) / 100;
                 totalProjectedAssists += playerAssistsForGW;
@@ -5528,8 +5532,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const seasonTotal = Math.round(totalProjectedAssists * 100) / 100;
               
               allPlayerProjections.push({
-                playerId: playerData.id,
-                playerName: playerData.name,
+                playerId: playerId,
+                playerName: playerName,
                 teamShort: teamData.teamShort,
                 position: playerData.position,
                 gameweekProjections,
@@ -6045,7 +6049,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     players.forEach(player => {
       const position = positions.find(p => p.id === player.element_type);
       const positionName = position?.singular_name;
-      const playerName = getPlayerName(player.id) || `${player.first_name} ${player.second_name}`;
+      // FIELD CONTRACT FIX: Robust name mapping with fallbacks
+      const playerName = `${player.first_name} ${player.second_name}`.trim() || `Player ${player.id}`;
       
       // DATA-DRIVEN FOUNDATION: Use actual xA per 90 instead of arbitrary base rates
       const currentYearXAPer90 = player.expected_assists_per_90 || 0;
