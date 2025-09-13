@@ -101,11 +101,7 @@ function Router() {
       <Route path="/predicted-scores" component={PredictedScores} />
       <Route path="/results-projections" component={ResultsProjections} />
       <Route path="/results-and-fixtures" component={ResultsAndFixtures} />
-      <Route path="/player-goals-scored-projections">
-        <ProtectedRoute requireAdmin={true}>
-          <PlayerGoalsScoredProjections />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
       <Route path="/player-minutes">
         <ProtectedRoute requireAdmin={true}>
           <PlayerMinutes />
@@ -116,11 +112,7 @@ function Router() {
           <PlayerCleanSheetPoints />
         </ProtectedRoute>
       </Route>
-      <Route path="/player-total-points">
-        <ProtectedRoute requireAdmin={true}>
-          <PlayerTotalPoints />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/player-total-points" component={PlayerTotalPoints} />
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
       <Route path="/team-goals-spread-betting" component={TeamGoalsSpreadBetting} />
       <Route path="/team-goals-against-projections" component={TeamGoalsAgainstProjections} />
@@ -138,11 +130,7 @@ function Router() {
           <PlayerGoalProjections />
         </ProtectedRoute>
       </Route>
-      <Route path="/player-assist-projections">
-        <ProtectedRoute requireAdmin={true}>
-          <PlayerAssistProjections />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/player-assist-projections" component={PlayerAssistProjections} />
       <Route path="/defensive-contribution-projections" component={DefensiveContributionProjections} />
       <Route path="/player-defensive-contributions" component={PlayerDefensiveContributions} />
       <Route path="/player-saves" component={PlayerSaves} />
