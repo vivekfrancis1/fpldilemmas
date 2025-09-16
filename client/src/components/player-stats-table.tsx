@@ -45,6 +45,17 @@ interface SavePointsData {
   };
 }
 
+interface MinutesPointsData {
+  [playerId: string]: {
+    gameweeks: Array<{
+      gameweek: number;
+      minutes: number;
+      minutesPoints: number;
+    }>;
+    seasonTotal: number;
+  };
+}
+
 const ITEMS_PER_PAGE = 20;
 
 export default function PlayerStatsTable({ 
@@ -81,6 +92,14 @@ export default function PlayerStatsTable({
     gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
   });
 
+  // Fetch Minutes points data from the API
+  const { data: minutesPointsData, isLoading: isMinutesPointsLoading, isError: isMinutesPointsError } = useQuery<MinutesPointsData>({
+    queryKey: ['/api/player-minutes-points'],
+    enabled: !isHistoricalSeason, // Only fetch for current season
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
+  });
+
   // Helper function to get CBIT points for a player
   const getCbitPoints = (playerId: number): number => {
     if (isHistoricalSeason || !cbitPointsData || isCbitPointsError) {
@@ -95,6 +114,14 @@ export default function PlayerStatsTable({
       return 0; // Fallback for historical seasons or when data is unavailable
     }
     return savePointsData[playerId.toString()]?.seasonTotal || 0;
+  };
+
+  // Helper function to get Minutes points for a player
+  const getMinutesPoints = (playerId: number): number => {
+    if (isHistoricalSeason || !minutesPointsData || isMinutesPointsError) {
+      return 0; // Fallback for historical seasons or when data is unavailable
+    }
+    return minutesPointsData[playerId.toString()]?.seasonTotal || 0;
   };
 
   const filteredAndSortedPlayers = useMemo(() => {
@@ -202,6 +229,10 @@ export default function PlayerStatsTable({
           case "save_points": {
             // Use the Save points data from the API
             return getSavePoints(player.id);
+          }
+          case "minutes_points": {
+            // Use the Minutes points data from the API
+            return getMinutesPoints(player.id);
           }
           default: return player.total_points;
         }
@@ -494,6 +525,11 @@ export default function PlayerStatsTable({
               )}
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[90px]">
+                  <SortableHeader field="minutes_points" label="Min Pts" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[90px]">
                   <SortableHeader field="tackles" label="Tackles" />
                 </th>
               )}
@@ -740,6 +776,19 @@ export default function PlayerStatsTable({
                         }
                         return getSavePoints(player.id);
                       })()} 
+                    </td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-orange-600" data-testid={`text-minutes-points-${player.id}`}>
+                      {(() => {
+                        if (isMinutesPointsLoading) {
+                          return <span className="text-gray-400">...</span>;
+                        }
+                        if (isMinutesPointsError) {
+                          return <span className="text-gray-400" title="Minutes points data unavailable">N/A</span>;
+                        }
+                        return getMinutesPoints(player.id);
+                      })()}
                     </td>
                   )}
                   {!isHistoricalSeason && (
