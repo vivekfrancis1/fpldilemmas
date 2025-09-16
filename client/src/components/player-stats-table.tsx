@@ -135,7 +135,22 @@ export default function PlayerStatsTable({
           case "expected_assists_per_90": return player.expected_assists_per_90 || 0;
           case "expected_goal_involvements_per_90": return player.expected_goal_involvements_per_90 || 0;
           case "expected_goals_conceded_per_90": return player.expected_goals_conceded_per_90 || 0;
-          case "defensive_contribution_points": return ((player.defensive_contribution || 0) * 1) + ((player.clean_sheets || 0) * 4);
+          case "defensive_contribution_points": {
+            // New FPL 2025/26 rule: Defenders need 10 CBIT, Midfielders/Forwards need 12 CBIRT for 2 points
+            const cbi = (player.clearances_blocks_interceptions || 0);
+            const tackles = (player.tackles || 0);
+            const recoveries = (player.recoveries || 0);
+            const elementType = player.element_type;
+            
+            if (elementType === 2) {
+              // Defenders: 10 CBIT (clearances + blocks + interceptions + tackles) = 2 points
+              return (cbi + tackles) >= 10 ? 2 : 0;
+            } else if (elementType === 3 || elementType === 4) {
+              // Midfielders/Forwards: 12 CBIRT (clearances + blocks + interceptions + recoveries + tackles) = 2 points
+              return (cbi + tackles + recoveries) >= 12 ? 2 : 0;
+            }
+            return 0;
+          }
           default: return player.total_points;
         }
       };
@@ -395,7 +410,7 @@ export default function PlayerStatsTable({
               )}
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[90px]">
-                  <SortableHeader field="defensive_contribution_points" label="Def Pts" />
+                  <SortableHeader field="defensive_contribution_points" label="CBIT Pts" />
                 </th>
               )}
               <th className="px-2 py-3 text-center min-w-[80px]">
@@ -633,7 +648,24 @@ export default function PlayerStatsTable({
                     <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-orange-600">{player.defensive_contribution || 0}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-yellow-600">{((player.defensive_contribution || 0) * 1) + ((player.clean_sheets || 0) * 4)}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-yellow-600">
+                      {(() => {
+                        // New FPL 2025/26 rule: Defenders need 10 CBIT, Midfielders/Forwards need 12 CBIRT for 2 points
+                        const cbi = (player.clearances_blocks_interceptions || 0);
+                        const tackles = (player.tackles || 0);
+                        const recoveries = (player.recoveries || 0);
+                        const elementType = player.element_type;
+                        
+                        if (elementType === 2) {
+                          // Defenders: 10 CBIT (clearances + blocks + interceptions + tackles) = 2 points
+                          return (cbi + tackles) >= 10 ? 2 : 0;
+                        } else if (elementType === 3 || elementType === 4) {
+                          // Midfielders/Forwards: 12 CBIRT (clearances + blocks + interceptions + recoveries + tackles) = 2 points
+                          return (cbi + tackles + recoveries) >= 12 ? 2 : 0;
+                        }
+                        return 0;
+                      })()}
+                    </td>
                   )}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700 font-semibold">{formatValue(player.value_season || player.value_form || 0, 'decimal')}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.points_per_game || player.form || 0, 'decimal')}</td>
