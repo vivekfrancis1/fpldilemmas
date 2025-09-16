@@ -5,6 +5,7 @@ import {
   cachedPlayerYellowCards, 
   cachedPlayerRedCards, 
   cachedPlayerBonusPoints,
+  cachedPlayerAttackPoints,
   cachedPlayerCbitPoints,
   cachedPlayerSavePoints,
   cachedPlayerMinutesPoints,
@@ -28,6 +29,7 @@ export class FPLScoringCacheService {
         this.cachePlayerYellowCards(),
         this.cachePlayerRedCards(),
         this.cachePlayerBonusPoints(),
+        this.cachePlayerAttackPoints(),
         this.cachePlayerCbitPoints(),
         this.cachePlayerSavePoints(),
         this.cachePlayerMinutesPoints(),
@@ -252,6 +254,196 @@ export class FPLScoringCacheService {
   }
 
   /**
+   * Cache player attack points data
+   */
+  private async cachePlayerAttackPoints(): Promise<void> {
+    console.log("📊 Caching player attack points data...");
+    
+    try {
+      // Fetch raw FPL gameweek data to calculate attack points
+      const attackPointsData = await this.calculateAttackPointsData();
+      
+      // Clear existing data
+      await db.delete(cachedPlayerAttackPoints);
+      
+      // Insert new data in batches
+      const batchSize = 50;
+      for (let i = 0; i < attackPointsData.length; i += batchSize) {
+        const batch = attackPointsData.slice(i, i + batchSize);
+        await db.insert(cachedPlayerAttackPoints).values(
+          batch.map((player: any) => ({
+            playerId: player.playerId,
+            playerName: player.playerName,
+            teamName: player.teamName,
+            position: player.position,
+            gameweekData: player.attackStats,
+            pointsData: player.attackPoints,
+            totalValue: player.totalAttackStats,
+            totalPoints: player.totalAttackPoints,
+            averagePerGameweek: player.averagePerGameweek,
+            lastUpdated: new Date()
+          }))
+        );
+      }
+      
+      console.log(`✅ Cached ${attackPointsData.length} player attack points records`);
+    } catch (error) {
+      console.error("❌ Failed to cache player attack points:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate attack points data from raw FPL gameweek data
+   */
+  private async calculateAttackPointsData(): Promise<any[]> {
+    console.log("🧮 Calculating attack points from FPL live data...");
+    
+    try {
+      // Fetch bootstrap data for player info
+      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      if (!bootstrapResponse.ok) throw new Error(`Bootstrap API failed: ${bootstrapResponse.statusText}`);
+      const bootstrapData = await bootstrapResponse.json();
+      
+      const players = bootstrapData.elements;
+      const teams = bootstrapData.teams;
+      const events = bootstrapData.events;
+      
+      // Get completed gameweeks only
+      const completedGameweeks = events.filter((event: any) => event.finished).map((event: any) => event.id);
+      
+      console.log(`📊 Processing ${players.length} players for ${completedGameweeks.length} completed gameweeks...`);
+      
+      const attackPointsResults = [];
+      
+      // Process players in batches to avoid overwhelming the API
+      for (let i = 0; i < players.length; i += 20) {
+        const playerBatch = players.slice(i, i + 20);
+        const batchPromises = playerBatch.map((player: any) => this.calculatePlayerAttackPoints(player, completedGameweeks, teams));
+        const batchResults = await Promise.allSettled(batchPromises);
+        
+        for (const result of batchResults) {
+          if (result.status === 'fulfilled' && result.value) {
+            attackPointsResults.push(result.value);
+          } else if (result.status === 'rejected') {
+            console.warn(`Failed to process player: ${result.reason}`);
+          }
+        }
+        
+        // Small delay to be respectful to FPL API
+        if (i + 20 < players.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      return attackPointsResults;
+    } catch (error) {
+      console.error("❌ Failed to calculate attack points data:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate attack points for a single player
+   */
+  private async calculatePlayerAttackPoints(player: any, completedGameweeks: number[], teams: any[]): Promise<any> {
+    try {
+      // Get position multiplier for goals
+      const getPositionMultiplier = (elementType: number): number => {
+        switch (elementType) {
+          case 1: return 10; // Goalkeeper
+          case 2: return 6;  // Defender
+          case 3: return 5;  // Midfielder
+          case 4: return 4;  // Forward
+          default: return 4;
+        }
+      };
+      
+      const positionMultiplier = getPositionMultiplier(player.element_type);
+      const team = teams.find((t: any) => t.id === player.team);
+      
+      // Fetch player's gameweek history
+      const historyResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+      if (!historyResponse.ok) {
+        console.warn(`Failed to fetch history for player ${player.id}: ${historyResponse.statusText}`);
+        return null;
+      }
+      
+      const historyData = await historyResponse.json();
+      const gameweekHistory = historyData.history || [];
+      
+      // Calculate attack points for each completed gameweek
+      const gameweekAttackStats: Record<string, any> = {};
+      const gameweekAttackPoints: Record<string, number> = {};
+      let totalAttackStats = 0;
+      let totalAttackPoints = 0;
+      
+      for (const gameweek of completedGameweeks) {
+        const gameweekData = gameweekHistory.find((gw: any) => gw.round === gameweek);
+        
+        if (gameweekData) {
+          const goals = gameweekData.goals_scored || 0;
+          const assists = gameweekData.assists || 0;
+          const penaltiesMissed = gameweekData.penalties_missed || 0;
+          
+          // Calculate attack points using FPL formula
+          const attackPoints = (goals * positionMultiplier) + (assists * 3) + (penaltiesMissed * -2);
+          
+          gameweekAttackStats[gameweek] = {
+            goals,
+            assists,
+            penalties_missed: penaltiesMissed,
+            position_multiplier: positionMultiplier
+          };
+          
+          gameweekAttackPoints[gameweek] = attackPoints;
+          totalAttackStats += goals + assists + penaltiesMissed; // Combined stat count
+          totalAttackPoints += attackPoints;
+        } else {
+          // Player didn't play this gameweek
+          gameweekAttackStats[gameweek] = {
+            goals: 0,
+            assists: 0,
+            penalties_missed: 0,
+            position_multiplier: positionMultiplier
+          };
+          gameweekAttackPoints[gameweek] = 0;
+        }
+      }
+      
+      const averagePerGameweek = completedGameweeks.length > 0 ? totalAttackPoints / completedGameweeks.length : 0;
+      
+      return {
+        playerId: player.id,
+        playerName: `${player.first_name} ${player.second_name}`.trim(),
+        teamName: team?.name || 'Unknown',
+        position: this.getPositionName(player.element_type),
+        attackStats: gameweekAttackStats,
+        attackPoints: gameweekAttackPoints,
+        totalAttackStats,
+        totalAttackPoints,
+        averagePerGameweek: Math.round(averagePerGameweek * 100) / 100
+      };
+    } catch (error) {
+      console.warn(`Failed to calculate attack points for player ${player.id}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Helper function to get position name from element type
+   */
+  private getPositionName(elementType: number): string {
+    switch (elementType) {
+      case 1: return 'Goalkeeper';
+      case 2: return 'Defender';
+      case 3: return 'Midfielder';
+      case 4: return 'Forward';
+      default: return 'Unknown';
+    }
+  }
+
+  /**
    * Get cached player saves data
    */
   async getCachedPlayerSaves(): Promise<any[]> {
@@ -337,6 +529,24 @@ export class FPLScoringCacheService {
       pointsFromBonus: record.pointsData,
       totalBonusPoints: record.totalValue,
       totalPoints: record.totalPoints,
+      averagePerGameweek: record.averagePerGameweek
+    }));
+  }
+
+  /**
+   * Get cached player attack points data
+   */
+  async getCachedPlayerAttackPoints(): Promise<any[]> {
+    const data = await db.select().from(cachedPlayerAttackPoints).orderBy(cachedPlayerAttackPoints.totalPoints);
+    return data.map(record => ({
+      playerId: record.playerId,
+      playerName: record.playerName,
+      teamName: record.teamName,
+      position: record.position,
+      attackStats: record.gameweekData,
+      attackPoints: record.pointsData,
+      totalAttackStats: record.totalValue,
+      totalAttackPoints: record.totalPoints,
       averagePerGameweek: record.averagePerGameweek
     }));
   }

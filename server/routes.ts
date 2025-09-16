@@ -31,6 +31,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { internalFetch, getApiBaseUrl } from "./config";
 import { resultCache } from "./result-cache-service";
+import { fplScoringCacheService } from "./fpl-scoring-cache-service";
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -12559,6 +12560,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching cached player bonus points:", error);
       // Fallback to real-time data if cache fails
       res.redirect(307, "/api/player-bonus-points-projections");
+    }
+  });
+
+  app.get("/api/player-attack-points", async (req, res) => {
+    try {
+      console.log("📊 Serving cached player attack points data");
+      const cachedData = await fplScoringCacheService.getCachedPlayerAttackPoints();
+      res.json(cachedData);
+    } catch (error) {
+      console.error("Error fetching cached player attack points:", error);
+      res.status(500).json({ error: "Failed to fetch player attack points data" });
     }
   });
 
