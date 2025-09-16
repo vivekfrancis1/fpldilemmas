@@ -12563,7 +12563,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("📊 Serving player CBIT points data");
       const cachedData = await fplScoringCacheService.getCachedPlayerCbitPoints();
-      res.json(cachedData);
+      
+      // If cache is empty, try to populate it immediately
+      if (Object.keys(cachedData).length === 0) {
+        console.log("🔄 CBIT cache is empty - attempting immediate population...");
+        try {
+          await fplScoringCacheService.cachePlayerCbitPoints();
+          const refreshedData = await fplScoringCacheService.getCachedPlayerCbitPoints();
+          
+          if (Object.keys(refreshedData).length > 0) {
+            console.log("✅ Successfully populated CBIT cache");
+            res.json(refreshedData);
+          } else {
+            console.warn("⚠️ Cache population failed - returning empty data");
+            res.json({});
+          }
+        } catch (populationError) {
+          console.error("❌ Failed to populate CBIT cache:", populationError);
+          // Return empty object rather than failing completely
+          res.json({});
+        }
+      } else {
+        res.json(cachedData);
+      }
     } catch (error) {
       console.error("Error fetching player CBIT points:", error);
       res.status(500).json({ error: "Failed to fetch player CBIT points data" });
