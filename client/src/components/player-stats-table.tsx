@@ -67,32 +67,6 @@ interface GcPointsData {
   };
 }
 
-interface AttackPointsData {
-  [playerId: string]: {
-    gameweeks: Array<{
-      gameweek: number;
-      attackPoints: number;
-      goals_scored: number;
-      assists: number;
-    }>;
-    seasonTotal: number;
-  };
-}
-
-interface DefencePointsData {
-  [playerId: string]: {
-    gameweeks: Array<{
-      gameweek: number;
-      defencePoints: number;
-      clean_sheets: number;
-      yellow_cards: number;
-      red_cards: number;
-      own_goals: number;
-    }>;
-    seasonTotal: number;
-  };
-}
-
 const ITEMS_PER_PAGE = 20;
 
 export default function PlayerStatsTable({ 
@@ -145,22 +119,6 @@ export default function PlayerStatsTable({
     gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
   });
 
-  // Fetch Attack points data from the API
-  const { data: attackPointsData, isLoading: isAttackPointsLoading, isError: isAttackPointsError } = useQuery<AttackPointsData>({
-    queryKey: ['/api/player-attack-points'],
-    enabled: !isHistoricalSeason, // Only fetch for current season
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
-  });
-
-  // Fetch Defence points data from the API
-  const { data: defencePointsData, isLoading: isDefencePointsLoading, isError: isDefencePointsError } = useQuery<DefencePointsData>({
-    queryKey: ['/api/player-defence-points'],
-    enabled: !isHistoricalSeason, // Only fetch for current season
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
-  });
-
   // Helper function to get CBIT points for a player
   const getCbitPoints = (playerId: number): number => {
     if (isHistoricalSeason || !cbitPointsData || isCbitPointsError) {
@@ -195,22 +153,6 @@ export default function PlayerStatsTable({
       return null; // Return null for midfielders and forwards to show "-"
     }
     return gcPointsData[playerId.toString()]?.seasonTotal || 0;
-  };
-
-  // Helper function to get Attack points for a player
-  const getAttackPoints = (playerId: number): number => {
-    if (isHistoricalSeason || !attackPointsData || isAttackPointsError) {
-      return 0; // Fallback for historical seasons or when data is unavailable
-    }
-    return attackPointsData[playerId.toString()]?.seasonTotal || 0;
-  };
-
-  // Helper function to get Defence points for a player
-  const getDefencePoints = (playerId: number): number => {
-    if (isHistoricalSeason || !defencePointsData || isDefencePointsError) {
-      return 0; // Fallback for historical seasons or when data is unavailable
-    }
-    return defencePointsData[playerId.toString()]?.seasonTotal || 0;
   };
 
   const filteredAndSortedPlayers = useMemo(() => {
@@ -326,14 +268,6 @@ export default function PlayerStatsTable({
           case "gc_points": {
             // Use the GC points data from the API (goalkeepers and defenders only)
             return getGcPoints(player.id, player.element_type);
-          }
-          case "attack_points": {
-            // Use the Attack points data from the API
-            return getAttackPoints(player.id);
-          }
-          case "defence_points": {
-            // Use the Defence points data from the API
-            return getDefencePoints(player.id);
           }
           default: return player.total_points;
         }
@@ -586,18 +520,6 @@ export default function PlayerStatsTable({
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="expected_goals_conceded_per_90" label="xGC/90" />
-                </th>
-              )}
-              {/* Attack Points - 2025/26 Season Only */}
-              {!isHistoricalSeason && (
-                <th className="px-2 py-3 text-center min-w-[90px]">
-                  <SortableHeader field="attack_points" label="Attack Pts" />
-                </th>
-              )}
-              {/* Defence Points - 2025/26 Season Only */}
-              {!isHistoricalSeason && (
-                <th className="px-2 py-3 text-center min-w-[90px]">
-                  <SortableHeader field="defence_points" label="Defence Pts" />
                 </th>
               )}
               {/* New Defensive Contribution Fields - 2025/26 Season Only */}
@@ -870,19 +792,6 @@ export default function PlayerStatsTable({
                           return <span className="text-gray-400" title="CBIT points data unavailable">N/A</span>;
                         }
                         return getCbitPoints(player.id);
-                      })()}
-                    </td>
-                  )}
-                  {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-indigo-600" data-testid={`text-defence-points-${player.id}`}>
-                      {(() => {
-                        if (isDefencePointsLoading) {
-                          return <span className="text-gray-400">...</span>;
-                        }
-                        if (isDefencePointsError) {
-                          return <span className="text-gray-400" title="Defence points data unavailable">N/A</span>;
-                        }
-                        return getDefencePoints(player.id);
                       })()}
                     </td>
                   )}

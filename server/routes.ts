@@ -31,7 +31,6 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { internalFetch, getApiBaseUrl } from "./config";
 import { resultCache } from "./result-cache-service";
-import { fplScoringCacheService } from "./fpl-scoring-cache-service";
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -12563,17 +12562,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/player-attack-points", async (req, res) => {
-    try {
-      console.log("📊 Serving cached player attack points data");
-      const cachedData = await fplScoringCacheService.getCachedPlayerAttackPoints();
-      res.json(cachedData);
-    } catch (error) {
-      console.error("Error fetching cached player attack points:", error);
-      res.status(500).json({ error: "Failed to fetch player attack points data" });
-    }
-  });
-
   app.get("/api/player-cbit-points", async (req, res) => {
     try {
       console.log("📊 Serving player CBIT points data");
@@ -12734,39 +12722,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching player GC points:", error);
       res.status(500).json({ error: "Failed to fetch player GC points data" });
-    }
-  });
-
-  // Player Defence Points API - Combined defensive scoring
-  app.get("/api/player-defence-points", async (req, res) => {
-    try {
-      console.log("📊 Serving player defence points data");
-      const cachedData = await fplScoringCacheService.getCachedPlayerDefencePoints();
-      
-      // If cache is empty, try to populate it immediately
-      if (Object.keys(cachedData).length === 0) {
-        console.log("🔄 Defence points cache is empty - attempting immediate population...");
-        try {
-          await fplScoringCacheService.cachePlayerDefencePoints();
-          const refreshedData = await fplScoringCacheService.getCachedPlayerDefencePoints();
-          
-          if (Object.keys(refreshedData).length > 0) {
-            console.log("✅ Successfully populated defence points cache");
-            res.json(refreshedData);
-          } else {
-            console.warn("⚠️ Failed to populate defence points cache - returning empty object");
-            res.json({});
-          }
-        } catch (populateError) {
-          console.error("❌ Error populating defence points cache:", populateError);
-          res.json({}); // Return empty object on error
-        }
-      } else {
-        res.json(cachedData);
-      }
-    } catch (error) {
-      console.error("Error fetching player defence points:", error);
-      res.status(500).json({ error: "Failed to fetch player defence points data" });
     }
   });
 

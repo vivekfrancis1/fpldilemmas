@@ -1,89 +1,19 @@
 import { db } from "./db";
-import { sql } from "drizzle-orm";
 import { 
   cachedPlayerSaves, 
   cachedPlayerGoalsConceded, 
   cachedPlayerYellowCards, 
   cachedPlayerRedCards, 
   cachedPlayerBonusPoints,
-  cachedPlayerAttackPoints,
   cachedPlayerCbitPoints,
   cachedPlayerSavePoints,
   cachedPlayerMinutesPoints,
-  cachedPlayerGcPoints,
-  cachedPlayerDefencePoints
+  cachedPlayerGcPoints
 } from "@shared/schema";
 import { internalFetch } from "./config";
 
 export class FPLScoringCacheService {
   
-  /**
-   * Create missing cache tables if they don't exist
-   * Uses idempotent CREATE TABLE IF NOT EXISTS for safe table creation
-   */
-  private async ensureCacheTablesExist(): Promise<void> {
-    console.log("🔧 Ensuring cache tables exist...");
-    
-    try {
-      // Create cached_player_gc_points table if not exists
-      await db.execute(sql`
-        CREATE TABLE IF NOT EXISTS cached_player_gc_points (
-          player_id integer PRIMARY KEY,
-          gameweeks_data jsonb NOT NULL,
-          season_total integer NOT NULL,
-          last_updated timestamp DEFAULT now() NOT NULL
-        )
-      `);
-      
-      // Create index if not exists
-      await db.execute(sql`
-        CREATE INDEX IF NOT EXISTS cached_player_gc_points_player_id_idx 
-        ON cached_player_gc_points(player_id)
-      `);
-      
-      // Create cached_player_defence_points table if not exists
-      await db.execute(sql`
-        CREATE TABLE IF NOT EXISTS cached_player_defence_points (
-          id serial PRIMARY KEY,
-          player_id integer NOT NULL,
-          player_name text NOT NULL,
-          team_name text NOT NULL,
-          position text NOT NULL,
-          gameweek_data jsonb NOT NULL,
-          points_data jsonb NOT NULL,
-          clean_sheet_data jsonb NOT NULL,
-          yellow_card_data jsonb NOT NULL,
-          red_card_data jsonb NOT NULL,
-          own_goal_data jsonb NOT NULL,
-          total_defence_points real NOT NULL DEFAULT 0,
-          average_per_gameweek real NOT NULL DEFAULT 0,
-          last_updated timestamp DEFAULT now()
-        )
-      `);
-      
-      // Create indices if not exist
-      await db.execute(sql`
-        CREATE INDEX IF NOT EXISTS idx_cached_defence_points_player_id 
-        ON cached_player_defence_points(player_id)
-      `);
-      
-      await db.execute(sql`
-        CREATE INDEX IF NOT EXISTS idx_cached_defence_points_total 
-        ON cached_player_defence_points(total_defence_points)
-      `);
-      
-      await db.execute(sql`
-        CREATE INDEX IF NOT EXISTS idx_cached_defence_points_position 
-        ON cached_player_defence_points(position)
-      `);
-      
-      console.log("✅ Cache tables verified/created successfully");
-    } catch (error) {
-      console.error("❌ Failed to create cache tables:", error);
-      throw error;
-    }
-  }
-
   /**
    * Fetch and cache all FPL scoring component data
    */
@@ -91,8 +21,6 @@ export class FPLScoringCacheService {
     console.log("🚀 Starting FPL scoring component cache update...");
     
     try {
-      // Ensure all cache tables exist before proceeding
-      await this.ensureCacheTablesExist();
       // Cache all scoring components in parallel
       await Promise.all([
         this.cachePlayerSaves(),
@@ -100,12 +28,10 @@ export class FPLScoringCacheService {
         this.cachePlayerYellowCards(),
         this.cachePlayerRedCards(),
         this.cachePlayerBonusPoints(),
-        this.cachePlayerAttackPoints(),
         this.cachePlayerCbitPoints(),
         this.cachePlayerSavePoints(),
         this.cachePlayerMinutesPoints(),
-        this.cachePlayerGcPoints(),
-        this.cachePlayerDefencePoints()
+        this.cachePlayerGcPoints()
       ]);
       
       console.log("✅ FPL scoring component cache update completed successfully");
@@ -326,196 +252,6 @@ export class FPLScoringCacheService {
   }
 
   /**
-   * Cache player attack points data
-   */
-  private async cachePlayerAttackPoints(): Promise<void> {
-    console.log("📊 Caching player attack points data...");
-    
-    try {
-      // Fetch raw FPL gameweek data to calculate attack points
-      const attackPointsData = await this.calculateAttackPointsData();
-      
-      // Clear existing data
-      await db.delete(cachedPlayerAttackPoints);
-      
-      // Insert new data in batches
-      const batchSize = 50;
-      for (let i = 0; i < attackPointsData.length; i += batchSize) {
-        const batch = attackPointsData.slice(i, i + batchSize);
-        await db.insert(cachedPlayerAttackPoints).values(
-          batch.map((player: any) => ({
-            playerId: player.playerId,
-            playerName: player.playerName,
-            teamName: player.teamName,
-            position: player.position,
-            gameweekData: player.attackStats,
-            pointsData: player.attackPoints,
-            totalValue: player.totalAttackStats,
-            totalPoints: player.totalAttackPoints,
-            averagePerGameweek: player.averagePerGameweek,
-            lastUpdated: new Date()
-          }))
-        );
-      }
-      
-      console.log(`✅ Cached ${attackPointsData.length} player attack points records`);
-    } catch (error) {
-      console.error("❌ Failed to cache player attack points:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Calculate attack points data from raw FPL gameweek data
-   */
-  private async calculateAttackPointsData(): Promise<any[]> {
-    console.log("🧮 Calculating attack points from FPL live data...");
-    
-    try {
-      // Fetch bootstrap data for player info
-      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
-      if (!bootstrapResponse.ok) throw new Error(`Bootstrap API failed: ${bootstrapResponse.statusText}`);
-      const bootstrapData = await bootstrapResponse.json();
-      
-      const players = bootstrapData.elements;
-      const teams = bootstrapData.teams;
-      const events = bootstrapData.events;
-      
-      // Get completed gameweeks only
-      const completedGameweeks = events.filter((event: any) => event.finished).map((event: any) => event.id);
-      
-      console.log(`📊 Processing ${players.length} players for ${completedGameweeks.length} completed gameweeks...`);
-      
-      const attackPointsResults = [];
-      
-      // Process players in batches to avoid overwhelming the API
-      for (let i = 0; i < players.length; i += 20) {
-        const playerBatch = players.slice(i, i + 20);
-        const batchPromises = playerBatch.map((player: any) => this.calculatePlayerAttackPoints(player, completedGameweeks, teams));
-        const batchResults = await Promise.allSettled(batchPromises);
-        
-        for (const result of batchResults) {
-          if (result.status === 'fulfilled' && result.value) {
-            attackPointsResults.push(result.value);
-          } else if (result.status === 'rejected') {
-            console.warn(`Failed to process player: ${result.reason}`);
-          }
-        }
-        
-        // Small delay to be respectful to FPL API
-        if (i + 20 < players.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      }
-      
-      return attackPointsResults;
-    } catch (error) {
-      console.error("❌ Failed to calculate attack points data:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Calculate attack points for a single player
-   */
-  private async calculatePlayerAttackPoints(player: any, completedGameweeks: number[], teams: any[]): Promise<any> {
-    try {
-      // Get position multiplier for goals
-      const getPositionMultiplier = (elementType: number): number => {
-        switch (elementType) {
-          case 1: return 10; // Goalkeeper
-          case 2: return 6;  // Defender
-          case 3: return 5;  // Midfielder
-          case 4: return 4;  // Forward
-          default: return 4;
-        }
-      };
-      
-      const positionMultiplier = getPositionMultiplier(player.element_type);
-      const team = teams.find((t: any) => t.id === player.team);
-      
-      // Fetch player's gameweek history
-      const historyResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-      if (!historyResponse.ok) {
-        console.warn(`Failed to fetch history for player ${player.id}: ${historyResponse.statusText}`);
-        return null;
-      }
-      
-      const historyData = await historyResponse.json();
-      const gameweekHistory = historyData.history || [];
-      
-      // Calculate attack points for each completed gameweek
-      const gameweekAttackStats: Record<string, any> = {};
-      const gameweekAttackPoints: Record<string, number> = {};
-      let totalAttackStats = 0;
-      let totalAttackPoints = 0;
-      
-      for (const gameweek of completedGameweeks) {
-        const gameweekData = gameweekHistory.find((gw: any) => gw.round === gameweek);
-        
-        if (gameweekData) {
-          const goals = gameweekData.goals_scored || 0;
-          const assists = gameweekData.assists || 0;
-          const penaltiesMissed = gameweekData.penalties_missed || 0;
-          
-          // Calculate attack points using FPL formula
-          const attackPoints = (goals * positionMultiplier) + (assists * 3) + (penaltiesMissed * -2);
-          
-          gameweekAttackStats[gameweek] = {
-            goals,
-            assists,
-            penalties_missed: penaltiesMissed,
-            position_multiplier: positionMultiplier
-          };
-          
-          gameweekAttackPoints[gameweek] = attackPoints;
-          totalAttackStats += goals + assists + penaltiesMissed; // Combined stat count
-          totalAttackPoints += attackPoints;
-        } else {
-          // Player didn't play this gameweek
-          gameweekAttackStats[gameweek] = {
-            goals: 0,
-            assists: 0,
-            penalties_missed: 0,
-            position_multiplier: positionMultiplier
-          };
-          gameweekAttackPoints[gameweek] = 0;
-        }
-      }
-      
-      const averagePerGameweek = completedGameweeks.length > 0 ? totalAttackPoints / completedGameweeks.length : 0;
-      
-      return {
-        playerId: player.id,
-        playerName: `${player.first_name} ${player.second_name}`.trim(),
-        teamName: team?.name || 'Unknown',
-        position: this.getPositionName(player.element_type),
-        attackStats: gameweekAttackStats,
-        attackPoints: gameweekAttackPoints,
-        totalAttackStats,
-        totalAttackPoints,
-        averagePerGameweek: Math.round(averagePerGameweek * 100) / 100
-      };
-    } catch (error) {
-      console.warn(`Failed to calculate attack points for player ${player.id}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Helper function to get position name from element type
-   */
-  private getPositionName(elementType: number): string {
-    switch (elementType) {
-      case 1: return 'Goalkeeper';
-      case 2: return 'Defender';
-      case 3: return 'Midfielder';
-      case 4: return 'Forward';
-      default: return 'Unknown';
-    }
-  }
-
-  /**
    * Get cached player saves data
    */
   async getCachedPlayerSaves(): Promise<any[]> {
@@ -601,24 +337,6 @@ export class FPLScoringCacheService {
       pointsFromBonus: record.pointsData,
       totalBonusPoints: record.totalValue,
       totalPoints: record.totalPoints,
-      averagePerGameweek: record.averagePerGameweek
-    }));
-  }
-
-  /**
-   * Get cached player attack points data
-   */
-  async getCachedPlayerAttackPoints(): Promise<any[]> {
-    const data = await db.select().from(cachedPlayerAttackPoints).orderBy(cachedPlayerAttackPoints.totalPoints);
-    return data.map(record => ({
-      playerId: record.playerId,
-      playerName: record.playerName,
-      teamName: record.teamName,
-      position: record.position,
-      attackStats: record.gameweekData,
-      attackPoints: record.pointsData,
-      totalAttackStats: record.totalValue,
-      totalAttackPoints: record.totalPoints,
       averagePerGameweek: record.averagePerGameweek
     }));
   }
@@ -1221,9 +939,6 @@ export class FPLScoringCacheService {
         }
       }
       
-      // Ensure table exists before clearing
-      await this.ensureCacheTablesExist();
-      
       // Clear existing data
       await db.delete(cachedPlayerGcPoints);
       
@@ -1259,15 +974,7 @@ export class FPLScoringCacheService {
       }
       
       console.log(`✅ Cached ${gcPointsArray.length} player GC points records`);
-    } catch (error: any) {
-      // If table doesn't exist, create it and retry
-      if (error?.code === '42P01' || error?.message?.includes('relation') || error?.message?.includes('does not exist')) {
-        console.log("⚠️ cached_player_gc_points table missing during cache operation - creating...");
-        await this.ensureCacheTablesExist();
-        // Don't retry the full operation to avoid infinite recursion
-        console.log("✅ Tables created - GC points cache will be populated on next update cycle");
-        return;
-      }
+    } catch (error) {
       console.error("❌ Failed to cache player GC points:", error);
       throw error;
     }
@@ -1407,8 +1114,7 @@ export class FPLScoringCacheService {
    * Returns object keyed by playerId to match frontend expectations
    */
   async getCachedPlayerGcPoints(): Promise<{ [playerId: string]: { gameweeks: Array<{ gameweek: number; goalsConceded: number; gcPoints: number; }>; seasonTotal: number; } }> {
-    try {
-      const data = await db.select().from(cachedPlayerGcPoints);
+    const data = await db.select().from(cachedPlayerGcPoints);
     
     // If no data is cached, return empty object (will trigger fallback calculation)
     if (data.length === 0) {
@@ -1437,356 +1143,8 @@ export class FPLScoringCacheService {
       };
     });
     
-      console.log(`📊 Serving cached GC points data for ${Object.keys(result).length} players`);
-      return result;
-    } catch (error: any) {
-      // Handle missing table error (42P01) - auto-create and retry
-      if (error?.code === '42P01' || error?.message?.includes('relation') || error?.message?.includes('does not exist')) {
-        console.log("⚠️ cached_player_gc_points table missing - creating and populating...");
-        try {
-          await this.ensureCacheTablesExist();
-          await this.cachePlayerGcPoints();
-          // Retry the query after table creation
-          const data = await db.select().from(cachedPlayerGcPoints);
-          
-          if (data.length === 0) {
-            console.warn("⚠️ No GC points data found after cache refresh - returning empty object");
-            return {};
-          }
-          
-          const result: { [playerId: string]: { gameweeks: Array<{ gameweek: number; goalsConceded: number; gcPoints: number; }>; seasonTotal: number; } } = {};
-          
-          data.forEach(record => {
-            const gameweeksData = record.gameweeksData as any || {};
-            const gameweeks = gameweeksData.gameweeks || [];
-            
-            const formattedGameweeks = gameweeks.map((gw: any) => ({
-              gameweek: gw.gameweek,
-              goalsConceded: gw.goalsConceded,
-              gcPoints: gw.points
-            })).sort((a: any, b: any) => a.gameweek - b.gameweek);
-            
-            result[record.playerId.toString()] = {
-              gameweeks: formattedGameweeks,
-              seasonTotal: record.seasonTotal || 0
-            };
-          });
-          
-          console.log(`📊 Serving cached GC points data for ${Object.keys(result).length} players after recovery`);
-          return result;
-        } catch (recoveryError) {
-          console.error("❌ Failed to recover GC points cache:", recoveryError);
-          return {};
-        }
-      }
-      console.error("❌ Failed to get cached GC points:", error);
-      return {};
-    }
-  }
-
-  /**
-   * Cache player defence points data
-   * Combines clean sheets, save points, CBIT points, GC points, yellow/red cards, and own goals
-   */
-  async cachePlayerDefencePoints(): Promise<void> {
-    console.log("📊 Caching player defence points data...");
-    
-    try {
-      // Get existing cached data to avoid redundant API calls
-      const savePointsData = await this.getCachedPlayerSavePoints();
-      const cbitPointsData = await this.getCachedPlayerCbitPoints();
-      const gcPointsData = await this.getCachedPlayerGcPoints();
-      
-      // Fetch bootstrap data to get player information
-      const bootstrapResponse = await internalFetch('api/bootstrap-static');
-      if (!bootstrapResponse.ok) throw new Error(`Failed to fetch bootstrap data: ${bootstrapResponse.statusText}`);
-      
-      const bootstrapData = await bootstrapResponse.json();
-      const players = bootstrapData.elements || [];
-      
-      const defencePointsData: any[] = [];
-      
-      // Process each player
-      for (const player of players) {
-        const playerId = player.id;
-        const playerName = `${player.first_name} ${player.second_name}`;
-        const teamName = bootstrapData.teams?.find((t: any) => t.id === player.team)?.name || 'Unknown';
-        const position = this.getPositionName(player.element_type);
-        
-        // Position multiplier for clean sheets
-        const cleanSheetMultiplier = this.getCleanSheetMultiplier(player.element_type);
-        
-        // Initialize defence points tracking
-        const gameweekDefenceData: any[] = [];
-        const gameweekPointsData: any[] = [];
-        const cleanSheetData: any[] = [];
-        const yellowCardData: any[] = [];
-        const redCardData: any[] = [];
-        const ownGoalData: any[] = [];
-        
-        let totalDefencePoints = 0;
-        
-        // Process gameweeks 1-9 (current season data)
-        for (let gw = 1; gw <= 9; gw++) {
-          try {
-            // Fetch player gameweek data from FPL API
-            const playerResponse = await internalFetch(`api/element-summary/${playerId}/`);
-            if (!playerResponse.ok) continue;
-            
-            const playerData = await playerResponse.json();
-            const gameweekHistory = playerData.history || [];
-            
-            const gwData = gameweekHistory.find((h: any) => h.round === gw);
-            if (!gwData) continue;
-            
-            // Extract raw stats
-            const cleanSheets = gwData.clean_sheets || 0;
-            const yellowCards = gwData.yellow_cards || 0;
-            const redCards = gwData.red_cards || 0;
-            const ownGoals = gwData.own_goals || 0;
-            
-            // Get points from cached data
-            const savePoints = savePointsData[playerId]?.gameweeks?.find((g: any) => g.gameweek === gw)?.savePoints || 0;
-            const cbitPoints = cbitPointsData[playerId]?.gameweeks?.find((g: any) => g.gameweek === gw)?.cbitPoints || 0;
-            const gcPoints = gcPointsData[playerId]?.gameweeks?.find((g: any) => g.gameweek === gw)?.gcPoints || 0;
-            
-            // Calculate defence points for this gameweek
-            const cleanSheetPoints = cleanSheets * cleanSheetMultiplier;
-            const yellowCardPoints = yellowCards * -1;
-            const redCardPoints = redCards * -3;
-            const ownGoalPoints = ownGoals * -2;
-            
-            const gameweekDefencePoints = cleanSheetPoints + savePoints + cbitPoints + gcPoints + yellowCardPoints + redCardPoints + ownGoalPoints;
-            
-            // Store gameweek data
-            gameweekDefenceData.push({
-              gameweek: gw,
-              cleanSheets,
-              yellowCards,
-              redCards,
-              ownGoals,
-              savePoints,
-              cbitPoints,
-              gcPoints,
-              cleanSheetPoints,
-              yellowCardPoints,
-              redCardPoints,
-              ownGoalPoints,
-              totalDefencePoints: gameweekDefencePoints
-            });
-            
-            gameweekPointsData.push({
-              gameweek: gw,
-              defencePoints: gameweekDefencePoints
-            });
-            
-            cleanSheetData.push({ gameweek: gw, cleanSheets });
-            yellowCardData.push({ gameweek: gw, yellowCards });
-            redCardData.push({ gameweek: gw, redCards });
-            ownGoalData.push({ gameweek: gw, ownGoals });
-            
-            totalDefencePoints += gameweekDefencePoints;
-            
-          } catch (error) {
-            console.warn(`Warning: Failed to fetch gameweek ${gw} data for player ${playerId}:`, error);
-            continue;
-          }
-        }
-        
-        // Only cache players with data
-        if (gameweekDefenceData.length > 0) {
-          defencePointsData.push({
-            playerId,
-            playerName,
-            teamName,
-            position,
-            gameweekData: gameweekDefenceData,
-            pointsData: gameweekPointsData,
-            cleanSheetData,
-            yellowCardData,
-            redCardData,
-            ownGoalData,
-            totalDefencePoints,
-            averagePerGameweek: gameweekDefenceData.length > 0 ? totalDefencePoints / gameweekDefenceData.length : 0,
-            lastUpdated: new Date()
-          });
-        }
-      }
-      
-      // Ensure table exists before clearing
-      await this.ensureCacheTablesExist();
-      
-      // Clear existing data
-      await db.delete(cachedPlayerDefencePoints);
-      
-      // Insert new data in batches
-      const batchSize = 50;
-      for (let i = 0; i < defencePointsData.length; i += batchSize) {
-        const batch = defencePointsData.slice(i, i + batchSize);
-        await db.insert(cachedPlayerDefencePoints).values(batch);
-      }
-      
-      console.log(`✅ Cached ${defencePointsData.length} player defence points records`);
-    } catch (error: any) {
-      // If table doesn't exist, create it and retry
-      if (error?.code === '42P01' || error?.message?.includes('relation') || error?.message?.includes('does not exist')) {
-        console.log("⚠️ cached_player_defence_points table missing during cache operation - creating...");
-        await this.ensureCacheTablesExist();
-        // Don't retry the full operation to avoid infinite recursion
-        console.log("✅ Tables created - defence points cache will be populated on next update cycle");
-        return;
-      }
-      console.error("❌ Failed to cache player defence points:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get cached player defence points data
-   * Returns object keyed by playerId to match frontend expectations
-   */
-  async getCachedPlayerDefencePoints(): Promise<{ [playerId: string]: { gameweeks: Array<{ gameweek: number; defencePoints: number; cleanSheets: number; yellowCards: number; redCards: number; ownGoals: number; }>; seasonTotal: number; } }> {
-    try {
-      const data = await db.select().from(cachedPlayerDefencePoints).orderBy(sql`total_defence_points DESC`);
-    
-    // If no data is cached, return empty object (will trigger fallback calculation)
-    if (data.length === 0) {
-      console.warn("⚠️ No defence points data found in cache - returning empty object");
-      return {};
-    }
-    
-      // Transform array data into object keyed by playerId
-      const result: { [playerId: string]: { gameweeks: Array<{ gameweek: number; defencePoints: number; cleanSheets: number; yellowCards: number; redCards: number; ownGoals: number; }>; seasonTotal: number; } } = {};
-      
-      data.forEach(record => {
-        // Parse gameweek data (stored as jsonb)
-        const gameweekData = record.gameweekData as any || [];
-        const pointsData = record.pointsData as any || [];
-        
-        // Transform to expected format
-        const formattedGameweeks = gameweekData.map((gw: any) => ({
-          gameweek: gw.gameweek,
-          defencePoints: pointsData.find((p: any) => p.gameweek === gw.gameweek)?.defencePoints || 0,
-          cleanSheets: gw.cleanSheets || 0,
-          yellowCards: gw.yellowCards || 0,
-          redCards: gw.redCards || 0,
-          ownGoals: gw.ownGoals || 0
-        })).sort((a: any, b: any) => a.gameweek - b.gameweek);
-        
-        result[record.playerId.toString()] = {
-          gameweeks: formattedGameweeks,
-          seasonTotal: record.totalDefencePoints || 0
-        };
-      });
-      
-      console.log(`📊 Serving cached defence points data for ${Object.keys(result).length} players`);
-      return result;
-    } catch (error: any) {
-      // Handle missing table error (42P01) - auto-create and retry
-      if (error?.code === '42P01' || error?.message?.includes('relation') || error?.message?.includes('does not exist')) {
-        console.log("⚠️ cached_player_defence_points table missing - creating and populating...");
-        try {
-          await this.ensureCacheTablesExist();
-          await this.cachePlayerDefencePoints();
-          // Retry the query after table creation
-          const data = await db.select().from(cachedPlayerDefencePoints).orderBy(sql`total_defence_points DESC`);
-          
-          if (data.length === 0) {
-            console.warn("⚠️ No defence points data found after cache refresh - returning empty object");
-            return {};
-          }
-          
-          const result: { [playerId: string]: { gameweeks: Array<{ gameweek: number; defencePoints: number; cleanSheets: number; yellowCards: number; redCards: number; ownGoals: number; }>; seasonTotal: number; } } = {};
-          
-          data.forEach(record => {
-            const gameweekData = record.gameweekData as any || [];
-            const pointsData = record.pointsData as any || [];
-            
-            const formattedGameweeks = gameweekData.map((gw: any) => ({
-              gameweek: gw.gameweek,
-              defencePoints: pointsData.find((p: any) => p.gameweek === gw.gameweek)?.defencePoints || 0,
-              cleanSheets: gw.cleanSheets || 0,
-              yellowCards: gw.yellowCards || 0,
-              redCards: gw.redCards || 0,
-              ownGoals: gw.ownGoals || 0
-            })).sort((a: any, b: any) => a.gameweek - b.gameweek);
-            
-            result[record.playerId.toString()] = {
-              gameweeks: formattedGameweeks,
-              seasonTotal: record.totalDefencePoints || 0
-            };
-          });
-          
-          console.log(`📊 Serving cached defence points data for ${Object.keys(result).length} players after recovery`);
-          return result;
-        } catch (recoveryError) {
-          console.error("❌ Failed to recover defence points cache:", recoveryError);
-          return {};
-        }
-      }
-      console.error("❌ Failed to get cached defence points:", error);
-      return {};
-    }
-  }
-    
-    data.forEach(record => {
-      const gameweekData = record.gameweekData as any || [];
-      const cleanSheetData = record.cleanSheetData as any || [];
-      const yellowCardData = record.yellowCardData as any || [];
-      const redCardData = record.redCardData as any || [];
-      const ownGoalData = record.ownGoalData as any || [];
-      
-      // Transform to expected format
-      const formattedGameweeks = gameweekData.map((gw: any) => {
-        const cleanSheets = cleanSheetData.find((cs: any) => cs.gameweek === gw.gameweek)?.cleanSheets || 0;
-        const yellowCards = yellowCardData.find((yc: any) => yc.gameweek === gw.gameweek)?.yellowCards || 0;
-        const redCards = redCardData.find((rc: any) => rc.gameweek === gw.gameweek)?.redCards || 0;
-        const ownGoals = ownGoalData.find((og: any) => og.gameweek === gw.gameweek)?.ownGoals || 0;
-        
-        return {
-          gameweek: gw.gameweek,
-          defencePoints: gw.totalDefencePoints || 0,
-          cleanSheets,
-          yellowCards,
-          redCards,
-          ownGoals
-        };
-      }).sort((a: any, b: any) => a.gameweek - b.gameweek);
-      
-      result[record.playerId.toString()] = {
-        gameweeks: formattedGameweeks,
-        seasonTotal: record.totalDefencePoints || 0
-      };
-    });
-    
-    console.log(`📊 Serving cached defence points data for ${Object.keys(result).length} players`);
+    console.log(`📊 Serving cached GC points data for ${Object.keys(result).length} players`);
     return result;
-  }
-
-  /**
-   * Get position name from element type
-   */
-  private getPositionName(elementType: number): string {
-    switch (elementType) {
-      case 1: return 'goalkeeper';
-      case 2: return 'defender';
-      case 3: return 'midfielder';
-      case 4: return 'forward';
-      default: return 'midfielder';
-    }
-  }
-
-  /**
-   * Get clean sheet multiplier based on position
-   */
-  private getCleanSheetMultiplier(elementType: number): number {
-    switch (elementType) {
-      case 1: return 4; // Goalkeepers
-      case 2: return 4; // Defenders  
-      case 3: return 1; // Midfielders
-      case 4: return 0; // Forwards
-      default: return 0;
-    }
   }
 }
 
