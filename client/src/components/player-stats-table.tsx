@@ -34,6 +34,17 @@ interface CbitPointsData {
   };
 }
 
+interface SavePointsData {
+  [playerId: string]: {
+    gameweeks: Array<{
+      gameweek: number;
+      savePoints: number;
+      saves: number;
+    }>;
+    seasonTotal: number;
+  };
+}
+
 const ITEMS_PER_PAGE = 20;
 
 export default function PlayerStatsTable({ 
@@ -62,12 +73,28 @@ export default function PlayerStatsTable({
     gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
   });
 
+  // Fetch Save points data from the API
+  const { data: savePointsData, isLoading: isSavePointsLoading, isError: isSavePointsError } = useQuery<SavePointsData>({
+    queryKey: ['/api/player-save-points'],
+    enabled: !isHistoricalSeason, // Only fetch for current season
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
+  });
+
   // Helper function to get CBIT points for a player
   const getCbitPoints = (playerId: number): number => {
     if (isHistoricalSeason || !cbitPointsData || isCbitPointsError) {
       return 0; // Fallback for historical seasons or when data is unavailable
     }
     return cbitPointsData[playerId.toString()]?.seasonTotal || 0;
+  };
+
+  // Helper function to get Save points for a player
+  const getSavePoints = (playerId: number): number => {
+    if (isHistoricalSeason || !savePointsData || isSavePointsError) {
+      return 0; // Fallback for historical seasons or when data is unavailable
+    }
+    return savePointsData[playerId.toString()]?.seasonTotal || 0;
   };
 
   const filteredAndSortedPlayers = useMemo(() => {
@@ -171,6 +198,10 @@ export default function PlayerStatsTable({
           case "defensive_contribution_points": {
             // Use the CBIT points data from the API instead of inline calculation
             return getCbitPoints(player.id);
+          }
+          case "save_points": {
+            // Use the Save points data from the API
+            return getSavePoints(player.id);
           }
           default: return player.total_points;
         }
@@ -458,6 +489,11 @@ export default function PlayerStatsTable({
               </th>
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[90px]">
+                  <SortableHeader field="save_points" label="Save Pts" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[90px]">
                   <SortableHeader field="tackles" label="Tackles" />
                 </th>
               )}
@@ -689,6 +725,23 @@ export default function PlayerStatsTable({
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.minutes || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{player.goals_conceded || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.saves || 0}</td>
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-blue-600" data-testid={`text-save-points-${player.id}`}>
+                      {(() => {
+                        const position = getPositionName(player);
+                        if (position !== 'GKP') {
+                          return <span className="text-gray-400">-</span>;
+                        }
+                        if (isSavePointsLoading) {
+                          return <span className="text-gray-400">...</span>;
+                        }
+                        if (isSavePointsError) {
+                          return <span className="text-gray-400" title="Save points data unavailable">N/A</span>;
+                        }
+                        return getSavePoints(player.id);
+                      })()} 
+                    </td>
+                  )}
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-blue-700">{player.tackles || 0}</td>
                   )}
