@@ -6,7 +6,8 @@ import {
   cachedPlayerRedCards, 
   cachedPlayerBonusPoints,
   cachedPlayerCbitPoints,
-  cachedPlayerSavePoints
+  cachedPlayerSavePoints,
+  cachedPlayerMinutesPoints
 } from "@shared/schema";
 import { internalFetch } from "./config";
 
@@ -27,7 +28,8 @@ export class FPLScoringCacheService {
         this.cachePlayerRedCards(),
         this.cachePlayerBonusPoints(),
         this.cachePlayerCbitPoints(),
-        this.cachePlayerSavePoints()
+        this.cachePlayerSavePoints(),
+        this.cachePlayerMinutesPoints()
       ]);
       
       console.log("✅ FPL scoring component cache update completed successfully");
@@ -668,6 +670,160 @@ export class FPLScoringCacheService {
   }
 
   /**
+   * Cache player minutes points data
+   * Fetches live event data from FPL API for all completed gameweeks
+   * Processes all players and calculates minutes points per FPL rules
+   */
+  async cachePlayerMinutesPoints(): Promise<void> {
+    console.log("📊 Caching player minutes points data...");
+    
+    try {
+      // Fetch bootstrap data to get completed gameweeks and player info
+      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      if (!bootstrapResponse.ok) {
+        throw new Error(`Failed to fetch bootstrap data: ${bootstrapResponse.statusText}`);
+      }
+      
+      const bootstrap = await bootstrapResponse.json();
+      const completedGameweeks = bootstrap.events.filter((gw: any) => gw.finished === true);
+      const players = bootstrap.elements;
+      
+      console.log(`🎯 Found ${completedGameweeks.length} completed gameweeks to process for ${players.length} players`);
+      
+      // Create player lookup map for efficiency
+      const playerMap = new Map();
+      players.forEach((player: any) => {
+        playerMap.set(player.id, {
+          id: player.id,
+          first_name: player.first_name,
+          second_name: player.second_name,
+          web_name: player.web_name,
+          element_type: player.element_type,
+          team: player.team
+        });
+      });
+      
+      // Get team names map  
+      const teamMap = new Map();
+      bootstrap.teams.forEach((team: any) => {
+        teamMap.set(team.id, team.name);
+      });
+      
+      // Initialize minutes points data structure for all players
+      const minutesPointsData = new Map();
+      
+      // Process each completed gameweek
+      for (const gameweek of completedGameweeks) {
+        console.log(`🔄 Processing gameweek ${gameweek.id}...`);
+        
+        try {
+          // Fetch live event data with retry logic
+          const liveResponse = await this.fetchWithRetry(
+            `https://fantasy.premierleague.com/api/event/${gameweek.id}/live/`,
+            3,
+            2000
+          );
+          
+          if (!liveResponse.ok) {
+            console.warn(`⚠️ Skipping GW${gameweek.id} - API returned ${liveResponse.status}`);
+            continue;
+          }
+          
+          const liveData = await liveResponse.json();
+          
+          // Process each player's stats for this gameweek
+          for (const playerData of liveData.elements) {
+            const playerId = playerData.id;
+            const player = playerMap.get(playerId);
+            
+            if (!player) continue;
+            
+            // Initialize player data if not exists
+            if (!minutesPointsData.has(playerId)) {
+              minutesPointsData.set(playerId, {
+                playerId,
+                playerName: `${player.first_name} ${player.second_name}`,
+                teamName: teamMap.get(player.team) || 'Unknown',
+                position: this.getPositionName(player.element_type),
+                gameweekData: {},
+                pointsData: {},
+                totalMinutes: 0,
+                totalPoints: 0
+              });
+            }
+            
+            const playerMinutesData = minutesPointsData.get(playerId);
+            
+            // Extract minutes stats (handle null/undefined gracefully)
+            const stats = playerData.stats || {};
+            const minutes = stats.minutes || 0;
+            
+            // Calculate minutes points based on FPL rules:
+            // Up to 60 minutes: 1 point
+            // 60 minutes or more: 2 points
+            let minutesPoints = 0;
+            if (minutes > 0) {
+              minutesPoints = minutes >= 60 ? 2 : 1;
+            }
+            
+            // Store gameweek data
+            playerMinutesData.gameweekData[gameweek.id] = minutes;
+            playerMinutesData.pointsData[gameweek.id] = minutesPoints;
+            playerMinutesData.totalMinutes += minutes;
+            playerMinutesData.totalPoints += minutesPoints;
+          }
+          
+          // Small delay to be respectful to FPL API
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+        } catch (error) {
+          console.warn(`⚠️ Error processing gameweek ${gameweek.id}:`, error.message);
+          continue;
+        }
+      }
+      
+      // Clear existing data
+      await db.delete(cachedPlayerMinutesPoints);
+      
+      // Convert map to array and calculate averages
+      const minutesPointsArray = Array.from(minutesPointsData.values()).map(player => ({
+        ...player,
+        averagePerGameweek: completedGameweeks.length > 0 ? 
+          player.totalPoints / completedGameweeks.length : 0
+      }));
+      
+      // Insert new data in batches
+      const batchSize = 50;
+      for (let i = 0; i < minutesPointsArray.length; i += batchSize) {
+        const batch = minutesPointsArray.slice(i, i + batchSize);
+        await db.insert(cachedPlayerMinutesPoints).values(
+          batch.map((player: any) => ({
+            playerId: player.playerId,
+            gameweeksData: {
+              gameweeks: Object.keys(player.gameweekData).map(gwId => ({
+                gameweek: parseInt(gwId),
+                minutes: player.gameweekData[gwId],
+                points: player.pointsData[gwId]
+              })),
+              playerName: player.playerName,
+              teamName: player.teamName,
+              position: player.position,
+              totalMinutes: player.totalMinutes,
+              averagePerGameweek: player.averagePerGameweek
+            },
+            seasonTotal: player.totalPoints
+          }))
+        );
+      }
+      
+      console.log(`✅ Cached ${minutesPointsArray.length} player minutes points records`);
+    } catch (error) {
+      console.error("❌ Failed to cache player minutes points:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Helper method to fetch with retry logic for FPL API calls
    */
   private async fetchWithRetry(url: string, retries = 3, delay = 1000): Promise<Response> {
@@ -755,6 +911,44 @@ export class FPLScoringCacheService {
       };
     });
     
+    return result;
+  }
+
+  /**
+   * Get cached player minutes points data
+   * Returns object keyed by playerId to match frontend expectations
+   */
+  async getCachedPlayerMinutesPoints(): Promise<{ [playerId: string]: { gameweeks: Array<{ gameweek: number; minutes: number; minutesPoints: number; }>; seasonTotal: number; } }> {
+    const data = await db.select().from(cachedPlayerMinutesPoints);
+    
+    // If no data is cached, return empty object (will trigger fallback calculation)
+    if (data.length === 0) {
+      console.warn("⚠️ No minutes points data found in cache - returning empty object");
+      return {};
+    }
+    
+    // Transform array data into object keyed by playerId
+    const result: { [playerId: string]: { gameweeks: Array<{ gameweek: number; minutes: number; minutesPoints: number; }>; seasonTotal: number; } } = {};
+    
+    data.forEach(record => {
+      // Parse gameweek data (stored as jsonb)
+      const gameweeksData = record.gameweeksData as any || {};
+      const gameweeks = gameweeksData.gameweeks || [];
+      
+      // Transform to expected format
+      const formattedGameweeks = gameweeks.map((gw: any) => ({
+        gameweek: gw.gameweek,
+        minutes: gw.minutes || 0,
+        minutesPoints: gw.points || 0
+      })).sort((a: any, b: any) => a.gameweek - b.gameweek);
+      
+      result[record.playerId.toString()] = {
+        gameweeks: formattedGameweeks,
+        seasonTotal: record.seasonTotal || 0
+      };
+    });
+    
+    console.log(`📊 Serving cached minutes points data for ${Object.keys(result).length} players`);
     return result;
   }
 }

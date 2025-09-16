@@ -8592,10 +8592,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'cbit-points':
           await fplScoringCacheService.cachePlayerCbitPoints();
           break;
+        case 'minutes-points':
+          await fplScoringCacheService.cachePlayerMinutesPoints();
+          break;
         default:
           return res.status(400).json({ 
             success: false, 
-            message: `Unknown cache type: ${type}. Available types: goals, assists, minutes, clean-sheets, defensive, team, goal-share, assist-share, total-points, saves, goals-conceded, yellow-cards, red-cards, bonus-points, cbit-points` 
+            message: `Unknown cache type: ${type}. Available types: goals, assists, minutes, clean-sheets, defensive, team, goal-share, assist-share, total-points, saves, goals-conceded, yellow-cards, red-cards, bonus-points, cbit-points, minutes-points` 
           });
       }
       
@@ -12589,6 +12592,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching player CBIT points:", error);
       res.status(500).json({ error: "Failed to fetch player CBIT points data" });
+    }
+  });
+
+  app.get("/api/player-minutes-points", async (req, res) => {
+    try {
+      console.log("📊 Serving player minutes points data");
+      const cachedData = await fplScoringCacheService.getCachedPlayerMinutesPoints();
+      
+      // If cache is empty, try to populate it immediately
+      if (Object.keys(cachedData).length === 0) {
+        console.log("🔄 Minutes points cache is empty - attempting immediate population...");
+        try {
+          await fplScoringCacheService.cachePlayerMinutesPoints();
+          const refreshedData = await fplScoringCacheService.getCachedPlayerMinutesPoints();
+          
+          if (Object.keys(refreshedData).length > 0) {
+            console.log("✅ Successfully populated minutes points cache");
+            res.json(refreshedData);
+          } else {
+            console.warn("⚠️ Cache population failed - returning empty data");
+            res.json({});
+          }
+        } catch (populationError) {
+          console.error("❌ Failed to populate minutes points cache:", populationError);
+          // Return empty object rather than failing completely
+          res.json({});
+        }
+      } else {
+        res.json(cachedData);
+      }
+    } catch (error) {
+      console.error("Error fetching player minutes points:", error);
+      res.status(500).json({ error: "Failed to fetch player minutes points data" });
     }
   });
 
