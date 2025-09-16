@@ -12692,6 +12692,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player GC (Goals Conceded) Points API
+  app.get("/api/player-gc-points", async (req, res) => {
+    try {
+      console.log("📊 Serving player GC points data");
+      const cachedData = await fplScoringCacheService.getCachedPlayerGcPoints();
+      
+      // If cache is empty, try to populate it immediately
+      if (Object.keys(cachedData).length === 0) {
+        console.log("🔄 GC points cache is empty - attempting immediate population...");
+        try {
+          await fplScoringCacheService.cachePlayerGcPoints();
+          const refreshedData = await fplScoringCacheService.getCachedPlayerGcPoints();
+          
+          if (Object.keys(refreshedData).length > 0) {
+            console.log("✅ Successfully populated GC points cache");
+            res.json(refreshedData);
+          } else {
+            console.warn("⚠️ Failed to populate GC points cache - returning empty object");
+            res.json({});
+          }
+        } catch (populateError) {
+          console.error("❌ Error populating GC points cache:", populateError);
+          res.json({}); // Return empty object on error
+        }
+      } else {
+        res.json(cachedData);
+      }
+    } catch (error) {
+      console.error("Error fetching player GC points:", error);
+      res.status(500).json({ error: "Failed to fetch player GC points data" });
+    }
+  });
+
   // Cache management endpoints
   app.post("/api/fpl-scoring-cache/update", async (req, res) => {
     try {

@@ -1189,6 +1189,16 @@ export const cachedPlayerMinutesPoints = pgTable("cached_player_minutes_points",
   index("cached_player_minutes_points_player_id_idx").on(t.playerId)
 ]);
 
+// CACHED PLAYER GC POINTS - Goals Conceded points from FPL live data for goalkeepers and defenders
+export const cachedPlayerGcPoints = pgTable("cached_player_gc_points", {
+  playerId: integer("player_id").notNull().primaryKey(),
+  gameweeksData: jsonb("gameweeks_data").notNull(),
+  seasonTotal: integer("season_total").notNull(),
+  lastUpdated: timestamp("last_updated").default(sql`now()`).notNull()
+}, (t) => [
+  index("cached_player_gc_points_player_id_idx").on(t.playerId)
+]);
+
 // CACHED PLAYER TOTAL POINTS - Ultra-fast comprehensive FPL points cache
 export const cachedPlayerTotalPoints = pgTable("cached_player_total_points", {
   id: serial("id").primaryKey(),
@@ -1265,6 +1275,9 @@ export type InsertCachedPlayerCbitPoints = typeof cachedPlayerCbitPoints.$inferI
 
 export type CachedPlayerMinutesPoints = typeof cachedPlayerMinutesPoints.$inferSelect;
 export type InsertCachedPlayerMinutesPoints = typeof cachedPlayerMinutesPoints.$inferInsert;
+
+export type CachedPlayerGcPoints = typeof cachedPlayerGcPoints.$inferSelect;
+export type InsertCachedPlayerGcPoints = typeof cachedPlayerGcPoints.$inferInsert;
 
 // Pre-computed 2024/25 data cache for fast goal/assist share calculations
 export const cachedHistoricalData = pgTable("cached_historical_data", {
