@@ -12592,6 +12592,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/player-save-points", async (req, res) => {
+    try {
+      console.log("📊 Serving player save points data");
+      const cachedData = await fplScoringCacheService.getCachedPlayerSavePoints();
+      
+      // If cache is empty, try to populate it immediately
+      if (cachedData.length === 0) {
+        console.log("🔄 Save points cache is empty - attempting immediate population...");
+        try {
+          await fplScoringCacheService.cachePlayerSavePoints();
+          const refreshedData = await fplScoringCacheService.getCachedPlayerSavePoints();
+          
+          if (refreshedData.length > 0) {
+            console.log("✅ Successfully populated save points cache");
+            
+            // Transform to required format: {[playerId]: {gameweeks: [...], seasonTotal: number}}
+            const transformedData: { [playerId: number]: { gameweeks: any[], seasonTotal: number } } = {};
+            
+            refreshedData.forEach(player => {
+              transformedData[player.playerId] = {
+                gameweeks: Object.entries(player.savePoints).map(([gw, points]) => ({
+                  gameweek: parseInt(gw),
+                  saves: player.saves[gw] || 0,
+                  savePoints: points,
+                  penaltySaves: player.penaltySaves[gw] || 0
+                })),
+                seasonTotal: player.totalSavePoints
+              };
+            });
+            
+            res.json(transformedData);
+          } else {
+            console.warn("⚠️ Cache population failed - returning empty data");
+            res.json({});
+          }
+        } catch (populationError) {
+          console.error("❌ Failed to populate save points cache:", populationError);
+          // Return empty object rather than failing completely
+          res.json({});
+        }
+      } else {
+        // Transform cached data to required format
+        const transformedData: { [playerId: number]: { gameweeks: any[], seasonTotal: number } } = {};
+        
+        cachedData.forEach(player => {
+          transformedData[player.playerId] = {
+            gameweeks: Object.entries(player.savePoints).map(([gw, points]) => ({
+              gameweek: parseInt(gw),
+              saves: player.saves[gw] || 0,
+              savePoints: points,
+              penaltySaves: player.penaltySaves[gw] || 0
+            })),
+            seasonTotal: player.totalSavePoints
+          };
+        });
+        
+        res.json(transformedData);
+      }
+    } catch (error) {
+      console.error("Error fetching player save points:", error);
+      res.status(500).json({ error: "Failed to fetch player save points data" });
+    }
+  });
+
   // Cache management endpoints
   app.post("/api/fpl-scoring-cache/update", async (req, res) => {
     try {

@@ -1158,6 +1158,27 @@ export const cachedPlayerCbitPoints = pgTable("cached_player_cbit_points", {
   index("idx_cached_cbit_points_total_points").on(table.totalPoints),
 ]);
 
+// CACHED PLAYER SAVE POINTS - Actual save points from FPL live data for goalkeepers
+export const cachedPlayerSavePoints = pgTable("cached_player_save_points", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamName: text("team_name").notNull(),
+  position: text("position").notNull(),
+  gameweekData: jsonb("gameweek_data").notNull(), // saves per gameweek
+  pointsData: jsonb("points_data").notNull(), // save points per gameweek  
+  penaltySavesData: jsonb("penalty_saves_data").notNull(), // penalty saves per gameweek
+  totalSaves: real("total_saves").notNull().default(0), // total saves across all gameweeks
+  totalSavePoints: real("total_save_points").notNull().default(0), // total save points
+  totalPenaltySaves: integer("total_penalty_saves").notNull().default(0), // total penalty saves
+  averagePerGameweek: real("average_per_gameweek").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  index("idx_cached_save_points_player_id").on(table.playerId),
+  index("idx_cached_save_points_total_points").on(table.totalSavePoints),
+  index("idx_cached_save_points_position").on(table.position),
+]);
+
 // CACHED PLAYER TOTAL POINTS - Ultra-fast comprehensive FPL points cache
 export const cachedPlayerTotalPoints = pgTable("cached_player_total_points", {
   id: serial("id").primaryKey(),

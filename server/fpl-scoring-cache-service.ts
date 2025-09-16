@@ -5,7 +5,8 @@ import {
   cachedPlayerYellowCards, 
   cachedPlayerRedCards, 
   cachedPlayerBonusPoints,
-  cachedPlayerCbitPoints
+  cachedPlayerCbitPoints,
+  cachedPlayerSavePoints
 } from "@shared/schema";
 import { internalFetch } from "./config";
 
@@ -25,7 +26,8 @@ export class FPLScoringCacheService {
         this.cachePlayerYellowCards(),
         this.cachePlayerRedCards(),
         this.cachePlayerBonusPoints(),
-        this.cachePlayerCbitPoints()
+        this.cachePlayerCbitPoints(),
+        this.cachePlayerSavePoints()
       ]);
       
       console.log("✅ FPL scoring component cache update completed successfully");
@@ -336,6 +338,26 @@ export class FPLScoringCacheService {
   }
 
   /**
+   * Get cached player save points data
+   */
+  async getCachedPlayerSavePoints(): Promise<any[]> {
+    const data = await db.select().from(cachedPlayerSavePoints).orderBy(cachedPlayerSavePoints.totalSavePoints);
+    return data.map(record => ({
+      playerId: record.playerId,
+      playerName: record.playerName,
+      teamName: record.teamName,
+      position: record.position,
+      saves: record.gameweekData,
+      savePoints: record.pointsData,
+      penaltySaves: record.penaltySavesData,
+      totalSaves: record.totalSaves,
+      totalSavePoints: record.totalSavePoints,
+      totalPenaltySaves: record.totalPenaltySaves,
+      averagePerGameweek: record.averagePerGameweek
+    }));
+  }
+
+  /**
    * Cache player CBIT (Clearances, Blocks, Interceptions, Tackles) points data
    * Fetches live event data from FPL API for all completed gameweeks
    */
@@ -489,6 +511,158 @@ export class FPLScoringCacheService {
       console.log(`✅ Cached ${cbitArray.length} player CBIT points records`);
     } catch (error) {
       console.error("❌ Failed to cache player CBIT points:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cache player save points data
+   * Fetches live event data from FPL API for all completed gameweeks
+   * Only processes goalkeepers (element_type = 1)
+   */
+  async cachePlayerSavePoints(): Promise<void> {
+    console.log("📊 Caching player save points data...");
+    
+    try {
+      // Fetch bootstrap data to get completed gameweeks and player info
+      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      if (!bootstrapResponse.ok) {
+        throw new Error(`Failed to fetch bootstrap data: ${bootstrapResponse.statusText}`);
+      }
+      
+      const bootstrap = await bootstrapResponse.json();
+      const completedGameweeks = bootstrap.events.filter((gw: any) => gw.finished === true);
+      const players = bootstrap.elements.filter((player: any) => player.element_type === 1); // Only goalkeepers
+      
+      console.log(`🎯 Found ${completedGameweeks.length} completed gameweeks to process for ${players.length} goalkeepers`);
+      
+      // Create player lookup map for efficiency
+      const playerMap = new Map();
+      players.forEach((player: any) => {
+        playerMap.set(player.id, {
+          id: player.id,
+          first_name: player.first_name,
+          second_name: player.second_name,
+          web_name: player.web_name,
+          element_type: player.element_type,
+          team: player.team
+        });
+      });
+      
+      // Get team names map  
+      const teamMap = new Map();
+      bootstrap.teams.forEach((team: any) => {
+        teamMap.set(team.id, team.name);
+      });
+      
+      // Initialize save points data structure for all goalkeepers
+      const savePointsData = new Map();
+      
+      // Process each completed gameweek
+      for (const gameweek of completedGameweeks) {
+        console.log(`🔄 Processing gameweek ${gameweek.id}...`);
+        
+        try {
+          // Fetch live event data with retry logic
+          const liveResponse = await this.fetchWithRetry(
+            `https://fantasy.premierleague.com/api/event/${gameweek.id}/live/`,
+            3,
+            2000
+          );
+          
+          if (!liveResponse.ok) {
+            console.warn(`⚠️ Skipping GW${gameweek.id} - API returned ${liveResponse.status}`);
+            continue;
+          }
+          
+          const liveData = await liveResponse.json();
+          
+          // Process each goalkeeper's stats for this gameweek
+          for (const playerData of liveData.elements) {
+            const playerId = playerData.id;
+            const player = playerMap.get(playerId);
+            
+            if (!player) continue; // Skip non-goalkeepers
+            
+            // Initialize player data if not exists
+            if (!savePointsData.has(playerId)) {
+              savePointsData.set(playerId, {
+                playerId,
+                playerName: `${player.first_name} ${player.second_name}`,
+                teamName: teamMap.get(player.team) || 'Unknown',
+                position: this.getPositionName(player.element_type),
+                gameweekData: {},
+                pointsData: {},
+                penaltySavesData: {},
+                totalSaves: 0,
+                totalSavePoints: 0,
+                totalPenaltySaves: 0
+              });
+            }
+            
+            const playerSaveData = savePointsData.get(playerId);
+            
+            // Extract save stats (handle null/undefined gracefully)
+            const stats = playerData.stats || {};
+            const saves = stats.saves || 0;
+            const penaltiesSaved = stats.penalties_saved || 0;
+            
+            // Calculate save points: 1 point per 3 saves (rounded down) + 5 points per penalty save
+            const savePoints = Math.floor(saves / 3) + (penaltiesSaved * 5);
+            
+            // Store gameweek data
+            playerSaveData.gameweekData[gameweek.id] = saves;
+            playerSaveData.pointsData[gameweek.id] = savePoints;
+            playerSaveData.penaltySavesData[gameweek.id] = penaltiesSaved;
+            playerSaveData.totalSaves += saves;
+            playerSaveData.totalSavePoints += savePoints;
+            playerSaveData.totalPenaltySaves += penaltiesSaved;
+          }
+          
+          // Small delay to be respectful to FPL API
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+        } catch (error) {
+          console.warn(`⚠️ Error processing gameweek ${gameweek.id}:`, error.message);
+          continue;
+        }
+      }
+      
+      // Clear existing data
+      await db.delete(cachedPlayerSavePoints);
+      
+      // Convert map to array and calculate averages
+      const savePointsArray = Array.from(savePointsData.values()).map(player => ({
+        ...player,
+        averagePerGameweek: completedGameweeks.length > 0 ? 
+          player.totalSavePoints / completedGameweeks.length : 0
+      }));
+      
+      // Insert new data in batches
+      const batchSize = 50;
+      for (let i = 0; i < savePointsArray.length; i += batchSize) {
+        const batch = savePointsArray.slice(i, i + batchSize);
+        await db.insert(cachedPlayerSavePoints).values(
+          batch.map((player: any) => ({
+            playerId: player.playerId,
+            playerName: player.playerName,
+            teamName: player.teamName,
+            position: player.position,
+            gameweekData: player.gameweekData,
+            pointsData: player.pointsData,
+            penaltySavesData: player.penaltySavesData,
+            totalSaves: player.totalSaves,
+            totalSavePoints: player.totalSavePoints,
+            totalPenaltySaves: player.totalPenaltySaves,
+            averagePerGameweek: player.averagePerGameweek,
+            lastUpdated: new Date()
+          }))
+        );
+      }
+      
+      console.log(`✅ Cached ${savePointsArray.length} goalkeeper save points records`);
+    } catch (error) {
+      console.error("❌ Failed to cache player save points:", error);
       throw error;
     }
   }
