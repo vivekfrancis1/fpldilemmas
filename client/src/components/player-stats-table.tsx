@@ -56,6 +56,17 @@ interface MinutesPointsData {
   };
 }
 
+interface GcPointsData {
+  [playerId: string]: {
+    gameweeks: Array<{
+      gameweek: number;
+      goalsConceded: number;
+      gcPoints: number;
+    }>;
+    seasonTotal: number;
+  };
+}
+
 const ITEMS_PER_PAGE = 20;
 
 export default function PlayerStatsTable({ 
@@ -100,6 +111,14 @@ export default function PlayerStatsTable({
     gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
   });
 
+  // Fetch GC points data from the API
+  const { data: gcPointsData, isLoading: isGcPointsLoading, isError: isGcPointsError } = useQuery<GcPointsData>({
+    queryKey: ['/api/player-gc-points'],
+    enabled: !isHistoricalSeason, // Only fetch for current season
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
+  });
+
   // Helper function to get CBIT points for a player
   const getCbitPoints = (playerId: number): number => {
     if (isHistoricalSeason || !cbitPointsData || isCbitPointsError) {
@@ -122,6 +141,18 @@ export default function PlayerStatsTable({
       return 0; // Fallback for historical seasons or when data is unavailable
     }
     return minutesPointsData[playerId.toString()]?.seasonTotal || 0;
+  };
+
+  // Helper function to get GC points for a player (goalkeepers and defenders only)
+  const getGcPoints = (playerId: number, elementType?: number): number | null => {
+    if (isHistoricalSeason || !gcPointsData || isGcPointsError) {
+      return null; // Fallback for historical seasons or when data is unavailable
+    }
+    // Only show GC points for goalkeepers (1) and defenders (2)
+    if (elementType !== 1 && elementType !== 2) {
+      return null; // Return null for midfielders and forwards to show "-"
+    }
+    return gcPointsData[playerId.toString()]?.seasonTotal || 0;
   };
 
   const filteredAndSortedPlayers = useMemo(() => {
@@ -167,7 +198,7 @@ export default function PlayerStatsTable({
 
     // Apply sorting with comprehensive field support
     players.sort((a, b) => {
-      const getValue = (player: Player, field: SortableField): number => {
+      const getValue = (player: Player, field: SortableField): number | null => {
         switch (field) {
           case "total_points": return player.total_points;
           case "minutes": return player.minutes;
@@ -234,12 +265,21 @@ export default function PlayerStatsTable({
             // Use the Minutes points data from the API
             return getMinutesPoints(player.id);
           }
+          case "gc_points": {
+            // Use the GC points data from the API (goalkeepers and defenders only)
+            return getGcPoints(player.id, player.element_type);
+          }
           default: return player.total_points;
         }
       };
 
       const aValue = getValue(a, sort.field);
       const bValue = getValue(b, sort.field);
+
+      // Handle null values: always sort null values to the end regardless of direction
+      if (aValue === null && bValue === null) return 0;
+      if (aValue === null) return 1; // Move null values to the end
+      if (bValue === null) return -1; // Move null values to the end
 
       return sort.direction === "asc" ? aValue - bValue : bValue - aValue;
     });
@@ -530,6 +570,11 @@ export default function PlayerStatsTable({
               )}
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[90px]">
+                  <SortableHeader field="gc_points" label="GC Pts" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[90px]">
                   <SortableHeader field="tackles" label="Tackles" />
                 </th>
               )}
@@ -788,6 +833,24 @@ export default function PlayerStatsTable({
                           return <span className="text-gray-400" title="Minutes points data unavailable">N/A</span>;
                         }
                         return getMinutesPoints(player.id);
+                      })()}
+                    </td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-red-600" data-testid={`text-gc-points-${player.id}`}>
+                      {(() => {
+                        const position = getPositionName(player);
+                        if (position !== 'GKP' && position !== 'DEF') {
+                          return <span className="text-gray-400">-</span>;
+                        }
+                        if (isGcPointsLoading) {
+                          return <span className="text-gray-400">...</span>;
+                        }
+                        if (isGcPointsError) {
+                          return <span className="text-gray-400" title="GC points data unavailable">N/A</span>;
+                        }
+                        const gcPoints = getGcPoints(player.id, player.element_type);
+                        return gcPoints !== null ? gcPoints : 0;
                       })()}
                     </td>
                   )}
