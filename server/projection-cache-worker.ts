@@ -1178,10 +1178,11 @@ class ProjectionCacheWorker {
         cachedPlayerGoalsConceded, 
         cachedPlayerYellowCards, 
         cachedPlayerRedCards, 
-        cachedPlayerBonusPoints 
+        cachedPlayerBonusPoints,
+        cachedPlayerCbitPoints
       } = await import("@shared/schema");
       
-      const [goals, assists, cleanSheets, minutes, defensive, teams, goalShare, assistShare, saves, goalsConceded, yellowCards, redCards, bonusPoints] = await Promise.all([
+      const [goals, assists, cleanSheets, minutes, defensive, teams, goalShare, assistShare, saves, goalsConceded, yellowCards, redCards, bonusPoints, cbitPoints] = await Promise.all([
         db.select({ 
           count: sql`count(*)`,
           lastUpdated: sql`MAX(calculated_at)`
@@ -1233,7 +1234,11 @@ class ProjectionCacheWorker {
         db.select({ 
           count: sql`count(*)`,
           lastUpdated: sql`MAX(last_updated)`
-        }).from(cachedPlayerBonusPoints)
+        }).from(cachedPlayerBonusPoints),
+        db.select({ 
+          count: sql`count(*)`,
+          lastUpdated: sql`MAX(last_updated)`
+        }).from(cachedPlayerCbitPoints)
       ]);
       
       const now = new Date();
@@ -1308,6 +1313,12 @@ class ProjectionCacheWorker {
           count: bonusPoints[0]?.count || 0, 
           lastUpdated: bonusPoints[0]?.lastUpdated || null,
           isStale: bonusPoints[0]?.lastUpdated ? (now.getTime() - new Date(bonusPoints[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
+        },
+        {
+          type: 'Player CBIT Points',
+          count: cbitPoints[0]?.count || 0, 
+          lastUpdated: cbitPoints[0]?.lastUpdated || null,
+          isStale: cbitPoints[0]?.lastUpdated ? (now.getTime() - new Date(cbitPoints[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
         }
       ];
       

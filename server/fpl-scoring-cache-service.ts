@@ -4,7 +4,8 @@ import {
   cachedPlayerGoalsConceded, 
   cachedPlayerYellowCards, 
   cachedPlayerRedCards, 
-  cachedPlayerBonusPoints 
+  cachedPlayerBonusPoints,
+  cachedPlayerCbitPoints
 } from "@shared/schema";
 import { internalFetch } from "./config";
 
@@ -23,7 +24,8 @@ export class FPLScoringCacheService {
         this.cachePlayerGoalsConceded(),
         this.cachePlayerYellowCards(),
         this.cachePlayerRedCards(),
-        this.cachePlayerBonusPoints()
+        this.cachePlayerBonusPoints(),
+        this.cachePlayerCbitPoints()
       ]);
       
       console.log("✅ FPL scoring component cache update completed successfully");
@@ -329,6 +331,228 @@ export class FPLScoringCacheService {
       pointsFromBonus: record.pointsData,
       totalBonusPoints: record.totalValue,
       totalPoints: record.totalPoints,
+      averagePerGameweek: record.averagePerGameweek
+    }));
+  }
+
+  /**
+   * Cache player CBIT (Clearances, Blocks, Interceptions, Tackles) points data
+   * Fetches live event data from FPL API for all completed gameweeks
+   */
+  async cachePlayerCbitPoints(): Promise<void> {
+    console.log("📊 Caching player CBIT points data...");
+    
+    try {
+      // Fetch bootstrap data to get completed gameweeks and player info
+      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      if (!bootstrapResponse.ok) {
+        throw new Error(`Failed to fetch bootstrap data: ${bootstrapResponse.statusText}`);
+      }
+      
+      const bootstrap = await bootstrapResponse.json();
+      const completedGameweeks = bootstrap.events.filter((gw: any) => gw.finished === true);
+      const players = bootstrap.elements;
+      
+      console.log(`🎯 Found ${completedGameweeks.length} completed gameweeks to process`);
+      
+      // Create player lookup map for efficiency
+      const playerMap = new Map();
+      players.forEach((player: any) => {
+        playerMap.set(player.id, {
+          id: player.id,
+          first_name: player.first_name,
+          second_name: player.second_name,
+          web_name: player.web_name,
+          element_type: player.element_type,
+          team: player.team
+        });
+      });
+      
+      // Get team names map  
+      const teamMap = new Map();
+      bootstrap.teams.forEach((team: any) => {
+        teamMap.set(team.id, team.name);
+      });
+      
+      // Initialize CBIT data structure for all players
+      const cbitData = new Map();
+      
+      // Process each completed gameweek
+      for (const gameweek of completedGameweeks) {
+        console.log(`🔄 Processing gameweek ${gameweek.id}...`);
+        
+        try {
+          // Fetch live event data with retry logic
+          const liveResponse = await this.fetchWithRetry(
+            `https://fantasy.premierleague.com/api/event/${gameweek.id}/live/`,
+            3,
+            2000
+          );
+          
+          if (!liveResponse.ok) {
+            console.warn(`⚠️ Skipping GW${gameweek.id} - API returned ${liveResponse.status}`);
+            continue;
+          }
+          
+          const liveData = await liveResponse.json();
+          
+          // Process each player's stats for this gameweek
+          for (const playerData of liveData.elements) {
+            const playerId = playerData.id;
+            const player = playerMap.get(playerId);
+            
+            if (!player) continue;
+            
+            // Initialize player data if not exists
+            if (!cbitData.has(playerId)) {
+              cbitData.set(playerId, {
+                playerId,
+                playerName: `${player.first_name} ${player.second_name}`,
+                teamName: teamMap.get(player.team) || 'Unknown',
+                position: this.getPositionName(player.element_type),
+                gameweekData: {},
+                pointsData: {},
+                totalCbitStats: 0,
+                totalCbitPoints: 0
+              });
+            }
+            
+            const playerCbitData = cbitData.get(playerId);
+            
+            // Extract defensive stats (handle null/undefined gracefully)
+            const stats = playerData.stats || {};
+            const clearances = stats.clearances_blocks_interceptions || 0;
+            const tackles = stats.tackles || 0;
+            const recoveries = stats.recoveries || 0;
+            
+            // Calculate CBIT points based on position
+            let cbitPoints = 0;
+            let cbitStats = 0;
+            
+            if (player.element_type === 2) {
+              // Defenders: (clearances_blocks_interceptions + tackles) >= 10 → 2 points
+              cbitStats = clearances + tackles;
+              cbitPoints = cbitStats >= 10 ? 2 : 0;
+            } else if (player.element_type === 3 || player.element_type === 4) {
+              // Midfielders/Forwards: (clearances_blocks_interceptions + tackles + recoveries) >= 12 → 2 points
+              cbitStats = clearances + tackles + recoveries;
+              cbitPoints = cbitStats >= 12 ? 2 : 0;
+            }
+            // Goalkeepers (element_type=1) don't get CBIT points
+            
+            // Store gameweek data
+            playerCbitData.gameweekData[gameweek.id] = cbitStats;
+            playerCbitData.pointsData[gameweek.id] = cbitPoints;
+            playerCbitData.totalCbitStats += cbitStats;
+            playerCbitData.totalCbitPoints += cbitPoints;
+          }
+          
+          // Small delay to be respectful to FPL API
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+        } catch (error) {
+          console.warn(`⚠️ Error processing gameweek ${gameweek.id}:`, error.message);
+          continue;
+        }
+      }
+      
+      // Clear existing data
+      await db.delete(cachedPlayerCbitPoints);
+      
+      // Convert map to array and calculate averages
+      const cbitArray = Array.from(cbitData.values()).map(player => ({
+        ...player,
+        averagePerGameweek: completedGameweeks.length > 0 ? 
+          player.totalCbitPoints / completedGameweeks.length : 0
+      }));
+      
+      // Insert new data in batches
+      const batchSize = 50;
+      for (let i = 0; i < cbitArray.length; i += batchSize) {
+        const batch = cbitArray.slice(i, i + batchSize);
+        await db.insert(cachedPlayerCbitPoints).values(
+          batch.map((player: any) => ({
+            playerId: player.playerId,
+            playerName: player.playerName,
+            teamName: player.teamName,
+            position: player.position,
+            gameweekData: player.gameweekData,
+            pointsData: player.pointsData,
+            totalValue: player.totalCbitStats,
+            totalPoints: player.totalCbitPoints,
+            averagePerGameweek: player.averagePerGameweek,
+            lastUpdated: new Date()
+          }))
+        );
+      }
+      
+      console.log(`✅ Cached ${cbitArray.length} player CBIT points records`);
+    } catch (error) {
+      console.error("❌ Failed to cache player CBIT points:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper method to fetch with retry logic for FPL API calls
+   */
+  private async fetchWithRetry(url: string, retries = 3, delay = 1000): Promise<Response> {
+    for (let i = 0; i < retries; i++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
+      try {
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; FPL-Analytics/1.0)',
+            'Accept': 'application/json',
+          }
+        });
+        
+        clearTimeout(timeoutId);
+        return response;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (i === retries - 1) throw error;
+        
+        const errorMsg = error instanceof Error && error.name === 'AbortError' 
+          ? 'timeout' 
+          : String(error);
+        console.warn(`FPL API ${url} failed: ${errorMsg}, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+      }
+    }
+    throw new Error('All retries failed');
+  }
+
+  /**
+   * Helper function to get position name from element type
+   */
+  private getPositionName(elementType: number): string {
+    switch (elementType) {
+      case 1: return 'goalkeeper';
+      case 2: return 'defender';
+      case 3: return 'midfielder';
+      case 4: return 'forward';
+      default: return 'midfielder';
+    }
+  }
+
+  /**
+   * Get cached player CBIT points data
+   */
+  async getCachedPlayerCbitPoints(): Promise<any[]> {
+    const data = await db.select().from(cachedPlayerCbitPoints).orderBy(cachedPlayerCbitPoints.totalPoints);
+    return data.map(record => ({
+      playerId: record.playerId,
+      playerName: record.playerName,
+      teamName: record.teamName,
+      position: record.position,
+      cbitStats: record.gameweekData,
+      cbitPoints: record.pointsData,
+      totalCbitStats: record.totalValue,
+      totalCbitPoints: record.totalPoints,
       averagePerGameweek: record.averagePerGameweek
     }));
   }

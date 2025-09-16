@@ -8589,10 +8589,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'bonus-points':
           await projectionCacheWorker.cachePlayerBonusPoints();
           break;
+        case 'cbit-points':
+          await fplScoringCacheService.cachePlayerCbitPoints();
+          break;
         default:
           return res.status(400).json({ 
             success: false, 
-            message: `Unknown cache type: ${type}. Available types: goals, assists, minutes, clean-sheets, defensive, team, goal-share, assist-share, total-points, saves, goals-conceded, yellow-cards, red-cards, bonus-points` 
+            message: `Unknown cache type: ${type}. Available types: goals, assists, minutes, clean-sheets, defensive, team, goal-share, assist-share, total-points, saves, goals-conceded, yellow-cards, red-cards, bonus-points, cbit-points` 
           });
       }
       
@@ -12553,6 +12556,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching cached player bonus points:", error);
       // Fallback to real-time data if cache fails
       res.redirect(307, "/api/player-bonus-points-projections");
+    }
+  });
+
+  app.get("/api/player-cbit-points", async (req, res) => {
+    try {
+      console.log("📊 Serving player CBIT points data");
+      const cachedData = await fplScoringCacheService.getCachedPlayerCbitPoints();
+      res.json(cachedData);
+    } catch (error) {
+      console.error("Error fetching player CBIT points:", error);
+      res.status(500).json({ error: "Failed to fetch player CBIT points data" });
     }
   });
 

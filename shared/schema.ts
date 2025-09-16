@@ -1140,6 +1140,24 @@ export const cachedPlayerBonusPoints = pgTable("cached_player_bonus_points", {
   index("idx_cached_bonus_points_total_value").on(table.totalValue),
 ]);
 
+// CACHED PLAYER CBIT POINTS - Clearances, Blocks, Interceptions, Tackles points cache
+export const cachedPlayerCbitPoints = pgTable("cached_player_cbit_points", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamName: text("team_name").notNull(),
+  position: text("position").notNull(),
+  gameweekData: jsonb("gameweek_data").notNull(), // CBIT stats per gameweek
+  pointsData: jsonb("points_data").notNull(), // CBIT points per gameweek  
+  totalValue: real("total_value").notNull().default(0), // total CBIT stats
+  totalPoints: real("total_points").notNull().default(0), // total CBIT points
+  averagePerGameweek: real("average_per_gameweek").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  index("idx_cached_cbit_points_player_id").on(table.playerId),
+  index("idx_cached_cbit_points_total_points").on(table.totalPoints),
+]);
+
 // CACHED PLAYER TOTAL POINTS - Ultra-fast comprehensive FPL points cache
 export const cachedPlayerTotalPoints = pgTable("cached_player_total_points", {
   id: serial("id").primaryKey(),
@@ -1210,6 +1228,9 @@ export type InsertCachedPlayerRedCards = typeof cachedPlayerRedCards.$inferInser
 
 export type CachedPlayerBonusPoints = typeof cachedPlayerBonusPoints.$inferSelect;
 export type InsertCachedPlayerBonusPoints = typeof cachedPlayerBonusPoints.$inferInsert;
+
+export type CachedPlayerCbitPoints = typeof cachedPlayerCbitPoints.$inferSelect;
+export type InsertCachedPlayerCbitPoints = typeof cachedPlayerCbitPoints.$inferInsert;
 
 // Pre-computed 2024/25 data cache for fast goal/assist share calculations
 export const cachedHistoricalData = pgTable("cached_historical_data", {
