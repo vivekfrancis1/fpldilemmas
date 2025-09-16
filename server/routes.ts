@@ -12737,6 +12737,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player Defence Points API - Combined defensive scoring
+  app.get("/api/player-defence-points", async (req, res) => {
+    try {
+      console.log("📊 Serving player defence points data");
+      const cachedData = await fplScoringCacheService.getCachedPlayerDefencePoints();
+      
+      // If cache is empty, try to populate it immediately
+      if (Object.keys(cachedData).length === 0) {
+        console.log("🔄 Defence points cache is empty - attempting immediate population...");
+        try {
+          await fplScoringCacheService.cachePlayerDefencePoints();
+          const refreshedData = await fplScoringCacheService.getCachedPlayerDefencePoints();
+          
+          if (Object.keys(refreshedData).length > 0) {
+            console.log("✅ Successfully populated defence points cache");
+            res.json(refreshedData);
+          } else {
+            console.warn("⚠️ Failed to populate defence points cache - returning empty object");
+            res.json({});
+          }
+        } catch (populateError) {
+          console.error("❌ Error populating defence points cache:", populateError);
+          res.json({}); // Return empty object on error
+        }
+      } else {
+        res.json(cachedData);
+      }
+    } catch (error) {
+      console.error("Error fetching player defence points:", error);
+      res.status(500).json({ error: "Failed to fetch player defence points data" });
+    }
+  });
+
   // Cache management endpoints
   app.post("/api/fpl-scoring-cache/update", async (req, res) => {
     try {

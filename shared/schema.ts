@@ -1217,6 +1217,28 @@ export const cachedPlayerGcPoints = pgTable("cached_player_gc_points", {
   index("cached_player_gc_points_player_id_idx").on(t.playerId)
 ]);
 
+// CACHED PLAYER DEFENCE POINTS - Complete defensive points calculation
+export const cachedPlayerDefencePoints = pgTable("cached_player_defence_points", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamName: text("team_name").notNull(),
+  position: text("position").notNull(),
+  gameweekData: jsonb("gameweek_data").notNull(), // all defence components per gameweek
+  pointsData: jsonb("points_data").notNull(), // defence points per gameweek
+  cleanSheetData: jsonb("clean_sheet_data").notNull(), // clean sheets per gameweek
+  yellowCardData: jsonb("yellow_card_data").notNull(), // yellow cards per gameweek
+  redCardData: jsonb("red_card_data").notNull(), // red cards per gameweek
+  ownGoalData: jsonb("own_goal_data").notNull(), // own goals per gameweek
+  totalDefencePoints: real("total_defence_points").notNull().default(0),
+  averagePerGameweek: real("average_per_gameweek").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  index("idx_cached_defence_points_player_id").on(table.playerId),
+  index("idx_cached_defence_points_total").on(table.totalDefencePoints),
+  index("idx_cached_defence_points_position").on(table.position),
+]);
+
 // CACHED PLAYER TOTAL POINTS - Ultra-fast comprehensive FPL points cache
 export const cachedPlayerTotalPoints = pgTable("cached_player_total_points", {
   id: serial("id").primaryKey(),
@@ -1299,6 +1321,9 @@ export type InsertCachedPlayerMinutesPoints = typeof cachedPlayerMinutesPoints.$
 
 export type CachedPlayerGcPoints = typeof cachedPlayerGcPoints.$inferSelect;
 export type InsertCachedPlayerGcPoints = typeof cachedPlayerGcPoints.$inferInsert;
+
+export type CachedPlayerDefencePoints = typeof cachedPlayerDefencePoints.$inferSelect;
+export type InsertCachedPlayerDefencePoints = typeof cachedPlayerDefencePoints.$inferInsert;
 
 // Pre-computed 2024/25 data cache for fast goal/assist share calculations
 export const cachedHistoricalData = pgTable("cached_historical_data", {
