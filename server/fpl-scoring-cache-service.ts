@@ -7,8 +7,7 @@ import {
   cachedPlayerBonusPoints,
   cachedPlayerCbitPoints,
   cachedPlayerSavePoints,
-  cachedPlayerMinutesPoints,
-  cachedPlayerGcPoints
+  cachedPlayerMinutesPoints
 } from "@shared/schema";
 import { internalFetch } from "./config";
 
@@ -30,8 +29,7 @@ export class FPLScoringCacheService {
         this.cachePlayerBonusPoints(),
         this.cachePlayerCbitPoints(),
         this.cachePlayerSavePoints(),
-        this.cachePlayerMinutesPoints(),
-        this.cachePlayerGcPoints()
+        this.cachePlayerMinutesPoints()
       ]);
       
       console.log("✅ FPL scoring component cache update completed successfully");
@@ -826,161 +824,6 @@ export class FPLScoringCacheService {
   }
 
   /**
-   * Cache player GC (Goals Conceded) points data
-   * Fetches live event data from FPL API for all completed gameweeks
-   * Only processes goalkeepers (element_type = 1) and defenders (element_type = 2)
-   * Formula: Math.floor(goals_conceded / 2) * -1 per game
-   */
-  async cachePlayerGcPoints(): Promise<void> {
-    console.log("📊 Caching player GC points data...");
-    
-    try {
-      // Fetch bootstrap data to get completed gameweeks and player info
-      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
-      if (!bootstrapResponse.ok) {
-        throw new Error(`Failed to fetch bootstrap data: ${bootstrapResponse.statusText}`);
-      }
-      
-      const bootstrap = await bootstrapResponse.json();
-      const completedGameweeks = bootstrap.events.filter((gw: any) => gw.finished === true);
-      // Only process goalkeepers and defenders
-      const players = bootstrap.elements.filter((player: any) => 
-        player.element_type === 1 || player.element_type === 2
-      );
-      
-      console.log(`🎯 Found ${completedGameweeks.length} completed gameweeks to process for ${players.length} goalkeepers and defenders`);
-      
-      // Create player lookup map for efficiency
-      const playerMap = new Map();
-      players.forEach((player: any) => {
-        playerMap.set(player.id, {
-          id: player.id,
-          first_name: player.first_name,
-          second_name: player.second_name,
-          web_name: player.web_name,
-          element_type: player.element_type,
-          team: player.team
-        });
-      });
-      
-      // Get team names map  
-      const teamMap = new Map();
-      bootstrap.teams.forEach((team: any) => {
-        teamMap.set(team.id, team.name);
-      });
-      
-      // Initialize GC points data structure for goalkeepers and defenders
-      const gcPointsData = new Map();
-      
-      // Process each completed gameweek
-      for (const gameweek of completedGameweeks) {
-        console.log(`🔄 Processing gameweek ${gameweek.id}...`);
-        
-        try {
-          // Fetch live event data with retry logic
-          const liveResponse = await this.fetchWithRetry(
-            `https://fantasy.premierleague.com/api/event/${gameweek.id}/live/`,
-            3,
-            2000
-          );
-          
-          if (!liveResponse.ok) {
-            console.warn(`⚠️ Skipping GW${gameweek.id} - API returned ${liveResponse.status}`);
-            continue;
-          }
-          
-          const liveData = await liveResponse.json();
-          
-          // Process each player's stats for this gameweek
-          for (const playerData of liveData.elements) {
-            const playerId = playerData.id;
-            const player = playerMap.get(playerId);
-            
-            if (!player) continue; // Skip non-goalkeepers and non-defenders
-            
-            // Initialize player data if not exists
-            if (!gcPointsData.has(playerId)) {
-              gcPointsData.set(playerId, {
-                playerId,
-                playerName: `${player.first_name} ${player.second_name}`,
-                teamName: teamMap.get(player.team) || 'Unknown',
-                position: this.getPositionName(player.element_type),
-                gameweekData: {},
-                pointsData: {},
-                totalGoalsConceded: 0,
-                totalPoints: 0
-              });
-            }
-            
-            const playerGcData = gcPointsData.get(playerId);
-            
-            // Extract goals conceded stats (handle null/undefined gracefully)
-            const stats = playerData.stats || {};
-            const goalsConceded = stats.goals_conceded || 0;
-            
-            // Calculate GC points based on FPL rules:
-            // -1 point for every 2 goals conceded (rounded down)
-            // Formula: Math.floor(goals_conceded / 2) * -1
-            const gcPoints = Math.floor(goalsConceded / 2) * -1;
-            
-            // Store gameweek data
-            playerGcData.gameweekData[gameweek.id] = goalsConceded;
-            playerGcData.pointsData[gameweek.id] = gcPoints;
-            playerGcData.totalGoalsConceded += goalsConceded;
-            playerGcData.totalPoints += gcPoints;
-          }
-          
-          // Small delay to be respectful to FPL API
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-        } catch (error) {
-          console.warn(`⚠️ Error processing gameweek ${gameweek.id}:`, error.message);
-          continue;
-        }
-      }
-      
-      // Clear existing data
-      await db.delete(cachedPlayerGcPoints);
-      
-      // Convert map to array and calculate averages
-      const gcPointsArray = Array.from(gcPointsData.values()).map(player => ({
-        ...player,
-        averagePerGameweek: completedGameweeks.length > 0 ? 
-          player.totalPoints / completedGameweeks.length : 0
-      }));
-      
-      // Insert new data in batches
-      const batchSize = 50;
-      for (let i = 0; i < gcPointsArray.length; i += batchSize) {
-        const batch = gcPointsArray.slice(i, i + batchSize);
-        await db.insert(cachedPlayerGcPoints).values(
-          batch.map((player: any) => ({
-            playerId: player.playerId,
-            gameweeksData: {
-              gameweeks: Object.keys(player.gameweekData).map(gwId => ({
-                gameweek: parseInt(gwId),
-                goalsConceded: player.gameweekData[gwId],
-                points: player.pointsData[gwId]
-              })),
-              playerName: player.playerName,
-              teamName: player.teamName,
-              position: player.position,
-              totalGoalsConceded: player.totalGoalsConceded,
-              averagePerGameweek: player.averagePerGameweek
-            },
-            seasonTotal: player.totalPoints
-          }))
-        );
-      }
-      
-      console.log(`✅ Cached ${gcPointsArray.length} player GC points records`);
-    } catch (error) {
-      console.error("❌ Failed to cache player GC points:", error);
-      throw error;
-    }
-  }
-
-  /**
    * Helper method to fetch with retry logic for FPL API calls
    */
   private async fetchWithRetry(url: string, retries = 3, delay = 1000): Promise<Response> {
@@ -1106,44 +949,6 @@ export class FPLScoringCacheService {
     });
     
     console.log(`📊 Serving cached minutes points data for ${Object.keys(result).length} players`);
-    return result;
-  }
-
-  /**
-   * Get cached player GC points data
-   * Returns object keyed by playerId to match frontend expectations
-   */
-  async getCachedPlayerGcPoints(): Promise<{ [playerId: string]: { gameweeks: Array<{ gameweek: number; goalsConceded: number; gcPoints: number; }>; seasonTotal: number; } }> {
-    const data = await db.select().from(cachedPlayerGcPoints);
-    
-    // If no data is cached, return empty object (will trigger fallback calculation)
-    if (data.length === 0) {
-      console.warn("⚠️ No GC points data found in cache - returning empty object");
-      return {};
-    }
-    
-    // Transform array data into object keyed by playerId
-    const result: { [playerId: string]: { gameweeks: Array<{ gameweek: number; goalsConceded: number; gcPoints: number; }>; seasonTotal: number; } } = {};
-    
-    data.forEach(record => {
-      // Parse gameweek data (stored as jsonb)
-      const gameweeksData = record.gameweeksData as any || {};
-      const gameweeks = gameweeksData.gameweeks || [];
-      
-      // Transform to expected format
-      const formattedGameweeks = gameweeks.map((gw: any) => ({
-        gameweek: gw.gameweek,
-        goalsConceded: gw.goalsConceded,
-        gcPoints: gw.points
-      })).sort((a: any, b: any) => a.gameweek - b.gameweek);
-      
-      result[record.playerId.toString()] = {
-        gameweeks: formattedGameweeks,
-        seasonTotal: record.seasonTotal || 0
-      };
-    });
-    
-    console.log(`📊 Serving cached GC points data for ${Object.keys(result).length} players`);
     return result;
   }
 }

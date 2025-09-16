@@ -56,7 +56,6 @@ interface MinutesPointsData {
   };
 }
 
-
 const ITEMS_PER_PAGE = 20;
 
 export default function PlayerStatsTable({ 
@@ -101,7 +100,6 @@ export default function PlayerStatsTable({
     gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
   });
 
-
   // Helper function to get CBIT points for a player
   const getCbitPoints = (playerId: number): number => {
     if (isHistoricalSeason || !cbitPointsData || isCbitPointsError) {
@@ -125,7 +123,6 @@ export default function PlayerStatsTable({
     }
     return minutesPointsData[playerId.toString()]?.seasonTotal || 0;
   };
-
 
   const filteredAndSortedPlayers = useMemo(() => {
     // Use historical data if available, otherwise use current season data
@@ -170,7 +167,7 @@ export default function PlayerStatsTable({
 
     // Apply sorting with comprehensive field support
     players.sort((a, b) => {
-      const getValue = (player: Player, field: SortableField): number | null => {
+      const getValue = (player: Player, field: SortableField): number => {
         switch (field) {
           case "total_points": return player.total_points;
           case "minutes": return player.minutes;
@@ -243,11 +240,6 @@ export default function PlayerStatsTable({
 
       const aValue = getValue(a, sort.field);
       const bValue = getValue(b, sort.field);
-
-      // Handle null values: always sort null values to the end regardless of direction
-      if (aValue === null && bValue === null) return 0;
-      if (aValue === null) return 1; // Move null values to the end
-      if (bValue === null) return -1; // Move null values to the end
 
       return sort.direction === "asc" ? aValue - bValue : bValue - aValue;
     });
