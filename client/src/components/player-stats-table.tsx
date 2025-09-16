@@ -5,6 +5,7 @@ import { FilterState, SortState, SortableField } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
 
 interface PlayerStatsTableProps {
   data?: BootstrapData;
@@ -18,6 +19,19 @@ interface PlayerStatsTableProps {
   onPlayerCompareClick?: (player: any) => void;
   compareList?: any[];
   maxCompareReached?: boolean;
+}
+
+interface CbitPointsData {
+  [playerId: string]: {
+    gameweeks: Array<{
+      gameweek: number;
+      cbitPoints: number;
+      tackles: number;
+      recoveries: number;
+      clearances_blocks_interceptions: number;
+    }>;
+    seasonTotal: number;
+  };
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -36,6 +50,25 @@ export default function PlayerStatsTable({
   maxCompareReached = false
 }: PlayerStatsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Check if we're viewing historical data - current season shows defensive contribution fields
+  const isHistoricalSeason = season && season !== "2025/26" && season !== "current";
+  
+  // Fetch CBIT points data from the API
+  const { data: cbitPointsData, isLoading: isCbitPointsLoading, isError: isCbitPointsError } = useQuery<CbitPointsData>({
+    queryKey: ['/api/player-cbit-points'],
+    enabled: !isHistoricalSeason, // Only fetch for current season
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
+  });
+
+  // Helper function to get CBIT points for a player
+  const getCbitPoints = (playerId: number): number => {
+    if (isHistoricalSeason || !cbitPointsData || isCbitPointsError) {
+      return 0; // Fallback for historical seasons or when data is unavailable
+    }
+    return cbitPointsData[playerId.toString()]?.seasonTotal || 0;
+  };
 
   const filteredAndSortedPlayers = useMemo(() => {
     // Use historical data if available, otherwise use current season data
@@ -136,20 +169,8 @@ export default function PlayerStatsTable({
           case "expected_goal_involvements_per_90": return player.expected_goal_involvements_per_90 || 0;
           case "expected_goals_conceded_per_90": return player.expected_goals_conceded_per_90 || 0;
           case "defensive_contribution_points": {
-            // New FPL 2025/26 rule: Defenders need 10 CBIT, Midfielders/Forwards need 12 CBIRT for 2 points
-            const cbi = (player.clearances_blocks_interceptions || 0);
-            const tackles = (player.tackles || 0);
-            const recoveries = (player.recoveries || 0);
-            const elementType = player.element_type;
-            
-            if (elementType === 2) {
-              // Defenders: 10 CBIT (clearances + blocks + interceptions + tackles) = 2 points
-              return (cbi + tackles) >= 10 ? 2 : 0;
-            } else if (elementType === 3 || elementType === 4) {
-              // Midfielders/Forwards: 12 CBIRT (clearances + blocks + interceptions + recoveries + tackles) = 2 points
-              return (cbi + tackles + recoveries) >= 12 ? 2 : 0;
-            }
-            return 0;
+            // Use the CBIT points data from the API instead of inline calculation
+            return getCbitPoints(player.id);
           }
           default: return player.total_points;
         }
@@ -277,9 +298,6 @@ export default function PlayerStatsTable({
     if (change < 0) return <ArrowDown className="h-3 w-3 text-red-600" />;
     return null;
   };
-
-  // Check if we're viewing historical data - current season shows defensive contribution fields
-  const isHistoricalSeason = season && season !== "2025/26" && season !== "current";
 
   if (isLoading) {
     return (
@@ -648,22 +666,15 @@ export default function PlayerStatsTable({
                     <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-orange-600">{player.defensive_contribution || 0}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-yellow-600">
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-yellow-600" data-testid={`text-cbit-points-${player.id}`}>
                       {(() => {
-                        // New FPL 2025/26 rule: Defenders need 10 CBIT, Midfielders/Forwards need 12 CBIRT for 2 points
-                        const cbi = (player.clearances_blocks_interceptions || 0);
-                        const tackles = (player.tackles || 0);
-                        const recoveries = (player.recoveries || 0);
-                        const elementType = player.element_type;
-                        
-                        if (elementType === 2) {
-                          // Defenders: 10 CBIT (clearances + blocks + interceptions + tackles) = 2 points
-                          return (cbi + tackles) >= 10 ? 2 : 0;
-                        } else if (elementType === 3 || elementType === 4) {
-                          // Midfielders/Forwards: 12 CBIRT (clearances + blocks + interceptions + recoveries + tackles) = 2 points
-                          return (cbi + tackles + recoveries) >= 12 ? 2 : 0;
+                        if (isCbitPointsLoading) {
+                          return <span className="text-gray-400">...</span>;
                         }
-                        return 0;
+                        if (isCbitPointsError) {
+                          return <span className="text-gray-400" title="CBIT points data unavailable">N/A</span>;
+                        }
+                        return getCbitPoints(player.id);
                       })()}
                     </td>
                   )}
