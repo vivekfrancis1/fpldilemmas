@@ -130,6 +130,12 @@ export default function PlayerStatsTable({
           case "expected_goals": return parseFloat(player.expected_goals || "0") || 0;
           case "expected_assists": return parseFloat(player.expected_assists || "0") || 0;
           case "expected_goal_involvements": return parseFloat(player.expected_goal_involvements || "0") || 0;
+          case "expected_goals_conceded": return parseFloat(player.expected_goals_conceded || "0") || 0;
+          case "expected_goals_per_90": return player.expected_goals_per_90 || 0;
+          case "expected_assists_per_90": return player.expected_assists_per_90 || 0;
+          case "expected_goal_involvements_per_90": return player.expected_goal_involvements_per_90 || 0;
+          case "expected_goals_conceded_per_90": return player.expected_goals_conceded_per_90 || 0;
+          case "defensive_contribution_points": return ((player.defensive_contribution || 0) * 1) + ((player.clean_sheets || 0) * 4);
           default: return player.total_points;
         }
       };
@@ -339,10 +345,57 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="clean_sheets" label="CS" />
               </th>
+              {/* Expected Stats */}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="expected_goals" label="xG" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="expected_assists" label="xA" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="expected_goal_involvements" label="xGI" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="expected_goals_conceded" label="xGC" />
+                </th>
+              )}
+              {/* Per-90 Expected Stats */}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="expected_goals_per_90" label="xG/90" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="expected_assists_per_90" label="xA/90" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="expected_goal_involvements_per_90" label="xGI/90" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="expected_goals_conceded_per_90" label="xGC/90" />
+                </th>
+              )}
               {/* New Defensive Contribution Fields - 2025/26 Season Only */}
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[90px]">
                   <SortableHeader field="defensive_contribution" label="Def Contrib" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[90px]">
+                  <SortableHeader field="defensive_contribution_points" label="Def Pts" />
                 </th>
               )}
               <th className="px-2 py-3 text-center min-w-[80px]">
@@ -549,9 +602,38 @@ export default function PlayerStatsTable({
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{player.goals_scored || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-blue-600">{player.assists || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{player.clean_sheets || 0}</td>
+                  {/* Expected Stats */}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-purple-600">{formatValue(player.expected_goals || 0, 'decimal')}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-blue-600">{formatValue(player.expected_assists || 0, 'decimal')}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-indigo-600">{formatValue(player.expected_goal_involvements || 0, 'decimal')}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-red-600">{formatValue(player.expected_goals_conceded || 0, 'decimal')}</td>
+                  )}
+                  {/* Per-90 Expected Stats */}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-purple-700">{formatValue(player.expected_goals_per_90 || 0, 'decimal')}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-blue-700">{formatValue(player.expected_assists_per_90 || 0, 'decimal')}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-indigo-700">{formatValue(player.expected_goal_involvements_per_90 || 0, 'decimal')}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-700">{formatValue(player.expected_goals_conceded_per_90 || 0, 'decimal')}</td>
+                  )}
                   {/* New Defensive Contribution Fields - 2025/26 Season Only */}
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-orange-600">{player.defensive_contribution || 0}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-yellow-600">{((player.defensive_contribution || 0) * 1) + ((player.clean_sheets || 0) * 4)}</td>
                   )}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700 font-semibold">{formatValue(player.value_season || player.value_form || 0, 'decimal')}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.points_per_game || player.form || 0, 'decimal')}</td>

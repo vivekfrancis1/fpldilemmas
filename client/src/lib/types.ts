@@ -16,7 +16,9 @@ export type SortableField =
   | "cost_change_start" | "cost_change_start_fall" | "ep_next" | "ep_this"
   | "squad_number" | "defensive_contribution" | "defensive_contribution_per_90"
   | "tackles" | "recoveries" | "clearances_blocks_interceptions" | "starts"
-  | "starts_per_90" | "expected_goals" | "expected_assists" | "expected_goal_involvements";
+  | "starts_per_90" | "expected_goals" | "expected_assists" | "expected_goal_involvements"
+  | "expected_goals_conceded" | "expected_goals_per_90" | "expected_assists_per_90"
+  | "expected_goal_involvements_per_90" | "expected_goals_conceded_per_90" | "defensive_contribution_points";
 
 export interface SortState {
   field: SortableField;
