@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Target, TrendingUp, Filter, BarChart3, Trophy } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
@@ -7,6 +7,7 @@ import { MobileChartWrapper } from "@/components/ui/mobile-chart-wrapper";
 import { useChartResponsive, getResponsiveChartMargin, getResponsiveFontSizes } from "@/hooks/use-chart-responsive";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BootstrapData } from "@shared/schema";
+import { getDefaultGameweekRange, debugGameweekCalculation } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -26,14 +27,32 @@ interface TeamGoalProjection {
 }
 
 export default function TeamGoalProjections() {
-  const [startGameweek, setStartGameweek] = useState<string>("5");
-  const [endGameweek, setEndGameweek] = useState<string>("10"); 
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("total");
-
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
+
+  // Calculate dynamic gameweek defaults based on bootstrap data
+  const defaultGameweekRange = useMemo(() => {
+    if (!bootstrapData?.events) {
+      return { startGameweek: "1", endGameweek: "6" }; // Fallback
+    }
+    debugGameweekCalculation(bootstrapData.events);
+    return getDefaultGameweekRange(bootstrapData.events, 6);
+  }, [bootstrapData?.events]);
+
+  const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
+  const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek); 
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("total");
+
+  // Update state when bootstrap data changes (e.g., on page load)
+  useEffect(() => {
+    if (bootstrapData?.events) {
+      const newRange = getDefaultGameweekRange(bootstrapData.events, 6);
+      setStartGameweek(newRange.startGameweek);
+      setEndGameweek(newRange.endGameweek);
+    }
+  }, [bootstrapData?.events]);
 
   const { data: projectionsData, isLoading: projectionsLoading, error: projectionsError } = useQuery<TeamGoalProjection[]>({
     queryKey: ["/api/team-goal-projections"],
@@ -218,11 +237,19 @@ export default function TeamGoalProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <SelectItem key={i + 4} value={(i + 4).toString()}>
-                          {i + 4}
-                        </SelectItem>
-                      ))}
+                      {bootstrapData?.events ? (
+                        bootstrapData.events.map(event => (
+                          <SelectItem key={event.id} value={event.id.toString()}>
+                            {event.id}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        Array.from({ length: 38 }, (_, i) => (
+                          <SelectItem key={i + 1} value={(i + 1).toString()}>
+                            {i + 1}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -234,11 +261,19 @@ export default function TeamGoalProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <SelectItem key={i + 4} value={(i + 4).toString()}>
-                          {i + 4}
-                        </SelectItem>
-                      ))}
+                      {bootstrapData?.events ? (
+                        bootstrapData.events.map(event => (
+                          <SelectItem key={event.id} value={event.id.toString()}>
+                            {event.id}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        Array.from({ length: 38 }, (_, i) => (
+                          <SelectItem key={i + 1} value={(i + 1).toString()}>
+                            {i + 1}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

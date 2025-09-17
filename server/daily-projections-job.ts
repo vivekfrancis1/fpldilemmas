@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { teamProjectionsDaily, goalShareDaily, assistShareDaily } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+import { getNextGameweeksList, debugGameweekCalculation, type GameweekEvent } from "@shared/gameweek-utils";
 
 /**
  * Daily Projections Job - Calculates and stores projections in database
@@ -13,6 +14,30 @@ const INTERNAL_API_BASE = process.env.NODE_ENV === 'development'
 
 export class DailyProjectionsService {
   
+  /**
+   * Fetch bootstrap data for gameweek calculations
+   */
+  private async fetchBootstrapData(): Promise<GameweekEvent[]> {
+    try {
+      const response = await fetch(`${INTERNAL_API_BASE}/api/bootstrap-static`);
+      if (!response.ok) {
+        throw new Error(`Bootstrap API failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.events || [];
+    } catch (error) {
+      console.error('❌ Failed to fetch bootstrap data:', error);
+      // Return fallback gameweeks if bootstrap fails
+      return Array.from({ length: 38 }, (_, i) => ({
+        id: i + 1,
+        deadline_time: new Date().toISOString(),
+        finished: i < 4, // Assume first 4 are finished as fallback
+        is_current: i === 4
+      }));
+    }
+  }
+
   /**
    * Main job entry point - calculates and stores all daily projections
    */
@@ -51,6 +76,14 @@ export class DailyProjectionsService {
     console.log('📊 Calculating team projections...');
     
     try {
+      // Fetch bootstrap data for dynamic gameweek calculation
+      const events = await this.fetchBootstrapData();
+      debugGameweekCalculation(events);
+      
+      // Calculate next 6 gameweeks dynamically
+      const nextGameweeks = getNextGameweeksList(events, 6);
+      console.log(`🎯 Using dynamic gameweeks: ${nextGameweeks.join(', ')}`);
+      
       // Get team projections from existing API
       const response = await fetch(`${INTERNAL_API_BASE}/api/team-goal-projections`);
       if (!response.ok) {
@@ -59,11 +92,11 @@ export class DailyProjectionsService {
       
       const teamData = await response.json();
       
-      // Transform and store data
+      // Transform and store data with dynamic gameweeks
       const records = teamData.map((team: any) => ({
         calculationDate: date,
         teamId: team.id,
-        gameweeks: JSON.stringify([5, 6, 7, 8, 9, 10]), // Next 6 gameweeks
+        gameweeks: JSON.stringify(nextGameweeks), // Dynamic next 6 gameweeks
         homeGoals: team.homeGoals?.toString() || '0',
         awayGoals: team.awayGoals?.toString() || '0'
       }));
