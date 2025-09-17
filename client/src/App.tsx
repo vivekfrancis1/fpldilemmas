@@ -70,6 +70,7 @@ import PlayerBonusPoints from "./pages/player-bonus-points";
 import TeamGoalsSpreadBetting from "./pages/team-goals-spread-betting";
 import Login from "./pages/login";
 import ResponsiveTableDemo from "./pages/responsive-table-demo";
+import CurrentStandings from "./pages/current-standings";
 
 
 function Router() {
@@ -98,6 +99,7 @@ function Router() {
 
       <Route path="/projected-goals-cs" component={ProjectedGoalsCS} />
       <Route path="/projected-standings" component={ProjectedStandings} />
+      <Route path="/current-standings" component={CurrentStandings} />
       <Route path="/predicted-scores" component={PredictedScores} />
       <Route path="/results-projections" component={ResultsProjections} />
       <Route path="/results-and-fixtures" component={ResultsAndFixtures} />

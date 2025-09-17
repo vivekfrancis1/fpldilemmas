@@ -79,7 +79,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/projected-goals-cs", label: "Goals and Clean Sheets", icon: Target, description: "Projected goals & clean sheets", popular: false },
         { path: "/team-goal-projections", label: "Best Attacks", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-cs-projections", label: "Best Defences", icon: Shield, description: "Clean sheet probabilities", popular: false },
-        { path: "/projected-standings", label: "Standings", icon: Trophy, description: "Final league table projection", popular: false }
+        { path: "/projected-standings", label: "Standings", icon: Trophy, description: "Final league table projection", popular: false },
+        { path: "/current-standings", label: "Current Standings", icon: Trophy, description: "Current league table based on completed matches", popular: false }
       ]
     },
     {
