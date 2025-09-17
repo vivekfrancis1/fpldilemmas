@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trophy, TrendingUp, Target, Users, RefreshCw } from "lucide-react";
+import { Trophy, TrendingUp, Target, Users, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,8 +32,13 @@ interface CurrentTeamStanding {
   defensiveActions: number;
 }
 
+type SortField = keyof CurrentTeamStanding;
+type SortDirection = 'asc' | 'desc';
+
 export default function CurrentStandings() {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('position');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const queryClient = useQueryClient();
 
   const { data: standingsData, isLoading, error } = useQuery<CurrentTeamStanding[]>({
@@ -53,21 +58,48 @@ export default function CurrentStandings() {
     setIsRefreshing(false);
   };
 
-  const getPositionColor = (position: number) => {
-    if (position <= 4) return 'bg-green-500 text-white'; // Champions League
-    if (position === 5 || position === 6) return 'bg-blue-500 text-white'; // Europa League
-    if (position === 7) return 'bg-purple-500 text-white'; // Conference League
-    if (position >= 18) return 'bg-red-500 text-white'; // Relegation
-    return 'bg-gray-500 text-white'; // Mid-table
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
   };
 
-  const getPositionBadge = (position: number) => {
-    if (position <= 4) return 'UCL';
-    if (position === 5 || position === 6) return 'UEL';
-    if (position === 7) return 'UECL';
-    if (position >= 18) return 'REL';
-    return '';
-  };
+  const sortedData = [...(standingsData || [])].sort((a, b) => {
+    const aValue = a[sortField];
+    const bValue = b[sortField];
+    
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sortDirection === 'asc' 
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    }
+    
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortDirection === 'asc' 
+        ? aValue - bValue
+        : bValue - aValue;
+    }
+    
+    return 0;
+  });
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <th 
+      className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+      onClick={() => handleSort(field)}
+      data-testid={`sort-${field}`}
+    >
+      <div className="flex items-center justify-center gap-1">
+        {children}
+        {sortField === field && (
+          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+        )}
+      </div>
+    </th>
+  );
 
   if (isLoading) {
     return (
@@ -166,103 +198,89 @@ export default function CurrentStandings() {
                 <thead className="bg-gray-50">
                   <tr>
                     {/* Position & Team Info */}
-                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">
-                      Pos
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r cursor-pointer hover:bg-gray-100 transition-colors"
+                        onClick={() => handleSort('position')}
+                        data-testid="sort-position">
+                      <div className="flex items-center justify-center gap-1">
+                        Pos
+                        {sortField === 'position' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                      </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-16 bg-gray-50 z-10 border-r min-w-[140px]">
-                      Team
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-16 bg-gray-50 z-10 border-r min-w-[140px] cursor-pointer hover:bg-gray-100 transition-colors"
+                        onClick={() => handleSort('name')}
+                        data-testid="sort-name">
+                      <div className="flex items-center gap-1">
+                        Team
+                        {sortField === 'name' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                      </div>
                     </th>
                     
                     {/* Match Record */}
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      P
-                    </th>
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      W
-                    </th>
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      D
-                    </th>
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      L
-                    </th>
+                    <SortableHeader field="played">P</SortableHeader>
+                    <SortableHeader field="wins">W</SortableHeader>
+                    <SortableHeader field="draws">D</SortableHeader>
+                    <SortableHeader field="losses">L</SortableHeader>
                     
                     {/* Goals */}
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
-                      GF
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l cursor-pointer hover:bg-gray-100 transition-colors"
+                        onClick={() => handleSort('goalsFor')}
+                        data-testid="sort-goalsFor">
+                      <div className="flex items-center justify-center gap-1">
+                        GF
+                        {sortField === 'goalsFor' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                      </div>
                     </th>
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      GA
-                    </th>
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      GD
-                    </th>
+                    <SortableHeader field="goalsAgainst">GA</SortableHeader>
+                    <SortableHeader field="goalDifference">GD</SortableHeader>
                     
                     {/* Points */}
-                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l bg-blue-50">
-                      Pts
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
+                        onClick={() => handleSort('points')}
+                        data-testid="sort-points">
+                      <div className="flex items-center justify-center gap-1">
+                        Pts
+                        {sortField === 'points' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                      </div>
                     </th>
                     
-                    {/* Clean Sheets */}
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
-                      CS
+                    {/* Enhanced Statistics */}
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l cursor-pointer hover:bg-gray-100 transition-colors"
+                        onClick={() => handleSort('cleanSheets')}
+                        data-testid="sort-cleanSheets">
+                      <div className="flex items-center justify-center gap-1">
+                        CS
+                        {sortField === 'cleanSheets' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                      </div>
                     </th>
-                    
-                    {/* Cards */}
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
-                      YC
-                    </th>
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      RC
-                    </th>
-                    
-                    {/* GK Stats */}
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
-                      Saves
-                    </th>
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      PS
-                    </th>
-                    
-                    {/* Other Events */}
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
-                      OG
-                    </th>
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      PM
-                    </th>
-                    
-                    {/* Expected Goals */}
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
-                      xGF
-                    </th>
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      xGA
-                    </th>
-                    
-                    {/* Defensive Stats */}
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
-                      T
-                    </th>
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      DA
-                    </th>
+                    <SortableHeader field="yellowCards">YC</SortableHeader>
+                    <SortableHeader field="redCards">RC</SortableHeader>
+                    <SortableHeader field="saves">Saves</SortableHeader>
+                    <SortableHeader field="penaltiesSaved">PS</SortableHeader>
+                    <SortableHeader field="ownGoals">OG</SortableHeader>
+                    <SortableHeader field="penaltiesMissed">PM</SortableHeader>
+                    <SortableHeader field="expectedGoalsFor">xGF</SortableHeader>
+                    <SortableHeader field="expectedGoalsAgainst">xGA</SortableHeader>
+                    <SortableHeader field="tackles">T</SortableHeader>
+                    <SortableHeader field="defensiveActions">DA</SortableHeader>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {standingsData?.map((team) => (
+                  {sortedData?.map((team) => (
                     <tr key={team.id} className="hover:bg-gray-50" data-testid={`current-standing-row-${team.shortName}`}>
                       {/* Position & Team Info */}
                       <td className="px-3 py-4 text-center sticky left-0 bg-white hover:bg-gray-50 border-r">
-                        <div className="flex items-center justify-center gap-1">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${getPositionColor(team.position)}`}>
-                            {team.position}
-                          </div>
-                          {getPositionBadge(team.position) && (
-                            <Badge variant="outline" className="text-xs hidden sm:inline-flex">
-                              {getPositionBadge(team.position)}
-                            </Badge>
-                          )}
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-gray-500 text-white">
+                          {team.position}
                         </div>
                       </td>
                       
@@ -367,29 +385,7 @@ export default function CurrentStandings() {
             <CardTitle className="text-lg">Enhanced Table Legend</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3">Position Colors</h4>
-                <ul className="text-sm text-gray-600 space-y-2">
-                  <li className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                    1st-4th: Champions League
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-                    5th-6th: Europa League
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-purple-500 rounded-full"></div>
-                    7th: Conference League
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                    18th-20th: Relegation
-                  </li>
-                </ul>
-              </div>
-              
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <h4 className="font-semibold text-gray-900 mb-3">Basic Statistics</h4>
                 <ul className="text-sm text-gray-600 space-y-1">
@@ -420,6 +416,7 @@ export default function CurrentStandings() {
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
               <h4 className="font-semibold text-gray-900 mb-2">💡 Table Features</h4>
               <ul className="text-sm text-gray-600 space-y-1">
+                <li>• <strong>Sortable columns:</strong> Click any column header to sort by that statistic</li>
                 <li>• <strong>Horizontal scroll:</strong> Use the horizontal scrollbar to view all statistics</li>
                 <li>• <strong>Sticky columns:</strong> Position and Team columns remain visible while scrolling</li>
                 <li>• <strong>Color coding:</strong> Different statistics use distinct colors for easy identification</li>
