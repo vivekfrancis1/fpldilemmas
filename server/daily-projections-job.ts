@@ -63,7 +63,7 @@ export class DailyProjectionsService {
       const records = teamData.map((team: any) => ({
         calculationDate: date,
         teamId: team.id,
-        gameweeks: JSON.stringify([4, 5, 6, 7, 8, 9]), // Next 6 gameweeks
+        gameweeks: JSON.stringify([5, 6, 7, 8, 9, 10]), // Next 6 gameweeks
         homeGoals: team.homeGoals?.toString() || '0',
         awayGoals: team.awayGoals?.toString() || '0'
       }));
