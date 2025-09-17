@@ -6574,6 +6574,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Current Standings endpoint - calculates actual Premier League table from completed matches only
+  app.get("/api/current-standings", async (req, res) => {
+    try {
+      console.log(`DEBUG: Current Standings API called - calculating actual table from completed matches`);
+      
+      // Fetch fixtures and bootstrap data
+      const [fixturesResponse, bootstrapResponse] = await Promise.all([
+        fetchWithRetry("https://fantasy.premierleague.com/api/fixtures/"),
+        fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/")
+      ]);
+      
+      if (!fixturesResponse.ok || !bootstrapResponse.ok) {
+        throw new Error("Failed to fetch data from FPL API");
+      }
+      
+      const fixturesData = await fixturesResponse.json();
+      const bootstrapData = await bootstrapResponse.json();
+      
+      // Filter for only completed fixtures
+      const completedFixtures = fixturesData.filter((fixture: any) => 
+        fixture.finished === true && 
+        fixture.team_h_score !== null && 
+        fixture.team_a_score !== null
+      );
+      
+      console.log(`DEBUG: Found ${completedFixtures.length} completed fixtures for current standings`);
+      
+      // Initialize team standings
+      const teamStandings = new Map();
+      bootstrapData.teams.forEach((team: any) => {
+        teamStandings.set(team.id, {
+          id: team.id,
+          name: team.name,
+          shortName: team.short_name,
+          played: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          goalsFor: 0,
+          goalsAgainst: 0,
+          goalDifference: 0,
+          points: 0
+        });
+      });
+      
+      // Process completed fixtures only
+      completedFixtures.forEach((fixture: any) => {
+        const homeTeam = teamStandings.get(fixture.team_h);
+        const awayTeam = teamStandings.get(fixture.team_a);
+        
+        if (!homeTeam || !awayTeam) return;
+        
+        // Use actual match results
+        const homeGoals = fixture.team_h_score;
+        const awayGoals = fixture.team_a_score;
+        
+        // Update games played
+        homeTeam.played++;
+        awayTeam.played++;
+        
+        // Update goals
+        homeTeam.goalsFor += homeGoals;
+        homeTeam.goalsAgainst += awayGoals;
+        awayTeam.goalsFor += awayGoals;
+        awayTeam.goalsAgainst += homeGoals;
+        
+        // Determine match result and update points
+        if (homeGoals > awayGoals) {
+          // Home win
+          homeTeam.wins++;
+          homeTeam.points += 3;
+          awayTeam.losses++;
+        } else if (awayGoals > homeGoals) {
+          // Away win
+          awayTeam.wins++;
+          awayTeam.points += 3;
+          homeTeam.losses++;
+        } else {
+          // Draw
+          homeTeam.draws++;
+          awayTeam.draws++;
+          homeTeam.points += 1;
+          awayTeam.points += 1;
+        }
+      });
+      
+      // Calculate goal difference and create final standings
+      const standings = Array.from(teamStandings.values()).map((team: any) => ({
+        ...team,
+        goalDifference: team.goalsFor - team.goalsAgainst
+      }));
+      
+      // Sort by standard Premier League rules: points (desc), then goal difference (desc), then goals for (desc)
+      standings.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+        return b.goalsFor - a.goalsFor;
+      });
+      
+      // Add position
+      const currentStandings = standings.map((team, index) => ({
+        ...team,
+        position: index + 1
+      }));
+      
+      console.log(`DEBUG: Current standings calculated for ${currentStandings.length} teams based on ${completedFixtures.length} completed matches`);
+      
+      res.json(currentStandings);
+    } catch (error) {
+      console.error('Error generating current standings:', error);
+      res.status(500).json({ error: 'Failed to generate current standings' });
+    }
+  });
+
   // Player Minutes Projections endpoint - estimates expected minutes and points per game
   app.get("/api/player-minutes-projections", async (req, res) => {
     try {
