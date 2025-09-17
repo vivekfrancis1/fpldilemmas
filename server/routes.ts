@@ -82,7 +82,7 @@ const TEAM_MULTIPLIERS = {
     9: 0.85, 16: 0.85, 19: 0.85, 20: 0.85, // Everton, Nottingham Forest, West Ham, Wolves (weak)
     3: 0.7, 11: 0.7, 17: 0.7 // Burnley, Leeds, Sunderland (promoted)
     // All others default to 1.0 (average)
-  } as { [key: number]: number },
+  },
   // Defense multipliers
   defense: {
     1: 0.7, // Arsenal (elite)
@@ -90,7 +90,7 @@ const TEAM_MULTIPLIERS = {
     4: 1.15, 5: 1.15, 6: 1.15, 19: 1.15, 20: 1.15, // Bournemouth, Brentford, Brighton, West Ham, Wolves (weak)
     3: 1.3, 11: 1.3, 17: 1.3 // Burnley, Leeds, Sunderland (promoted)
     // All others default to 1.0 (average)
-  } as { [key: number]: number }
+  }
 };
 
 // Super-fast simplified goal calculation - 90% faster than original
@@ -106,10 +106,10 @@ function calculateFastGoals(
   goals *= isHome ? 1.16 : 0.84;
   
   // Apply attack multiplier (single lookup)
-  goals *= (TEAM_MULTIPLIERS.attack as any)[teamId] || 1.0;
+  goals *= TEAM_MULTIPLIERS.attack[teamId] || 1.0;
   
   // Apply opponent defense multiplier (single lookup)
-  goals *= (TEAM_MULTIPLIERS.defense as any)[opponentId] || 1.0;
+  goals *= TEAM_MULTIPLIERS.defense[opponentId] || 1.0;
   
   // Apply bounds (instant)
   goals = Math.max(0.3, Math.min(goals, 4.2));
@@ -317,7 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Middleware to check if user is authenticated
   function requireAuth(req: any, res: any, next: any) {
-    if ((req.session as any)?.user) {
+    if (req.session?.user) {
       next();
     } else {
       res.status(401).json({ error: 'Authentication required' });
@@ -326,7 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Middleware to check if user is admin
   function requireAdmin(req: any, res: any, next: any) {
-    if ((req.session as any)?.user?.role === 'admin') {
+    if (req.session?.user?.role === 'admin') {
       next();
     } else {
       res.status(403).json({ error: 'Admin access required' });
@@ -356,7 +356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Store user in session
-      (req.session as any).user = {
+      req.session.user = {
         id: user.id,
         email: user.email,
         role: user.role,
@@ -390,8 +390,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/auth/user", (req: any, res) => {
-    if ((req.session as any)?.user) {
-      res.json((req.session as any).user);
+    if (req.session?.user) {
+      res.json(req.session.user);
     } else {
       res.status(401).json({ error: 'Not authenticated' });
     }
@@ -566,8 +566,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const response = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
-      if (!response || !response.ok) {
-        console.error(`FPL API responded with status: ${response?.status || 'unknown'}`);
+      if (!response.ok) {
+        console.error(`FPL API responded with status: ${response.status}`);
         return res.status(500).json({ error: "Failed to fetch bootstrap data" });
       }
       const data = await response.json();
@@ -610,92 +610,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         error: "Failed to fetch FPL data",
         message: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-  });
-
-  // Team statistics cache (5 minutes)
-  let teamStatsCache: { data: any; timestamp: number } | null = null;
-  const TEAM_STATS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-  // Team Statistics endpoint - Actual FPL team statistics only
-  app.get("/api/team-statistics", async (req, res) => {
-    try {
-      // Check cache first
-      const now = Date.now();
-      if (teamStatsCache && (now - teamStatsCache.timestamp) < TEAM_STATS_CACHE_DURATION) {
-        console.log("DEBUG: Serving team statistics from cache");
-        return res.json(teamStatsCache.data);
-      }
-
-      console.log("DEBUG: Generating actual team statistics from FPL data");
-
-      // Import hardcoded teams for consistency
-      const { PREMIER_LEAGUE_TEAMS } = await import("@shared/schema");
-
-      // Fetch actual team stats from FPL API only
-      const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
-
-      if (!bootstrapResponse || !bootstrapResponse.ok) {
-        throw new Error("Failed to fetch bootstrap data from FPL API");
-      }
-
-      const bootstrapData = await bootstrapResponse.json();
-      const fplTeams = bootstrapData.teams || [];
-
-      // Aggregate actual team statistics
-      const teamStatistics = PREMIER_LEAGUE_TEAMS.map(team => {
-        // Find matching FPL team data for actual stats
-        const fplTeam = fplTeams.find((t: any) => t.id === team.id);
-
-        // Calculate actual stats from FPL bootstrap data
-        const currentStats = {
-          points: fplTeam?.points || 0,
-          position: fplTeam?.position || team.id,
-          form: fplTeam?.form || null,
-          played: fplTeam?.played || 0,
-          wins: fplTeam?.win || 0,
-          draws: fplTeam?.draw || 0,
-          losses: fplTeam?.loss || 0,
-          goalsScored: fplTeam?.goals_for || 0,
-          goalsConceded: fplTeam?.goals_against || 0,
-          goalDifference: (fplTeam?.goals_for || 0) - (fplTeam?.goals_against || 0),
-          cleanSheets: fplTeam?.clean_sheets || 0,
-          strengthAttackHome: fplTeam?.strength_attack_home || 1000,
-          strengthAttackAway: fplTeam?.strength_attack_away || 1000,
-          strengthDefenceHome: fplTeam?.strength_defence_home || 1000,
-          strengthDefenceAway: fplTeam?.strength_defence_away || 1000,
-          strengthOverallHome: fplTeam?.strength_overall_home || 1000,
-          strengthOverallAway: fplTeam?.strength_overall_away || 1000
-        };
-
-        return {
-          id: team.id,
-          name: team.name,
-          shortName: team.short_name,
-          code: team.code,
-          currentStats
-        };
-      });
-
-      // Sort by league position (or by ID if position not available)
-      teamStatistics.sort((a, b) => {
-        const posA = a.currentStats.position || a.id;
-        const posB = b.currentStats.position || b.id;
-        return posA - posB;
-      });
-
-      // Cache the result
-      teamStatsCache = { data: teamStatistics, timestamp: now };
-      
-      console.log(`DEBUG: Generated actual statistics for ${teamStatistics.length} teams`);
-      res.json(teamStatistics);
-
-    } catch (error) {
-      console.error("Error generating team statistics:", error);
-      res.status(500).json({
-        error: "Failed to generate team statistics",
-        message: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
@@ -1098,10 +1012,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${entryId}/`);
       
-      if (!response) {
-        throw new Error('Failed to fetch data from FPL API');
-      }
-      
       if (!response.ok) {
         if (response.status === 404) {
           return res.status(404).json({ message: "Team not found" });
@@ -1130,10 +1040,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${entryId}/event/${eventId}/picks/`);
-      
-      if (!response) {
-        throw new Error('Failed to fetch data from FPL API');
-      }
       
       if (!response.ok) {
         throw new Error(`FPL API responded with status: ${response.status}`);
@@ -1307,10 +1213,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
       
-      if (!response) {
-        throw new Error('Failed to fetch data from FPL API');
-      }
-      
       if (!response.ok) {
         if (response.status === 404) {
           return res.status(404).json({ message: "Manager not found" });
@@ -1345,10 +1247,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`);
       
-      if (!response) {
-        throw new Error('Failed to fetch data from FPL API');
-      }
-      
       if (!response.ok) {
         if (response.status === 404) {
           return res.status(404).json({ message: "Manager history not found" });
@@ -1381,7 +1279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let currentGameweek = gameweek;
       if (!currentGameweek) {
         const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
-        if (bootstrapResponse && bootstrapResponse.ok) {
+        if (bootstrapResponse.ok) {
           const bootstrapData = await bootstrapResponse.json();
           currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
         } else {
@@ -1390,10 +1288,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
-      
-      if (!response) {
-        throw new Error('Failed to fetch data from FPL API');
-      }
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -1424,10 +1318,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get manager data which includes leagues
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
-      
-      if (!response) {
-        throw new Error('Failed to fetch data from FPL API');
-      }
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -1465,10 +1355,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`);
-      
-      if (!response) {
-        throw new Error('Failed to fetch data from FPL API');
-      }
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -3510,9 +3396,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pressureMatchMultiplier: MASTER_TEAM_DEFAULTS.pressureMatchMultiplier,
         homeCrowdBoostMultiplier: MASTER_TEAM_DEFAULTS.homeCrowdBoostMultiplier,
         weatherConditionsGoalsMultiplier: MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier,
-        refereeInfluenceMultiplier: (MASTER_TEAM_DEFAULTS as any).refereeInfluenceMultiplier || 1.0,
-        postInternationalBreakMultiplier: (MASTER_TEAM_DEFAULTS as any).postInternationalBreakMultiplier || 0.92,
-        travelDistanceFatigueMultiplier: (MASTER_TEAM_DEFAULTS as any).travelDistanceFatigueMultiplier || 0.95,
+        refereeInfluenceMultiplier: MASTER_TEAM_DEFAULTS.refereeInfluenceMultiplier,
+        postInternationalBreakMultiplier: MASTER_TEAM_DEFAULTS.postInternationalBreakMultiplier,
+        travelDistanceFatigueMultiplier: MASTER_TEAM_DEFAULTS.travelDistanceFatigueMultiplier,
         
         // Bounds
         marketFloorMultiplier: MASTER_TEAM_DEFAULTS.marketFloorMultiplier,
@@ -3553,8 +3439,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Extract only clean sheet parameters from adminGoalSettings
       const cleanSheetSettings = {
-        cleanSheetExponent: (adminGoalSettings as any).cleanSheetExponent || 1.1,
-        cleanSheetMultiplier: (adminGoalSettings as any).cleanSheetMultiplier || 90,
+        cleanSheetExponent: adminGoalSettings.cleanSheetExponent || 1.1,
+        cleanSheetMultiplier: adminGoalSettings.cleanSheetMultiplier || 90,
         lastUpdated: adminGoalSettings.lastUpdated,
         updatedBy: adminGoalSettings.updatedBy
       };
@@ -3575,11 +3461,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update only clean sheet parameters in adminGoalSettings
       const updatedSettings = {
         ...adminGoalSettings,
-        cleanSheetExponent: req.body.cleanSheetExponent || (adminGoalSettings as any).cleanSheetExponent || 1.1,
-        cleanSheetMultiplier: req.body.cleanSheetMultiplier || (adminGoalSettings as any).cleanSheetMultiplier || 90,
+        cleanSheetExponent: req.body.cleanSheetExponent || adminGoalSettings.cleanSheetExponent,
+        cleanSheetMultiplier: req.body.cleanSheetMultiplier || adminGoalSettings.cleanSheetMultiplier,
         lastUpdated: new Date().toISOString(),
         updatedBy: "admin"
-      } as any;
+      };
       
       adminGoalSettings = updatedSettings;
       
@@ -6390,6 +6276,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return playerShares.sort((a, b) => b.assistShare - a.assistShare);
   }
 
+  // SET PIECE TAKER ADJUSTMENT FUNCTION (replaces penalty taker for assists)
+  function getSetPieceTakerAdjustment(playerName: string, playerId: number): number {
+    // Known primary freekick and corner takers (more conservative than penalty adjustments)
+    const setPieceTakers: { [key: string]: number } = {
+      // Primary freekick specialists
+      'James Maddison': 0.06, 'Kevin De Bruyne': 0.05, 'Bruno Fernandes': 0.04,
+      'Trent Alexander-Arnold': 0.05, 'Mason Mount': 0.03, 'Pascal Groß': 0.04,
+      
+      // Primary corner takers
+      'Andrew Robertson': 0.03, 'Luke Shaw': 0.02, 'Ben Chilwell': 0.02,
+      'Kieran Trippier': 0.04, 'Reece James': 0.03,
+      
+      // Versatile set piece takers
+      'Cole Palmer': 0.04, 'Martin Ødegaard': 0.03, 'Phil Foden': 0.02,
+      'Bukayo Saka': 0.03, 'Son Heung-min': 0.02
+    };
+    
+    return setPieceTakers[playerName] || 0;
+  }
 
 
   // Helper function to generate Assist Share data (same logic as assist-share page)
@@ -7362,29 +7267,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Helper function to process fixtures with projection data
   function processFixtureWithProjections(fixture: any, homeTeam: any, awayTeam: any, gameweek: number, currentGameweek: number) {
-    const matchOdds: any = {
+    const matchOdds = {
       id: fixture.id,
       gameweek: gameweek,
       kickoffTime: fixture.kickoff_time || `2025-08-${15 + gameweek}T15:00:00Z`,
       finished: fixture.finished,
-      matchResult: '',
-      totalExpectedGoals: 0,
-      confidence: 'Medium',
       homeTeam: {
         id: homeTeam.id,
         name: homeTeam.name,
-        shortName: homeTeam.shortName,
-        expectedGoals: 0,
-        cleanSheetOdds: 0,
-        result: ''
+        shortName: homeTeam.shortName
       },
       awayTeam: {
         id: awayTeam.id,
         name: awayTeam.name,
-        shortName: awayTeam.shortName,
-        expectedGoals: 0,
-        cleanSheetOdds: 0,
-        result: ''
+        shortName: awayTeam.shortName
       }
     };
     

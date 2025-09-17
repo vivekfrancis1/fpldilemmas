@@ -157,33 +157,6 @@ export const teamSchema = z.object({
   pulse_id: z.number(),
 });
 
-// Team statistics schema for actual FPL team data
-export const teamStatsSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  shortName: z.string(),
-  code: z.number(),
-  currentStats: z.object({
-    points: z.number(),
-    position: z.number(),
-    form: z.string().nullable(),
-    played: z.number(),
-    wins: z.number(),
-    draws: z.number(),
-    losses: z.number(),
-    goalsScored: z.number(),
-    goalsConceded: z.number(),
-    goalDifference: z.number(),
-    cleanSheets: z.number(),
-    strengthAttackHome: z.number(),
-    strengthAttackAway: z.number(),
-    strengthDefenceHome: z.number(),
-    strengthDefenceAway: z.number(),
-    strengthOverallHome: z.number(),
-    strengthOverallAway: z.number(),
-  })
-});
-
 export const elementTypeSchema = z.object({
   id: z.number(),
   plural_name: z.string(),
@@ -236,7 +209,6 @@ export type Player = z.infer<typeof playerSchema>;
 export type HistoricalPlayerData = z.infer<typeof historicalPlayerDataSchema>;
 export type PlayerWithHistory = z.infer<typeof playerWithHistorySchema>;
 export type Team = z.infer<typeof teamSchema>;
-export type TeamStats = z.infer<typeof teamStatsSchema>;
 export type ElementType = z.infer<typeof elementTypeSchema>;
 export type Fixture = z.infer<typeof fixtureSchema>;
 export type BootstrapData = z.infer<typeof bootstrapDataSchema>;

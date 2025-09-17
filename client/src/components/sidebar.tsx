@@ -67,7 +67,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Basic Tools",
       items: [
         { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
-        { path: "/team-statistics", label: "Team Statistics", icon: Trophy, description: "Actual team performance and league standings", popular: false },
         { path: "/fixtures", label: "Fixture Difficulty Rating", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
         { path: "/results-and-fixtures", label: "Results and Fixtures", icon: Trophy, description: "Complete Premier League schedule with results", popular: false },
         { path: "/recent-price-changes", label: "Recent Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
