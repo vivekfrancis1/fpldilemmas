@@ -78,20 +78,18 @@ const FormBadge = ({ form }: { form: string }) => {
   );
 };
 
-// Confidence indicator
-const ConfidenceIndicator = ({ confidence }: { confidence: string }) => {
-  const getConfidenceColor = (level: string) => {
-    switch (level?.toLowerCase()) {
-      case 'high': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+// League position badge component
+const PositionBadge = ({ position }: { position: number }) => {
+  const getPositionColor = (pos: number) => {
+    if (pos <= 4) return 'bg-green-100 text-green-800 border-green-200';
+    if (pos <= 7) return 'bg-blue-100 text-blue-800 border-blue-200';
+    if (pos >= 18) return 'bg-red-100 text-red-800 border-red-200';
+    return 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
   return (
-    <Badge className={cn("text-xs font-medium", getConfidenceColor(confidence))}>
-      {confidence}
+    <Badge className={cn("text-sm font-semibold px-2 py-1 border", getPositionColor(position))}>
+      {position}
     </Badge>
   );
 };
@@ -156,9 +154,7 @@ export default function TeamStatistics() {
       className: "w-20",
       render: (value) => (
         <div className="flex items-center justify-center">
-          <Badge className="bg-indigo-100 text-indigo-800 font-semibold">
-            {value}
-          </Badge>
+          <PositionBadge position={value} />
         </div>
       )
     },
@@ -170,6 +166,46 @@ export default function TeamStatistics() {
       className: "w-20",
       render: (value) => (
         <span className="font-semibold text-gray-900">{value || 0}</span>
+      )
+    },
+    {
+      key: "currentStats.played",
+      header: "Played",
+      sortable: true,
+      align: "center",
+      className: "w-20",
+      render: (value) => (
+        <span className="font-medium text-gray-900">{value || 0}</span>
+      )
+    },
+    {
+      key: "currentStats.wins",
+      header: "Wins",
+      sortable: true,
+      align: "center",
+      className: "w-20",
+      render: (value) => (
+        <span className="font-medium text-green-700">{value || 0}</span>
+      )
+    },
+    {
+      key: "currentStats.draws",
+      header: "Draws",
+      sortable: true,
+      align: "center",
+      className: "w-20",
+      render: (value) => (
+        <span className="font-medium text-yellow-700">{value || 0}</span>
+      )
+    },
+    {
+      key: "currentStats.losses",
+      header: "Losses",
+      sortable: true,
+      align: "center",
+      className: "w-20",
+      render: (value) => (
+        <span className="font-medium text-red-700">{value || 0}</span>
       )
     },
     {
@@ -200,6 +236,22 @@ export default function TeamStatistics() {
       )
     },
     {
+      key: "currentStats.goalDifference",
+      header: "Goal Diff",
+      sortable: true,
+      align: "right",
+      className: "w-24",
+      render: (value) => {
+        const diff = value || 0;
+        const colorClass = diff > 0 ? 'text-green-700' : diff < 0 ? 'text-red-700' : 'text-gray-700';
+        return (
+          <span className={`font-medium ${colorClass}`}>
+            {diff > 0 ? '+' : ''}{diff}
+          </span>
+        );
+      }
+    },
+    {
       key: "currentStats.cleanSheets",
       header: "Clean Sheets",
       sortable: true,
@@ -207,57 +259,6 @@ export default function TeamStatistics() {
       className: "w-24",
       render: (value) => (
         <span className="font-medium text-blue-700">{value || 0}</span>
-      )
-    },
-    {
-      key: "projectedStats.expectedGoals",
-      header: "xG",
-      sortable: true,
-      align: "right",
-      className: "w-20",
-      render: (value, team) => (
-        <div className="flex flex-col items-end">
-          <span className="font-medium text-gray-900">
-            {typeof value === 'number' ? value.toFixed(1) : '0.0'}
-          </span>
-          {team.confidence?.goals && (
-            <ConfidenceIndicator confidence={team.confidence.goals} />
-          )}
-        </div>
-      )
-    },
-    {
-      key: "projectedStats.expectedGoalsConceded",
-      header: "xGC",
-      sortable: true,
-      align: "right",
-      className: "w-20",
-      render: (value, team) => (
-        <div className="flex flex-col items-end">
-          <span className="font-medium text-gray-900">
-            {typeof value === 'number' ? value.toFixed(1) : '0.0'}
-          </span>
-          {team.confidence?.cleanSheets && (
-            <ConfidenceIndicator confidence={team.confidence.cleanSheets} />
-          )}
-        </div>
-      )
-    },
-    {
-      key: "projectedStats.expectedAssists",
-      header: "xA",
-      sortable: true,
-      align: "right",
-      className: "w-20",
-      render: (value, team) => (
-        <div className="flex flex-col items-end">
-          <span className="font-medium text-gray-900">
-            {typeof value === 'number' ? value.toFixed(1) : '0.0'}
-          </span>
-          {team.confidence?.assists && (
-            <ConfidenceIndicator confidence={team.confidence.assists} />
-          )}
-        </div>
       )
     },
     {
@@ -302,12 +303,12 @@ export default function TeamStatistics() {
     }
   ];
 
-  // Chart data preparation - team performance visualization
+  // Chart data preparation - actual team performance visualization
   const chartData = sortedData.slice(0, 20).map((team) => ({
     name: team.shortName,
     points: team.currentStats.points || 0,
-    xG: team.projectedStats.expectedGoals || 0,
-    xGC: team.projectedStats.expectedGoalsConceded || 0,
+    goalsScored: team.currentStats.goalsScored || 0,
+    goalsConceded: team.currentStats.goalsConceded || 0,
     position: team.currentStats.position || 20
   }));
 
@@ -316,9 +317,9 @@ export default function TeamStatistics() {
       label: "League Points",
       color: "#2563eb",
     },
-    xG: {
-      label: "Expected Goals",
-      color: "#dc2626",
+    goalsScored: {
+      label: "Goals Scored",
+      color: "#16a34a",
     }
   };
 
@@ -353,7 +354,7 @@ export default function TeamStatistics() {
               <h1>Team Statistics</h1>
             </div>
             <p className="fpl-page-subtitle">
-              Comprehensive team performance analysis including current league standings, expected statistics, and strength ratings for informed FPL decisions
+              Complete Premier League team statistics including current standings, match records, goals, and FPL strength ratings for informed decisions
             </p>
           </div>
         </div>
@@ -391,10 +392,10 @@ export default function TeamStatistics() {
               </div>
               <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-3 sm:p-4">
                 <div className="text-2xl sm:text-3xl font-bold text-purple-700 mb-1">
-                  {teamStats?.reduce((sum, team) => sum + (team.currentStats.cleanSheets || 0), 0) || 0}
+                  {teamStats?.reduce((sum, team) => sum + (team.currentStats.played || 0), 0) || 0}
                 </div>
                 <div className="text-xs sm:text-sm text-purple-600 font-medium">
-                  Clean Sheets
+                  Games Played
                 </div>
               </div>
             </div>
@@ -420,7 +421,7 @@ export default function TeamStatistics() {
         {chartData.length > 0 && (
           <MobileChartWrapper
             title="Team Performance Overview"
-            description={`League points vs expected goals analysis (${chartData.length} teams)`}
+            description={`League points vs goals scored analysis (${chartData.length} teams)`}
             collapsible={true}
             performanceMode={true}
             showMetadata={true}

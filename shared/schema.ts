@@ -157,7 +157,7 @@ export const teamSchema = z.object({
   pulse_id: z.number(),
 });
 
-// Team statistics schema for comprehensive team data
+// Team statistics schema for actual FPL team data
 export const teamStatsSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -166,25 +166,22 @@ export const teamStatsSchema = z.object({
   currentStats: z.object({
     points: z.number(),
     position: z.number(),
-    form: z.string(),
+    form: z.string().nullable(),
+    played: z.number(),
+    wins: z.number(),
+    draws: z.number(),
+    losses: z.number(),
+    goalsScored: z.number(),
+    goalsConceded: z.number(),
+    goalDifference: z.number(),
+    cleanSheets: z.number(),
     strengthAttackHome: z.number(),
     strengthAttackAway: z.number(),
     strengthDefenceHome: z.number(),
     strengthDefenceAway: z.number(),
-    goalsScored: z.number().optional(),
-    goalsConceded: z.number().optional(),
-    cleanSheets: z.number().optional(),
-  }),
-  projectedStats: z.object({
-    expectedGoals: z.number(),
-    expectedGoalsConceded: z.number(),
-    expectedAssists: z.number(),
-  }),
-  confidence: z.object({
-    goals: z.string(),
-    assists: z.string(),
-    cleanSheets: z.string(),
-  }).optional(),
+    strengthOverallHome: z.number(),
+    strengthOverallAway: z.number(),
+  })
 });
 
 export const elementTypeSchema = z.object({

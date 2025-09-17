@@ -618,7 +618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let teamStatsCache: { data: any; timestamp: number } | null = null;
   const TEAM_STATS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  // Comprehensive Team Statistics endpoint
+  // Team Statistics endpoint - Actual FPL team statistics only
   app.get("/api/team-statistics", async (req, res) => {
     try {
       // Check cache first
@@ -628,18 +628,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(teamStatsCache.data);
       }
 
-      console.log("DEBUG: Generating comprehensive team statistics");
+      console.log("DEBUG: Generating actual team statistics from FPL data");
 
       // Import hardcoded teams for consistency
       const { PREMIER_LEAGUE_TEAMS } = await import("@shared/schema");
 
-      // Fetch actual team stats from FPL API and projections in parallel
-      const [bootstrapResponse, goalProjectionsResponse, assistProjectionsResponse, csProjectionsResponse] = await Promise.all([
-        fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch(`${getApiBaseUrl()}/api/team-goal-projections`).catch(() => null),
-        fetch(`${getApiBaseUrl()}/api/team-assist-projections`).catch(() => null),
-        fetch(`${getApiBaseUrl()}/api/team-cs-projections`).catch(() => null)
-      ]);
+      // Fetch actual team stats from FPL API only
+      const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
 
       if (!bootstrapResponse || !bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data from FPL API");
@@ -648,107 +643,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const fplTeams = bootstrapData.teams || [];
 
-      // Parse projection responses
-      let goalProjections = [];
-      let assistProjections = [];
-      let csProjections = [];
-
-      try {
-        if (goalProjectionsResponse && goalProjectionsResponse.ok) {
-          goalProjections = await goalProjectionsResponse.json();
-        }
-      } catch (error) {
-        console.warn("Could not fetch goal projections:", error);
-      }
-
-      try {
-        if (assistProjectionsResponse && assistProjectionsResponse.ok) {
-          assistProjections = await assistProjectionsResponse.json();
-        }
-      } catch (error) {
-        console.warn("Could not fetch assist projections:", error);
-      }
-
-      try {
-        if (csProjectionsResponse && csProjectionsResponse.ok) {
-          csProjections = await csProjectionsResponse.json();
-        }
-      } catch (error) {
-        console.warn("Could not fetch clean sheet projections:", error);
-      }
-
-      // Create lookup maps for projections
-      const goalProjectionsMap = new Map(goalProjections.map((team: any) => [team.id, team]));
-      const assistProjectionsMap = new Map(assistProjections.map((team: any) => [team.id, team]));
-      const csProjectionsMap = new Map(csProjections.map((team: any) => [team.id, team]));
-
-      // Aggregate team statistics
+      // Aggregate actual team statistics
       const teamStatistics = PREMIER_LEAGUE_TEAMS.map(team => {
         // Find matching FPL team data for actual stats
         const fplTeam = fplTeams.find((t: any) => t.id === team.id);
-        
-        // Get projection data
-        const goalProj = goalProjectionsMap.get(team.id);
-        const assistProj = assistProjectionsMap.get(team.id);
-        const csProj = csProjectionsMap.get(team.id);
 
-        // Calculate actual stats from FPL data
+        // Calculate actual stats from FPL bootstrap data
         const currentStats = {
-          goalsScored: 0, // FPL doesn't provide team goals directly, would need aggregation
-          goalsConceded: 0, // FPL doesn't provide team goals conceded directly
-          cleanSheets: 0, // Would need to be calculated from fixtures
-          gamesPlayed: 0, // Would need to be calculated from fixtures
           points: fplTeam?.points || 0,
           position: fplTeam?.position || team.id,
           form: fplTeam?.form || null,
-          strengthAttackHome: fplTeam?.strength_attack_home || 1100 + (team.id * 5),
-          strengthAttackAway: fplTeam?.strength_attack_away || 1100 + (team.id * 5),
-          strengthDefenceHome: fplTeam?.strength_defence_home || 1100 + (team.id * 5),
-          strengthDefenceAway: fplTeam?.strength_defence_away || 1100 + (team.id * 5),
-          strengthOverallHome: fplTeam?.strength_overall_home || 1100 + (team.id * 5),
-          strengthOverallAway: fplTeam?.strength_overall_away || 1100 + (team.id * 5)
+          played: fplTeam?.played || 0,
+          wins: fplTeam?.win || 0,
+          draws: fplTeam?.draw || 0,
+          losses: fplTeam?.loss || 0,
+          goalsScored: fplTeam?.goals_for || 0,
+          goalsConceded: fplTeam?.goals_against || 0,
+          goalDifference: (fplTeam?.goals_for || 0) - (fplTeam?.goals_against || 0),
+          cleanSheets: fplTeam?.clean_sheets || 0,
+          strengthAttackHome: fplTeam?.strength_attack_home || 1000,
+          strengthAttackAway: fplTeam?.strength_attack_away || 1000,
+          strengthDefenceHome: fplTeam?.strength_defence_home || 1000,
+          strengthDefenceAway: fplTeam?.strength_defence_away || 1000,
+          strengthOverallHome: fplTeam?.strength_overall_home || 1000,
+          strengthOverallAway: fplTeam?.strength_overall_away || 1000
         };
-
-        // Calculate projected stats with proper type checking
-        const projectedStats = {
-          expectedGoals: (goalProj && typeof goalProj === 'object' && 'totalGoals' in goalProj) ? goalProj.totalGoals : 0,
-          expectedGoalsConceded: 0, // Will be calculated from clean sheet data
-          expectedAssists: (assistProj && typeof assistProj === 'object' && 'totalAssists' in assistProj) ? assistProj.totalAssists : 0,
-          expectedCleanSheets: 0,
-          averageExpectedGoalsPerGame: (goalProj && typeof goalProj === 'object' && 'averageGoalsPerGame' in goalProj) ? goalProj.averageGoalsPerGame : 0,
-          averageExpectedAssistsPerGame: (assistProj && typeof assistProj === 'object' && 'averageAssistsPerGame' in assistProj) ? assistProj.averageAssistsPerGame : 0
-        };
-
-        // Calculate expected goals conceded and clean sheets from CS projections
-        if (csProj && typeof csProj === 'object' && 'gameweekProjections' in csProj) {
-          // Sum clean sheet probabilities to get expected clean sheets
-          const gameweekProjections = csProj.gameweekProjections || {};
-          const totalCSProbability = Object.values(gameweekProjections)
-            .reduce((sum: number, prob: any) => sum + (Number(prob) || 0), 0);
-          
-          projectedStats.expectedCleanSheets = Math.round(totalCSProbability / 100 * 10) / 10;
-          
-          // Estimate expected goals conceded (inverse relationship with clean sheets)
-          // Rough calculation: if clean sheet probability is high, goals conceded should be lower
-          const gameweekCount = Object.keys(gameweekProjections).length;
-          if (gameweekCount > 0) {
-            const avgCleanSheetProb = totalCSProbability / gameweekCount;
-            projectedStats.expectedGoalsConceded = Math.round((100 - avgCleanSheetProb) * 0.6 * 10) / 10;
-          }
-        }
 
         return {
           id: team.id,
           name: team.name,
           shortName: team.short_name,
           code: team.code,
-          currentStats,
-          projectedStats,
-          confidence: {
-            goals: (goalProj && typeof goalProj === 'object' && 'confidence' in goalProj) ? goalProj.confidence : 'Medium',
-            assists: (assistProj && typeof assistProj === 'object' && 'confidence' in assistProj) ? assistProj.confidence : 'Medium',
-            cleanSheets: (csProj && typeof csProj === 'object' && 'confidence' in csProj) ? csProj.confidence : 'Medium'
-          }
+          currentStats
         };
       });
 
@@ -762,7 +688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Cache the result
       teamStatsCache = { data: teamStatistics, timestamp: now };
       
-      console.log(`DEBUG: Generated statistics for ${teamStatistics.length} teams`);
+      console.log(`DEBUG: Generated actual statistics for ${teamStatistics.length} teams`);
       res.json(teamStatistics);
 
     } catch (error) {
@@ -1172,6 +1098,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${entryId}/`);
       
+      if (!response) {
+        throw new Error('Failed to fetch data from FPL API');
+      }
+      
       if (!response.ok) {
         if (response.status === 404) {
           return res.status(404).json({ message: "Team not found" });
@@ -1200,6 +1130,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${entryId}/event/${eventId}/picks/`);
+      
+      if (!response) {
+        throw new Error('Failed to fetch data from FPL API');
+      }
       
       if (!response.ok) {
         throw new Error(`FPL API responded with status: ${response.status}`);
@@ -1373,6 +1307,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
       
+      if (!response) {
+        throw new Error('Failed to fetch data from FPL API');
+      }
+      
       if (!response.ok) {
         if (response.status === 404) {
           return res.status(404).json({ message: "Manager not found" });
@@ -1407,6 +1345,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`);
       
+      if (!response) {
+        throw new Error('Failed to fetch data from FPL API');
+      }
+      
       if (!response.ok) {
         if (response.status === 404) {
           return res.status(404).json({ message: "Manager history not found" });
@@ -1439,7 +1381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let currentGameweek = gameweek;
       if (!currentGameweek) {
         const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
-        if (bootstrapResponse.ok) {
+        if (bootstrapResponse && bootstrapResponse.ok) {
           const bootstrapData = await bootstrapResponse.json();
           currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
         } else {
@@ -1448,6 +1390,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
+      
+      if (!response) {
+        throw new Error('Failed to fetch data from FPL API');
+      }
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -1478,6 +1424,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get manager data which includes leagues
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
+      
+      if (!response) {
+        throw new Error('Failed to fetch data from FPL API');
+      }
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -1515,6 +1465,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`);
+      
+      if (!response) {
+        throw new Error('Failed to fetch data from FPL API');
+      }
       
       if (!response.ok) {
         if (response.status === 404) {
