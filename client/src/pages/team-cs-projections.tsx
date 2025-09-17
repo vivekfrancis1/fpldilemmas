@@ -20,8 +20,8 @@ interface TeamCSProjection {
 }
 
 export default function TeamCSProjections() {
-  const [startGameweek, setStartGameweek] = useState<string>("4");
-  const [endGameweek, setEndGameweek] = useState<string>("9");
+  const [startGameweek, setStartGameweek] = useState<string>("5");
+  const [endGameweek, setEndGameweek] = useState<string>("10");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("average");
 
