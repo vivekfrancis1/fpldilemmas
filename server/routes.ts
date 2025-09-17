@@ -6623,19 +6623,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Fetching live data for ${completedGameweeks.size} completed gameweeks`);
       
-      // Only fetch live data for the most recent completed gameweek (contains season totals without double-counting)
-      const mostRecentGameweek = Math.max(...Array.from(completedGameweeks));
-      console.log(`DEBUG: Using live data from most recent gameweek ${mostRecentGameweek} for season totals`);
+      // Fetch live data for each completed gameweek to calculate per-gameweek Expected Goals
+      console.log(`DEBUG: Fetching live data for ${completedGameweeks.size} completed gameweeks for per-gameweek xG calculation`);
       
-      let mostRecentLiveData = null;
-      try {
-        const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${mostRecentGameweek}/live/`);
-        if (liveResponse.ok) {
-          mostRecentLiveData = await liveResponse.json();
+      const liveDataPromises = Array.from(completedGameweeks).map(async (gameweek) => {
+        try {
+          const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            return { gameweek, data: liveData };
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch live data for gameweek ${gameweek}:`, error);
         }
-      } catch (error) {
-        console.warn(`Failed to fetch live data for gameweek ${mostRecentGameweek}:`, error);
-      }
+        return null;
+      });
+      
+      const liveDataResults = await Promise.all(liveDataPromises);
+      const liveDataMap = new Map<number, any>();
+      liveDataResults.forEach((result) => {
+        if (result) {
+          liveDataMap.set(result.gameweek, result.data);
+        }
+      });
       
       // Initialize enhanced team standings
       const teamStandings = new Map();
@@ -6675,54 +6685,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playerPositionMap.set(player.id, player.element_type); // 1=GK, 2=DEF, 3=MID, 4=FWD
       });
       
-      // Process live data once per completed gameweek to get season totals
-      if (mostRecentLiveData && mostRecentLiveData.elements) {
-        Object.entries(mostRecentLiveData.elements).forEach(([playerId, playerData]: [string, any]) => {
+      // Process live data per gameweek to calculate per-gameweek Expected Goals and sum them up
+      for (const [gameweek, liveData] of liveDataMap) {
+        if (!liveData || !liveData.elements) continue;
+        
+        // Calculate per-gameweek xGF (sum) and xGA (max) for each team
+        const gameweekTeamXGF = new Map<number, number>();
+        const gameweekTeamXGA = new Map<number, number>();
+        
+        // Initialize gameweek totals for all teams
+        bootstrapData.teams.forEach((team: any) => {
+          gameweekTeamXGF.set(team.id, 0);
+          gameweekTeamXGA.set(team.id, 0);
+        });
+        
+        Object.entries(liveData.elements).forEach(([playerId, playerData]: [string, any]) => {
           const teamId = playerToTeamMap.get(parseInt(playerId));
-          const position = playerPositionMap.get(parseInt(playerId));
-          if (!teamId || !position) return;
-          
-          const team = teamStandings.get(teamId);
-          if (!team) return;
+          if (!teamId) return;
           
           const stats = playerData.stats || {};
           
-          // Expected Goals For: Sum of xGF of all players in the team
+          // Sum xGF for all players in the team for this gameweek
+          let playerXGF = 0;
           if (stats.expected_goals) {
-            team.expectedGoalsFor += parseFloat(stats.expected_goals) || 0;
+            playerXGF = parseFloat(stats.expected_goals) || 0;
           } else if (stats.xg) {
-            team.expectedGoalsFor += parseFloat(stats.xg) || 0;
+            playerXGF = parseFloat(stats.xg) || 0;
           }
+          gameweekTeamXGF.set(teamId, (gameweekTeamXGF.get(teamId) || 0) + playerXGF);
           
-          // Expected Goals Against: Maximum xGA of all players in the team
+          // Track max xGA for all players in the team for this gameweek
           let playerXGA = 0;
           if (stats.expected_goals_conceded) {
             playerXGA = parseFloat(stats.expected_goals_conceded) || 0;
           } else if (stats.xga) {
             playerXGA = parseFloat(stats.xga) || 0;
           }
-          if (playerXGA > team.expectedGoalsAgainst) {
-            team.expectedGoalsAgainst = playerXGA;
+          const currentMaxXGA = gameweekTeamXGA.get(teamId) || 0;
+          if (playerXGA > currentMaxXGA) {
+            gameweekTeamXGA.set(teamId, playerXGA);
           }
           
-          // Aggregate other stats from all players (these don't have the multiplier issue)
-          if (stats.yellow_cards) team.yellowCards += stats.yellow_cards;
-          if (stats.red_cards) team.redCards += stats.red_cards;
-          if (stats.saves) team.saves += stats.saves;
-          if (stats.own_goals) team.ownGoals += stats.own_goals;
-          if (stats.penalties_saved) team.penaltiesSaved += stats.penalties_saved;
-          
-          // Extract tackles and calculate defensive actions
-          if (stats.tackles) team.tackles += stats.tackles;
-          
-          let playerDefensiveActions = 0;
-          if (stats.tackles) playerDefensiveActions += stats.tackles;
-          if (stats.blocks) playerDefensiveActions += stats.blocks;
-          if (stats.interceptions) playerDefensiveActions += stats.interceptions;
-          if (stats.clearances) playerDefensiveActions += stats.clearances;
-          if (stats.recoveries) playerDefensiveActions += stats.recoveries;
-          if (playerDefensiveActions > 0) team.defensiveActions += playerDefensiveActions;
+          // Aggregate other stats from all players (only do this once, not per gameweek)
+          if (gameweek === Math.max(...Array.from(completedGameweeks))) {
+            const team = teamStandings.get(teamId);
+            if (!team) return;
+            
+            if (stats.yellow_cards) team.yellowCards += stats.yellow_cards;
+            if (stats.red_cards) team.redCards += stats.red_cards;
+            if (stats.saves) team.saves += stats.saves;
+            if (stats.own_goals) team.ownGoals += stats.own_goals;
+            if (stats.penalties_saved) team.penaltiesSaved += stats.penalties_saved;
+            
+            // Extract tackles and calculate defensive actions
+            if (stats.tackles) team.tackles += stats.tackles;
+            
+            let playerDefensiveActions = 0;
+            if (stats.tackles) playerDefensiveActions += stats.tackles;
+            if (stats.blocks) playerDefensiveActions += stats.blocks;
+            if (stats.interceptions) playerDefensiveActions += stats.interceptions;
+            if (stats.clearances) playerDefensiveActions += stats.clearances;
+            if (stats.recoveries) playerDefensiveActions += stats.recoveries;
+            if (playerDefensiveActions > 0) team.defensiveActions += playerDefensiveActions;
+          }
         });
+        
+        // Add this gameweek's xGF and xGA to season totals
+        for (const [teamId, xgf] of gameweekTeamXGF) {
+          const team = teamStandings.get(teamId);
+          if (team) {
+            team.expectedGoalsFor += xgf;
+          }
+        }
+        
+        for (const [teamId, xga] of gameweekTeamXGA) {
+          const team = teamStandings.get(teamId);
+          if (team) {
+            team.expectedGoalsAgainst += xga;
+          }
+        }
       }
       
       // Process completed fixtures with enhanced statistics
