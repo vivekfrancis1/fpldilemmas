@@ -6687,22 +6687,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const stats = playerData.stats || {};
           
-          // Expected Goals For: Aggregate from outfield players (positions 2,3,4) who actually score
-          if (position >= 2) { // Defenders, midfielders, forwards
-            if (stats.expected_goals) {
-              team.expectedGoalsFor += parseFloat(stats.expected_goals) || 0;
-            } else if (stats.xg) {
-              team.expectedGoalsFor += parseFloat(stats.xg) || 0;
-            }
+          // Expected Goals For: Sum of xGF of all players in the team
+          if (stats.expected_goals) {
+            team.expectedGoalsFor += parseFloat(stats.expected_goals) || 0;
+          } else if (stats.xg) {
+            team.expectedGoalsFor += parseFloat(stats.xg) || 0;
           }
           
-          // Expected Goals Against: Only from goalkeepers (position 1) to avoid multiplier
-          if (position === 1) {
-            if (stats.expected_goals_conceded) {
-              team.expectedGoalsAgainst += parseFloat(stats.expected_goals_conceded) || 0;
-            } else if (stats.xga) {
-              team.expectedGoalsAgainst += parseFloat(stats.xga) || 0;
-            }
+          // Expected Goals Against: Maximum xGA of all players in the team
+          let playerXGA = 0;
+          if (stats.expected_goals_conceded) {
+            playerXGA = parseFloat(stats.expected_goals_conceded) || 0;
+          } else if (stats.xga) {
+            playerXGA = parseFloat(stats.xga) || 0;
+          }
+          if (playerXGA > team.expectedGoalsAgainst) {
+            team.expectedGoalsAgainst = playerXGA;
           }
           
           // Aggregate other stats from all players (these don't have the multiplier issue)
