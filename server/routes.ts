@@ -6752,6 +6752,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const stats = playerData.stats || {};
             const explain = playerData.explain || [];
             
+            // Debug: Log the structure of the live data for first few players
+            if (Math.random() < 0.01) { // Log 1% of players to avoid spam
+              console.log(`DEBUG: Live data structure for player ${playerId}:`, {
+                stats: Object.keys(stats),
+                explain: explain.map((e: any) => ({ stat: e.stat, value: e.value, points: e.points })),
+                statsValues: stats
+              });
+            }
+            
             // Aggregate player stats to team level
             if (stats.yellow_cards) team.yellowCards += stats.yellow_cards;
             if (stats.red_cards) team.redCards += stats.red_cards;
@@ -6760,13 +6769,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (stats.penalties_saved) team.penaltiesSaved += stats.penalties_saved;
             if (stats.penalties_missed) team.penaltiesMissed += stats.penalties_missed;
             
-            // Extract advanced stats from explain array if available
+            // Extract expected goals from live data - check multiple possible field names and convert to numbers
+            if (stats.expected_goals) team.expectedGoalsFor += parseFloat(stats.expected_goals) || 0;
+            if (stats.expected_goals_conceded) team.expectedGoalsAgainst += parseFloat(stats.expected_goals_conceded) || 0;
+            if (stats.xg) team.expectedGoalsFor += parseFloat(stats.xg) || 0;
+            if (stats.xga) team.expectedGoalsAgainst += parseFloat(stats.xga) || 0;
+            
+            // Extract defensive stats - tackles and defensive actions
+            if (stats.tackles) team.tackles += stats.tackles;
+            if (stats.defensive_actions) team.defensiveActions += stats.defensive_actions;
+            
+            // Calculate defensive actions from individual components if not available directly
+            if (!stats.defensive_actions) {
+              let defensiveActions = 0;
+              if (stats.tackles) defensiveActions += stats.tackles;
+              if (stats.blocks) defensiveActions += stats.blocks;
+              if (stats.interceptions) defensiveActions += stats.interceptions;
+              if (stats.clearances) defensiveActions += stats.clearances;
+              if (defensiveActions > 0) team.defensiveActions += defensiveActions;
+            }
+            
+            // Extract advanced stats from explain array if available (backup method)
             explain.forEach((item: any) => {
-              if (item.stat === 'expected_goals') {
-                team.expectedGoalsFor += item.points || 0;
+              if (item.stat === 'expected_goals' || item.stat === 'xg') {
+                team.expectedGoalsFor += parseFloat(item.value || item.points) || 0;
               }
-              if (item.stat === 'expected_goals_conceded') {
-                team.expectedGoalsAgainst += item.points || 0;
+              if (item.stat === 'expected_goals_conceded' || item.stat === 'xga') {
+                team.expectedGoalsAgainst += parseFloat(item.value || item.points) || 0;
+              }
+              if (item.stat === 'tackles') {
+                team.tackles += parseInt(item.value || item.points) || 0;
+              }
+              if (item.stat === 'defensive_actions') {
+                team.defensiveActions += parseInt(item.value || item.points) || 0;
               }
             });
           });
