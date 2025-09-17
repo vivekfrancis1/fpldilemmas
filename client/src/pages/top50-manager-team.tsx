@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  ArrowLeft,
   Crown,
   DollarSign,
   Shield,
@@ -331,6 +332,16 @@ export default function Top50ManagerTeam() {
       {/* Header */}
       <div className="flex flex-col space-y-4">
         <div className="flex items-center gap-4">
+          <Link href="/top50-managers">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="hover:bg-blue-50"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Top 50
+            </Button>
+          </Link>
         </div>
         
         <div className="space-y-2">
