@@ -18,6 +18,18 @@ interface CurrentTeamStanding {
   goalsAgainst: number;
   goalDifference: number;
   points: number;
+  // Enhanced statistics from backend API
+  cleanSheets: number;
+  yellowCards: number;
+  redCards: number;
+  saves: number;
+  ownGoals: number;
+  penaltiesSaved: number;
+  penaltiesMissed: number;
+  expectedGoalsFor: number;
+  expectedGoalsAgainst: number;
+  tackles: number;
+  defensiveActions: number;
 }
 
 export default function CurrentStandings() {
@@ -92,7 +104,7 @@ export default function CurrentStandings() {
             <h1>Current Premier League Standings</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Live Premier League table based on completed matches and official results
+            Enhanced Premier League table with detailed statistics from completed matches and official results
           </p>
           <div className="mt-6">
             <Button 
@@ -137,71 +149,124 @@ export default function CurrentStandings() {
           </CardContent>
         </Card>
 
-        {/* Current Standings Table */}
+        {/* Enhanced Current Standings Table */}
         <Card className="overflow-hidden shadow-lg border-0">
           <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
             <CardTitle className="flex items-center gap-3 text-xl">
               <Trophy className="h-6 w-6" />
-              Premier League Table
+              Enhanced Premier League Table
               <Badge className="bg-white/20 text-white border-white/30 ml-auto">
-                Official Results
+                Detailed Statistics
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[1400px]">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {/* Position & Team Info */}
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">
                       Pos
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-16 bg-gray-50 z-10 border-r min-w-[140px]">
                       Team
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    
+                    {/* Match Record */}
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       P
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       W
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       D
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       L
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    
+                    {/* Goals */}
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
                       GF
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       GA
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       GD
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    
+                    {/* Points */}
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l bg-blue-50">
                       Pts
+                    </th>
+                    
+                    {/* Clean Sheets */}
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
+                      CS
+                    </th>
+                    
+                    {/* Cards */}
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
+                      YC
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      RC
+                    </th>
+                    
+                    {/* GK Stats */}
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
+                      Saves
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      PS
+                    </th>
+                    
+                    {/* Other Events */}
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
+                      OG
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      PM
+                    </th>
+                    
+                    {/* Expected Goals */}
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
+                      xGF
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      xGA
+                    </th>
+                    
+                    {/* Defensive Stats */}
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">
+                      T
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      DA
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {standingsData?.map((team) => (
                     <tr key={team.id} className="hover:bg-gray-50" data-testid={`current-standing-row-${team.shortName}`}>
-                      <td className="px-4 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${getPositionColor(team.position)}`}>
+                      {/* Position & Team Info */}
+                      <td className="px-3 py-4 text-center sticky left-0 bg-white hover:bg-gray-50 border-r">
+                        <div className="flex items-center justify-center gap-1">
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${getPositionColor(team.position)}`}>
                             {team.position}
                           </div>
                           {getPositionBadge(team.position) && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-xs hidden sm:inline-flex">
                               {getPositionBadge(team.position)}
                             </Badge>
                           )}
                         </div>
                       </td>
                       
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-4 sticky left-16 bg-white hover:bg-gray-50 border-r min-w-[140px]">
                         <div className="flex items-center">
                           <div>
                             <div className="text-sm font-medium text-gray-900" data-testid={`team-name-${team.shortName}`}>
@@ -212,38 +277,81 @@ export default function CurrentStandings() {
                         </div>
                       </td>
                       
-                      <td className="px-4 py-4 text-center text-sm font-medium text-gray-900" data-testid={`played-${team.shortName}`}>
+                      {/* Match Record */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-gray-900" data-testid={`played-${team.shortName}`}>
                         {team.played}
                       </td>
-                      
-                      <td className="px-4 py-4 text-center text-sm font-medium text-green-600" data-testid={`wins-${team.shortName}`}>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-green-600" data-testid={`wins-${team.shortName}`}>
                         {team.wins}
                       </td>
-                      
-                      <td className="px-4 py-4 text-center text-sm font-medium text-gray-600" data-testid={`draws-${team.shortName}`}>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-gray-600" data-testid={`draws-${team.shortName}`}>
                         {team.draws}
                       </td>
-                      
-                      <td className="px-4 py-4 text-center text-sm font-medium text-red-600" data-testid={`losses-${team.shortName}`}>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-red-600" data-testid={`losses-${team.shortName}`}>
                         {team.losses}
                       </td>
                       
-                      <td className="px-4 py-4 text-center text-sm font-medium text-gray-900" data-testid={`goals-for-${team.shortName}`}>
+                      {/* Goals */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-gray-900 border-l" data-testid={`goals-for-${team.shortName}`}>
                         {team.goalsFor}
                       </td>
-                      
-                      <td className="px-4 py-4 text-center text-sm font-medium text-gray-900" data-testid={`goals-against-${team.shortName}`}>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-gray-900" data-testid={`goals-against-${team.shortName}`}>
                         {team.goalsAgainst}
                       </td>
-                      
-                      <td className="px-4 py-4 text-center text-sm font-medium" data-testid={`goal-difference-${team.shortName}`}>
+                      <td className="px-2 py-4 text-center text-sm font-medium" data-testid={`goal-difference-${team.shortName}`}>
                         <span className={team.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}>
                           {team.goalDifference >= 0 ? '+' : ''}{team.goalDifference}
                         </span>
                       </td>
                       
-                      <td className="px-4 py-4 text-center text-sm font-bold text-gray-900" data-testid={`points-${team.shortName}`}>
+                      {/* Points */}
+                      <td className="px-3 py-4 text-center text-sm font-bold text-gray-900 border-l bg-blue-50" data-testid={`points-${team.shortName}`}>
                         {team.points}
+                      </td>
+                      
+                      {/* Clean Sheets */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-blue-600 border-l" data-testid={`clean-sheets-${team.shortName}`}>
+                        {team.cleanSheets}
+                      </td>
+                      
+                      {/* Cards */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-yellow-600 border-l" data-testid={`yellow-cards-${team.shortName}`}>
+                        {team.yellowCards}
+                      </td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-red-600" data-testid={`red-cards-${team.shortName}`}>
+                        {team.redCards}
+                      </td>
+                      
+                      {/* GK Stats */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-purple-600 border-l" data-testid={`saves-${team.shortName}`}>
+                        {team.saves}
+                      </td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-green-600" data-testid={`penalties-saved-${team.shortName}`}>
+                        {team.penaltiesSaved}
+                      </td>
+                      
+                      {/* Other Events */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-orange-600 border-l" data-testid={`own-goals-${team.shortName}`}>
+                        {team.ownGoals}
+                      </td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-red-500" data-testid={`penalties-missed-${team.shortName}`}>
+                        {team.penaltiesMissed}
+                      </td>
+                      
+                      {/* Expected Goals */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600 border-l" data-testid={`expected-goals-for-${team.shortName}`}>
+                        {team.expectedGoalsFor.toFixed(1)}
+                      </td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-500" data-testid={`expected-goals-against-${team.shortName}`}>
+                        {team.expectedGoalsAgainst.toFixed(1)}
+                      </td>
+                      
+                      {/* Defensive Stats */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-600 border-l" data-testid={`tackles-${team.shortName}`}>
+                        {team.tackles}
+                      </td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-500" data-testid={`defensive-actions-${team.shortName}`}>
+                        {team.defensiveActions}
                       </td>
                     </tr>
                   ))}
@@ -253,16 +361,16 @@ export default function CurrentStandings() {
           </CardContent>
         </Card>
 
-        {/* Legend */}
+        {/* Enhanced Legend */}
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="text-lg">Table Legend</CardTitle>
+            <CardTitle className="text-lg">Enhanced Table Legend</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Position Colors</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
+                <h4 className="font-semibold text-gray-900 mb-3">Position Colors</h4>
+                <ul className="text-sm text-gray-600 space-y-2">
                   <li className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-green-500 rounded-full"></div>
                     1st-4th: Champions League
@@ -281,16 +389,51 @@ export default function CurrentStandings() {
                   </li>
                 </ul>
               </div>
+              
               <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Table Details</h4>
+                <h4 className="font-semibold text-gray-900 mb-3">Basic Statistics</h4>
                 <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• P: Played matches</li>
-                  <li>• W/D/L: Wins, Draws, Losses</li>
-                  <li>• GF/GA: Goals For/Against</li>
-                  <li>• GD: Goal Difference</li>
-                  <li>• Pts: Total points (3 for win, 1 for draw)</li>
+                  <li><strong>P:</strong> Matches played</li>
+                  <li><strong>W/D/L:</strong> Wins, Draws, Losses</li>
+                  <li><strong>GF/GA:</strong> Goals For/Against</li>
+                  <li><strong>GD:</strong> Goal Difference</li>
+                  <li><strong>Pts:</strong> Points (3 for win, 1 for draw)</li>
+                  <li><strong>CS:</strong> Clean Sheets</li>
                 </ul>
               </div>
+              
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Enhanced Statistics</h4>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li><strong>YC/RC:</strong> Yellow/Red Cards</li>
+                  <li><strong>Saves:</strong> Goalkeeper saves</li>
+                  <li><strong>PS:</strong> Penalties saved</li>
+                  <li><strong>OG:</strong> Own goals</li>
+                  <li><strong>PM:</strong> Penalties missed</li>
+                  <li><strong>xGF/xGA:</strong> Expected Goals For/Against</li>
+                  <li><strong>T:</strong> Tackles</li>
+                  <li><strong>DA:</strong> Defensive actions</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-semibold text-gray-900 mb-2">💡 Table Features</h4>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li>• <strong>Horizontal scroll:</strong> Use the horizontal scrollbar to view all statistics</li>
+                <li>• <strong>Sticky columns:</strong> Position and Team columns remain visible while scrolling</li>
+                <li>• <strong>Color coding:</strong> Different statistics use distinct colors for easy identification</li>
+                <li>• <strong>Expected Goals:</strong> Displayed with one decimal place (e.g., 2.1)</li>
+                <li>• <strong>Real-time data:</strong> Updated after each completed match</li>
+              </ul>
+            </div>
+            
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600">
+                <strong>Note:</strong> All statistics are calculated from completed Premier League matches only. 
+                Enhanced data includes goalkeeper saves, defensive actions, cards, and advanced metrics 
+                to provide comprehensive team performance analysis.
+              </p>
             </div>
           </CardContent>
         </Card>
