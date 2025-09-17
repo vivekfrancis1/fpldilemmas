@@ -6623,27 +6623,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Fetching live data for ${completedGameweeks.size} completed gameweeks`);
       
-      // Fetch live data for completed gameweeks
-      const liveDataPromises = Array.from(completedGameweeks).map(async (gameweek) => {
-        try {
-          const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
-          if (liveResponse.ok) {
-            const liveData = await liveResponse.json();
-            return { gameweek, data: liveData };
-          }
-        } catch (error) {
-          console.warn(`Failed to fetch live data for gameweek ${gameweek}:`, error);
-        }
-        return null;
-      });
+      // Only fetch live data for the most recent completed gameweek (contains season totals without double-counting)
+      const mostRecentGameweek = Math.max(...Array.from(completedGameweeks));
+      console.log(`DEBUG: Using live data from most recent gameweek ${mostRecentGameweek} for season totals`);
       
-      const liveDataResults = await Promise.all(liveDataPromises);
-      const liveDataMap = new Map<number, any>();
-      liveDataResults.forEach((result) => {
-        if (result) {
-          liveDataMap.set(result.gameweek, result.data);
+      let mostRecentLiveData = null;
+      try {
+        const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${mostRecentGameweek}/live/`);
+        if (liveResponse.ok) {
+          mostRecentLiveData = await liveResponse.json();
         }
-      });
+      } catch (error) {
+        console.warn(`Failed to fetch live data for gameweek ${mostRecentGameweek}:`, error);
+      }
       
       // Initialize enhanced team standings
       const teamStandings = new Map();
@@ -6675,11 +6667,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
-      // Create a map of player ID to team ID for easier lookups
+      // Create a map of player ID to team ID and position for easier lookups
       const playerToTeamMap = new Map<number, number>();
+      const playerPositionMap = new Map<number, number>();
       bootstrapData.elements.forEach((player: any) => {
         playerToTeamMap.set(player.id, player.team);
+        playerPositionMap.set(player.id, player.element_type); // 1=GK, 2=DEF, 3=MID, 4=FWD
       });
+      
+      // Process live data once per completed gameweek to get season totals
+      if (mostRecentLiveData && mostRecentLiveData.elements) {
+        Object.entries(mostRecentLiveData.elements).forEach(([playerId, playerData]: [string, any]) => {
+          const teamId = playerToTeamMap.get(parseInt(playerId));
+          const position = playerPositionMap.get(parseInt(playerId));
+          if (!teamId || !position) return;
+          
+          const team = teamStandings.get(teamId);
+          if (!team) return;
+          
+          const stats = playerData.stats || {};
+          
+          // Only aggregate Expected Goals from goalkeepers (position 1) to avoid 11x multiplier
+          if (position === 1) {
+            if (stats.expected_goals) {
+              team.expectedGoalsFor += parseFloat(stats.expected_goals) || 0;
+            } else if (stats.xg) {
+              team.expectedGoalsFor += parseFloat(stats.xg) || 0;
+            }
+            
+            if (stats.expected_goals_conceded) {
+              team.expectedGoalsAgainst += parseFloat(stats.expected_goals_conceded) || 0;
+            } else if (stats.xga) {
+              team.expectedGoalsAgainst += parseFloat(stats.xga) || 0;
+            }
+          }
+          
+          // Aggregate other stats from all players (these don't have the multiplier issue)
+          if (stats.yellow_cards) team.yellowCards += stats.yellow_cards;
+          if (stats.red_cards) team.redCards += stats.red_cards;
+          if (stats.saves) team.saves += stats.saves;
+          if (stats.own_goals) team.ownGoals += stats.own_goals;
+          if (stats.penalties_saved) team.penaltiesSaved += stats.penalties_saved;
+          
+          // Extract tackles and calculate defensive actions
+          if (stats.tackles) team.tackles += stats.tackles;
+          
+          let playerDefensiveActions = 0;
+          if (stats.tackles) playerDefensiveActions += stats.tackles;
+          if (stats.blocks) playerDefensiveActions += stats.blocks;
+          if (stats.interceptions) playerDefensiveActions += stats.interceptions;
+          if (stats.clearances) playerDefensiveActions += stats.clearances;
+          if (stats.recoveries) playerDefensiveActions += stats.recoveries;
+          if (playerDefensiveActions > 0) team.defensiveActions += playerDefensiveActions;
+        });
+      }
       
       // Process completed fixtures with enhanced statistics
       completedFixtures.forEach((fixture: any) => {
@@ -6736,76 +6777,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Process live data for this fixture's gameweek if available
-        const liveData = liveDataMap.get(fixture.event);
-        if (liveData && liveData.elements) {
-          Object.entries(liveData.elements).forEach(([playerId, playerData]: [string, any]) => {
-            const teamId = playerToTeamMap.get(parseInt(playerId));
-            if (!teamId) return;
-            
-            const team = teamStandings.get(teamId);
-            if (!team) return;
-            
-            // Only aggregate stats for this fixture's teams
-            if (teamId !== fixture.team_h && teamId !== fixture.team_a) return;
-            
-            const stats = playerData.stats || {};
-            const explain = playerData.explain || [];
-            
-            // Debug: Log the structure of the live data for first few players
-            if (Math.random() < 0.01) { // Log 1% of players to avoid spam
-              console.log(`DEBUG: Live data structure for player ${playerId}:`, {
-                stats: Object.keys(stats),
-                explain: explain.map((e: any) => ({ stat: e.stat, value: e.value, points: e.points })),
-                statsValues: stats
-              });
-            }
-            
-            // Aggregate player stats to team level
-            if (stats.yellow_cards) team.yellowCards += stats.yellow_cards;
-            if (stats.red_cards) team.redCards += stats.red_cards;
-            if (stats.saves) team.saves += stats.saves;
-            if (stats.own_goals) team.ownGoals += stats.own_goals;
-            if (stats.penalties_saved) team.penaltiesSaved += stats.penalties_saved;
-            if (stats.penalties_missed) team.penaltiesMissed += stats.penalties_missed;
-            
-            // Extract expected goals from live data - check multiple possible field names and convert to numbers
-            if (stats.expected_goals) team.expectedGoalsFor += parseFloat(stats.expected_goals) || 0;
-            if (stats.expected_goals_conceded) team.expectedGoalsAgainst += parseFloat(stats.expected_goals_conceded) || 0;
-            if (stats.xg) team.expectedGoalsFor += parseFloat(stats.xg) || 0;
-            if (stats.xga) team.expectedGoalsAgainst += parseFloat(stats.xga) || 0;
-            
-            // Extract defensive stats - tackles and defensive actions
-            if (stats.tackles) team.tackles += stats.tackles;
-            if (stats.defensive_actions) team.defensiveActions += stats.defensive_actions;
-            
-            // Calculate defensive actions from individual components if not available directly
-            if (!stats.defensive_actions) {
-              let defensiveActions = 0;
-              if (stats.tackles) defensiveActions += stats.tackles;
-              if (stats.blocks) defensiveActions += stats.blocks;
-              if (stats.interceptions) defensiveActions += stats.interceptions;
-              if (stats.clearances) defensiveActions += stats.clearances;
-              if (defensiveActions > 0) team.defensiveActions += defensiveActions;
-            }
-            
-            // Extract advanced stats from explain array if available (backup method)
-            explain.forEach((item: any) => {
-              if (item.stat === 'expected_goals' || item.stat === 'xg') {
-                team.expectedGoalsFor += parseFloat(item.value || item.points) || 0;
-              }
-              if (item.stat === 'expected_goals_conceded' || item.stat === 'xga') {
-                team.expectedGoalsAgainst += parseFloat(item.value || item.points) || 0;
-              }
-              if (item.stat === 'tackles') {
-                team.tackles += parseInt(item.value || item.points) || 0;
-              }
-              if (item.stat === 'defensive_actions') {
-                team.defensiveActions += parseInt(item.value || item.points) || 0;
-              }
-            });
-          });
-        }
         
         // Determine match result and update points
         if (homeGoals > awayGoals) {
