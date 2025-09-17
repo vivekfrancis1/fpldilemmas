@@ -468,9 +468,8 @@ export default function ResultsAndFixtures() {
         totalPoints: homeStats.reduce((sum, p) => sum + (p?.total_points || 0), 0),
         totalGoals: homeStats.reduce((sum, p) => sum + (p?.goals_scored || 0), 0),
         totalAssists: homeStats.reduce((sum, p) => sum + (p?.assists || 0), 0),
-        totalMinutes: homeStats.reduce((sum, p) => sum + (p?.minutes || 0), 0),
         totalSaves: homeStats.reduce((sum, p) => sum + (p?.saves || 0), 0),
-        totalGoalsConceded: homeStats.reduce((sum, p) => sum + (p?.goals_conceded || 0), 0),
+        totalGoalsConceded: homeStats.length > 0 ? Math.max(...homeStats.map(p => p?.goals_conceded || 0)) : 0,
         totalYellowCards: homeStats.reduce((sum, p) => sum + (p?.yellow_cards || 0), 0),
         totalRedCards: homeStats.reduce((sum, p) => sum + (p?.red_cards || 0), 0),
         totalBonus: homeStats.reduce((sum, p) => sum + (p?.bonus || 0), 0),
@@ -496,9 +495,8 @@ export default function ResultsAndFixtures() {
         totalPoints: awayStats.reduce((sum, p) => sum + (p?.total_points || 0), 0),
         totalGoals: awayStats.reduce((sum, p) => sum + (p?.goals_scored || 0), 0),
         totalAssists: awayStats.reduce((sum, p) => sum + (p?.assists || 0), 0),
-        totalMinutes: awayStats.reduce((sum, p) => sum + (p?.minutes || 0), 0),
         totalSaves: awayStats.reduce((sum, p) => sum + (p?.saves || 0), 0),
-        totalGoalsConceded: awayStats.reduce((sum, p) => sum + (p?.goals_conceded || 0), 0),
+        totalGoalsConceded: awayStats.length > 0 ? Math.max(...awayStats.map(p => p?.goals_conceded || 0)) : 0,
         totalYellowCards: awayStats.reduce((sum, p) => sum + (p?.yellow_cards || 0), 0),
         totalRedCards: awayStats.reduce((sum, p) => sum + (p?.red_cards || 0), 0),
         totalBonus: awayStats.reduce((sum, p) => sum + (p?.bonus || 0), 0),
@@ -1523,10 +1521,6 @@ export default function ResultsAndFixtures() {
                         <h4 className="font-semibold text-gray-700">Match Details</h4>
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Total Minutes:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalMinutes}'</span>
-                          </div>
-                          <div className="flex justify-between">
                             <span className="text-gray-600">Clean Sheet:</span>
                             <span className="font-medium">{matchTeamStats.homeTeamMatchStats.cleanSheets ? 'Yes' : 'No'}</span>
                           </div>
@@ -1654,10 +1648,6 @@ export default function ResultsAndFixtures() {
                       <div className="space-y-2">
                         <h4 className="font-semibold text-gray-700">Match Details</h4>
                         <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Total Minutes:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalMinutes}'</span>
-                          </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Clean Sheet:</span>
                             <span className="font-medium">{matchTeamStats.awayTeamMatchStats.cleanSheets ? 'Yes' : 'No'}</span>
