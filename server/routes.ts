@@ -6574,10 +6574,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Current Standings endpoint - calculates actual Premier League table from completed matches only
+  // Enhanced Current Standings cache (30 minutes - completed match data doesn't change often)
+  const currentStandingsCache = new Map<string, { data: any; timestamp: number }>();
+  const CURRENT_STANDINGS_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+  // Current Standings endpoint - calculates actual Premier League table with detailed statistics from completed matches only
   app.get("/api/current-standings", async (req, res) => {
     try {
-      console.log(`DEBUG: Current Standings API called - calculating actual table from completed matches`);
+      console.log(`DEBUG: Enhanced Current Standings API called - calculating detailed table from completed matches`);
+      
+      // Check cache first
+      const now = Date.now();
+      const cached = currentStandingsCache.get('detailed_standings');
+      if (cached && (now - cached.timestamp) < CURRENT_STANDINGS_CACHE_DURATION) {
+        console.log("DEBUG: Serving detailed current standings from cache");
+        return res.json(cached.data);
+      }
       
       // Fetch fixtures and bootstrap data
       const [fixturesResponse, bootstrapResponse] = await Promise.all([
@@ -6599,9 +6611,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fixture.team_a_score !== null
       );
       
-      console.log(`DEBUG: Found ${completedFixtures.length} completed fixtures for current standings`);
+      console.log(`DEBUG: Found ${completedFixtures.length} completed fixtures for enhanced standings`);
       
-      // Initialize team standings
+      // Get all completed gameweeks for live data fetching
+      const completedGameweeks = new Set<number>();
+      completedFixtures.forEach((fixture: any) => {
+        if (fixture.event) {
+          completedGameweeks.add(fixture.event);
+        }
+      });
+      
+      console.log(`DEBUG: Fetching live data for ${completedGameweeks.size} completed gameweeks`);
+      
+      // Fetch live data for completed gameweeks
+      const liveDataPromises = Array.from(completedGameweeks).map(async (gameweek) => {
+        try {
+          const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            return { gameweek, data: liveData };
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch live data for gameweek ${gameweek}:`, error);
+        }
+        return null;
+      });
+      
+      const liveDataResults = await Promise.all(liveDataPromises);
+      const liveDataMap = new Map<number, any>();
+      liveDataResults.forEach((result) => {
+        if (result) {
+          liveDataMap.set(result.gameweek, result.data);
+        }
+      });
+      
+      // Initialize enhanced team standings
       const teamStandings = new Map();
       bootstrapData.teams.forEach((team: any) => {
         teamStandings.set(team.id, {
@@ -6615,11 +6659,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           goalsFor: 0,
           goalsAgainst: 0,
           goalDifference: 0,
-          points: 0
+          points: 0,
+          // Enhanced statistics
+          cleanSheets: 0,
+          yellowCards: 0,
+          redCards: 0,
+          saves: 0,
+          ownGoals: 0,
+          penaltiesSaved: 0,
+          penaltiesMissed: 0,
+          expectedGoalsFor: 0,
+          expectedGoalsAgainst: 0,
+          tackles: 0,
+          defensiveActions: 0
         });
       });
       
-      // Process completed fixtures only
+      // Create a map of player ID to team ID for easier lookups
+      const playerToTeamMap = new Map<number, number>();
+      bootstrapData.elements.forEach((player: any) => {
+        playerToTeamMap.set(player.id, player.team);
+      });
+      
+      // Process completed fixtures with enhanced statistics
       completedFixtures.forEach((fixture: any) => {
         const homeTeam = teamStandings.get(fixture.team_h);
         const awayTeam = teamStandings.get(fixture.team_a);
@@ -6630,29 +6692,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const homeGoals = fixture.team_h_score;
         const awayGoals = fixture.team_a_score;
         
-        // Update games played
+        // Update basic stats
         homeTeam.played++;
         awayTeam.played++;
-        
-        // Update goals
         homeTeam.goalsFor += homeGoals;
         homeTeam.goalsAgainst += awayGoals;
         awayTeam.goalsFor += awayGoals;
         awayTeam.goalsAgainst += homeGoals;
         
+        // Clean sheets
+        if (awayGoals === 0) homeTeam.cleanSheets++;
+        if (homeGoals === 0) awayTeam.cleanSheets++;
+        
+        // Extract additional stats from fixture-level data if available
+        if (fixture.stats && Array.isArray(fixture.stats)) {
+          fixture.stats.forEach((stat: any) => {
+            switch (stat.identifier) {
+              case 'yellow_cards':
+                if (stat.h) homeTeam.yellowCards += stat.h.length;
+                if (stat.a) awayTeam.yellowCards += stat.a.length;
+                break;
+              case 'red_cards':
+                if (stat.h) homeTeam.redCards += stat.h.length;
+                if (stat.a) awayTeam.redCards += stat.a.length;
+                break;
+              case 'saves':
+                if (stat.h) stat.h.forEach((save: any) => homeTeam.saves += save.value || 0);
+                if (stat.a) stat.a.forEach((save: any) => awayTeam.saves += save.value || 0);
+                break;
+              case 'own_goals':
+                if (stat.h) homeTeam.ownGoals += stat.h.length;
+                if (stat.a) awayTeam.ownGoals += stat.a.length;
+                break;
+              case 'penalties_saved':
+                if (stat.h) homeTeam.penaltiesSaved += stat.h.length;
+                if (stat.a) awayTeam.penaltiesSaved += stat.a.length;
+                break;
+              case 'penalties_missed':
+                if (stat.h) homeTeam.penaltiesMissed += stat.h.length;
+                if (stat.a) awayTeam.penaltiesMissed += stat.a.length;
+                break;
+            }
+          });
+        }
+        
+        // Process live data for this fixture's gameweek if available
+        const liveData = liveDataMap.get(fixture.event);
+        if (liveData && liveData.elements) {
+          Object.entries(liveData.elements).forEach(([playerId, playerData]: [string, any]) => {
+            const teamId = playerToTeamMap.get(parseInt(playerId));
+            if (!teamId) return;
+            
+            const team = teamStandings.get(teamId);
+            if (!team) return;
+            
+            // Only aggregate stats for this fixture's teams
+            if (teamId !== fixture.team_h && teamId !== fixture.team_a) return;
+            
+            const stats = playerData.stats || {};
+            const explain = playerData.explain || [];
+            
+            // Aggregate player stats to team level
+            if (stats.yellow_cards) team.yellowCards += stats.yellow_cards;
+            if (stats.red_cards) team.redCards += stats.red_cards;
+            if (stats.saves) team.saves += stats.saves;
+            if (stats.own_goals) team.ownGoals += stats.own_goals;
+            if (stats.penalties_saved) team.penaltiesSaved += stats.penalties_saved;
+            if (stats.penalties_missed) team.penaltiesMissed += stats.penalties_missed;
+            
+            // Extract advanced stats from explain array if available
+            explain.forEach((item: any) => {
+              if (item.stat === 'expected_goals') {
+                team.expectedGoalsFor += item.points || 0;
+              }
+              if (item.stat === 'expected_goals_conceded') {
+                team.expectedGoalsAgainst += item.points || 0;
+              }
+            });
+          });
+        }
+        
         // Determine match result and update points
         if (homeGoals > awayGoals) {
-          // Home win
           homeTeam.wins++;
           homeTeam.points += 3;
           awayTeam.losses++;
         } else if (awayGoals > homeGoals) {
-          // Away win
           awayTeam.wins++;
           awayTeam.points += 3;
           homeTeam.losses++;
         } else {
-          // Draw
           homeTeam.draws++;
           awayTeam.draws++;
           homeTeam.points += 1;
@@ -6660,13 +6789,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Calculate goal difference and create final standings
+      // Calculate goal difference and create final enhanced standings
       const standings = Array.from(teamStandings.values()).map((team: any) => ({
         ...team,
         goalDifference: team.goalsFor - team.goalsAgainst
       }));
       
-      // Sort by standard Premier League rules: points (desc), then goal difference (desc), then goals for (desc)
+      // Sort by standard Premier League rules
       standings.sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
         if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
@@ -6674,17 +6803,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Add position
-      const currentStandings = standings.map((team, index) => ({
+      const enhancedStandings = standings.map((team, index) => ({
         ...team,
         position: index + 1
       }));
       
-      console.log(`DEBUG: Current standings calculated for ${currentStandings.length} teams based on ${completedFixtures.length} completed matches`);
+      // Cache the result
+      currentStandingsCache.set('detailed_standings', {
+        data: enhancedStandings,
+        timestamp: now
+      });
       
-      res.json(currentStandings);
+      console.log(`DEBUG: Enhanced current standings calculated for ${enhancedStandings.length} teams based on ${completedFixtures.length} completed matches with detailed statistics`);
+      
+      res.json(enhancedStandings);
     } catch (error) {
-      console.error('Error generating current standings:', error);
-      res.status(500).json({ error: 'Failed to generate current standings' });
+      console.error('Error generating enhanced current standings:', error);
+      res.status(500).json({ error: 'Failed to generate enhanced current standings' });
     }
   });
 
