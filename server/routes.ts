@@ -6687,14 +6687,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const stats = playerData.stats || {};
           
-          // Only aggregate Expected Goals from goalkeepers (position 1) to avoid 11x multiplier
-          if (position === 1) {
+          // Expected Goals For: Aggregate from outfield players (positions 2,3,4) who actually score
+          if (position >= 2) { // Defenders, midfielders, forwards
             if (stats.expected_goals) {
               team.expectedGoalsFor += parseFloat(stats.expected_goals) || 0;
             } else if (stats.xg) {
               team.expectedGoalsFor += parseFloat(stats.xg) || 0;
             }
-            
+          }
+          
+          // Expected Goals Against: Only from goalkeepers (position 1) to avoid multiplier
+          if (position === 1) {
             if (stats.expected_goals_conceded) {
               team.expectedGoalsAgainst += parseFloat(stats.expected_goals_conceded) || 0;
             } else if (stats.xga) {
