@@ -7,7 +7,7 @@ import { MobileChartWrapper } from "@/components/ui/mobile-chart-wrapper";
 import { useChartResponsive, getResponsiveChartMargin, getResponsiveFontSizes } from "@/hooks/use-chart-responsive";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BootstrapData } from "@shared/schema";
-import { getDefaultGameweekRange, debugGameweekCalculation } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,14 @@ export default function TeamGoalProjections() {
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek); 
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
+
+  // Get available gameweeks for dropdown options (next 12 gameweeks)
+  const availableGameweeks = useMemo(() => {
+    if (!bootstrapData?.events) {
+      return Array.from({ length: 12 }, (_, i) => i + 1); // Fallback
+    }
+    return getNextGameweeksForDropdown(bootstrapData.events, 12);
+  }, [bootstrapData?.events]);
 
   // Update state when bootstrap data changes (e.g., on page load)
   useEffect(() => {
@@ -237,19 +245,11 @@ export default function TeamGoalProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {bootstrapData?.events ? (
-                        bootstrapData.events.map(event => (
-                          <SelectItem key={event.id} value={event.id.toString()}>
-                            {event.id}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        Array.from({ length: 38 }, (_, i) => (
-                          <SelectItem key={i + 1} value={(i + 1).toString()}>
-                            {i + 1}
-                          </SelectItem>
-                        ))
-                      )}
+                      {availableGameweeks.map(gameweek => (
+                        <SelectItem key={gameweek} value={gameweek.toString()}>
+                          {gameweek}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -261,19 +261,11 @@ export default function TeamGoalProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {bootstrapData?.events ? (
-                        bootstrapData.events.map(event => (
-                          <SelectItem key={event.id} value={event.id.toString()}>
-                            {event.id}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        Array.from({ length: 38 }, (_, i) => (
-                          <SelectItem key={i + 1} value={(i + 1).toString()}>
-                            {i + 1}
-                          </SelectItem>
-                        ))
-                      )}
+                      {availableGameweeks.map(gameweek => (
+                        <SelectItem key={gameweek} value={gameweek.toString()}>
+                          {gameweek}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
