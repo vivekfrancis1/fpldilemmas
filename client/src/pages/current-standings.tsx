@@ -251,6 +251,10 @@ export default function CurrentStandings() {
                       </div>
                     </th>
                     
+                    {/* Expected Goals - After Points */}
+                    <SortableHeader field="expectedGoalsFor">xGF</SortableHeader>
+                    <SortableHeader field="expectedGoalsAgainst">xGA</SortableHeader>
+                    
                     {/* Enhanced Statistics */}
                     <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l cursor-pointer hover:bg-gray-100 transition-colors"
                         onClick={() => handleSort('cleanSheets')}
@@ -268,8 +272,6 @@ export default function CurrentStandings() {
                     <SortableHeader field="penaltiesSaved">PS</SortableHeader>
                     <SortableHeader field="ownGoals">OG</SortableHeader>
                     <SortableHeader field="penaltiesMissed">PM</SortableHeader>
-                    <SortableHeader field="expectedGoalsFor">xGF</SortableHeader>
-                    <SortableHeader field="expectedGoalsAgainst">xGA</SortableHeader>
                     <SortableHeader field="tackles">T</SortableHeader>
                     <SortableHeader field="defensiveActions">DA</SortableHeader>
                   </tr>
@@ -327,13 +329,21 @@ export default function CurrentStandings() {
                         {team.points}
                       </td>
                       
+                      {/* Expected Goals - After Points */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600" data-testid={`expected-goals-for-${team.shortName}`}>
+                        {team.expectedGoalsFor.toFixed(1)}
+                      </td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-500" data-testid={`expected-goals-against-${team.shortName}`}>
+                        {team.expectedGoalsAgainst.toFixed(1)}
+                      </td>
+                      
                       {/* Clean Sheets */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-blue-600 border-l" data-testid={`clean-sheets-${team.shortName}`}>
                         {team.cleanSheets}
                       </td>
                       
                       {/* Cards */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-yellow-600 border-l" data-testid={`yellow-cards-${team.shortName}`}>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-yellow-600" data-testid={`yellow-cards-${team.shortName}`}>
                         {team.yellowCards}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-red-600" data-testid={`red-cards-${team.shortName}`}>
@@ -354,14 +364,6 @@ export default function CurrentStandings() {
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-red-500" data-testid={`penalties-missed-${team.shortName}`}>
                         {team.penaltiesMissed}
-                      </td>
-                      
-                      {/* Expected Goals */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600 border-l" data-testid={`expected-goals-for-${team.shortName}`}>
-                        {team.expectedGoalsFor.toFixed(1)}
-                      </td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-500" data-testid={`expected-goals-against-${team.shortName}`}>
-                        {team.expectedGoalsAgainst.toFixed(1)}
                       </td>
                       
                       {/* Defensive Stats */}
