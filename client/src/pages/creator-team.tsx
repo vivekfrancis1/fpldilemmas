@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  ArrowLeft,
   Crown,
   DollarSign,
   Shield,
@@ -260,6 +261,16 @@ export default function CreatorTeam() {
       {/* Header */}
       <div className="flex flex-col space-y-4">
         <div className="flex items-center gap-4">
+          <Link href="/content-creators">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="hover:bg-blue-50"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Creators
+            </Button>
+          </Link>
         </div>
         
         <div className="space-y-2">
