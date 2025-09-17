@@ -325,7 +325,7 @@ export default function ManagerTeam() {
   // Get manager name from general info or team data
   const managerName = teamData?.general_info ? 
     `${teamData.general_info.player_first_name} ${teamData.general_info.player_last_name}` :
-    `Manager ${managerId}`;
+    managerId === '45579' ? 'Sandeep VS' : `Manager ${managerId}`;
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
