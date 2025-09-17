@@ -9,35 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { EnhancedTable, TableColumn, TeamBadge } from "@/components/enhanced-table";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-
-interface TeamStats {
-  id: number;
-  name: string;
-  shortName: string;
-  code: number;
-  currentStats: {
-    points: number;
-    position: number;
-    form: string;
-    strengthAttackHome: number;
-    strengthAttackAway: number;
-    strengthDefenceHome: number;
-    strengthDefenceAway: number;
-    goalsScored?: number;
-    goalsConceded?: number;
-    cleanSheets?: number;
-  };
-  projectedStats: {
-    expectedGoals: number;
-    expectedGoalsConceded: number;
-    expectedAssists: number;
-  };
-  confidence?: {
-    goals: string;
-    assists: string;
-    cleanSheets: string;
-  };
-}
+import { TeamStats } from "@shared/schema";
 
 interface SortState {
   field: string;

@@ -68,6 +68,7 @@ import PlayerYellowCards from "./pages/player-yellow-cards";
 import PlayerRedCards from "./pages/player-red-cards";
 import PlayerBonusPoints from "./pages/player-bonus-points";
 import TeamGoalsSpreadBetting from "./pages/team-goals-spread-betting";
+import TeamStatistics from "./pages/team-statistics";
 import Login from "./pages/login";
 import ResponsiveTableDemo from "./pages/responsive-table-demo";
 
@@ -94,6 +95,7 @@ function Router() {
       <Route path="/transfer-tracker" component={TransferTracker} />
       <Route path="/league-comparison" component={LeagueComparison} />
       <Route path="/player-statistics" component={PlayerStats} />
+      <Route path="/team-statistics" component={TeamStatistics} />
       <Route path="/responsive-table-demo" component={ResponsiveTableDemo} />
 
       <Route path="/projected-goals-cs" component={ProjectedGoalsCS} />

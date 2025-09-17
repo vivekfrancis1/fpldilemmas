@@ -157,6 +157,36 @@ export const teamSchema = z.object({
   pulse_id: z.number(),
 });
 
+// Team statistics schema for comprehensive team data
+export const teamStatsSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  shortName: z.string(),
+  code: z.number(),
+  currentStats: z.object({
+    points: z.number(),
+    position: z.number(),
+    form: z.string(),
+    strengthAttackHome: z.number(),
+    strengthAttackAway: z.number(),
+    strengthDefenceHome: z.number(),
+    strengthDefenceAway: z.number(),
+    goalsScored: z.number().optional(),
+    goalsConceded: z.number().optional(),
+    cleanSheets: z.number().optional(),
+  }),
+  projectedStats: z.object({
+    expectedGoals: z.number(),
+    expectedGoalsConceded: z.number(),
+    expectedAssists: z.number(),
+  }),
+  confidence: z.object({
+    goals: z.string(),
+    assists: z.string(),
+    cleanSheets: z.string(),
+  }).optional(),
+});
+
 export const elementTypeSchema = z.object({
   id: z.number(),
   plural_name: z.string(),
@@ -209,6 +239,7 @@ export type Player = z.infer<typeof playerSchema>;
 export type HistoricalPlayerData = z.infer<typeof historicalPlayerDataSchema>;
 export type PlayerWithHistory = z.infer<typeof playerWithHistorySchema>;
 export type Team = z.infer<typeof teamSchema>;
+export type TeamStats = z.infer<typeof teamStatsSchema>;
 export type ElementType = z.infer<typeof elementTypeSchema>;
 export type Fixture = z.infer<typeof fixtureSchema>;
 export type BootstrapData = z.infer<typeof bootstrapDataSchema>;
