@@ -70,7 +70,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/fixtures", label: "Fixture Difficulty Rating", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
         { path: "/results-and-fixtures", label: "Results and Fixtures", icon: Trophy, description: "Complete Premier League schedule with results", popular: false },
         { path: "/recent-price-changes", label: "Recent Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
-        { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false }
+        { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false },
+        { path: "/current-standings", label: "Team Statistics", icon: Trophy, description: "Current league table based on completed matches", popular: false }
       ]
     },
     {
@@ -79,8 +80,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/projected-goals-cs", label: "Goals and Clean Sheets", icon: Target, description: "Projected goals & clean sheets", popular: false },
         { path: "/team-goal-projections", label: "Best Attacks", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-cs-projections", label: "Best Defences", icon: Shield, description: "Clean sheet probabilities", popular: false },
-        { path: "/projected-standings", label: "Standings", icon: Trophy, description: "Final league table projection", popular: false },
-        { path: "/current-standings", label: "Current Standings", icon: Trophy, description: "Current league table based on completed matches", popular: false }
+        { path: "/projected-standings", label: "Standings", icon: Trophy, description: "Final league table projection", popular: false }
       ]
     },
     {
