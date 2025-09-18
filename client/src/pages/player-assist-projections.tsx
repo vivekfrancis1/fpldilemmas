@@ -36,8 +36,8 @@ export default function PlayerAssistProjections() {
   // All useState hooks
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [startGameweek, setStartGameweek] = useState<number | null>(null);
-  const [endGameweek, setEndGameweek] = useState<number | null>(null);
+  const [startGameweek, setStartGameweek] = useState<number>(5);
+  const [endGameweek, setEndGameweek] = useState<number>(10);
   const [initialized, setInitialized] = useState(false);
   const [sortField, setSortField] = useState<SortField>('rangeTotal');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -64,7 +64,7 @@ export default function PlayerAssistProjections() {
   const { data: liveAssistData, isLoading: liveLoading, error: liveError } = useQuery<PlayerAssistProjection[]>({
     queryKey: ["/api/player-assist-projections", startGameweek, endGameweek],
     staleTime: 5 * 60 * 1000, // 5 minutes for live data
-    enabled: startGameweek !== null && endGameweek !== null, // Only fetch when gameweeks are set
+    enabled: true, // Always enabled since gameweeks have safe defaults
   });
 
   // ALL useMemo hooks
@@ -128,7 +128,7 @@ export default function PlayerAssistProjections() {
 
   // Generate dynamic gameweek columns based on selected range
   const dynamicGameweekColumns = useMemo(() => {
-    if (startGameweek === null || endGameweek === null) return [];
+    // Safe to use startGameweek and endGameweek (never null)
     const columns = [];
     for (let gw = startGameweek; gw <= endGameweek; gw++) {
       columns.push(gw);
@@ -138,7 +138,7 @@ export default function PlayerAssistProjections() {
 
   // Calculate dynamic range label
   const rangeLabel = useMemo(() => {
-    if (startGameweek === null || endGameweek === null) return 'Range Total';
+    // Safe to use startGameweek and endGameweek (never null)
     const gwCount = endGameweek - startGameweek + 1;
     return `${gwCount}GW Total`;
   }, [startGameweek, endGameweek]);
@@ -323,7 +323,7 @@ export default function PlayerAssistProjections() {
               <div className="flex items-center gap-3">
                 <Target className="h-5 w-5 text-green-600" />
                 <label className="text-sm font-semibold text-gray-700">From GW:</label>
-                <Select value={startGameweek?.toString() || ""} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
                   <SelectTrigger className="w-20 border-2 border-gray-200 hover:border-green-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
@@ -334,7 +334,7 @@ export default function PlayerAssistProjections() {
                   </SelectContent>
                 </Select>
                 <label className="text-sm font-semibold text-gray-700">To GW:</label>
-                <Select value={endGameweek?.toString() || ""} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
                   <SelectTrigger className="w-20 border-2 border-gray-200 hover:border-green-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
