@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Target, Filter, BarChart3, Trophy, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,8 +28,9 @@ export default function PlayerGoalsScoredProjections() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("total");
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
-  const [startGameweek, setStartGameweek] = useState<number>(4);
-  const [endGameweek, setEndGameweek] = useState<number>(9);
+  const [startGameweek, setStartGameweek] = useState<number | null>(null);
+  const [endGameweek, setEndGameweek] = useState<number | null>(null);
+  const [initialized, setInitialized] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("goals");
   
   const queryClient = useQueryClient();
@@ -44,6 +46,19 @@ export default function PlayerGoalsScoredProjections() {
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
+
+  // One-time initialization when bootstrap data loads
+  useEffect(() => {
+    if (!bootstrapData || initialized) return;
+    
+    const currentGW = computeCurrentGameweek(bootstrapData.events);
+    const nextGW = Math.min((currentGW ?? 3) + 1, 38);
+    const maxAvailableGW = Math.min(38, nextGW + 11); // Next 12 gameweeks max
+    
+    setStartGameweek(nextGW);
+    setEndGameweek(Math.min(nextGW + 5, maxAvailableGW)); // Next 6 gameweeks default
+    setInitialized(true);
+  }, [bootstrapData, initialized]);
 
   // Use fast cached endpoint with robust error handling
   const { data: playerGoalData, isLoading: playerGoalLoading, error } = useQuery<PlayerGoalProjection[]>({
@@ -69,6 +84,16 @@ export default function PlayerGoalsScoredProjections() {
   // Get current gameweek from bootstrap data
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 3;
   const nextGameweek = currentGameweek + 1;
+  const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
+
+  // Show loading while gameweeks not initialized
+  if (startGameweek === null || endGameweek === null) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   // Dynamic gameweek range based on user selection (default: starts from next gameweek)
   const selectedGameweeks = useMemo(() => {
@@ -338,7 +363,7 @@ export default function PlayerGoalsScoredProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 4).map(gw => (
+                    {Array.from({ length: Math.max(0, maxAvailableGW - nextGameweek + 1) }, (_, i) => i + nextGameweek).map(gw => (
                       <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
@@ -352,7 +377,7 @@ export default function PlayerGoalsScoredProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 4).filter(gw => gw >= startGameweek).map(gw => (
+                    {Array.from({ length: Math.max(0, maxAvailableGW - startGameweek + 1) }, (_, i) => i + startGameweek).map(gw => (
                       <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>

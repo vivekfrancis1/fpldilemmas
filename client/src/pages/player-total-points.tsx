@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -420,9 +420,8 @@ function createPlayerTotalPointsColumns(
   ];
 }
 
-interface BootstrapData {
-  events: Array<{ id: number; is_current: boolean; finished: boolean }>;
-}
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { BootstrapData } from "@shared/schema";
 
 export default function PlayerTotalPoints() {
   // Fetch bootstrap data to get current gameweek
@@ -430,6 +429,28 @@ export default function PlayerTotalPoints() {
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  const [startGameweek, setStartGameweek] = useState<number | null>(null);
+  const [endGameweek, setEndGameweek] = useState<number | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState<string>("all");
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // One-time initialization when bootstrap data loads
+  useEffect(() => {
+    if (!bootstrapData || initialized) return;
+    
+    const currentGW = computeCurrentGameweek(bootstrapData.events);
+    const nextGW = Math.min((currentGW ?? 3) + 1, 38);
+    const maxAvailableGW = Math.min(38, nextGW + 11); // Next 12 gameweeks max
+    
+    setStartGameweek(nextGW);
+    setEndGameweek(Math.min(nextGW + 5, maxAvailableGW)); // Next 6 gameweeks default
+    setInitialized(true);
+  }, [bootstrapData, initialized]);
 
   // Calculate current gameweek and upcoming gameweeks
   const currentGameweek = useMemo(() => {
@@ -439,23 +460,18 @@ export default function PlayerTotalPoints() {
   }, [bootstrapData]);
 
   const nextGameweek = currentGameweek + 1;
-  const defaultEndGameweek = Math.min(nextGameweek + 5, 38); // Next 6 gameweeks or up to GW38
+  const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
 
-  const [startGameweek, setStartGameweek] = useState(nextGameweek);
-  const [endGameweek, setEndGameweek] = useState(defaultEndGameweek);
-  const [selectedPosition, setSelectedPosition] = useState<string>("all");
-
-  // Update start and end gameweeks when bootstrap data loads
-  useMemo(() => {
-    if (bootstrapData && startGameweek === nextGameweek) { // Only update if still at default
-      setStartGameweek(nextGameweek);
-      setEndGameweek(defaultEndGameweek);
-    }
-  }, [bootstrapData, nextGameweek, defaultEndGameweek, startGameweek]);
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  // Show loading while gameweeks not initialized
+  if (startGameweek === null || endGameweek === null) {
+    return (
+      <div className="container mx-auto px-6 py-8">
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   // Fetch player total points data
   const { data: totalPointsData, isLoading, error } = useQuery<PlayerTotalPointsData[]>({
@@ -481,7 +497,7 @@ export default function PlayerTotalPoints() {
   // Generate gameweek range for table headers
   const gameweekRange = useMemo(() => {
     const range = [];
-    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+    for (let gw = startGameweek!; gw <= endGameweek!; gw++) {
       range.push(gw);
     }
     return range;

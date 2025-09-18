@@ -1,8 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
-interface BootstrapData {
-  events: Array<{ id: number; is_current: boolean; finished: boolean }>;
-}
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { BootstrapData } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +21,7 @@ interface PlayerAssistProjection {
   assistShare: number;
 }
 
-type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'sixGwTotal' | 'gw4' | 'gw5' | 'gw6' | 'gw7' | 'gw8' | 'gw9' | 'assistShare';
+type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'rangeTotal' | 'assistShare' | string; // string allows dynamic gameweek fields like 'gw4', 'gw5', etc.
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerAssistProjections() {
@@ -32,6 +31,27 @@ export default function PlayerAssistProjections() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  const [selectedPosition, setSelectedPosition] = useState<string>("all");
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [startGameweek, setStartGameweek] = useState<number | null>(null);
+  const [endGameweek, setEndGameweek] = useState<number | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('rangeTotal');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  // One-time initialization when bootstrap data loads
+  useEffect(() => {
+    if (!bootstrapData || initialized) return;
+    
+    const currentGW = computeCurrentGameweek(bootstrapData.events);
+    const nextGW = Math.min((currentGW ?? 3) + 1, 38);
+    const maxAvailableGW = Math.min(38, nextGW + 11); // Next 12 gameweeks max
+    
+    setStartGameweek(nextGW);
+    setEndGameweek(Math.min(nextGW + 5, maxAvailableGW)); // Next 6 gameweeks default
+    setInitialized(true);
+  }, [bootstrapData, initialized]);
+
   // Calculate current gameweek and upcoming gameweeks
   const currentGameweek = useMemo(() => {
     if (!bootstrapData?.events) return 3; // Default fallback
@@ -40,22 +60,16 @@ export default function PlayerAssistProjections() {
   }, [bootstrapData]);
 
   const nextGameweek = currentGameweek + 1;
-  const defaultEndGameweek = Math.min(nextGameweek + 5, 15); // Next 6 gameweeks or up to GW15
+  const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
 
-  const [selectedPosition, setSelectedPosition] = useState<string>("all");
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [startGameweek, setStartGameweek] = useState<number>(nextGameweek);
-  const [endGameweek, setEndGameweek] = useState<number>(defaultEndGameweek);
-
-  // Update start and end gameweeks when bootstrap data loads
-  useMemo(() => {
-    if (bootstrapData && startGameweek === nextGameweek) { // Only update if still at default
-      setStartGameweek(nextGameweek);
-      setEndGameweek(defaultEndGameweek);
-    }
-  }, [bootstrapData, nextGameweek, defaultEndGameweek, startGameweek]);
-  const [sortField, setSortField] = useState<SortField>('sixGwTotal');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  // Show loading while gameweeks not initialized
+  if (startGameweek === null || endGameweek === null) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
 
   // Fetch player assist projections data from cached database
   const { data: cachedAssistData, isLoading: cachedLoading, error: cachedError } = useQuery<PlayerAssistProjection[]>({
@@ -95,13 +109,13 @@ export default function PlayerAssistProjections() {
     playerAssistData.forEach(player => {
       Object.keys(player.gameweekProjections).forEach(gw => {
         const gwNum = parseInt(gw);
-        if (gwNum >= 4 && gwNum <= 15) { // Show only GW4-15 (12 gameweeks max)
+        if (gwNum >= nextGameweek && gwNum <= maxAvailableGW) { // Show next 12 gameweeks dynamically
           gameweeks.add(gwNum);
         }
       });
     });
     return Array.from(gameweeks).sort((a, b) => a - b);
-  }, [playerAssistData]);
+  }, [playerAssistData, nextGameweek, maxAvailableGW]);
 
   // Calculate dynamic totals based on selected gameweek range
   const getFilteredTotal = (player: PlayerAssistProjection) => {
@@ -111,6 +125,23 @@ export default function PlayerAssistProjections() {
     }
     return total;
   };
+
+  // Generate dynamic gameweek columns based on selected range
+  const dynamicGameweekColumns = useMemo(() => {
+    if (startGameweek === null || endGameweek === null) return [];
+    const columns = [];
+    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+      columns.push(gw);
+    }
+    return columns;
+  }, [startGameweek, endGameweek]);
+
+  // Calculate dynamic range label
+  const rangeLabel = useMemo(() => {
+    if (startGameweek === null || endGameweek === null) return 'Range Total';
+    const gwCount = endGameweek - startGameweek + 1;
+    return `${gwCount}GW Total`;
+  }, [startGameweek, endGameweek]);
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
@@ -143,7 +174,7 @@ export default function PlayerAssistProjections() {
           aValue = a.totalProjectedAssists;
           bValue = b.totalProjectedAssists;
           break;
-        case 'sixGwTotal':
+        case 'rangeTotal':
           aValue = getFilteredTotal(a);
           bValue = getFilteredTotal(b);
           break;
@@ -151,33 +182,21 @@ export default function PlayerAssistProjections() {
           aValue = a.assistShare;
           bValue = b.assistShare;
           break;
-        case 'gw4':
-          aValue = a.gameweekProjections[4] || 0;
-          bValue = b.gameweekProjections[4] || 0;
-          break;
-        case 'gw5':
-          aValue = a.gameweekProjections[5] || 0;
-          bValue = b.gameweekProjections[5] || 0;
-          break;
-        case 'gw6':
-          aValue = a.gameweekProjections[6] || 0;
-          bValue = b.gameweekProjections[6] || 0;
-          break;
-        case 'gw7':
-          aValue = a.gameweekProjections[7] || 0;
-          bValue = b.gameweekProjections[7] || 0;
-          break;
-        case 'gw8':
-          aValue = a.gameweekProjections[8] || 0;
-          bValue = b.gameweekProjections[8] || 0;
-          break;
-        case 'gw9':
-          aValue = a.gameweekProjections[9] || 0;
-          bValue = b.gameweekProjections[9] || 0;
-          break;
         default:
-          aValue = a.totalProjectedAssists;
-          bValue = b.totalProjectedAssists;
+          // Handle dynamic gameweek fields (like 'gw4', 'gw5', etc.)
+          if (sortField.startsWith('gw')) {
+            const gwNumber = parseInt(sortField.replace('gw', ''));
+            if (!isNaN(gwNumber)) {
+              aValue = a.gameweekProjections[gwNumber] || 0;
+              bValue = b.gameweekProjections[gwNumber] || 0;
+            } else {
+              aValue = a.totalProjectedAssists;
+              bValue = b.totalProjectedAssists;
+            }
+          } else {
+            aValue = a.totalProjectedAssists;
+            bValue = b.totalProjectedAssists;
+          }
       }
       
       if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -289,7 +308,7 @@ export default function PlayerAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableGameweeks.filter(gw => gw >= nextGameweek).map((gw, index) => (
+                    {Array.from({ length: Math.max(0, maxAvailableGW - nextGameweek + 1) }, (_, i) => i + nextGameweek).map((gw, index) => (
                       <SelectItem key={`start-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
@@ -300,7 +319,7 @@ export default function PlayerAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableGameweeks.filter(gw => gw >= nextGameweek && gw >= startGameweek).map((gw, index) => (
+                    {Array.from({ length: Math.max(0, maxAvailableGW - startGameweek + 1) }, (_, i) => i + startGameweek).map((gw, index) => (
                       <SelectItem key={`end-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
@@ -348,39 +367,16 @@ export default function PlayerAssistProjections() {
                               Player {getSortIcon('name')}
                             </Button>
                           </th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw4')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW4 {getSortIcon('gw4')}
-                            </Button>
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw5')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW5 {getSortIcon('gw5')}
-                            </Button>
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw6')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW6 {getSortIcon('gw6')}
-                            </Button>
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw7')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW7 {getSortIcon('gw7')}
-                            </Button>
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw8')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW8 {getSortIcon('gw8')}
-                            </Button>
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw9')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW9 {getSortIcon('gw9')}
-                            </Button>
-                          </th>
+                          {dynamicGameweekColumns.map((gw) => (
+                            <th key={`assists-header-gw${gw}`} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <Button variant="ghost" size="sm" onClick={() => handleSort(`gw${gw}`)} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                                GW{gw} {getSortIcon(`gw${gw}`)}
+                              </Button>
+                            </th>
+                          ))}
                           <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              6GW Total {getSortIcon('sixGwTotal')}
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('rangeTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                              {rangeLabel} {getSortIcon('rangeTotal')}
                             </Button>
                           </th>
                         </tr>
@@ -397,24 +393,11 @@ export default function PlayerAssistProjections() {
                                 compact={true}
                               />
                             </td>
-                            <td className="text-center py-3 px-1">
-                              {(player.gameweekProjections[4] || 0) > 0 ? (player.gameweekProjections[4] || 0).toFixed(2) : "-"}
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              {(player.gameweekProjections[5] || 0) > 0 ? (player.gameweekProjections[5] || 0).toFixed(2) : "-"}
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              {(player.gameweekProjections[6] || 0) > 0 ? (player.gameweekProjections[6] || 0).toFixed(2) : "-"}
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              {(player.gameweekProjections[7] || 0) > 0 ? (player.gameweekProjections[7] || 0).toFixed(2) : "-"}
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              {(player.gameweekProjections[8] || 0) > 0 ? (player.gameweekProjections[8] || 0).toFixed(2) : "-"}
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              {(player.gameweekProjections[9] || 0) > 0 ? (player.gameweekProjections[9] || 0).toFixed(2) : "-"}
-                            </td>
+                            {dynamicGameweekColumns.map((gw) => (
+                              <td key={`assists-cell-${player.playerId}-gw${gw}`} className="text-center py-3 px-1">
+                                {(player.gameweekProjections[gw] || 0) > 0 ? (player.gameweekProjections[gw] || 0).toFixed(2) : "-"}
+                              </td>
+                            ))}
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
                               {getFilteredTotal(player).toFixed(2)}
                             </td>
@@ -446,39 +429,16 @@ export default function PlayerAssistProjections() {
                               Player {getSortIcon('name')}
                             </Button>
                           </th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw4')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW4 {getSortIcon('gw4')}
-                            </Button>
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw5')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW5 {getSortIcon('gw5')}
-                            </Button>
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw6')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW6 {getSortIcon('gw6')}
-                            </Button>
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw7')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW7 {getSortIcon('gw7')}
-                            </Button>
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw8')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW8 {getSortIcon('gw8')}
-                            </Button>
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('gw9')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW9 {getSortIcon('gw9')}
-                            </Button>
-                          </th>
+                          {dynamicGameweekColumns.map((gw) => (
+                            <th key={`points-header-gw${gw}`} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <Button variant="ghost" size="sm" onClick={() => handleSort(`gw${gw}`)} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                                GW{gw} {getSortIcon(`gw${gw}`)}
+                              </Button>
+                            </th>
+                          ))}
                           <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('sixGwTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              6GW Total {getSortIcon('sixGwTotal')}
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('rangeTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                              {rangeLabel} {getSortIcon('rangeTotal')}
                             </Button>
                           </th>
                         </tr>
@@ -496,24 +456,11 @@ export default function PlayerAssistProjections() {
                                 compact={true}
                               />
                             </td>
-                            <td className="text-center py-3 px-1">
-                              {((player.gameweekProjections[4] || 0) * 3) > 0 ? ((player.gameweekProjections[4] || 0) * 3).toFixed(1) : "-"}
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              {((player.gameweekProjections[5] || 0) * 3) > 0 ? ((player.gameweekProjections[5] || 0) * 3).toFixed(1) : "-"}
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              {((player.gameweekProjections[6] || 0) * 3) > 0 ? ((player.gameweekProjections[6] || 0) * 3).toFixed(1) : "-"}
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              {((player.gameweekProjections[7] || 0) * 3) > 0 ? ((player.gameweekProjections[7] || 0) * 3).toFixed(1) : "-"}
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              {((player.gameweekProjections[8] || 0) * 3) > 0 ? ((player.gameweekProjections[8] || 0) * 3).toFixed(1) : "-"}
-                            </td>
-                            <td className="text-center py-3 px-1">
-                              {((player.gameweekProjections[9] || 0) * 3) > 0 ? ((player.gameweekProjections[9] || 0) * 3).toFixed(1) : "-"}
-                            </td>
+                            {dynamicGameweekColumns.map((gw) => (
+                              <td key={`points-cell-${player.playerId}-gw${gw}`} className="text-center py-3 px-1">
+                                {((player.gameweekProjections[gw] || 0) * 3) > 0 ? ((player.gameweekProjections[gw] || 0) * 3).toFixed(1) : "-"}
+                              </td>
+                            ))}
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
                               {filteredGwPoints.toFixed(1)}
                             </td>
