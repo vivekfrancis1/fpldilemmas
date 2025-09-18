@@ -62,8 +62,9 @@ export default function PlayerAssistProjections() {
   });
 
   const { data: liveAssistData, isLoading: liveLoading, error: liveError } = useQuery<PlayerAssistProjection[]>({
-    queryKey: ["/api/player-assist-projections"],
+    queryKey: ["/api/player-assist-projections", startGameweek, endGameweek],
     staleTime: 5 * 60 * 1000, // 5 minutes for live data
+    enabled: startGameweek !== null && endGameweek !== null, // Only fetch when gameweeks are set
   });
 
   // ALL useMemo hooks
