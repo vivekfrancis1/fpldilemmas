@@ -462,17 +462,6 @@ export default function PlayerTotalPoints() {
   const nextGameweek = currentGameweek + 1;
   const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
 
-  // Show loading while gameweeks not initialized
-  if (startGameweek === null || endGameweek === null) {
-    return (
-      <div className="container mx-auto px-6 py-8">
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      </div>
-    );
-  }
-
   // Fetch player total points data
   const { data: totalPointsData, isLoading, error } = useQuery<PlayerTotalPointsData[]>({
     queryKey: ["/api/cached/player-total-points", startGameweek, endGameweek],
@@ -486,7 +475,7 @@ export default function PlayerTotalPoints() {
     },
     staleTime: 60 * 60 * 1000, // 1 hour cache
     gcTime: 2 * 60 * 60 * 1000, // Keep in cache for 2 hours  
-    enabled: startGameweek <= endGameweek,
+    enabled: startGameweek !== null && endGameweek !== null && startGameweek <= endGameweek,
     retry: 2, // Increased retries since we removed manual timeout
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000), // Exponential backoff
     networkMode: 'online',
@@ -496,8 +485,9 @@ export default function PlayerTotalPoints() {
 
   // Generate gameweek range for table headers
   const gameweekRange = useMemo(() => {
+    if (!startGameweek || !endGameweek) return [];
     const range = [];
-    for (let gw = startGameweek!; gw <= endGameweek!; gw++) {
+    for (let gw = startGameweek; gw <= endGameweek; gw++) {
       range.push(gw);
     }
     return range;
@@ -577,6 +567,17 @@ export default function PlayerTotalPoints() {
     if (sortField !== field) return null;
     return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
+
+  // Show loading while gameweeks not initialized
+  if (startGameweek === null || endGameweek === null || isLoading) {
+    return (
+      <div className="container mx-auto px-6 py-8">
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (

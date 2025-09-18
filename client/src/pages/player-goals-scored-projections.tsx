@@ -86,17 +86,9 @@ export default function PlayerGoalsScoredProjections() {
   const nextGameweek = currentGameweek + 1;
   const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
 
-  // Show loading while gameweeks not initialized
-  if (startGameweek === null || endGameweek === null) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   // Dynamic gameweek range based on user selection (default: starts from next gameweek)
   const selectedGameweeks = useMemo(() => {
+    if (!startGameweek || !endGameweek) return [];
     const gameweeks = [];
     for (let gw = startGameweek; gw <= endGameweek; gw++) {
       gameweeks.push(gw);
@@ -281,7 +273,7 @@ export default function PlayerGoalsScoredProjections() {
     return 'bg-red-50 text-red-800';
   };
 
-  if (isLoading || playerGoalLoading) {
+  if (isLoading || playerGoalLoading || startGameweek === null || endGameweek === null) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
