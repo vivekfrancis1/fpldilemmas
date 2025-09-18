@@ -84,15 +84,22 @@ export default function PlayerAssistProjections() {
   const nextGameweek = currentGameweek + 1;
   const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
 
-  // Data selection logic - prefer cached data over live data when available
+  // Data selection logic - prefer cached data but use live data when gameweeks not available
   const playerAssistData = useMemo(() => {
-    // Prefer cached data when available and not empty
+    // Check if cached data contains the requested gameweek range
     if (cachedAssistData && cachedAssistData.length > 0) {
-      return cachedAssistData;
+      const samplePlayer = cachedAssistData[0];
+      const hasRequestedRange = startGameweek && endGameweek && 
+        samplePlayer.gameweekProjections[startGameweek] !== undefined && 
+        samplePlayer.gameweekProjections[endGameweek] !== undefined;
+      
+      if (hasRequestedRange) {
+        return cachedAssistData;
+      }
     }
-    // Fallback to live data when cached data is empty or unavailable
+    // Use live data when cached data doesn't contain requested range or is unavailable
     return liveAssistData;
-  }, [cachedAssistData, liveAssistData]);
+  }, [cachedAssistData, liveAssistData, startGameweek, endGameweek]);
 
   // Loading state - show loading if cached is loading, or if cached data is empty/unavailable and live is loading
   const isLoading = useMemo(() => {
