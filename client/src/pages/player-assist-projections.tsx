@@ -322,7 +322,7 @@ export default function PlayerAssistProjections() {
               <div className="flex items-center gap-3">
                 <Target className="h-5 w-5 text-green-600" />
                 <label className="text-sm font-semibold text-gray-700">From GW:</label>
-                <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                <Select value={startGameweek?.toString() || ""} onValueChange={(value) => setStartGameweek(parseInt(value))}>
                   <SelectTrigger className="w-20 border-2 border-gray-200 hover:border-green-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
@@ -333,12 +333,12 @@ export default function PlayerAssistProjections() {
                   </SelectContent>
                 </Select>
                 <label className="text-sm font-semibold text-gray-700">To GW:</label>
-                <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                <Select value={endGameweek?.toString() || ""} onValueChange={(value) => setEndGameweek(parseInt(value))}>
                   <SelectTrigger className="w-20 border-2 border-gray-200 hover:border-green-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: Math.max(0, maxAvailableGW - startGameweek + 1) }, (_, i) => i + startGameweek).map((gw, index) => (
+                    {startGameweek && Array.from({ length: Math.max(0, maxAvailableGW - startGameweek + 1) }, (_, i) => i + startGameweek).map((gw, index) => (
                       <SelectItem key={`end-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
