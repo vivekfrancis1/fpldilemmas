@@ -63,6 +63,13 @@ export default function PlayerAssistProjections() {
 
   const { data: liveAssistData, isLoading: liveLoading, error: liveError } = useQuery<PlayerAssistProjection[]>({
     queryKey: ["/api/player-assist-projections", startGameweek, endGameweek],
+    queryFn: async () => {
+      const response = await fetch(`/api/player-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assist projections: ${response.statusText}`);
+      }
+      return response.json();
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes for live data
     enabled: true, // Always enabled since gameweeks have safe defaults
   });
