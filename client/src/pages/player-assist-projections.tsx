@@ -25,12 +25,15 @@ type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'rangeTotal' | 
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerAssistProjections() {
+  // ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL LOGIC OR EARLY RETURNS
+  
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // All useState hooks
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
@@ -39,7 +42,7 @@ export default function PlayerAssistProjections() {
   const [sortField, setSortField] = useState<SortField>('rangeTotal');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
-  // One-time initialization when bootstrap data loads
+  // useEffect for initialization
   useEffect(() => {
     if (!bootstrapData || initialized) return;
     
@@ -52,7 +55,18 @@ export default function PlayerAssistProjections() {
     setInitialized(true);
   }, [bootstrapData, initialized]);
 
-  // Calculate current gameweek and upcoming gameweeks
+  // ALL useQuery hooks - REMOVED conditional enabled to ensure consistent hook order
+  const { data: cachedAssistData, isLoading: cachedLoading, error: cachedError } = useQuery<PlayerAssistProjection[]>({
+    queryKey: ["/api/cached/player-assists-projections"],
+    staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
+  });
+
+  const { data: liveAssistData, isLoading: liveLoading, error: liveError } = useQuery<PlayerAssistProjection[]>({
+    queryKey: ["/api/player-assist-projections"],
+    staleTime: 5 * 60 * 1000, // 5 minutes for live data
+  });
+
+  // ALL useMemo hooks
   const currentGameweek = useMemo(() => {
     if (!bootstrapData?.events) return 3; // Default fallback
     const currentEvent = bootstrapData.events.find(e => e.is_current);
@@ -62,31 +76,25 @@ export default function PlayerAssistProjections() {
   const nextGameweek = currentGameweek + 1;
   const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
 
-  // Show loading while gameweeks not initialized
-  if (startGameweek === null || endGameweek === null) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
-    );
-  }
+  // Data selection logic - prefer cached data over live data when available
+  const playerAssistData = useMemo(() => {
+    // Prefer cached data when available and not empty
+    if (cachedAssistData && cachedAssistData.length > 0) {
+      return cachedAssistData;
+    }
+    // Fallback to live data when cached data is empty or unavailable
+    return liveAssistData;
+  }, [cachedAssistData, liveAssistData]);
 
-  // Fetch player assist projections data from cached database
-  const { data: cachedAssistData, isLoading: cachedLoading, error: cachedError } = useQuery<PlayerAssistProjection[]>({
-    queryKey: ["/api/cached/player-assists-projections"],
-    staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
-  });
+  // Loading state - show loading if cached is loading, or if cached data is empty/unavailable and live is loading
+  const isLoading = useMemo(() => {
+    // If cached is loading, show loading
+    if (cachedLoading) return true;
+    // If cached data is empty or unavailable, and live data is loading, show loading
+    if ((!cachedAssistData || cachedAssistData.length === 0) && liveLoading) return true;
+    return false;
+  }, [cachedLoading, liveLoading, cachedAssistData]);
 
-  // Fallback to live data if cache is empty
-  const { data: liveAssistData, isLoading: liveLoading, error: liveError } = useQuery<PlayerAssistProjection[]>({
-    queryKey: ["/api/player-assist-projections"],
-    enabled: !cachedLoading && (!cachedAssistData || cachedAssistData.length === 0), // Only fetch if cache is empty
-    staleTime: 5 * 60 * 1000, // 5 minutes for live data
-  });
-
-  // Use cached data if available, otherwise use live data
-  const playerAssistData = cachedAssistData && cachedAssistData.length > 0 ? cachedAssistData : liveAssistData;
-  const isLoading = cachedLoading || ((!cachedAssistData || cachedAssistData.length === 0) && liveLoading);
   const error = cachedError || liveError;
 
   // Get unique teams and positions for filters
@@ -117,15 +125,6 @@ export default function PlayerAssistProjections() {
     return Array.from(gameweeks).sort((a, b) => a - b);
   }, [playerAssistData, nextGameweek, maxAvailableGW]);
 
-  // Calculate dynamic totals based on selected gameweek range
-  const getFilteredTotal = (player: PlayerAssistProjection) => {
-    let total = 0;
-    for (let gw = startGameweek; gw <= endGameweek; gw++) {
-      total += player.gameweekProjections[gw] || 0;
-    }
-    return total;
-  };
-
   // Generate dynamic gameweek columns based on selected range
   const dynamicGameweekColumns = useMemo(() => {
     if (startGameweek === null || endGameweek === null) return [];
@@ -152,6 +151,15 @@ export default function PlayerAssistProjections() {
       if (selectedTeam !== "all" && player.teamShort !== selectedTeam) return false;
       return true;
     });
+
+    // Calculate dynamic totals based on selected gameweek range
+    const getFilteredTotal = (player: PlayerAssistProjection) => {
+      let total = 0;
+      for (let gw = startGameweek || 0; gw <= (endGameweek || 0); gw++) {
+        total += player.gameweekProjections[gw] || 0;
+      }
+      return total;
+    };
 
     // Sort data
     filtered.sort((a, b) => {
@@ -209,6 +217,15 @@ export default function PlayerAssistProjections() {
     return filtered;
   }, [playerAssistData, selectedPosition, selectedTeam, startGameweek, endGameweek, sortField, sortDirection]);
 
+  // Calculate dynamic totals based on selected gameweek range
+  const getFilteredTotal = (player: PlayerAssistProjection) => {
+    let total = 0;
+    for (let gw = startGameweek || 0; gw <= (endGameweek || 0); gw++) {
+      total += player.gameweekProjections[gw] || 0;
+    }
+    return total;
+  };
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -226,6 +243,8 @@ export default function PlayerAssistProjections() {
       <ArrowUpDown className="h-4 w-4 text-green-600 rotate-180" /> : 
       <ArrowUpDown className="h-4 w-4 text-green-600" />;
   };
+
+  // ALL CONDITIONAL LOGIC AND EARLY RETURNS MUST COME AFTER ALL HOOKS
 
   if (error) {
     return (
