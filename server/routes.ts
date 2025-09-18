@@ -12341,7 +12341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .sort((a, b) => b.projectedAssists - a.projectedAssists);
       
       // Cache the processed response
-      assistsResponseCache = { data: responseData, timestamp: now };
+      assistsResponseCache = { data: responseData, timestamp: Date.now() };
       
       res.json(responseData);
     } catch (error) {
