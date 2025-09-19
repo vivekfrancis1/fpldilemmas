@@ -526,6 +526,7 @@ class RateLimiter {
 }
 
 const jobRateLimiter = new RateLimiter(5, 60000); // 5 jobs per minute
+const statusRateLimiter = new RateLimiter(30, 60000); // 30 requests per minute for status endpoint
 
 // Generate unique job ID
 function generateJobId(): string {
@@ -12912,6 +12913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // CRITICAL FIX: Enforce rate limiting to prevent DoS
       const clientId = req.session?.user?.id || req.ip || 'anonymous';
       if (!jobRateLimiter.isAllowed(clientId)) {
+        res.set('Retry-After', '60');
         res.status(429).json({ 
           error: 'Rate limit exceeded', 
           message: 'Too many requests. Please try again later.',
@@ -13038,6 +13040,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // STATUS POLLING ENDPOINT for Background Jobs
   app.get("/api/comprehensive-player-projections/status/:jobId", async (req, res) => {
     try {
+      // LIGHTWEIGHT RATE LIMITING: Apply basic protection for status polling
+      const clientId = req.session?.user?.id || req.ip || 'anonymous';
+      if (!statusRateLimiter.isAllowed(clientId)) {
+        res.set('Retry-After', '60');
+        return res.status(429).json({ 
+          error: 'Status polling rate limit exceeded', 
+          message: 'Too many status requests. Please try again later.',
+          retryAfter: 60 // seconds
+        });
+      }
+
       const { jobId } = req.params;
       
       if (!jobId) {
