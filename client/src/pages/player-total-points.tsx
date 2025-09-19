@@ -462,26 +462,52 @@ export default function PlayerTotalPoints() {
   const nextGameweek = currentGameweek + 1;
   const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
 
-  // Fetch player total points data
-  const { data: totalPointsData, isLoading, error } = useQuery<PlayerTotalPointsData[]>({
-    queryKey: ["/api/cached/player-total-points", startGameweek, endGameweek],
+  // ALL useQuery hooks - cached and live data sources
+  const { data: cachedTotalPointsData, isLoading: cachedLoading, error: cachedError } = useQuery<PlayerTotalPointsData[]>({
+    queryKey: ["/api/cached/player-total-points"],
+    staleTime: 60 * 60 * 1000, // 1 hour cache
+  });
+
+  const { data: liveTotalPointsData, isLoading: liveLoading, error: liveError } = useQuery<PlayerTotalPointsData[]>({
+    queryKey: ["/api/player-total-points", startGameweek, endGameweek],
     queryFn: async () => {
-      const response = await fetch(`/api/cached/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
-      
+      const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) {
-        throw new Error(`Failed to load total points: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch total points: ${response.statusText}`);
       }
       return response.json();
     },
-    staleTime: 60 * 60 * 1000, // 1 hour cache
-    gcTime: 2 * 60 * 60 * 1000, // Keep in cache for 2 hours  
-    enabled: startGameweek !== null && endGameweek !== null && startGameweek <= endGameweek,
-    retry: 2, // Increased retries since we removed manual timeout
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000), // Exponential backoff
-    networkMode: 'online',
-    placeholderData: [], // Show empty table immediately while loading
-    refetchOnWindowFocus: false, // Prevent unnecessary refetches
+    staleTime: 5 * 60 * 1000, // 5 minutes for live data
+    enabled: true, // Always enabled since gameweeks have safe defaults
   });
+
+  // Data selection logic - prefer cached data but use live data when gameweeks not available
+  const totalPointsData = useMemo(() => {
+    // Check if cached data contains the requested gameweek range
+    if (cachedTotalPointsData && cachedTotalPointsData.length > 0) {
+      const samplePlayer = cachedTotalPointsData[0];
+      const hasRequestedRange = startGameweek && endGameweek && 
+        samplePlayer.gameweekProjections[`gw${startGameweek}`] !== undefined && 
+        samplePlayer.gameweekProjections[`gw${endGameweek}`] !== undefined;
+      
+      if (hasRequestedRange) {
+        return cachedTotalPointsData;
+      }
+    }
+    // Use live data when cached data doesn't contain requested range or is unavailable
+    return liveTotalPointsData;
+  }, [cachedTotalPointsData, liveTotalPointsData, startGameweek, endGameweek]);
+
+  // Loading state - show loading if cached is loading, or if cached data is empty/unavailable and live is loading
+  const isLoading = useMemo(() => {
+    // If cached is loading, show loading
+    if (cachedLoading) return true;
+    // If cached data is empty or unavailable, and live data is loading, show loading
+    if ((!cachedTotalPointsData || cachedTotalPointsData.length === 0) && liveLoading) return true;
+    return false;
+  }, [cachedLoading, liveLoading, cachedTotalPointsData]);
+
+  const error = cachedError || liveError;
 
   // Generate gameweek range for table headers
   const gameweekRange = useMemo(() => {
