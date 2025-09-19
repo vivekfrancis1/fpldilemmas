@@ -12559,10 +12559,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("📊 Serving cached player minutes data from database");
       const cachedData = await db.select().from(playerMinutesProjections)
-        .where(eq(playerMinutesProjections.season, '2025/26'))
-        .orderBy(desc(playerMinutesProjections.minutes));
+        .where(eq(playerMinutesProjections.season, '2025/26'));
       
-      res.json(cachedData);
+      // Sort in JavaScript as a workaround for SQL syntax error
+      const sortedData = cachedData.sort((a, b) => (b.minutes || 0) - (a.minutes || 0));
+      
+      res.json(sortedData);
     } catch (error) {
       console.error("Error fetching cached minutes projections:", error);
       res.status(500).json({ error: "Failed to fetch cached minutes projections" });
