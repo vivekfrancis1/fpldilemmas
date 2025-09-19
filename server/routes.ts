@@ -32,6 +32,7 @@ import connectPg from "connect-pg-simple";
 import { internalFetch, getApiBaseUrl } from "./config";
 import { resultCache } from "./result-cache-service";
 import { applyMinutesScaling, applyMinutesScalingBatch, getExpectedMinutes } from './minutes-scaling-utils';
+import { syncProjectionService } from './sync-projection-service';
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -295,8 +296,650 @@ const MASTER_TEAM_DEFAULTS = {
   absoluteMaxGoals: 7
 };
 
-// Export totalPointsCache for access from other modules
-export const totalPointsCache = new Map();
+// Enhanced totalPointsCache with TTL and size management
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+  gameweekRange?: { start: number; end: number };
+  ttl?: number;
+}
+
+class EnhancedCache {
+  private cache = new Map<string, CacheEntry>();
+  private readonly maxSize: number;
+  private readonly defaultTTL: number;
+  
+  constructor(maxSize = 1000, defaultTTL = 30 * 60 * 1000) { // 30 minutes default TTL
+    this.maxSize = maxSize;
+    this.defaultTTL = defaultTTL;
+    
+    // Cleanup expired entries every 5 minutes
+    setInterval(() => this.cleanup(), 5 * 60 * 1000);
+  }
+  
+  set(key: string, value: any, ttl?: number): void {
+    // Evict oldest entries if cache is full
+    if (this.cache.size >= this.maxSize) {
+      this.evictOldest();
+    }
+    
+    this.cache.set(key, {
+      data: value,
+      timestamp: Date.now(),
+      ttl: ttl || this.defaultTTL
+    });
+  }
+  
+  get(key: string): any | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    
+    // Check if entry has expired
+    if (Date.now() - entry.timestamp > (entry.ttl || this.defaultTTL)) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return entry.data;
+  }
+  
+  has(key: string): boolean {
+    return this.get(key) !== null;
+  }
+  
+  delete(key: string): boolean {
+    return this.cache.delete(key);
+  }
+  
+  clear(): void {
+    this.cache.clear();
+  }
+  
+  size(): number {
+    return this.cache.size;
+  }
+  
+  private evictOldest(): void {
+    let oldestKey: string | null = null;
+    let oldestTime = Date.now();
+    
+    for (const [key, entry] of this.cache) {
+      if (entry.timestamp < oldestTime) {
+        oldestTime = entry.timestamp;
+        oldestKey = key;
+      }
+    }
+    
+    if (oldestKey) {
+      this.cache.delete(oldestKey);
+      console.log(`🧹 Evicted oldest cache entry: ${oldestKey}`);
+    }
+  }
+  
+  private cleanup(): void {
+    const now = Date.now();
+    let cleanedCount = 0;
+    
+    for (const [key, entry] of this.cache) {
+      if (now - entry.timestamp > (entry.ttl || this.defaultTTL)) {
+        this.cache.delete(key);
+        cleanedCount++;
+      }
+    }
+    
+    if (cleanedCount > 0) {
+      console.log(`🧹 Cleaned up ${cleanedCount} expired cache entries`);
+    }
+  }
+}
+
+// Export enhanced totalPointsCache
+export const totalPointsCache = new EnhancedCache(1000, 30 * 60 * 1000); // 1000 entries, 30min TTL
+
+// ========== BACKGROUND JOB MANAGEMENT SYSTEM ==========
+
+interface BackgroundJob {
+  id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  type: 'comprehensive-player-projections';
+  parameters: {
+    startGameweek: number;
+    endGameweek: number;
+  };
+  progress: {
+    current: number;
+    total: number;
+    message?: string;
+  };
+  result?: any;
+  error?: string;
+  createdAt: number;
+  startedAt?: number;
+  completedAt?: number;
+  lastUpdated: number;
+}
+
+interface GapFillInfo {
+  missingGameweeks: number[];
+  cachedGameweeks: number[];
+  hasPartialCache: boolean;
+}
+
+// Job tracking maps
+const backgroundJobs = new Map<string, BackgroundJob>();
+const activeJobsByParams = new Map<string, string>(); // paramKey -> jobId
+
+// Job management configuration
+const JOB_TIMEOUT_MS = 300000; // 5 minutes max processing time
+const MAX_CONCURRENT_JOBS = 3;
+const JOB_CLEANUP_INTERVAL = 3600000; // 1 hour cleanup interval
+const MAX_JOB_HISTORY = 100; // Keep max 100 completed jobs
+
+// Concurrency control
+class JobQueue {
+  private queue: string[] = [];
+  private processing = new Set<string>();
+  
+  async addJob(jobId: string): Promise<boolean> {
+    if (this.processing.size >= MAX_CONCURRENT_JOBS) {
+      this.queue.push(jobId);
+      console.log(`📋 Job ${jobId} queued (${this.processing.size}/${MAX_CONCURRENT_JOBS} slots busy, ${this.queue.length} in queue)`);
+      return false; // Job queued, not started immediately
+    }
+    
+    this.processing.add(jobId);
+    console.log(`🚀 Job ${jobId} started immediately (${this.processing.size}/${MAX_CONCURRENT_JOBS} slots busy)`);
+    return true; // Job started immediately
+  }
+  
+  finishJob(jobId: string): void {
+    this.processing.delete(jobId);
+    
+    // Start next job in queue if available
+    if (this.queue.length > 0 && this.processing.size < MAX_CONCURRENT_JOBS) {
+      const nextJobId = this.queue.shift()!;
+      this.processing.add(nextJobId);
+      console.log(`📋➡️🚀 Started queued job ${nextJobId} (${this.processing.size}/${MAX_CONCURRENT_JOBS} slots busy, ${this.queue.length} remaining in queue)`);
+      
+      // Start the queued job
+      processBackgroundJob(nextJobId).catch(error => {
+        console.error(`❌ Queued job ${nextJobId} failed:`, error);
+        markJobFailed(nextJobId, error.message || 'Unknown error');
+      });
+    }
+  }
+  
+  getStatus(): { processing: number; queued: number; capacity: number } {
+    return {
+      processing: this.processing.size,
+      queued: this.queue.length,
+      capacity: MAX_CONCURRENT_JOBS
+    };
+  }
+}
+
+const jobQueue = new JobQueue();
+
+// Rate limiting for job creation
+class RateLimiter {
+  private requests = new Map<string, number[]>();
+  private readonly maxRequests: number;
+  private readonly timeWindow: number;
+  
+  constructor(maxRequests = 5, timeWindowMs = 60000) { // 5 requests per minute
+    this.maxRequests = maxRequests;
+    this.timeWindow = timeWindowMs;
+    
+    // Cleanup old entries every minute
+    setInterval(() => this.cleanup(), 60000);
+  }
+  
+  isAllowed(identifier: string): boolean {
+    const now = Date.now();
+    const requests = this.requests.get(identifier) || [];
+    
+    // Remove old requests outside the time window
+    const validRequests = requests.filter(time => now - time < this.timeWindow);
+    
+    if (validRequests.length >= this.maxRequests) {
+      return false; // Rate limit exceeded
+    }
+    
+    // Add current request
+    validRequests.push(now);
+    this.requests.set(identifier, validRequests);
+    
+    return true;
+  }
+  
+  private cleanup(): void {
+    const now = Date.now();
+    for (const [identifier, requests] of this.requests) {
+      const validRequests = requests.filter(time => now - time < this.timeWindow);
+      if (validRequests.length === 0) {
+        this.requests.delete(identifier);
+      } else {
+        this.requests.set(identifier, validRequests);
+      }
+    }
+  }
+}
+
+const jobRateLimiter = new RateLimiter(5, 60000); // 5 jobs per minute
+
+// Generate unique job ID
+function generateJobId(): string {
+  return `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Generate parameter key for job deduplication
+function getParameterKey(startGw: number, endGw: number): string {
+  return `${startGw}-${endGw}`;
+}
+
+// Check for existing jobs with same parameters
+function findExistingJob(startGw: number, endGw: number): BackgroundJob | null {
+  const paramKey = getParameterKey(startGw, endGw);
+  const existingJobId = activeJobsByParams.get(paramKey);
+  
+  if (existingJobId) {
+    const job = backgroundJobs.get(existingJobId);
+    if (job && (job.status === 'pending' || job.status === 'processing')) {
+      return job;
+    }
+  }
+  
+  return null;
+}
+
+// Analyze cache gaps for optimization - ENHANCED with range key validation
+function analyzeGapFill(startGw: number, endGw: number): GapFillInfo {
+  const allGameweeks = [];
+  for (let gw = startGw; gw <= endGw; gw++) {
+    allGameweeks.push(gw);
+  }
+  
+  const cachedGameweeks: number[] = [];
+  const missingGameweeks: number[] = [];
+  
+  // CRITICAL FIX: Check range key first for FULL_CACHE_HIT eligibility
+  const rangeKey = `${startGw}-${endGw}`;
+  const hasRangeCache = totalPointsCache.has(rangeKey);
+  
+  if (hasRangeCache) {
+    // Full range is cached - all gameweeks are available
+    cachedGameweeks.push(...allGameweeks);
+    console.log(`🔍 FULL RANGE CACHE HIT: GW${startGw}-${endGw} available in range cache`);
+  } else {
+    // Check individual gameweek cache for partial coverage
+    for (const gw of allGameweeks) {
+      const individualKey = `${gw}-${gw}`;
+      if (totalPointsCache.has(individualKey)) {
+        cachedGameweeks.push(gw);
+      } else {
+        missingGameweeks.push(gw);
+      }
+    }
+    console.log(`🔍 INDIVIDUAL CACHE ANALYSIS: GW${startGw}-${endGw} - Missing: ${missingGameweeks.length}, Individual cached: ${cachedGameweeks.length}`);
+  }
+  
+  return {
+    missingGameweeks,
+    cachedGameweeks,
+    hasPartialCache: cachedGameweeks.length > 0 && !hasRangeCache
+  };
+}
+
+// Update job progress
+function updateJobProgress(jobId: string, current: number, total: number, message?: string): void {
+  const job = backgroundJobs.get(jobId);
+  if (job) {
+    job.progress = { current, total, message };
+    job.lastUpdated = Date.now();
+    console.log(`📊 Job ${jobId}: ${current}/${total} ${message || ''}`);
+  }
+}
+
+// Mark job as failed
+function markJobFailed(jobId: string, error: string): void {
+  const job = backgroundJobs.get(jobId);
+  if (job) {
+    job.status = 'failed';
+    job.error = error;
+    job.completedAt = Date.now();
+    job.lastUpdated = Date.now();
+    
+    // Remove from active jobs
+    const paramKey = getParameterKey(job.parameters.startGameweek, job.parameters.endGameweek);
+    activeJobsByParams.delete(paramKey);
+    
+    // Notify job queue that this job is finished
+    jobQueue.finishJob(jobId);
+    
+    console.error(`❌ Job ${jobId} failed: ${error}`);
+  }
+}
+
+// Mark job as completed
+function markJobCompleted(jobId: string, result: any): void {
+  const job = backgroundJobs.get(jobId);
+  if (job) {
+    job.status = 'completed';
+    job.result = result;
+    job.completedAt = Date.now();
+    job.lastUpdated = Date.now();
+    
+    // Remove from active jobs
+    const paramKey = getParameterKey(job.parameters.startGameweek, job.parameters.endGameweek);
+    activeJobsByParams.delete(paramKey);
+    
+    // Notify job queue that this job is finished
+    jobQueue.finishJob(jobId);
+    
+    console.log(`✅ Job ${jobId} completed successfully with ${result?.length || 0} projections`);
+  }
+}
+
+// Background job processor - ENHANCED with gap-fill and sync service
+async function processBackgroundJob(jobId: string): Promise<void> {
+  const job = backgroundJobs.get(jobId);
+  if (!job) {
+    console.error(`❌ Job ${jobId} not found`);
+    return;
+  }
+  
+  console.log(`🚀 Starting ENHANCED background job ${jobId} for GW${job.parameters.startGameweek}-${job.parameters.endGameweek}`);
+  
+  // Mark as processing
+  job.status = 'processing';
+  job.startedAt = Date.now();
+  job.lastUpdated = Date.now();
+  
+  // Set timeout protection
+  const timeoutId = setTimeout(() => {
+    markJobFailed(jobId, `Job timed out after ${JOB_TIMEOUT_MS / 1000} seconds`);
+  }, JOB_TIMEOUT_MS);
+  
+  try {
+    const { startGameweek, endGameweek } = job.parameters;
+    
+    // Step 1: ENHANCED Gap Analysis
+    updateJobProgress(jobId, 1, 6, 'Analyzing cache gaps with enhanced algorithm...');
+    const gapInfo = analyzeGapFill(startGameweek, endGameweek);
+    
+    console.log(`🔍 ENHANCED Gap analysis for GW${startGameweek}-${endGameweek}:`, {
+      missingGameweeks: gapInfo.missingGameweeks,
+      cachedGameweeks: gapInfo.cachedGameweeks.length,
+      hasPartialCache: gapInfo.hasPartialCache,
+      strategy: gapInfo.missingGameweeks.length === 0 ? 'FULL_CACHE_HIT' : 
+                gapInfo.hasPartialCache ? 'GAP_FILL' : 'FULL_CALCULATION'
+    });
+    
+    let finalProjectionData: any[];
+    
+    // Step 2: Smart Processing Strategy
+    if (gapInfo.missingGameweeks.length === 0) {
+      // FULL CACHE HIT - No calculation needed
+      updateJobProgress(jobId, 2, 6, 'All data available in cache - no calculation needed');
+      const cacheKey = `${startGameweek}-${endGameweek}`;
+      const cachedData = totalPointsCache.get(cacheKey);
+      
+      // CRITICAL FIX: Handle both range cache and assembled individual cache
+      if (cachedData) {
+        finalProjectionData = cachedData;
+        console.log(`⚡ FULL CACHE HIT: Using cached data for GW${startGameweek}-${endGameweek} (${finalProjectionData.length} projections)`);
+      } else {
+        // ENHANCED ASSEMBLY: Properly merge individual gameweek slices
+        console.log(`🔧 ASSEMBLING from individual GW slices for GW${startGameweek}-${endGameweek}`);
+        finalProjectionData = assembleFromIndividualGameweekSlices(startGameweek, endGameweek);
+        
+        if (finalProjectionData.length === 0) {
+          throw new Error('Cache inconsistency detected - no usable cache data found despite gap analysis showing full coverage');
+        }
+        
+        console.log(`⚡ ASSEMBLED CACHE HIT: Combined ${endGameweek - startGameweek + 1} individual GW slices into ${finalProjectionData.length} complete projections`);
+      }
+      
+    } else if (gapInfo.hasPartialCache) {
+      // GAP FILL STRATEGY - Calculate only missing gameweeks
+      updateJobProgress(jobId, 2, 6, `Gap-fill calculation for ${gapInfo.missingGameweeks.length} missing gameweeks...`);
+      
+      console.log(`🔧 GAP-FILL MODE: Calculating missing gameweeks ${gapInfo.missingGameweeks.join(', ')}`);
+      
+      // Calculate only missing gameweeks using sync service (NO HTTP RECURSION)
+      const newProjections = await syncProjectionService.calculateGameweekProjections(gapInfo.missingGameweeks);
+      
+      // Step 3: Merge with cached data
+      updateJobProgress(jobId, 3, 6, 'Merging new calculations with cached data...');
+      finalProjectionData = syncProjectionService.mergeProjections(
+        gapInfo.cachedGameweeks,
+        newProjections,
+        startGameweek,
+        endGameweek
+      );
+      
+      console.log(`🔄 GAP-FILL COMPLETED: Merged ${newProjections.size} new + ${gapInfo.cachedGameweeks.length} cached gameweeks`);
+      
+    } else {
+      // FULL CALCULATION - No cache available
+      updateJobProgress(jobId, 2, 6, 'Full calculation required - no cache available...');
+      
+      console.log(`🏗️ FULL CALCULATION MODE: No cache available for GW${startGameweek}-${endGameweek}`);
+      
+      // Use synchronous service to avoid HTTP recursion
+      finalProjectionData = await syncProjectionService.calculateComprehensiveProjections(
+        startGameweek, 
+        endGameweek
+      );
+      
+      console.log(`✅ FULL CALCULATION COMPLETED: ${finalProjectionData.length} projections calculated`);
+    }
+    
+    // Validate final data
+    if (!Array.isArray(finalProjectionData)) {
+      throw new Error(`Invalid final projection data type: expected array, got ${typeof finalProjectionData}`);
+    }
+    
+    if (finalProjectionData.length === 0) {
+      console.warn(`⚠️ No projections available for job ${jobId}`);
+      throw new Error('No projection data available after processing');
+    }
+    
+    // Step 4: ENHANCED Cache Storage - Both range and individual keys
+    updateJobProgress(jobId, 4, 6, 'Storing in enhanced cache with dual-key strategy...');
+    const now = Date.now();
+    const cacheKey = `${startGameweek}-${endGameweek}`;
+    
+    // Store the complete result in the main cache (range key) - SIMPLIFIED API
+    totalPointsCache.set(cacheKey, finalProjectionData);
+    
+    // CRITICAL FIX: Store individual gameweek keys with TRUE per-GW data slicing
+    updateJobProgress(jobId, 5, 6, 'Creating optimized individual gameweek cache entries...');
+    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+      const individualKey = `${gw}-${gw}`;
+      // MEMORY OPTIMIZATION: Store only gameweek-specific data subset
+      const gameweekSpecificData = finalProjectionData.map(player => {
+        if (!player.gameweekProjections) {
+          console.warn(`⚠️ Player ${player.playerId || player.id} missing gameweekProjections for GW${gw}`);
+          return null;
+        }
+        
+        // Extract only the specific gameweek data for this player
+        const gwKey = `gw${gw}`;
+        const gameweekPoints = player.gameweekProjections[gwKey];
+        
+        if (gameweekPoints === undefined) {
+          // Skip players with no data for this specific gameweek
+          return null;
+        }
+        
+        // Create gameweek-specific player object with minimal data
+        return {
+          playerId: player.playerId || player.id,
+          playerName: player.playerName || player.name,
+          position: player.position,
+          teamId: player.teamId,
+          gameweek: gw,
+          projectedPoints: gameweekPoints,
+          // Only include fields that are gameweek-specific or essential for assembly
+          price: player.price,
+          availability: player.availability
+        };
+      }).filter(player => player !== null); // Remove null entries
+      
+      console.log(`💾 OPTIMIZED CACHING: GW${gw} stored ${gameweekSpecificData.length} gameweek-specific player entries (vs ${finalProjectionData.length} full entries)`);
+      totalPointsCache.set(individualKey, gameweekSpecificData);
+    }
+    
+    console.log(`💾 ENHANCED CACHING: Stored range key '${cacheKey}' + ${endGameweek - startGameweek + 1} individual GW keys`);
+    
+    // Step 6: Complete job
+    updateJobProgress(jobId, 6, 6, 'Job completed successfully with enhanced caching');
+    clearTimeout(timeoutId);
+    markJobCompleted(jobId, finalProjectionData);
+    
+    console.log(`✅ ENHANCED Background job ${jobId} completed successfully with ${finalProjectionData.length} player projections`);
+    
+  } catch (error) {
+    clearTimeout(timeoutId);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`❌ ENHANCED Background job ${jobId} failed:`, errorMessage);
+    markJobFailed(jobId, errorMessage);
+  }
+}
+
+// Cleanup old jobs periodically - ENHANCED with MAX_JOB_HISTORY enforcement
+function cleanupOldJobs(): void {
+  const now = Date.now();
+  const cutoffTime = now - (24 * 60 * 60 * 1000); // 24 hours
+  
+  let cleanedCount = 0;
+  const completedJobs: { jobId: string; completedAt: number }[] = [];
+  
+  // First pass: Remove jobs older than 24 hours
+  for (const [jobId, job] of backgroundJobs.entries()) {
+    if (job.status === 'completed' || job.status === 'failed') {
+      if (job.completedAt && job.completedAt < cutoffTime) {
+        backgroundJobs.delete(jobId);
+        cleanedCount++;
+      } else if (job.completedAt) {
+        completedJobs.push({ jobId, completedAt: job.completedAt });
+      }
+    }
+  }
+  
+  // Second pass: Enforce MAX_JOB_HISTORY limit
+  if (completedJobs.length > MAX_JOB_HISTORY) {
+    // Sort by completion time (oldest first)
+    completedJobs.sort((a, b) => a.completedAt - b.completedAt);
+    
+    // Remove oldest jobs beyond the limit
+    const jobsToRemove = completedJobs.slice(0, completedJobs.length - MAX_JOB_HISTORY);
+    for (const { jobId } of jobsToRemove) {
+      backgroundJobs.delete(jobId);
+      cleanedCount++;
+    }
+  }
+  
+  if (cleanedCount > 0) {
+    console.log(`🧹 Cleaned up ${cleanedCount} old background jobs (MAX_JOB_HISTORY: ${MAX_JOB_HISTORY})`);
+  }
+}
+
+// Initialize job cleanup
+setInterval(cleanupOldJobs, JOB_CLEANUP_INTERVAL);
+
+// ========== ENHANCED ASSEMBLY FUNCTIONS ==========
+
+/**
+ * Assemble complete player projections from individual gameweek slices
+ * 
+ * This function takes individual gameweek cache entries (which now store only
+ * gameweek-specific data) and assembles them back into complete player objects
+ * with full gameweekProjections covering the entire range.
+ */
+function assembleFromIndividualGameweekSlices(startGameweek: number, endGameweek: number): any[] {
+  console.log(`🔧 ASSEMBLING: Reconstructing complete projections from GW${startGameweek}-${endGameweek} individual slices`);
+  
+  const playerProjectionMap = new Map<string, any>();
+  let totalSlicesProcessed = 0;
+  const missingGameweeks: number[] = [];
+  
+  // Step 1: Validate all required gameweeks are present
+  for (let gw = startGameweek; gw <= endGameweek; gw++) {
+    const individualKey = `${gw}-${gw}`;
+    const gameweekSlices = totalPointsCache.get(individualKey);
+    
+    if (!gameweekSlices || !Array.isArray(gameweekSlices)) {
+      missingGameweeks.push(gw);
+      console.warn(`⚠️ ASSEMBLY: Missing cache data for GW${gw}`);
+      continue;
+    }
+    
+    // Step 2: Process each player slice for this gameweek
+    for (const playerSlice of gameweekSlices) {
+      const playerId = playerSlice.playerId || playerSlice.id;
+      if (!playerId) {
+        console.warn(`⚠️ ASSEMBLY: Player slice missing ID in GW${gw}`);
+        continue;
+      }
+      
+      // Initialize player object if not exists
+      if (!playerProjectionMap.has(playerId)) {
+        playerProjectionMap.set(playerId, {
+          playerId: playerId,
+          playerName: playerSlice.playerName,
+          position: playerSlice.position,
+          teamId: playerSlice.teamId,
+          price: playerSlice.price,
+          availability: playerSlice.availability,
+          gameweekProjections: {}
+        });
+      }
+      
+      // Add this gameweek's projection to the player
+      const player = playerProjectionMap.get(playerId);
+      const gwKey = `gw${gw}`;
+      player.gameweekProjections[gwKey] = playerSlice.projectedPoints;
+      totalSlicesProcessed++;
+    }
+    
+    console.log(`🔧 ASSEMBLY: Processed ${gameweekSlices.length} player slices for GW${gw}`);
+  }
+  
+  // Step 3: Validation - Assert all required gameweeks are present
+  if (missingGameweeks.length > 0) {
+    throw new Error(`ASSEMBLY FAILED: Missing cache data for gameweeks: ${missingGameweeks.join(', ')}. Cannot assemble complete projections.`);
+  }
+  
+  // Step 4: Convert map to array and validate completeness
+  const assembledProjections = Array.from(playerProjectionMap.values());
+  let validationErrors = 0;
+  
+  for (const player of assembledProjections) {
+    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+      const gwKey = `gw${gw}`;
+      if (player.gameweekProjections[gwKey] === undefined) {
+        console.error(`❌ ASSEMBLY: Player ${player.playerId} missing projection for GW${gw}`);
+        validationErrors++;
+      }
+    }
+  }
+  
+  if (validationErrors > 0) {
+    throw new Error(`ASSEMBLY VALIDATION FAILED: Found ${validationErrors} missing gameweek projections. Data integrity compromised.`);
+  }
+  
+  // Step 5: Success metrics
+  const expectedGameweeks = endGameweek - startGameweek + 1;
+  console.log(`✅ ASSEMBLY SUCCESS: Reconstructed ${assembledProjections.length} complete players from ${totalSlicesProcessed} individual slices`);
+  console.log(`✅ ASSEMBLY VALIDATION: All ${assembledProjections.length} players have complete data for all ${expectedGameweeks} gameweeks`);
+  
+  return assembledProjections;
+}
+
+// ========== END ENHANCED ASSEMBLY FUNCTIONS ==========
+// ========== END BACKGROUND JOB MANAGEMENT SYSTEM ==========
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configure session middleware
@@ -12263,77 +12906,244 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let totalPointsResponseCache: Map<string, { data: any[]; timestamp: number }> = new Map();
   const TOTAL_POINTS_RESPONSE_CACHE_DURATION = 60 * 60 * 1000; // 1 hour cache (increased)
 
-  app.get("/api/cached/player-total-points", async (req, res) => {
+  // COMPREHENSIVE PLAYER PROJECTIONS ENDPOINT - ENHANCED with Rate Limiting & Concurrency Control
+  app.get("/api/comprehensive-player-projections", requireAuth, requireAdmin, async (req, res) => {
     try {
+      // CRITICAL FIX: Enforce rate limiting to prevent DoS
+      const clientId = req.session?.user?.id || req.ip || 'anonymous';
+      if (!jobRateLimiter.isAllowed(clientId)) {
+        res.status(429).json({ 
+          error: 'Rate limit exceeded', 
+          message: 'Too many requests. Please try again later.',
+          retryAfter: 60 // seconds
+        });
+        return;
+      }
+
       const { startGameweek = 4, endGameweek = 9 } = req.query;
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
       const cacheKey = `${start}-${end}`;
+      const now = Date.now();
+      
+      // Validate gameweek range
+      if (start < 1 || end > 38 || start > end) {
+        return res.status(400).json({ 
+          error: "Invalid gameweek range. Must be between 1-38 and start <= end" 
+        });
+      }
 
       // Return cached response if available and fresh for this specific range
-      const now = Date.now();
       const cachedData = totalPointsResponseCache.get(cacheKey);
       if (cachedData && (now - cachedData.timestamp) < TOTAL_POINTS_RESPONSE_CACHE_DURATION) {
-        console.log(`⚡ Serving player total points from response cache for GW${start}-${end} (${Math.round((now - cachedData.timestamp) / 1000 / 60)}min old)`);
+        console.log(`⚡ CACHE HIT: Serving comprehensive player projections from cache for GW${start}-${end} (${Math.round((now - cachedData.timestamp) / 1000 / 60)}min old)`);
         return res.json(cachedData.data);
       }
 
-      console.log("📊 Building comprehensive total points from optimized endpoint");
-      const startTime = Date.now();
-
-      // Use a much shorter timeout to fail fast and serve from cache
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout (further reduced)
-      
-      try {
-        const totalPointsResponse = await internalFetch(`api/player-total-points?startGameweek=${start}&endGameweek=${end}`, {
-          signal: controller.signal
+      // Check for existing active job with same parameters
+      const existingJob = findExistingJob(start, end);
+      if (existingJob) {
+        console.log(`🔄 Found existing job ${existingJob.id} for GW${start}-${end}, status: ${existingJob.status}`);
+        return res.status(202).json({
+          message: "Background job already in progress",
+          jobId: existingJob.id,
+          status: existingJob.status,
+          progress: existingJob.progress,
+          statusUrl: `/api/comprehensive-player-projections/status/${existingJob.id}`,
+          estimatedTime: "2-5 minutes",
+          concurrencyInfo: jobQueue.getStatus(),
+          createdAt: existingJob.createdAt,
+          lastUpdated: existingJob.lastUpdated
         });
-        clearTimeout(timeoutId);
-        
-        if (!totalPointsResponse.ok) {
-          throw new Error("Failed to fetch comprehensive total points data");
-        }
-        
-        const totalPointsData = await totalPointsResponse.json();
-
-        // Cache the comprehensive response with the specific gameweek range
-        totalPointsResponseCache.set(cacheKey, { data: totalPointsData, timestamp: now });
-        
-        const duration = Date.now() - startTime;
-        console.log(`📊 Built ${totalPointsData.length} comprehensive total points projections in ${duration}ms using main endpoint for GW${start}-${end}`);
-        
-        res.json(totalPointsData);
-        
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        
-        if (fetchError.name === 'AbortError') {
-          console.log("⚠️ Total points calculation timed out after 10s, checking for older cache");
-        } else {
-          console.error("Error fetching total points:", fetchError);
-        }
-
-        // If we have ANY cached data for this range (even if stale), serve it
-        if (cachedData) {
-          const age = Math.round((now - cachedData.timestamp) / 1000 / 60);
-          console.log(`🔄 Serving stale cache for GW${start}-${end} (${age}min old) due to timeout`);
-          return res.json(cachedData.data);
-        }
-        
-        // Fallback: return basic data structure with message
-        const fallbackData = [{
-          message: "Total points calculation is taking longer than expected. Please try again in a few minutes.",
-          isCalculating: true,
-          estimatedTime: "2-3 minutes"
-        }];
-        
-        res.json(fallbackData);
       }
+
+      // Create new background job
+      const jobId = generateJobId();
+      const paramKey = getParameterKey(start, end);
+      
+      const newJob: BackgroundJob = {
+        id: jobId,
+        status: 'pending',
+        type: 'comprehensive-player-projections',
+        parameters: {
+          startGameweek: start,
+          endGameweek: end
+        },
+        progress: {
+          current: 0,
+          total: 6, // Updated to match new enhanced process
+          message: 'Job created, analyzing concurrency...'
+        },
+        createdAt: now,
+        lastUpdated: now
+      };
+
+      // Store job and mark as active
+      backgroundJobs.set(jobId, newJob);
+      activeJobsByParams.set(paramKey, jobId);
+
+      console.log(`🚀 Created ENHANCED background job ${jobId} for comprehensive player projections GW${start}-${end}`);
+
+      // CONCURRENCY CONTROL: Add to job queue
+      const startedImmediately = await jobQueue.addJob(jobId);
+      
+      if (startedImmediately) {
+        // Job started immediately - begin processing
+        processBackgroundJob(jobId).catch(error => {
+          console.error(`❌ Enhanced background job ${jobId} failed:`, error);
+          markJobFailed(jobId, error.message || 'Unknown error');
+        });
+      } else {
+        // Job queued - update status
+        newJob.progress.message = `Queued for processing (${jobQueue.getStatus().processing}/${jobQueue.getStatus().capacity} slots busy)`;
+        console.log(`📋 Job ${jobId} queued due to concurrency limits`);
+      }
+
+      // Return 202 Accepted with enhanced job info  
+      res.status(202).json({
+        message: startedImmediately ? 
+          "Enhanced background job started for comprehensive player projections" :
+          "Job queued due to concurrency limits - will start automatically",
+        jobId: jobId,
+        status: 'pending',
+        progress: newJob.progress,
+        statusUrl: `/api/comprehensive-player-projections/status/${jobId}`,
+        estimatedTime: startedImmediately ? "2-5 minutes" : "3-8 minutes (including queue time)",
+        gameweekRange: { start, end },
+        concurrencyInfo: jobQueue.getStatus(),
+        rateLimitInfo: {
+          clientId: clientId.toString().substring(0, 8) + '...',
+          remaining: "Rate limit status: OK"
+        },
+        enhancements: {
+          gapFillEnabled: true,
+          syncServiceEnabled: true,
+          enhancedCaching: true,
+          concurrencyControl: true,
+          rateLimiting: true
+        },
+        createdAt: now,
+        lastUpdated: now
+      });
+
     } catch (error) {
-      console.error("Error building cached total points:", error);
-      res.status(500).json({ error: "Failed to build cached total points" });
+      console.error("Error creating enhanced comprehensive player projections job:", error);
+      res.status(500).json({ 
+        error: "Failed to create background job",
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
+  });
+
+  // STATUS POLLING ENDPOINT for Background Jobs
+  app.get("/api/comprehensive-player-projections/status/:jobId", async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      
+      if (!jobId) {
+        return res.status(400).json({ error: "Job ID is required" });
+      }
+
+      // Find the job
+      const job = backgroundJobs.get(jobId);
+      if (!job) {
+        return res.status(404).json({ 
+          error: "Job not found",
+          jobId: jobId,
+          message: "The requested job does not exist or has been cleaned up"
+        });
+      }
+
+      // Calculate job runtime
+      const now = Date.now();
+      const runtimeMs = now - job.createdAt;
+      const runtimeSeconds = Math.round(runtimeMs / 1000);
+
+      // Base response structure
+      const baseResponse = {
+        jobId: job.id,
+        status: job.status,
+        type: job.type,
+        parameters: job.parameters,
+        progress: job.progress,
+        createdAt: job.createdAt,
+        lastUpdated: job.lastUpdated,
+        runtimeSeconds: runtimeSeconds
+      };
+
+      // Handle different job statuses
+      switch (job.status) {
+        case 'pending':
+          res.json({
+            ...baseResponse,
+            message: "Job is queued and waiting to start",
+            estimatedTime: "1-3 minutes remaining",
+            retryAfter: 5 // Suggest client polls again in 5 seconds
+          });
+          break;
+
+        case 'processing':
+          const processingTime = job.startedAt ? now - job.startedAt : 0;
+          const estimatedTotal = 120000; // Estimate 2 minutes total processing
+          const progressPercent = Math.min(95, Math.round((job.progress.current / job.progress.total) * 100));
+          const estimatedRemaining = Math.max(10, Math.round((estimatedTotal - processingTime) / 1000));
+          
+          res.json({
+            ...baseResponse,
+            message: "Job is currently processing",
+            startedAt: job.startedAt,
+            processingTimeSeconds: Math.round(processingTime / 1000),
+            progressPercent: progressPercent,
+            estimatedRemainingSeconds: estimatedRemaining,
+            retryAfter: 3 // Suggest client polls again in 3 seconds
+          });
+          break;
+
+        case 'completed':
+          res.json({
+            ...baseResponse,
+            message: "Job completed successfully",
+            completedAt: job.completedAt,
+            result: job.result,
+            resultCount: job.result?.length || 0,
+            gameweekRange: `GW${job.parameters.startGameweek}-${job.parameters.endGameweek}`,
+            totalProcessingTime: job.completedAt && job.startedAt ? 
+              Math.round((job.completedAt - job.startedAt) / 1000) : null
+          });
+          break;
+
+        case 'failed':
+          res.status(500).json({
+            ...baseResponse,
+            message: "Job failed to complete",
+            error: job.error,
+            completedAt: job.completedAt,
+            gameweekRange: `GW${job.parameters.startGameweek}-${job.parameters.endGameweek}`,
+            retryRecommendation: "You can start a new job with the same parameters"
+          });
+          break;
+
+        default:
+          res.status(500).json({
+            ...baseResponse,
+            message: "Unknown job status",
+            error: `Unexpected job status: ${job.status}`
+          });
+      }
+
+    } catch (error) {
+      console.error("Error checking job status:", error);
+      res.status(500).json({ 
+        error: "Failed to check job status",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Legacy endpoint redirects to new async endpoint
+  app.get("/api/cached/player-total-points", async (req, res) => {
+    console.log("🔄 Redirecting legacy endpoint to new async comprehensive player projections");
+    res.redirect(307, `/api/comprehensive-player-projections?${new URLSearchParams(req.query as any).toString()}`);
   });
 
   // Global bootstrap cache for player metadata
