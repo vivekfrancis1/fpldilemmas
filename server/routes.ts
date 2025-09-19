@@ -5315,8 +5315,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Goals Scored Projections endpoint - pure projection methodology for future gameweeks only
+  // Player Goals Scored Projections endpoint - OPTIMIZED: Cache-first approach for sub-second performance
   app.get("/api/player-goals-scored-projections", async (req, res) => {
+    try {
+      console.log(`🚀 PERFORMANCE OPTIMIZED: Player Goals Projections using cache-first approach`);
+      
+      // PERFORMANCE FIX: Use cached data for ultra-fast response times
+      // The cached endpoint already includes minutes scaling and all adjustments
+      const cachedResponse = await internalFetch('api/cached/player-goals-projections');
+      
+      if (cachedResponse.ok) {
+        const cachedData = await cachedResponse.json();
+        console.log(`⚡ Served ${cachedData.length} goal projections from cache in <1 second`);
+        res.json(cachedData);
+        return;
+      }
+      
+      // Fallback: If cache is empty, return error (cache should be populated by background job)
+      console.error(`❌ Cached goals projections not available - cache may need to be populated`);
+      res.status(503).json({ 
+        error: "Projection data temporarily unavailable. Please try again in a few minutes.",
+        note: "Background cache population may be in progress"
+      });
+      
+    } catch (error) {
+      console.error("Error in optimized goals projections endpoint:", error);
+      res.status(500).json({ error: "Failed to fetch goal projections" });
+    }
+  });
+
+  // LEGACY ENDPOINT FOR INTERNAL USE ONLY - Full calculation for cache population
+  app.get("/api/player-goals-scored-projections-full-calculation", async (req, res) => {
     try {
       console.log(`DEBUG: Player Goals Scored Projections API called - using pure projections for next 12 gameweeks only`);
       
@@ -5629,8 +5658,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Assist Projections endpoint - pure projection methodology for future gameweeks only
+  // Player Assist Projections endpoint - OPTIMIZED: Cache-first approach for sub-second performance
   app.get("/api/player-assist-projections", async (req, res) => {
+    try {
+      console.log(`🚀 PERFORMANCE OPTIMIZED: Player Assist Projections using cache-first approach`);
+      
+      // PERFORMANCE FIX: Use cached data for ultra-fast response times
+      // The cached endpoint already includes minutes scaling and all adjustments
+      const cachedResponse = await internalFetch('api/cached/player-assists-projections');
+      
+      if (cachedResponse.ok) {
+        const cachedData = await cachedResponse.json();
+        console.log(`⚡ Served ${cachedData.length} assist projections from cache in <1 second`);
+        res.json(cachedData);
+        return;
+      }
+      
+      // Fallback: If cache is empty, return error (cache should be populated by background job)
+      console.error(`❌ Cached assist projections not available - cache may need to be populated`);
+      res.status(503).json({ 
+        error: "Projection data temporarily unavailable. Please try again in a few minutes.",
+        note: "Background cache population may be in progress"
+      });
+      
+    } catch (error) {
+      console.error("Error in optimized assist projections endpoint:", error);
+      res.status(500).json({ error: "Failed to fetch assist projections" });
+    }
+  });
+
+  // LEGACY ENDPOINT FOR INTERNAL USE ONLY - Full calculation for cache population
+  app.get("/api/player-assist-projections-full-calculation", async (req, res) => {
     try {
       console.log("DEBUG: Player Assist Projections API called - using pure projections for next 12 gameweeks only");
       
@@ -8553,13 +8611,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!bonusProbabilitiesResponse.ok) throw new Error("Failed to fetch bonus probabilities");
       const bonusProbabilitiesData = await bonusProbabilitiesResponse.json();
 
-      // Still fetch core projection data via API (until cached)
+      // PERFORMANCE FIX: Use correct cached endpoints that include minutes scaling
       const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse] = await Promise.all([
-        internalFetch(`api/goals-projections-cached`),
-        internalFetch(`api/assist-projections-cached`),
-        internalFetch(`api/minutes-projections-cached`),
-        internalFetch(`api/defensive-contribution-projections-cached`),
-        internalFetch(`api/team-cs-projections-cached`)
+        internalFetch(`api/cached/player-goals-projections`),
+        internalFetch(`api/cached/player-assists-projections`),
+        internalFetch(`api/cached/player-minutes-projections`),
+        internalFetch(`api/cached/player-defensive-projections`),
+        internalFetch(`api/cached/team-cs-projections`)
       ]);
 
       // Check API responses
@@ -12502,7 +12560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("📊 Serving cached player minutes data from database");
       const cachedData = await db.select().from(playerMinutesProjections)
         .where(eq(playerMinutesProjections.season, '2025/26'))
-        .orderBy(desc(playerMinutesProjections.expectedMinutes));
+        .orderBy(desc(playerMinutesProjections.minutes));
       
       res.json(cachedData);
     } catch (error) {

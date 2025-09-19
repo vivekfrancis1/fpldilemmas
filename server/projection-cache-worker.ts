@@ -129,9 +129,10 @@ class ProjectionCacheWorker {
     try {
       console.log(`📊 Caching goals projections with set piece adjustments...`);
       
-      // Fetch base projections and bootstrap data in parallel
+      // CIRCULAR DEPENDENCY FIX: Use full-calculation endpoint for cache population
+      // This avoids calling the optimized endpoint which uses cache-first approach
       const [projResponse, bootstrapResponse] = await Promise.all([
-        internalFetch('api/player-goals-scored-projections'),
+        internalFetch('api/player-goals-scored-projections-full-calculation'),
         fetch('https://fantasy.premierleague.com/api/bootstrap-static/')
       ]);
       
@@ -474,9 +475,10 @@ class ProjectionCacheWorker {
     try {
       console.log(`📊 Caching assist projections with set piece adjustments...`);
       
-      // Fetch base projections and bootstrap data in parallel
+      // CIRCULAR DEPENDENCY FIX: Use full-calculation endpoint for cache population
+      // This avoids calling the optimized endpoint which uses cache-first approach
       const [projResponse, bootstrapResponse] = await Promise.all([
-        internalFetch('api/player-assist-projections?startGameweek=4&endGameweek=9'),
+        internalFetch('api/player-assist-projections-full-calculation?startGameweek=4&endGameweek=9'),
         fetch('https://fantasy.premierleague.com/api/bootstrap-static/')
       ]);
       
