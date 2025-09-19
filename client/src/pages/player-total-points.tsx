@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 
@@ -513,9 +514,15 @@ export default function PlayerTotalPoints() {
   const error = cachedError || liveError;
 
   const handleRefreshData = async () => {
+    console.log('🔄 Total Points refresh button clicked!');
     setIsRefreshing(true);
+    console.log('🔄 isRefreshing set to true');
     try {
+      // Add a minimum delay to make spinner visible
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Invalidate all total points related queries
+      console.log('🔄 Invalidating total points queries...');
       await queryClient.invalidateQueries({ queryKey: ["/api/cached/player-total-points"] });
       await queryClient.invalidateQueries({ 
         predicate: (query) => {
@@ -524,9 +531,12 @@ export default function PlayerTotalPoints() {
         }
       });
       // Force refetch the current data
+      console.log('🔄 Refetching total points data...');
       await queryClient.refetchQueries({ queryKey: ["/api/cached/player-total-points"] });
+      console.log('🔄 Total points refresh completed!');
     } finally {
       setIsRefreshing(false);
+      console.log('🔄 isRefreshing set to false');
     }
   };
 

@@ -47,6 +47,7 @@ export default function GoalShare() {
   // Gameweek range state (only for current season)
   const [startGameweek, setStartGameweek] = useState<number>(4); // Will be updated in useEffect
   const [endGameweek, setEndGameweek] = useState<number>(9); // Will be updated in useEffect
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Update gameweek defaults when bootstrap data loads
   useEffect(() => {
@@ -107,18 +108,32 @@ export default function GoalShare() {
   }, [filteredData]);
 
   const handleRefreshData = async () => {
-    // Invalidate all goal share related queries
-    await queryClient.invalidateQueries({ 
-      predicate: (query) => {
-        const key = query.queryKey[0] as string;
-        return key?.includes("/api/cached/goal-share") || key?.includes("/api/goal-share-historical");
+    console.log('🔄 Goal Share refresh button clicked!');
+    setIsRefreshing(true);
+    console.log('🔄 isRefreshing set to true');
+    try {
+      // Add a minimum delay to make spinner visible
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Invalidate all goal share related queries
+      console.log('🔄 Invalidating goal share queries...');
+      await queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.includes("/api/cached/goal-share") || key?.includes("/api/goal-share-historical");
+        }
+      });
+      // Force refetch current query based on selected season
+      console.log('🔄 Refetching goal share data...');
+      if (selectedSeason === "current") {
+        await queryClient.refetchQueries({ queryKey: ["/api/cached/goal-share", startGameweek, endGameweek] });
+      } else {
+        await queryClient.refetchQueries({ queryKey: ["/api/goal-share-historical", selectedSeason] });
       }
-    });
-    // Force refetch current query based on selected season
-    if (selectedSeason === "current") {
-      await queryClient.refetchQueries({ queryKey: ["/api/cached/goal-share", startGameweek, endGameweek] });
-    } else {
-      await queryClient.refetchQueries({ queryKey: ["/api/goal-share-historical", selectedSeason] });
+      console.log('🔄 Goal share refresh completed!');
+    } finally {
+      setIsRefreshing(false);
+      console.log('🔄 isRefreshing set to false');
     }
   };
 
@@ -167,13 +182,14 @@ export default function GoalShare() {
             <div className="mt-6">
               <Button
                 onClick={handleRefreshData}
+                disabled={isRefreshing}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 disabled:opacity-50"
                 data-testid="button-refresh-data"
               >
-                <RefreshCw className="h-4 w-4" />
-                Refresh Data
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
               </Button>
             </div>
           </div>

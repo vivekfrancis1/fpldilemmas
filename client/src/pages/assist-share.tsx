@@ -47,6 +47,7 @@ export default function AssistShare() {
   // Gameweek range state (only for current season)
   const [startGameweek, setStartGameweek] = useState<number>(4); // Will be updated in useEffect
   const [endGameweek, setEndGameweek] = useState<number>(9); // Will be updated in useEffect
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Update gameweek defaults when bootstrap data loads
   useEffect(() => {
@@ -107,18 +108,32 @@ export default function AssistShare() {
   }, [filteredData]);
 
   const handleRefreshData = async () => {
-    // Invalidate all assist share related queries
-    await queryClient.invalidateQueries({ 
-      predicate: (query) => {
-        const key = query.queryKey[0] as string;
-        return key?.includes("/api/cached/assist-share") || key?.includes("/api/assist-share-historical");
+    console.log('🔄 Assist Share refresh button clicked!');
+    setIsRefreshing(true);
+    console.log('🔄 isRefreshing set to true');
+    try {
+      // Add a minimum delay to make spinner visible
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Invalidate all assist share related queries
+      console.log('🔄 Invalidating assist share queries...');
+      await queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.includes("/api/cached/assist-share") || key?.includes("/api/assist-share-historical");
+        }
+      });
+      // Force refetch current query based on selected season
+      console.log('🔄 Refetching assist share data...');
+      if (selectedSeason === "current") {
+        await queryClient.refetchQueries({ queryKey: ["/api/cached/assist-share", startGameweek, endGameweek] });
+      } else {
+        await queryClient.refetchQueries({ queryKey: ["/api/assist-share-historical", selectedSeason] });
       }
-    });
-    // Force refetch current query based on selected season
-    if (selectedSeason === "current") {
-      await queryClient.refetchQueries({ queryKey: ["/api/cached/assist-share", startGameweek, endGameweek] });
-    } else {
-      await queryClient.refetchQueries({ queryKey: ["/api/assist-share-historical", selectedSeason] });
+      console.log('🔄 Assist share refresh completed!');
+    } finally {
+      setIsRefreshing(false);
+      console.log('🔄 isRefreshing set to false');
     }
   };
 
@@ -167,13 +182,14 @@ export default function AssistShare() {
             <div className="mt-6">
               <Button
                 onClick={handleRefreshData}
+                disabled={isRefreshing}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 disabled:opacity-50"
                 data-testid="button-refresh-data"
               >
-                <RefreshCw className="h-4 w-4" />
-                Refresh Data
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
               </Button>
             </div>
           </div>

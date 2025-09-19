@@ -161,9 +161,15 @@ export default function PlayerAssistProjections() {
   }, [startGameweek, endGameweek]);
 
   const handleRefreshData = async () => {
+    console.log('🔄 Refresh button clicked!');
     setIsRefreshing(true);
+    console.log('🔄 isRefreshing set to true');
     try {
+      // Add a minimum delay to make spinner visible
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Invalidate all assist-related queries
+      console.log('🔄 Invalidating queries...');
       await queryClient.invalidateQueries({ queryKey: ["/api/cached/player-assists-projections"] });
       await queryClient.invalidateQueries({ 
         predicate: (query) => {
@@ -172,9 +178,12 @@ export default function PlayerAssistProjections() {
         }
       });
       // Force refetch
+      console.log('🔄 Refetching data...');
       await queryClient.refetchQueries({ queryKey: ["/api/cached/player-assists-projections"] });
+      console.log('🔄 Refresh completed!');
     } finally {
       setIsRefreshing(false);
+      console.log('🔄 isRefreshing set to false');
     }
   };
 
