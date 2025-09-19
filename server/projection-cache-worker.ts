@@ -435,6 +435,23 @@ class ProjectionCacheWorker {
       console.log(`   - Bruno Fernandes capped: ${brunoFernandesCapped ? 'YES' : 'NO'}`);
       console.log(`✅ Position-based capping completed`);
       
+      // BATCH MINUTES SCALING: Apply minutes scaling to all projections at once
+      console.log(`🕐 Applying batch minutes scaling to ${records.length} goal projections...`);
+      const scalingInput = records.map(record => ({
+        playerId: record.playerId,
+        gameweek: record.gameweek,
+        value: record.goals
+      }));
+      
+      const scaledResults = await applyMinutesScalingBatch(scalingInput, CURRENT_SEASON, false);
+      
+      // Update records with scaled values
+      for (let i = 0; i < records.length; i++) {
+        records[i].goals = Number(scaledResults[i].scaledValue);
+      }
+      
+      console.log(`✅ Batch minutes scaling applied to ${records.length} goal projections`);
+      
       // Insert in batches
       for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
         const batch = records.slice(i, i + this.BATCH_SIZE);
@@ -808,6 +825,23 @@ class ProjectionCacheWorker {
       console.log(`   - Key players capped: ${keyPlayersCapped.length > 0 ? keyPlayersCapped.join(', ') : 'None'}`);
       console.log(`✅ Position-based assist capping completed`);
       
+      // BATCH MINUTES SCALING: Apply minutes scaling to all assist projections at once
+      console.log(`🕐 Applying batch minutes scaling to ${records.length} assist projections...`);
+      const assistScalingInput = records.map(record => ({
+        playerId: record.playerId,
+        gameweek: record.gameweek,
+        value: record.assists
+      }));
+      
+      const assistScaledResults = await applyMinutesScalingBatch(assistScalingInput, CURRENT_SEASON, false);
+      
+      // Update records with scaled values
+      for (let i = 0; i < records.length; i++) {
+        records[i].assists = Number(assistScaledResults[i].scaledValue);
+      }
+      
+      console.log(`✅ Batch minutes scaling applied to ${records.length} assist projections`);
+      
       // Insert in batches
       for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
         const batch = records.slice(i, i + this.BATCH_SIZE);
@@ -989,8 +1023,25 @@ class ProjectionCacheWorker {
         }
       }
       
-      // Insert in batches
+      // BATCH MINUTES SCALING: Apply minutes scaling to all defensive projections at once
       if (records.length > 0) {
+        console.log(`🕐 Applying batch minutes scaling to ${records.length} defensive projections...`);
+        const defensiveScalingInput = records.map(record => ({
+          playerId: record.playerId,
+          gameweek: record.gameweek,
+          value: record.defensiveContribution
+        }));
+        
+        const defensiveScaledResults = await applyMinutesScalingBatch(defensiveScalingInput, '2025/26', false);
+        
+        // Update records with scaled values
+        for (let i = 0; i < records.length; i++) {
+          records[i].defensiveContribution = Number(defensiveScaledResults[i].scaledValue);
+        }
+        
+        console.log(`✅ Batch minutes scaling applied to ${records.length} defensive projections`);
+        
+        // Insert in batches
         for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
           const batch = records.slice(i, i + this.BATCH_SIZE);
           await db.insert(playerDefensiveProjections).values(batch);
