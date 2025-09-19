@@ -5687,12 +5687,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 // Use pure projections for all future gameweeks
                 const projectedTeamAssists = (typeof teamAssists === 'number') ? teamAssists : 0;
-                const playerAssistsForGW = projectedTeamAssists * (playerData.assistShare / 100);
+                const rawPlayerAssists = projectedTeamAssists * (playerData.assistShare / 100);
                 
-                console.log(`DEBUG: Assists - GW${gameweek} PROJECTION - ${teamData.teamShort} projected: ${projectedTeamAssists.toFixed(2)} assists, ${playerName}: ${playerAssistsForGW.toFixed(2)}`);
+                // Apply minutes scaling to the raw assist projection
+                const scaledPlayerAssists = await applyMinutesScaling(playerId, gameweek, rawPlayerAssists, "2025/26", false);
                 
-                gameweekProjections[gameweek] = Math.round(playerAssistsForGW * 100) / 100;
-                totalProjectedAssists += playerAssistsForGW;
+                console.log(`DEBUG: Assists - GW${gameweek} PROJECTION - ${teamData.teamShort} projected: ${projectedTeamAssists.toFixed(2)} assists, ${playerName}: ${rawPlayerAssists.toFixed(2)} (raw) → ${scaledPlayerAssists.toFixed(2)} (minutes-scaled)`);
+                
+                gameweekProjections[gameweek] = Math.round(scaledPlayerAssists * 100) / 100;
+                totalProjectedAssists += scaledPlayerAssists;
               }
               
               // Calculate season total from future gameweeks only

@@ -18,6 +18,7 @@ import {
   enforcePositionCaps,
   TeamPlayerShare
 } from "./projection-adjustments";
+import { applyMinutesScaling, applyMinutesScalingBatch } from './minutes-scaling-utils';
 
 interface ProjectionData {
   playerId: number;
