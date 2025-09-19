@@ -647,7 +647,7 @@ export default function PlayerTotalPoints() {
             {/* Gameweek Range */}
             <div className="space-y-2">
               <Label htmlFor="start-gameweek" className="text-sm font-medium">Start GW</Label>
-              <Select value={startGameweek?.toString() || ''} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+              <Select value={startGameweek?.toString() || ''} onValueChange={(value) => setStartGameweek(parseInt(value) || nextGameweek)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -661,7 +661,7 @@ export default function PlayerTotalPoints() {
 
             <div className="space-y-2">
               <Label htmlFor="end-gameweek" className="text-sm font-medium">End GW</Label>
-              <Select value={endGameweek?.toString() || ''} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+              <Select value={endGameweek?.toString() || ''} onValueChange={(value) => setEndGameweek(parseInt(value) || nextGameweek + 5)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
