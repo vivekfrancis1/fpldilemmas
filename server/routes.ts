@@ -10644,6 +10644,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const team = currentData.teams.find((t: any) => t.id === player.team);
         const position = currentData.element_types.find((p: any) => p.id === player.element_type);
         
+        // Apply minutes scaling to convert per-90 rates to expected totals
+        const avgExpectedMinutes = estimatedMinutesPerGW; // Use the same minutes estimation from above
+        const minutesScalingFactor = avgExpectedMinutes / 90;
+        
+        // Convert per-90 rates to expected totals using minutes scaling
+        const scaledDCProjection = await applyMinutesScaling(
+          player.id, 
+          currentGW + 1, // Use next gameweek as representative
+          currentDCPer90 * formFactor,
+          "2025/26",
+          false
+        );
+        
+        const scaledTacklesProjection = await applyMinutesScaling(
+          player.id,
+          currentGW + 1,
+          currentTacklesPer90 * formFactor,
+          "2025/26", 
+          false
+        );
+        
+        const scaledRecoveriesProjection = await applyMinutesScaling(
+          player.id,
+          currentGW + 1,
+          currentRecoveriesPer90 * formFactor,
+          "2025/26",
+          false
+        );
+        
+        const scaledCBIProjection = await applyMinutesScaling(
+          player.id,
+          currentGW + 1,
+          currentCBIPer90 * formFactor,
+          "2025/26",
+          false
+        );
+
         projections.push({
           playerId: player.id,
           playerName: player.web_name,
@@ -10662,10 +10699,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             recoveriesPer90: Math.round(currentRecoveriesPer90 * 100) / 100,
             cbiPer90: Math.round(currentCBIPer90 * 100) / 100
           },
-          projectedDefensiveContribution: Math.round((currentDCPer90 * formFactor) * 100) / 100,
-          projectedTackles: Math.round((currentTacklesPer90 * formFactor) * 100) / 100,
-          projectedRecoveries: Math.round((currentRecoveriesPer90 * formFactor) * 100) / 100,
-          projectedCBI: Math.round((currentCBIPer90 * formFactor) * 100) / 100,
+          // FIXED: Applied minutes scaling to convert per-90 rates to expected totals
+          projectedDefensiveContribution: Math.round(scaledDCProjection * 100) / 100,
+          projectedTackles: Math.round(scaledTacklesProjection * 100) / 100,
+          projectedRecoveries: Math.round(scaledRecoveriesProjection * 100) / 100,
+          projectedCBI: Math.round(scaledCBIProjection * 100) / 100,
+          expectedMinutesPerGameweek: avgExpectedMinutes, // Add this for transparency
           form: Math.round(formFactor * 100) / 100,
           confidence: Math.round(confidence * 100) / 100,
           gameweekProjections
