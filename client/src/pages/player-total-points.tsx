@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -424,6 +424,8 @@ import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { BootstrapData } from "@shared/schema";
 
 export default function PlayerTotalPoints() {
+  const queryClient = useQueryClient();
+  
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -508,6 +510,12 @@ export default function PlayerTotalPoints() {
   }, [cachedLoading, liveLoading, cachedTotalPointsData]);
 
   const error = cachedError || liveError;
+
+  const handleRefreshData = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["/api/cached/player-total-points"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/player-total-points"] });
+    await queryClient.refetchQueries({ queryKey: ["/api/cached/player-total-points"] });
+  };
 
   // Generate gameweek range for table headers
   const gameweekRange = useMemo(() => {
@@ -631,6 +639,18 @@ export default function PlayerTotalPoints() {
               <p className="fpl-page-subtitle">
                 Complete FPL points projection combining all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points
               </p>
+              <div className="fpl-page-actions">
+                <Button
+                  onClick={handleRefreshData}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border-white/30 text-white"
+                  data-testid="button-refresh-data"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh Data
+                </Button>
+              </div>
             </div>
           </div>
 

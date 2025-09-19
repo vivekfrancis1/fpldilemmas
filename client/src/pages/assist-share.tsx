@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Users, TrendingUp, Calendar, Trophy, Filter, Zap, Target } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Users, TrendingUp, Calendar, Trophy, Filter, Zap, Target, RefreshCw } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface SeasonAssistShareData {
   gameweek: number; // 0 for season-long data, or specific gameweek for range data
@@ -23,6 +24,8 @@ interface SeasonAssistShareData {
 }
 
 export default function AssistShare() {
+  const queryClient = useQueryClient();
+  
   const [selectedSeason, setSelectedSeason] = useState<string>("current");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
 
@@ -103,6 +106,12 @@ export default function AssistShare() {
     return [...filteredData].sort((a, b) => b.expectedAssists - a.expectedAssists);
   }, [filteredData]);
 
+  const handleRefreshData = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["/api/cached/assist-share"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/assist-share-historical"] });
+    await queryClient.refetchQueries({ queryKey: ["/api/cached/assist-share"] });
+  };
+
   if (error) {
     return (
       
@@ -145,6 +154,18 @@ export default function AssistShare() {
                 : `Each player's percentage share of their team's actual assists provided in the ${selectedSeason} season`
               }
             </p>
+            <div className="mt-6">
+              <Button
+                onClick={handleRefreshData}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                data-testid="button-refresh-data"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh Data
+              </Button>
+            </div>
           </div>
 
           {/* Controls */}

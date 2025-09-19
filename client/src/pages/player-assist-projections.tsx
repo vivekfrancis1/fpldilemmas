@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { BootstrapData } from "@shared/schema";
-import { useQuery } from "@tanstack/react-query";
-import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,8 @@ type SortDirection = 'asc' | 'desc';
 
 export default function PlayerAssistProjections() {
   // ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL LOGIC OR EARLY RETURNS
+  
+  const queryClient = useQueryClient();
   
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery<BootstrapData>({
@@ -156,6 +158,12 @@ export default function PlayerAssistProjections() {
     const gwCount = endGameweek - startGameweek + 1;
     return `${gwCount}GW Total`;
   }, [startGameweek, endGameweek]);
+
+  const handleRefreshData = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["/api/cached/player-assists-projections"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/player-assist-projections"] });
+    await queryClient.refetchQueries({ queryKey: ["/api/cached/player-assists-projections"] });
+  };
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
@@ -293,6 +301,18 @@ export default function PlayerAssistProjections() {
           <p className="fpl-page-subtitle">
             Projected Assists for each player across all remaining fixtures
           </p>
+          <div className="fpl-page-actions">
+            <Button
+              onClick={handleRefreshData}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border-white/30 text-white"
+              data-testid="button-refresh-data"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh Data
+            </Button>
+          </div>
         </div>
       </div>
 
