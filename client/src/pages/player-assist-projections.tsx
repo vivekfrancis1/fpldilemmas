@@ -43,6 +43,7 @@ export default function PlayerAssistProjections() {
   const [initialized, setInitialized] = useState(false);
   const [sortField, setSortField] = useState<SortField>('rangeTotal');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // useEffect for initialization
   useEffect(() => {
@@ -160,9 +161,21 @@ export default function PlayerAssistProjections() {
   }, [startGameweek, endGameweek]);
 
   const handleRefreshData = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["/api/cached/player-assists-projections"] });
-    await queryClient.invalidateQueries({ queryKey: ["/api/player-assist-projections"] });
-    await queryClient.refetchQueries({ queryKey: ["/api/cached/player-assists-projections"] });
+    setIsRefreshing(true);
+    try {
+      // Invalidate all assist-related queries
+      await queryClient.invalidateQueries({ queryKey: ["/api/cached/player-assists-projections"] });
+      await queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.includes("/api/player-assist-projections") || key?.includes("/api/cached/player-assists-projections");
+        }
+      });
+      // Force refetch
+      await queryClient.refetchQueries({ queryKey: ["/api/cached/player-assists-projections"] });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // Filter and sort data
@@ -304,13 +317,14 @@ export default function PlayerAssistProjections() {
           <div className="fpl-page-actions">
             <Button
               onClick={handleRefreshData}
+              disabled={isRefreshing}
               variant="outline"
               size="sm"
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border-white/30 text-white"
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border-white/30 text-white disabled:opacity-50"
               data-testid="button-refresh-data"
             >
-              <RefreshCw className="h-4 w-4" />
-              Refresh Data
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
             </Button>
           </div>
         </div>

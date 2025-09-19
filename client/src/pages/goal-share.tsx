@@ -107,9 +107,19 @@ export default function GoalShare() {
   }, [filteredData]);
 
   const handleRefreshData = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["/api/cached/goal-share"] });
-    await queryClient.invalidateQueries({ queryKey: ["/api/goal-share-historical"] });
-    await queryClient.refetchQueries({ queryKey: ["/api/cached/goal-share"] });
+    // Invalidate all goal share related queries
+    await queryClient.invalidateQueries({ 
+      predicate: (query) => {
+        const key = query.queryKey[0] as string;
+        return key?.includes("/api/cached/goal-share") || key?.includes("/api/goal-share-historical");
+      }
+    });
+    // Force refetch current query based on selected season
+    if (selectedSeason === "current") {
+      await queryClient.refetchQueries({ queryKey: ["/api/cached/goal-share", startGameweek, endGameweek] });
+    } else {
+      await queryClient.refetchQueries({ queryKey: ["/api/goal-share-historical", selectedSeason] });
+    }
   };
 
   if (error) {

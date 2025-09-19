@@ -435,6 +435,7 @@ export default function PlayerTotalPoints() {
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -512,9 +513,21 @@ export default function PlayerTotalPoints() {
   const error = cachedError || liveError;
 
   const handleRefreshData = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["/api/cached/player-total-points"] });
-    await queryClient.invalidateQueries({ queryKey: ["/api/player-total-points"] });
-    await queryClient.refetchQueries({ queryKey: ["/api/cached/player-total-points"] });
+    setIsRefreshing(true);
+    try {
+      // Invalidate all total points related queries
+      await queryClient.invalidateQueries({ queryKey: ["/api/cached/player-total-points"] });
+      await queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.includes("/api/player-total-points") || key?.includes("/api/cached/player-total-points");
+        }
+      });
+      // Force refetch the current data
+      await queryClient.refetchQueries({ queryKey: ["/api/cached/player-total-points"] });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // Generate gameweek range for table headers
@@ -642,13 +655,14 @@ export default function PlayerTotalPoints() {
               <div className="fpl-page-actions">
                 <Button
                   onClick={handleRefreshData}
+                  disabled={isRefreshing}
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border-white/30 text-white"
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border-white/30 text-white disabled:opacity-50"
                   data-testid="button-refresh-data"
                 >
-                  <RefreshCw className="h-4 w-4" />
-                  Refresh Data
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
                 </Button>
               </div>
             </div>

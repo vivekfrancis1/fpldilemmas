@@ -107,9 +107,19 @@ export default function AssistShare() {
   }, [filteredData]);
 
   const handleRefreshData = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["/api/cached/assist-share"] });
-    await queryClient.invalidateQueries({ queryKey: ["/api/assist-share-historical"] });
-    await queryClient.refetchQueries({ queryKey: ["/api/cached/assist-share"] });
+    // Invalidate all assist share related queries
+    await queryClient.invalidateQueries({ 
+      predicate: (query) => {
+        const key = query.queryKey[0] as string;
+        return key?.includes("/api/cached/assist-share") || key?.includes("/api/assist-share-historical");
+      }
+    });
+    // Force refetch current query based on selected season
+    if (selectedSeason === "current") {
+      await queryClient.refetchQueries({ queryKey: ["/api/cached/assist-share", startGameweek, endGameweek] });
+    } else {
+      await queryClient.refetchQueries({ queryKey: ["/api/assist-share-historical", selectedSeason] });
+    }
   };
 
   if (error) {
