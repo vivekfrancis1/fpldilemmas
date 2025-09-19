@@ -12505,8 +12505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assists: playerAssistProjections.assists
       })
         .from(playerAssistProjections)
-        .where(eq(playerAssistProjections.season, '2025/26'))
-        .orderBy(desc(playerAssistProjections.assists));
+        .where(eq(playerAssistProjections.season, '2025/26'));
       
       // If no cached data, return empty array
       if (!cachedData || cachedData.length === 0) {

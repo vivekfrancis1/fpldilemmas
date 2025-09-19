@@ -478,7 +478,7 @@ class ProjectionCacheWorker {
       // CIRCULAR DEPENDENCY FIX: Use full-calculation endpoint for cache population
       // This avoids calling the optimized endpoint which uses cache-first approach
       const [projResponse, bootstrapResponse] = await Promise.all([
-        internalFetch('api/player-assist-projections-full-calculation?startGameweek=4&endGameweek=9'),
+        internalFetch('api/player-assist-projections-full-calculation?startGameweek=4&endGameweek=10'),
         fetch('https://fantasy.premierleague.com/api/bootstrap-static/')
       ]);
       
@@ -505,7 +505,7 @@ class ProjectionCacheWorker {
         if (player.gameweekProjections) {
           const playerName = getPlayerNameForDebug(player.playerId, bootstrapData);
           
-          for (let gw = 4; gw <= 9; gw++) {
+          for (let gw = 4; gw <= 10; gw++) {
             // Enhanced key lookup with fallbacks for robust parsing
             const baseAssists = player.gameweekProjections[gw] || 
                               player.gameweekProjections[`gw${gw}`] || 
