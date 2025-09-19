@@ -5658,27 +5658,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Assist Projections endpoint - OPTIMIZED: Cache-first approach for sub-second performance
+  // Player Assist Projections endpoint - OPTIMIZED: Cache-first approach with range validation
   app.get("/api/player-assist-projections", async (req, res) => {
     try {
-      console.log(`🚀 PERFORMANCE OPTIMIZED: Player Assist Projections using cache-first approach`);
+      const startGameweek = parseInt(req.query.startGameweek as string) || 5;
+      const endGameweek = parseInt(req.query.endGameweek as string) || 10;
       
-      // PERFORMANCE FIX: Use cached data for ultra-fast response times
-      // The cached endpoint already includes minutes scaling and all adjustments
+      console.log(`🚀 PERFORMANCE OPTIMIZED: Player Assist Projections using cache-first approach for GW${startGameweek}-${endGameweek}`);
+      
+      // PERFORMANCE FIX: Use cached data if it contains the requested range
       const cachedResponse = await internalFetch('api/cached/player-assists-projections');
       
       if (cachedResponse.ok) {
         const cachedData = await cachedResponse.json();
-        console.log(`⚡ Served ${cachedData.length} assist projections from cache in <1 second`);
-        res.json(cachedData);
+        
+        // Check if cached data contains the full requested range
+        if (cachedData.length > 0) {
+          const samplePlayer = cachedData[0];
+          const hasRequestedRange = samplePlayer.gameweekProjections && 
+            samplePlayer.gameweekProjections[startGameweek] !== undefined && 
+            samplePlayer.gameweekProjections[endGameweek] !== undefined;
+          
+          if (hasRequestedRange) {
+            console.log(`⚡ Served ${cachedData.length} assist projections from cache for GW${startGameweek}-${endGameweek} in <1 second`);
+            res.json(cachedData);
+            return;
+          } else {
+            console.log(`🔄 Cache doesn't contain full range GW${startGameweek}-${endGameweek}, falling back to live calculation`);
+          }
+        }
+      }
+      
+      // Fallback: Use full calculation endpoint when cache doesn't have the requested range
+      console.log(`🌐 Using full calculation for GW${startGameweek}-${endGameweek} range`);
+      const liveResponse = await internalFetch(`api/player-assist-projections-full-calculation?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      
+      if (liveResponse.ok) {
+        const liveData = await liveResponse.json();
+        console.log(`✅ Served ${liveData.length} assist projections from live calculation`);
+        res.json(liveData);
         return;
       }
       
-      // Fallback: If cache is empty, return error (cache should be populated by background job)
-      console.error(`❌ Cached assist projections not available - cache may need to be populated`);
+      // Last resort: return error
+      console.error(`❌ Both cached and live assist projections failed`);
       res.status(503).json({ 
         error: "Projection data temporarily unavailable. Please try again in a few minutes.",
-        note: "Background cache population may be in progress"
+        note: "Both cache and live calculation failed"
       });
       
     } catch (error) {
