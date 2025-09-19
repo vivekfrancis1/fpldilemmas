@@ -13153,10 +13153,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Legacy endpoint redirects to new async endpoint
+  // CACHED PLAYER TOTAL POINTS - PUBLIC ENDPOINT - serves pre-computed data without auth
   app.get("/api/cached/player-total-points", async (req, res) => {
-    console.log("🔄 Redirecting legacy endpoint to new async comprehensive player projections");
-    res.redirect(307, `/api/comprehensive-player-projections?${new URLSearchParams(req.query as any).toString()}`);
+    try {
+      // Check if we have cached total points data - serve default GW5-10 range
+      const defaultCacheKey = "5-10";
+      const cachedData = totalPointsCache.get(defaultCacheKey);
+      
+      if (cachedData && (Date.now() - cachedData.timestamp) < TOTAL_POINTS_CACHE_DURATION) {
+        console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW5-10 (${cachedData.data.length} players)`);
+        return res.json(cachedData.data);
+      }
+      
+      // If no cached data available, return empty array to prevent errors
+      console.log("⚠️ No cached Player Total Points data available - returning empty array");
+      res.json([]);
+      
+    } catch (error) {
+      console.error("Error in cached player total points:", error);
+      res.status(500).json({ error: "Failed to get cached player total points" });
+    }
   });
 
   // Global bootstrap cache for player metadata

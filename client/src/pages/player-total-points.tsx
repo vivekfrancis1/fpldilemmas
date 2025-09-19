@@ -482,7 +482,7 @@ export default function PlayerTotalPoints() {
       return response.json();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes for live data
-    enabled: true, // Always enabled since gameweeks have safe defaults
+    enabled: startGameweek !== null && endGameweek !== null, // Only fetch when gameweek values are initialized
   });
 
   // Data selection logic - prefer cached data but use live data when gameweeks not available
