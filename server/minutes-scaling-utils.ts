@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { playerMinutesProjections } from "@shared/schema";
 
 // Cache for minutes data to avoid frequent database hits within the same request
@@ -71,6 +71,72 @@ export async function applyMinutesScaling(
 }
 
 /**
+ * Optimized batch fetch for minutes data - single database query instead of N queries
+ * 
+ * @param keys - Array of {playerId, gameweek, season} combinations
+ * @returns Map with composite keys "${playerId}-${gameweek}" to minutes values
+ */
+async function fetchMinutesBatch(
+  keys: Array<{ playerId: number; gameweek: number; season: string }>
+): Promise<Map<string, number>> {
+  if (!keys || keys.length === 0) {
+    return new Map();
+  }
+
+  try {
+    // Extract unique values for the batch query
+    const uniquePlayerIds = Array.from(new Set(keys.map(k => k.playerId)));
+    const uniqueGameweeks = Array.from(new Set(keys.map(k => k.gameweek)));
+    const seasons = Array.from(new Set(keys.map(k => k.season)));
+
+    // For simplicity, handle single season (most common case)
+    // Could be extended for multi-season support if needed
+    const season = seasons[0];
+
+    // Single optimized database query using inArray operations
+    const results = await db
+      .select({
+        playerId: playerMinutesProjections.playerId,
+        gameweek: playerMinutesProjections.gameweek,
+        minutes: playerMinutesProjections.minutes
+      })
+      .from(playerMinutesProjections)
+      .where(
+        and(
+          inArray(playerMinutesProjections.playerId, uniquePlayerIds),
+          inArray(playerMinutesProjections.gameweek, uniqueGameweeks),
+          eq(playerMinutesProjections.season, season)
+        )
+      );
+
+    // Build the result map with composite keys
+    const minutesMap = new Map<string, number>();
+    
+    for (const result of results) {
+      if (result.minutes != null) {
+        const key = `${result.playerId}-${result.gameweek}`;
+        let minutes = Number(result.minutes);
+        
+        // Validate and clamp minutes data
+        if (minutes < 0) {
+          minutes = 0;
+        } else if (minutes > 90) {
+          minutes = 90;
+        }
+        
+        minutesMap.set(key, minutes);
+      }
+    }
+
+    return minutesMap;
+
+  } catch (error) {
+    console.error(`❌ Error in fetchMinutesBatch:`, error);
+    return new Map(); // Return empty map on error
+  }
+}
+
+/**
  * Batch apply minutes scaling to multiple projections
  * More efficient for processing many players at once
  * 
@@ -89,16 +155,15 @@ export async function applyMinutesScalingBatch(
   }
 
   try {
-    // Get all unique player-gameweek combinations
-    const uniqueKeys = Array.from(new Set(projections.map(p => `${p.playerId}-${p.gameweek}`)));
-    const minutesData = new Map<string, number>();
+    // Prepare batch keys for optimized single-query fetch
+    const batchKeys = projections.map(p => ({
+      playerId: p.playerId,
+      gameweek: p.gameweek,
+      season: season
+    }));
     
-    // Batch fetch expected minutes for all players/gameweeks
-    for (const key of uniqueKeys) {
-      const [playerId, gameweek] = key.split('-').map(Number);
-      const expectedMinutes = await getExpectedMinutes(playerId, gameweek, season, false);
-      minutesData.set(key, expectedMinutes);
-    }
+    // OPTIMIZATION: Single database query instead of N sequential queries
+    const minutesData = await fetchMinutesBatch(batchKeys);
     
     // Apply scaling to all projections
     const results = projections.map(projection => {
