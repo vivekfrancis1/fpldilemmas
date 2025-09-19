@@ -40,15 +40,15 @@ export interface TeamPlayerShare {
 export const DEFAULT_GOAL_SHARE_CAPS: PositionCaps = {
   goalkeeper: 2,    // Max 2% share for GKs
   defender: 10,     // Max 10% share for defenders
-  midfielder: 30,   // Max 30% share for midfielders
-  forward: 40       // Max 40% share for forwards
+  midfielder: 25,   // Max 25% share for midfielders
+  forward: 30       // Max 30% share for forwards
 };
 
 // Default position caps for assist shares
 export const DEFAULT_ASSIST_SHARE_CAPS: PositionCaps = {
   goalkeeper: 2,    // Max 2% share for GKs
   defender: 15,     // Max 15% share for defenders
-  midfielder: 40,   // Max 40% share for midfielders
+  midfielder: 30,   // Max 30% share for midfielders
   forward: 25       // Max 25% share for forwards
 };
 
