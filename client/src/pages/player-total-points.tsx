@@ -377,7 +377,7 @@ function createPlayerTotalPointsColumns(
             <TeamBadge team={player.team} compact={true} />
           </div>
           <div className="text-xs text-gray-500 space-x-2">
-            <span className="font-medium">£{player.price ? (player.price / 10).toFixed(1) : '0.0'}m</span>
+            <span className="font-medium">£{player.price ? player.price.toFixed(1) : '0.0'}m</span>
             <span className="text-gray-400">•</span>
             <span>{player.ownership ? player.ownership.toFixed(1) : '0.0'}%</span>
           </div>
