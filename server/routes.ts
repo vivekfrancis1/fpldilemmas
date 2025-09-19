@@ -8822,7 +8822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Clean sheets from cached Team Clean Sheet Projections API
           let cleanSheetPoints = 0;
           if (csPoints > 0) {
-            const teamCSProb = teamCleanSheets[gw] || 0;
+            const teamCSProb = teamCleanSheetProjections[fplPlayer.team] ? teamCleanSheetProjections[fplPlayer.team][gw] || 0 : 0;
             // Convert percentage to decimal probability (API returns percentages like 24.5, need 0.245)
             const csDecimalProb = teamCSProb / 100;
             cleanSheetPoints = csDecimalProb * csPoints;
@@ -8835,6 +8835,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const minutesPoints = projectedMinutes >= 60 ? 2 : projectedMinutes > 0 ? 1 : 0;
           pointsFromMinutes[`gw${gw}`] = minutesPoints;
           totalMinutesPoints += minutesPoints;
+          
+          // Debug for first player to understand data structure
+          if (fplPlayer.id === 413) {
+            console.log(`DEBUG: Player ${fplPlayer.web_name} GW${gw} - Minutes: ${projectedMinutes}, Minutes Points: ${minutesPoints}, CS Prob: ${teamCleanSheetProjections[fplPlayer.team] ? teamCleanSheetProjections[fplPlayer.team][gw] || 0 : 0}`);
+          }
           
           // Defensive contributions from cached Defensive Projections API
           // NEW FORMULA: 2 × percentage probability of hitting threshold (≥12 for mid/fwd, ≥10 for def)
