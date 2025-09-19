@@ -146,7 +146,7 @@ export async function applyMinutesScalingBatch(
  * @param debug - Whether to log debug information
  * @returns Expected minutes (defaults to 90 if unavailable)
  */
-async function getExpectedMinutes(
+export async function getExpectedMinutes(
   playerId: number,
   gameweek: number,
   season: string,

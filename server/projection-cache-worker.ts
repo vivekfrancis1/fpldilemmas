@@ -363,7 +363,7 @@ class ProjectionCacheWorker {
       let brunoFernandesCapped = false;
       
       // Apply position capping to each team-gameweek group
-      for (const [key, teamRecords] of teamGameweekGroups.entries()) {
+      for (const [key, teamRecords] of Array.from(teamGameweekGroups.entries())) {
         const [teamId, gameweek] = key.split('-');
         const teamTotal = teamRecords.reduce((sum, r) => sum + r.goals, 0);
         
@@ -736,7 +736,7 @@ class ProjectionCacheWorker {
       let keyPlayersCapped = [];
       
       // Apply position capping to each team-gameweek group
-      for (const [key, teamRecords] of assistTeamGameweekGroups.entries()) {
+      for (const [key, teamRecords] of Array.from(assistTeamGameweekGroups.entries())) {
         const [teamId, gameweek] = key.split('-');
         const teamTotal = teamRecords.reduce((sum, r) => sum + r.assists, 0);
         
@@ -1450,7 +1450,7 @@ class ProjectionCacheWorker {
         console.log(`🔍 DEBUG: Found totalPointsCache with ${totalPointsCache.size} entries`);
         
         // Count total cached players across all gameweek ranges
-        for (const [key, value] of totalPointsCache.entries()) {
+        for (const [key, value] of Array.from(totalPointsCache.entries())) {
           console.log(`🔍 DEBUG: Cache entry key: ${key}, value type: ${typeof value}, has data: ${!!value?.data}`);
           
           if (value && value.data && Array.isArray(value.data)) {

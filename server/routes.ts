@@ -31,6 +31,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { internalFetch, getApiBaseUrl } from "./config";
 import { resultCache } from "./result-cache-service";
+import { applyMinutesScaling, applyMinutesScalingBatch, getExpectedMinutes } from './minutes-scaling-utils';
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -74,7 +75,10 @@ const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
 };
 
 // Pre-calculated team multipliers for ultra-fast lookups (no parsing needed)
-const TEAM_MULTIPLIERS = {
+const TEAM_MULTIPLIERS: {
+  attack: { [key: number]: number };
+  defense: { [key: number]: number };
+} = {
   // Attack multipliers
   attack: {
     12: 1.35, 13: 1.35, // Liverpool, Man City (elite)
@@ -356,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Store user in session
-      req.session.user = {
+      (req.session as any).user = {
         id: user.id,
         email: user.email,
         role: user.role,
@@ -495,10 +499,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return 0;
   }
 
-  // Set piece taker adjustment wrapper for assists (used in assist projections)
-  function getSetPieceTakerAdjustment(playerName: string, playerId: number, bootstrapData?: any): number {
-    return getCornerFreekickAdjustment(playerName, playerId, bootstrapData);
-  }
 
   // Bootstrap data cache (5 minutes)
   let bootstrapCache: { data: any; timestamp: number } | null = null;
@@ -4459,7 +4459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Generate goal share data using Team Goal Projections expected goals for this gameweek
-        const weekGoalShareData = generateGoalShareFromTeamProjections(bootstrapData, fixturesData, teamProjections, gameweek);
+        const weekGoalShareData = await generateGoalShareFromTeamProjections(bootstrapData, fixturesData, teamProjections, gameweek);
         console.log(`DEBUG: Generated ${weekGoalShareData.length} entries for GW${gameweek}`);
         allGoalShareData.push(...weekGoalShareData);
       }
@@ -4467,7 +4467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Generated ${allGoalShareData.length} total team entries for GW2-GW7 using Team Goal Projections`);
       
       // Debug: Check gameweeks in data
-      const uniqueGameweeks = [...new Set(allGoalShareData.map((item: any) => item.gameweek))];
+      const uniqueGameweeks = Array.from(new Set(allGoalShareData.map((item: any) => item.gameweek)));
       console.log(`DEBUG: Unique gameweeks in data: ${uniqueGameweeks.join(', ')}`);
       
       // Filter to requested gameweek if specific, otherwise return all
@@ -5001,7 +5001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
 
   // Helper function to calculate defensive contribution based on position
-  function calculateDefensiveContribution(elementType: number, cbi: number, tackles: number, recoveries: number): number {
+  const calculateDefensiveContribution = (elementType: number, cbi: number, tackles: number, recoveries: number): number => {
     // Defenders: DC = CBI + T
     if (elementType === 2) {
       return cbi + tackles;
@@ -5014,13 +5014,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     else {
       return cbi + tackles;
     }
-  }
+  };
 
   // Helper function to calculate per-90 stats
-  function calculatePer90(value: number, minutes: number): number {
+  const calculatePer90 = (value: number, minutes: number): number => {
     if (minutes === 0) return 0;
     return Math.round((value * 90 / minutes) * 100) / 100;
-  }
+  };
 
   // Historical Player Stats Storage API - populates database with previous seasons data
   app.post("/api/historical-player-stats/populate", async (req, res) => {
@@ -5420,8 +5420,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Use pure projections for all future gameweeks
             const projectedTeamGoals = (typeof teamGoals === 'number') ? teamGoals : 0;
-            const playerGoalsForGW = projectedTeamGoals * (player.goalShare / 100);
+            const rawGoalProjection = projectedTeamGoals * (player.goalShare / 100);
             
+            // Apply minutes scaling to the raw goal projection
+            const playerGoalsForGW = await applyMinutesScaling(playerId, gameweek, rawGoalProjection, "2025/26", false);
             
             gameweekProjections[gameweek] = Math.round(playerGoalsForGW * 100) / 100;
             totalProjectedGoals += playerGoalsForGW;
@@ -5458,6 +5460,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to convert database response format to teamSeasonTotals format
+  function convertResponseToTeamSeasonTotals(response: any[]): any {
+    const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: any } } } = {};
+    
+    if (!Array.isArray(response)) {
+      console.error(`ERROR: Expected array response, got:`, typeof response);
+      return {};
+    }
+    
+    response.forEach((teamData: any) => {
+      if (teamData && teamData.teamId && Array.isArray(teamData.players)) {
+        const teamId = teamData.teamId;
+        teamSeasonTotals[teamId] = {
+          expectedGoals: teamData.expectedGoals || 0,
+          players: {}
+        };
+        
+        teamData.players.forEach((player: any) => {
+          const playerId = player.id || player.playerId;
+          if (playerId) {
+            teamSeasonTotals[teamId].players[playerId] = {
+              name: player.name || player.playerName,
+              position: player.position,
+              projectedGoals: player.projectedGoals || 0,
+              goalShare: player.goalShare || 0
+            };
+          }
+        });
+      }
+    });
+    
+    console.log(`DEBUG: Converted ${response.length} team responses to teamSeasonTotals format with ${Object.keys(teamSeasonTotals).length} teams`);
+    return teamSeasonTotals;
+  }
+
   // Player Total Goal Projections endpoint - uses saved Goal Share data
   app.get("/api/player-goal-projections", async (req, res) => {
     try {
@@ -5480,27 +5517,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Using saved Goal Share data from ${new Date(savedGoalShareData.timestamp).toISOString()}`);
       
-      const { teamSeasonTotals, bootstrapData } = savedGoalShareData;
+      // Debug the structure of savedGoalShareData safely
+      console.log(`DEBUG: savedGoalShareData type:`, typeof savedGoalShareData);
+      console.log(`DEBUG: savedGoalShareData exists:`, !!savedGoalShareData);
+      if (savedGoalShareData && typeof savedGoalShareData === 'object') {
+        console.log(`DEBUG: savedGoalShareData keys:`, Object.keys(savedGoalShareData));
+        console.log(`DEBUG: teamSeasonTotals type:`, typeof savedGoalShareData.teamSeasonTotals);
+        console.log(`DEBUG: response type:`, typeof savedGoalShareData.response);
+      }
+      
+      // Handle both data structure formats - CRITICAL FIX for undefined teamSeasonTotals
+      let teamSeasonTotals: any;
+      let bootstrapData: any;
+      
+      if (savedGoalShareData.teamSeasonTotals) {
+        // Format 1: Fresh calculation with teamSeasonTotals object
+        teamSeasonTotals = savedGoalShareData.teamSeasonTotals;
+        bootstrapData = savedGoalShareData.bootstrapData;
+        console.log(`DEBUG: Using direct teamSeasonTotals format`);
+      } else if (savedGoalShareData.response && Array.isArray(savedGoalShareData.response)) {
+        // Format 2: Database response with response array - convert to expected format
+        console.log(`DEBUG: Converting database response format to teamSeasonTotals format`);
+        teamSeasonTotals = convertResponseToTeamSeasonTotals(savedGoalShareData.response);
+        bootstrapData = savedGoalShareData.bootstrapData;
+      } else {
+        console.error(`ERROR: savedGoalShareData has unexpected structure:`, savedGoalShareData);
+        throw new Error(`Invalid savedGoalShareData structure - missing both teamSeasonTotals and response`);
+      }
+      
+      // Safety check: ensure teamSeasonTotals exists and is valid before trying to iterate
+      if (!teamSeasonTotals || typeof teamSeasonTotals !== 'object' || Object.keys(teamSeasonTotals).length === 0) {
+        console.error(`ERROR: teamSeasonTotals is invalid or empty:`, teamSeasonTotals);
+        throw new Error(`Invalid team season totals data: ${typeof teamSeasonTotals}, keys: ${teamSeasonTotals ? Object.keys(teamSeasonTotals).length : 0}`);
+      }
+      
+      if (!bootstrapData || !bootstrapData.teams || !bootstrapData.elements) {
+        console.error(`ERROR: bootstrapData is invalid:`, bootstrapData);
+        throw new Error('Invalid bootstrap data');
+      }
+      
       const teams = bootstrapData.teams;
       const players = bootstrapData.elements;
       const positions = bootstrapData.element_types;
       
-      // Convert the saved goal share data to individual player projections
+      // Convert the saved goal share data to individual player projections with minutes scaling
       const allPlayerProjections: any[] = [];
       
-      Object.keys(teamSeasonTotals).forEach(teamIdStr => {
+      for (const teamIdStr of Object.keys(teamSeasonTotals)) {
         const teamId = parseInt(teamIdStr);
         const team = teams.find((t: any) => t.id === teamId);
         const teamData = teamSeasonTotals[teamId];
         
         if (team && teamData.expectedGoals > 0 && teamData.players) {
-          Object.keys(teamData.players).forEach(playerIdStr => {
+          for (const playerIdStr of Object.keys(teamData.players)) {
             const playerId = parseInt(playerIdStr);
             const playerData = teamData.players[playerId];
             const currentPlayer = players.find((p: any) => p.id === playerId);
             
             if (currentPlayer && playerData.projectedGoals > 0) {
               const goalShare = (playerData.projectedGoals / teamData.expectedGoals) * 100;
+              
+              // Apply seasonal average minutes scaling
+              // Calculate average minutes scaling across remaining gameweeks (5-38)
+              const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 4;
+              const remainingGameweeks = Array.from({length: 38 - currentGameweek}, (_, i) => currentGameweek + 1 + i);
+              
+              let totalMinutesFactor = 0;
+              let validGameweeks = 0;
+              
+              for (const gw of remainingGameweeks) {
+                try {
+                  // Get expected minutes for this gameweek (synchronous fallback if async fails)
+                  const expectedMinutes = await getExpectedMinutes(playerId, gw, "2025/26", false);
+                  const minutesFactor = Math.max(0, Math.min(1, expectedMinutes / 90));
+                  totalMinutesFactor += minutesFactor;
+                  validGameweeks++;
+                } catch (error) {
+                  // Use full minutes (1.0 factor) as fallback for this gameweek
+                  totalMinutesFactor += 1.0;
+                  validGameweeks++;
+                }
+              }
+              
+              const averageMinutesFactor = validGameweeks > 0 ? totalMinutesFactor / validGameweeks : 1.0;
+              const scaledProjectedGoals = playerData.projectedGoals * averageMinutesFactor;
               
               allPlayerProjections.push({
                 id: playerId,
@@ -5509,13 +5609,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 teamShort: team.short_name,
                 position: playerData.position,
                 currentPrice: currentPlayer.now_cost / 10,
-                projectedGoals: playerData.projectedGoals,
-                goalShare: Math.round(goalShare * 10) / 10
+                projectedGoals: Math.round(scaledProjectedGoals * 100) / 100,
+                goalShare: Math.round(goalShare * 10) / 10,
+                minutesFactor: Math.round(averageMinutesFactor * 1000) / 1000 // For debugging
               });
             }
-          });
+          }
         }
-      });
+      }
       
       // Sort by projected goals (highest first)
       allPlayerProjections.sort((a, b) => b.projectedGoals - a.projectedGoals);
@@ -5887,7 +5988,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = await fixturesResponse.json();
       
       // Get Goal Share data for the specific gameweek
-      const goalShareData = generateGoalShareFromTeamProjections(bootstrapData, fixturesData, [], gameweek);
+      const goalShareData = await generateGoalShareFromTeamProjections(bootstrapData, fixturesData, [], gameweek);
       
       // Find Jarrod Bowen in the data
       const bowenData: any[] = [];
@@ -6028,7 +6129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Helper function to generate Goal Share data using Team Goal Projections for consistency
-  function generateGoalShareFromTeamProjections(bootstrapData: any, fixturesData: any, teamGoalProjections: any[], targetGameweek: number) {
+  async function generateGoalShareFromTeamProjections(bootstrapData: any, fixturesData: any, teamGoalProjections: any[], targetGameweek: number) {
     const data: any[] = [];
     const teams = bootstrapData.teams;
     
@@ -6039,7 +6140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     console.log(`DEBUG: Found ${gwFixtures.length} fixtures for GW${targetGameweek}`);
     
-    gwFixtures.forEach((fixture: any) => {
+    for (const fixture of gwFixtures) {
       const homeTeam = teams.find((t: any) => t.id === fixture.team_h);
       const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
       
@@ -6063,10 +6164,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
             const homePlayerShares = distributeGoalShares(homePlayersInSquad, bootstrapData.element_types);
             
-            // Calculate projected goals for each player
-            homePlayerShares.forEach(player => {
-              player.projectedGoals = Math.round((homeExpectedGoals * player.goalShare / 100) * 100) / 100;
-            });
+            // Calculate projected goals for each player with minutes scaling
+            for (const player of homePlayerShares) {
+              const rawGoalProjection = homeExpectedGoals * player.goalShare / 100;
+              const scaledProjection = await applyMinutesScaling(player.playerId || player.id, targetGameweek, rawGoalProjection, "2025/26", false);
+              player.projectedGoals = Math.round(scaledProjection * 100) / 100;
+            }
             
             data.push({
               gameweek: targetGameweek,
@@ -6081,10 +6184,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
             const awayPlayerShares = distributeGoalShares(awayPlayersInSquad, bootstrapData.element_types);
             
-            // Calculate projected goals for each player
-            awayPlayerShares.forEach(player => {
-              player.projectedGoals = Math.round((awayExpectedGoals * player.goalShare / 100) * 100) / 100;
-            });
+            // Calculate projected goals for each player with minutes scaling
+            for (const player of awayPlayerShares) {
+              const rawGoalProjection = awayExpectedGoals * player.goalShare / 100;
+              const scaledProjection = await applyMinutesScaling(player.playerId || player.id, targetGameweek, rawGoalProjection, "2025/26", false);
+              player.projectedGoals = Math.round(scaledProjection * 100) / 100;
+            }
             
             data.push({
               gameweek: targetGameweek,
@@ -6097,7 +6202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-    });
+    }
     
     return data;
   }
@@ -6686,7 +6791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Process live data per gameweek to calculate per-gameweek Expected Goals and sum them up
-      for (const [gameweek, liveData] of liveDataMap) {
+      for (const [gameweek, liveData] of Array.from(liveDataMap)) {
         if (!liveData || !liveData.elements) continue;
         
         // Calculate per-gameweek xGF (sum) and xGA (max) for each team
@@ -6751,14 +6856,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Add this gameweek's xGF and xGA to season totals
-        for (const [teamId, xgf] of gameweekTeamXGF) {
+        for (const [teamId, xgf] of Array.from(gameweekTeamXGF)) {
           const team = teamStandings.get(teamId);
           if (team) {
             team.expectedGoalsFor += xgf;
           }
         }
         
-        for (const [teamId, xga] of gameweekTeamXGA) {
+        for (const [teamId, xga] of Array.from(gameweekTeamXGA)) {
           const team = teamStandings.get(teamId);
           if (team) {
             team.expectedGoalsAgainst += xga;
@@ -9839,7 +9944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log("✓ Content Creators API routes registered successfully");
 
   // Helper function to calculate defensive contribution based on position
-  function calculateDefensiveContribution(elementType: number, cbi: number, tackles: number, recoveries: number): number {
+  const calculateDefensiveContribution = (elementType: number, cbi: number, tackles: number, recoveries: number): number => {
     // Defenders: DC = CBI + T
     if (elementType === 2) {
       return cbi + tackles;
@@ -9852,13 +9957,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     else {
       return cbi + tackles;
     }
-  }
+  };
 
   // Helper function to calculate per-90 stats
-  function calculatePer90(value: number, minutes: number): number {
+  const calculatePer90 = (value: number, minutes: number): number => {
     if (minutes === 0) return 0;
     return Math.round((value * 90 / minutes) * 100) / 100;
-  }
+  };
 
   // Historical Player Stats Storage API - populates database with previous seasons data
   app.post("/api/historical-player-stats/populate", async (req, res) => {
