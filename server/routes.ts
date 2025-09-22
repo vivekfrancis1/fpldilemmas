@@ -36,6 +36,7 @@ import { resultCache } from "./result-cache-service";
 import { applyMinutesScaling, applyMinutesScalingBatch, getExpectedMinutes } from './minutes-scaling-utils';
 import { syncProjectionService } from './sync-projection-service';
 import { FPLScoringCacheService } from './fpl-scoring-cache-service';
+import { assessPlayerInjuryStatus, calculateInjuryAdjustedMinutes } from './injury-assessment-utils';
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -5317,7 +5318,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // ENHANCED INJURY/SUSPENSION ANALYSIS using new injury assessment utilities
     try {
-      const { assessPlayerInjuryStatus, calculateInjuryAdjustedMinutes } = require('./injury-assessment-utils');
       
       // Get comprehensive injury assessment
       const currentGameweek = 5; // Current season position - can be made dynamic
@@ -7774,34 +7774,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const team = teams.find((t: any) => t.id === player.team);
         const position = positions.find((p: any) => p.id === player.element_type);
         
-        // Base minutes calculation on current minutes and games played
-        const totalMinutes = player.minutes || 0;
-        const totalGames = Math.max(currentGameweek - 1, 1); // Avoid division by zero
-        const currentMinutesPerGame = Math.min(90, totalMinutes / totalGames); // Cap at 90 minutes per game
+        // Use enhanced calculateExpectedMinutes function with injury/suspension analysis
+        const expectedMinutesTotal = calculateExpectedMinutes(player, players);
         
-        // Expected minutes estimation based on current form and role
-        let expectedMinutesPerGame = 0;
-        if (currentMinutesPerGame >= 75) {
-          // Regular starter
-          expectedMinutesPerGame = Math.min(90, currentMinutesPerGame * 1.02); // Slight boost for consistent starters, capped at 90
-        } else if (currentMinutesPerGame >= 45) {
-          // Squad rotation player
-          expectedMinutesPerGame = Math.min(90, currentMinutesPerGame * 1.0); // Maintain current rate, capped at 90
-        } else if (currentMinutesPerGame >= 20) {
-          // Substitute/impact player
-          expectedMinutesPerGame = Math.min(60, currentMinutesPerGame * 1.15); // Potential for more opportunities
-        } else if (currentMinutesPerGame >= 5) {
-          // Fringe player
-          expectedMinutesPerGame = Math.min(30, currentMinutesPerGame * 1.2); // Small chance for breakthrough
-        } else {
-          // Rarely plays
-          expectedMinutesPerGame = Math.min(10, currentMinutesPerGame * 1.1);
+        // DEBUG: Log if calculation fails
+        if (expectedMinutesTotal === null || expectedMinutesTotal === undefined) {
+          console.log(`DEBUG: calculateExpectedMinutes returned ${expectedMinutesTotal} for player ${player.web_name || 'unknown'}`);
         }
         
-        // Adjust based on form and recent performances
-        const form = parseFloat(player.form) || 0;
-        const formAdjustment = Math.max(0.8, Math.min(1.2, 1 + (form - 5) / 20)); // Form adjustment between 0.8-1.2
-        expectedMinutesPerGame = Math.min(90, expectedMinutesPerGame * formAdjustment); // Apply form adjustment and cap at 90
+        // Convert season total to per-gameweek average (assumes ~35 remaining games)
+        const remainingGameweeks = Math.max(1, 38 - currentGameweek);
+        const expectedMinutesPerGame = Math.round(expectedMinutesTotal / remainingGameweeks);
+        
+        // Base minutes calculation on current minutes and games played for comparison
+        const totalMinutes = player.minutes || 0;
+        const totalGames = Math.max(currentGameweek - 1, 1);
+        const currentMinutesPerGame = Math.min(90, totalMinutes / totalGames)
         
 
         
@@ -7822,6 +7810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentMinutes: totalMinutes,
           currentMinutesPerGame: Math.round(currentMinutesPerGame * 10) / 10,
           expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
+          expectedMinutes: Math.round(expectedMinutesTotal), // Add this field for compatibility
           pointsFromMinutes: pointsFromMinutes,
           benchAppearances: Math.max(0, (player.total_points > 0 ? totalGames - (player.starts || 0) : 0))
         };
