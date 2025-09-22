@@ -6387,11 +6387,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if cached data contains the full requested range
         if (cachedData.length > 0) {
           const samplePlayer = cachedData[0];
-          const hasRequestedRange = samplePlayer.gameweekProjections && 
-            samplePlayer.gameweekProjections[startGameweek] !== undefined && 
-            samplePlayer.gameweekProjections[endGameweek] !== undefined;
           
-          if (hasRequestedRange) {
+          // Check EVERY gameweek in the requested range, not just start and end
+          let hasFullRange = true;
+          if (samplePlayer.gameweekProjections) {
+            for (let gw = startGameweek; gw <= endGameweek; gw++) {
+              if (samplePlayer.gameweekProjections[gw] === undefined) {
+                hasFullRange = false;
+                console.log(`🔄 Cache missing GW${gw} data for range GW${startGameweek}-${endGameweek}`);
+                break;
+              }
+            }
+          } else {
+            hasFullRange = false;
+          }
+          
+          if (hasFullRange) {
             console.log(`⚡ Served ${cachedData.length} assist projections from cache for GW${startGameweek}-${endGameweek} in <1 second`);
             res.json(cachedData);
             return;
