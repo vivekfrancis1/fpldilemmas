@@ -5429,8 +5429,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const MIN_MINUTES_THRESHOLD = 180; // Minimum minutes for meaningful data
     
     try {
-      // Get last season data
-      const lastSeasonPlayers = await storage.getHistoricalPlayers(LAST_SEASON);
+      // Use cached historical data service for ultra-fast lookup
+      const { historicalCacheService } = await import("./historical-cache-service");
+      const lastSeasonPlayers = await historicalCacheService.getCached2024Data();
+      
       const lastSeasonPlayer = lastSeasonPlayers?.find(p => 
         p.playerId === playerId || 
         (p.firstName && p.secondName && 
