@@ -1733,7 +1733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Top 50 Managers Overall League endpoint
+  // Top 50 Managers Overall League endpoint with rank change tracking
   app.get("/api/top50-managers", async (req, res) => {
     try {
       // Fetch the current top 50 managers from the FPL Overall league (ID: 314)
@@ -1747,13 +1747,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = await response.json();
       
       // Extract the top 50 managers from the results
-      const top50Managers = data.standings.results.slice(0, 50).map((manager: any, index: number) => ({
-        rank: index + 1,
-        name: manager.player_name,
-        managerId: manager.entry
-      }));
+      const current50Managers = data.standings.results.slice(0, 50);
+      
+      // Get current gameweek for tracking purposes
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const bootstrapData = await bootstrapResponse.json();
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      
+      // Process each manager with rank change calculation
+      const managersWithRankChanges = await Promise.all(
+        current50Managers.map(async (manager: any, index: number) => {
+          const currentRank = index + 1;
+          const managerId = manager.entry;
+          const managerName = manager.player_name;
+          
+          try {
+            // Get existing manager record or create new one
+            let existingManager = await storage.getTopManagerById(managerId);
+            if (!existingManager) {
+              // Create new manager record
+              await storage.addTopManager({
+                managerId,
+                name: managerName,
+                category: 'top50',
+                staticRank: currentRank,
+                lastUpdated: new Date()
+              });
+            }
+            
+            // Get latest tracking record for rank change calculation
+            const latestTracking = await storage.getLatestTopManagerTracking(managerId);
+            
+            // Add new tracking record
+            await storage.addTopManagerTracking({
+              managerId,
+              gameweek: currentGameweek,
+              overallRank: currentRank,
+              overallPoints: manager.total || 0,
+              gameweekPoints: null,
+              gameweekRank: null,
+              teamValue: null,
+              totalTransfers: null,
+              recordedAt: new Date()
+            });
+            
+            // Calculate rank change compared to a different rank (not gameweek)
+            let rankChange = null;
+            if (latestTracking && latestTracking.overallRank !== null && latestTracking.overallRank !== currentRank) {
+              rankChange = latestTracking.overallRank - currentRank; // Positive = improvement, negative = decline
+            }
+            
+            return {
+              rank: currentRank,
+              name: managerName,
+              managerId,
+              rankChange
+            };
+          } catch (error) {
+            console.error(`Error processing manager ${managerId}:`, error);
+            // Return basic data without rank change on error
+            return {
+              rank: currentRank,
+              name: managerName,
+              managerId,
+              rankChange: null
+            };
+          }
+        })
+      );
 
-      res.json(top50Managers);
+      res.json(managersWithRankChanges);
     } catch (error) {
       console.error("Error fetching top 50 managers from Overall league:", error);
       res.status(500).json({

@@ -1,4 +1,4 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type PriceChange, type InsertPriceChange, fplContentCreators, fplCreatorTracking, priceChanges } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
 import { eq, sql, inArray, desc } from "drizzle-orm";
@@ -62,6 +62,19 @@ export interface IStorage {
   getCreatorTracking(creatorId: number, limit?: number): Promise<FplCreatorTracking[]>;
   addCreatorTracking(tracking: InsertFplCreatorTracking): Promise<FplCreatorTracking>;
   getLatestCreatorTracking(creatorId: number): Promise<FplCreatorTracking | undefined>;
+
+  // FPL Top Managers operations
+  getTopManagers(category?: string): Promise<FplTopManager[]>;
+  getTopManagerById(managerId: number): Promise<FplTopManager | undefined>;
+  addTopManager(manager: InsertFplTopManager): Promise<FplTopManager>;
+  updateTopManager(managerId: number, updates: Partial<InsertFplTopManager>): Promise<FplTopManager>;
+  deleteTopManager(managerId: number): Promise<void>;
+  clearTopManagers(): Promise<void>;
+
+  // FPL Top Manager Tracking operations
+  getTopManagerTracking(managerId: number, limit?: number): Promise<FplTopManagerTracking[]>;
+  addTopManagerTracking(tracking: InsertFplTopManagerTracking): Promise<FplTopManagerTracking>;
+  getLatestTopManagerTracking(managerId: number): Promise<FplTopManagerTracking | undefined>;
   
   // Price changes tracking operations
   getPriceChanges(limit?: number): Promise<PriceChange[]>;
@@ -340,6 +353,44 @@ export class MemStorage implements IStorage {
   }
 
   async getLatestCreatorTracking(creatorId: number): Promise<FplCreatorTracking | undefined> {
+    return undefined;
+  }
+
+  // FPL Top Managers operations (in-memory stubs)
+  async getTopManagers(category?: string): Promise<FplTopManager[]> {
+    return [];
+  }
+
+  async getTopManagerById(managerId: number): Promise<FplTopManager | undefined> {
+    return undefined;
+  }
+
+  async addTopManager(manager: InsertFplTopManager): Promise<FplTopManager> {
+    throw new Error("MemStorage: Top manager operations not supported. Use DatabaseStorage.");
+  }
+
+  async updateTopManager(managerId: number, updates: Partial<InsertFplTopManager>): Promise<FplTopManager> {
+    throw new Error("MemStorage: Top manager operations not supported. Use DatabaseStorage.");
+  }
+
+  async deleteTopManager(managerId: number): Promise<void> {
+    throw new Error("MemStorage: Top manager operations not supported. Use DatabaseStorage.");
+  }
+
+  async clearTopManagers(): Promise<void> {
+    throw new Error("MemStorage: Top manager operations not supported. Use DatabaseStorage.");
+  }
+
+  // FPL Top Manager Tracking operations (in-memory stubs)
+  async getTopManagerTracking(managerId: number, limit?: number): Promise<FplTopManagerTracking[]> {
+    return [];
+  }
+
+  async addTopManagerTracking(tracking: InsertFplTopManagerTracking): Promise<FplTopManagerTracking> {
+    throw new Error("MemStorage: Top manager tracking operations not supported. Use DatabaseStorage.");
+  }
+
+  async getLatestTopManagerTracking(managerId: number): Promise<FplTopManagerTracking | undefined> {
     return undefined;
   }
 
@@ -979,6 +1030,127 @@ export class DatabaseStorage implements IStorage {
       return latest;
     } catch (error) {
       console.error(`Error fetching latest tracking for creator ${creatorId}:`, error);
+      return undefined;
+    }
+  }
+
+  // FPL Top Managers operations
+  async getTopManagers(category?: string): Promise<FplTopManager[]> {
+    try {
+      console.log(`📊 Fetching top managers from database${category ? ` for category ${category}` : ''}...`);
+      let query = db.select().from(fplTopManagers);
+      
+      if (category) {
+        query = query.where(eq(fplTopManagers.category, category));
+      }
+      
+      const managers = await query.orderBy(fplTopManagers.staticRank);
+      console.log(`✅ Found ${managers.length} top managers in database`);
+      return managers;
+    } catch (error) {
+      console.error("Error fetching top managers from database:", error);
+      return [];
+    }
+  }
+
+  async getTopManagerById(managerId: number): Promise<FplTopManager | undefined> {
+    try {
+      const [manager] = await db.select().from(fplTopManagers).where(eq(fplTopManagers.managerId, managerId));
+      return manager;
+    } catch (error) {
+      console.error(`Error fetching top manager ${managerId}:`, error);
+      return undefined;
+    }
+  }
+
+  async addTopManager(manager: InsertFplTopManager): Promise<FplTopManager> {
+    try {
+      console.log(`💾 Adding top manager: ${manager.name} (${manager.category})`);
+      const [newManager] = await db.insert(fplTopManagers).values(manager).returning();
+      console.log(`✅ Successfully added top manager: ${newManager.name}`);
+      return newManager;
+    } catch (error) {
+      console.error("Error adding top manager:", error);
+      throw error;
+    }
+  }
+
+  async updateTopManager(managerId: number, updates: Partial<InsertFplTopManager>): Promise<FplTopManager> {
+    try {
+      console.log(`💾 Updating top manager: ${managerId}`);
+      const [updatedManager] = await db.update(fplTopManagers)
+        .set({ ...updates, lastUpdated: new Date() })
+        .where(eq(fplTopManagers.managerId, managerId))
+        .returning();
+      console.log(`✅ Successfully updated top manager: ${updatedManager.name}`);
+      return updatedManager;
+    } catch (error) {
+      console.error("Error updating top manager:", error);
+      throw error;
+    }
+  }
+
+  async deleteTopManager(managerId: number): Promise<void> {
+    try {
+      console.log(`🗑️ Deleting top manager: ${managerId}`);
+      await db.delete(fplTopManagers).where(eq(fplTopManagers.managerId, managerId));
+      console.log(`✅ Successfully deleted top manager: ${managerId}`);
+    } catch (error) {
+      console.error("Error deleting top manager:", error);
+      throw error;
+    }
+  }
+
+  async clearTopManagers(): Promise<void> {
+    try {
+      console.log(`🗑️ Clearing all top managers...`);
+      await db.delete(fplTopManagers);
+      console.log(`✅ Successfully cleared all top managers`);
+    } catch (error) {
+      console.error("Error clearing top managers:", error);
+      throw error;
+    }
+  }
+
+  // FPL Top Manager Tracking operations
+  async getTopManagerTracking(managerId: number, limit: number = 20): Promise<FplTopManagerTracking[]> {
+    try {
+      console.log(`📊 Fetching tracking data for top manager ${managerId}...`);
+      const tracking = await db.select()
+        .from(fplTopManagerTracking)
+        .where(eq(fplTopManagerTracking.managerId, managerId))
+        .orderBy(desc(fplTopManagerTracking.recordedAt))
+        .limit(limit);
+      console.log(`✅ Found ${tracking.length} tracking records for top manager ${managerId}`);
+      return tracking;
+    } catch (error) {
+      console.error(`Error fetching tracking data for top manager ${managerId}:`, error);
+      return [];
+    }
+  }
+
+  async addTopManagerTracking(tracking: InsertFplTopManagerTracking): Promise<FplTopManagerTracking> {
+    try {
+      console.log(`💾 Adding tracking data for top manager ${tracking.managerId}, GW${tracking.gameweek}`);
+      const [newTracking] = await db.insert(fplTopManagerTracking).values(tracking).returning();
+      console.log(`✅ Successfully added tracking data for top manager ${tracking.managerId}`);
+      return newTracking;
+    } catch (error) {
+      console.error("Error adding top manager tracking:", error);
+      throw error;
+    }
+  }
+
+  async getLatestTopManagerTracking(managerId: number): Promise<FplTopManagerTracking | undefined> {
+    try {
+      const [latest] = await db.select()
+        .from(fplTopManagerTracking)
+        .where(eq(fplTopManagerTracking.managerId, managerId))
+        .orderBy(desc(fplTopManagerTracking.recordedAt))
+        .limit(1);
+      return latest;
+    } catch (error) {
+      console.error(`Error fetching latest tracking for top manager ${managerId}:`, error);
       return undefined;
     }
   }

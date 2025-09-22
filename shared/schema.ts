@@ -889,6 +889,46 @@ export type FplCreatorTracking = typeof fplCreatorTracking.$inferSelect;
 export type InsertFplCreatorTracking = typeof fplCreatorTracking.$inferInsert;
 
 export const insertFplCreatorTrackingSchema = createInsertSchema(fplCreatorTracking);
+
+// Top Managers (Top 25 & Top 50) tracking tables
+export const fplTopManagers = pgTable("fpl_top_managers", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  name: varchar("name", { length: 100 }).notNull(),
+  managerId: integer("manager_id").notNull().unique(), // FPL manager ID
+  category: varchar("category", { length: 10 }).notNull(), // "top25" or "top50"
+  staticRank: integer("static_rank").notNull(), // Static rank position (1-25 for top25, 1-50 for top50)
+  isActive: boolean("is_active").default(true),
+  addedDate: timestamp("added_date").defaultNow(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+export type FplTopManager = typeof fplTopManagers.$inferSelect;
+export type InsertFplTopManager = typeof fplTopManagers.$inferInsert;
+
+export const insertFplTopManagerSchema = createInsertSchema(fplTopManagers);
+
+export const fplTopManagerTracking = pgTable("fpl_top_manager_tracking", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  managerId: integer("manager_id").notNull().references(() => fplTopManagers.managerId),
+  gameweek: integer("gameweek").notNull(),
+  
+  // FPL Performance Data
+  overallRank: integer("overall_rank"),
+  overallPoints: integer("overall_points"),
+  gameweekPoints: integer("gameweek_points"),
+  gameweekRank: integer("gameweek_rank"),
+  teamValue: decimal("team_value", { precision: 4, scale: 1 }), // e.g., 100.5
+  totalTransfers: integer("total_transfers"),
+  
+  // Metadata
+  recordedAt: timestamp("recorded_at").defaultNow(),
+});
+
+export type FplTopManagerTracking = typeof fplTopManagerTracking.$inferSelect;
+export type InsertFplTopManagerTracking = typeof fplTopManagerTracking.$inferInsert;
+
+export const insertFplTopManagerTrackingSchema = createInsertSchema(fplTopManagerTracking);
+
 export type InsertUnifiedProjectionSettings = typeof unifiedProjectionSettings.$inferInsert;
 
 // Historical xG data cache - pre-calculated and never changes
