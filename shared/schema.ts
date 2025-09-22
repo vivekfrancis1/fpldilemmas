@@ -1240,6 +1240,17 @@ export const cachedPlayerTotalPoints = pgTable("cached_player_total_points", {
   totalPointsData: jsonb("total_points_data").notNull(), // comprehensive points breakdown per gameweek
   totalExpectedPoints: real("total_expected_points").notNull().default(0),
   averagePerGameweek: real("average_per_gameweek").notNull().default(0),
+  // Breakdown totals for frontend display
+  totalPointsFromGoals: real("total_points_from_goals").default(0),
+  totalPointsFromAssists: real("total_points_from_assists").default(0),
+  totalPointsFromCleanSheets: real("total_points_from_clean_sheets").default(0),
+  totalPointsFromDefensiveContributions: real("total_points_from_defensive_contributions").default(0),
+  totalPointsFromMinutes: real("total_points_from_minutes").default(0),
+  totalPointsFromBonus: real("total_points_from_bonus").default(0),
+  totalPointsFromSaves: real("total_points_from_saves").default(0),
+  totalPointsFromGoalsConceded: real("total_points_from_goals_conceded").default(0),
+  totalPointsFromYellowCards: real("total_points_from_yellow_cards").default(0),
+  totalPointsFromRedCards: real("total_points_from_red_cards").default(0),
   lastUpdated: timestamp("last_updated").defaultNow(),
 }, (table) => [
   index("idx_cached_total_points_player_id").on(table.playerId),

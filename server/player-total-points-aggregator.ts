@@ -76,7 +76,57 @@ export class PlayerTotalPointsAggregator {
 
       console.log(`🔄 Aggregated data for ${playerTotalPointsMap.size} players`);
 
-      // Step 3: Clear existing cached data and insert new aggregated data
+      // Step 3: Calculate breakdown totals for each player
+      console.log("🔢 Calculating breakdown totals for frontend display...");
+      
+      // Create lookup maps for breakdown totals
+      const goalsBreakdown = new Map<number, number>();
+      const assistsBreakdown = new Map<number, number>();
+      const cleanSheetsBreakdown = new Map<number, number>();
+      const defensiveBreakdown = new Map<number, number>();
+      const minutesBreakdown = new Map<number, number>();
+      const bonusBreakdown = new Map<number, number>();
+      const savesBreakdown = new Map<number, number>();
+      const goalsConcededBreakdown = new Map<number, number>();
+      const yellowCardsBreakdown = new Map<number, number>();
+      const redCardsBreakdown = new Map<number, number>();
+      
+      // Calculate goals totals
+      for (const goalData of goalsPointsData) {
+        goalsBreakdown.set(goalData.playerId, goalData.totalPoints);
+      }
+      
+      // Calculate assists totals
+      for (const assistData of assistsPointsData) {
+        assistsBreakdown.set(assistData.playerId, assistData.totalPoints);
+      }
+      
+      // Calculate other component totals with null safety
+      for (const [playerId, cbitData] of Object.entries(cbitPointsData || {})) {
+        if (cbitData && cbitData.gameweeks) {
+          defensiveBreakdown.set(Number(playerId), Object.values(cbitData.gameweeks).reduce((sum: number, gw: any) => sum + (gw?.points || 0), 0));
+        }
+      }
+      
+      for (const [playerId, minutesData] of Object.entries(minutesPointsData || {})) {
+        if (minutesData && minutesData.gameweeks) {
+          minutesBreakdown.set(Number(playerId), Object.values(minutesData.gameweeks).reduce((sum: number, gw: any) => sum + (gw?.points || 0), 0));
+        }
+      }
+      
+      for (const [playerId, bonusData] of Object.entries(bonusPointsData || {})) {
+        if (bonusData && bonusData.gameweeks) {
+          bonusBreakdown.set(Number(playerId), Object.values(bonusData.gameweeks).reduce((sum: number, gw: any) => sum + (gw?.points || 0), 0));
+        }
+      }
+      
+      for (const [playerId, savesData] of Object.entries(savePointsData || {})) {
+        if (savesData && savesData.gameweeks) {
+          savesBreakdown.set(Number(playerId), Object.values(savesData.gameweeks).reduce((sum: number, gw: any) => sum + (gw?.points || 0), 0));
+        }
+      }
+      
+      // Step 4: Clear existing cached data and insert new aggregated data with breakdown totals
       await db.delete(cachedPlayerTotalPoints);
       
       const aggregatedData = Array.from(playerTotalPointsMap.values());
@@ -94,6 +144,13 @@ export class PlayerTotalPointsAggregator {
             totalPointsData: player.gameweekPoints,
             totalExpectedPoints: player.totalPoints,
             averagePerGameweek: player.totalPoints / Object.keys(player.gameweekPoints).length,
+            // Add breakdown totals for frontend
+            totalPointsFromGoals: goalsBreakdown.get(player.playerId) || 0,
+            totalPointsFromAssists: assistsBreakdown.get(player.playerId) || 0,
+            totalPointsFromDefensiveContributions: defensiveBreakdown.get(player.playerId) || 0,
+            totalPointsFromMinutes: minutesBreakdown.get(player.playerId) || 0,
+            totalPointsFromBonus: bonusBreakdown.get(player.playerId) || 0,
+            totalPointsFromSaves: savesBreakdown.get(player.playerId) || 0,
             lastUpdated: new Date()
           }))
         );
