@@ -164,79 +164,187 @@ export class PlayerTotalPointsAggregator {
   }
 
   /**
-   * Fetch and convert goals projection data to points
+   * Fetch and convert goals projection data to points - WITH RESILIENT FALLBACK
    */
   private async fetchGoalsPointsData(startGameweek: number, endGameweek: number) {
     try {
-      const response = await internalFetch(`api/player-goals-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
-      if (!response.ok) throw new Error(`Failed to fetch goals data: ${response.statusText}`);
+      // First try: Use cached database data directly
+      console.log("🔄 Attempting to fetch goals data from cached database...");
+      const cachedGoalsData = await db.select().from(playerGoalsProjections);
       
-      const goalsData = await response.json();
+      if (cachedGoalsData.length > 0) {
+        console.log(`✅ Using cached goals database data: ${cachedGoalsData.length} records`);
+        
+        // Convert cached data to expected format with null safety
+        return cachedGoalsData.map((player: any) => {
+          // Parse JSON data if it's stored as JSON, with null safety
+          let goalProjections = null;
+          try {
+            if (player.gameweekData) {
+              goalProjections = typeof player.gameweekData === 'string' 
+                ? JSON.parse(player.gameweekData) 
+                : player.gameweekData;
+            }
+          } catch (error) {
+            console.warn(`Failed to parse gameweekData for player ${player.playerId}:`, error);
+            goalProjections = {};
+          }
+          
+          // Ensure goalProjections is a valid object
+          if (!goalProjections || typeof goalProjections !== 'object') {
+            goalProjections = {};
+          }
+            
+          return {
+            playerId: player.playerId,
+            playerName: player.playerName,
+            teamName: player.teamName,
+            position: player.position,
+            pointsData: this.convertGoalsToPoints(goalProjections, player.position),
+            totalPoints: Object.values(this.convertGoalsToPoints(goalProjections, player.position)).reduce((sum: number, points: any) => sum + points, 0)
+          };
+        });
+      }
       
-      // Convert goals projections to points using FPL scoring rules
-      return goalsData.map((player: any) => ({
-        playerId: player.playerId,
-        playerName: player.playerName,
-        teamName: player.teamName,
-        position: player.position,
-        pointsData: this.convertGoalsToPoints(player.goalProjections, player.position),
-        totalPoints: Object.values(this.convertGoalsToPoints(player.goalProjections, player.position)).reduce((sum: number, points: any) => sum + points, 0)
-      }));
+      // Second try: API call with extended timeout
+      console.log("🌐 Cached data empty, trying API with extended timeout...");
+      const response = await internalFetch(`api/cached/player-goals-projections`, 10000); // 10 second timeout
+      if (response.ok) {
+        const goalsData = await response.json();
+        console.log(`✅ API call successful: ${goalsData.length} goals records`);
+        
+        // Convert API response to points format
+        return goalsData.map((player: any) => ({
+          playerId: player.playerId,
+          playerName: player.playerName,
+          teamName: player.teamName,
+          position: player.position,
+          pointsData: this.convertGoalsToPoints(player.goalProjections || player.gameweekProjections, player.position),
+          totalPoints: Object.values(this.convertGoalsToPoints(player.goalProjections || player.gameweekProjections, player.position)).reduce((sum: number, points: any) => sum + points, 0)
+        }));
+      }
+      
+      throw new Error(`API call failed: ${response.statusText}`);
+      
     } catch (error) {
-      console.warn("⚠️ Failed to fetch goals points data, using empty array:", error);
+      console.warn("⚠️ All goals data sources failed, using empty array:", error);
       return [];
     }
   }
 
   /**
-   * Fetch and convert assists projection data to points
+   * Fetch and convert assists projection data to points - WITH RESILIENT FALLBACK
    */
   private async fetchAssistsPointsData(startGameweek: number, endGameweek: number) {
     try {
-      const response = await internalFetch(`api/player-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
-      if (!response.ok) throw new Error(`Failed to fetch assists data: ${response.statusText}`);
+      // First try: Use cached database data directly
+      console.log("🔄 Attempting to fetch assists data from cached database...");
+      const cachedAssistsData = await db.select().from(playerAssistProjections);
       
-      const assistsData = await response.json();
+      if (cachedAssistsData.length > 0) {
+        console.log(`✅ Using cached assists database data: ${cachedAssistsData.length} records`);
+        
+        // Convert cached data to expected format with null safety
+        return cachedAssistsData.map((player: any) => {
+          // Parse JSON data if it's stored as JSON, with null safety
+          let assistProjections = null;
+          try {
+            if (player.gameweekData) {
+              assistProjections = typeof player.gameweekData === 'string' 
+                ? JSON.parse(player.gameweekData) 
+                : player.gameweekData;
+            }
+          } catch (error) {
+            console.warn(`Failed to parse gameweekData for player ${player.playerId}:`, error);
+            assistProjections = {};
+          }
+          
+          // Ensure assistProjections is a valid object
+          if (!assistProjections || typeof assistProjections !== 'object') {
+            assistProjections = {};
+          }
+            
+          return {
+            playerId: player.playerId,
+            playerName: player.playerName,
+            teamName: player.teamName,
+            position: player.position,
+            pointsData: this.convertAssistsToPoints(assistProjections),
+            totalPoints: Object.values(this.convertAssistsToPoints(assistProjections)).reduce((sum: number, points: any) => sum + points, 0)
+          };
+        });
+      }
       
-      // Convert assists projections to points using FPL scoring rules (3 points per assist)
-      return assistsData.map((player: any) => ({
-        playerId: player.playerId,
-        playerName: player.playerName,
-        teamName: player.teamName,
-        position: player.position,
-        pointsData: this.convertAssistsToPoints(player.assistProjections),
-        totalPoints: Object.values(this.convertAssistsToPoints(player.assistProjections)).reduce((sum: number, points: any) => sum + points, 0)
-      }));
+      // Second try: API call with extended timeout
+      console.log("🌐 Cached data empty, trying API with extended timeout...");
+      const response = await internalFetch(`api/cached/player-assists-projections`, 10000); // 10 second timeout
+      if (response.ok) {
+        const assistsData = await response.json();
+        console.log(`✅ API call successful: ${assistsData.length} assists records`);
+        
+        // Convert API response to points format
+        return assistsData.map((player: any) => ({
+          playerId: player.playerId,
+          playerName: player.playerName,
+          teamName: player.teamName,
+          position: player.position,
+          pointsData: this.convertAssistsToPoints(player.assistProjections || player.gameweekProjections),
+          totalPoints: Object.values(this.convertAssistsToPoints(player.assistProjections || player.gameweekProjections)).reduce((sum: number, points: any) => sum + points, 0)
+        }));
+      }
+      
+      throw new Error(`API call failed: ${response.statusText}`);
+      
     } catch (error) {
-      console.warn("⚠️ Failed to fetch assists points data, using empty array:", error);
+      console.warn("⚠️ All assists data sources failed, using empty array:", error);
       return [];
     }
   }
 
   /**
-   * Convert goals projections to FPL points
+   * Convert goals projections to FPL points - WITH NULL SAFETY
    */
-  private convertGoalsToPoints(goalProjections: { [gameweek: string]: number }, position: string): { [gameweek: string]: number } {
+  private convertGoalsToPoints(goalProjections: { [gameweek: string]: number } | null | undefined, position: string): { [gameweek: string]: number } {
     const goalPoints: { [gameweek: string]: number } = {};
+    
+    // Null safety check
+    if (!goalProjections || typeof goalProjections !== 'object') {
+      return goalPoints;
+    }
     
     // FPL scoring: Forwards/Midfielders = 4 points, Defenders/Goalkeepers = 6 points
     const pointsPerGoal = (position === "Forward" || position === "Midfielder") ? 4 : 6;
     
-    for (const [gameweek, goals] of Object.entries(goalProjections)) {
-      goalPoints[gameweek] = goals * pointsPerGoal;
+    try {
+      for (const [gameweek, goals] of Object.entries(goalProjections)) {
+        const goalValue = Number(goals) || 0;
+        goalPoints[gameweek] = goalValue * pointsPerGoal;
+      }
+    } catch (error) {
+      console.warn(`Error converting goals to points for position ${position}:`, error);
     }
     
     return goalPoints;
   }
 
   /**
-   * Convert assists projections to FPL points (3 points per assist for all positions)
+   * Convert assists projections to FPL points (3 points per assist for all positions) - WITH NULL SAFETY
    */
-  private convertAssistsToPoints(assistProjections: { [gameweek: string]: number }): { [gameweek: string]: number } {
+  private convertAssistsToPoints(assistProjections: { [gameweek: string]: number } | null | undefined): { [gameweek: string]: number } {
     const assistPoints: { [gameweek: string]: number } = {};
     
-    for (const [gameweek, assists] of Object.entries(assistProjections)) {
-      assistPoints[gameweek] = assists * 3; // 3 points per assist
+    // Null safety check
+    if (!assistProjections || typeof assistProjections !== 'object') {
+      return assistPoints;
+    }
+    
+    try {
+      for (const [gameweek, assists] of Object.entries(assistProjections)) {
+        const assistValue = Number(assists) || 0;
+        assistPoints[gameweek] = assistValue * 3; // 3 points per assist
+      }
+    } catch (error) {
+      console.warn(`Error converting assists to points:`, error);
     }
     
     return assistPoints;
