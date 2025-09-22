@@ -475,23 +475,30 @@ class ProjectionCacheWorker {
     try {
       console.log(`📊 Caching assist projections with set piece adjustments...`);
       
+      // First fetch bootstrap data to determine current gameweek
+      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      if (!bootstrapResponse.ok) {
+        throw new Error(`Bootstrap API returned ${bootstrapResponse.status}`);
+      }
+      const bootstrapData = await bootstrapResponse.json();
+      
+      // Calculate current gameweek and next 6 gameweeks range
+      const currentGameweek = this.computeCurrentGameweek(bootstrapData.events);
+      const startGameweek = Math.max(1, currentGameweek + 1); // Next gameweek
+      const endGameweek = Math.min(38, startGameweek + 5); // Next 6 gameweeks
+      
+      console.log(`📊 Dynamically fetching assist projections for GW${startGameweek}-${endGameweek} (next 6 gameweeks)`);
+      
       // CIRCULAR DEPENDENCY FIX: Use full-calculation endpoint for cache population
       // This avoids calling the optimized endpoint which uses cache-first approach
-      const [projResponse, bootstrapResponse] = await Promise.all([
-        internalFetch('api/player-assist-projections-full-calculation?startGameweek=4&endGameweek=10'),
-        fetch('https://fantasy.premierleague.com/api/bootstrap-static/')
-      ]);
+      const projResponse = await internalFetch(`api/player-assist-projections-full-calculation?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       
       if (!projResponse.ok) {
         throw new Error(`Assists API returned ${projResponse.status}`);
       }
-      if (!bootstrapResponse.ok) {
-        throw new Error(`Bootstrap API returned ${bootstrapResponse.status}`);
-      }
       
       const data: ProjectionData[] = await projResponse.json();
-      const bootstrapData = await bootstrapResponse.json();
-      console.log(`📥 Retrieved ${data.length} assist projections`);
+      console.log(`📥 Retrieved ${data.length} assist projections for GW${startGameweek}-${endGameweek}`);
       
       // Clear existing data for this season
       await db.delete(playerAssistProjections)
@@ -505,7 +512,7 @@ class ProjectionCacheWorker {
         if (player.gameweekProjections) {
           const playerName = getPlayerNameForDebug(player.playerId, bootstrapData);
           
-          for (let gw = 4; gw <= 10; gw++) {
+          for (let gw = startGameweek; gw <= endGameweek; gw++) {
             // Enhanced key lookup with fallbacks for robust parsing
             const baseAssists = player.gameweekProjections[gw] || 
                               player.gameweekProjections[`gw${gw}`] || 
@@ -541,7 +548,7 @@ class ProjectionCacheWorker {
       console.log(`🔄 Applying team-level normalization for assists...`);
       
       // Fetch team assist projections for comparison  
-      const teamAssistsResponse = await internalFetch('api/team-assist-projections?startGameweek=4&endGameweek=9');
+      const teamAssistsResponse = await internalFetch(`api/team-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!teamAssistsResponse.ok) {
         throw new Error(`Team assists API returned ${teamAssistsResponse.status}`);
       }
@@ -577,7 +584,7 @@ class ProjectionCacheWorker {
         assistsFromGoalsFallback = true;
         
         try {
-          const teamGoalsResponse = await internalFetch('api/team-goal-projections?startGameweek=4&endGameweek=9');
+          const teamGoalsResponse = await internalFetch(`api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
           if (teamGoalsResponse.ok) {
             const teamGoalsData = await teamGoalsResponse.json();
             
@@ -586,7 +593,7 @@ class ProjectionCacheWorker {
               const assistProjections: Record<string, number> = {};
               
               if (team.gameweekProjections) {
-                for (let gw = 4; gw <= 9; gw++) {
+                for (let gw = startGameweek; gw <= endGameweek; gw++) {
                   const teamGoals = team.gameweekProjections[gw.toString()] || 0;
                   assistProjections[gw.toString()] = teamGoals * 0.72; // 72% conversion
                 }
@@ -860,14 +867,62 @@ class ProjectionCacheWorker {
   }
   
   /**
+   * Compute current gameweek from bootstrap events
+   */
+  private computeCurrentGameweek(events: any[]): number {
+    if (!events || events.length === 0) {
+      return 3; // Default fallback
+    }
+
+    // Strategy 1: Look for is_current flag
+    const currentEvent = events.find((event: any) => event.is_current);
+    if (currentEvent) {
+      return currentEvent.id;
+    }
+
+    // Strategy 2: Look for is_next flag (current gameweek is the previous one)
+    const nextEvent = events.find((event: any) => event.is_next);
+    if (nextEvent) {
+      return Math.max(0, nextEvent.id - 1);
+    }
+
+    // Strategy 3: Find first unfinished gameweek and determine current
+    const unfinishedEvent = events.find((event: any) => !event.finished);
+    if (unfinishedEvent) {
+      return Math.max(0, unfinishedEvent.id - 1);
+    }
+
+    // Strategy 4: Use deadline_time to determine current gameweek
+    const now = new Date();
+    for (const event of events.sort((a: any, b: any) => a.id - b.id)) {
+      const deadline = new Date(event.deadline_time);
+      if (deadline > now) {
+        return Math.max(0, event.id - 1);
+      }
+    }
+
+    // Strategy 5: If all gameweeks are finished, return the last one
+    return Math.max(...events.map((e: any) => e.id));
+  }
+  
+  /**
    * Cache clean sheet projections (team-level data)
    */
   private async cacheCleanSheetProjections(): Promise<void> {
     try {
       console.log(`📊 Caching team clean sheet projections...`);
       
-      // Use Team CS Projections API directly
-      const response = await internalFetch('api/team-cs-projections?startGameweek=4&endGameweek=9');
+      // Use Team CS Projections API directly - get current gameweek dynamically
+      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      if (!bootstrapResponse.ok) {
+        throw new Error(`Bootstrap API returned ${bootstrapResponse.status}`);
+      }
+      const bootstrapData = await bootstrapResponse.json();
+      const currentGameweek = this.computeCurrentGameweek(bootstrapData.events);
+      const startGameweek = Math.max(1, currentGameweek + 1);
+      const endGameweek = Math.min(38, startGameweek + 5);
+      
+      const response = await internalFetch(`api/team-cs-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) {
         console.log(`Team CS projections API returned ${response.status}, skipping clean sheet cache`);
         return;
@@ -884,7 +939,7 @@ class ProjectionCacheWorker {
       const records = [];
       for (const team of teamData) {
         if (team.gameweekProjections) {
-          for (let gw = 4; gw <= 9; gw++) {
+          for (let gw = startGameweek; gw <= endGameweek; gw++) {
             // Team CS API uses string keys for gameweeks
             const cleanSheetProbability = team.gameweekProjections[gw.toString()] || 0;
             if (cleanSheetProbability > 0) {
