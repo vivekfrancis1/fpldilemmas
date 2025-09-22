@@ -16,20 +16,20 @@ export class FPLScoringCacheService {
   /**
    * Fetch and cache all FPL scoring component data
    */
-  async updateAllScoringData(): Promise<void> {
+  async updateAllScoringData(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
     console.log("🚀 Starting FPL scoring component cache update...");
     
     try {
       // Cache all scoring components in parallel
       await Promise.all([
-        this.cachePlayerSaves(),
-        this.cachePlayerGoalsConceded(),
-        this.cachePlayerYellowCards(),
-        this.cachePlayerRedCards(),
-        this.cachePlayerBonusPoints(),
+        this.cachePlayerSaves(startGameweek, endGameweek),
+        this.cachePlayerGoalsConceded(startGameweek, endGameweek),
+        this.cachePlayerYellowCards(startGameweek, endGameweek),
+        this.cachePlayerRedCards(startGameweek, endGameweek),
+        this.cachePlayerBonusPoints(startGameweek, endGameweek),
         this.cachePlayerCbitPoints(),
         this.cachePlayerSavePoints(),
-        this.cachePlayerMinutesPoints()
+        this.cachePlayerMinutesPoints(startGameweek, endGameweek)
       ]);
       
       console.log("✅ FPL scoring component cache update completed successfully");
@@ -42,11 +42,11 @@ export class FPLScoringCacheService {
   /**
    * Cache player saves data
    */
-  private async cachePlayerSaves(): Promise<void> {
+  private async cachePlayerSaves(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
     console.log("📊 Caching player saves data...");
     
     try {
-      const response = await internalFetch(`api/player-saves-projections?startGameweek=4&endGameweek=9`);
+      const response = await internalFetch(`api/player-saves-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) throw new Error(`Failed to fetch saves data: ${response.statusText}`);
       
       const savesData = await response.json();
@@ -84,11 +84,11 @@ export class FPLScoringCacheService {
   /**
    * Cache player goals conceded data
    */
-  private async cachePlayerGoalsConceded(): Promise<void> {
+  private async cachePlayerGoalsConceded(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
     console.log("📊 Caching player goals conceded data...");
     
     try {
-      const response = await internalFetch(`api/player-goals-conceded-projections?startGameweek=4&endGameweek=9`);
+      const response = await internalFetch(`api/player-goals-conceded-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) throw new Error(`Failed to fetch goals conceded data: ${response.statusText}`);
       
       const goalsConcededData = await response.json();
@@ -126,11 +126,11 @@ export class FPLScoringCacheService {
   /**
    * Cache player yellow cards data
    */
-  private async cachePlayerYellowCards(): Promise<void> {
+  private async cachePlayerYellowCards(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
     console.log("📊 Caching player yellow cards data...");
     
     try {
-      const response = await internalFetch(`api/player-yellow-cards-projections?startGameweek=4&endGameweek=9`);
+      const response = await internalFetch(`api/player-yellow-cards-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) throw new Error(`Failed to fetch yellow cards data: ${response.statusText}`);
       
       const yellowCardsData = await response.json();
@@ -168,11 +168,11 @@ export class FPLScoringCacheService {
   /**
    * Cache player red cards data
    */
-  private async cachePlayerRedCards(): Promise<void> {
+  private async cachePlayerRedCards(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
     console.log("📊 Caching player red cards data...");
     
     try {
-      const response = await internalFetch(`api/player-red-cards-projections?startGameweek=4&endGameweek=9`);
+      const response = await internalFetch(`api/player-red-cards-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) throw new Error(`Failed to fetch red cards data: ${response.statusText}`);
       
       const redCardsData = await response.json();
@@ -210,11 +210,11 @@ export class FPLScoringCacheService {
   /**
    * Cache player bonus points data
    */
-  private async cachePlayerBonusPoints(): Promise<void> {
+  private async cachePlayerBonusPoints(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
     console.log("📊 Caching player bonus points data...");
     
     try {
-      const response = await internalFetch(`api/player-bonus-points-projections?startGameweek=4&endGameweek=9`);
+      const response = await internalFetch(`api/player-bonus-points-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) throw new Error(`Failed to fetch bonus points data: ${response.statusText}`);
       
       const bonusPointsData = await response.json();
@@ -674,7 +674,7 @@ export class FPLScoringCacheService {
    * Fetches live event data from FPL API for all completed gameweeks
    * Processes all players and calculates minutes points per FPL rules
    */
-  async cachePlayerMinutesPoints(): Promise<void> {
+  async cachePlayerMinutesPoints(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
     console.log("📊 Caching player minutes points data...");
     
     try {

@@ -1557,8 +1557,20 @@ class ProjectionCacheWorker {
   private async cacheFPLScoringComponents(): Promise<void> {
     try {
       console.log(`📊 Caching FPL scoring components...`);
-      await fplScoringCacheService.updateAllScoringData();
-      console.log(`✅ FPL scoring components cached successfully`);
+      
+      // Get dynamic gameweek range (same logic as Player Total Points endpoint)
+      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      const bootstrap = await bootstrapResponse.json();
+      const currentEvent = bootstrap.events.find((event: any) => event.is_current) || 
+                          bootstrap.events.find((event: any) => event.is_next);
+      const currentGameweek = currentEvent ? currentEvent.id - 1 : 0;
+      const startGameweek = currentGameweek + 1;
+      const endGameweek = Math.min(startGameweek + 5, 38); // Next 6 gameweeks
+      
+      console.log(`📊 FPL Scoring Cache: Current GW: ${currentGameweek}, caching scoring data for GW${startGameweek}-${endGameweek}`);
+      
+      await fplScoringCacheService.updateAllScoringData(startGameweek, endGameweek);
+      console.log(`✅ FPL scoring components cached successfully for GW${startGameweek}-${endGameweek}`);
     } catch (error) {
       console.error(`❌ Failed to cache FPL scoring components:`, error);
       throw error;
