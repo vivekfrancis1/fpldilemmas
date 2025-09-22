@@ -9235,7 +9235,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/player-total-points", async (req, res) => {
     try {
-      const { startGameweek = 4, endGameweek = 9 } = req.query;
+      // Get dynamic gameweek range (same logic as cached endpoint)
+      let currentGameweek = 5; // fallback default
+      let dynamicStart = 6;
+      let dynamicEnd = 11;
+      
+      try {
+        const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+        const bootstrap = await bootstrapResponse.json();
+        const currentEvent = bootstrap.events.find((event: any) => event.is_current) || 
+                            bootstrap.events.find((event: any) => event.is_next);
+        if (currentEvent) {
+          currentGameweek = currentEvent.id - 1;
+          dynamicStart = currentGameweek + 1;
+          dynamicEnd = Math.min(dynamicStart + 5, 38); // Next 6 gameweeks
+        }
+      } catch (error) {
+        console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
+      }
+      
+      const { startGameweek = dynamicStart, endGameweek = dynamicEnd } = req.query;
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
       
