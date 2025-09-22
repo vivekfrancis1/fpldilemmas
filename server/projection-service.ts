@@ -11,16 +11,16 @@ class ProjectionService {
   private readonly STALE_THRESHOLD = 4 * 60 * 60 * 1000; // 4 hours
 
   /**
-   * Get player total points projections with next 12 gameweeks static cache priority (Option 3)
+   * Get player total points projections with next 6 gameweeks static cache priority (Option 3)
    */
   async getPlayerTotalPoints(startGameweek: number, endGameweek: number): Promise<any[]> {
     try {
-      // OPTION 3: Check static cache for next 12 gameweeks first (80% faster)
+      // OPTION 3: Check static cache for next 6 gameweeks first (80% faster)
       const { staticCacheService } = await import('./static-cache-service');
       const staticCached = await staticCacheService.getCachedProjections(startGameweek, endGameweek);
       
       if (staticCached) {
-        console.log(`🚀 STATIC CACHE HIT: Serving GW${startGameweek}-${endGameweek} from next 12 gameweeks cache`);
+        console.log(`🚀 STATIC CACHE HIT: Serving GW${startGameweek}-${endGameweek} from next 6 gameweeks cache`);
         return staticCached;
       }
       
