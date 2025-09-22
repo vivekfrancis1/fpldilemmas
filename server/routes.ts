@@ -13165,6 +13165,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(cachedData.data);
       }
       
+      // Fallback: Serve from database - check available ranges (GW4-9 available)
+      console.log("📦 CACHED: No memory cache, checking database for available projections...");
+      
+      try {
+        // Direct database query for cached projections
+        const dbProjections = await db.execute(sql`
+          SELECT * FROM player_projections 
+          WHERE start_gameweek = 4 
+            AND end_gameweek = 9 
+            AND season = '2025/26'
+          ORDER BY total_points DESC
+        `);
+        
+        if (dbProjections.rows && dbProjections.rows.length > 0) {
+          console.log(`📦 CACHED: Serving ${dbProjections.rows.length} database-cached projections for GW4-9`);
+          return res.json(dbProjections.rows);
+        }
+      } catch (dbError) {
+        console.error("📦 CACHED: Database fallback failed:", dbError);
+      }
+      
       // If no cached data available, return empty array to prevent errors
       console.log("⚠️ No cached Player Total Points data available - returning empty array");
       res.json([]);
