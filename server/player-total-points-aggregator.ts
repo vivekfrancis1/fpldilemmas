@@ -168,7 +168,8 @@ export class PlayerTotalPointsAggregator {
    */
   private async fetchGoalsPointsData(startGameweek: number, endGameweek: number) {
     try {
-      const response = await internalFetch(`api/player-goals-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      // Use fast cached endpoint instead of slow API
+      const response = await internalFetch(`api/cached/player-goals-projections`);
       if (!response.ok) throw new Error(`Failed to fetch goals data: ${response.statusText}`);
       
       const goalsData = await response.json();
@@ -179,8 +180,8 @@ export class PlayerTotalPointsAggregator {
         playerName: player.playerName,
         teamName: player.teamName,
         position: player.position,
-        pointsData: this.convertGoalsToPoints(player.goalProjections, player.position),
-        totalPoints: Object.values(this.convertGoalsToPoints(player.goalProjections, player.position)).reduce((sum: number, points: any) => sum + points, 0)
+        pointsData: this.convertGoalsToPoints(player.gameweekProjections, player.position),
+        totalPoints: Object.values(this.convertGoalsToPoints(player.gameweekProjections, player.position)).reduce((sum: number, points: any) => sum + points, 0)
       }));
     } catch (error) {
       console.warn("⚠️ Failed to fetch goals points data, using empty array:", error);
@@ -193,7 +194,8 @@ export class PlayerTotalPointsAggregator {
    */
   private async fetchAssistsPointsData(startGameweek: number, endGameweek: number) {
     try {
-      const response = await internalFetch(`api/player-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      // Use fast cached endpoint instead of slow API
+      const response = await internalFetch(`api/cached/player-assists-projections`);
       if (!response.ok) throw new Error(`Failed to fetch assists data: ${response.statusText}`);
       
       const assistsData = await response.json();
@@ -204,8 +206,8 @@ export class PlayerTotalPointsAggregator {
         playerName: player.playerName,
         teamName: player.teamName,
         position: player.position,
-        pointsData: this.convertAssistsToPoints(player.assistProjections),
-        totalPoints: Object.values(this.convertAssistsToPoints(player.assistProjections)).reduce((sum: number, points: any) => sum + points, 0)
+        pointsData: this.convertAssistsToPoints(player.gameweekProjections),
+        totalPoints: Object.values(this.convertAssistsToPoints(player.gameweekProjections)).reduce((sum: number, points: any) => sum + points, 0)
       }));
     } catch (error) {
       console.warn("⚠️ Failed to fetch assists points data, using empty array:", error);
