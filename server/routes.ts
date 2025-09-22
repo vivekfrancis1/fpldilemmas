@@ -5669,12 +5669,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // SIMPLE NORMALIZATION (no perfect balance required)
-          const getPositionGoalShareCap = (position: string): number => {
+          const getPositionGoalShareCap = (position: string, playerId?: number): number => {
+            // Special caps for elite players
+            if (playerId === 430) return 40; // Haaland - 40% cap for forwards
+            if (playerId === 381) return 30; // Salah - 30% cap for midfielders
+            
             switch (position?.toLowerCase()) {
               case 'goalkeeper': return 2; // Max 2% share for GKs
               case 'defender': return 10; // Max 10% share for defenders
-              case 'midfielder': return 30; // Max 30% share for midfielders
-              case 'forward': return 40; // Max 40% share for forwards
+              case 'midfielder': return 25; // Max 25% share for midfielders
+              case 'forward': return 30; // Max 30% share for forwards
               default: return 25;
             }
           };
@@ -5689,7 +5693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               (playerData.contribution / totalContribution) * teamSeasonTotals[teamId].expectedGoals : 0;
             
             // Apply position cap
-            const positionGoalShareCap = getPositionGoalShareCap(playerData.position);
+            const positionGoalShareCap = getPositionGoalShareCap(playerData.position, playerId);
             const maxProjectedGoals = (positionGoalShareCap / 100) * teamSeasonTotals[teamId].expectedGoals;
             const cappedGoals = Math.min(rawShare, maxProjectedGoals);
             
@@ -6882,19 +6886,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adjustedShare = baseShare * performanceMultiplier;
       
       // Apply position-based caps to goal share percentage
-      const getPositionGoalShareCap = (position: string): number => {
+      const getPositionGoalShareCap = (position: string, playerId?: number): number => {
+        // Special caps for elite players
+        if (playerId === 430) return 40; // Haaland - 40% cap for forwards
+        if (playerId === 381) return 30; // Salah - 30% cap for midfielders
+        
         switch (position?.toLowerCase()) {
           case 'goalkeeper': return 2; // Max 2% share for GKs
           case 'defender': return 10; // Max 10% share for defenders
-          case 'midfielder': return 30; // Max 30% share for midfielders
-          case 'forward': return 40; // Max 40% share for forwards
+          case 'midfielder': return 25; // Max 25% share for midfielders
+          case 'forward': return 30; // Max 30% share for forwards
           default: return 25;
         }
       };
       
-      // OPTION 6: Position-First Caps - static lookup by element_type
-      const STATIC_CAPS = { 1: 2.0, 2: 10.0, 3: 30.0, 4: 40.0 };
-      const positionGoalShareCap = STATIC_CAPS[player.element_type] || 25.0;
+      // OPTION 6: Position-First Caps - static lookup by element_type with special cases
+      let positionGoalShareCap;
+      if (player.id === 430) positionGoalShareCap = 40.0; // Haaland
+      else if (player.id === 381) positionGoalShareCap = 30.0; // Salah
+      else {
+        const STATIC_CAPS = { 1: 2.0, 2: 10.0, 3: 25.0, 4: 30.0 };
+        positionGoalShareCap = STATIC_CAPS[player.element_type] || 25.0;
+      }
       const cappedAdjustedShare = Math.min(adjustedShare, positionGoalShareCap);
       
       if (cappedAdjustedShare !== adjustedShare) {
