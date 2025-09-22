@@ -233,14 +233,14 @@ function getRankChangeDisplay(change: number | undefined) {
   if (change > 0) {
     return (
       <div className="flex items-center text-red-600 text-xs">
-        <TrendingDown className="h-3 w-3 mr-1" />
+        <TrendingUp className="h-3 w-3 mr-1" />
         +{change.toLocaleString()}
       </div>
     );
   } else {
     return (
       <div className="flex items-center text-green-600 text-xs">
-        <TrendingUp className="h-3 w-3 mr-1" />
+        <TrendingDown className="h-3 w-3 mr-1" />
         {change.toLocaleString()}
       </div>
     );
