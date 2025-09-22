@@ -178,7 +178,7 @@ class ProjectionService {
             
             // 1. ENHANCED MINUTES CALCULATION with injury/suspension awareness
             // Import injury assessment utilities
-            const { assessPlayerInjuryStatus, calculateInjuryAdjustedMinutes } = await import('./injury-assessment-utils');
+            const { assessPlayerInjuryStatus, calculateInjuryAdjustedMinutes } = require('./injury-assessment-utils');
             
             // Get enhanced injury assessment
             const injuryAssessment = assessPlayerInjuryStatus(
