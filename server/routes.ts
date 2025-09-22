@@ -10187,15 +10187,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const creatorsWithLatestData = await Promise.all(
         creators.map(async (creator) => {
           const latestTracking = await storage.getLatestCreatorTracking(creator.id);
-          const history = await storage.getCreatorTracking(creator.id, 2);
+          const history = await storage.getCreatorTracking(creator.id, 10);
           
-          // Calculate rank change if we have historical data
+          // Calculate rank change if we have historical data with different ranks
           let rankChange = undefined;
           if (history.length >= 2) {
-            const current = history[0]?.overallRank;
-            const previous = history[1]?.overallRank;
-            if (current && previous) {
-              rankChange = previous - current; // Positive means rank improved (went down in number)
+            const current = history[0]; // Most recent record
+            // Find the most recent record with a different rank
+            const previous = history.find(record => record.overallRank !== current?.overallRank);
+            
+            if (current?.overallRank && previous?.overallRank) {
+              rankChange = previous.overallRank - current.overallRank; // Positive means rank improved (went down in number)
             }
           }
           
