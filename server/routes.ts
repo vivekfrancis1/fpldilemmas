@@ -13179,8 +13179,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
         
         if (dbProjections.rows && dbProjections.rows.length > 0) {
-          console.log(`📦 CACHED: Serving ${dbProjections.rows.length} database-cached projections for GW4-9`);
-          return res.json(dbProjections.rows);
+          // Transform database field names to match frontend expectations
+          const transformedProjections = dbProjections.rows.map((row: any) => ({
+            ...row,
+            gameweekProjections: row.total_points_projections || {}
+          }));
+          
+          console.log(`📦 CACHED: Serving ${transformedProjections.length} database-cached projections for GW4-9`);
+          return res.json(transformedProjections);
         }
       } catch (dbError) {
         console.error("📦 CACHED: Database fallback failed:", dbError);
