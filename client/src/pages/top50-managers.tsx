@@ -41,6 +41,7 @@ type Top50Manager = {
   rank: number;
   name: string;
   managerId: number;
+  rankChange?: number | null;
   latestTracking?: {
     gameweek: number;
     overallRank: number;
@@ -185,7 +186,7 @@ function getRankBadgeVariant(rank?: number): "default" | "secondary" | "destruct
   return "destructive";
 }
 
-function getRankChangeDisplay(change: number | undefined) {
+function getRankChangeDisplay(change: number | undefined | null) {
   if (!change || change === 0) return null;
   if (change > 0) {
     return (
@@ -214,8 +215,11 @@ const getTop50ManagerColumns = (): ResponsiveTableColumn<Top50Manager>[] => [
     mobileLabel: 'Manager',
     cardOrder: 1,
     render: (value, manager) => (
-      <div className="flex items-center">
-        <div className="font-medium">{manager.name}</div>
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <div className="font-medium">{manager.name}</div>
+          {getRankChangeDisplay(manager.rankChange)}
+        </div>
       </div>
     )
   },

@@ -36,6 +36,7 @@ type Top25Manager = {
   rank: number;
   name: string;
   managerId: number;
+  rankChange?: number | null;
   latestTracking?: {
     gameweek: number;
     overallRank: number;
@@ -127,7 +128,12 @@ const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
     cardOrder: 2,
     sortable: true,
     render: (value, manager) => (
-      <div className="font-medium">{manager.name}</div>
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <div className="font-medium">{manager.name}</div>
+          {getRankChangeDisplay(manager.rankChange)}
+        </div>
+      </div>
     )
   },
   {
@@ -233,6 +239,12 @@ export default function Top25Managers() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [, navigate] = useLocation();
 
+  // Fetch top 50 managers with rank change data
+  const { data: top50Data, isLoading: isLoadingTop50 } = useQuery({
+    queryKey: ['/api/top50-managers'],
+    refetchInterval: 30000,
+  });
+
   // Fetch latest tracking data for all managers
   const fetchManagerData = async (managerId: number) => {
     try {
@@ -283,6 +295,20 @@ export default function Top25Managers() {
   useEffect(() => {
     refreshAllData();
   }, []);
+
+  // Update managers with rank change data when top50Data is available
+  useEffect(() => {
+    if (top50Data) {
+      const updatedManagers = managersWithData.map(manager => {
+        const top50Manager = top50Data.find((m: any) => m.managerId === manager.managerId);
+        return {
+          ...manager,
+          rankChange: top50Manager?.rankChange || null
+        };
+      });
+      setManagersWithData(updatedManagers);
+    }
+  }, [top50Data]);
 
   // Sorting logic
   const handleSort = (field: string) => {
