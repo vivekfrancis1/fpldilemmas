@@ -5414,6 +5414,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // REMOVED: Sample size regression function (Option B simplification)
 
+  // Two-season weighting helper function
+  async function computeWeightedMetric(
+    playerId: number, 
+    playerName: string,
+    currentSeasonMetric: number,
+    metricType: 'goals' | 'assists' | 'goalShare' | 'assistShare',
+    fallbackValue: number = 0
+  ): Promise<number> {
+    const CURRENT_SEASON_WEIGHT = 0.6; // 60%
+    const LAST_SEASON_WEIGHT = 0.4;    // 40%
+    const CURRENT_SEASON = '2025/26';
+    const LAST_SEASON = '2024/25';
+    const MIN_MINUTES_THRESHOLD = 180; // Minimum minutes for meaningful data
+    
+    try {
+      // Get last season data
+      const lastSeasonPlayers = await storage.getHistoricalPlayers(LAST_SEASON);
+      const lastSeasonPlayer = lastSeasonPlayers?.find(p => 
+        p.playerId === playerId || 
+        (p.firstName && p.secondName && 
+         `${p.firstName} ${p.secondName}`.trim() === playerName.trim())
+      );
+      
+      let lastSeasonMetric = 0;
+      if (lastSeasonPlayer && lastSeasonPlayer.minutes >= MIN_MINUTES_THRESHOLD) {
+        switch (metricType) {
+          case 'goals':
+            lastSeasonMetric = (lastSeasonPlayer.goalsScored || 0) / Math.max(1, (lastSeasonPlayer.minutes || 1) / 90);
+            break;
+          case 'assists':
+            lastSeasonMetric = (lastSeasonPlayer.assists || 0) / Math.max(1, (lastSeasonPlayer.minutes || 1) / 90);
+            break;
+          case 'goalShare':
+          case 'assistShare':
+            // For share calculations, we'll use the raw goals/assists and calculate share at team level
+            lastSeasonMetric = metricType === 'goalShare' 
+              ? (lastSeasonPlayer.goalsScored || 0) 
+              : (lastSeasonPlayer.assists || 0);
+            break;
+        }
+      }
+      
+      // Smart fallback logic
+      if (currentSeasonMetric === 0 && lastSeasonMetric === 0) {
+        return fallbackValue;
+      }
+      
+      if (currentSeasonMetric === 0) {
+        console.log(`DEBUG: Using 100% last season data for ${playerName} (${metricType})`);
+        return lastSeasonMetric;
+      }
+      
+      if (lastSeasonMetric === 0) {
+        console.log(`DEBUG: Using 100% current season data for ${playerName} (${metricType})`);
+        return currentSeasonMetric;
+      }
+      
+      // Weighted blend
+      const weightedMetric = (CURRENT_SEASON_WEIGHT * currentSeasonMetric) + (LAST_SEASON_WEIGHT * lastSeasonMetric);
+      console.log(`DEBUG: Weighted blend for ${playerName} (${metricType}): ${currentSeasonMetric.toFixed(3)} (60%) + ${lastSeasonMetric.toFixed(3)} (40%) = ${weightedMetric.toFixed(3)}`);
+      
+      return weightedMetric;
+      
+    } catch (error) {
+      console.error(`Error calculating weighted metric for ${playerName}:`, error);
+      return currentSeasonMetric || fallbackValue;
+    }
+  }
+
   // Add simple caching for goal share data
   let goalShareCache: { data: any, timestamp: number } | null = null;
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -5573,40 +5642,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const playerContributions: { [playerId: number]: { name: string, position: string, contribution: number, xgPer90: number, expectedMinutes: number } } = {};
           let totalContribution = 0;
           
-          for (const player of qualifiedPlayers) {
-            // ENHANCED HYBRID APPROACH: Use actual goals + current year xG + last year's xG
-            const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-            const completedGameweeks = currentGameweek - 1; // GW1 is completed
-            const remainingGameweeks = 38 - completedGameweeks;
-            
-            // Calculate goals per game from actual performance
-            const actualGoalsPerGame = completedGameweeks > 0 ? player.actualGoalsScored / completedGameweeks : 0;
-            
-            // ENHANCED xG CALCULATION: Combine current year xG with ACTUAL historical xG data
-            const currentYearXGPer90 = player.xgPer90;
-            
-            // Optimized: Only do intensive historical lookup when cache is empty
-            let historical2024XGPer90 = 0;
-            let historical2023XGPer90 = 0;
-            
-            // Use position-based fallbacks for now - historical data will be added later
-            // This prevents the undefined variable error while maintaining functionality
-            
-            // Simple equal weighting: (current + 2024/25) * 0.5
-            // Fall back to position averages if no historical data found
-            const fallback2024 = historical2024XGPer90 > 0 ? historical2024XGPer90 : 
-              (player.element_type === 1 ? 0.01 : player.element_type === 2 ? 0.06 : player.element_type === 3 ? 0.12 : 0.25);
+          // Process players with two-season weighted calculations
+          const weightedCalculations = await Promise.all(
+            qualifiedPlayers.map(async (player) => {
+              const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+              const completedGameweeks = currentGameweek - 1;
               
-            const combinedXGPer90 = (currentYearXGPer90 + fallback2024) * 0.5;
-            
-            // Reduce debug logging for performance
-            if (player.name.includes('Salah') || player.name.includes('Haaland')) {
-              const has2024Data = historical2024XGPer90 > 0;
-              console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, 2024/25: ${fallback2024.toFixed(3)}${has2024Data ? ' (actual)' : ' (fallback)'}, Average: ${combinedXGPer90.toFixed(3)}`);
-            }
-            
-            // SIMPLIFIED: Use raw xG data without adjustments (adjustments now applied in cache generation)
-            let projectedXGPer90 = combinedXGPer90;
+              // Current season goals per 90
+              const currentYearGoalsPer90 = player.totalMinutes > 0 ? 
+                (player.actualGoalsScored / (player.totalMinutes / 90)) : 0;
+              
+              // Position-based fallback for goals per 90
+              const positionFallback = player.element_type === 1 ? 0.01 :  // GK
+                                     player.element_type === 2 ? 0.06 :  // DEF
+                                     player.element_type === 3 ? 0.12 :  // MID
+                                     0.25; // FWD
+              
+              // Apply two-season weighting for goals
+              const weightedGoalsPer90 = await computeWeightedMetric(
+                player.id,
+                player.name,
+                currentYearGoalsPer90,
+                'goals',
+                positionFallback
+              );
+              
+              return { player, weightedGoalsPer90 };
+            })
+          );
+
+          for (const { player, weightedGoalsPer90 } of weightedCalculations) {
+            // Use weighted goals per 90 for projection calculations
+            let projectedXGPer90 = weightedGoalsPer90;
             
             // NOTE: Set piece adjustments (penalty/freekick) are now applied during cache generation
             // in projection-cache-worker.ts to prevent double-counting
@@ -6601,7 +6668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       historicalXAData[previousSeason] = cachedPreviousSeasonData;
       
       // Now use the CORRECTED distributeAssistSharesDataDriven function for all teams
-      const response = Object.keys(teamSeasonTotals).map(teamIdStr => {
+      const teamPromises = Object.keys(teamSeasonTotals).map(async (teamIdStr) => {
         const teamId = parseInt(teamIdStr);
         const team = bootstrapData.teams.find((t: any) => t.id === teamId);
         
@@ -6614,7 +6681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`DEBUG: Using CORRECTED logic for team ${team.name} with ${teamPlayers.length} players and ${teamSeasonTotals[teamId].expectedAssists} expected assists`);
         
         // Call our corrected distribution function that includes position caps, inclusion criteria, and epsilon floor
-        const distributedPlayers = distributeAssistSharesDataDriven(teamPlayers, positions, bootstrapData);
+        const distributedPlayers = await distributeAssistSharesDataDriven(teamPlayers, positions, bootstrapData);
         
         if (!distributedPlayers || distributedPlayers.length === 0) {
           console.log(`DEBUG: No valid assist shares generated for team ${team.name}`);
@@ -6642,7 +6709,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           expectedAssists: teamSeasonTotals[teamId].expectedAssists,
           players: scaledPlayers.sort((a, b) => b.assistShare - a.assistShare)
         };
-      }).filter(team => team !== null);
+      });
+      
+      const response = (await Promise.all(teamPromises)).filter(team => team !== null);
       
       console.log(`DEBUG: Successfully generated CORRECTED assist share data for ${response.length} teams`);
       res.json(response);
@@ -7002,32 +7071,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // DATA-DRIVEN assist share distribution mirroring goals methodology
-  function distributeAssistSharesDataDriven(players: any[], positions: any[], bootstrapData: any) {
+  async function distributeAssistSharesDataDriven(players: any[], positions: any[], bootstrapData: any) {
     const playerShares = [];
     let totalContribution = 0;
 
     // Pure projection approach - no gameweek calculations needed since we're only projecting next 12 GWs
 
-    // Calculate player contributions using data-driven approach
+    // Calculate player contributions using data-driven approach with two-season weighting
     const playerContributions: { [playerId: number]: { name: string, position: string, contribution: number, xaPer90: number, expectedMinutes: number } } = {};
 
-    players.forEach(player => {
-      const position = positions.find(p => p.id === player.element_type);
-      const positionName = position?.singular_name;
-      // FIELD CONTRACT FIX: Robust name mapping with fallbacks
-      const playerName = `${player.first_name} ${player.second_name}`.trim() || `Player ${player.id}`;
-      
-      // DATA-DRIVEN FOUNDATION: Use actual xA per 90 instead of arbitrary base rates
-      const currentYearXAPer90 = player.expected_assists_per_90 || 0;
-      
-      // Position-based fallbacks for xA (conservative, realistic values)
-      const fallbackXA = player.element_type === 1 ? 0.005 : // GK: very minimal
-                         player.element_type === 2 ? 0.08 :  // DEF: realistic
-                         player.element_type === 3 ? 0.15 :  // MID: moderate
-                         0.12; // FWD: lower than goals since assists are harder
-      
-      // Use actual xA data or fallback to position average
-      const xAPer90 = currentYearXAPer90 > 0 ? currentYearXAPer90 : fallbackXA;
+    // Process all players with weighted calculations
+    const weightedAssistCalculations = await Promise.all(
+      players.map(async (player) => {
+        const position = positions.find(p => p.id === player.element_type);
+        const positionName = position?.singular_name;
+        // FIELD CONTRACT FIX: Robust name mapping with fallbacks
+        const playerName = `${player.first_name} ${player.second_name}`.trim() || `Player ${player.id}`;
+        
+        // Current season assists per 90
+        const currentYearAssistsPer90 = player.minutes > 0 ? 
+          ((player.assists || 0) / (player.minutes / 90)) : (player.expected_assists_per_90 || 0);
+        
+        // Position-based fallbacks for assists per 90 (conservative, realistic values)
+        const fallbackXA = player.element_type === 1 ? 0.005 : // GK: very minimal
+                          player.element_type === 2 ? 0.08 :  // DEF: realistic
+                          player.element_type === 3 ? 0.15 :  // MID: moderate
+                          0.12; // FWD: lower than goals since assists are harder
+        
+        // Apply two-season weighting for assists
+        const weightedAssistsPer90 = await computeWeightedMetric(
+          player.id,
+          playerName,
+          currentYearAssistsPer90,
+          'assists',
+          fallbackXA
+        );
+        
+        return { player, playerName, positionName, weightedAssistsPer90 };
+      })
+    );
+
+    for (const { player, playerName, positionName, weightedAssistsPer90 } of weightedAssistCalculations) {
+      // Use weighted assists per 90 for calculations
+      const xAPer90 = weightedAssistsPer90;
       
       // PURE PROJECTION: Only projected assists for next 12 gameweeks
       const expectedMinutes = calculateExpectedMinutes(player, players);
@@ -7091,7 +7177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       totalContribution += contribution;
-    });
+    }
 
     // PERFECT TEAM BALANCE: Ensure sum of player assists = team assists
     const getPositionAssistShareCap = (position: string): number => {
@@ -7272,10 +7358,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // DATA-DRIVEN assist share distribution using xA per 90 methodology (mirroring goals approach)
-  function distributeCurrentSeasonAssistShares(players: any[], positions: any[], bootstrapData: any = null) {
+  async function distributeCurrentSeasonAssistShares(players: any[], positions: any[], bootstrapData: any = null) {
     // If bootstrapData is available, use the new data-driven approach
     if (bootstrapData) {
-      return distributeAssistSharesDataDriven(players, positions, bootstrapData);
+      return await distributeAssistSharesDataDriven(players, positions, bootstrapData);
     }
     
     // Fallback to simplified approach if bootstrapData is not available
