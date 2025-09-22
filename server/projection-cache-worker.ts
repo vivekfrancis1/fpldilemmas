@@ -869,7 +869,7 @@ class ProjectionCacheWorker {
   /**
    * Compute current gameweek from bootstrap events
    */
-  private computeCurrentGameweek(events: any[]): number {
+  private computeCurrentGameweek = (events: any[]): number => {
     if (!events || events.length === 0) {
       return 3; // Default fallback
     }
@@ -903,7 +903,7 @@ class ProjectionCacheWorker {
 
     // Strategy 5: If all gameweeks are finished, return the last one
     return Math.max(...events.map((e: any) => e.id));
-  }
+  };
   
   /**
    * Cache clean sheet projections (team-level data)
