@@ -241,9 +241,9 @@ const MASTER_TEAM_DEFAULTS = {
   
   // Attack Team Assignments
   eliteAttackTeams: [12, 13], // Liverpool, Manchester City
-  strongAttackTeams: [1, 7, 15, 18], // Arsenal, Chelsea, Newcastle, Tottenham
-  averageAttackTeams: [6, 14, 4, 5, 10, 8, 2, 9], // Brighton, Manchester United, Bournemouth, Brentford, Fulham, Crystal Palace, Aston Villa, Everton
-  weakAttackTeams: [16, 19, 20], // Nottingham Forest, West Ham, Wolves
+  strongAttackTeams: [1, 7, 18], // Arsenal, Chelsea, Tottenham
+  averageAttackTeams: [6, 14, 4, 5, 10, 8, 9, 15], // Brighton, Manchester United, Bournemouth, Brentford, Fulham, Crystal Palace, Everton, Newcastle
+  weakAttackTeams: [16, 19, 20, 2], // Nottingham Forest, West Ham, Wolves, Aston Villa
   promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
   
   // Attack Multipliers
