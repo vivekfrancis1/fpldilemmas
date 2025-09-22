@@ -392,17 +392,8 @@ const getContentCreatorColumns = (): ResponsiveTableColumn<CreatorWithLatestData
     sortable: true,
     className: 'font-mono',
     render: (value, creator) => {
-      const tracking = creator.latestTracking;
-      if (!tracking) return "N/A";
-      
-      // Count chips used from individual boolean fields
-      const chipsUsed = [
-        tracking.wildcardUsed,
-        tracking.benchBoostUsed, 
-        tracking.freeHitUsed,
-        tracking.tripleCaptainUsed
-      ].filter(Boolean).length;
-      
+      // Use the same logic as Top 25/50 managers - count chips from history array
+      const chipsUsed = creator.historyData?.chips ? creator.historyData.chips.length : 0;
       return chipsUsed;
     }
   }

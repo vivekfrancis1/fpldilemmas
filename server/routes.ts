@@ -10252,6 +10252,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const latestTracking = await storage.getLatestCreatorTracking(creator.id);
           const history = await storage.getCreatorTracking(creator.id, 10);
           
+          // Fetch manager history data from FPL API (includes chips array)
+          let historyData = null;
+          try {
+            const historyResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/history/`);
+            if (historyResponse.ok) {
+              historyData = await historyResponse.json();
+            }
+          } catch (error) {
+            console.error(`Failed to fetch history for creator ${creator.id}:`, error);
+          }
+          
           // Calculate rank change if we have historical data with different ranks
           let rankChange = undefined;
           if (history.length >= 2) {
@@ -10267,6 +10278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return {
             ...creator,
             latestTracking,
+            historyData, // Add FPL manager history data with chips array
             rankChange,
             pointsThisGw: latestTracking?.gameweekPoints
           };
