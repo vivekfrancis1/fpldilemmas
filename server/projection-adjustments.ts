@@ -140,11 +140,7 @@ export function getCornerFreekickAdjustment(playerId: number, bootstrapData?: an
 /**
  * Get position goal share cap by position name
  */
-export function getPositionGoalShareCap(position: string, playerId?: number): number {
-  // Special caps for elite players
-  if (playerId === 430) return 40; // Haaland - 40% cap for forwards
-  if (playerId === 381) return 30; // Salah - 30% cap for midfielders
-  
+export function getPositionGoalShareCap(position: string): number {
   switch (position?.toLowerCase()) {
     case 'goalkeeper': return DEFAULT_GOAL_SHARE_CAPS.goalkeeper;
     case 'defender': return DEFAULT_GOAL_SHARE_CAPS.defender;
@@ -200,7 +196,7 @@ export function enforcePositionCaps(
   const cappedShares = teamPlayerShares.map(player => {
     const originalShare = player[shareProperty] || 0;
     const positionCap = type === 'goals' 
-      ? getPositionGoalShareCap(player.position, player.id)
+      ? getPositionGoalShareCap(player.position)
       : getPositionAssistShareCap(player.position);
     
     const cappedShare = Math.min(originalShare, positionCap);
@@ -227,7 +223,7 @@ export function enforcePositionCaps(
     cappedShares.forEach(player => {
       const currentShare = player[shareProperty] || 0;
       const positionCap = type === 'goals' 
-        ? getPositionGoalShareCap(player.position, player.id)
+        ? getPositionGoalShareCap(player.position)
         : getPositionAssistShareCap(player.position);
       
       // Only redistribute to players who aren't at their cap
