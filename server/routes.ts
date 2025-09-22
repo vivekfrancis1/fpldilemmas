@@ -34,6 +34,7 @@ import { internalFetch, getApiBaseUrl } from "./config";
 import { resultCache } from "./result-cache-service";
 import { applyMinutesScaling, applyMinutesScalingBatch, getExpectedMinutes } from './minutes-scaling-utils';
 import { syncProjectionService } from './sync-projection-service';
+import { FPLScoringCacheService } from './fpl-scoring-cache-service';
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -13241,6 +13242,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in cached player total points:", error);
       res.status(500).json({ error: "Failed to get cached player total points" });
+    }
+  });
+
+  // FPL SCORING CACHE ORCHESTRATION - Rebuild all scoring caches with aggregation
+  app.post("/api/cache/rebuild-fpl-scoring", async (req, res) => {
+    try {
+      // Get current gameweek to determine proper range
+      let currentGameweek = 5; // fallback
+      try {
+        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        if (bootstrapResponse.ok) {
+          const bootstrapData = await bootstrapResponse.json();
+          currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 5;
+        }
+      } catch (error) {
+        console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
+      }
+      
+      // Use query parameters or calculate from current gameweek
+      const startGameweek = parseInt(req.query.start as string) || (currentGameweek + 1);
+      const endGameweek = parseInt(req.query.end as string) || Math.min(startGameweek + 5, 38);
+      
+      console.log(`🚀 Admin-triggered FPL scoring cache rebuild for GW${startGameweek}-${endGameweek}`);
+      
+      // Use the FPLScoringCacheService for orchestration
+      console.log("🔧 Creating FPLScoringCacheService instance...");
+      const cacheService = new FPLScoringCacheService();
+      console.log("✅ FPLScoringCacheService instance created");
+      
+      // Run the complete orchestration including aggregation
+      console.log("🚀 Starting updateAllScoringData...");
+      await cacheService.updateAllScoringData(startGameweek, endGameweek);
+      console.log("✅ updateAllScoringData completed successfully");
+      
+      res.json({
+        success: true,
+        message: "FPL scoring cache rebuild completed successfully",
+        gameweekRange: `GW${startGameweek}-${endGameweek}`,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error("❌ FPL scoring cache rebuild failed:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to rebuild FPL scoring cache",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
