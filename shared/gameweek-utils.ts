@@ -188,7 +188,7 @@ export function formatGameweekRange(range: GameweekRange): string {
  * This is specifically for UI dropdowns that need a limited set of options
  * while still being dynamic based on the current gameweek
  */
-export function getNextGameweeksForDropdown(events: GameweekEvent[], count: number = 12): number[] {
+export function getNextGameweeksForDropdown(events: GameweekEvent[], count: number = 6): number[] {
   const range = computeNextRange(events, count);
   return range.list;
 }
