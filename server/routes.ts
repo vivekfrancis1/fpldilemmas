@@ -13156,24 +13156,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CACHED PLAYER TOTAL POINTS - PUBLIC ENDPOINT - serves pre-computed data without auth
   app.get("/api/cached/player-total-points", async (req, res) => {
     try {
-      // Check if we have cached total points data - serve default GW5-10 range
-      const defaultCacheKey = "5-10";
-      const cachedData = totalPointsCache.get(defaultCacheKey);
+      // Get current gameweek to determine proper range
+      let currentGameweek = 5; // fallback
+      try {
+        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        if (bootstrapResponse.ok) {
+          const bootstrapData = await bootstrapResponse.json();
+          currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 5;
+        }
+      } catch (error) {
+        console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
+      }
+      
+      // Calculate next 6 gameweeks range
+      const startGameweek = currentGameweek + 1;
+      const endGameweek = Math.min(startGameweek + 5, 38); // Next 6 gameweeks
+      
+      console.log(`📊 Current GW: ${currentGameweek}, serving next 6 gameweeks: GW${startGameweek}-${endGameweek}`);
+      
+      // Check memory cache for current range
+      const currentCacheKey = `${startGameweek}-${endGameweek}`;
+      const cachedData = totalPointsCache.get(currentCacheKey);
       
       if (cachedData && (Date.now() - cachedData.timestamp) < TOTAL_POINTS_CACHE_DURATION) {
-        console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW5-10 (${cachedData.data.length} players)`);
+        console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${cachedData.data.length} players)`);
         return res.json(cachedData.data);
       }
       
-      // Fallback: Serve from database - check available ranges (GW4-9 available)
-      console.log("📦 CACHED: No memory cache, checking database for available projections...");
+      // Fallback: Serve from database for current range
+      console.log(`📦 CACHED: No memory cache, checking database for GW${startGameweek}-${endGameweek} projections...`);
       
       try {
-        // Direct database query for cached projections
+        // Direct database query for cached projections with current range
         const dbProjections = await db.execute(sql`
           SELECT * FROM player_projections 
-          WHERE start_gameweek = 4 
-            AND end_gameweek = 9 
+          WHERE start_gameweek = ${startGameweek}
+            AND end_gameweek = ${endGameweek}
             AND season = '2025/26'
           ORDER BY total_points DESC
         `);
@@ -13185,7 +13203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             gameweekProjections: row.total_points_projections || {}
           }));
           
-          console.log(`📦 CACHED: Serving ${transformedProjections.length} database-cached projections for GW4-9`);
+          console.log(`📦 CACHED: Serving ${transformedProjections.length} database-cached projections for GW${startGameweek}-${endGameweek}`);
           return res.json(transformedProjections);
         }
       } catch (dbError) {
