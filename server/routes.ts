@@ -10239,6 +10239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
   console.log("✓ Current Players API routes registered successfully");
 
   // FPL Content Creators API routes
@@ -10619,6 +10620,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let transfersOut = [];
           let allTimeTransfers = 0;
           
+          // Fetch manager history to get chip information
+          let chipGameweeks = new Set();
+          try {
+            const historyResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/history/`);
+            if (historyResponse.ok) {
+              const historyData = await historyResponse.json();
+              if (historyData.chips && historyData.chips.length > 0) {
+                // Get gameweeks where wildcard or freehit chips were played
+                historyData.chips.forEach((chip: any) => {
+                  if (chip.name === 'wildcard' || chip.name === 'freehit') {
+                    chipGameweeks.add(chip.event);
+                    console.log(`📝 ${creator.name} used ${chip.name} in GW${chip.event} - excluding transfers from this gameweek`);
+                  }
+                });
+              }
+            }
+          } catch (error) {
+            console.error(`❌ Error fetching history data for ${creator.name}:`, error);
+          }
+          
           try {
             console.log(`🔄 Fetching transfer data for ${creator.name} (ID: ${creator.managerId})...`);
             const transferResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/transfers/`);
@@ -10628,9 +10649,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const transferData = await transferResponse.json();
               console.log(`📊 Raw transfer data for ${creator.name}:`, transferData?.length ? `${transferData.length} transfers found` : 'No transfers found');
               
-              // Count all transfers made this season
-              allTimeTransfers = transferData ? transferData.length : 0;
-              console.log(`✅ ${creator.name} has made ${allTimeTransfers} transfers this season`);
+              // Count transfers excluding those made during wildcard/freehit gameweeks
+              const validTransfers = transferData ? transferData.filter((transfer: any) => !chipGameweeks.has(transfer.event)) : [];
+              allTimeTransfers = validTransfers.length;
+              const excludedCount = transferData ? transferData.length - allTimeTransfers : 0;
+              console.log(`✅ ${creator.name} has made ${allTimeTransfers} transfers this season (excluded ${excludedCount} transfers from chip gameweeks)`);
               
               if (transferData && transferData.length > 0) {
                 // Get transfers for current gameweek
