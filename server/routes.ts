@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, type UpsetConfig } from "./storage";
 import { priceScheduler } from "./price-scheduler";
+import { z } from "zod";
 import { 
   insertPriceAlertSchema, 
   unifiedProjectionSettings as unifiedProjectionSettingsTable, 
@@ -13536,6 +13537,223 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching cached assists projections:", error);
       res.status(500).json({ error: "Failed to fetch cached assists projections" });
+    }
+  });
+
+  // BATCH API ENDPOINTS - Performance optimization for reduced network overhead
+  
+  // Batch request validation schema
+  const batchRequestSchema = z.object({
+    playerIds: z.array(z.number().positive()).min(1).max(200).describe("Array of player IDs (1-200)"),
+    startGameweek: z.number().min(1).max(38).describe("Starting gameweek"),
+    endGameweek: z.number().min(1).max(38).describe("Ending gameweek")
+  });
+
+  app.post("/api/batch/player-goals-projections", async (req, res) => {
+    try {
+      // Validate request body
+      const validation = batchRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({
+          error: "Invalid request body",
+          details: validation.error.errors
+        });
+      }
+
+      const { playerIds, startGameweek, endGameweek } = validation.data;
+      
+      // Validate gameweek range
+      if (startGameweek > endGameweek) {
+        return res.status(400).json({
+          error: "startGameweek must be less than or equal to endGameweek"
+        });
+      }
+
+      console.log(`🚀 BATCH API: Fetching goals projections for ${playerIds.length} players (GW${startGameweek}-${endGameweek})`);
+
+      // Efficient database query with IN clause and gameweek range
+      const cachedData = await db.select({
+        playerId: playerGoalsProjections.playerId,
+        gameweek: playerGoalsProjections.gameweek,
+        goals: playerGoalsProjections.goals
+      })
+        .from(playerGoalsProjections)
+        .where(and(
+          eq(playerGoalsProjections.season, '2025/26'),
+          inArray(playerGoalsProjections.playerId, playerIds),
+          gte(playerGoalsProjections.gameweek, startGameweek),
+          lte(playerGoalsProjections.gameweek, endGameweek)
+        ));
+
+      // Get player metadata
+      const playerMetadata = await getPlayerMetadata();
+      
+      // Track which players we have data for
+      const foundPlayerIds = new Set(cachedData.map(row => row.playerId));
+      const missingPlayerIds = playerIds.filter(id => !foundPlayerIds.has(id));
+
+      // Group by player efficiently using Map
+      const playersMap = new Map();
+      
+      for (const row of cachedData) {
+        if (!playersMap.has(row.playerId)) {
+          const metadata = playerMetadata.get(row.playerId);
+          
+          playersMap.set(row.playerId, {
+            playerId: row.playerId,
+            playerName: metadata?.name || `Player ${row.playerId}`,
+            teamName: metadata?.teamName || null,
+            teamShort: metadata?.teamShort || null,
+            position: metadata?.position || null,
+            gameweekProjections: {},
+            projectedGoals: 0,
+            totalProjectedGoals: 0
+          });
+        }
+        
+        const player = playersMap.get(row.playerId);
+        player.gameweekProjections[row.gameweek] = row.goals;
+        player.projectedGoals += row.goals;
+        player.totalProjectedGoals += row.goals;
+      }
+
+      // Convert to array preserving input order
+      const responseData = playerIds.map(playerId => {
+        const player = playersMap.get(playerId);
+        if (player) {
+          return player;
+        }
+        // Return empty projection for missing players
+        const metadata = playerMetadata.get(playerId);
+        return {
+          playerId,
+          playerName: metadata?.name || `Player ${playerId}`,
+          teamName: metadata?.teamName || null,
+          teamShort: metadata?.teamShort || null,
+          position: metadata?.position || null,
+          gameweekProjections: {},
+          projectedGoals: 0,
+          totalProjectedGoals: 0
+        };
+      });
+
+      console.log(`⚡ BATCH API: Served ${responseData.length} players (${missingPlayerIds.length} missing from cache)`);
+
+      res.json({
+        data: responseData,
+        missingPlayerIds: missingPlayerIds.length > 0 ? missingPlayerIds : undefined,
+        gameweekRange: { start: startGameweek, end: endGameweek },
+        totalPlayers: playerIds.length,
+        cachedPlayers: foundPlayerIds.size
+      });
+
+    } catch (error) {
+      console.error("Error in batch goals projections:", error);
+      res.status(500).json({ error: "Failed to fetch batch goals projections" });
+    }
+  });
+
+  app.post("/api/batch/player-assists-projections", async (req, res) => {
+    try {
+      // Validate request body
+      const validation = batchRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({
+          error: "Invalid request body",
+          details: validation.error.errors
+        });
+      }
+
+      const { playerIds, startGameweek, endGameweek } = validation.data;
+      
+      // Validate gameweek range
+      if (startGameweek > endGameweek) {
+        return res.status(400).json({
+          error: "startGameweek must be less than or equal to endGameweek"
+        });
+      }
+
+      console.log(`🚀 BATCH API: Fetching assists projections for ${playerIds.length} players (GW${startGameweek}-${endGameweek})`);
+
+      // Efficient database query with IN clause and gameweek range
+      const cachedData = await db.select({
+        playerId: playerAssistProjections.playerId,
+        gameweek: playerAssistProjections.gameweek,
+        assists: playerAssistProjections.assists
+      })
+        .from(playerAssistProjections)
+        .where(and(
+          eq(playerAssistProjections.season, '2025/26'),
+          inArray(playerAssistProjections.playerId, playerIds),
+          gte(playerAssistProjections.gameweek, startGameweek),
+          lte(playerAssistProjections.gameweek, endGameweek)
+        ));
+
+      // Get player metadata
+      const playerMetadata = await getPlayerMetadata();
+      
+      // Track which players we have data for
+      const foundPlayerIds = new Set(cachedData.map(row => row.playerId));
+      const missingPlayerIds = playerIds.filter(id => !foundPlayerIds.has(id));
+
+      // Group by player efficiently using Map
+      const playersMap = new Map();
+      
+      for (const row of cachedData) {
+        if (!playersMap.has(row.playerId)) {
+          const metadata = playerMetadata.get(row.playerId);
+          
+          playersMap.set(row.playerId, {
+            playerId: row.playerId,
+            playerName: metadata?.name || `Player ${row.playerId}`,
+            teamShort: metadata?.teamShort || null,
+            position: metadata?.position || null,
+            gameweekProjections: {},
+            projectedAssists: 0,
+            totalProjectedAssists: 0,
+            assistShare: 0
+          });
+        }
+        
+        const player = playersMap.get(row.playerId);
+        player.gameweekProjections[row.gameweek] = row.assists;
+        player.projectedAssists += row.assists;
+        player.totalProjectedAssists += row.assists;
+      }
+
+      // Convert to array preserving input order
+      const responseData = playerIds.map(playerId => {
+        const player = playersMap.get(playerId);
+        if (player) {
+          return player;
+        }
+        // Return empty projection for missing players
+        const metadata = playerMetadata.get(playerId);
+        return {
+          playerId,
+          playerName: metadata?.name || `Player ${playerId}`,
+          teamShort: metadata?.teamShort || null,
+          position: metadata?.position || null,
+          gameweekProjections: {},
+          projectedAssists: 0,
+          totalProjectedAssists: 0,
+          assistShare: 0
+        };
+      });
+
+      console.log(`⚡ BATCH API: Served ${responseData.length} players (${missingPlayerIds.length} missing from cache)`);
+
+      res.json({
+        data: responseData,
+        missingPlayerIds: missingPlayerIds.length > 0 ? missingPlayerIds : undefined,
+        gameweekRange: { start: startGameweek, end: endGameweek },
+        totalPlayers: playerIds.length,
+        cachedPlayers: foundPlayerIds.size
+      });
+
+    } catch (error) {
+      console.error("Error in batch assists projections:", error);
+      res.status(500).json({ error: "Failed to fetch batch assists projections" });
     }
   });
 
