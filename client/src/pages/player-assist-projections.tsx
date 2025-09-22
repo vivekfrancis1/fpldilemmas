@@ -52,7 +52,7 @@ export default function PlayerAssistProjections() {
     
     const currentGW = computeCurrentGameweek(bootstrapData.events);
     const nextGW = Math.min((currentGW ?? 3) + 1, 38);
-    const maxAvailableGW = Math.min(38, nextGW + 11); // Next 12 gameweeks max
+    const maxAvailableGW = Math.min(38, nextGW + 5); // Next 6 gameweeks max
     
     setStartGameweek(nextGW);
     setEndGameweek(Math.min(nextGW + 5, maxAvailableGW)); // Next 6 gameweeks default
@@ -84,7 +84,7 @@ export default function PlayerAssistProjections() {
   }, [bootstrapData]);
 
   const nextGameweek = currentGameweek + 1;
-  const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
+  const maxAvailableGW = Math.min(38, nextGameweek + 5); // Next 6 gameweeks max
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
@@ -106,7 +106,7 @@ export default function PlayerAssistProjections() {
     playerAssistData.forEach(player => {
       Object.keys(player.gameweekProjections).forEach(gw => {
         const gwNum = parseInt(gw);
-        if (gwNum >= nextGameweek && gwNum <= maxAvailableGW) { // Show next 12 gameweeks dynamically
+        if (gwNum >= nextGameweek && gwNum <= maxAvailableGW) { // Show next 6 gameweeks dynamically
           gameweeks.add(gwNum);
         }
       });

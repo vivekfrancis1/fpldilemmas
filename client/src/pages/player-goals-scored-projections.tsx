@@ -53,7 +53,7 @@ export default function PlayerGoalsScoredProjections() {
     
     const currentGW = computeCurrentGameweek(bootstrapData.events);
     const nextGW = Math.min((currentGW ?? 3) + 1, 38);
-    const maxAvailableGW = Math.min(38, nextGW + 11); // Next 12 gameweeks max
+    const maxAvailableGW = Math.min(38, nextGW + 5); // Next 6 gameweeks max
     
     setStartGameweek(nextGW);
     setEndGameweek(Math.min(nextGW + 5, maxAvailableGW)); // Next 6 gameweeks default
@@ -84,7 +84,7 @@ export default function PlayerGoalsScoredProjections() {
   // Get current gameweek from bootstrap data
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 3;
   const nextGameweek = currentGameweek + 1;
-  const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
+  const maxAvailableGW = Math.min(38, nextGameweek + 5); // Next 6 gameweeks max
 
   // Dynamic gameweek range based on user selection (default: starts from next gameweek)
   const selectedGameweeks = useMemo(() => {
