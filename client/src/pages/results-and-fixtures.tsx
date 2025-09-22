@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, Clock, Trophy, Target, Home, Plane, ArrowUpDown, ArrowUp, ArrowDown, X, User, Shield, Star, Zap, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
@@ -62,7 +62,7 @@ interface MatchStats {
 }
 
 export default function ResultsAndFixtures() {
-  const [selectedGameweek, setSelectedGameweek] = useState<"all" | number>(3);
+  const [selectedGameweek, setSelectedGameweek] = useState<"all" | number>(5);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const [isMatchStatsOpen, setIsMatchStatsOpen] = useState(false);
   const [matchStats, setMatchStats] = useState<MatchStats | null>(null);
@@ -111,10 +111,17 @@ export default function ResultsAndFixtures() {
 
   // Get current gameweek for context
   const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 1;
+    if (!bootstrapData?.events) return 5;
     const currentEvent = bootstrapData.events.find(event => event.is_current);
-    return currentEvent ? currentEvent.id : 1;
+    return currentEvent ? currentEvent.id : 5;
   }, [bootstrapData]);
+
+  // Update selected gameweek to current gameweek when data loads
+  useEffect(() => {
+    if (bootstrapData?.events && currentGameweek) {
+      setSelectedGameweek(currentGameweek);
+    }
+  }, [bootstrapData, currentGameweek]);
 
   // Process fixtures data
   const processedFixtures = useMemo(() => {
