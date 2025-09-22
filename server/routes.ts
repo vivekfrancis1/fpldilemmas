@@ -9417,47 +9417,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      minutesData.forEach((player: any) => {
-        if (player.gameweekProjections) {
-          minutesProjections[player.playerId] = player.gameweekProjections;
+      // Transform minutes data from individual records to grouped format
+      minutesData.forEach((record: any) => {
+        if (!minutesProjections[record.playerId]) {
+          minutesProjections[record.playerId] = {};
         }
+        minutesProjections[record.playerId][record.gameweek] = record.minutes;
       });
 
-      defensiveDataArray.forEach((player: any) => {
-        if (player.gameweekProjections) {
-          defensiveProjections[player.playerId] = {};
-          
-          // Handle two formats: array format (gameweekProjections as array) or object format (gameweeks as keys)
-          if (Array.isArray(player.gameweekProjections)) {
-            // Array format: iterate over array
-            player.gameweekProjections.forEach((gwData: any) => {
-              const gw = gwData.gameweek;
-              if (gw >= start && gw <= end) {
-                defensiveProjections[player.playerId][gw] = {
-                  dc: gwData.defensiveContribution || 0,
-                  points: gwData.points || 0
-                };
-              }
-            });
-          } else {
-            // Object format: iterate over gameweek keys
-            Object.entries(player.gameweekProjections).forEach(([gwStr, dcValue]) => {
-              const gw = parseInt(gwStr);
-              if (gw >= start && gw <= end) {
-                defensiveProjections[player.playerId][gw] = {
-                  dc: dcValue as number,
-                  points: (player.pointsProjections && player.pointsProjections[gwStr]) || 0
-                };
-              }
-            });
-          }
+      // Transform defensive data from individual records to grouped format
+      defensiveDataArray.forEach((record: any) => {
+        if (!defensiveProjections[record.playerId]) {
+          defensiveProjections[record.playerId] = {};
         }
+        defensiveProjections[record.playerId][record.gameweek] = {
+          dc: record.defensiveContribution || 0,
+          points: record.points || 0
+        };
       });
 
-      cleanSheetsData.forEach((team: any) => {
-        if (team.gameweekProjections) {
-          teamCleanSheetProjections[team.teamId] = team.gameweekProjections;
+      // Transform clean sheet data from team records to team lookup
+      cleanSheetsData.forEach((record: any) => {
+        if (!teamCleanSheetProjections[record.teamId]) {
+          teamCleanSheetProjections[record.teamId] = {};
         }
+        teamCleanSheetProjections[record.teamId][record.gameweek] = record.cleanSheetProbability;
       });
 
       // Populate FPL scoring component projections from database cache data
