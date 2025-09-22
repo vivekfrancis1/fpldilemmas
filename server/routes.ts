@@ -4364,9 +4364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (gameweekFixtures.length > 0 && finishedFixtures.length === gameweekFixtures.length) {
           completeGameweeks.add(gw);
-          console.log(`DEBUG: Goals Scored - GW${gw} COMPLETE - All ${gameweekFixtures.length} fixtures finished, using ACTUAL data`);
         } else if (gameweekFixtures.length > 0) {
-          console.log(`DEBUG: Goals Scored - GW${gw} INCOMPLETE - ${finishedFixtures.length}/${gameweekFixtures.length} fixtures finished, using PROJECTIONS`);
         }
       }
       
@@ -6422,7 +6420,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Apply minutes scaling to the raw assist projection
                 const scaledPlayerAssists = await applyMinutesScaling(playerId, gameweek, rawPlayerAssists, "2025/26", false);
                 
-                console.log(`DEBUG: Assists - GW${gameweek} PROJECTION - ${teamData.teamShort} projected: ${projectedTeamAssists.toFixed(2)} assists, ${playerName}: ${rawPlayerAssists.toFixed(2)} (raw) → ${scaledPlayerAssists.toFixed(2)} (minutes-scaled)`);
                 
                 gameweekProjections[gameweek] = Math.round(scaledPlayerAssists * 100) / 100;
                 totalProjectedAssists += scaledPlayerAssists;
@@ -7967,7 +7964,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`DEBUG: Clean Sheet - GW${gw} ACTUAL - ${player.web_name}: ${cleanSheetPointsForGW} points (completed)`);
             } else if (!hasCompletedFixtures && hasUncompletedFixtures) {
               cleanSheetPointsForGW = projectedCleanSheetPoints;
-              console.log(`DEBUG: Clean Sheet - GW${gw} PROJECTION - ${player.web_name}: ${cleanSheetPointsForGW.toFixed(2)} points (all pending)`);
             } else {
               cleanSheetPointsForGW = actualCleanSheetPoints + projectedCleanSheetPoints;
               console.log(`DEBUG: Clean Sheet - GW${gw} HYBRID - ${player.web_name}: ${actualCleanSheetPoints} actual + ${projectedCleanSheetPoints.toFixed(2)} projected = ${cleanSheetPointsForGW.toFixed(2)} total`);
@@ -7977,7 +7973,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
             if (teamCleanSheetPercent !== undefined) {
               cleanSheetPointsForGW = (teamCleanSheetPercent / 100) * probabilityPlays60Plus * cleanSheetPoints;
-              console.log(`DEBUG: Clean Sheet - GW${gw} PROJECTION - ${team.short_name} CS%: ${teamCleanSheetPercent.toFixed(1)}%, ${player.web_name}: ${cleanSheetPointsForGW.toFixed(2)} points`);
             } else {
               cleanSheetPointsForGW = 0;
             }
