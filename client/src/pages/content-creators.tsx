@@ -86,10 +86,13 @@ type FPLCreatorTracking = {
   overallPoints: number;
   gameweekPoints: number;
   gameweekRank?: number;
-  teamValue: number;
+  teamValue: number | string;
   totalTransfers: number;
   recordedAt: string;
-  chipsUsed?: number;
+  wildcardUsed?: boolean;
+  benchBoostUsed?: boolean;
+  freeHitUsed?: boolean;
+  tripleCaptainUsed?: boolean;
 };
 
 type CreatorWithLatestData = FPLCreator;
@@ -356,11 +359,13 @@ const getContentCreatorColumns = (): ResponsiveTableColumn<CreatorWithLatestData
     cardOrder: 5,
     sortable: true,
     className: 'font-mono',
-    render: (value, creator) => {
+    render: (_, creator) => {
       const teamValue = creator.latestTracking?.teamValue;
-      return teamValue !== undefined && teamValue !== null 
-        ? `£${(teamValue / 10).toFixed(1)}m` 
-        : "N/A";
+      if (teamValue === undefined || teamValue === null) return "N/A";
+      
+      // Handle both string and number formats
+      const parsedValue = typeof teamValue === 'string' ? parseFloat(teamValue) : teamValue;
+      return `£${parsedValue.toFixed(1)}m`;
     }
   },
   {
@@ -387,8 +392,18 @@ const getContentCreatorColumns = (): ResponsiveTableColumn<CreatorWithLatestData
     sortable: true,
     className: 'font-mono',
     render: (value, creator) => {
-      const chips = creator.latestTracking?.chipsUsed;
-      return chips !== undefined ? chips : "N/A";
+      const tracking = creator.latestTracking;
+      if (!tracking) return "N/A";
+      
+      // Count chips used from individual boolean fields
+      const chipsUsed = [
+        tracking.wildcardUsed,
+        tracking.benchBoostUsed, 
+        tracking.freeHitUsed,
+        tracking.tripleCaptainUsed
+      ].filter(Boolean).length;
+      
+      return chipsUsed;
     }
   }
 ];
