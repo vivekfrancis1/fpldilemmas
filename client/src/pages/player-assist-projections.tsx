@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect } from "react";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { BootstrapData } from "@shared/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useBatchAssistsProjections } from "@/hooks/use-batch-projections";
 import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -58,24 +59,22 @@ export default function PlayerAssistProjections() {
     setInitialized(true);
   }, [bootstrapData, initialized]);
 
-  // ALL useQuery hooks - REMOVED conditional enabled to ensure consistent hook order
-  const { data: cachedAssistData, isLoading: cachedLoading, error: cachedError } = useQuery<PlayerAssistProjection[]>({
-    queryKey: ["/api/cached/player-assists-projections"],
-    staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
-  });
-
-  const { data: liveAssistData, isLoading: liveLoading, error: liveError } = useQuery<PlayerAssistProjection[]>({
-    queryKey: ["/api/player-assist-projections", startGameweek, endGameweek],
-    queryFn: async () => {
-      const response = await fetch(`/api/player-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch assist projections: ${response.statusText}`);
-      }
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes for live data
-    enabled: true, // Always enabled since gameweeks have safe defaults
-  });
+  // BATCH OPTIMIZED: Use new batch hook for better performance
+  const { 
+    data: playerAssistData, 
+    isLoading, 
+    error, 
+    usedBatch 
+  } = useBatchAssistsProjections(
+    initialized ? startGameweek : undefined,
+    initialized ? endGameweek : undefined,
+    {
+      enabled: true,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      batchSize: 150, // Process 150 players per batch
+      maxConcurrency: 3, // Max 3 concurrent requests
+    }
+  );
 
   // ALL useMemo hooks
   const currentGameweek = useMemo(() => {
@@ -86,34 +85,6 @@ export default function PlayerAssistProjections() {
 
   const nextGameweek = currentGameweek + 1;
   const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
-
-  // Data selection logic - prefer cached data but use live data when gameweeks not available
-  const playerAssistData = useMemo(() => {
-    // Check if cached data contains the requested gameweek range
-    if (cachedAssistData && cachedAssistData.length > 0) {
-      const samplePlayer = cachedAssistData[0];
-      const hasRequestedRange = startGameweek && endGameweek && 
-        samplePlayer.gameweekProjections[startGameweek] !== undefined && 
-        samplePlayer.gameweekProjections[endGameweek] !== undefined;
-      
-      if (hasRequestedRange) {
-        return cachedAssistData;
-      }
-    }
-    // Use live data when cached data doesn't contain requested range or is unavailable
-    return liveAssistData;
-  }, [cachedAssistData, liveAssistData, startGameweek, endGameweek]);
-
-  // Loading state - show loading if cached is loading, or if cached data is empty/unavailable and live is loading
-  const isLoading = useMemo(() => {
-    // If cached is loading, show loading
-    if (cachedLoading) return true;
-    // If cached data is empty or unavailable, and live data is loading, show loading
-    if ((!cachedAssistData || cachedAssistData.length === 0) && liveLoading) return true;
-    return false;
-  }, [cachedLoading, liveLoading, cachedAssistData]);
-
-  const error = cachedError || liveError;
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
