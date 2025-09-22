@@ -28,7 +28,7 @@ export class PlayerTotalPointsAggregator {
   /**
    * Aggregate individual component caches into comprehensive Total Points cache
    */
-  async aggregatePlayerTotalPoints(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
+  async aggregatePlayerTotalPoints(startGameweek: number = 6, endGameweek: number = 11): Promise<void> {
     console.log(`🔧 Starting Player Total Points aggregation for GW${startGameweek}-${endGameweek}...`);
     
     try {

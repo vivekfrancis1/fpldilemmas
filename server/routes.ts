@@ -13260,9 +13260,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
       }
       
-      // Use query parameters or calculate from current gameweek
+      // Use query parameters or calculate from current gameweek (next 6 future gameweeks)
       const startGameweek = parseInt(req.query.start as string) || (currentGameweek + 1);
       const endGameweek = parseInt(req.query.end as string) || Math.min(startGameweek + 5, 38);
+      
+      console.log(`📅 Current gameweek: ${currentGameweek}, Target range: GW${startGameweek}-${endGameweek}`);
       
       console.log(`🚀 Admin-triggered FPL scoring cache rebuild for GW${startGameweek}-${endGameweek}`);
       
