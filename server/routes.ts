@@ -13783,7 +13783,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🚀 BATCH API: Fetching assists projections for ${playerIds.length} players (GW${startGameweek}-${endGameweek})`);
 
-      // Efficient database query with IN clause and gameweek range
+      // CACHE VALIDATION: Check if cache contains data for the full requested range
+      // Get a sample of data to check gameweek coverage
+      const sampleData = await db.select({
+        gameweek: playerAssistProjections.gameweek
+      })
+        .from(playerAssistProjections)
+        .where(eq(playerAssistProjections.season, '2025/26'))
+        .limit(100);
+      
+      const availableGameweeks = new Set(sampleData.map(row => row.gameweek));
+      let hasFullRange = true;
+      let missingGameweeks = [];
+      
+      for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        if (!availableGameweeks.has(gw)) {
+          hasFullRange = false;
+          missingGameweeks.push(gw);
+        }
+      }
+      
+      if (!hasFullRange) {
+        console.log(`🔄 BATCH API: Cache missing gameweeks ${missingGameweeks.join(', ')} for range GW${startGameweek}-${endGameweek}, falling back to live calculation`);
+        
+        // Fallback to regular API endpoint for live calculation
+        try {
+          const fallbackResponse = await fetch(`http://localhost:5000/api/player-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json();
+            
+            // Filter to requested players and convert to batch format
+            const filteredData = fallbackData
+              .filter((player: any) => playerIds.includes(player.playerId))
+              .map((player: any) => ({
+                playerId: player.playerId,
+                playerName: player.playerName,
+                teamShort: player.teamShort,
+                position: player.position,
+                gameweekProjections: player.gameweekProjections,
+                projectedAssists: player.totalProjectedAssists || 0,
+                totalProjectedAssists: player.totalProjectedAssists || 0,
+                assistShare: player.assistShare || 0
+              }));
+            
+            // Ensure order matches request and handle missing players
+            const responseData = playerIds.map(playerId => {
+              const player = filteredData.find(p => p.playerId === playerId);
+              if (player) return player;
+              
+              // Return empty projection for missing players
+              return {
+                playerId,
+                playerName: `Player ${playerId}`,
+                teamShort: null,
+                position: null,
+                gameweekProjections: {},
+                projectedAssists: 0,
+                totalProjectedAssists: 0,
+                assistShare: 0
+              };
+            });
+            
+            console.log(`⚡ BATCH API: Served ${responseData.length} players from live calculation (GW${startGameweek}-${endGameweek})`);
+            
+            return res.json({
+              data: responseData,
+              gameweekRange: { start: startGameweek, end: endGameweek },
+              totalPlayers: playerIds.length,
+              cachedPlayers: filteredData.length,
+              source: 'live_calculation'
+            });
+          }
+        } catch (error) {
+          console.error('Failed to fetch from live calculation:', error);
+        }
+        
+        // If fallback fails, return error
+        return res.status(503).json({
+          error: `Cache incomplete for range GW${startGameweek}-${endGameweek}. Missing gameweeks: ${missingGameweeks.join(', ')}`,
+          availableGameweeks: Array.from(availableGameweeks).sort((a, b) => a - b),
+          requestedRange: { start: startGameweek, end: endGameweek }
+        });
+      }
+
+      // If cache has full range, proceed with database query
       const cachedData = await db.select({
         playerId: playerAssistProjections.playerId,
         gameweek: playerAssistProjections.gameweek,
