@@ -10,6 +10,7 @@ import {
   cachedPlayerMinutesPoints
 } from "@shared/schema";
 import { internalFetch } from "./config";
+import { PlayerTotalPointsAggregator } from "./player-total-points-aggregator";
 
 export class FPLScoringCacheService {
   
@@ -33,6 +34,12 @@ export class FPLScoringCacheService {
       ]);
       
       console.log("✅ FPL scoring component cache update completed successfully");
+      
+      // Aggregate all component caches into comprehensive Total Points cache
+      console.log("🔧 Starting Player Total Points aggregation...");
+      const aggregator = new PlayerTotalPointsAggregator();
+      await aggregator.aggregatePlayerTotalPoints(startGameweek, endGameweek);
+      
     } catch (error) {
       console.error("❌ FPL scoring component cache update failed:", error);
       throw error;

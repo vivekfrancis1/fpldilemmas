@@ -17,6 +17,7 @@ import {
   cachedPlayerYellowCards,
   cachedPlayerRedCards,
   cachedPlayerBonusPoints,
+  cachedPlayerTotalPoints,
   teamProjections,
   users
 } from "@shared/schema";
@@ -13171,7 +13172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CACHED PLAYER TOTAL POINTS - PUBLIC ENDPOINT - serves pre-computed data without auth
+  // CACHED PLAYER TOTAL POINTS - PUBLIC ENDPOINT - serves pre-computed aggregated data
   app.get("/api/cached/player-total-points", async (req, res) => {
     try {
       // Get current gameweek to determine proper range
@@ -13201,31 +13202,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(cachedData.data);
       }
       
-      // Fallback: Serve from database for current range
-      console.log(`📦 CACHED: No memory cache, checking database for GW${startGameweek}-${endGameweek} projections...`);
+      // Serve from new aggregated cache database table
+      console.log(`📦 CACHED: No memory cache, checking aggregated database cache...`);
       
       try {
-        // Direct database query for cached projections with current range
-        const dbProjections = await db.execute(sql`
-          SELECT * FROM player_projections 
-          WHERE start_gameweek = ${startGameweek}
-            AND end_gameweek = ${endGameweek}
-            AND season = '2025/26'
-          ORDER BY total_points DESC
-        `);
+        // Query the new aggregated cached player total points table
+        const aggregatedData = await db.select().from(cachedPlayerTotalPoints);
         
-        if (dbProjections.rows && dbProjections.rows.length > 0) {
-          // Transform database field names to match frontend expectations
-          const transformedProjections = dbProjections.rows.map((row: any) => ({
-            ...row,
-            gameweekProjections: row.total_points_projections || {}
-          }));
+        if (aggregatedData && aggregatedData.length > 0) {
+          // Transform to match frontend expectations
+          const transformedData = aggregatedData.map((player: any) => ({
+            playerId: player.playerId,
+            playerName: player.playerName,
+            teamName: player.teamName,
+            position: player.position,
+            gameweekProjections: player.totalPointsData || {},
+            totalPoints: player.totalExpectedPoints || 0,
+            averagePerGameweek: player.averagePerGameweek || 0
+          })).sort((a, b) => b.totalPoints - a.totalPoints); // Sort by total points descending
           
-          console.log(`📦 CACHED: Serving ${transformedProjections.length} database-cached projections for GW${startGameweek}-${endGameweek}`);
-          return res.json(transformedProjections);
+          // Cache the result in memory for faster subsequent access
+          totalPointsCache.set(currentCacheKey, {
+            data: transformedData,
+            timestamp: Date.now()
+          });
+          
+          console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${transformedData.length} players)`);
+          return res.json(transformedData);
         }
       } catch (dbError) {
-        console.error("📦 CACHED: Database fallback failed:", dbError);
+        console.error("📦 CACHED: Aggregated database cache failed:", dbError);
       }
       
       // If no cached data available, return empty array to prevent errors
