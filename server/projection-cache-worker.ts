@@ -1484,55 +1484,37 @@ class ProjectionCacheWorker {
   }
 
   /**
-   * Get Player Total Points cache status from the actual totalPointsCache Map (aligned with API)
+   * Get Player Total Points cache status from the database cache (aligned with new caching system)
    */
   private async getPlayerTotalPointsStatus(): Promise<{ type: string; count: number; lastUpdated: string | null; isStale: boolean }> {
     try {
-      // Import the actual totalPointsCache that the Player Total Points API uses
-      const { totalPointsCache } = await import('./routes');
+      const { db } = await import("./db");
+      const { cachedPlayerTotalPoints } = await import("@shared/schema");
+      const { sql, count } = await import("drizzle-orm");
       
       const now = new Date();
-      const STALE_THRESHOLD = 15 * 60 * 1000; // 15 minutes (same as API cache duration)
+      const STALE_THRESHOLD = 60 * 60 * 1000; // 1 hour (player total points are more complex, allow longer cache)
       
-      let totalCount = 0;
-      let lastUpdated: string | null = null;
+      // Get count and most recent update time from database
+      const result = await db
+        .select({
+          count: count(),
+          lastUpdated: sql<string>`MAX(${cachedPlayerTotalPoints.lastUpdated})::text`
+        })
+        .from(cachedPlayerTotalPoints);
+      
+      const totalCount = result[0]?.count || 0;
+      const lastUpdated = result[0]?.lastUpdated || null;
+      
+      // Check if stale
       let isStale = true;
-      
-      console.log(`🔍 DEBUG: Checking actual totalPointsCache Map - exists: ${!!totalPointsCache}, size: ${totalPointsCache?.size || 0}`);
-      
-      if (totalPointsCache && totalPointsCache.size > 0) {
-        console.log(`🔍 DEBUG: Found totalPointsCache with ${totalPointsCache.size} entries`);
-        
-        // Count total cached players across all gameweek ranges
-        for (const [key, value] of Array.from(totalPointsCache.entries())) {
-          console.log(`🔍 DEBUG: Cache entry key: ${key}, value type: ${typeof value}, has data: ${!!value?.data}`);
-          
-          if (value && value.data && Array.isArray(value.data)) {
-            totalCount += value.data.length;
-            console.log(`🔍 DEBUG: Added ${value.data.length} players from key ${key}, total now: ${totalCount}`);
-            
-            // Find the most recent timestamp
-            if (value.timestamp) {
-              const cacheTime = new Date(value.timestamp).toISOString();
-              if (!lastUpdated || cacheTime > lastUpdated) {
-                lastUpdated = cacheTime;
-              }
-              
-              // Check if this entry is stale
-              const entryAge = now.getTime() - value.timestamp;
-              if (entryAge <= STALE_THRESHOLD) {
-                isStale = false; // At least one entry is fresh
-              }
-            }
-          }
-        }
-        
-        console.log(`🔍 DEBUG: Most recent cache timestamp: ${lastUpdated}`);
-      } else {
-        console.log(`🔍 DEBUG: No totalPointsCache or cache is empty`);
+      if (lastUpdated) {
+        const cacheTime = new Date(lastUpdated);
+        const ageMs = now.getTime() - cacheTime.getTime();
+        isStale = ageMs > STALE_THRESHOLD;
       }
       
-      console.log(`🔍 DEBUG: Final result - count: ${totalCount}, lastUpdated: ${lastUpdated}, isStale: ${isStale}`);
+      console.log(`🔍 DEBUG: Player Total Points DB cache - count: ${totalCount}, lastUpdated: ${lastUpdated}, isStale: ${isStale}`);
       
       return {
         type: 'Player Total Points',
@@ -1541,7 +1523,7 @@ class ProjectionCacheWorker {
         isStale
       };
     } catch (error) {
-      console.error('❌ Error getting Player Total Points cache status:', error);
+      console.error('❌ Error getting Player Total Points database cache status:', error);
       return {
         type: 'Player Total Points',
         count: 0,
