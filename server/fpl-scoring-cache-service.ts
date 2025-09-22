@@ -789,9 +789,6 @@ export class FPLScoringCacheService {
         }
       }
       
-      // Clear existing data
-      await db.delete(cachedPlayerMinutesPoints);
-      
       // Convert map to array and calculate averages
       const minutesPointsArray = Array.from(minutesPointsData.values()).map(player => ({
         ...player,
@@ -799,7 +796,7 @@ export class FPLScoringCacheService {
           player.totalPoints / completedGameweeks.length : 0
       }));
       
-      // Insert new data in batches
+      // Use upsert instead of delete + insert to prevent race conditions
       const batchSize = 50;
       for (let i = 0; i < minutesPointsArray.length; i += batchSize) {
         const batch = minutesPointsArray.slice(i, i + batchSize);
@@ -820,7 +817,14 @@ export class FPLScoringCacheService {
             },
             seasonTotal: player.totalPoints
           }))
-        );
+        ).onConflictDoUpdate({
+          target: cachedPlayerMinutesPoints.playerId,
+          set: {
+            gameweeksData: sql`excluded.gameweeks_data`,
+            seasonTotal: sql`excluded.season_total`,
+            lastUpdated: sql`now()`
+          }
+        });
       }
       
       console.log(`✅ Cached ${minutesPointsArray.length} player minutes points records`);
