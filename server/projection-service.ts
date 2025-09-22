@@ -176,34 +176,10 @@ class ProjectionService {
             const seasonPerformance = totalPoints / Math.max(minutes / 90, 1); // Points per 90 minutes
             const adjustedForm = Math.max(form * 0.7 + seasonPerformance * 0.3, 1.0);
             
-            // 1. ENHANCED MINUTES CALCULATION with injury/suspension awareness
-            // Import injury assessment utilities
-            const { assessPlayerInjuryStatus, calculateInjuryAdjustedMinutes } = require('./injury-assessment-utils');
-            
-            // Get enhanced injury assessment
-            const injuryAssessment = assessPlayerInjuryStatus(
-              fplPlayer.status,
-              fplPlayer.news,
-              fplPlayer.chance_of_playing_this_round,
-              fplPlayer.chance_of_playing_next_round,
-              gw // current gameweek being calculated
-            );
-            
-            // Base minutes calculation (without injury)
+            // 1. MINUTES CALCULATION
+            const injuryRisk = (fplPlayer.chance_of_playing_next_round || 100) / 100;
             const rotationRisk = selectedBy > 30 ? 0.95 : selectedBy > 10 ? 0.85 : 0.75; // Popular players less rotated
-            const baseMinutes = Math.min(90, adjustedForm * 15) * rotationRisk;
-            
-            // Apply injury/suspension adjustments
-            const { adjustedMinutes: expectedMinutes, reasoning } = calculateInjuryAdjustedMinutes(
-              baseMinutes,
-              injuryAssessment,
-              gw
-            );
-            
-            // Debug logging for significant injury impacts
-            if (injuryAssessment.minutesMultiplier < 0.8) {
-              console.log(`🏥 Injury impact on ${fplPlayer.web_name} (${fplPlayer.id}) GW${gw}: ${baseMinutes.toFixed(1)} → ${expectedMinutes.toFixed(1)} mins (${reasoning})`);
-            }
+            const expectedMinutes = Math.min(90, adjustedForm * 15) * injuryRisk * rotationRisk;
             const minutesPoints = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
             pointsFromMinutes[`gw${gw}`] = minutesPoints;
             totalMinutesPoints += minutesPoints;

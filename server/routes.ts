@@ -36,7 +36,6 @@ import { resultCache } from "./result-cache-service";
 import { applyMinutesScaling, applyMinutesScalingBatch, getExpectedMinutes } from './minutes-scaling-utils';
 import { syncProjectionService } from './sync-projection-service';
 import { FPLScoringCacheService } from './fpl-scoring-cache-service';
-import { assessPlayerInjuryStatus, calculateInjuryAdjustedMinutes } from './injury-assessment-utils';
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -5316,80 +5315,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expectedMinutes = 1000;
     }
     
-    // ENHANCED INJURY/SUSPENSION ANALYSIS using new injury assessment utilities
-    try {
-      
-      // Get comprehensive injury assessment
-      const currentGameweek = 5; // Current season position - can be made dynamic
-      const injuryAssessment = assessPlayerInjuryStatus(
-        player.status,
-        player.news,
-        player.chance_of_playing_this_round,
-        player.chance_of_playing_next_round,
-        currentGameweek
-      );
-      
-      // Apply form factor (more conservative)
-      const formFactor = player.form ? Math.max(0.7, Math.min(1.1, player.form / 5)) : 0.9;
-      
-      // Check for international tournament impact
-      const playerName = `${player.first_name || ''} ${player.second_name || ''}`.trim();
-      const playerNationality = PLAYER_NATIONALITIES[playerName];
-      
-      let tournamentAdjustment = 1.0;
-      let tournamentWeeksOut = 0;
-      
-      if (playerNationality) {
-        // Check AFCON impact
-        const afcon = INTERNATIONAL_TOURNAMENTS.AFCON_2025;
-        if (afcon.affectedCountries.includes(playerNationality)) {
-          tournamentWeeksOut = afcon.endGameweek - afcon.startGameweek + 1; // 3 gameweeks
+    // ENHANCED AVAILABILITY AND INJURY ANALYSIS
+    
+    // 1. Primary availability factor from FPL API
+    const chanceNextRound = player.chance_of_playing_next_round || 75;
+    const chanceThisRound = player.chance_of_playing_this_round || 75;
+    
+    // 2. Analyze player status and news for injury severity
+    const playerStatus = (player.status || '').toLowerCase();
+    const playerNews = (player.news || '').toLowerCase();
+    
+    let injuryMultiplier = 1.0;
+    let returnTimelineWeeks = 0;
+    
+    // Comprehensive injury status analysis
+    if (playerStatus === 'd' || playerStatus === 'doubtful') {
+      injuryMultiplier = 0.6; // 40% reduction for doubtful players
+      returnTimelineWeeks = 1;
+    } else if (playerStatus === 's' || playerStatus === 'suspended') {
+      injuryMultiplier = 0.0; // No minutes during suspension
+      returnTimelineWeeks = Math.max(1, Math.floor(Math.random() * 3) + 1); // 1-3 weeks typical
+    } else if (playerStatus === 'i' || playerStatus === 'injured') {
+      // Analyze injury news for severity
+      if (playerNews.includes('out for') || playerNews.includes('long-term') || playerNews.includes('surgery')) {
+        injuryMultiplier = 0.1; // Long-term injury
+        returnTimelineWeeks = 6; // 6+ weeks for serious injuries
+      } else if (playerNews.includes('weeks') || playerNews.includes('month')) {
+        injuryMultiplier = 0.2; // Medium-term injury
+        returnTimelineWeeks = 4; // 4 weeks average
+      } else if (playerNews.includes('knock') || playerNews.includes('minor') || playerNews.includes('strain')) {
+        injuryMultiplier = 0.4; // Minor injury
+        returnTimelineWeeks = 2; // 2 weeks for minor issues
+      } else {
+        injuryMultiplier = 0.3; // Unknown injury severity
+        returnTimelineWeeks = 3; // Default 3 weeks
+      }
+    } else if (playerStatus === 'n' || playerStatus === 'unavailable') {
+      injuryMultiplier = 0.0; // Completely unavailable
+      returnTimelineWeeks = 4; // Default return timeline
+    }
+    
+    // 3. Combine availability chances for more accurate assessment
+    const avgAvailability = (chanceNextRound + chanceThisRound) / 2;
+    const availabilityFactor = Math.max(0.1, avgAvailability / 100);
+    
+    // 4. Apply form factor (more conservative)
+    const formFactor = player.form ? Math.max(0.7, Math.min(1.1, player.form / 5)) : 0.9;
+    
+    // 5. Check for international tournament impact
+    const playerName = `${player.first_name || ''} ${player.second_name || ''}`.trim();
+    const playerNationality = PLAYER_NATIONALITIES[playerName];
+    
+    let tournamentAdjustment = 1.0;
+    let tournamentWeeksOut = 0;
+    
+    if (playerNationality) {
+      // Check AFCON impact
+      const afcon = INTERNATIONAL_TOURNAMENTS.AFCON_2025;
+      if (afcon.affectedCountries.includes(playerNationality)) {
+        tournamentWeeksOut = afcon.endGameweek - afcon.startGameweek + 1; // 3 gameweeks
+        const currentGameweek = 3; // Current season position
+        
+        // Only apply if tournament is upcoming
+        if (currentGameweek < afcon.startGameweek) {
+          const totalRemainingWeeks = 38 - currentGameweek;
+          tournamentAdjustment = (totalRemainingWeeks - tournamentWeeksOut) / totalRemainingWeeks;
           
-          // Only apply if tournament is upcoming
-          if (currentGameweek < afcon.startGameweek) {
-            const totalRemainingWeeks = 38 - currentGameweek;
-            tournamentAdjustment = (totalRemainingWeeks - tournamentWeeksOut) / totalRemainingWeeks;
-            
-            console.log(`DEBUG: ${playerName} (${playerNationality}) - AFCON impact: ${tournamentWeeksOut} weeks out, adjustment: ${tournamentAdjustment.toFixed(2)}`);
-          }
+          console.log(`DEBUG: ${playerName} (${playerNationality}) - AFCON impact: ${tournamentWeeksOut} weeks out, adjustment: ${tournamentAdjustment.toFixed(2)}`);
         }
       }
-      
-      // Apply injury buffer (15% reduction for realistic expectations)
-      const injuryBuffer = 0.85;
-      
-      // Calculate base minutes with form and tournament factors
-      const baseMinutesWithFactors = expectedMinutes * formFactor * tournamentAdjustment * injuryBuffer;
-      
-      // Use enhanced injury assessment for final adjustment
-      const { adjustedMinutes: finalMinutes, reasoning } = calculateInjuryAdjustedMinutes(
-        baseMinutesWithFactors,
-        injuryAssessment,
-        currentGameweek
-      );
-      
-      // Debug logging for significant injury impacts or tournament effects
-      if ((injuryAssessment.minutesMultiplier < 0.8 || tournamentAdjustment < 0.95) && 
-          playerName && playerName.trim() !== '' && !playerName.includes('undefined') && playerName.length > 3) {
-        console.log(`DEBUG: ${playerName} availability - Status: ${player.status}, Chance: ${Math.min(player.chance_of_playing_this_round || 100, player.chance_of_playing_next_round || 100)}%, Injury mult: ${injuryAssessment.minutesMultiplier}, Tournament adj: ${tournamentAdjustment.toFixed(2)}, Return: ${injuryAssessment.estimatedReturnGameweek ? injuryAssessment.estimatedReturnGameweek - currentGameweek : 0}w, Final minutes: ${Math.round(finalMinutes)}`);
-      }
-      
-      return Math.round(Math.max(100, finalMinutes)); // Minimum 100 minutes (for severely injured players)
-      
-    } catch (error) {
-      console.error(`Error in enhanced injury assessment for ${player.web_name || 'unknown player'}:`, error);
-      
-      // Fallback to simpler calculation if enhanced system fails
-      const chanceNextRound = player.chance_of_playing_next_round || 75;
-      const chanceThisRound = player.chance_of_playing_this_round || 75;
-      const avgAvailability = (chanceNextRound + chanceThisRound) / 2;
-      const availabilityFactor = Math.max(0.1, avgAvailability / 100);
-      const formFactor = player.form ? Math.max(0.7, Math.min(1.1, player.form / 5)) : 0.9;
-      const injuryBuffer = 0.85;
-      
-      const fallbackMinutes = expectedMinutes * availabilityFactor * formFactor * injuryBuffer;
-      return Math.round(Math.max(100, fallbackMinutes));
     }
+    
+    // 6. Calculate seasonal adjustment for injured players
+    const remainingSeasonWeeks = 35; // Approximate weeks left in season
+    const availableWeeks = Math.max(1, remainingSeasonWeeks - returnTimelineWeeks);
+    const seasonalAvailability = availableWeeks / remainingSeasonWeeks;
+    
+    // 7. Apply injury buffer (15% reduction for realistic expectations)
+    const injuryBuffer = 0.85;
+    
+    // Calculate final expected minutes with comprehensive factors including tournaments
+    const finalExpectedMinutes = expectedMinutes * 
+                                availabilityFactor * 
+                                injuryMultiplier * 
+                                seasonalAvailability * 
+                                tournamentAdjustment * 
+                                formFactor * 
+                                injuryBuffer;
+    
+    // Debug logging for injured/unavailable players or tournament impacts (only for significant issues)
+    if ((injuryMultiplier < 0.8 || availabilityFactor < 0.8 || tournamentAdjustment < 0.95) && 
+        playerName && playerName.trim() !== '' && !playerName.includes('undefined') && playerName.length > 3) {
+      console.log(`DEBUG: ${playerName} availability - Status: ${playerStatus}, Chance: ${avgAvailability}%, Injury mult: ${injuryMultiplier}, Tournament adj: ${tournamentAdjustment.toFixed(2)}, Return: ${returnTimelineWeeks}w, Final minutes: ${Math.round(finalExpectedMinutes)}`);
+    }
+    
+    return Math.round(Math.max(100, finalExpectedMinutes)); // Minimum 100 minutes (for severely injured players)
   }
   
   // REMOVED: Sample size regression function (Option B simplification)
@@ -7774,25 +7794,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const team = teams.find((t: any) => t.id === player.team);
         const position = positions.find((p: any) => p.id === player.element_type);
         
-        // Use enhanced calculateExpectedMinutes function with injury/suspension analysis
-        const expectedMinutesTotal = calculateExpectedMinutes(player, players);
+        // Base minutes calculation on current minutes and games played
+        const totalMinutes = player.minutes || 0;
+        const totalGames = Math.max(currentGameweek - 1, 1); // Avoid division by zero
+        const currentMinutesPerGame = Math.min(90, totalMinutes / totalGames); // Cap at 90 minutes per game
         
-        // DEBUG: Log calculation results
-        console.log(`DEBUG: calculateExpectedMinutes for ${player.web_name || 'unknown'} returned: ${expectedMinutesTotal} (type: ${typeof expectedMinutesTotal})`);
-        
-        // DEBUG: Log if calculation fails
-        if (expectedMinutesTotal === null || expectedMinutesTotal === undefined) {
-          console.log(`DEBUG: calculateExpectedMinutes returned ${expectedMinutesTotal} for player ${player.web_name || 'unknown'}`);
+        // Expected minutes estimation based on current form and role
+        let expectedMinutesPerGame = 0;
+        if (currentMinutesPerGame >= 75) {
+          // Regular starter
+          expectedMinutesPerGame = Math.min(90, currentMinutesPerGame * 1.02); // Slight boost for consistent starters, capped at 90
+        } else if (currentMinutesPerGame >= 45) {
+          // Squad rotation player
+          expectedMinutesPerGame = Math.min(90, currentMinutesPerGame * 1.0); // Maintain current rate, capped at 90
+        } else if (currentMinutesPerGame >= 20) {
+          // Substitute/impact player
+          expectedMinutesPerGame = Math.min(60, currentMinutesPerGame * 1.15); // Potential for more opportunities
+        } else if (currentMinutesPerGame >= 5) {
+          // Fringe player
+          expectedMinutesPerGame = Math.min(30, currentMinutesPerGame * 1.2); // Small chance for breakthrough
+        } else {
+          // Rarely plays
+          expectedMinutesPerGame = Math.min(10, currentMinutesPerGame * 1.1);
         }
         
-        // Convert season total to per-gameweek average (assumes ~35 remaining games)
-        const remainingGameweeks = Math.max(1, 38 - currentGameweek);
-        const expectedMinutesPerGame = Math.round(expectedMinutesTotal / remainingGameweeks);
-        
-        // Base minutes calculation on current minutes and games played for comparison
-        const totalMinutes = player.minutes || 0;
-        const totalGames = Math.max(currentGameweek - 1, 1);
-        const currentMinutesPerGame = Math.min(90, totalMinutes / totalGames)
+        // Adjust based on form and recent performances
+        const form = parseFloat(player.form) || 0;
+        const formAdjustment = Math.max(0.8, Math.min(1.2, 1 + (form - 5) / 20)); // Form adjustment between 0.8-1.2
+        expectedMinutesPerGame = Math.min(90, expectedMinutesPerGame * formAdjustment); // Apply form adjustment and cap at 90
         
 
         
@@ -7813,7 +7842,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentMinutes: totalMinutes,
           currentMinutesPerGame: Math.round(currentMinutesPerGame * 10) / 10,
           expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
-          expectedMinutes: Math.round(expectedMinutesTotal), // Add this field for compatibility
           pointsFromMinutes: pointsFromMinutes,
           benchAppearances: Math.max(0, (player.total_points > 0 ? totalGames - (player.starts || 0) : 0))
         };
