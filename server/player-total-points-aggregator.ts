@@ -76,57 +76,7 @@ export class PlayerTotalPointsAggregator {
 
       console.log(`🔄 Aggregated data for ${playerTotalPointsMap.size} players`);
 
-      // Step 3: Calculate breakdown totals for each player
-      console.log("🔢 Calculating breakdown totals for frontend display...");
-      
-      // Create lookup maps for breakdown totals
-      const goalsBreakdown = new Map<number, number>();
-      const assistsBreakdown = new Map<number, number>();
-      const cleanSheetsBreakdown = new Map<number, number>();
-      const defensiveBreakdown = new Map<number, number>();
-      const minutesBreakdown = new Map<number, number>();
-      const bonusBreakdown = new Map<number, number>();
-      const savesBreakdown = new Map<number, number>();
-      const goalsConcededBreakdown = new Map<number, number>();
-      const yellowCardsBreakdown = new Map<number, number>();
-      const redCardsBreakdown = new Map<number, number>();
-      
-      // Calculate goals totals
-      for (const goalData of goalsPointsData) {
-        goalsBreakdown.set(goalData.playerId, goalData.totalPoints);
-      }
-      
-      // Calculate assists totals
-      for (const assistData of assistsPointsData) {
-        assistsBreakdown.set(assistData.playerId, assistData.totalPoints);
-      }
-      
-      // Calculate other component totals with null safety
-      for (const [playerId, cbitData] of Object.entries(cbitPointsData || {})) {
-        if (cbitData && cbitData.gameweeks) {
-          defensiveBreakdown.set(Number(playerId), Object.values(cbitData.gameweeks).reduce((sum: number, gw: any) => sum + (gw?.points || 0), 0));
-        }
-      }
-      
-      for (const [playerId, minutesData] of Object.entries(minutesPointsData || {})) {
-        if (minutesData && minutesData.gameweeks) {
-          minutesBreakdown.set(Number(playerId), Object.values(minutesData.gameweeks).reduce((sum: number, gw: any) => sum + (gw?.points || 0), 0));
-        }
-      }
-      
-      for (const [playerId, bonusData] of Object.entries(bonusPointsData || {})) {
-        if (bonusData && bonusData.gameweeks) {
-          bonusBreakdown.set(Number(playerId), Object.values(bonusData.gameweeks).reduce((sum: number, gw: any) => sum + (gw?.points || 0), 0));
-        }
-      }
-      
-      for (const [playerId, savesData] of Object.entries(savePointsData || {})) {
-        if (savesData && savesData.gameweeks) {
-          savesBreakdown.set(Number(playerId), Object.values(savesData.gameweeks).reduce((sum: number, gw: any) => sum + (gw?.points || 0), 0));
-        }
-      }
-      
-      // Step 4: Clear existing cached data and insert new aggregated data with breakdown totals
+      // Step 3: Clear existing cached data and insert new aggregated data
       await db.delete(cachedPlayerTotalPoints);
       
       const aggregatedData = Array.from(playerTotalPointsMap.values());
@@ -144,13 +94,6 @@ export class PlayerTotalPointsAggregator {
             totalPointsData: player.gameweekPoints,
             totalExpectedPoints: player.totalPoints,
             averagePerGameweek: player.totalPoints / Object.keys(player.gameweekPoints).length,
-            // Add breakdown totals for frontend
-            totalPointsFromGoals: goalsBreakdown.get(player.playerId) || 0,
-            totalPointsFromAssists: assistsBreakdown.get(player.playerId) || 0,
-            totalPointsFromDefensiveContributions: defensiveBreakdown.get(player.playerId) || 0,
-            totalPointsFromMinutes: minutesBreakdown.get(player.playerId) || 0,
-            totalPointsFromBonus: bonusBreakdown.get(player.playerId) || 0,
-            totalPointsFromSaves: savesBreakdown.get(player.playerId) || 0,
             lastUpdated: new Date()
           }))
         );
@@ -221,187 +164,79 @@ export class PlayerTotalPointsAggregator {
   }
 
   /**
-   * Fetch and convert goals projection data to points - WITH RESILIENT FALLBACK
+   * Fetch and convert goals projection data to points
    */
   private async fetchGoalsPointsData(startGameweek: number, endGameweek: number) {
     try {
-      // First try: Use cached database data directly
-      console.log("🔄 Attempting to fetch goals data from cached database...");
-      const cachedGoalsData = await db.select().from(playerGoalsProjections);
+      const response = await internalFetch(`api/player-goals-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      if (!response.ok) throw new Error(`Failed to fetch goals data: ${response.statusText}`);
       
-      if (cachedGoalsData.length > 0) {
-        console.log(`✅ Using cached goals database data: ${cachedGoalsData.length} records`);
-        
-        // Convert cached data to expected format with null safety
-        return cachedGoalsData.map((player: any) => {
-          // Parse JSON data if it's stored as JSON, with null safety
-          let goalProjections = null;
-          try {
-            if (player.gameweekData) {
-              goalProjections = typeof player.gameweekData === 'string' 
-                ? JSON.parse(player.gameweekData) 
-                : player.gameweekData;
-            }
-          } catch (error) {
-            console.warn(`Failed to parse gameweekData for player ${player.playerId}:`, error);
-            goalProjections = {};
-          }
-          
-          // Ensure goalProjections is a valid object
-          if (!goalProjections || typeof goalProjections !== 'object') {
-            goalProjections = {};
-          }
-            
-          return {
-            playerId: player.playerId,
-            playerName: player.playerName,
-            teamName: player.teamName,
-            position: player.position,
-            pointsData: this.convertGoalsToPoints(goalProjections, player.position),
-            totalPoints: Object.values(this.convertGoalsToPoints(goalProjections, player.position)).reduce((sum: number, points: any) => sum + points, 0)
-          };
-        });
-      }
+      const goalsData = await response.json();
       
-      // Second try: API call with extended timeout
-      console.log("🌐 Cached data empty, trying API with extended timeout...");
-      const response = await internalFetch(`api/cached/player-goals-projections`, 10000); // 10 second timeout
-      if (response.ok) {
-        const goalsData = await response.json();
-        console.log(`✅ API call successful: ${goalsData.length} goals records`);
-        
-        // Convert API response to points format
-        return goalsData.map((player: any) => ({
-          playerId: player.playerId,
-          playerName: player.playerName,
-          teamName: player.teamName,
-          position: player.position,
-          pointsData: this.convertGoalsToPoints(player.goalProjections || player.gameweekProjections, player.position),
-          totalPoints: Object.values(this.convertGoalsToPoints(player.goalProjections || player.gameweekProjections, player.position)).reduce((sum: number, points: any) => sum + points, 0)
-        }));
-      }
-      
-      throw new Error(`API call failed: ${response.statusText}`);
-      
+      // Convert goals projections to points using FPL scoring rules
+      return goalsData.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamName,
+        position: player.position,
+        pointsData: this.convertGoalsToPoints(player.goalProjections, player.position),
+        totalPoints: Object.values(this.convertGoalsToPoints(player.goalProjections, player.position)).reduce((sum: number, points: any) => sum + points, 0)
+      }));
     } catch (error) {
-      console.warn("⚠️ All goals data sources failed, using empty array:", error);
+      console.warn("⚠️ Failed to fetch goals points data, using empty array:", error);
       return [];
     }
   }
 
   /**
-   * Fetch and convert assists projection data to points - WITH RESILIENT FALLBACK
+   * Fetch and convert assists projection data to points
    */
   private async fetchAssistsPointsData(startGameweek: number, endGameweek: number) {
     try {
-      // First try: Use cached database data directly
-      console.log("🔄 Attempting to fetch assists data from cached database...");
-      const cachedAssistsData = await db.select().from(playerAssistProjections);
+      const response = await internalFetch(`api/player-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      if (!response.ok) throw new Error(`Failed to fetch assists data: ${response.statusText}`);
       
-      if (cachedAssistsData.length > 0) {
-        console.log(`✅ Using cached assists database data: ${cachedAssistsData.length} records`);
-        
-        // Convert cached data to expected format with null safety
-        return cachedAssistsData.map((player: any) => {
-          // Parse JSON data if it's stored as JSON, with null safety
-          let assistProjections = null;
-          try {
-            if (player.gameweekData) {
-              assistProjections = typeof player.gameweekData === 'string' 
-                ? JSON.parse(player.gameweekData) 
-                : player.gameweekData;
-            }
-          } catch (error) {
-            console.warn(`Failed to parse gameweekData for player ${player.playerId}:`, error);
-            assistProjections = {};
-          }
-          
-          // Ensure assistProjections is a valid object
-          if (!assistProjections || typeof assistProjections !== 'object') {
-            assistProjections = {};
-          }
-            
-          return {
-            playerId: player.playerId,
-            playerName: player.playerName,
-            teamName: player.teamName,
-            position: player.position,
-            pointsData: this.convertAssistsToPoints(assistProjections),
-            totalPoints: Object.values(this.convertAssistsToPoints(assistProjections)).reduce((sum: number, points: any) => sum + points, 0)
-          };
-        });
-      }
+      const assistsData = await response.json();
       
-      // Second try: API call with extended timeout
-      console.log("🌐 Cached data empty, trying API with extended timeout...");
-      const response = await internalFetch(`api/cached/player-assists-projections`, 10000); // 10 second timeout
-      if (response.ok) {
-        const assistsData = await response.json();
-        console.log(`✅ API call successful: ${assistsData.length} assists records`);
-        
-        // Convert API response to points format
-        return assistsData.map((player: any) => ({
-          playerId: player.playerId,
-          playerName: player.playerName,
-          teamName: player.teamName,
-          position: player.position,
-          pointsData: this.convertAssistsToPoints(player.assistProjections || player.gameweekProjections),
-          totalPoints: Object.values(this.convertAssistsToPoints(player.assistProjections || player.gameweekProjections)).reduce((sum: number, points: any) => sum + points, 0)
-        }));
-      }
-      
-      throw new Error(`API call failed: ${response.statusText}`);
-      
+      // Convert assists projections to points using FPL scoring rules (3 points per assist)
+      return assistsData.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamName,
+        position: player.position,
+        pointsData: this.convertAssistsToPoints(player.assistProjections),
+        totalPoints: Object.values(this.convertAssistsToPoints(player.assistProjections)).reduce((sum: number, points: any) => sum + points, 0)
+      }));
     } catch (error) {
-      console.warn("⚠️ All assists data sources failed, using empty array:", error);
+      console.warn("⚠️ Failed to fetch assists points data, using empty array:", error);
       return [];
     }
   }
 
   /**
-   * Convert goals projections to FPL points - WITH NULL SAFETY
+   * Convert goals projections to FPL points
    */
-  private convertGoalsToPoints(goalProjections: { [gameweek: string]: number } | null | undefined, position: string): { [gameweek: string]: number } {
+  private convertGoalsToPoints(goalProjections: { [gameweek: string]: number }, position: string): { [gameweek: string]: number } {
     const goalPoints: { [gameweek: string]: number } = {};
-    
-    // Null safety check
-    if (!goalProjections || typeof goalProjections !== 'object') {
-      return goalPoints;
-    }
     
     // FPL scoring: Forwards/Midfielders = 4 points, Defenders/Goalkeepers = 6 points
     const pointsPerGoal = (position === "Forward" || position === "Midfielder") ? 4 : 6;
     
-    try {
-      for (const [gameweek, goals] of Object.entries(goalProjections)) {
-        const goalValue = Number(goals) || 0;
-        goalPoints[gameweek] = goalValue * pointsPerGoal;
-      }
-    } catch (error) {
-      console.warn(`Error converting goals to points for position ${position}:`, error);
+    for (const [gameweek, goals] of Object.entries(goalProjections)) {
+      goalPoints[gameweek] = goals * pointsPerGoal;
     }
     
     return goalPoints;
   }
 
   /**
-   * Convert assists projections to FPL points (3 points per assist for all positions) - WITH NULL SAFETY
+   * Convert assists projections to FPL points (3 points per assist for all positions)
    */
-  private convertAssistsToPoints(assistProjections: { [gameweek: string]: number } | null | undefined): { [gameweek: string]: number } {
+  private convertAssistsToPoints(assistProjections: { [gameweek: string]: number }): { [gameweek: string]: number } {
     const assistPoints: { [gameweek: string]: number } = {};
     
-    // Null safety check
-    if (!assistProjections || typeof assistProjections !== 'object') {
-      return assistPoints;
-    }
-    
-    try {
-      for (const [gameweek, assists] of Object.entries(assistProjections)) {
-        const assistValue = Number(assists) || 0;
-        assistPoints[gameweek] = assistValue * 3; // 3 points per assist
-      }
-    } catch (error) {
-      console.warn(`Error converting assists to points:`, error);
+    for (const [gameweek, assists] of Object.entries(assistProjections)) {
+      assistPoints[gameweek] = assists * 3; // 3 points per assist
     }
     
     return assistPoints;
