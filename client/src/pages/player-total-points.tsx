@@ -174,7 +174,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
   if (!hasBreakdownData) {
     return (
       <ValueCell 
-        value={player.totalExpectedPoints || 0} 
+        value={player.totalPoints || player.totalExpectedPoints || 0} 
         format="points" 
         decimals={1} 
         className="text-green-800"
@@ -188,7 +188,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
       <TooltipTrigger asChild>
         <button className="cursor-help hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
           <ValueCell 
-            value={player.totalExpectedPoints || 0} 
+            value={player.totalPoints || player.totalExpectedPoints || 0} 
             format="points" 
             decimals={1} 
             className="text-green-800"
@@ -199,7 +199,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
       <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
         <div className="space-y-2">
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
-            {player.name} - 6GW Total Breakdown
+            {player.playerName || player.name || ''} - 6GW Total Breakdown
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between items-center">
@@ -307,7 +307,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
             <div className="flex justify-between items-center font-semibold">
               <span className="text-gray-800">6GW Total:</span>
               <ValueCell 
-                value={player.totalExpectedPoints || 0} 
+                value={player.totalPoints || player.totalExpectedPoints || 0} 
                 format="points" 
                 decimals={1} 
                 className="text-green-800"
@@ -324,15 +324,18 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
 interface PlayerTotalPointsData {
   [key: string]: any; // Add index signature for dynamic property access
   playerId: number;
-  name: string;
-  fullName: string;
-  team: string;
+  playerName: string; // API returns playerName
+  name?: string; // Keep for backwards compatibility
+  fullName?: string;
+  teamName: string; // API returns teamName  
+  team?: string; // Keep for backwards compatibility
   position: string;
-  price: number;
-  ownership: number;
+  price?: number;
+  ownership?: number;
   gameweekProjections: { [key: string]: number };
-  totalExpectedPoints: number;
-  seasonTotalPoints: number;
+  totalPoints: number; // API returns totalPoints
+  totalExpectedPoints?: number; // Keep for backwards compatibility
+  seasonTotalPoints?: number;
   averagePerGameweek: number;
   // Detailed point breakdowns
   pointsFromGoals?: { [key: string]: number };
@@ -372,10 +375,10 @@ function createPlayerTotalPointsColumns(
       className: 'sticky left-0 bg-white z-10 min-w-[180px]',
       render: (_, player) => (
         <div className="min-w-[180px]">
-          <PlayerNameCell name={player.name} />
+          <PlayerNameCell name={player.playerName || player.name || ''} />
           <div className="flex items-center gap-1 mt-1 mb-1">
             <PositionBadge position={player.position} compact={true} />
-            <TeamBadge team={player.team} compact={true} />
+            <TeamBadge team={player.teamName || player.team || ''} compact={true} />
           </div>
           <div className="text-xs text-gray-500 space-x-2">
             <span className="font-medium">£{player.price ? player.price.toFixed(1) : '0.0'}m</span>
@@ -396,7 +399,7 @@ function createPlayerTotalPointsColumns(
       )
     })),
     {
-      key: 'totalExpectedPoints',
+      key: 'totalPoints',
       header: '6GW Total',
       sortable: true,
       align: 'center',
@@ -440,7 +443,7 @@ export default function PlayerTotalPoints() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
+  const [sortField, setSortField] = useState<SortField>('totalPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // One-time initialization when bootstrap data loads
@@ -553,7 +556,7 @@ export default function PlayerTotalPoints() {
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
     if (!totalPointsData) return [];
-    return Array.from(new Set(totalPointsData.map(p => p.team))).sort();
+    return Array.from(new Set(totalPointsData.map(p => p.teamName || p.team || ''))).sort();
   }, [totalPointsData]);
 
   const positions = useMemo(() => {
@@ -567,7 +570,7 @@ export default function PlayerTotalPoints() {
     
     let filtered = totalPointsData.filter(player => {
       if (selectedPosition !== "all" && player.position !== selectedPosition) return false;
-      if (selectedTeam !== "all" && player.team !== selectedTeam) return false;
+      if (selectedTeam !== "all" && (player.teamName || player.team) !== selectedTeam) return false;
       if (searchTerm && !player.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
           !player.team.toLowerCase().includes(searchTerm.toLowerCase())) return false;
       return true;
