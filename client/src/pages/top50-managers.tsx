@@ -215,12 +215,7 @@ const getTop50ManagerColumns = (): ResponsiveTableColumn<Top50Manager>[] => [
     mobileLabel: 'Manager',
     cardOrder: 1,
     render: (value, manager) => (
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <div className="font-medium">{manager.name}</div>
-          {getRankChangeDisplay(manager.rankChange)}
-        </div>
-      </div>
+      <div className="font-medium">{manager.name}</div>
     )
   },
   {
@@ -236,9 +231,12 @@ const getTop50ManagerColumns = (): ResponsiveTableColumn<Top50Manager>[] => [
       if (rank !== undefined && rank !== null) {
         return (
           <div className="space-y-1">
-            <Badge variant={getRankBadgeVariant(rank)} className="font-mono">
-              #{rank.toLocaleString()}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant={getRankBadgeVariant(rank)} className="font-mono">
+                #{rank.toLocaleString()}
+              </Badge>
+              {getRankChangeDisplay(manager.rankChange)}
+            </div>
           </div>
         );
       }
