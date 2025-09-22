@@ -1,14 +1,11 @@
 /**
- * Enhanced injury and suspension assessment utilities for player-minutes projections
- * Parses FPL API news and status fields to provide more accurate availability projections
+ * Simple FPL-only availability utilities for player-minutes projections
+ * Uses only direct FPL API data without parsing news or making estimations
  */
 
-interface InjuryAssessment {
-  statusCode: string;
-  severity: 'available' | 'doubtful' | 'injured' | 'suspended' | 'unavailable';
-  estimatedReturnGameweek: number | null;
-  confidenceLevel: number; // 0-1 scale
-  minutesMultiplier: number; // 0-1 scale for scaling minutes
+interface SimpleAvailability {
+  availabilityFactor: number; // 0-1 scale for scaling minutes
+  status: string;
   description: string;
 }
 

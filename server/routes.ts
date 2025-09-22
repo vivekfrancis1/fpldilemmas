@@ -7777,6 +7777,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Use enhanced calculateExpectedMinutes function with injury/suspension analysis
         const expectedMinutesTotal = calculateExpectedMinutes(player, players);
         
+        // DEBUG: Log calculation results
+        console.log(`DEBUG: calculateExpectedMinutes for ${player.web_name || 'unknown'} returned: ${expectedMinutesTotal} (type: ${typeof expectedMinutesTotal})`);
+        
         // DEBUG: Log if calculation fails
         if (expectedMinutesTotal === null || expectedMinutesTotal === undefined) {
           console.log(`DEBUG: calculateExpectedMinutes returned ${expectedMinutesTotal} for player ${player.web_name || 'unknown'}`);
