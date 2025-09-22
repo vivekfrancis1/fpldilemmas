@@ -9273,14 +9273,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startTime = Date.now();
       
       // Get bootstrap data for player info
-      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      if (!bootstrapResponse.ok) {
+      const bootstrapResponse2 = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse2.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
-      const bootstrapData = await bootstrapResponse.json();
+      const bootstrapData = await bootstrapResponse2.json();
       
-      // Determine current gameweek and adjust range to match projection APIs
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
+      // Use the currentGameweek already calculated above
       const nextGameweek = currentGameweek + 1; // Projection APIs start from next gameweek
       const actualStart = Math.max(start, nextGameweek); // Only process future gameweeks
       const actualEnd = end;
