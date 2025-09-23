@@ -254,7 +254,7 @@ class ProjectionCacheWorker {
         }
         
         if (team.gameweekProjections) {
-          for (let gw = 4; gw <= 9; gw++) {
+          for (let gw = 6; gw <= 11; gw++) {
             const teamGoal = team.gameweekProjections[gw.toString()];
             if (teamGoal > 0) {
               totalTeamGwKeys++;
@@ -650,7 +650,7 @@ class ProjectionCacheWorker {
         }
         
         if (team.gameweekProjections) {
-          for (let gw = 4; gw <= 9; gw++) {
+          for (let gw = 6; gw <= 11; gw++) {
             const teamAssist = team.gameweekProjections[gw.toString()];
             if (teamAssist > 0) {
               totalTeamGwKeys++;
@@ -1137,8 +1137,8 @@ class ProjectionCacheWorker {
       const records = [];
       for (const team of data) {
         records.push({
-          teamId: team.id,
-          teamName: team.team,
+          teamId: team.teamId,
+          teamName: team.teamName,
           goalProjections: team.gameweekProjections,
           cleanSheetProjections: {}, // Will be updated separately
           goalsAgainstProjections: {},
