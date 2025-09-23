@@ -315,16 +315,23 @@ export class SpreadBettingCacheService {
           totalsData, spreadsData, game.bookmakers || []
         );
 
-        // Determine market confidence based on data source quality
-        let marketConfidence = 'Low';
-        if (totalsData.source === 'real_market' && spreadsData.source === 'real_market') {
-          // Both markets from popular bookmaker = High confidence
-          marketConfidence = 'High';
-        } else if (totalsData.source === 'real_market' || spreadsData.source === 'real_market') {
-          // At least one real market = Medium confidence
-          marketConfidence = 'Medium';
+        // Verify data authenticity - check for demo/sample patterns
+        const isAuthentic = this.verifyDataAuthenticity(game, totalsData, spreadsData);
+        
+        // Determine market confidence based on authenticity and data source quality
+        let marketConfidence = 'Demo Data';
+        let dataSource = "Demo/Sample Data";
+        
+        if (isAuthentic) {
+          dataSource = "The Odds API";
+          if (totalsData.source === 'real_market' && spreadsData.source === 'real_market') {
+            marketConfidence = 'High';
+          } else if (totalsData.source === 'real_market' || spreadsData.source === 'real_market') {
+            marketConfidence = 'Medium';
+          } else {
+            marketConfidence = 'Low';
+          }
         }
-        // Keep 'Low' for fallback data
 
         const fixtureId = `${homeTeam.shortName}_${awayTeam.shortName}_GW${gameweek}`;
 
@@ -347,7 +354,7 @@ export class SpreadBettingCacheService {
           homeExpectedGoals,
           awayExpectedGoals,
           marketConfidence,
-          dataSource: "The Odds API",
+          dataSource,
           bookmakerCount
         });
 
@@ -428,6 +435,61 @@ export class SpreadBettingCacheService {
       }
     }
     return null;
+  }
+
+  private verifyDataAuthenticity(game: any, totalsData: any, spreadsData: any): boolean {
+    console.log(`🔍 Verifying authenticity for ${game.home_team} vs ${game.away_team}`);
+    
+    // Check 1: Minimum bookmaker count (real markets have multiple bookmakers)
+    const bookmakerCount = game.bookmakers?.length || 0;
+    if (bookmakerCount < 5) {
+      console.log(`❌ DEMO PATTERN: Only ${bookmakerCount} bookmakers (need ≥5 for real markets)`);
+      return false;
+    }
+
+    // Check 2: Market data freshness (real markets update frequently)
+    const now = new Date();
+    let hasRecentUpdate = false;
+    
+    for (const bookmaker of game.bookmakers || []) {
+      const lastUpdate = new Date(bookmaker.last_update || 0);
+      const ageHours = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
+      if (ageHours < 24) {
+        hasRecentUpdate = true;
+        break;
+      }
+    }
+    
+    if (!hasRecentUpdate) {
+      console.log(`❌ DEMO PATTERN: No bookmaker updates within 24 hours`);
+      return false;
+    }
+
+    // Check 3: Spreads patterns (0.0 spreads are common in demo data)
+    if (spreadsData.midpoint === 0.0 && totalsData.midpoint === 2.5) {
+      console.log(`❌ DEMO PATTERN: Classic demo values (0.0 spread, 2.5 total)`);
+      return false;
+    }
+
+    // Check 4: Market diversity (real markets have varied totals)
+    if (totalsData.midpoint < 1.5 || totalsData.midpoint > 5.5) {
+      console.log(`❌ DEMO PATTERN: Unrealistic total goals: ${totalsData.midpoint}`);
+      return false;
+    }
+
+    // Check 5: Bookmaker names (real markets have recognizable bookmakers)
+    const realBookmakerNames = ['bet365', 'william hill', 'ladbrokes', 'paddy power', 'betfair', 'coral', 'unibet'];
+    const hasRealBookmaker = game.bookmakers?.some((book: any) => 
+      realBookmakerNames.some(real => book.title?.toLowerCase().includes(real))
+    );
+    
+    if (!hasRealBookmaker) {
+      console.log(`❌ DEMO PATTERN: No recognized bookmaker brands found`);
+      return false;
+    }
+
+    console.log(`✅ AUTHENTIC: Passed all verification checks`);
+    return true;
   }
 
   private findTeamData(teamName: string, teamMapping: Map<string, any>, fplTeams: any[]): any {
