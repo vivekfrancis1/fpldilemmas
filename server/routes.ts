@@ -7450,13 +7450,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Predicted Scores endpoint - rounds match projections to whole numbers with outcomes
   app.get("/api/predicted-scores", async (req, res) => {
     try {
-      // Fetch match projections data
-      const matchProjectionsResponse = await fetch(`http://localhost:5000/api/projected-goals-cs`);
-      if (!matchProjectionsResponse.ok) {
-        throw new Error("Failed to fetch match projections data");
+      // Fetch data from separate endpoints like projected-goals-cs
+      const [bootstrapResponse, fixturesResponse, teamGoalResponse, teamCSResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/"),
+        fetch(`http://localhost:5000/api/team-goal-projections`),
+        fetch(`http://localhost:5000/api/team-cs-projections`)
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok || !teamGoalResponse.ok || !teamCSResponse.ok) {
+        throw new Error("Failed to fetch required data");
       }
       
-      const matchProjections = await matchProjectionsResponse.json();
+      const [bootstrapData, fixturesData, teamGoalData, teamCSData] = await Promise.all([
+        bootstrapResponse.json(),
+        fixturesResponse.json(),
+        teamGoalResponse.json(),
+        teamCSResponse.json()
+      ]);
+
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 5;
+      const nextStartGameweek = currentGameweek + 1;
+      const nextEndGameweek = Math.min(currentGameweek + 6, 38);
+
+      // Create lookup maps for goal and CS data
+      const goalMap = new Map();
+      const csMap = new Map();
+
+      (teamGoalData || []).forEach((team: any) => {
+        goalMap.set(team.teamId, team.gameweekProjections);
+      });
+
+      (teamCSData || []).forEach((team: any) => {
+        const teamId = bootstrapData.teams.find((t: any) => t.short_name === team.team)?.id;
+        if (teamId) {
+          csMap.set(teamId, team.gameweekProjections);
+        }
+      });
+
+      // Filter fixtures for next 6 gameweeks (future only)
+      const relevantFixtures = fixturesData.filter((fixture: any) => 
+        fixture.event >= nextStartGameweek && fixture.event <= nextEndGameweek
+      );
+
+      // Create match projections from separate endpoint data
+      const matchProjections = relevantFixtures.map((fixture: any) => {
+        const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+        const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+
+        if (!homeTeam || !awayTeam) return null;
+
+        const homeGoalData = goalMap.get(homeTeam.id) || {};
+        const awayGoalData = goalMap.get(awayTeam.id) || {};
+        const homeCSData = csMap.get(homeTeam.id) || {};
+        const awayCSData = csMap.get(awayTeam.id) || {};
+
+        const homeExpectedGoals = homeGoalData[fixture.event.toString()] || 0;
+        const awayExpectedGoals = awayGoalData[fixture.event.toString()] || 0;
+        const homeCleanSheetOdds = homeCSData[fixture.event.toString()] || 0;
+        const awayCleanSheetOdds = awayCSData[fixture.event.toString()] || 0;
+
+        return {
+          id: fixture.id,
+          gameweek: fixture.event,
+          kickoffTime: fixture.kickoff_time,
+          finished: fixture.finished,
+          matchResult: fixture.finished ? `${fixture.team_h_score}-${fixture.team_a_score}` : 'TBD',
+          homeTeam: {
+            id: homeTeam.id,
+            name: homeTeam.name,
+            shortName: homeTeam.short_name,
+            expectedGoals: homeExpectedGoals,
+            cleanSheetOdds: homeCleanSheetOdds,
+          },
+          awayTeam: {
+            id: awayTeam.id,
+            name: awayTeam.name,
+            shortName: awayTeam.short_name,
+            expectedGoals: awayExpectedGoals,
+            cleanSheetOdds: awayCleanSheetOdds,
+          },
+          totalExpectedGoals: homeExpectedGoals + awayExpectedGoals,
+          confidence: 'Medium' as const
+        };
+      }).filter(Boolean);
 
       // Get upset configuration
       const upsetConfig = await storage.getUpsetConfig() || defaultUpsetConfig;
