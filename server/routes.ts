@@ -4277,13 +4277,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Assist Projections endpoint - using correct assist values based on actual FPL data analysis
   app.get("/api/team-assist-projections", async (req, res) => {
     try {
-      // Parse gameweek range parameters with validation (1-38, start<=end)
-      const reqStartGameweek = parseInt(req.query.startGameweek as string);
-      const reqEndGameweek = parseInt(req.query.endGameweek as string);
+      console.log(`DEBUG: Team Assist Projections API called - generating next 6 gameweeks only`);
+      
+      // Get current gameweek from bootstrap data
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      const bootstrapData = await bootstrapResponse.json();
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      
+      // Force next 6 gameweeks only - ignore query parameters
+      const startGameweek = currentGameweek + 1;
+      const endGameweek = Math.min(currentGameweek + 6, 38);
+      console.log(`DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW${startGameweek}-${endGameweek}`);
       
       // Use TeamGoalsService directly (not HTTP call) as architect specified
       const { TeamGoalsService } = await import('./team-goals-service');
-      const teamGoals = await TeamGoalsService.getTeamGoalProjections(reqStartGameweek, reqEndGameweek);
+      const teamGoals = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
       
       // FORMULA: Team Assists = 72% of Team Goals (as specified by user)
       const assistProjections = teamGoals.map((tp: any) => {
