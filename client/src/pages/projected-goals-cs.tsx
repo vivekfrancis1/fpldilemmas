@@ -33,39 +33,127 @@ interface MatchProjection {
 }
 
 export default function ProjectedGoalsCS() {
-  const [startGameweek, setStartGameweek] = useState<string>("4");
-  const [endGameweek, setEndGameweek] = useState<string>("9");
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
-
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
 
-  const { data: projectionsData, isLoading: projectionsLoading } = useQuery<MatchProjection[]>({
-    queryKey: ["/api/projected-goals-cs"],
+  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 5;
+  const nextStartGameweek = currentGameweek + 1;
+  const nextEndGameweek = Math.min(currentGameweek + 6, 38);
+
+  const [startGameweek, setStartGameweek] = useState<string>(nextStartGameweek.toString());
+  const [endGameweek, setEndGameweek] = useState<string>(nextEndGameweek.toString());
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+
+  // Fetch team goal projections
+  const { data: teamGoalData, isLoading: goalsLoading } = useQuery<any[]>({
+    queryKey: ["/api/team-goal-projections"],
   });
+
+  // Fetch team clean sheet projections  
+  const { data: teamCSData, isLoading: csLoading } = useQuery<any[]>({
+    queryKey: ["/api/team-cs-projections"],
+  });
+
+  // Fetch fixtures data to get actual match information
+  const { data: fixturesData, isLoading: fixturesLoading } = useQuery<any[]>({
+    queryKey: ["/api/fixtures"],
+  });
+
+  // Process data from separate endpoints to create match projections
+  const projectionsData = useMemo(() => {
+    if (!teamGoalData || !teamCSData || !fixturesData || !bootstrapData) return [];
+
+    const matches: MatchProjection[] = [];
+    const startGW = parseInt(startGameweek);
+    const endGW = parseInt(endGameweek);
+
+    // Create lookup maps for goal and CS data
+    const goalMap = new Map();
+    const csMap = new Map();
+
+    (teamGoalData || []).forEach((team: any) => {
+      goalMap.set(team.teamId, team.gameweekProjections);
+    });
+
+    (teamCSData || []).forEach((team: any) => {
+      const teamId = bootstrapData.teams.find((t: any) => t.short_name === team.team)?.id;
+      if (teamId) {
+        csMap.set(teamId, team.gameweekProjections);
+      }
+    });
+
+    // Filter fixtures for the selected gameweek range
+    const relevantFixtures = (fixturesData || []).filter((fixture: any) => 
+      fixture.event >= startGW && fixture.event <= endGW
+    );
+
+    relevantFixtures.forEach((fixture: any) => {
+      const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+      const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+
+      if (homeTeam && awayTeam) {
+        const homeGoalData = goalMap.get(homeTeam.id) || {};
+        const awayGoalData = goalMap.get(awayTeam.id) || {};
+        const homeCSData = csMap.get(homeTeam.id) || {};
+        const awayCSData = csMap.get(awayTeam.id) || {};
+
+        const homeExpectedGoals = homeGoalData[fixture.event.toString()] || 0;
+        const awayExpectedGoals = awayGoalData[fixture.event.toString()] || 0;
+        const homeCleanSheetOdds = homeCSData[fixture.event.toString()] || 0;
+        const awayCleanSheetOdds = awayCSData[fixture.event.toString()] || 0;
+
+        matches.push({
+          id: fixture.id,
+          gameweek: fixture.event,
+          kickoffTime: fixture.kickoff_time,
+          finished: fixture.finished,
+          matchResult: fixture.finished ? `${fixture.team_h_score}-${fixture.team_a_score}` : 'TBD',
+          homeTeam: {
+            id: homeTeam.id,
+            name: homeTeam.name,
+            shortName: homeTeam.short_name,
+            expectedGoals: homeExpectedGoals,
+            cleanSheetOdds: homeCleanSheetOdds,
+            result: fixture.finished 
+              ? (fixture.team_h_score > fixture.team_a_score ? 'win' : 
+                 fixture.team_h_score < fixture.team_a_score ? 'loss' : 'draw')
+              : 'TBD'
+          },
+          awayTeam: {
+            id: awayTeam.id,
+            name: awayTeam.name,
+            shortName: awayTeam.short_name,
+            expectedGoals: awayExpectedGoals,
+            cleanSheetOdds: awayCleanSheetOdds,
+            result: fixture.finished 
+              ? (fixture.team_a_score > fixture.team_h_score ? 'win' : 
+                 fixture.team_a_score < fixture.team_h_score ? 'loss' : 'draw')
+              : 'TBD'
+          },
+          totalExpectedGoals: homeExpectedGoals + awayExpectedGoals,
+          confidence: 'Medium' as const
+        });
+      }
+    });
+
+    return matches.sort((a, b) => {
+      if (a.gameweek !== b.gameweek) {
+        return a.gameweek - b.gameweek;
+      }
+      return new Date(a.kickoffTime).getTime() - new Date(b.kickoffTime).getTime();
+    });
+  }, [teamGoalData, teamCSData, fixturesData, bootstrapData, startGameweek, endGameweek]);
 
   const filteredProjections = useMemo(() => {
     if (!projectionsData) return [];
     
-    const startGW = parseInt(startGameweek);
-    const endGW = parseInt(endGameweek);
-    
-    return projectionsData
-      .filter(match => 
-        (match.gameweek >= startGW && match.gameweek <= endGW) &&
-        (selectedTeam === "all" || 
-        match.homeTeam.shortName === selectedTeam || 
-        match.awayTeam.shortName === selectedTeam)
-      )
-      .sort((a, b) => {
-        // Sort by gameweek, then by kickoff time
-        if (a.gameweek !== b.gameweek) {
-          return a.gameweek - b.gameweek;
-        }
-        return new Date(a.kickoffTime).getTime() - new Date(b.kickoffTime).getTime();
-      });
-  }, [projectionsData, startGameweek, endGameweek, selectedTeam]);
+    return projectionsData.filter(match => 
+      selectedTeam === "all" || 
+      match.homeTeam.shortName === selectedTeam || 
+      match.awayTeam.shortName === selectedTeam
+    );
+  }, [projectionsData, selectedTeam]);
 
   // Group by gameweek for display
   const groupedProjections = useMemo(() => {
@@ -118,7 +206,7 @@ export default function ProjectedGoalsCS() {
     return '-';
   };
 
-  if (isLoading || projectionsLoading) {
+  if (isLoading || goalsLoading || csLoading || fixturesLoading) {
     return (
       
         <div className="flex justify-center items-center min-h-screen">
@@ -127,8 +215,6 @@ export default function ProjectedGoalsCS() {
       
     );
   }
-
-  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
 
   return (
     <div className="fpl-page-container">
@@ -160,7 +246,7 @@ export default function ProjectedGoalsCS() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 4).map(gw => (
+                      {Array.from({ length: 7 }, (_, i) => currentGameweek + i).map(gw => (
                         <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                       ))}
                     </SelectContent>
@@ -175,7 +261,7 @@ export default function ProjectedGoalsCS() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 4).map(gw => (
+                      {Array.from({ length: 7 }, (_, i) => currentGameweek + i).map(gw => (
                         <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                       ))}
                     </SelectContent>
