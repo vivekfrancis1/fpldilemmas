@@ -575,6 +575,7 @@ class ProjectionCacheWorker {
           console.log(`🚀 OPTIMIZATION: Using direct team goals calculation (fallback) instead of HTTP`);
           const teamGoalsData = await calculateTeamGoalsWithRange(startGameweek, endGameweek, bootstrapData);
             
+          if (teamGoalsData && teamGoalsData.length > 0) {
             // Convert team goals to assists (72% conversion rate)
             extractedTeamAssistsData = teamGoalsData.map((team: any) => {
               const assistProjections: Record<string, number> = {};
@@ -1254,10 +1255,24 @@ class ProjectionCacheWorker {
     }
   }
 
+  // Cache for expensive getCacheStats operation
+  private cacheStatsCache: { data: any; timestamp: number } | null = null;
+  private readonly CACHE_STATS_TTL = 30 * 1000; // 30 seconds cache
+
   /**
-   * Get cache statistics with timestamps
+   * Get cache statistics with timestamps (cached for performance)
    */
   async getCacheStats(): Promise<any> {
+    // Check if we have valid cached data
+    const now = Date.now();
+    if (this.cacheStatsCache && (now - this.cacheStatsCache.timestamp) < this.CACHE_STATS_TTL) {
+      console.log(`⚡ Returning cached stats (${Math.round((now - this.cacheStatsCache.timestamp) / 1000)}s old)`);
+      return this.cacheStatsCache.data;
+    }
+
+    console.log(`🔄 Refreshing cache stats (15+ database queries)...`);
+    const startTime = Date.now();
+    
     try {
       const { sql } = await import("drizzle-orm");
       const { 
@@ -1428,9 +1443,25 @@ class ProjectionCacheWorker {
           isStale: minutesPoints[0]?.lastUpdated ? (now.getTime() - new Date(minutesPoints[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
         }
       ];
+
+      // Cache the result for future requests
+      const endTime = Date.now();
+      console.log(`✅ Cache stats retrieved in ${endTime - startTime}ms, caching for ${this.CACHE_STATS_TTL/1000}s`);
+      
+      this.cacheStatsCache = {
+        data: stats,
+        timestamp: endTime
+      };
+      
+      return stats;
       
     } catch (error) {
       console.error(`❌ Failed to get cache stats:`, error);
+      // Return cached data if available, even if stale
+      if (this.cacheStatsCache) {
+        console.log(`⚠️ Returning stale cached stats due to error`);
+        return this.cacheStatsCache.data;
+      }
       return [];
     }
   }
