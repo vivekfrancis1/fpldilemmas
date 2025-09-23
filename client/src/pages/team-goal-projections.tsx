@@ -375,10 +375,10 @@ export default function TeamGoalProjections() {
                         
                         {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, weekIndex) => {
                           const gwNumber = parseInt(startGameweek) + weekIndex;
-                          const goals = team.gameweekProjections[gwNumber] || 0;
+                          const goals = team.gameweekProjections[gwNumber];
                           return (
-                            <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsColor(goals)}`}>
-                              {goals > 0 ? (goals || 0).toFixed(2) : "-"}
+                            <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsColor(goals || 0)}`}>
+                              {goals !== undefined ? goals.toFixed(2) : "-"}
                             </td>
                           );
                         })}
@@ -419,7 +419,7 @@ export default function TeamGoalProjections() {
                         const gwTotal = totalGoals.gameweekTotals[gwNumber] || 0;
                         return (
                           <td key={weekIndex} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
-                            {gwTotal > 0 ? gwTotal.toFixed(2) : "-"}
+                            {gwTotal.toFixed(2)}
                           </td>
                         );
                       })}
