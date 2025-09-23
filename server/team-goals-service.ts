@@ -139,15 +139,7 @@ export class TeamGoalsService {
           bettingData, adminGoalSettings, MASTER_TEAM_DEFAULTS
         );
         
-        // Debug logging for null/NaN calculations
-        if ((expectedGoals === null || isNaN(expectedGoals)) && team.id <= 3) {
-          console.warn(`⚠️ INVALID CALCULATION: Team ${team.name} vs ${opponent.short_name} in GW${fixture.event} (${isHome ? 'HOME' : 'AWAY'}) - result: ${expectedGoals}`);
-        }
-        
-        // Handle null/NaN values properly
-        if (expectedGoals === null || isNaN(expectedGoals)) {
-          return null;
-        }
+        // Note: calculateFixtureGoals now guarantees a valid number, no need to filter
         
         const projection = {
           gameweek: fixture.event,
@@ -163,7 +155,7 @@ export class TeamGoalsService {
         }
         
         return projection;
-      }).filter(Boolean);
+      }); // No longer need .filter(Boolean) since calculateFixtureGoals guarantees valid numbers
       
       const totalGoals = projections.reduce((sum: number, p: any) => sum + p.expectedGoals, 0);
       
@@ -382,9 +374,9 @@ export class TeamGoalsService {
   ): number {
     let adjustedGoals = baseExpectedGoals;
     
-    // Team form calculation
+    // Team form calculation (with safe multiplication)
     const teamFormMultiplier = TeamGoalsService.calculateTeamForm(team.id, fixture.event, fixturesData, adminGoalSettings);
-    adjustedGoals *= teamFormMultiplier;
+    adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, teamFormMultiplier, 1.0);
     
     // Match context factors
     const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id);
@@ -395,11 +387,11 @@ export class TeamGoalsService {
     const isRelegationBattle = [17, 20, 19, 4, 5].includes(team.id) && [17, 20, 19, 4, 5].includes(opponent.id);
     
     if (isRivalryMatch) {
-      adjustedGoals *= adminGoalSettings.derbyGoalsMultiplier || 0.87;
+      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.derbyGoalsMultiplier, 0.87);
     } else if (isTopSixBattle) {
-      adjustedGoals *= adminGoalSettings.topSixGoalsMultiplier || 1.12;
+      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.topSixGoalsMultiplier, 1.12);
     } else if (isRelegationBattle) {
-      adjustedGoals *= adminGoalSettings.relegationBattleGoalsMultiplier || 0.83;
+      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.relegationBattleGoalsMultiplier, 0.83);
     }
     
     // Apply all other context multipliers (timing, weather, referee, etc.)
@@ -452,7 +444,7 @@ export class TeamGoalsService {
   ): number {
     let adjustedGoals = baseExpectedGoals;
     
-    // Timing factors
+    // Timing factors (with safe multiplication)
     const isEarlyKickoff = (fixture.event + team.id) % 7 === 0;
     const isLateKickoff = (fixture.event + team.id) % 7 === 3;
     const isMidweekFixture = fixture.event % 4 === 0;
@@ -460,38 +452,44 @@ export class TeamGoalsService {
     const hasNewManager = (team.id + fixture.event) % 20 === 0;
     
     if (isEarlyKickoff) {
-      adjustedGoals *= adminGoalSettings.earlyKickoffGoalsMultiplier || 0.94;
+      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.earlyKickoffGoalsMultiplier, 0.94);
     } else if (isLateKickoff) {
-      adjustedGoals *= adminGoalSettings.lateKickoffGoalsMultiplier || 1.07;
+      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.lateKickoffGoalsMultiplier, 1.07);
     }
     
     if (isMidweekFixture) {
-      adjustedGoals *= adminGoalSettings.midweekFixtureGoalsMultiplier || 0.91;
+      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.midweekFixtureGoalsMultiplier, 0.91);
     }
     
     if (isSeasonFinale) {
-      adjustedGoals *= adminGoalSettings.seasonFinaleGoalsMultiplier || 1.05;
+      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.seasonFinaleGoalsMultiplier, 1.05);
     }
     
     if (hasNewManager) {
-      adjustedGoals *= adminGoalSettings.newManagerBounceGoalsMultiplier || 1.08;
+      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.newManagerBounceGoalsMultiplier, 1.08);
     }
     
-    // Enhanced context multipliers
+    // Enhanced context multipliers (with safe multiplication)
     const hasAdverseWeather = (fixture.event + team.id + opponent.id) % 8 === 0;
     if (hasAdverseWeather) {
-      adjustedGoals *= adminGoalSettings.weatherConditionsGoalsMultiplier || MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier;
+      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, 
+        adminGoalSettings.weatherConditionsGoalsMultiplier || MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier, 
+        1.0);
     }
     
     const isPostInternationalBreak = fixture.event === 4 || fixture.event === 8 || fixture.event === 16 || fixture.event === 29;
     if (isPostInternationalBreak) {
-      adjustedGoals *= adminGoalSettings.postInternationalBreakMultiplier || MASTER_TEAM_DEFAULTS.postInternationalBreakMultiplier;
+      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, 
+        adminGoalSettings.postInternationalBreakMultiplier || MASTER_TEAM_DEFAULTS.postInternationalBreakMultiplier, 
+        1.0);
     }
     
     if (!isHome) {
       const isLongTrip = (team.id + opponent.id) % 5 === 0;
       if (isLongTrip) {
-        adjustedGoals *= adminGoalSettings.travelDistanceFatigueMultiplier || MASTER_TEAM_DEFAULTS.travelDistanceFatigueMultiplier;
+        adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, 
+          adminGoalSettings.travelDistanceFatigueMultiplier || MASTER_TEAM_DEFAULTS.travelDistanceFatigueMultiplier, 
+          1.0);
       }
     }
     
