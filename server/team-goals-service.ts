@@ -44,8 +44,11 @@ export class TeamGoalsService {
     
     // Import required dependencies
     const { PREMIER_LEAGUE_TEAMS } = await import("@shared/schema");
-    const routesModuleForTeamService = await import("./routes");
-    const createTeamService = (routesModuleForTeamService as any).createTeamService;
+    const { getAdminGoalSettings, getCreateTeamService, MASTER_TEAM_DEFAULTS } = await import("./team-config");
+    
+    // Get team configuration (must be initialized by routes module first)
+    const adminGoalSettings = getAdminGoalSettings();
+    const createTeamService = getCreateTeamService();
     
     // Fetch required data
     const [bootstrapResponse, fixturesResponse] = await Promise.all([
@@ -72,10 +75,7 @@ export class TeamGoalsService {
     const teamService = await createTeamService();
     const bettingData = teamService.getBettingData();
     
-    // Get admin settings - import the global variables from routes
-    const routesModule = await import("./routes");
-    const adminGoalSettings = (routesModule as any).adminGoalSettings;
-    const MASTER_TEAM_DEFAULTS = (routesModule as any).MASTER_TEAM_DEFAULTS;
+    // Admin settings and config are already initialized above
     
     console.log(`🎯 Calculating team goals for GW${calculatedStartGameweek}-${calculatedEndGameweek}, current GW: ${currentGameweek}`);
     

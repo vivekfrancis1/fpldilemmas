@@ -946,6 +946,9 @@ function assembleFromIndividualGameweekSlices(startGameweek: number, endGameweek
 // ========== END BACKGROUND JOB MANAGEMENT SYSTEM ==========
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize team configuration to avoid circular dependency
+  const { setAdminGoalSettings, setCreateTeamService } = await import('./team-config');
+  
   // Configure session middleware
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
@@ -5065,106 +5068,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startGameweek = currentGameweek + 1; // Start from next gameweek
       const endGameweek = startGameweek + 5; // 6 gameweeks total
       
+      // Use shared TeamGoalsService to derive team totals for consistency
+      const { TeamGoalsService } = await import('./team-goals-service');
+      
       for (let gameweek = startGameweek; gameweek <= endGameweek; gameweek++) {
-        // Generate team goal projections data using the same logic as the endpoint
-        const teams = bootstrapData.teams;
-        const teamProjections: any[] = [];
+        console.log(`🔄 DERIVATION: Goal Share using TeamGoalsService for GW${gameweek}`);
         
-        teams.forEach((team: any) => {
-          const gameweekProjections: any = {};
-          
-          // Generate projections for this specific gameweek
-          for (let gw = gameweek; gw <= gameweek; gw++) {
-          const gwFixtures = fixturesData.filter((fixture: any) => 
-            !fixture.finished && 
-            fixture.event === gw &&
-            (fixture.team_h === team.id || fixture.team_a === team.id)
-          );
-          
-          if (gwFixtures.length > 0) {
-            const fixture = gwFixtures[0];
-            const isHome = fixture.team_h === team.id;
-            
-            // Use EXACT same logic as team-goal-projections endpoint
-            const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
-            if (!opponent) continue;
-            
-            // EXACT same 8-phase calculation as team-goal-projections endpoint
-            const teamBettingData = bettingData.teamGoalRates[team.id] || { expectedGoalsPerGame: 1.5, variance: 0.4, confidence: 0.70 };
-            const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { baseCleanSheetRate: 0.25, confidence: 0.70 };
-            
-            // Phase 1: Core market probability foundation
-            let baseExpectedGoals = teamBettingData.expectedGoalsPerGame;
-            
-            // Phase 2: Advanced venue-specific market adjustments using Goals Scored admin settings
-            const venueMultiplier = isHome ? 
-              (adminGoalSettings.homeAdvantageGoalsMultiplier || 1.12) : // Configurable home advantage
-              (adminGoalSettings.awayFactorGoalsMultiplier || 0.88); // Configurable away factor
-            baseExpectedGoals *= venueMultiplier;
-            
-            // Phase 3: Sophisticated opponent defensive resistance matrix
-            const opponentDefenseStrength = opponentDefenseData.baseCleanSheetRate;
-            const defensiveImpact = Math.pow(opponentDefenseStrength * 2.5, 1.2); // Non-linear scaling
-            const attackingPenetration = 1.25 - (defensiveImpact * 0.65);
-            baseExpectedGoals *= Math.max(0.55, Math.min(1.35, attackingPenetration));
-            
-            // Phase 4: Market-informed tactical context analysis
-            const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
-            const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
-            const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
-                                 (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
-                                 (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13); // Manchester
-            
-            if (isEliteClash) {
-              baseExpectedGoals *= 1.08; // Elite clashes feature quality attacking play
-            } else if (isTopSixBattle) {
-              baseExpectedGoals *= bettingData.contextMultipliers.topSix.goals * 1.02;
-            }
-            if (isRivalryMatch) {
-              baseExpectedGoals *= 1.14; // Rivalry games typically more open and emotional
-            }
-            
-            // Phase 5: Centralized attacking tier performance modeling
-            const tierSeed = (team.id * fixture.event * 13) % 100;
-            const tierMultiplier = teamService.getTierMultiplier(team.id, tierSeed);
-            baseExpectedGoals *= tierMultiplier;
-            
-            // Phase 6: Minimal market momentum and fixture complexity factors (COMPRESSED FOR GOALS AGAINST)
-            const marketMomentum = 0.99 + ((team.id * fixture.event * 17) % 100) / 5000; // 99-101% market sentiment (compressed)
-            const fixtureComplexity = fixture.event <= 10 ? 1.005 : fixture.event <= 20 ? 1.0 : 0.995; // Minimal season stage impact
-            baseExpectedGoals *= marketMomentum * fixtureComplexity;
-            
-            // Phase 7: Minimal variance modeling for tight range (COMPRESSED FOR GOALS AGAINST)
-            const marketVolatility = 0.99 + ((team.id * fixture.event * 19) % 100) / 5000; // 99-101% minimal variation (compressed)
-            const confidenceAdjustment = Math.pow(teamBettingData.confidence, 0.95); // Reduced confidence impact
-            const varianceImpact = 1 + (((team.id * fixture.event * 23) % 100 - 50) / 100) * teamBettingData.variance * 0.2; // Reduced variance impact
-            baseExpectedGoals *= marketVolatility * confidenceAdjustment * varianceImpact;
-            
-            // Phase 8: Compressed Premier League goal bounds for tight range (UNIFIED WITH GOALS SCORED)
-            const marketFloor = Math.max(0.6, teamBettingData.expectedGoalsPerGame * 0.6); // Dynamic minimum (compressed)
-            const marketCeiling = Math.min(2.2, teamBettingData.expectedGoalsPerGame * 1.4); // Dynamic maximum (compressed)
-            baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
-            
-            // Final expected goals with market precision
-            const expectedGoals = baseExpectedGoals;
-            gameweekProjections[gw.toString()] = Math.round(expectedGoals * 100) / 100;
-          }
-        }
-        
-        // Calculate total goals from gameweek projections
-        const totalGoals = Object.values(gameweekProjections).reduce((sum: number, goals: any) => sum + (goals || 0), 0);
-        const roundedTotalGoals = Math.round(totalGoals * 100) / 100;
-        
-        teamProjections.push({
-          id: team.id,
-          team: team.short_name,
-          teamShort: team.short_name,
-          teamName: team.name,
-          gameweekProjections,
-          totalGoals: roundedTotalGoals,
-          expectedGoals: roundedTotalGoals // Alias for consistency
-          });
-        });
+        // Get team projections from shared service for this specific gameweek
+        const teamProjections = await TeamGoalsService.calculateTeamGoals(gameweek, gameweek);
         
         // Generate goal share data using Team Goal Projections expected goals for this gameweek
         const weekGoalShareData = await generateGoalShareFromTeamProjections(bootstrapData, fixturesData, teamProjections, gameweek);
