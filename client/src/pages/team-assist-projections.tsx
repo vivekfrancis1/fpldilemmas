@@ -5,6 +5,7 @@ import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 
 interface TeamAssistProjection {
   id: number;
@@ -21,14 +22,33 @@ interface TeamAssistProjection {
 }
 
 export default function TeamAssistProjections() {
-  const [startGameweek, setStartGameweek] = useState<string>("4");
-  const [endGameweek, setEndGameweek] = useState<string>("9");
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("total");
-
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
+
+  // Calculate dynamic gameweek ranges based on current gameweek
+  const { defaultStart, defaultEnd } = useMemo(() => {
+    const range = getDefaultGameweekRange(bootstrapData?.events || [], 6);
+    return {
+      defaultStart: range.startGameweek || "6",
+      defaultEnd: range.endGameweek || "11"
+    };
+  }, [bootstrapData]);
+  
+  const availableGameweeks = useMemo(() => 
+    getNextGameweeksForDropdown(bootstrapData?.events || [], 6), [bootstrapData]
+  );
+
+  const [startGameweek, setStartGameweek] = useState<string>("6");
+  const [endGameweek, setEndGameweek] = useState<string>("11");
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("total");
+
+  // Update state when defaults change
+  useMemo(() => {
+    if (defaultStart && defaultStart !== startGameweek) setStartGameweek(defaultStart);
+    if (defaultEnd && defaultEnd !== endGameweek) setEndGameweek(defaultEnd);
+  }, [defaultStart, defaultEnd]);
 
   const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamAssistProjection[]>({
     queryKey: ["/api/team-assist-projections"],
@@ -164,9 +184,9 @@ export default function TeamAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <SelectItem key={i + 4} value={(i + 4).toString()}>
-                        {i + 4}
+                    {availableGameweeks.map((gw) => (
+                      <SelectItem key={gw} value={gw.toString()}>
+                        {gw}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -182,9 +202,9 @@ export default function TeamAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <SelectItem key={i + 4} value={(i + 4).toString()}>
-                        {i + 4}
+                    {availableGameweeks.map((gw) => (
+                      <SelectItem key={gw} value={gw.toString()}>
+                        {gw}
                       </SelectItem>
                     ))}
                   </SelectContent>
