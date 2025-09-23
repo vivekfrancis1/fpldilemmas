@@ -8,11 +8,9 @@ import {
   teamProjections,
   CURRENT_SEASON
 } from "../shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { internalFetch } from "./config";
 import { fplScoringCacheService } from "./fpl-scoring-cache-service";
-import { calculateTeamGoals, formatTeamGoalsForAPI, calculateTeamAssists, calculateTeamGoalsWithRange } from "./team-calculation-service";
-import { calculatePlayerGoalsProjections, calculatePlayerAssistProjections } from "./player-projection-service";
 import { 
   applyGoalAdjustments, 
   applyAssistAdjustments,
@@ -29,7 +27,7 @@ interface ProjectionData {
 }
 
 class ProjectionCacheWorker {
-  private readonly BATCH_SIZE = 500; // Increased from 50 to 500 for better performance
+  private readonly BATCH_SIZE = 50;
   
   /**
    * Helper function to get position name from element type
@@ -131,21 +129,25 @@ class ProjectionCacheWorker {
     try {
       console.log(`📊 Caching goals projections with set piece adjustments...`);
       
-      // PERFORMANCE OPTIMIZATION: Direct function call instead of 81+ second HTTP call  
-      console.log(`🚀 OPTIMIZATION: Using direct goals projection calculation instead of HTTP (eliminating 81+ second bottleneck)`);
-      const [data, bootstrapResponse] = await Promise.all([
-        calculatePlayerGoalsProjections(),
+      // CIRCULAR DEPENDENCY FIX: Use full-calculation endpoint for cache population
+      // This avoids calling the optimized endpoint which uses cache-first approach
+      const [projResponse, bootstrapResponse] = await Promise.all([
+        internalFetch('api/player-goals-scored-projections-full-calculation'),
         fetch('https://fantasy.premierleague.com/api/bootstrap-static/')
       ]);
       
+      if (!projResponse.ok) {
+        throw new Error(`Goals API returned ${projResponse.status}`);
+      }
       if (!bootstrapResponse.ok) {
         throw new Error(`Bootstrap API returned ${bootstrapResponse.status}`);
       }
       
+      const data: ProjectionData[] = await projResponse.json();
       const bootstrapData = await bootstrapResponse.json();
       console.log(`📥 Retrieved ${data.length} goal projections`);
       
-      // Clear existing data for this season  
+      // Clear existing data for this season
       await db.delete(playerGoalsProjections)
         .where(eq(playerGoalsProjections.season, CURRENT_SEASON));
       
@@ -213,10 +215,12 @@ class ProjectionCacheWorker {
       // TEAM-LEVEL NORMALIZATION: Ensure individual player projections sum to team totals
       console.log(`🔄 Applying team-level normalization...`);
       
-      // PERFORMANCE OPTIMIZATION: Direct function call instead of internal HTTP
-      console.log(`🚀 OPTIMIZATION: Using direct team calculation instead of HTTP call`);
-      const teamGameweeks = Array.from(gameweekRange);
-      const teamGoalsData = formatTeamGoalsForAPI([], bootstrapData);
+      // Fetch team goal projections for comparison
+      const teamGoalsResponse = await internalFetch('api/team-goal-projections');
+      if (!teamGoalsResponse.ok) {
+        throw new Error(`Team goals API returned ${teamGoalsResponse.status}`);
+      }
+      const teamGoalsData = await teamGoalsResponse.json();
       
       // Group individual player projections by team and gameweek for normalization
       const teamTotals = new Map<string, { individual: number, team: number }>();
@@ -449,11 +453,11 @@ class ProjectionCacheWorker {
       
       console.log(`✅ Batch minutes scaling applied to ${records.length} goal projections`);
       
-      // Insert in batches (safe delete+insert with improved batch size)
+      // Insert in batches
       for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
         const batch = records.slice(i, i + this.BATCH_SIZE);
         await db.insert(playerGoalsProjections).values(batch);
-        console.log(`📊 Inserted goals batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(records.length / this.BATCH_SIZE)} (${batch.length} records)`);
+        console.log(`📊 Inserted goals batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(records.length / this.BATCH_SIZE)}`);
       }
       
       console.log(`✅ Goals projections cached successfully (${records.length} records, ${adjustmentCount} adjustments applied)`);
@@ -485,9 +489,15 @@ class ProjectionCacheWorker {
       
       console.log(`📊 Dynamically fetching assist projections for GW${startGameweek}-${endGameweek} (next 6 gameweeks)`);
       
-      // PERFORMANCE OPTIMIZATION: Direct function call instead of internal HTTP call
-      console.log(`🚀 OPTIMIZATION: Using direct assists projection calculation instead of HTTP (eliminating bottleneck)`);
-      const data: ProjectionData[] = await calculatePlayerAssistProjections(startGameweek, endGameweek);
+      // CIRCULAR DEPENDENCY FIX: Use full-calculation endpoint for cache population
+      // This avoids calling the optimized endpoint which uses cache-first approach
+      const projResponse = await internalFetch(`api/player-assist-projections-full-calculation?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      
+      if (!projResponse.ok) {
+        throw new Error(`Assists API returned ${projResponse.status}`);
+      }
+      
+      const data: ProjectionData[] = await projResponse.json();
       console.log(`📥 Retrieved ${data.length} assist projections for GW${startGameweek}-${endGameweek}`);
       
       // Clear existing data for this season
@@ -537,9 +547,12 @@ class ProjectionCacheWorker {
       // TEAM-LEVEL NORMALIZATION: Ensure individual player projections sum to team totals
       console.log(`🔄 Applying team-level normalization for assists...`);
       
-      // PERFORMANCE OPTIMIZATION: Direct function call instead of internal HTTP
-      console.log(`🚀 OPTIMIZATION: Using direct team assists calculation instead of HTTP`);
-      const teamAssistsData = await calculateTeamAssists(startGameweek, endGameweek, bootstrapData);
+      // Fetch team assist projections for comparison  
+      const teamAssistsResponse = await internalFetch(`api/team-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      if (!teamAssistsResponse.ok) {
+        throw new Error(`Team assists API returned ${teamAssistsResponse.status}`);
+      }
+      const teamAssistsData = await teamAssistsResponse.json();
       
       // DEBUG: Log response structure to understand data format
       console.log(`📊 DEBUG: Team assists response structure:`, {
@@ -571,11 +584,10 @@ class ProjectionCacheWorker {
         assistsFromGoalsFallback = true;
         
         try {
-          // PERFORMANCE OPTIMIZATION: Direct function call instead of internal HTTP
-          console.log(`🚀 OPTIMIZATION: Using direct team goals calculation (fallback) instead of HTTP`);
-          const teamGoalsData = await calculateTeamGoalsWithRange(startGameweek, endGameweek, bootstrapData);
+          const teamGoalsResponse = await internalFetch(`api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+          if (teamGoalsResponse.ok) {
+            const teamGoalsData = await teamGoalsResponse.json();
             
-          if (teamGoalsData && teamGoalsData.length > 0) {
             // Convert team goals to assists (72% conversion rate)
             extractedTeamAssistsData = teamGoalsData.map((team: any) => {
               const assistProjections: Record<string, number> = {};
@@ -839,11 +851,11 @@ class ProjectionCacheWorker {
       
       console.log(`✅ Batch minutes scaling applied to ${records.length} assist projections`);
       
-      // Insert in batches (safe delete+insert with improved batch size)
+      // Insert in batches
       for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
         const batch = records.slice(i, i + this.BATCH_SIZE);
         await db.insert(playerAssistProjections).values(batch);
-        console.log(`📊 Inserted assists batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(records.length / this.BATCH_SIZE)} (${batch.length} records)`);
+        console.log(`📊 Inserted assists batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(records.length / this.BATCH_SIZE)}`);
       }
       
       console.log(`✅ Assist projections cached successfully (${records.length} records, ${adjustmentCount} adjustments applied)`);
@@ -1255,24 +1267,10 @@ class ProjectionCacheWorker {
     }
   }
 
-  // Cache for expensive getCacheStats operation
-  private cacheStatsCache: { data: any; timestamp: number } | null = null;
-  private readonly CACHE_STATS_TTL = 30 * 1000; // 30 seconds cache
-
   /**
-   * Get cache statistics with timestamps (cached for performance)
+   * Get cache statistics with timestamps
    */
   async getCacheStats(): Promise<any> {
-    // Check if we have valid cached data
-    const now = Date.now();
-    if (this.cacheStatsCache && (now - this.cacheStatsCache.timestamp) < this.CACHE_STATS_TTL) {
-      console.log(`⚡ Returning cached stats (${Math.round((now - this.cacheStatsCache.timestamp) / 1000)}s old)`);
-      return this.cacheStatsCache.data;
-    }
-
-    console.log(`🔄 Refreshing cache stats (15+ database queries)...`);
-    const startTime = Date.now();
-    
     try {
       const { sql } = await import("drizzle-orm");
       const { 
@@ -1443,25 +1441,9 @@ class ProjectionCacheWorker {
           isStale: minutesPoints[0]?.lastUpdated ? (now.getTime() - new Date(minutesPoints[0].lastUpdated as string).getTime()) > STALE_THRESHOLD : true
         }
       ];
-
-      // Cache the result for future requests
-      const endTime = Date.now();
-      console.log(`✅ Cache stats retrieved in ${endTime - startTime}ms, caching for ${this.CACHE_STATS_TTL/1000}s`);
-      
-      this.cacheStatsCache = {
-        data: stats,
-        timestamp: endTime
-      };
-      
-      return stats;
       
     } catch (error) {
       console.error(`❌ Failed to get cache stats:`, error);
-      // Return cached data if available, even if stale
-      if (this.cacheStatsCache) {
-        console.log(`⚠️ Returning stale cached stats due to error`);
-        return this.cacheStatsCache.data;
-      }
       return [];
     }
   }
@@ -1512,41 +1494,41 @@ class ProjectionCacheWorker {
   }
 
   /**
-   * Get Player Assists cache status from DATABASE (performance optimized - no internal HTTP calls)
+   * Get Player Assists cache status from API functionality (aligned with actual API)
    */
   private async getPlayerAssistsStatus(): Promise<{ type: string; count: number; lastUpdated: string | null; isStale: boolean }> {
     try {
-      console.log(`🔍 DEBUG: Checking Player Assists database status...`);
+      console.log(`🔍 DEBUG: Checking Player Assists API status...`);
       
-      // PERFORMANCE OPTIMIZATION: Direct database query instead of internal HTTP call
+      // Test if the Player Assists API is working by calling it
       const startTime = Date.now();
-      const { sql } = await import("drizzle-orm");
-      const { playerAssistProjections } = await import("@shared/schema");
-      
-      const [assistStats] = await db.select({ 
-        count: sql`count(*)`,
-        lastUpdated: sql`MAX(calculated_at)`
-      }).from(playerAssistProjections);
-      
+      const response = await fetch("http://localhost:5000/api/player-assist-projections?startGameweek=4&endGameweek=9");
       const duration = Date.now() - startTime;
-      const count = Number(assistStats?.count || 0);
-      const lastUpdated = assistStats?.lastUpdated as string | null;
       
-      console.log(`🔍 DEBUG: Player Assists database query - ${count} records, ${duration}ms response time`);
-      
-      // Check if stale (more than 4 hours old)
-      const now = new Date();
-      const STALE_THRESHOLD = 4 * 60 * 60 * 1000; // 4 hours
-      const isStale = lastUpdated ? (now.getTime() - new Date(lastUpdated).getTime()) > STALE_THRESHOLD : true;
-      
-      return {
-        type: 'Assists',
-        count,
-        lastUpdated,
-        isStale
-      };
+      if (response.ok) {
+        const data = await response.json();
+        const count = data.length || 0;
+        const lastUpdated = new Date().toISOString();
+        
+        console.log(`🔍 DEBUG: Player Assists API working - ${count} players, ${duration}ms response time`);
+        
+        return {
+          type: 'Assists',
+          count,
+          lastUpdated,
+          isStale: false
+        };
+      } else {
+        console.log(`🔍 DEBUG: Player Assists API failed with status ${response.status}`);
+        return {
+          type: 'Assists',
+          count: 0,
+          lastUpdated: null,
+          isStale: true
+        };
+      }
     } catch (error) {
-      console.error(`❌ DEBUG: Player Assists database query failed:`, error);
+      console.error(`❌ Failed to check Player Assists API status:`, error);
       return {
         type: 'Assists',
         count: 0,

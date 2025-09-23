@@ -13315,76 +13315,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const aggregatedData = await db.select().from(cachedPlayerTotalPoints);
         
         if (aggregatedData && aggregatedData.length > 0) {
-          // Get bootstrap data for player metadata (prices, ownership, team mapping)
-          let bootstrapData = null;
-          try {
-            const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-            if (bootstrapResponse.ok) {
-              bootstrapData = await bootstrapResponse.json();
-            }
-          } catch (error) {
-            console.warn("Could not fetch bootstrap data for player metadata:", error);
-          }
-          
-          // Create lookup maps for better performance
-          const playerLookup = new Map();
-          const teamLookup = new Map();
-          
-          if (bootstrapData) {
-            bootstrapData.elements?.forEach((element: any) => {
-              playerLookup.set(element.id, element);
-            });
-            bootstrapData.teams?.forEach((team: any) => {
-              teamLookup.set(team.name, team.id);
-            });
-          }
-          
-          // Transform to match frontend expectations with complete data structure
-          const transformedData = aggregatedData.map((player: any) => {
-            const bootstrapPlayer = playerLookup.get(player.playerId);
-            const teamId = teamLookup.get(player.teamName) || 1; // fallback to team 1
-            
-            return {
-              playerId: player.playerId,
-              name: player.playerName, // Frontend expects 'name', not 'playerName'
-              playerName: player.playerName, // Keep for compatibility
-              team: teamId, // Frontend expects team ID, not name
-              teamName: player.teamName, // Keep for compatibility  
-              position: player.position,
-              now_cost: bootstrapPlayer?.now_cost || 40, // Price in 0.1m units
-              price: (bootstrapPlayer?.now_cost || 40) / 10, // Price in millions for compatibility
-              selected_by_percent: bootstrapPlayer?.selected_by_percent || 0, // Ownership percentage
-              ownership: bootstrapPlayer?.selected_by_percent || 0, // For compatibility
-              gameweekProjections: player.totalPointsData || {},
-              totalPoints: player.totalExpectedPoints || 0,
-              totalExpectedPoints: player.totalExpectedPoints || 0, // Frontend expects this
-              averagePerGameweek: player.averagePerGameweek || 0,
-              
-              // Add placeholder component breakdowns - TODO: implement detailed breakdowns
-              pointsFromGoals: {},
-              pointsFromAssists: {},
-              pointsFromCleanSheets: {},
-              pointsFromDefensiveContributions: {},
-              pointsFromMinutes: {},
-              pointsFromBonus: {},
-              pointsFromSaves: {},
-              pointsFromGoalsConceded: {},
-              pointsFromYellowCards: {},
-              pointsFromRedCards: {},
-              
-              // Add placeholder total breakdowns
-              totalPointsFromGoals: 0,
-              totalPointsFromAssists: 0,
-              totalPointsFromCleanSheets: 0,
-              totalPointsFromDefensiveContributions: 0,
-              totalPointsFromMinutes: 0,
-              totalPointsFromBonus: 0,
-              totalPointsFromSaves: 0,
-              totalPointsFromGoalsConceded: 0,
-              totalPointsFromYellowCards: 0,
-              totalPointsFromRedCards: 0
-            };
-          }).sort((a, b) => b.totalPoints - a.totalPoints); // Sort by total points descending
+          // Transform to match frontend expectations
+          const transformedData = aggregatedData.map((player: any) => ({
+            playerId: player.playerId,
+            playerName: player.playerName,
+            teamName: player.teamName,
+            position: player.position,
+            gameweekProjections: player.totalPointsData || {},
+            totalPoints: player.totalExpectedPoints || 0,
+            averagePerGameweek: player.averagePerGameweek || 0
+          })).sort((a, b) => b.totalPoints - a.totalPoints); // Sort by total points descending
           
           // Cache the result in memory for faster subsequent access
           totalPointsCache.set(currentCacheKey, {
@@ -13548,7 +13488,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamShort: metadata?.teamShort || null,
             position: metadata?.position || null,
             gameweekProjections: {},
-            projectedGoals: 0, // Added missing field expected by frontend
             totalProjectedGoals: 0,
             goalShare: 0
           });
@@ -13556,7 +13495,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const player = playersMap.get(row.playerId);
         player.gameweekProjections[row.gameweek] = row.goals;
-        player.projectedGoals += row.goals; // Add to projectedGoals field
         player.totalProjectedGoals += row.goals;
       }
       

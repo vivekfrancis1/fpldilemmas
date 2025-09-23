@@ -254,7 +254,6 @@ import {
   varchar,
   index,
   uniqueIndex,
-  unique,
   date,
   real,
   primaryKey,
@@ -972,8 +971,6 @@ export const playerGoalsProjections = pgTable("player_goals_projections", {
   calculatedAt: timestamp("calculated_at").defaultNow(),
 }, (table) => ({
   pk: primaryKey({ columns: [table.playerId, table.gameweek] }),
-  // Add unique constraint for season safety without changing primary key
-  seasonPlayerGameweek: unique().on(table.season, table.playerId, table.gameweek),
 }));
 
 export const playerAssistProjections = pgTable("player_assist_projections", {
@@ -984,8 +981,6 @@ export const playerAssistProjections = pgTable("player_assist_projections", {
   calculatedAt: timestamp("calculated_at").defaultNow(),
 }, (table) => ({
   pk: primaryKey({ columns: [table.playerId, table.gameweek] }),
-  // Add unique constraint for season safety without changing primary key
-  seasonPlayerGameweek: unique().on(table.season, table.playerId, table.gameweek),
 }));
 
 export const teamCleanSheetProjections = pgTable("team_clean_sheet_projections", {
@@ -1007,8 +1002,6 @@ export const playerDefensiveProjections = pgTable("player_defensive_projections"
   calculatedAt: timestamp("calculated_at").defaultNow(),
 }, (table) => ({
   pk: primaryKey({ columns: [table.playerId, table.gameweek] }),
-  // Add unique constraint for season safety without changing primary key
-  seasonPlayerGameweek: unique().on(table.season, table.playerId, table.gameweek),
 }));
 
 export const playerMinutesProjections = pgTable("player_minutes_projections", {
@@ -1019,8 +1012,6 @@ export const playerMinutesProjections = pgTable("player_minutes_projections", {
   calculatedAt: timestamp("calculated_at").defaultNow(),
 }, (table) => ({
   pk: primaryKey({ columns: [table.playerId, table.gameweek] }),
-  // Add unique constraint for season safety without changing primary key
-  seasonPlayerGameweek: unique().on(table.season, table.playerId, table.gameweek),
 }));
 
 // Types for projection cache tables
