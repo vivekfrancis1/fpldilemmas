@@ -25,6 +25,34 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 export class TeamGoalsService {
   /**
+   * Defensive numeric coercion helper - ensures valid numbers with fallbacks
+   */
+  private static num(value: any, fallback: number): number {
+    const numValue = Number(value);
+    return isFinite(numValue) && !isNaN(numValue) ? numValue : fallback;
+  }
+
+  /**
+   * Safe multiplication helper - coerces factors and provides fallbacks
+   */
+  private static safeMul(base: number, factor: any, fallback: number = 1.0): number {
+    return base * TeamGoalsService.num(factor, fallback);
+  }
+
+  /**
+   * Deterministic baseline calculator for when calculations fail
+   */
+  private static calculateBaselineFallback(teamId: number, opponentId: number, isHome: boolean): number {
+    // Simple but reliable calculation: 1.5 * venue * basic team strength
+    const venue = isHome ? 1.16 : 0.84;
+    const attackStrength = teamId <= 6 ? 1.15 : (teamId >= 17 ? 0.85 : 1.0); // Elite, average, weak
+    const defenseStrength = opponentId <= 6 ? 0.85 : (opponentId >= 17 ? 1.15 : 1.0); // Elite defense = lower goals
+    
+    const baseline = 1.5 * venue * attackStrength * defenseStrength;
+    return Math.max(0.3, Math.min(4.2, baseline)); // Clamp to reasonable bounds
+  }
+
+  /**
    * Get team goal projections for a specific gameweek range
    * This is the single source of truth for team goal calculations
    */
@@ -192,46 +220,81 @@ export class TeamGoalsService {
     adminGoalSettings: any,
     MASTER_TEAM_DEFAULTS: any
   ): number {
-    // Phase 1: Universal Base xG Foundation
-    let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame || MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame;
-    
-    if (baseExpectedGoals === 0 || !baseExpectedGoals) {
-      baseExpectedGoals = MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame;
+    try {
+      // Phase 1: Universal Base xG Foundation (with defensive coercion)
+      let baseExpectedGoals = TeamGoalsService.num(
+        adminGoalSettings.averageBaseXGPerTeamPerGame || MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame,
+        1.5 // Fallback to Premier League average
+      );
+      
+      // Phase 2: Venue Factors (with safe multiplication)
+      const venueMultiplier = isHome ? 
+        TeamGoalsService.num(adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier, 1.16) :
+        TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.84);
+      baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, venueMultiplier, 1.0);
+      
+      // Intermediate validation check
+      if (!isFinite(baseExpectedGoals) || isNaN(baseExpectedGoals)) {
+        console.warn(`⚠️ CALCULATION FALLBACK: Team ${team.name} vs ${opponent.name} GW${fixture.event} - Phase 2 invalid, using baseline`);
+        return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
+      }
+      
+      // Phase 3: Defensive Tiers (with safe multiplication)
+      const opponentDefensiveTier = TeamGoalsService.getDefensiveTier(opponent.id, adminGoalSettings);
+      const opponentDefensiveMultiplier = TeamGoalsService.getDefensiveMultiplier(opponentDefensiveTier, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+      baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, opponentDefensiveMultiplier, 1.0);
+      
+      // Phase 4: Attacking Tiers (with safe multiplication)
+      const attackingTier = TeamGoalsService.getAttackingTier(team.id, adminGoalSettings);
+      const attackingTierMultiplier = TeamGoalsService.getAttackingMultiplier(attackingTier, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+      baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, attackingTierMultiplier, 1.0);
+      
+      // Intermediate validation check after tiers
+      if (!isFinite(baseExpectedGoals) || isNaN(baseExpectedGoals)) {
+        console.warn(`⚠️ CALCULATION FALLBACK: Team ${team.name} vs ${opponent.name} GW${fixture.event} - Phase 4 invalid, using baseline`);
+        return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
+      }
+      
+      // Phase 5: Context Multipliers (with enhanced error handling)
+      baseExpectedGoals = TeamGoalsService.applyContextMultipliers(
+        baseExpectedGoals, team, opponent, fixture, isHome, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
+      );
+      
+      // Critical validation check after context multipliers
+      if (!isFinite(baseExpectedGoals) || isNaN(baseExpectedGoals)) {
+        console.warn(`⚠️ CALCULATION FALLBACK: Team ${team.name} vs ${opponent.name} GW${fixture.event} - Phase 5 invalid, using baseline`);
+        return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
+      }
+      
+      // Phase 6: Market Bounds (with defensive coercion)
+      const averageBaseXG = TeamGoalsService.num(adminGoalSettings.averageBaseXGPerTeamPerGame, 1.5);
+      const marketFloor = averageBaseXG * TeamGoalsService.num(adminGoalSettings.marketFloorMultiplier, 0.40);
+      const marketCeiling = averageBaseXG * TeamGoalsService.num(adminGoalSettings.marketCeilingMultiplier, 2.0);
+      
+      // Ensure floor <= ceiling, fix if needed
+      const validFloor = Math.min(marketFloor, marketCeiling);
+      const validCeiling = Math.max(marketFloor, marketCeiling);
+      
+      baseExpectedGoals = Math.max(validFloor, Math.min(validCeiling, baseExpectedGoals));
+      
+      // Phase 8: Final Bounds and Validation
+      const absoluteMin = TeamGoalsService.num(adminGoalSettings.absoluteMinGoals, 0.0);
+      const absoluteMax = TeamGoalsService.num(adminGoalSettings.absoluteMaxGoals, 7.0);
+      const expectedGoals = Math.max(absoluteMin, Math.min(absoluteMax, baseExpectedGoals));
+      
+      // Final safety check - if still invalid, use baseline
+      if (!isFinite(expectedGoals) || isNaN(expectedGoals)) {
+        console.warn(`⚠️ CALCULATION FALLBACK: Team ${team.name} vs ${opponent.name} GW${fixture.event} - Final result invalid, using baseline`);
+        return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
+      }
+      
+      return expectedGoals;
+      
+    } catch (error) {
+      // Ultimate fallback for any unexpected errors
+      console.error(`❌ CALCULATION ERROR: Team ${team.name} vs ${opponent.name} GW${fixture.event} - ${error}, using baseline`);
+      return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
     }
-    
-    // Phase 2: Venue Factors
-    const venueMultiplier = isHome ? 
-      (adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier) :
-      (adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier);
-    baseExpectedGoals *= venueMultiplier;
-    
-    // Phase 3: Defensive Tiers
-    const opponentDefensiveTier = TeamGoalsService.getDefensiveTier(opponent.id, adminGoalSettings);
-    const opponentDefensiveMultiplier = TeamGoalsService.getDefensiveMultiplier(opponentDefensiveTier, adminGoalSettings, MASTER_TEAM_DEFAULTS);
-    baseExpectedGoals *= opponentDefensiveMultiplier;
-    
-    // Phase 4: Attacking Tiers
-    const attackingTier = TeamGoalsService.getAttackingTier(team.id, adminGoalSettings);
-    const attackingTierMultiplier = TeamGoalsService.getAttackingMultiplier(attackingTier, adminGoalSettings, MASTER_TEAM_DEFAULTS);
-    baseExpectedGoals *= attackingTierMultiplier;
-    
-    // Phase 5: Context Multipliers
-    baseExpectedGoals = TeamGoalsService.applyContextMultipliers(
-      baseExpectedGoals, team, opponent, fixture, isHome, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
-    );
-    
-    // Phase 6: Market Bounds
-    const averageBaseXG = adminGoalSettings.averageBaseXGPerTeamPerGame || 1.5;
-    const marketFloor = averageBaseXG * (adminGoalSettings.marketFloorMultiplier || 0.40);
-    const marketCeiling = averageBaseXG * (adminGoalSettings.marketCeilingMultiplier || 2.0);
-    baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
-    
-    // Phase 8: Final Bounds
-    const absoluteMin = adminGoalSettings.absoluteMinGoals || 0.0;
-    const absoluteMax = adminGoalSettings.absoluteMaxGoals || 7.0;
-    const expectedGoals = Math.max(absoluteMin, Math.min(absoluteMax, baseExpectedGoals));
-    
-    return expectedGoals;
   }
   
   // Helper methods for tier calculations
