@@ -246,7 +246,7 @@ export default function ProjectedGoalsCS() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 7 }, (_, i) => currentGameweek + i).map(gw => (
+                      {Array.from({ length: 6 }, (_, i) => currentGameweek + 1 + i).map(gw => (
                         <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                       ))}
                     </SelectContent>
@@ -261,7 +261,7 @@ export default function ProjectedGoalsCS() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 7 }, (_, i) => currentGameweek + i).map(gw => (
+                      {Array.from({ length: 6 }, (_, i) => currentGameweek + 1 + i).map(gw => (
                         <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                       ))}
                     </SelectContent>
