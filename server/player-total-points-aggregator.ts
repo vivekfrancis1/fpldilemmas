@@ -168,11 +168,9 @@ export class PlayerTotalPointsAggregator {
    */
   private async fetchGoalsPointsData(startGameweek: number, endGameweek: number) {
     try {
-      // Use fast cached endpoint instead of slow API
-      const response = await internalFetch(`api/cached/player-goals-projections`);
-      if (!response.ok) throw new Error(`Failed to fetch goals data: ${response.statusText}`);
-      
-      const goalsData = await response.json();
+      // PERFORMANCE OPTIMIZATION: Direct database query instead of internal HTTP call
+      console.log(`🚀 OPTIMIZATION: Using direct database query for goals data (eliminating HTTP call)`);
+      const goalsData = await db.select().from(playerGoalsProjections);
       
       // Convert goals projections to points using FPL scoring rules
       return goalsData.map((player: any) => ({
@@ -194,11 +192,9 @@ export class PlayerTotalPointsAggregator {
    */
   private async fetchAssistsPointsData(startGameweek: number, endGameweek: number) {
     try {
-      // Use fast cached endpoint instead of slow API
-      const response = await internalFetch(`api/cached/player-assists-projections`);
-      if (!response.ok) throw new Error(`Failed to fetch assists data: ${response.statusText}`);
-      
-      const assistsData = await response.json();
+      // PERFORMANCE OPTIMIZATION: Direct database query instead of internal HTTP call
+      console.log(`🚀 OPTIMIZATION: Using direct database query for assists data (eliminating HTTP call)`);
+      const assistsData = await db.select().from(playerAssistProjections);
       
       // Convert assists projections to points using FPL scoring rules (3 points per assist)
       return assistsData.map((player: any) => ({
