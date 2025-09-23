@@ -12920,7 +12920,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (gw < currentGameweek) {
               // COMPLETED GAMEWEEKS: Use actual FPL data
               try {
-                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.playerId}/`);
+                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
                 const playerDetail = await playerDetailResponse.json();
                 const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
                 
