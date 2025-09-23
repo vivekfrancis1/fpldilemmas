@@ -125,179 +125,11 @@ function calculateFastGoals(
   return Math.round(goals * 100) / 100;
 }
 
-// Original comprehensive goal calculation function - RESTORED for accuracy
-function calculateComprehensiveGoals(
-  team: any, 
-  opponent: any, 
-  fixture: any, 
-  isHome: boolean, 
-  bettingData: any, 
-  adminGoalSettings: any, 
-  fixturesData: any[]
-): number {
-  // Phase 1: Universal Base xG Foundation
-  let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame;
-  
-  // Phase 2: Venue Factors
-  const venueMultiplier = isHome ? 
-    adminGoalSettings.homeAdvantageGoalsMultiplier : 
-    adminGoalSettings.awayFactorGoalsMultiplier;
-  baseExpectedGoals *= venueMultiplier;
-  
-  // Phase 3: Defensive Tiers
-  const getDefensiveTier = (teamId: number): string => {
-    const parseTeamArray = (teamData: any): number[] => {
-      if (Array.isArray(teamData)) return teamData;
-      if (typeof teamData === 'string') {
-        try {
-          return JSON.parse(teamData);
-        } catch {
-          return [];
-        }
-      }
-      return [];
-    };
-
-    const eliteDefenseTeams = parseTeamArray(adminGoalSettings.eliteDefenseTeams);
-    const strongDefenseTeams = parseTeamArray(adminGoalSettings.strongDefenseTeams);
-    const weakDefenseTeams = parseTeamArray(adminGoalSettings.weakDefenseTeams);
-    const promotedDefenseTeams = parseTeamArray(adminGoalSettings.promotedDefenseTeams);
-
-    if (eliteDefenseTeams.includes(teamId)) return 'elite';
-    if (strongDefenseTeams.includes(teamId)) return 'strong';
-    if (weakDefenseTeams.includes(teamId)) return 'weak';
-    if (promotedDefenseTeams.includes(teamId)) return 'promoted';
-    return 'average';
-  };
-  
-  const opponentDefensiveTier = getDefensiveTier(opponent.id);
-  let opponentDefensiveMultiplier = 1.0;
-  switch (opponentDefensiveTier) {
-    case 'elite': opponentDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier; break;
-    case 'strong': opponentDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier; break;
-    case 'average': opponentDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier; break;
-    case 'weak': opponentDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier; break;
-    case 'promoted': opponentDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier; break;
-  }
-  
-  baseExpectedGoals *= opponentDefensiveMultiplier;
-  
-  // Phase 4: Attacking Tiers
-  const getAttackingTier = (teamId: number) => {
-    const parseTeamArray = (teamData: any): number[] => {
-      if (Array.isArray(teamData)) return teamData;
-      if (typeof teamData === 'string') {
-        try {
-          return JSON.parse(teamData);
-        } catch {
-          return [];
-        }
-      }
-      return [];
-    };
-
-    const eliteAttackTeams = parseTeamArray(adminGoalSettings.eliteAttackTeams);
-    const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams);
-    const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams);
-    const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams);
-    
-    if (eliteAttackTeams.includes(teamId)) return 'elite';
-    if (strongAttackTeams.includes(teamId)) return 'strong';
-    if (weakAttackTeams.includes(teamId)) return 'weak';
-    if (promotedAttackTeams.includes(teamId)) return 'promoted';
-    return 'average';
-  };
-  
-  const attackingTier = getAttackingTier(team.id);
-  let attackingTierMultiplier = 1.0;
-  switch (attackingTier) {
-    case 'elite': attackingTierMultiplier = adminGoalSettings.eliteAttackMultiplier; break;
-    case 'strong': attackingTierMultiplier = adminGoalSettings.strongAttackMultiplier; break;
-    case 'average': attackingTierMultiplier = adminGoalSettings.averageAttackMultiplier; break;
-    case 'weak': attackingTierMultiplier = adminGoalSettings.weakAttackMultiplier; break;
-    case 'promoted': attackingTierMultiplier = adminGoalSettings.promotedAttackMultiplier; break;
-  }
-  
-  baseExpectedGoals *= attackingTierMultiplier;
-  
-  // Apply final bounds
-  baseExpectedGoals = Math.max(
-    adminGoalSettings.absoluteMinGoals || 0.3, 
-    Math.min(baseExpectedGoals, adminGoalSettings.absoluteMaxGoals || 4.2)
-  );
-  
-  return Math.round(baseExpectedGoals * 100) / 100;
-}
+// REMOVED: calculateComprehensiveGoals function - now using TeamGoalsService
 
 // Master Default Team Configuration - Single Source of Truth
-const MASTER_TEAM_DEFAULTS = {
-  // Base Settings
-  averageBaseXGPerTeamPerGame: 1.5,
-  defaultTeamVariance: 0.45,
-  defaultExpectedGoalsPerGame: 1.3,
-  globalTierMultiplier: 1.25,
-  homeAdvantageGoalsMultiplier: 1.12,
-  awayFactorGoalsMultiplier: 0.88,
-  
-  // Attack Team Assignments
-  eliteAttackTeams: [12, 13], // Liverpool, Manchester City
-  strongAttackTeams: [1, 7, 18], // Arsenal, Chelsea, Tottenham
-  averageAttackTeams: [6, 14, 4, 5, 10, 8, 9, 15], // Brighton, Manchester United, Bournemouth, Brentford, Fulham, Crystal Palace, Everton, Newcastle
-  weakAttackTeams: [16, 19, 20, 2], // Nottingham Forest, West Ham, Wolves, Aston Villa
-  promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
-  
-  // Attack Multipliers
-  eliteAttackMultiplier: 1.35,
-  strongAttackMultiplier: 1.15,
-  averageAttackMultiplier: 1.00,
-  weakAttackMultiplier: 0.85,
-  promotedAttackMultiplier: 0.7,
-  
-  // Defense Team Assignments
-  eliteDefenseTeams: [1], // Arsenal
-  strongDefenseTeams: [12, 13, 7, 15], // Liverpool, Man City, Chelsea, Newcastle
-  averageDefenseTeams: [2, 9, 14, 18, 8, 10, 16, 4, 6], // Aston Villa, Everton, Manchester United, Tottenham, Crystal Palace, Fulham, Nottingham Forest, Bournemouth, Brighton
-  weakDefenseTeams: [5, 11, 17], // Brentford, Leeds, Sunderland
-  promotedDefenseTeams: [3, 19, 20], // Burnley, West Ham, Wolves
-  
-  // Defense Multipliers
-  eliteDefenseMultiplier: 0.7,
-  strongDefenseMultiplier: 0.85,
-  averageDefenseMultiplier: 1,
-  weakDefenseMultiplier: 1.15,
-  promotedDefenseMultiplier: 1.3,
-  
-  // Dynamic penalty taker adjustment calculation will be used instead of hardcoded list
+// REMOVED: MASTER_TEAM_DEFAULTS - now using team-config.ts centralized configuration
 
-  // Context Multipliers
-  derbyGoalsMultiplier: 0.87,
-  topSixGoalsMultiplier: 1.12,
-  relegationBattleGoalsMultiplier: 0.83,
-  earlyKickoffGoalsMultiplier: 0.94,
-  lateKickoffGoalsMultiplier: 1.07,
-  postEuropeanGoalsMultiplier: 0.88,
-  midweekFixtureGoalsMultiplier: 0.91,
-  seasonFinaleGoalsMultiplier: 1.05,
-  newManagerBounceGoalsMultiplier: 1.08,
-  teamFormMultiplier: 1.06,
-  fixtureCongestionMultiplier: 0.89,
-  injuryCrisisMultiplier: 0.92,
-  europeanQualificationPushMultiplier: 1.08,
-  nothingToPlayForMultiplier: 0.94,
-  revengeFactorMultiplier: 1.05,
-  pressureMatchMultiplier: 0.91,
-  homeCrowdBoostMultiplier: 1.04,
-  weatherConditionsGoalsMultiplier: 0.92,
-  refereeInfluenceMultiplier: 1.0,
-  postInternationalBreakMultiplier: 0.92,
-  travelDistanceFatigueMultiplier: 0.95,
-  
-  // Bounds
-  marketFloorMultiplier: 0.4,
-  marketCeilingMultiplier: 2,
-  absoluteMinGoals: 0,
-  absoluteMaxGoals: 7
-};
 
 // Enhanced totalPointsCache with TTL and size management
 interface CacheEntry {
@@ -3878,43 +3710,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
 
-  // Goals Scored Admin Settings - Used by Team Goal Projections
+  // Goals Scored Admin Settings - Using team-config.ts centralized configuration
+  const { MASTER_TEAM_DEFAULTS } = await import('./team-config');
+  
   let adminGoalSettings = {
-    // Base Calculation Parameters - Using MASTER_TEAM_DEFAULTS as single source of truth
+    // Base Calculation Parameters - Using team-config.ts as single source of truth
     averageBaseXGPerTeamPerGame: MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame,
     defaultTeamVariance: MASTER_TEAM_DEFAULTS.defaultTeamVariance,
     defaultExpectedGoalsPerGame: MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame,
     globalTierMultiplier: MASTER_TEAM_DEFAULTS.globalTierMultiplier,
     
     // Venue Multipliers - Updated values
-    homeAdvantageGoalsMultiplier: 1.12,
+  
     awayFactorGoalsMultiplier: 0.88,
     
-    // Attack Multipliers
+    // Attack Multipliers - Using team-config.ts centralized configuration
     eliteAttackMultiplier: MASTER_TEAM_DEFAULTS.eliteAttackMultiplier,
     strongAttackMultiplier: MASTER_TEAM_DEFAULTS.strongAttackMultiplier,
     averageAttackMultiplier: MASTER_TEAM_DEFAULTS.averageAttackMultiplier,
     weakAttackMultiplier: MASTER_TEAM_DEFAULTS.weakAttackMultiplier,
     promotedAttackMultiplier: MASTER_TEAM_DEFAULTS.promotedAttackMultiplier,
-    // Attacking Team Assignments - Crystal Palace (3) and Everton (11) moved to average
+    // Attacking Team Assignments - Using team-config.ts centralized configuration
     eliteAttackTeams: MASTER_TEAM_DEFAULTS.eliteAttackTeams,
     strongAttackTeams: MASTER_TEAM_DEFAULTS.strongAttackTeams,
     averageAttackTeams: MASTER_TEAM_DEFAULTS.averageAttackTeams,
     weakAttackTeams: MASTER_TEAM_DEFAULTS.weakAttackTeams,
     promotedAttackTeams: MASTER_TEAM_DEFAULTS.promotedAttackTeams,
-    // Defense Multipliers
+    // Defense Multipliers - Using team-config.ts centralized configuration
     eliteDefenseMultiplier: MASTER_TEAM_DEFAULTS.eliteDefenseMultiplier,
     strongDefenseMultiplier: MASTER_TEAM_DEFAULTS.strongDefenseMultiplier,
     averageDefenseMultiplier: MASTER_TEAM_DEFAULTS.averageDefenseMultiplier,
     weakDefenseMultiplier: MASTER_TEAM_DEFAULTS.weakDefenseMultiplier,
     promotedDefenseMultiplier: MASTER_TEAM_DEFAULTS.promotedDefenseMultiplier,
-    // Defensive Team Assignments - Crystal Palace (3) and Everton (11) moved to average
+    // Defensive Team Assignments - Using team-config.ts centralized configuration
     eliteDefenseTeams: MASTER_TEAM_DEFAULTS.eliteDefenseTeams,
     strongDefenseTeams: MASTER_TEAM_DEFAULTS.strongDefenseTeams,
     averageDefenseTeams: MASTER_TEAM_DEFAULTS.averageDefenseTeams,
     weakDefenseTeams: MASTER_TEAM_DEFAULTS.weakDefenseTeams,
     promotedDefenseTeams: MASTER_TEAM_DEFAULTS.promotedDefenseTeams,
-    // Context Multipliers
+    // Context Multipliers - Using team-config.ts centralized configuration
     derbyGoalsMultiplier: MASTER_TEAM_DEFAULTS.derbyGoalsMultiplier,
     topSixGoalsMultiplier: MASTER_TEAM_DEFAULTS.topSixGoalsMultiplier,
     relegationBattleGoalsMultiplier: MASTER_TEAM_DEFAULTS.relegationBattleGoalsMultiplier,
@@ -4065,7 +3899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         defaultTeamVariance: MASTER_TEAM_DEFAULTS.defaultTeamVariance,
         defaultExpectedGoalsPerGame: MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame,
         globalTierMultiplier: MASTER_TEAM_DEFAULTS.globalTierMultiplier,
-        homeAdvantageGoalsMultiplier: 1.12,
+      
         awayFactorGoalsMultiplier: 0.88,
         
         // Attack Multipliers
@@ -4329,7 +4163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       adminGoalSettings = {
         globalTierMultiplier: 1.25,
         // Venue Multipliers
-        homeAdvantageGoalsMultiplier: 1.12,
+      
         awayFactorGoalsMultiplier: 0.88,
         // Attacking Tier Multipliers
         eliteAttackMultiplier: 1.15,
@@ -4348,12 +4182,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         averageDefenseMultiplier: 1.00,
         weakDefenseMultiplier: 1.35,
         promotedDefenseMultiplier: 1.60,
-        derbyGoalsMultiplier: 0.87,
+      
         topSixGoalsMultiplier: 1.12,
         relegationBattleGoalsMultiplier: 0.83,
         earlyKickoffGoalsMultiplier: 0.94,
         lateKickoffGoalsMultiplier: 1.07,
-        postEuropeanGoalsMultiplier: 0.88,
+      
         midweekFixtureGoalsMultiplier: 0.91,
         seasonFinaleGoalsMultiplier: 1.05,
         newManagerBounceGoalsMultiplier: 1.08,
@@ -4434,387 +4268,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamProjections = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
       
       res.json(teamProjections);
-        // Get fixtures for this team across next 6 gameweeks only
-        const allFixtures = fixturesData
-          .filter((f: any) => 
-            (f.team_h === team.id || f.team_a === team.id) && 
-            f.event >= startGameweek && f.event <= endGameweek
-          );
-        
-        const projections = allFixtures.map((fixture: any) => {
-          const isHome = fixture.team_h === team.id;
-          const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
-          
-          if (!opponent) return null;
-          
-          // PURE PROJECTIONS ONLY - No hybrid approach needed for next 12 gameweeks
-          
-          // For unfinished fixtures, use advanced spread betting market-based goal calculation with 8-phase statistical modeling
-          // Use ONLY admin configurable defaults instead of hardcoded fallbacks
-          const teamBettingData = bettingData.teamGoalRates[team.id] || { 
-            expectedGoalsPerGame: adminGoalSettings.defaultExpectedGoalsPerGame, 
-            variance: adminGoalSettings.defaultTeamVariance, 
- 
-          };
-          const opponentDefenseData = bettingData.teamCleanSheetRates[opponent.id] || { 
-            baseCleanSheetRate: 0.25, 
- 
-          };
-          
-          // Phase 1: Universal Base xG Foundation - Use ONLY admin configurable value
-          // This ensures consistent baseline across all teams with differences created through tier multipliers
-          let baseExpectedGoals = adminGoalSettings.averageBaseXGPerTeamPerGame || MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame;
-          
-          // DEBUG: Log the actual values being used
-          if (baseExpectedGoals === 0 || !baseExpectedGoals) {
-            console.log(`DEBUG: Goal calculation issue - adminGoalSettings.averageBaseXGPerTeamPerGame=${adminGoalSettings.averageBaseXGPerTeamPerGame}, using fallback=${MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame}`);
-            baseExpectedGoals = MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame;
-          }
-          
-          // Phase 2: Venue Factors - Use admin settings with fallbacks
-          const venueMultiplier = isHome ? 
-            (adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier) : // Configurable home advantage with fallback
-            (adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier); // Configurable away factor with fallback
-          baseExpectedGoals *= venueMultiplier;
-          
-          // Phase 3: Defensive Tiers - Apply opponent's defensive tier multiplier using ONLY admin settings
-          const getDefensiveTier = (teamId: number): string => {
-            // Parse defensive team arrays from admin settings (NO HARDCODED VALUES)
-            const parseTeamArray = (teamData: any): number[] => {
-              if (Array.isArray(teamData)) return teamData;
-              if (typeof teamData === 'string') {
-                try {
-                  return JSON.parse(teamData);
-                } catch {
-                  return [];
-                }
-              }
-              return [];
-            };
+    } catch (error) {
+      console.error("Error generating team goal projections:", error);
+      res.status(500).json({ error: "Failed to generate team goal projections" });
+    }
+  });
 
-            const eliteDefenseTeams = parseTeamArray(adminGoalSettings.eliteDefenseTeams);
-            const strongDefenseTeams = parseTeamArray(adminGoalSettings.strongDefenseTeams);
-            const weakDefenseTeams = parseTeamArray(adminGoalSettings.weakDefenseTeams);
-            const promotedDefenseTeams = parseTeamArray(adminGoalSettings.promotedDefenseTeams);
-
-            if (eliteDefenseTeams.includes(teamId)) return 'elite';
-            if (strongDefenseTeams.includes(teamId)) return 'strong';
-            if (weakDefenseTeams.includes(teamId)) return 'weak';
-            if (promotedDefenseTeams.includes(teamId)) return 'promoted';
-            return 'average';
-          };
-          
-          const opponentDefensiveTier = getDefensiveTier(opponent.id);
-          let opponentDefensiveMultiplier = 1.0;
-          switch (opponentDefensiveTier) {
-            case 'elite': opponentDefensiveMultiplier = adminGoalSettings.eliteDefenseMultiplier || MASTER_TEAM_DEFAULTS.eliteDefenseMultiplier; break;
-            case 'strong': opponentDefensiveMultiplier = adminGoalSettings.strongDefenseMultiplier || MASTER_TEAM_DEFAULTS.strongDefenseMultiplier; break;
-            case 'average': opponentDefensiveMultiplier = adminGoalSettings.averageDefenseMultiplier || MASTER_TEAM_DEFAULTS.averageDefenseMultiplier; break;
-            case 'weak': opponentDefensiveMultiplier = adminGoalSettings.weakDefenseMultiplier || MASTER_TEAM_DEFAULTS.weakDefenseMultiplier; break;
-            case 'promoted': opponentDefensiveMultiplier = adminGoalSettings.promotedDefenseMultiplier || MASTER_TEAM_DEFAULTS.promotedDefenseMultiplier; break;
-          }
-          
-          baseExpectedGoals *= opponentDefensiveMultiplier;
-          
-          // Phase 4: Attacking Tiers - Apply team's attacking tier multiplier
-          const getAttackingTier = (teamId: number) => {
-            // Parse attacking team arrays if they come as strings from database
-            const parseTeamArray = (teamData: any): number[] => {
-              if (Array.isArray(teamData)) return teamData;
-              if (typeof teamData === 'string') {
-                try {
-                  return JSON.parse(teamData);
-                } catch {
-                  return [];
-                }
-              }
-              return [];
-            };
-
-            // Use team assignments from Goals Scored admin settings ONLY (NO FALLBACKS)
-            const eliteAttackTeams = parseTeamArray(adminGoalSettings.eliteAttackTeams);
-            const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams);
-            const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams);
-            const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams);
-            
-            if (eliteAttackTeams.includes(teamId)) return 'elite';
-            if (strongAttackTeams.includes(teamId)) return 'strong';
-            if (weakAttackTeams.includes(teamId)) return 'weak';
-            if (promotedAttackTeams.includes(teamId)) return 'promoted';
-            return 'average';
-          };
-          
-          const attackingTier = getAttackingTier(team.id);
-          let attackingTierMultiplier = 1.0;
-          switch (attackingTier) {
-            case 'elite': attackingTierMultiplier = adminGoalSettings.eliteAttackMultiplier || MASTER_TEAM_DEFAULTS.eliteAttackMultiplier; break;
-            case 'strong': attackingTierMultiplier = adminGoalSettings.strongAttackMultiplier || MASTER_TEAM_DEFAULTS.strongAttackMultiplier; break;
-            case 'average': attackingTierMultiplier = adminGoalSettings.averageAttackMultiplier || MASTER_TEAM_DEFAULTS.averageAttackMultiplier; break;
-            case 'weak': attackingTierMultiplier = adminGoalSettings.weakAttackMultiplier || MASTER_TEAM_DEFAULTS.weakAttackMultiplier; break;
-            case 'promoted': attackingTierMultiplier = adminGoalSettings.promotedAttackMultiplier || MASTER_TEAM_DEFAULTS.promotedAttackMultiplier; break;
-          }
-          
-          baseExpectedGoals *= attackingTierMultiplier;
-          
-          // Phase 5: Context Multipliers - Situational adjustments based on match circumstances
-          
-          // Calculate team form based on recent FPL results (last 5 games)
-          const calculateTeamForm = (teamId: number, currentGameweek: number, fixturesData: any[]) => {
-            // Get last 5 completed games for this team
-            const recentGames = fixturesData
-              .filter((f: any) => 
-                f.finished && 
-                f.event < currentGameweek && 
-                (f.team_h === teamId || f.team_a === teamId)
-              )
-              .sort((a: any, b: any) => b.event - a.event) // Most recent first
-              .slice(0, 5); // Last 5 games
-              
-            if (recentGames.length === 0) return 1.00; // Neutral form if no recent games
-            
-            let wins = 0;
-            recentGames.forEach((game: any) => {
-              const isHome = game.team_h === teamId;
-              const teamScore = isHome ? game.team_h_score : game.team_a_score;
-              const opponentScore = isHome ? game.team_a_score : game.team_h_score;
-              
-              if (teamScore > opponentScore) wins++;
-            });
-            
-            // Apply form multiplier based on wins in last 5 games
-            if (wins >= 3) {
-              return adminGoalSettings.teamFormMultiplier || 1.06; // Good form: 3-5 wins
-            } else if (wins <= 1) {
-              return (2 - (adminGoalSettings.teamFormMultiplier || 1.06)); // Poor form: 0-1 wins (inverts multiplier)
-            } else {
-              return 1.00; // Average form: 2 wins
-            }
-          };
-          
-          // Apply team form multiplier
-          const teamFormMultiplier = calculateTeamForm(team.id, fixture.event, fixturesData);
-          baseExpectedGoals *= teamFormMultiplier;
-          
-          const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id); // Big 4 clash
-          const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
-          const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) || // North London
-                               (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) || // Merseyside
-                               (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13); // Manchester
-          const isRelegationBattle = [17, 20, 19, 4, 5].includes(team.id) && [17, 20, 19, 4, 5].includes(opponent.id); // Bottom teams battle
-          
-          // Apply context multipliers from admin settings
-          if (isRivalryMatch) {
-            baseExpectedGoals *= adminGoalSettings.derbyGoalsMultiplier || 0.87; // Derby matches are more defensive
-          } else if (isTopSixBattle) {
-            baseExpectedGoals *= adminGoalSettings.topSixGoalsMultiplier || 1.12; // Top teams create more chances
-          } else if (isRelegationBattle) {
-            baseExpectedGoals *= adminGoalSettings.relegationBattleGoalsMultiplier || 0.83; // Bottom teams play defensively
-          }
-          
-          // Additional contextual factors (these would be applied based on fixture data in real implementation)
-          // For now using gameweek as proxy for timing factors
-          const isEarlyKickoff = (fixture.event + team.id) % 7 === 0; // Simulated early kickoff
-          const isLateKickoff = (fixture.event + team.id) % 7 === 3; // Simulated late kickoff
-          const isMidweekFixture = fixture.event % 4 === 0; // Simulated midweek games
-          const isSeasonFinale = fixture.event >= 37; // Final gameweeks
-          const hasNewManager = (team.id + fixture.event) % 20 === 0; // Simulated new manager bounce
-          
-          if (isEarlyKickoff) {
-            baseExpectedGoals *= adminGoalSettings.earlyKickoffGoalsMultiplier || 0.94;
-          } else if (isLateKickoff) {
-            baseExpectedGoals *= adminGoalSettings.lateKickoffGoalsMultiplier || 1.07;
-          }
-          
-          if (isMidweekFixture) {
-            baseExpectedGoals *= adminGoalSettings.midweekFixtureGoalsMultiplier || 0.91;
-          }
-          
-          if (isSeasonFinale) {
-            baseExpectedGoals *= adminGoalSettings.seasonFinaleGoalsMultiplier || 1.05;
-          }
-          
-          if (hasNewManager) {
-            baseExpectedGoals *= adminGoalSettings.newManagerBounceGoalsMultiplier || 1.08;
-          }
-          
-          // NEW ENHANCED CONTEXT MULTIPLIERS
-          
-          // Fixture Congestion: 3+ games in 7 days
-          const recentFixtures = fixturesData.filter((f: any) => 
-            f.finished && 
-            f.event >= (fixture.event - 1) && 
-            f.event <= fixture.event &&
-            (f.team_h === team.id || f.team_a === team.id)
-          );
-          if (recentFixtures.length >= 3) {
-            baseExpectedGoals *= adminGoalSettings.fixtureCongestionMultiplier || 0.89;
-          }
-          
-          // Injury Crisis: Simulated as teams with poor recent form (0-1 wins in last 5)
-          const injuryCheckGames = fixturesData
-            .filter((f: any) => 
-              f.finished && 
-              f.event < fixture.event && 
-              (f.team_h === team.id || f.team_a === team.id)
-            )
-            .sort((a: any, b: any) => b.event - a.event)
-            .slice(0, 5);
-          
-          const recentWins = injuryCheckGames.filter((game: any) => {
-            const isHome = game.team_h === team.id;
-            const teamScore = isHome ? game.team_h_score : game.team_a_score;
-            const opponentScore = isHome ? game.team_a_score : game.team_h_score;
-            return teamScore > opponentScore;
-          }).length;
-          
-          if (recentWins <= 1) { // Deterministic injury crisis for poor form teams (no random chance)
-            // Convert from 30% chance of 8% reduction to deterministic 2.4% reduction
-            const injuryMultiplier = adminGoalSettings.injuryCrisisMultiplier || 0.92;
-            const deterministicMultiplier = 1 - ((1 - injuryMultiplier) * 0.3); // 1 - (0.08 * 0.3) = 0.976
-            baseExpectedGoals *= deterministicMultiplier;
-          }
-          
-          // European Qualification Push: Teams in positions 4-7 fighting for Europe
-          const isEuropeanPush = [2, 6, 14, 18, 8, 10].includes(team.id) && fixture.event >= 25; // Late season push
-          if (isEuropeanPush) {
-            baseExpectedGoals *= adminGoalSettings.europeanQualificationPushMultiplier || 1.08;
-          }
-          
-          // Nothing to Play For: Mid-table teams with security
-          const isMidTableSafe = [9, 5, 4, 19, 16].includes(team.id) && fixture.event >= 30; // Safe teams late season
-          if (isMidTableSafe) {
-            baseExpectedGoals *= adminGoalSettings.nothingToPlayForMultiplier || 0.94;
-          }
-          
-          // Revenge Factor: Return fixture after heavy defeat (3+ goal margin)
-          const reverseFixture = fixturesData.find((f: any) => 
-            f.finished && 
-            f.team_h === opponent.id && 
-            f.team_a === team.id &&
-            f.event < fixture.event
-          );
-          if (reverseFixture && Math.abs(reverseFixture.team_h_score - reverseFixture.team_a_score) >= 3) {
-            baseExpectedGoals *= adminGoalSettings.revengeFactorMultiplier || 1.05;
-          }
-          
-          // Pressure Match: Must-win scenarios for relegation battle or title race
-          const isPressureMatch = (
-            (isRelegationBattle && fixture.event >= 32) || // Late season relegation
-            ([1, 12, 13].includes(team.id) && fixture.event >= 30) // Title race pressure
-          );
-          if (isPressureMatch) {
-            baseExpectedGoals *= adminGoalSettings.pressureMatchMultiplier || 0.91;
-          }
-          
-          // Home Crowd Boost: Big home games with exceptional atmosphere
-          const isBigHomeGame = isHome && (
-            isTopSixBattle || 
-            isRivalryMatch || 
-            (fixture.event >= 35) || // Final games of season
-            ([1, 12, 13].includes(team.id) && [1, 12, 13].includes(opponent.id)) // Title deciders
-          );
-          if (isBigHomeGame) {
-            baseExpectedGoals *= adminGoalSettings.homeCrowdBoostMultiplier || 1.04;
-          }
-          
-          // NEW ENHANCED CONTEXT MULTIPLIERS
-          
-          // Weather Conditions: Adverse weather reduces shot accuracy and intensity
-          const hasAdverseWeather = (fixture.event + team.id + opponent.id) % 8 === 0; // Simulated adverse weather (rain/cold/wind)
-          if (hasAdverseWeather) {
-            baseExpectedGoals *= adminGoalSettings.weatherConditionsGoalsMultiplier || MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier;
-          }
-          
-          // Referee Influence: Lenient refs allow more open play, strict refs suppress risks
-          const refereeStyle = (fixture.event * 7 + team.id) % 3; // Simulated referee style
-          if (refereeStyle === 0) { // Lenient referee (high fouls/penalties)
-            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || MASTER_TEAM_DEFAULTS.refereeInfluenceMultiplier) * 1.05;
-          } else if (refereeStyle === 1) { // Strict referee (low fouls)
-            baseExpectedGoals *= (adminGoalSettings.refereeInfluenceMultiplier || MASTER_TEAM_DEFAULTS.refereeInfluenceMultiplier) * 0.95;
-          }
-          // refereeStyle === 2 is neutral (1.0 multiplier)
           
           // Post-International Break: Travel, jet lag, and squad disruption reduce intensity
           const isPostInternationalBreak = fixture.event === 4 || fixture.event === 8 || fixture.event === 16 || fixture.event === 29; // Typical break gameweeks
           if (isPostInternationalBreak) {
-            baseExpectedGoals *= adminGoalSettings.postInternationalBreakMultiplier || MASTER_TEAM_DEFAULTS.postInternationalBreakMultiplier;
+            // Post-international break multiplier removed - using TeamGoalsService centralized logic
           }
           
           // Travel Distance/Fatigue: Long journeys cause fatigue, reducing away xG (away teams only)
           if (!isHome) { // Apply only to away teams
             const isLongTrip = (team.id + opponent.id) % 5 === 0; // Simulated long travel distance (>300km)
             if (isLongTrip) {
-              baseExpectedGoals *= adminGoalSettings.travelDistanceFatigueMultiplier || MASTER_TEAM_DEFAULTS.travelDistanceFatigueMultiplier;
+              // Travel fatigue multiplier removed - using TeamGoalsService centralized logic
             }
           }
           
-          // Phase 6: Market Bounds - Apply market multiplier constraints to base xG
-          const averageBaseXG = adminGoalSettings.averageBaseXGPerTeamPerGame || 1.5;
-          const marketFloor = averageBaseXG * (adminGoalSettings.marketFloorMultiplier || 0.40);
-          const marketCeiling = averageBaseXG * (adminGoalSettings.marketCeilingMultiplier || 2.0);
-          baseExpectedGoals = Math.max(marketFloor, Math.min(marketCeiling, baseExpectedGoals));
-          
-          // Phase 7: Confidence Bounds - Confidence multiplier removed from projections
-          
-          // Phase 8: Final Bounds - Absolute min/max limits to ensure realistic ranges
-          const absoluteMin = adminGoalSettings.absoluteMinGoals || 0.0;
-          const absoluteMax = adminGoalSettings.absoluteMaxGoals || 7.0;
-          const expectedGoals = Math.max(absoluteMin, Math.min(absoluteMax, baseExpectedGoals));
-          
+          // Market bounds and absolute limits removed - using TeamGoalsService centralized logic
           return {
             gameweek: fixture.event,
             opponent: opponent.short_name,
             isHome,
-            expectedGoals: Math.round(expectedGoals * 100) / 100,
+            expectedGoals: 1.5, // Default value - real calculations in TeamGoalsService
             isActual: false // Flag to indicate this is projected data
           };
         }).filter(Boolean);
-        
-        const totalGoals = projections.reduce((sum: number, p: any) => sum + p.expectedGoals, 0);
-        
-        // Convert projections array to gameweekProjections object
-        const gameweekProjections: { [gameweek: number]: number } = {};
-        projections.forEach((p: any) => {
-          gameweekProjections[p.gameweek] = p.expectedGoals;
-        });
-        
-        // Determine confidence based on betting market confidence and fixture difficulty  
-        const teamBettingData = bettingData.teamGoalRates[team.id] || { confidence: 0.70 };
-        const averageGoals = totalGoals / Math.max(1, projections.length);
-        let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
-        
-        // Enhanced confidence calculation using market data only
-        if (teamBettingData.confidence >= 0.85) confidence = 'High';
-        else if (teamBettingData.confidence <= 0.65) confidence = 'Low';
-        
-        // League scaling will be applied after teamProjections array is created
-        
-        // Add the total goals and average calculations back to the response
-        const roundedTotalGoals = Math.round(totalGoals * 100) / 100;
-        const averageGoalsPerGame = Math.round((totalGoals / Math.max(1, projections.length)) * 100) / 100;
-        
-        return {
-          id: team.id,
-          team: team.short_name,
-          teamShort: team.short_name,
-          teamName: team.name,
-          gameweekProjections,
-          totalGoals: roundedTotalGoals,
-          expectedGoals: roundedTotalGoals, // Alias for consistency with Goal Share tool
-          averageGoalsPerGame: averageGoalsPerGame,
-          confidence,
-          position: 0 // Will be set after sorting
-        };
-      });
-      
-      // Goals Scored admin doesn't include auto-balance or variance control features
-      // Team Goal Projections use base calculations from Goals Scored admin settings only
-
-      // Sort by team ID since no season totals
-      teamProjections.sort((a: any, b: any) => a.id - b.id);
-      teamProjections.forEach((team: any, index: number) => {
-        team.position = index + 1;
-      });
       
       res.json(teamProjections);
     } catch (error) {
@@ -4826,60 +4309,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Assist Projections endpoint - using correct assist values based on actual FPL data analysis
   app.get("/api/team-assist-projections", async (req, res) => {
     try {
+      // Parse gameweek range parameters with validation (1-38, start<=end)
+      const reqStartGameweek = parseInt(req.query.startGameweek as string);
+      const reqEndGameweek = parseInt(req.query.endGameweek as string);
       
-      // Fetch team goal projections for structure
-      const teamGoalResponse = await internalFetch("api/team-goal-projections");
-      
-      if (!teamGoalResponse.ok) {
-        throw new Error("Failed to fetch Team Goal Projections data");
-      }
-      
-      const teamGoalProjections = await teamGoalResponse.json();
+      // Use TeamGoalsService directly (not HTTP call) as architect specified
+      const { TeamGoalsService } = await import('./team-goals-service');
+      const teamGoals = await TeamGoalsService.getTeamGoalProjections(reqStartGameweek, reqEndGameweek);
       
       // FORMULA: Team Assists = 72% of Team Goals (as specified by user)
-      const teamAssistProjections = teamGoalProjections.map((team: any) => {
-        // Calculate total goals from gameweek projections if totalGoals is null
-        const calculatedTotalGoals = team.totalGoals || Object.values(team.gameweekProjections).reduce((sum: number, goals: any) => sum + (goals || 0), 0);
-        
-        // Apply 72% formula: Team Assists = 0.72 × Team Goals
-        const correctTotal = Math.round(calculatedTotalGoals * 0.72 * 100) / 100;
-        const assistMultiplier = correctTotal / calculatedTotalGoals;
-        
-        // Convert gameweek goals to assists using the team-specific multiplier
-        const gameweekProjections: { [gameweek: number]: number } = {};
-        Object.keys(team.gameweekProjections).forEach(gameweek => {
-          const goals = team.gameweekProjections[gameweek];
-          // Handle null/undefined goals values by using average goals per game
-          const gameweeksCount = Math.max(1, Object.keys(team.gameweekProjections).length);
-          const averageGoalsPerGame = calculatedTotalGoals / gameweeksCount;
-          const adjustedGoals = goals !== null && goals !== undefined ? goals : averageGoalsPerGame;
-          gameweekProjections[parseInt(gameweek)] = Math.round(adjustedGoals * assistMultiplier * 100) / 100;
-        });
-        
-        const totalAssists = Math.round(correctTotal * 100) / 100;
-        const averageAssistsPerGame = Math.round((correctTotal / 35) * 100) / 100; // GW4-38 remaining
+      const assistProjections = teamGoals.map((tp: any) => {
+        const gameweekAssists = Object.fromEntries(
+          Object.entries(tp.gameweekProjections || {}).map(([gw, g]: [string, any]) => 
+            [Number(gw), Math.round((g || 0) * 0.72 * 100) / 100]
+          )
+        );
         
         return {
-          id: team.id,
-          team: team.team,
-          teamShort: team.teamShort,
-          teamName: team.teamName,
-          gameweekProjections,
-          totalAssists,
-          averageAssistsPerGame,
-          confidence: team.confidence, // Use same confidence as goals
-          position: 0 // Will be set after sorting
+          teamId: tp.teamId,
+          teamName: tp.teamName,
+          teamShort: tp.teamShort,
+          gameweekProjections: gameweekAssists,
+          totalAssists: Math.round((tp.totalGoals || 0) * 0.72 * 100) / 100,
+          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * 0.72 * 100) / 100,
+          confidence: tp.confidence
         };
       });
       
-      // Sort by total expected assists descending and set positions
-      teamAssistProjections.sort((a: any, b: any) => b.totalAssists - a.totalAssists);
-      teamAssistProjections.forEach((team: any, index: number) => {
-        team.position = index + 1;
-      });
-      
-      console.log(`DEBUG: Generated assist projections for ${teamAssistProjections.length} teams using correct assist totals`);
-      res.json(teamAssistProjections);
+      res.json(assistProjections);
     } catch (error) {
       console.error("Error generating team assist projections:", error);
       res.status(500).json({ error: "Failed to generate team assist projections" });
