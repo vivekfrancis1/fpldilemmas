@@ -4432,14 +4432,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use centralized TeamGoalsService instead of duplicated calculation logic
       const { TeamGoalsService } = await import('./team-goals-service');
       const teamProjections = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
-        
-        if (gameweekFixtures.length > 0 && finishedFixtures.length === gameweekFixtures.length) {
-          completeGameweeks.add(gw);
-        } else if (gameweekFixtures.length > 0) {
-        }
-      }
       
-      const teamProjections = teams.map((team: any) => {
+      res.json(teamProjections);
         // Get fixtures for this team across next 6 gameweeks only
         const allFixtures = fixturesData
           .filter((f: any) => 
