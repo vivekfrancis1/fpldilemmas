@@ -3600,6 +3600,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   };
 
+  // Initialize team configuration to avoid circular dependency
+  setCreateTeamService(createTeamService);
+
   // API endpoint to initialize team database with FPL data and projections
   app.post("/api/admin/initialize-teams", async (req, res) => {
     try {
@@ -3939,6 +3942,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     lastUpdated: new Date().toISOString(),
     updatedBy: "admin"
   };
+
+  // Initialize admin goal settings for team configuration
+  setAdminGoalSettings(adminGoalSettings);
 
   // In-memory admin settings for CS Projections
   let adminCSSettings = {
@@ -4423,11 +4429,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endGameweek = Math.min(currentGameweek + 6, 38); // Next 6 gameweeks only
       console.log(`DEBUG: Processing next 12 gameweeks (GW${startGameweek}-${endGameweek}) for team goal projections, current GW: ${currentGameweek}`);
       
-      // Check which gameweeks are COMPLETELY finished (all 10 fixtures done) - only check relevant range
-      const completeGameweeks = new Set();
-      for (let gw = startGameweek; gw <= endGameweek; gw++) {
-        const gameweekFixtures = fixturesData.filter((f: any) => f.event === gw);
-        const finishedFixtures = gameweekFixtures.filter((f: any) => f.finished);
+      // Use centralized TeamGoalsService instead of duplicated calculation logic
+      const { TeamGoalsService } = await import('./team-goals-service');
+      const teamProjections = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
         
         if (gameweekFixtures.length > 0 && finishedFixtures.length === gameweekFixtures.length) {
           completeGameweeks.add(gw);
