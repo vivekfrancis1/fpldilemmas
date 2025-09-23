@@ -10,8 +10,10 @@ import {
   cachedPlayerMinutesPoints,
   cachedPlayerTotalPoints,
   playerGoalsProjections,
-  playerAssistProjections
+  playerAssistProjections,
+  playerMappings
 } from "@shared/schema";
+import { eq, and, gte, lte } from "drizzle-orm";
 import { internalFetch } from "./config";
 
 interface PlayerPointsData {
@@ -170,10 +172,46 @@ export class PlayerTotalPointsAggregator {
     try {
       // PERFORMANCE OPTIMIZATION: Direct database query instead of internal HTTP call
       console.log(`🚀 OPTIMIZATION: Using direct database query for goals data (eliminating HTTP call)`);
-      const goalsData = await db.select().from(playerGoalsProjections);
       
-      // Convert goals projections to points using FPL scoring rules
-      return goalsData.map((player: any) => ({
+      // Get goals data with player metadata
+      const goalsData = await db
+        .select({
+          playerId: playerGoalsProjections.playerId,
+          gameweek: playerGoalsProjections.gameweek,
+          goals: playerGoalsProjections.goals,
+          playerName: playerMappings.webName,
+          teamName: playerMappings.currentTeamName,
+          position: playerMappings.position
+        })
+        .from(playerGoalsProjections)
+        .leftJoin(playerMappings, eq(playerGoalsProjections.playerId, playerMappings.id))
+        .where(
+          and(
+            gte(playerGoalsProjections.gameweek, startGameweek),
+            lte(playerGoalsProjections.gameweek, endGameweek)
+          )
+        );
+      
+      // Group by player and build gameweek projections object
+      const playerMap = new Map<number, any>();
+      
+      for (const record of goalsData) {
+        if (!playerMap.has(record.playerId)) {
+          playerMap.set(record.playerId, {
+            playerId: record.playerId,
+            playerName: record.playerName || `Player ${record.playerId}`,
+            teamName: record.teamName || 'Unknown Team',
+            position: record.position || 'Unknown',
+            gameweekProjections: {}
+          });
+        }
+        
+        const player = playerMap.get(record.playerId)!;
+        player.gameweekProjections[`gw${record.gameweek}`] = record.goals || 0;
+      }
+      
+      // Convert to array and calculate points
+      return Array.from(playerMap.values()).map((player: any) => ({
         playerId: player.playerId,
         playerName: player.playerName,
         teamName: player.teamName,
@@ -194,10 +232,46 @@ export class PlayerTotalPointsAggregator {
     try {
       // PERFORMANCE OPTIMIZATION: Direct database query instead of internal HTTP call
       console.log(`🚀 OPTIMIZATION: Using direct database query for assists data (eliminating HTTP call)`);
-      const assistsData = await db.select().from(playerAssistProjections);
       
-      // Convert assists projections to points using FPL scoring rules (3 points per assist)
-      return assistsData.map((player: any) => ({
+      // Get assists data with player metadata
+      const assistsData = await db
+        .select({
+          playerId: playerAssistProjections.playerId,
+          gameweek: playerAssistProjections.gameweek,
+          assists: playerAssistProjections.assists,
+          playerName: playerMappings.webName,
+          teamName: playerMappings.currentTeamName,
+          position: playerMappings.position
+        })
+        .from(playerAssistProjections)
+        .leftJoin(playerMappings, eq(playerAssistProjections.playerId, playerMappings.id))
+        .where(
+          and(
+            gte(playerAssistProjections.gameweek, startGameweek),
+            lte(playerAssistProjections.gameweek, endGameweek)
+          )
+        );
+      
+      // Group by player and build gameweek projections object
+      const playerMap = new Map<number, any>();
+      
+      for (const record of assistsData) {
+        if (!playerMap.has(record.playerId)) {
+          playerMap.set(record.playerId, {
+            playerId: record.playerId,
+            playerName: record.playerName || `Player ${record.playerId}`,
+            teamName: record.teamName || 'Unknown Team',
+            position: record.position || 'Unknown',
+            gameweekProjections: {}
+          });
+        }
+        
+        const player = playerMap.get(record.playerId)!;
+        player.gameweekProjections[`gw${record.gameweek}`] = record.assists || 0;
+      }
+      
+      // Convert to array and calculate points
+      return Array.from(playerMap.values()).map((player: any) => ({
         playerId: player.playerId,
         playerName: player.playerName,
         teamName: player.teamName,
@@ -217,6 +291,11 @@ export class PlayerTotalPointsAggregator {
   private convertGoalsToPoints(goalProjections: { [gameweek: string]: number }, position: string): { [gameweek: string]: number } {
     const goalPoints: { [gameweek: string]: number } = {};
     
+    // Safety check: return empty object if goalProjections is null/undefined
+    if (!goalProjections || typeof goalProjections !== 'object') {
+      return goalPoints;
+    }
+    
     // FPL scoring: Forwards/Midfielders = 4 points, Defenders/Goalkeepers = 6 points
     const pointsPerGoal = (position === "Forward" || position === "Midfielder") ? 4 : 6;
     
@@ -232,6 +311,11 @@ export class PlayerTotalPointsAggregator {
    */
   private convertAssistsToPoints(assistProjections: { [gameweek: string]: number }): { [gameweek: string]: number } {
     const assistPoints: { [gameweek: string]: number } = {};
+    
+    // Safety check: return empty object if assistProjections is null/undefined
+    if (!assistProjections || typeof assistProjections !== 'object') {
+      return assistPoints;
+    }
     
     for (const [gameweek, assists] of Object.entries(assistProjections)) {
       assistPoints[gameweek] = assists * 3; // 3 points per assist
