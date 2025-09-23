@@ -34,7 +34,6 @@ export default function ProjectedStandings() {
   });
 
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
-  const nextStartGameweek = currentGameweek + 1;
   const maxEndGameweek = Math.min(currentGameweek + 6, 38); // Next 6 gameweeks
   const [selectedEndGameweek, setSelectedEndGameweek] = useState<number | null>(null);
   
@@ -46,9 +45,9 @@ export default function ProjectedStandings() {
   }, [bootstrapData, maxEndGameweek, selectedEndGameweek]);
 
   const { data: standingsData, isLoading: standingsLoading } = useQuery<TeamStanding[]>({
-    queryKey: ["/api/projected-standings", nextStartGameweek, selectedEndGameweek],
+    queryKey: ["/api/projected-standings", selectedEndGameweek],
     queryFn: async () => {
-      const response = await fetch(`/api/projected-standings?startGameweek=${nextStartGameweek}&endGameweek=${selectedEndGameweek}`);
+      const response = await fetch(`/api/projected-standings?endGameweek=${selectedEndGameweek}`);
       if (!response.ok) {
         throw new Error('Failed to fetch projected standings');
       }
@@ -106,7 +105,7 @@ export default function ProjectedStandings() {
             <h1>Projected Final Standings</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Premier League table projections for selected future gameweeks only
+            Premier League table based on actual results and projected outcomes for next 12 gameweeks
           </p>
           <div className="mt-6">
             <Button 
@@ -135,7 +134,7 @@ export default function ProjectedStandings() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Users className="h-5 w-5 text-purple-600" />
-                    <span className="text-sm font-semibold text-gray-700">Based on: Projected Results Only</span>
+                    <span className="text-sm font-semibold text-gray-700">Based on: Actual + Projected Results</span>
                   </div>
                 </div>
                 
@@ -156,15 +155,14 @@ export default function ProjectedStandings() {
                       <SelectValue placeholder="Loading..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {bootstrapData && Array.from({ length: 6 }, (_, i) => {
-                        const gw = nextStartGameweek + i;
-                        if (gw > 38) return null; // Don't show gameweeks beyond the season
+                      {bootstrapData && Array.from({ length: maxEndGameweek - currentGameweek + 1 }, (_, i) => {
+                        const gw = currentGameweek + i;
                         return (
                           <SelectItem key={gw} value={gw.toString()}>
                             {gw}
                           </SelectItem>
                         );
-                      }).filter(Boolean)}
+                      })}
                     </SelectContent>
                   </Select>
                 </div>

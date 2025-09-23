@@ -6710,19 +6710,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Accept startGameweek and endGameweek parameters from query, with bounds checking
-      const requestedStartGameweek = parseInt(req.query.startGameweek as string) || (currentGameweek + 1);
+      // Accept endGameweek parameter from query, with bounds checking
       const requestedEndGameweek = parseInt(req.query.endGameweek as string) || Math.min(currentGameweek + 6, 38);
-      
-      const startGameweek = Math.max(requestedStartGameweek, currentGameweek + 1);
       const maxAllowedEndGameweek = Math.min(currentGameweek + 6, 38);
       const endGameweek = Math.min(Math.max(requestedEndGameweek, currentGameweek + 1), maxAllowedEndGameweek);
       
-      console.log(`DEBUG: Processing projected standings for gameweeks ${startGameweek} to ${endGameweek} (projected results only), current GW: ${currentGameweek}`);
+      console.log(`DEBUG: Processing final standings for gameweeks 1 to GW${endGameweek} (user requested: ${requestedEndGameweek}), current GW: ${currentGameweek}`);
       
-      // Get fixtures only from the selected gameweek range
+      // Get fixtures from GW1 to selected end gameweek
       const allFixtures = fixturesData.filter((fixture: any) => 
-        fixture.event >= startGameweek && fixture.event <= endGameweek
+        fixture.event >= 1 && fixture.event <= endGameweek
       );
       
       // Initialize team standings
@@ -6773,19 +6770,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let homeGoals, awayGoals;
         let isActual = false;
         
-        // Since we're only processing future gameweeks, use predicted scores only
-        const predictedMatch = predictedMatchResults.get(fixture.id);
-        
-        if (predictedMatch) {
-          homeGoals = predictedMatch.homeScore;
-          awayGoals = predictedMatch.awayScore;
+        if (fixture.finished) {
+          // Use actual results for finished games
+          homeGoals = fixture.team_h_score || 0;
+          awayGoals = fixture.team_a_score || 0;
+          isActual = true;
+          homeTeam.actualGames++;
+          awayTeam.actualGames++;
         } else {
-          // Fallback to 0-0 if no prediction available
-          homeGoals = 0;
-          awayGoals = 0;
+          // Use predicted scores for unfinished games
+          const predictedMatch = predictedMatchResults.get(fixture.id);
+          
+          if (predictedMatch) {
+            homeGoals = predictedMatch.homeScore;
+            awayGoals = predictedMatch.awayScore;
+          } else {
+            homeGoals = 0;
+            awayGoals = 0;
+          }
+          homeTeam.projectedGames++;
+          awayTeam.projectedGames++;
         }
-        homeTeam.projectedGames++;
-        awayTeam.projectedGames++;
         
         // Update games played
         homeTeam.played++;
