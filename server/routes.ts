@@ -7776,10 +7776,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create team lookup from projection data
       const teamLookup = new Map();
       goalProjections.forEach((team: any) => {
-        teamLookup.set(team.id, {
-          id: team.id,
+        teamLookup.set(team.teamId, {
+          id: team.teamId,
           name: team.teamName,
-          shortName: team.team,
+          shortName: team.teamShort,
           goalProjections: team.gameweekProjections
         });
       });
