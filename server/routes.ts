@@ -13548,6 +13548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamShort: metadata?.teamShort || null,
             position: metadata?.position || null,
             gameweekProjections: {},
+            projectedGoals: 0, // Added missing field expected by frontend
             totalProjectedGoals: 0,
             goalShare: 0
           });
@@ -13555,6 +13556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const player = playersMap.get(row.playerId);
         player.gameweekProjections[row.gameweek] = row.goals;
+        player.projectedGoals += row.goals; // Add to projectedGoals field
         player.totalProjectedGoals += row.goals;
       }
       
