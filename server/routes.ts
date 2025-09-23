@@ -7673,8 +7673,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               awayTeamAgainst.gameweekProjections[fixture.event] = fixture.team_h_score || 0;
             } else {
               // For incomplete gameweeks, use projections for ALL fixtures (even finished ones)
-              const homeTeamScored = teamGoalProjections.find((t: any) => t.id === fixture.team_h);
-              const awayTeamScored = teamGoalProjections.find((t: any) => t.id === fixture.team_a);
+              const homeTeamScored = teamGoalProjections.find((t: any) => t.teamId === fixture.team_h);
+              const awayTeamScored = teamGoalProjections.find((t: any) => t.teamId === fixture.team_a);
               
               if (homeTeamScored && awayTeamScored) {
                 // Direct mirror: home concedes what away scores, away concedes what home scores
