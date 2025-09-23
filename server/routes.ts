@@ -6027,32 +6027,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Goals Scored Projections endpoint - OPTIMIZED: Cache-first approach for sub-second performance
+  // Player Goals Scored Projections endpoint - DERIVED from goal-share data
   app.get("/api/player-goals-scored-projections", async (req, res) => {
     try {
-      console.log(`🚀 PERFORMANCE OPTIMIZED: Player Goals Projections using cache-first approach`);
+      console.log(`🚀 API DERIVATION: Player Goals Projections derived from goal-share endpoint`);
       
-      // PERFORMANCE FIX: Use cached data for ultra-fast response times
-      // The cached endpoint already includes minutes scaling and all adjustments
-      const cachedResponse = await internalFetch('api/cached/player-goals-projections');
+      // Derive data from goal-share endpoint
+      const goalShareResponse = await internalFetch('api/goal-share-season');
       
-      if (cachedResponse.ok) {
-        const cachedData = await cachedResponse.json();
-        console.log(`⚡ Served ${cachedData.length} goal projections from cache in <1 second`);
-        res.json(cachedData);
-        return;
+      if (!goalShareResponse.ok) {
+        throw new Error(`Failed to fetch goal-share data: ${goalShareResponse.status}`);
       }
       
-      // Fallback: If cache is empty, return error (cache should be populated by background job)
-      console.error(`❌ Cached goals projections not available - cache may need to be populated`);
-      res.status(503).json({ 
-        error: "Projection data temporarily unavailable. Please try again in a few minutes.",
-        note: "Background cache population may be in progress"
+      const goalShareData = await goalShareResponse.json();
+      
+      // Transform goal-share data into player projections format
+      const playerProjections: any[] = [];
+      
+      goalShareData.forEach((team: any) => {
+        if (team.players && Array.isArray(team.players)) {
+          team.players.forEach((player: any) => {
+            playerProjections.push({
+              playerId: player.playerId,
+              playerName: player.playerName || player.name,
+              team: team.teamName,
+              teamShort: team.teamShort,
+              position: player.position,
+              projectedGoals: player.projectedGoals || 0,
+              goalShare: player.goalShare || 0
+            });
+          });
+        }
       });
       
+      // Sort by projected goals (highest first)
+      playerProjections.sort((a, b) => b.projectedGoals - a.projectedGoals);
+      
+      console.log(`⚡ Derived ${playerProjections.length} goal projections from goal-share data`);
+      res.json(playerProjections);
+      
     } catch (error) {
-      console.error("Error in optimized goals projections endpoint:", error);
-      res.status(500).json({ error: "Failed to fetch goal projections" });
+      console.error("Error deriving goals projections from goal-share:", error);
+      res.status(500).json({ error: "Failed to derive goal projections" });
     }
   });
 
@@ -6370,69 +6386,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Assist Projections endpoint - OPTIMIZED: Cache-first approach with range validation
+  // Player Assist Projections endpoint - DERIVED from assist-share data
   app.get("/api/player-assist-projections", async (req, res) => {
     try {
       const startGameweek = parseInt(req.query.startGameweek as string) || 5;
       const endGameweek = parseInt(req.query.endGameweek as string) || 10;
       
-      console.log(`🚀 PERFORMANCE OPTIMIZED: Player Assist Projections using cache-first approach for GW${startGameweek}-${endGameweek}`);
+      console.log(`🚀 API DERIVATION: Player Assist Projections derived from assist-share endpoint for GW${startGameweek}-${endGameweek}`);
       
-      // PERFORMANCE FIX: Use cached data if it contains the requested range
-      const cachedResponse = await internalFetch('api/cached/player-assists-projections');
+      // Derive data from assist-share endpoint
+      const assistShareResponse = await internalFetch('api/assist-share-season');
       
-      if (cachedResponse.ok) {
-        const cachedData = await cachedResponse.json();
-        
-        // Check if cached data contains the full requested range
-        if (cachedData.length > 0) {
-          const samplePlayer = cachedData[0];
-          
-          // Check EVERY gameweek in the requested range, not just start and end
-          let hasFullRange = true;
-          if (samplePlayer.gameweekProjections) {
+      if (!assistShareResponse.ok) {
+        throw new Error(`Failed to fetch assist-share data: ${assistShareResponse.status}`);
+      }
+      
+      const assistShareData = await assistShareResponse.json();
+      
+      // Transform assist-share data into player projections format
+      const playerProjections: any[] = [];
+      
+      assistShareData.forEach((team: any) => {
+        if (team.players && Array.isArray(team.players)) {
+          team.players.forEach((player: any) => {
+            // Create gameweek projections by distributing season total across gameweeks
+            const gameweekProjections: { [key: string]: number } = {};
+            const projectedAssists = player.projectedAssists || 0;
+            const assistsPerGameweek = projectedAssists / 38; // Distribute evenly across season
+            
+            // Generate projections for requested gameweek range
             for (let gw = startGameweek; gw <= endGameweek; gw++) {
-              if (samplePlayer.gameweekProjections[gw] === undefined) {
-                hasFullRange = false;
-                console.log(`🔄 Cache missing GW${gw} data for range GW${startGameweek}-${endGameweek}`);
-                break;
-              }
+              gameweekProjections[gw] = Math.round(assistsPerGameweek * 100) / 100;
             }
-          } else {
-            hasFullRange = false;
-          }
-          
-          if (hasFullRange) {
-            console.log(`⚡ Served ${cachedData.length} assist projections from cache for GW${startGameweek}-${endGameweek} in <1 second`);
-            res.json(cachedData);
-            return;
-          } else {
-            console.log(`🔄 Cache doesn't contain full range GW${startGameweek}-${endGameweek}, falling back to live calculation`);
-          }
+            
+            playerProjections.push({
+              playerId: player.playerId,
+              playerName: player.playerName || player.name,
+              team: team.teamName,
+              teamShort: team.teamShort,
+              position: player.position,
+              projectedAssists: projectedAssists,
+              assistShare: player.assistShare || 0,
+              gameweekProjections: gameweekProjections
+            });
+          });
         }
-      }
-      
-      // Fallback: Use full calculation endpoint when cache doesn't have the requested range
-      console.log(`🌐 Using full calculation for GW${startGameweek}-${endGameweek} range`);
-      const liveResponse = await internalFetch(`api/player-assist-projections-full-calculation?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
-      
-      if (liveResponse.ok) {
-        const liveData = await liveResponse.json();
-        console.log(`✅ Served ${liveData.length} assist projections from live calculation`);
-        res.json(liveData);
-        return;
-      }
-      
-      // Last resort: return error
-      console.error(`❌ Both cached and live assist projections failed`);
-      res.status(503).json({ 
-        error: "Projection data temporarily unavailable. Please try again in a few minutes.",
-        note: "Both cache and live calculation failed"
       });
       
+      // Sort by projected assists (highest first)
+      playerProjections.sort((a, b) => b.projectedAssists - a.projectedAssists);
+      
+      console.log(`⚡ Derived ${playerProjections.length} assist projections from assist-share data`);
+      res.json(playerProjections);
+      
     } catch (error) {
-      console.error("Error in optimized assist projections endpoint:", error);
-      res.status(500).json({ error: "Failed to fetch assist projections" });
+      console.error("Error deriving assist projections from assist-share:", error);
+      res.status(500).json({ error: "Failed to derive assist projections" });
     }
   });
 
