@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, TrendingUp, Filter, BarChart3, Trophy } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -21,14 +22,40 @@ interface TeamGoalsAgainstProjection {
 }
 
 export default function TeamGoalsAgainstProjections() {
-  const [startGameweek, setStartGameweek] = useState<string>("4");
-  const [endGameweek, setEndGameweek] = useState<string>("9");
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("total");
-
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
+
+  // Calculate dynamic gameweek defaults based on bootstrap data (next 6 gameweeks only)
+  const defaultGameweekRange = useMemo(() => {
+    if (!bootstrapData?.events) {
+      return { startGameweek: "6", endGameweek: "11" }; // Fallback
+    }
+    debugGameweekCalculation(bootstrapData.events);
+    return getDefaultGameweekRange(bootstrapData.events, 6);
+  }, [bootstrapData?.events]);
+
+  const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
+  const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("total");
+
+  // Get available gameweeks for dropdown options (next 6 gameweeks only)
+  const availableGameweeks = useMemo(() => {
+    if (!bootstrapData?.events) {
+      return Array.from({ length: 6 }, (_, i) => i + 6); // Fallback
+    }
+    return getNextGameweeksForDropdown(bootstrapData.events, 6);
+  }, [bootstrapData?.events]);
+
+  // Update state when bootstrap data changes (e.g., on page load)
+  useEffect(() => {
+    if (bootstrapData?.events) {
+      const newRange = getDefaultGameweekRange(bootstrapData.events, 6);
+      setStartGameweek(newRange.startGameweek);
+      setEndGameweek(newRange.endGameweek);
+    }
+  }, [bootstrapData?.events]);
 
   const { data: projectionsData, isLoading: projectionsLoading, error: projectionsError } = useQuery<TeamGoalsAgainstProjection[]>({
     queryKey: ["/api/team-goals-against-projections"],
@@ -186,9 +213,9 @@ export default function TeamGoalsAgainstProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 35 }, (_, i) => (
-                        <SelectItem key={i + 4} value={(i + 4).toString()}>
-                          {i + 4}
+                      {availableGameweeks.map((gw) => (
+                        <SelectItem key={gw} value={gw.toString()}>
+                          {gw}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -202,9 +229,9 @@ export default function TeamGoalsAgainstProjections() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 35 }, (_, i) => (
-                        <SelectItem key={i + 4} value={(i + 4).toString()}>
-                          {i + 4}
+                      {availableGameweeks.map((gw) => (
+                        <SelectItem key={gw} value={gw.toString()}>
+                          {gw}
                         </SelectItem>
                       ))}
                     </SelectContent>
