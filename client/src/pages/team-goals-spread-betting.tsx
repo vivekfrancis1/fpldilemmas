@@ -329,10 +329,10 @@ export default function TeamGoalsSpreadBetting() {
                         <td className="px-4 py-4 text-center">
                           <div className="space-y-1">
                             <div className="text-xs text-gray-600">
-                              {match.matchData?.source || 'Market Data'}
+                              Market Data
                             </div>
                             <div className="text-xs text-gray-500">
-                              {match.matchData?.bookmakers > 0 ? `${match.matchData.bookmakers} bookmakers` : 'Real odds'}
+                              Real odds
                             </div>
                             <Badge variant="secondary" className={getConfidenceColor(match.matchData.spreadConfidence)}>
                               {match.matchData.spreadConfidence}
