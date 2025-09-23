@@ -34,7 +34,7 @@ export default function ProjectedStandings() {
   });
 
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
-  const maxEndGameweek = Math.min(currentGameweek + 12, 38); // Next 12 gameweeks
+  const maxEndGameweek = Math.min(currentGameweek + 6, 38); // Next 6 gameweeks
   const [selectedEndGameweek, setSelectedEndGameweek] = useState<number | null>(null);
   
   // Initialize selectedEndGameweek when bootstrapData is loaded
@@ -155,8 +155,8 @@ export default function ProjectedStandings() {
                       <SelectValue placeholder="Loading..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {bootstrapData && Array.from({ length: maxEndGameweek - currentGameweek }, (_, i) => {
-                        const gw = currentGameweek + 1 + i;
+                      {bootstrapData && Array.from({ length: maxEndGameweek - currentGameweek + 1 }, (_, i) => {
+                        const gw = currentGameweek + i;
                         return (
                           <SelectItem key={gw} value={gw.toString()}>
                             {gw}
