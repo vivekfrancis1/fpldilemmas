@@ -87,11 +87,23 @@ export class TeamGoalsService {
           f.event >= calculatedStartGameweek && f.event <= calculatedEndGameweek
         );
       
+      // Debug logging for teams with missing fixtures
+      if (team.id <= 3) { // Log for first 3 teams only
+        console.log(`🔍 FIXTURES DEBUG: Team ${team.name} (${team.id}) has ${allFixtures.length} fixtures:`);
+        allFixtures.forEach((f: any) => {
+          console.log(`  - GW${f.event}: ${f.team_h === team.id ? 'HOME' : 'AWAY'} vs ${f.team_h === team.id ? f.team_a : f.team_h}`);
+        });
+      }
+      
       const projections = allFixtures.map((fixture: any) => {
         const isHome = fixture.team_h === team.id;
-        const opponent = teams.find((t: any) => t.id === (isHome ? fixture.team_a : fixture.team_h));
+        const opponentId = isHome ? fixture.team_a : fixture.team_h;
+        const opponent = teams.find((t: any) => t.id === opponentId);
         
-        if (!opponent) return null;
+        if (!opponent) {
+          console.warn(`⚠️ OPPONENT NOT FOUND: Team ${team.name} vs opponent ID ${opponentId} in GW${fixture.event}`);
+          return null;
+        }
         
         // Apply the full 8-phase team goal calculation logic
         const expectedGoals = TeamGoalsService.calculateFixtureGoals(
@@ -99,13 +111,30 @@ export class TeamGoalsService {
           bettingData, adminGoalSettings, MASTER_TEAM_DEFAULTS
         );
         
-        return {
+        // Debug logging for null/NaN calculations
+        if ((expectedGoals === null || isNaN(expectedGoals)) && team.id <= 3) {
+          console.warn(`⚠️ INVALID CALCULATION: Team ${team.name} vs ${opponent.short_name} in GW${fixture.event} (${isHome ? 'HOME' : 'AWAY'}) - result: ${expectedGoals}`);
+        }
+        
+        // Handle null/NaN values properly
+        if (expectedGoals === null || isNaN(expectedGoals)) {
+          return null;
+        }
+        
+        const projection = {
           gameweek: fixture.event,
           opponent: opponent.short_name,
           isHome,
           expectedGoals: Math.round(expectedGoals * 100) / 100,
           isActual: false
         };
+        
+        // Debug logging for projection objects
+        if (team.id <= 3 && (!projection || !projection.expectedGoals)) {
+          console.warn(`⚠️ PROJECTION ISSUE: Team ${team.name} GW${fixture.event} - projection:`, projection);
+        }
+        
+        return projection;
       }).filter(Boolean);
       
       const totalGoals = projections.reduce((sum: number, p: any) => sum + p.expectedGoals, 0);
