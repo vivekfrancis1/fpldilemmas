@@ -1132,7 +1132,16 @@ export default function MyDashboard() {
                     <CardContent>
                       {transfersData && transfersData.length > 0 ? (
                         <div className="space-y-3 max-h-96 overflow-y-auto">
-                          {transfersData.slice().reverse().map((transfer, index) => {
+                          {transfersData
+                            .slice()
+                            .sort((a, b) => {
+                              // Sort by timestamp (most recent first), then by gameweek (descending)
+                              const timeA = new Date(a.time).getTime();
+                              const timeB = new Date(b.time).getTime();
+                              if (timeB !== timeA) return timeB - timeA;
+                              return b.event - a.event;
+                            })
+                            .map((transfer, index) => {
                             const playerIn = bootstrapData?.elements.find(p => p.id === transfer.element_in);
                             const playerOut = bootstrapData?.elements.find(p => p.id === transfer.element_out);
                             

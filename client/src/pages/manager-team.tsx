@@ -673,7 +673,17 @@ export default function ManagerTeam() {
                 </div>
               ) : transfersData && transfersData.length > 0 ? (
                 <div className="space-y-2">
-                  {transfersData.slice(0, 10).map((transfer, index) => {
+                  {transfersData
+                    .slice()
+                    .sort((a, b) => {
+                      // Sort by timestamp (most recent first), then by gameweek (descending)
+                      const timeA = new Date(a.time).getTime();
+                      const timeB = new Date(b.time).getTime();
+                      if (timeB !== timeA) return timeB - timeA;
+                      return b.event - a.event;
+                    })
+                    .slice(0, 10)
+                    .map((transfer, index) => {
                     const inPlayer = getPlayerData(transfer.element_in);
                     const outPlayer = getPlayerData(transfer.element_out);
                     

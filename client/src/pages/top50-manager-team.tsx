@@ -666,7 +666,17 @@ export default function Top50ManagerTeam() {
                 </div>
               ) : transfersData && transfersData.length > 0 ? (
                 <div className="space-y-4">
-                  {transfersData.slice(0, 10).map((transfer, idx) => (
+                  {transfersData
+                    .slice()
+                    .sort((a, b) => {
+                      // Sort by timestamp (most recent first), then by gameweek (descending)
+                      const timeA = new Date(a.time).getTime();
+                      const timeB = new Date(b.time).getTime();
+                      if (timeB !== timeA) return timeB - timeA;
+                      return b.event - a.event;
+                    })
+                    .slice(0, 10)
+                    .map((transfer, idx) => (
                     <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-4">
                         <Badge variant="outline">GW{transfer.event}</Badge>
