@@ -7677,9 +7677,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const awayTeamScored = teamGoalProjections.find((t: any) => t.teamId === fixture.team_a);
               
               if (homeTeamScored && awayTeamScored) {
-                // Direct mirror: home concedes what away scores, away concedes what home scores
-                homeTeamAgainst.gameweekProjections[fixture.event] = awayTeamScored.gameweekProjections[fixture.event] || 0;
-                awayTeamAgainst.gameweekProjections[fixture.event] = homeTeamScored.gameweekProjections[fixture.event] || 0;
+                const awayGoals = awayTeamScored.gameweekProjections[fixture.event];
+                const homeGoals = homeTeamScored.gameweekProjections[fixture.event];
+                if (awayGoals !== undefined && homeGoals !== undefined) {
+                  // Direct mirror: home concedes what away scores, away concedes what home scores
+                  homeTeamAgainst.gameweekProjections[fixture.event] = awayGoals;
+                  awayTeamAgainst.gameweekProjections[fixture.event] = homeGoals;
+                }
               }
             }
           }
