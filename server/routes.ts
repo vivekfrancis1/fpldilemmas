@@ -4274,38 +4274,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-          
-          // Post-International Break: Travel, jet lag, and squad disruption reduce intensity
-          const isPostInternationalBreak = fixture.event === 4 || fixture.event === 8 || fixture.event === 16 || fixture.event === 29; // Typical break gameweeks
-          if (isPostInternationalBreak) {
-            // Post-international break multiplier removed - using TeamGoalsService centralized logic
-          }
-          
-          // Travel Distance/Fatigue: Long journeys cause fatigue, reducing away xG (away teams only)
-          if (!isHome) { // Apply only to away teams
-            const isLongTrip = (team.id + opponent.id) % 5 === 0; // Simulated long travel distance (>300km)
-            if (isLongTrip) {
-              // Travel fatigue multiplier removed - using TeamGoalsService centralized logic
-            }
-          }
-          
-          // Market bounds and absolute limits removed - using TeamGoalsService centralized logic
-          return {
-            gameweek: fixture.event,
-            opponent: opponent.short_name,
-            isHome,
-            expectedGoals: 1.5, // Default value - real calculations in TeamGoalsService
-            isActual: false // Flag to indicate this is projected data
-          };
-        }).filter(Boolean);
-      
-      res.json(teamProjections);
-    } catch (error) {
-      console.error("Error generating team goal projections:", error);
-      res.status(500).json({ error: "Failed to generate team goal projections" });
-    }
-  });
-
   // Team Assist Projections endpoint - using correct assist values based on actual FPL data analysis
   app.get("/api/team-assist-projections", async (req, res) => {
     try {
