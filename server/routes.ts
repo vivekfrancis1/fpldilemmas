@@ -7619,13 +7619,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const fixturesData = await fixturesResponse.json();
       const teams = bootstrapData.teams;
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Initialize goals against with zeros for all teams
+      // Initialize goals against with zeros for all teams - LIMIT TO NEXT 6 GAMEWEEKS ONLY
       const teamsGoalsAgainst = new Map();
+      const startGameweek = currentGameweek + 1;
+      const endGameweek = Math.min(currentGameweek + 6, 38); // Next 6 gameweeks only
+      console.log(`DEBUG: Team Goals Conceded Projections - Limiting to next 6 gameweeks: GW${startGameweek}-${endGameweek}`);
+      
       teams.forEach((team: any) => {
         const gameweekProjections: any = {};
-        const maxGW = Math.min(bootstrapData.events.find((event: any) => event.is_current)?.id + 12 || 14, 38);
-        for (let gw = 1; gw <= maxGW; gw++) {
+        for (let gw = startGameweek; gw <= endGameweek; gw++) {
           gameweekProjections[gw] = 0;
         }
         
@@ -7649,8 +7653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check which gameweeks are COMPLETELY finished - EXACT SAME LOGIC AS TEAM GOAL PROJECTIONS
       const completeGameweeks = new Set();
-      const maxGW = Math.min(bootstrapData.events.find((event: any) => event.is_current)?.id + 12 || 14, 38);
-      for (let gw = 1; gw <= maxGW; gw++) {
+      for (let gw = 1; gw <= endGameweek; gw++) {
         const gameweekFixtures = fixturesData.filter((f: any) => f.event === gw);
         const finishedFixtures = gameweekFixtures.filter((f: any) => f.finished);
         
@@ -7706,7 +7709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Debug info (season totals removed)
-      console.log(`DEBUG: Team Goals Conceded Projections - Generated gameweek data for ${teamsGoalsAgainst.size} teams`);
+      console.log(`DEBUG: Team Goals Conceded Projections - Generated gameweek data for ${teamsGoalsAgainst.size} teams (next 6 gameweeks only: GW${startGameweek}-${endGameweek})`);
       
       // Convert to array and sort by team ID since no season totals
       const finalProjections = Array.from(teamsGoalsAgainst.values())
