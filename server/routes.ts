@@ -4406,13 +4406,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }).filter(Boolean);
         
-        // Calculate totals and averages across all 38 gameweeks
-        const allGameweeks = Array.from({ length: 38 }, (_, i) => i + 1);
-        const totalCSProbability = allGameweeks.reduce((sum, gw) => {
-          const projection = projections.find((p: any) => p && p.gameweek === gw);
-          return sum + (projection ? projection.cleanSheetOdds : 0);
-        }, 0);
-        const averageCleanSheetOdds = totalCSProbability / 38;
+        // Calculate totals and averages for next 6 gameweeks only (actual projections)
+        const totalCSProbability = projections.reduce((sum, p) => sum + (p ? p.cleanSheetOdds : 0), 0);
+        const averageCleanSheetOdds = projections.length > 0 ? totalCSProbability / projections.length : 0;
         
         // Convert projections array to gameweekProjections object
         const gameweekProjections: { [gameweek: number]: number } = {};
@@ -4451,7 +4447,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections,
-          // Removed totalCSProbability and averageCSProbability
+          totalCleanSheets: Math.round(totalCSProbability * 10) / 10,
+          averageCleanSheetOdds: Math.round(averageCleanSheetOdds * 10) / 10,
           confidence,
           position: 0 // Will be set after sorting
         };
