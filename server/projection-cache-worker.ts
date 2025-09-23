@@ -1512,41 +1512,41 @@ class ProjectionCacheWorker {
   }
 
   /**
-   * Get Player Assists cache status from API functionality (aligned with actual API)
+   * Get Player Assists cache status from DATABASE (performance optimized - no internal HTTP calls)
    */
   private async getPlayerAssistsStatus(): Promise<{ type: string; count: number; lastUpdated: string | null; isStale: boolean }> {
     try {
-      console.log(`🔍 DEBUG: Checking Player Assists API status...`);
+      console.log(`🔍 DEBUG: Checking Player Assists database status...`);
       
-      // Test if the Player Assists API is working by calling it
+      // PERFORMANCE OPTIMIZATION: Direct database query instead of internal HTTP call
       const startTime = Date.now();
-      const response = await fetch("http://localhost:5000/api/player-assist-projections?startGameweek=4&endGameweek=9");
-      const duration = Date.now() - startTime;
+      const { sql } = await import("drizzle-orm");
+      const { playerAssistProjections } = await import("@shared/schema");
       
-      if (response.ok) {
-        const data = await response.json();
-        const count = data.length || 0;
-        const lastUpdated = new Date().toISOString();
-        
-        console.log(`🔍 DEBUG: Player Assists API working - ${count} players, ${duration}ms response time`);
-        
-        return {
-          type: 'Assists',
-          count,
-          lastUpdated,
-          isStale: false
-        };
-      } else {
-        console.log(`🔍 DEBUG: Player Assists API failed with status ${response.status}`);
-        return {
-          type: 'Assists',
-          count: 0,
-          lastUpdated: null,
-          isStale: true
-        };
-      }
+      const [assistStats] = await db.select({ 
+        count: sql`count(*)`,
+        lastUpdated: sql`MAX(calculated_at)`
+      }).from(playerAssistProjections);
+      
+      const duration = Date.now() - startTime;
+      const count = Number(assistStats?.count || 0);
+      const lastUpdated = assistStats?.lastUpdated as string | null;
+      
+      console.log(`🔍 DEBUG: Player Assists database query - ${count} records, ${duration}ms response time`);
+      
+      // Check if stale (more than 4 hours old)
+      const now = new Date();
+      const STALE_THRESHOLD = 4 * 60 * 60 * 1000; // 4 hours
+      const isStale = lastUpdated ? (now.getTime() - new Date(lastUpdated).getTime()) > STALE_THRESHOLD : true;
+      
+      return {
+        type: 'Assists',
+        count,
+        lastUpdated,
+        isStale
+      };
     } catch (error) {
-      console.error(`❌ Failed to check Player Assists API status:`, error);
+      console.error(`❌ DEBUG: Player Assists database query failed:`, error);
       return {
         type: 'Assists',
         count: 0,
