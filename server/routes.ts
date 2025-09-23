@@ -4390,8 +4390,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const teamGoalsAgainstProjections = teamGoalsAgainstMap.get(team.id) || {};
           const gameweekGoalsAgainst = teamGoalsAgainstProjections[fixture.event.toString()] || 1.5; // Default if not found
           
-          // CONFIGURABLE EXPONENTIAL FORMULA: CS = cleanSheetMultiplier × e^(-cleanSheetExponent × xGA)
-          let cleanSheetProbability = (adminGoalSettings.cleanSheetMultiplier || 90) * Math.exp(-(adminGoalSettings.cleanSheetExponent || 1.1) * gameweekGoalsAgainst);
+          // POISSON DISTRIBUTION FORMULA: P(Clean Sheet) = e^(-λ) where λ is expected goals conceded
+          let cleanSheetProbability = Math.exp(-gameweekGoalsAgainst) * 100; // Convert to percentage
           
           // Ensure realistic bounds (0-100%)
           cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
