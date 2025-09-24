@@ -6946,27 +6946,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const team = teams.find((t: any) => t.id === player.team);
         const position = positions.find((p: any) => p.id === player.element_type);
         
-        // Base minutes calculation on current minutes and actual games played
+        // Base minutes calculation on current minutes and team's actual games played
         const totalMinutes = player.minutes || 0;
         
-        // Calculate actual games played using FPL's own calculation: total_points / points_per_game
-        let actualGamesPlayed = 1; // Default fallback
+        // Use team's actual games played (much simpler and more consistent)
+        const teamGamesPlayed = Math.max(currentGameweek - 1, 1); // Games completed by the team
         
-        if (player.points_per_game && parseFloat(player.points_per_game) > 0) {
-          // Use FPL's derived games played calculation
-          actualGamesPlayed = Math.round(player.total_points / parseFloat(player.points_per_game));
-        } else if (player.starts && player.starts > 0) {
-          // Fallback: use starts for zero-point players who have started games
-          actualGamesPlayed = player.starts;
-        } else if (totalMinutes > 0) {
-          // Fallback: if player has minutes but no starts/points, assume 1 game
-          actualGamesPlayed = 1;
-        }
-        
-        // Ensure actualGamesPlayed is at least equal to starts (data consistency)
-        actualGamesPlayed = Math.max(actualGamesPlayed, player.starts || 0, 1);
-        
-        const currentMinutesPerGame = Math.min(90, totalMinutes / actualGamesPlayed); // Cap at 90 minutes per game
+        const currentMinutesPerGame = Math.min(90, totalMinutes / teamGamesPlayed); // Cap at 90 minutes per game
         
         // Simplified expected minutes: use current average with no complex calculations
         const expectedMinutesPerGame = currentMinutesPerGame;
@@ -6991,7 +6977,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentMinutesPerGame: Math.round(currentMinutesPerGame * 10) / 10,
           expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
           pointsFromMinutes: pointsFromMinutes,
-          benchAppearances: Math.max(0, actualGamesPlayed - (player.starts || 0))
+          benchAppearances: Math.max(0, teamGamesPlayed - (player.starts || 0))
         };
       })
       .filter((player: any) => player.expectedMinutesPerGame >= 0) // Include all players
