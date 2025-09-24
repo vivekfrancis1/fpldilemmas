@@ -697,7 +697,7 @@ export default function PlayerTotalPoints() {
                 </SelectTrigger>
                 <SelectContent>
                   {Array.from({ length: Math.min(15 - nextGameweek + 1, 12) }, (_, i) => nextGameweek + i).map(gw => (
-                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    <SelectItem key={`start-gw-${gw}`} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -711,7 +711,7 @@ export default function PlayerTotalPoints() {
                 </SelectTrigger>
                 <SelectContent>
                   {Array.from({ length: Math.min(15 - nextGameweek + 1, 12) }, (_, i) => nextGameweek + i).filter(gw => gw >= (startGameweek || nextGameweek)).map(gw => (
-                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    <SelectItem key={`end-gw-${gw}`} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -740,9 +740,9 @@ export default function PlayerTotalPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem key="all" value="all">All Positions</SelectItem>
+                  <SelectItem key="position-all" value="all">All Positions</SelectItem>
                   {positions.map(position => (
-                    <SelectItem key={position} value={position}>{position}</SelectItem>
+                    <SelectItem key={`position-${position}`} value={position}>{position}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -756,9 +756,9 @@ export default function PlayerTotalPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem key="all" value="all">All Teams</SelectItem>
+                  <SelectItem key="team-all" value="all">All Teams</SelectItem>
                   {teams.map(team => (
-                    <SelectItem key={team} value={team}>{team}</SelectItem>
+                    <SelectItem key={`team-${team}`} value={team}>{team}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
