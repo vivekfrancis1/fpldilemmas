@@ -334,6 +334,8 @@ interface PlayerTotalPointsData {
   totalExpectedPoints: number;
   seasonTotalPoints: number;
   averagePerGameweek: number;
+  averageValue: number;
+  avgMinutesPerGameweek: number;
   // Detailed point breakdowns
   pointsFromGoals?: { [key: string]: number };
   pointsFromAssists?: { [key: string]: number };
@@ -357,7 +359,7 @@ interface PlayerTotalPointsData {
   totalPointsFromRedCards?: number;
 }
 
-type SortField = 'name' | 'position' | 'team' | 'totalExpectedPoints' | 'averagePerGameweek' | string;
+type SortField = 'name' | 'position' | 'team' | 'totalExpectedPoints' | 'averagePerGameweek' | 'averageValue' | 'avgMinutesPerGameweek' | string;
 
 // Create columns configuration for the enhanced table
 function createPlayerTotalPointsColumns(
@@ -415,6 +417,36 @@ function createPlayerTotalPointsColumns(
           format="points" 
           decimals={2}
           className="font-bold text-orange-800 text-lg"
+        />
+      )
+    },
+    {
+      key: 'averageValue',
+      header: 'Avg Value',
+      sortable: true,
+      align: 'center',
+      className: 'min-w-[90px] bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300',
+      render: (value) => (
+        <ValueCell 
+          value={value || 0} 
+          format="decimal" 
+          decimals={2}
+          className="font-bold text-purple-800 text-sm"
+        />
+      )
+    },
+    {
+      key: 'avgMinutesPerGameweek',
+      header: 'Avg Mins',
+      sortable: true,
+      align: 'center',
+      className: 'min-w-[80px] bg-gradient-to-r from-blue-50 to-sky-50 border-l border-gray-300',
+      render: (value) => (
+        <ValueCell 
+          value={value || 0} 
+          format="decimal" 
+          decimals={0}
+          className="font-bold text-blue-800 text-sm"
         />
       )
     }
