@@ -15,7 +15,6 @@ import {
   applyGoalAdjustments, 
   applyAssistAdjustments,
   getPlayerNameForDebug,
-  enforcePositionCaps,
   TeamPlayerShare
 } from "./projection-adjustments";
 import { applyMinutesScaling, applyMinutesScalingBatch } from './minutes-scaling-utils';
@@ -361,8 +360,7 @@ class ProjectionCacheWorker {
         teamGameweekGroups.get(key)!.push(record);
       }
       
-      let totalCappingApplications = 0;
-      let brunoFernandesCapped = false;
+      // Position capping removed - using raw uncapped shares
       
       // Apply position capping to each team-gameweek group
       for (const [key, teamRecords] of Array.from(teamGameweekGroups.entries())) {
@@ -390,50 +388,14 @@ class ProjectionCacheWorker {
         
         if (teamPlayerShares.length === 0) continue;
         
-        // Apply position caps with debug logging for specific players
-        const cappedShares = enforcePositionCaps(teamPlayerShares, 'goals', true);
-        
-        // Convert capped shares back to goals and update records
-        let hadCapping = false;
-        for (let i = 0; i < teamRecords.length; i++) {
-          const record = teamRecords[i];
-          const cappedPlayer = cappedShares.find(p => p.id === record.playerId);
-          
-          if (cappedPlayer && cappedPlayer.goalShare !== undefined) {
-            const newGoals = (cappedPlayer.goalShare / 100) * teamTotal;
-            const originalGoals = record.goals;
-            
-            // Check if this is Bruno Fernandes (player ID 284)
-            if (record.playerId === 284) {
-              const originalShare = (originalGoals / teamTotal) * 100;
-              console.log(`🔍 BRUNO FERNANDES CAPPING - GW${gameweek}: Original ${originalShare.toFixed(1)}% (${originalGoals.toFixed(3)} goals) → Capped ${cappedPlayer.goalShare.toFixed(1)}% (${newGoals.toFixed(3)} goals)`);
-              if (originalShare > 30.1) {
-                brunoFernandesCapped = true;
-              }
-            }
-            
-            // Log significant capping events
-            if (Math.abs(newGoals - originalGoals) > 0.01) {
-              hadCapping = true;
-              const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
-              const playerName = player ? `${player.first_name} ${player.second_name}` : `Player ${record.playerId}`;
-              const originalShare = (originalGoals / teamTotal) * 100;
-              console.log(`📊 POSITION CAPPING - ${playerName} (${cappedPlayer.position}) GW${gameweek}: ${originalShare.toFixed(1)}% → ${cappedPlayer.goalShare.toFixed(1)}% (${originalGoals.toFixed(3)} → ${newGoals.toFixed(3)} goals)`);
-            }
-            
-            record.goals = Number(newGoals.toFixed(4));
-          }
-        }
-        
-        if (hadCapping) {
-          totalCappingApplications++;
-        }
+        // SIMPLIFIED: No position caps or normalization - use raw shares
+        console.log(`DEBUG: Goal share for team ${teamId} GW${gameweek}: ${teamPlayerShares.length} players, no position caps applied`);
       }
       
       console.log(`📊 POSITION CAPPING SUMMARY:`);
       console.log(`   - Team-gameweek groups processed: ${teamGameweekGroups.size}`);
-      console.log(`   - Groups with capping applied: ${totalCappingApplications}`);
-      console.log(`   - Bruno Fernandes capped: ${brunoFernandesCapped ? 'YES' : 'NO'}`);
+      console.log(`   - Position capping disabled - using raw shares`);
+      console.log(`   - No normalization applied - shares may exceed position limits`);
       console.log(`✅ Position-based capping completed`);
       
       // BATCH MINUTES SCALING: Apply minutes scaling to all projections at once
@@ -759,8 +721,7 @@ class ProjectionCacheWorker {
         assistTeamGameweekGroups.get(key)!.push(record);
       }
       
-      let totalAssistCappingApplications = 0;
-      let keyPlayersCapped = [];
+      // Assist position capping removed - using raw uncapped shares
       
       // Apply position capping to each team-gameweek group
       for (const [key, teamRecords] of Array.from(assistTeamGameweekGroups.entries())) {
@@ -790,48 +751,14 @@ class ProjectionCacheWorker {
         
         if (teamPlayerShares.length === 0) continue;
         
-        // Apply position caps with debug logging for specific players
-        const cappedShares = enforcePositionCaps(teamPlayerShares, 'assists', true);
-        
-        // Convert capped shares back to assists and update records
-        let hadCapping = false;
-        for (let i = 0; i < teamRecords.length; i++) {
-          const record = teamRecords[i];
-          const cappedPlayer = cappedShares.find(p => p.id === record.playerId);
-          
-          if (cappedPlayer && cappedPlayer.assistShare !== undefined) {
-            const newAssists = (cappedPlayer.assistShare / 100) * teamTotal;
-            const originalAssists = record.assists;
-            
-            // Check if this is a key playmaker who might get capped
-            const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
-            const playerName = player ? `${player.first_name} ${player.second_name}` : `Player ${record.playerId}`;
-            const originalShare = (originalAssists / teamTotal) * 100;
-            
-            // Log significant capping events
-            if (Math.abs(newAssists - originalAssists) > 0.01) {
-              hadCapping = true;
-              console.log(`📊 ASSIST POSITION CAPPING - ${playerName} (${cappedPlayer.position}) GW${gameweek}: ${originalShare.toFixed(1)}% → ${cappedPlayer.assistShare.toFixed(1)}% (${originalAssists.toFixed(3)} → ${newAssists.toFixed(3)} assists)`);
-              
-              // Track key players who get capped significantly
-              if (originalShare > 30) {
-                keyPlayersCapped.push(`${playerName} (${originalShare.toFixed(1)}% → ${cappedPlayer.assistShare.toFixed(1)}%)`);
-              }
-            }
-            
-            record.assists = Number(newAssists.toFixed(4));
-          }
-        }
-        
-        if (hadCapping) {
-          totalAssistCappingApplications++;
-        }
+        // SIMPLIFIED: No position caps or normalization - use raw shares
+        console.log(`DEBUG: Assist share for team ${teamId} GW${gameweek}: ${teamPlayerShares.length} players, no position caps applied`);
       }
       
       console.log(`📊 ASSIST POSITION CAPPING SUMMARY:`);
       console.log(`   - Team-gameweek groups processed: ${assistTeamGameweekGroups.size}`);
-      console.log(`   - Groups with capping applied: ${totalAssistCappingApplications}`);
-      console.log(`   - Key players capped: ${keyPlayersCapped.length > 0 ? keyPlayersCapped.join(', ') : 'None'}`);
+      console.log(`   - Assist position capping disabled - using raw shares`);
+      console.log(`   - No normalization applied - shares may exceed position limits`);
       console.log(`✅ Position-based assist capping completed`);
       
       // BATCH MINUTES SCALING: Apply minutes scaling to all assist projections at once
