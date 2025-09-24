@@ -14,8 +14,8 @@ interface SeasonAssistShareData {
   teamShort: string;
   expectedAssists: number; // Total assists for the gameweek range
   players: {
-    id: number;
-    name: string;
+    playerId: number;
+    playerName: string;
     position: string;
     assistShare: number; // Percentage of team's assists for the range
     projectedAssists: number; // Total projected assists for the range
@@ -177,7 +177,7 @@ export default function AssistShare() {
                   <CardContent className="p-4">
                     <div className="space-y-3">
                       {(teamData.players || []).slice(0, 8).map((player, playerIndex) => (
-                        <div key={player.id} className="flex items-center justify-between">
+                        <div key={player.playerId} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                               playerIndex === 0 ? 'bg-gold text-yellow-800' :
@@ -188,7 +188,7 @@ export default function AssistShare() {
                               {playerIndex + 1}
                             </span>
                             <div>
-                              <div className="font-medium text-sm">{player.name}</div>
+                              <div className="font-medium text-sm">{player.playerName}</div>
                               <div className="text-xs text-gray-500">{player.position}</div>
                             </div>
                           </div>

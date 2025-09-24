@@ -14,8 +14,8 @@ interface SeasonGoalShareData {
   teamShort: string;
   expectedGoals: number; // Total goals for the gameweek range
   players: {
-    id: number;
-    name: string;
+    playerId: number;
+    playerName: string;
     position: string;
     goalShare: number; // Percentage of team's goals for the range
     projectedGoals: number; // Total projected goals for the range
@@ -193,13 +193,13 @@ export default function GoalShare() {
                   <CardContent className="pt-0">
                     <div className="space-y-3">
                       {team.players.slice(0, 10).map((player, index) => (
-                        <div key={player.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div key={player.playerId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                           <div className="flex items-center gap-3">
                             <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-blue-600 font-bold text-xs">
                               {index + 1}
                             </div>
                             <div>
-                              <p className="font-semibold text-gray-900 text-sm">{player.name}</p>
+                              <p className="font-semibold text-gray-900 text-sm">{player.playerName}</p>
                               <p className="text-xs text-gray-500">{player.position}</p>
                             </div>
                           </div>
