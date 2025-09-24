@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { computeNextRange } from "@shared/gameweek-utils";
 
 interface BootstrapData {
   elements: any[];
@@ -43,8 +44,8 @@ interface OpenFPLProjection {
 export default function OpenFPLProjections() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
-  const [startGameweek, setStartGameweek] = useState<number>(4); // Default to GW4
-  const [endGameweek, setEndGameweek] = useState<number>(9); // Default next 6 GWs (GW4-9)
+  const [startGameweek, setStartGameweek] = useState<number>(6); // Will be dynamically calculated
+  const [endGameweek, setEndGameweek] = useState<number>(11); // Will be dynamically calculated
   const gameweekFilter = "all"; // Always use all available data
   const [activeMetric, setActiveMetric] = useState("predicted_points");
   const [sortBy, setSortBy] = useState<keyof OpenFPLProjection>("predicted_points");
@@ -57,18 +58,15 @@ export default function OpenFPLProjections() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Calculate current gameweek and set proper defaults
-  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 3;
-  const nextGameweek = currentGameweek + 1;
-  
-  // Update defaults when bootstrap data loads
+  // Update gameweek range when bootstrap data loads - always use next 6 gameweeks
   useEffect(() => {
-    if (bootstrapData && startGameweek === 4 && endGameweek === 9) {
-      // Only update if still using initial defaults
-      setStartGameweek(Math.max(nextGameweek, 4));
-      setEndGameweek(Math.max(nextGameweek, 4) + 5); // Default to 6 gameweeks
+    if (bootstrapData?.events) {
+      // Calculate next 6 gameweeks dynamically
+      const nextRange = computeNextRange(bootstrapData.events, 6);
+      setStartGameweek(nextRange.start);
+      setEndGameweek(nextRange.end);
     }
-  }, [bootstrapData, nextGameweek, startGameweek, endGameweek]);
+  }, [bootstrapData]);
 
   // Fetch data for the selected gameweek range
   const numberOfGameweeks = Math.max(1, endGameweek - startGameweek + 1);

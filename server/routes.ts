@@ -8853,7 +8853,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Point Breakdowns API - Get specific point categories
   app.get("/api/player-point-breakdowns", async (req, res) => {
     try {
-      const { startGameweek = 4, endGameweek = 9, category = 'all' } = req.query;
+      // Use next 6 gameweeks as default
+      let { startGameweek, endGameweek, category = 'all' } = req.query;
+      if (!startGameweek || !endGameweek) {
+        const { computeNextRange } = await import('../shared/gameweek-utils');
+        const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+        const bootstrap = await bootstrapResponse.json();
+        const nextRange = computeNextRange(bootstrap.events, 6);
+        startGameweek = startGameweek || nextRange.start.toString();
+        endGameweek = endGameweek || nextRange.end.toString();
+      }
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
       
@@ -11304,7 +11313,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // BPS Projections API - Step 1: Raw BPS calculations
   app.get("/api/player-bps-projections", async (req, res) => {
     try {
-      const { startGameweek = 4, endGameweek = 9 } = req.query;
+      // Use next 6 gameweeks as default
+      let { startGameweek, endGameweek } = req.query;
+      if (!startGameweek || !endGameweek) {
+        const { computeNextRange } = await import('../shared/gameweek-utils');
+        const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+        const bootstrap = await bootstrapResponse.json();
+        const nextRange = computeNextRange(bootstrap.events, 6);
+        startGameweek = startGameweek || nextRange.start.toString();
+        endGameweek = endGameweek || nextRange.end.toString();
+      }
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
 
@@ -11376,7 +11394,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bonus Probability API - Step 2: Calculate probabilities from BPS with team-level normalization
   app.get("/api/player-bonus-probabilities", async (req, res) => {
     try {
-      const { startGameweek = 4, endGameweek = 9 } = req.query;
+      // Use next 6 gameweeks as default
+      let { startGameweek, endGameweek } = req.query;
+      if (!startGameweek || !endGameweek) {
+        const { computeNextRange } = await import('../shared/gameweek-utils');
+        const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+        const bootstrap = await bootstrapResponse.json();
+        const nextRange = computeNextRange(bootstrap.events, 6);
+        startGameweek = startGameweek || nextRange.start.toString();
+        endGameweek = endGameweek || nextRange.end.toString();
+      }
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
 
@@ -11737,7 +11764,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      const { startGameweek = 4, endGameweek = 9 } = req.query;
+      // Use next 6 gameweeks as default
+      let { startGameweek, endGameweek } = req.query;
+      if (!startGameweek || !endGameweek) {
+        const { computeNextRange } = await import('../shared/gameweek-utils');
+        const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+        const bootstrap = await bootstrapResponse.json();
+        const nextRange = computeNextRange(bootstrap.events, 6);
+        startGameweek = startGameweek || nextRange.start.toString();
+        endGameweek = endGameweek || nextRange.end.toString();
+      }
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
       const cacheKey = `${start}-${end}`;
@@ -13156,7 +13192,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("DEBUG: Simple Bonus Points API called - probability × 1 formula");
       
-      const { startGameweek = 4, endGameweek = 9 } = req.query;
+      // Use next 6 gameweeks as default
+      let { startGameweek, endGameweek } = req.query;
+      if (!startGameweek || !endGameweek) {
+        const { computeNextRange } = await import('../shared/gameweek-utils');
+        const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+        const bootstrap = await bootstrapResponse.json();
+        const nextRange = computeNextRange(bootstrap.events, 6);
+        startGameweek = startGameweek || nextRange.start.toString();
+        endGameweek = endGameweek || nextRange.end.toString();
+      }
       
       // Get bonus probabilities from the live API (not cached bonus points) with gameweek parameters
       const probabilitiesResponse = await internalFetch(`api/player-bonus-probabilities?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);

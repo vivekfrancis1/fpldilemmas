@@ -5,6 +5,7 @@ import { BootstrapData, PREMIER_LEAGUE_TEAMS } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { computeNextRange } from "@shared/gameweek-utils";
 
 interface Fixture {
   id: number;
@@ -25,8 +26,8 @@ interface Team {
 
 export default function Fixtures() {
   const [gameweekRange, setGameweekRange] = useState(() => {
-    // Show next 6 gameweeks: GW6 to GW11
-    return { start: 6, end: 11 };
+    // Will be dynamically calculated from bootstrap data
+    return { start: 6, end: 11 }; // Temporary fallback
   });
   const [sortBy, setSortBy] = useState<'team' | 'fdr-asc' | 'fdr-desc' | string>('fdr-asc');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -66,18 +67,17 @@ export default function Fixtures() {
     return { currentGameweek: current, availableGameweeks: available };
   }, [bootstrapData]);
 
-  // Update gameweek range when current gameweek changes - show next 6 gameweeks (GW6-GW11)
+  // Update gameweek range when bootstrap data changes - always show next 6 gameweeks
   useEffect(() => {
-    if (availableGameweeks.length > 0 && gameweekRange.start !== 6) {
-      // Start from GW6 and show next 6 gameweeks (GW6-GW11)
-      const startGW = 6;
-      const endGW = 11;
+    if (bootstrapData?.events) {
+      // Calculate next 6 gameweeks dynamically
+      const nextRange = computeNextRange(bootstrapData.events, 6);
       setGameweekRange({
-        start: startGW,
-        end: endGW
+        start: nextRange.start,
+        end: nextRange.end
       });
     }
-  }, [availableGameweeks, gameweekRange.start]);
+  }, [bootstrapData]);
 
   // Get difficulty rating color class
   const getDifficultyColor = (difficulty: number) => {

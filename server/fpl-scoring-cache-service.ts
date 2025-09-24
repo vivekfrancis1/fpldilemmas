@@ -18,7 +18,16 @@ export class FPLScoringCacheService {
   /**
    * Fetch and cache all FPL scoring component data
    */
-  async updateAllScoringData(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
+  async updateAllScoringData(startGameweek?: number, endGameweek?: number): Promise<void> {
+    // Calculate next 6 gameweeks if not provided
+    if (!startGameweek || !endGameweek) {
+      const { computeNextRange } = await import('../shared/gameweek-utils');
+      const bootstrapResponse = await internalFetch('/api/bootstrap-static');
+      const bootstrap = await bootstrapResponse.json();
+      const nextRange = computeNextRange(bootstrap.events, 6);
+      startGameweek = nextRange.start;
+      endGameweek = nextRange.end;
+    }
     console.log("🚀 Starting FPL scoring component cache update...");
     
     try {
@@ -92,7 +101,7 @@ export class FPLScoringCacheService {
   /**
    * Cache player goals conceded data
    */
-  private async cachePlayerGoalsConceded(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
+  private async cachePlayerGoalsConceded(startGameweek: number, endGameweek: number): Promise<void> {
     console.log("📊 Caching player goals conceded data...");
     
     try {
@@ -134,7 +143,7 @@ export class FPLScoringCacheService {
   /**
    * Cache player yellow cards data
    */
-  private async cachePlayerYellowCards(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
+  private async cachePlayerYellowCards(startGameweek: number, endGameweek: number): Promise<void> {
     console.log("📊 Caching player yellow cards data...");
     
     try {
@@ -176,7 +185,7 @@ export class FPLScoringCacheService {
   /**
    * Cache player red cards data
    */
-  private async cachePlayerRedCards(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
+  private async cachePlayerRedCards(startGameweek: number, endGameweek: number): Promise<void> {
     console.log("📊 Caching player red cards data...");
     
     try {
@@ -218,7 +227,7 @@ export class FPLScoringCacheService {
   /**
    * Cache player bonus points data
    */
-  private async cachePlayerBonusPoints(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
+  private async cachePlayerBonusPoints(startGameweek: number, endGameweek: number): Promise<void> {
     console.log("📊 Caching player bonus points data...");
     
     try {
@@ -682,7 +691,7 @@ export class FPLScoringCacheService {
    * Fetches live event data from FPL API for all completed gameweeks
    * Processes all players and calculates minutes points per FPL rules
    */
-  async cachePlayerMinutesPoints(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
+  async cachePlayerMinutesPoints(startGameweek: number, endGameweek: number): Promise<void> {
     console.log("📊 Caching player minutes points data...");
     
     try {
