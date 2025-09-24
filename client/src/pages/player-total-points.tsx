@@ -519,14 +519,28 @@ export default function PlayerTotalPoints() {
     enabled: startGameweek !== null && endGameweek !== null, // Only fetch when gameweek values are initialized
   });
 
-  // Data selection logic - prefer cached data but use live data when gameweeks not available or data is incomplete
+  // Data selection logic - API-first approach with cache fallback for reliability
   const totalPointsData = useMemo(() => {
-    // Check if cached data contains the requested gameweek range AND has critical fields
+    // PRIORITY 1: Use live API data if available and valid (ensures freshest data)
+    if (liveTotalPointsData && liveTotalPointsData.length > 0 && !liveError) {
+      const samplePlayer = liveTotalPointsData[0];
+      
+      // Validate live data quality - must have critical fields
+      const hasValidLiveData = samplePlayer.playerName && 
+        samplePlayer.totalExpectedPoints !== undefined && 
+        samplePlayer.pointsFromGoals !== undefined;
+      
+      if (hasValidLiveData) {
+        return liveTotalPointsData;
+      }
+    }
+    
+    // PRIORITY 2: Fall back to cached data if live API fails, is loading, or has errors
     if (cachedTotalPointsData && cachedTotalPointsData.length > 0) {
       const samplePlayer = cachedTotalPointsData[0];
       
-      // Validate data quality - must have critical fields
-      const hasValidData = samplePlayer.playerName && 
+      // Validate cached data quality - must have critical fields
+      const hasValidCachedData = samplePlayer.playerName && 
         samplePlayer.totalExpectedPoints !== undefined && 
         samplePlayer.pointsFromGoals !== undefined;
       
@@ -534,24 +548,44 @@ export default function PlayerTotalPoints() {
         samplePlayer.gameweekProjections[`gw${startGameweek}`] !== undefined && 
         samplePlayer.gameweekProjections[`gw${endGameweek}`] !== undefined;
       
-      if (hasRequestedRange && hasValidData) {
+      if (hasRequestedRange && hasValidCachedData) {
         return cachedTotalPointsData;
       }
     }
-    // Use live data when cached data doesn't contain requested range, is unavailable, or lacks critical fields
-    return liveTotalPointsData;
-  }, [cachedTotalPointsData, liveTotalPointsData, startGameweek, endGameweek]);
+    
+    // PRIORITY 3: Return null if neither data source is available
+    return null;
+  }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek]);
 
-  // Loading state - show loading if cached is loading, or if cached data is empty/unavailable and live is loading
+  // Loading state - API-first loading logic: show loading primarily for live API, fallback to cached loading
   const isLoading = useMemo(() => {
-    // If cached is loading, show loading
-    if (cachedLoading) return true;
-    // If cached data is empty or unavailable, and live data is loading, show loading
-    if ((!cachedTotalPointsData || cachedTotalPointsData.length === 0) && liveLoading) return true;
+    // PRIORITY 1: Show loading while live API is loading (our primary data source)
+    if (liveLoading) return true;
+    
+    // PRIORITY 2: If live API failed or is unavailable, show loading while cached data loads
+    if ((liveError || !liveTotalPointsData) && cachedLoading) return true;
+    
+    // PRIORITY 3: Show loading if neither data source is available yet
+    if (!liveTotalPointsData && !cachedTotalPointsData && !liveError && !cachedError) return true;
+    
     return false;
-  }, [cachedLoading, liveLoading, cachedTotalPointsData]);
+  }, [liveLoading, liveError, liveTotalPointsData, cachedLoading, cachedTotalPointsData, cachedError]);
 
-  const error = cachedError || liveError;
+  // Error handling - API-first: prioritize live API errors, only show cached errors if live API succeeds
+  const error = useMemo(() => {
+    // If live API has error and cached also fails, show live error (primary source)
+    if (liveError && cachedError) return liveError;
+    // If only live API has error but cached works, don't show error (cache fallback working)
+    if (liveError && cachedTotalPointsData) return null;
+    // If live API works but cached fails, don't show error (primary source working)
+    if (liveTotalPointsData && cachedError) return null;
+    // Show live API error if no cached fallback available
+    if (liveError && !cachedTotalPointsData) return liveError;
+    // Show cached error only if live API is also unavailable
+    if (cachedError && !liveTotalPointsData) return cachedError;
+    
+    return null;
+  }, [liveError, cachedError, liveTotalPointsData, cachedTotalPointsData]);
 
   const handleRefreshData = async () => {
     console.log('🔄 Total Points refresh button clicked!');
