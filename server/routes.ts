@@ -10945,212 +10945,284 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Goals Conceded Projections - Pure projections for future gameweeks only
+  // Player Goals Conceded Projections - API-first with cache fallback
   app.get("/api/player-goals-conceded-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Goals Conceded Projections API called - using pure projections for future gameweeks only");
-      
-      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
-      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
-      
-      // Get FPL bootstrap data for current gameweek info and players
-      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      const fplData = await fplResponse.json();
-      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
-      const nextGameweek = currentGameweek + 1; // Start from next gameweek
-      
-      // Get team goals conceded projections and player minutes
-      const [teamProjectionsResponse, playerMinutesResponse] = await Promise.all([
-        fetch(`http://localhost:5000/api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`),
-        fetch("http://localhost:5000/api/player-minutes-projections")
-      ]);
-      
-      const teamProjections = await teamProjectionsResponse.json();
-      const playerMinutesData = await playerMinutesResponse.json();
-      
-      // Filter to only GKP and DEF (affected by goals conceded)
-      const affectedPlayers = fplData.elements.filter((player: any) => 
-        player.element_type === 1 || player.element_type === 2
-      );
-      
-      const goalsConcededProjections = affectedPlayers.map((player: any) => {
-        const team = fplData.teams.find((t: any) => t.id === player.team);
-        const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'DEF';
-        const goalsConceded: { [key: string]: number } = {};
-        const pointsFromGoalsConceded: { [key: string]: number } = {};
-        let totalGoalsConceded = 0;
-        let totalPoints = 0;
+      console.log("🚀 API-FIRST: Attempting live calculation for player goals conceded projections");
+
+      // TRY LIVE CALCULATION FIRST
+      try {
+        console.log("DEBUG: Player Goals Conceded Projections API called - using pure projections for future gameweeks only");
         
-        // Find player's expected minutes data
-        const playerMinutes = playerMinutesData.find((pm: any) => pm.playerId === player.id);
-        const expectedMinutesPerGame = playerMinutes?.expectedMinutesPerGame || 0;
+        const startGameweek = parseInt(req.query.startGameweek as string) || 4;
+        const endGameweek = parseInt(req.query.endGameweek as string) || 9;
         
-        // Find team's projected goals conceded data
-        const teamGoalData = teamProjections.find((tp: any) => tp.teamShort === team?.short_name);
+        // Get FPL bootstrap data for current gameweek info and players
+        const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        const fplData = await fplResponse.json();
+        const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
+        const nextGameweek = currentGameweek + 1; // Start from next gameweek
         
-        // Process each FUTURE gameweek only with pure projections
-        for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
-          let gwGoalsConceded = 0;
-          let gwPoints = 0;
+        // Get team goals conceded projections and player minutes
+        const [teamProjectionsResponse, playerMinutesResponse] = await Promise.all([
+          fetch(`http://localhost:5000/api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`),
+          fetch("http://localhost:5000/api/player-minutes-projections")
+        ]);
+        
+        const teamProjections = await teamProjectionsResponse.json();
+        const playerMinutesData = await playerMinutesResponse.json();
+        
+        // Filter to only GKP and DEF (affected by goals conceded)
+        const affectedPlayers = fplData.elements.filter((player: any) => 
+          player.element_type === 1 || player.element_type === 2
+        );
+        
+        const goalsConcededProjections = affectedPlayers.map((player: any) => {
+          const team = fplData.teams.find((t: any) => t.id === player.team);
+          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'DEF';
+          const goalsConceded: { [key: string]: number } = {};
+          const pointsFromGoalsConceded: { [key: string]: number } = {};
+          let totalGoalsConceded = 0;
+          let totalPoints = 0;
           
-          if (teamGoalData && teamGoalData.gameweekProjections && teamGoalData.gameweekProjections[gw]) {
-            const teamGoalsAgainst = parseFloat(teamGoalData.gameweekProjections[gw]);
+          // Find player's expected minutes data
+          const playerMinutes = playerMinutesData.find((pm: any) => pm.playerId === player.id);
+          const expectedMinutesPerGame = playerMinutes?.expectedMinutesPerGame || 0;
+          
+          // Find team's projected goals conceded data
+          const teamGoalData = teamProjections.find((tp: any) => tp.teamShort === team?.short_name);
+          
+          // Process each FUTURE gameweek only with pure projections
+          for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
+            let gwGoalsConceded = 0;
+            let gwPoints = 0;
             
-            // Player expected goals conceded = (expected minutes / 90) * Team expected goals conceded
-            gwGoalsConceded = (expectedMinutesPerGame / 90) * teamGoalsAgainst;
+            if (teamGoalData && teamGoalData.gameweekProjections && teamGoalData.gameweekProjections[gw]) {
+              const teamGoalsAgainst = parseFloat(teamGoalData.gameweekProjections[gw]);
+              
+              // Player expected goals conceded = (expected minutes / 90) * Team expected goals conceded
+              gwGoalsConceded = (expectedMinutesPerGame / 90) * teamGoalsAgainst;
+              
+              // Points from goals conceded = -0.5 * Player expected goals conceded
+              gwPoints = -0.5 * gwGoalsConceded;
+            }
             
-            // Points from goals conceded = -0.5 * Player expected goals conceded
-            gwPoints = -0.5 * gwGoalsConceded;
+            goalsConceded[`gw${gw}`] = parseFloat(gwGoalsConceded.toFixed(2));
+            pointsFromGoalsConceded[`gw${gw}`] = parseFloat(gwPoints.toFixed(2));
+            totalGoalsConceded += gwGoalsConceded;
+            totalPoints += gwPoints;
           }
           
-          goalsConceded[`gw${gw}`] = parseFloat(gwGoalsConceded.toFixed(2));
-          pointsFromGoalsConceded[`gw${gw}`] = parseFloat(gwPoints.toFixed(2));
-          totalGoalsConceded += gwGoalsConceded;
-          totalPoints += gwPoints;
-        }
+          return {
+            playerId: player.id,
+            playerName: player.web_name,
+            teamName: team?.short_name || 'UNK',
+            position,
+            goalsConceded,
+            pointsFromGoalsConceded,
+            totalGoalsConceded: parseFloat(totalGoalsConceded.toFixed(2)),
+            totalPoints: parseFloat(totalPoints.toFixed(2)),
+            averagePerGameweek: parseFloat((totalGoalsConceded / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(2))
+          };
+        });
         
-        return {
-          playerId: player.id,
-          playerName: player.web_name,
-          teamName: team?.short_name || 'UNK',
-          position,
-          goalsConceded,
-          pointsFromGoalsConceded,
-          totalGoalsConceded: parseFloat(totalGoalsConceded.toFixed(2)),
-          totalPoints: parseFloat(totalPoints.toFixed(2)),
-          averagePerGameweek: parseFloat((totalGoalsConceded / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(2))
-        };
-      });
-      
-      console.log(`DEBUG: Generated pure goals conceded projections for ${goalsConcededProjections.length} players (GKP/DEF) for future gameweeks only`);
-      res.json(goalsConcededProjections);
+        console.log(`✅ LIVE SUCCESS: Generated pure goals conceded projections for ${goalsConcededProjections.length} players (GKP/DEF) for future gameweeks only`);
+        return res.json(goalsConcededProjections);
+
+      } catch (liveError) {
+        console.warn(`⚠️ LIVE CALCULATION FAILED for player goals conceded projections: ${liveError.message}`);
+        
+        // FALLBACK TO CACHE
+        console.log("🔄 CACHE FALLBACK: Trying cached player goals conceded projections...");
+        try {
+          const cacheResponse = await internalFetch("api/cached/player-goals-conceded-projections");
+          if (cacheResponse.ok) {
+            const cachedData = await cacheResponse.json();
+            console.log(`✅ CACHE SUCCESS: Serving ${cachedData.length} cached player goals conceded projections`);
+            return res.json(cachedData);
+          } else {
+            throw new Error("Cache endpoint failed");
+          }
+        } catch (cacheError) {
+          console.error("❌ CACHE ALSO FAILED:", cacheError.message);
+          throw new Error("Both live calculation and cache failed");
+        }
+      }
     } catch (error) {
-      console.error("Error in player goals conceded projections:", error);
-      res.status(500).json({ error: "Failed to get player goals conceded projections" });
+      console.error("❌ COMPLETE FAILURE in player goals conceded projections:", error);
+      res.status(500).json({ error: "Failed to get player goals conceded projections - both live and cache failed" });
     }
   });
 
-  // Player Yellow Cards Projections - Pure projections for future gameweeks only
+  // Player Yellow Cards Projections - API-first with cache fallback
   app.get("/api/player-yellow-cards-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Yellow Cards Projections API called - using pure projections for future gameweeks only");
-      
-      // Get FPL bootstrap data for current gameweek info and players
-      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      const fplData = await fplResponse.json();
-      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
-      
-      // Use dynamic gameweek calculation for next 6 gameweeks
-      const { computeNextRange } = await import("../shared/gameweek-utils");
-      const gameweekRange = computeNextRange(fplData.events, 6);
-      const startGameweek = gameweekRange.start;
-      const endGameweek = gameweekRange.end;
-      
-      // Extract yellow card data for all players using historical data
-      const yellowCardProjections = fplData.elements.map((player: any) => {
-        const team = fplData.teams.find((t: any) => t.id === player.team);
-        const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
-        const yellowCards: { [key: string]: number } = {};
-        const pointsFromYellowCards: { [key: string]: number } = {};
-        let totalYellowCards = 0;
-        let totalPoints = 0;
+      console.log("🚀 API-FIRST: Attempting live calculation for player yellow cards projections");
+
+      // TRY LIVE CALCULATION FIRST
+      try {
+        console.log("DEBUG: Player Yellow Cards Projections API called - using pure projections for future gameweeks only");
         
-        // Calculate expected yellow cards per gameweek using season data
-        const seasonYellowCards = player.yellow_cards || 0;
-        const teamGamesPlayed = currentGameweek; // Average number of games team has played
-        const expectedYellowCardsPerGameweek = teamGamesPlayed > 0 ? seasonYellowCards / teamGamesPlayed : 0;
+        // Get FPL bootstrap data for current gameweek info and players
+        const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        const fplData = await fplResponse.json();
+        const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
         
-        // Process each gameweek in the next 6 gameweeks range
-        for (let gw = startGameweek; gw <= endGameweek; gw++) {
-          const gwYellowCards = expectedYellowCardsPerGameweek;
-          const gwPoints = -gwYellowCards; // -1 point per yellow card
+        // Use dynamic gameweek calculation for next 6 gameweeks
+        const { computeNextRange } = await import("../shared/gameweek-utils");
+        const gameweekRange = computeNextRange(fplData.events, 6);
+        const startGameweek = gameweekRange.start;
+        const endGameweek = gameweekRange.end;
+        
+        // Extract yellow card data for all players using historical data
+        const yellowCardProjections = fplData.elements.map((player: any) => {
+          const team = fplData.teams.find((t: any) => t.id === player.team);
+          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
+          const yellowCards: { [key: string]: number } = {};
+          const pointsFromYellowCards: { [key: string]: number } = {};
+          let totalYellowCards = 0;
+          let totalPoints = 0;
           
-          yellowCards[`gw${gw}`] = parseFloat(gwYellowCards.toFixed(3));
-          pointsFromYellowCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
-          totalYellowCards += gwYellowCards;
-          totalPoints += gwPoints;
-        }
+          // Calculate expected yellow cards per gameweek using season data
+          const seasonYellowCards = player.yellow_cards || 0;
+          const teamGamesPlayed = currentGameweek; // Average number of games team has played
+          const expectedYellowCardsPerGameweek = teamGamesPlayed > 0 ? seasonYellowCards / teamGamesPlayed : 0;
+          
+          // Process each gameweek in the next 6 gameweeks range
+          for (let gw = startGameweek; gw <= endGameweek; gw++) {
+            const gwYellowCards = expectedYellowCardsPerGameweek;
+            const gwPoints = -gwYellowCards; // -1 point per yellow card
+            
+            yellowCards[`gw${gw}`] = parseFloat(gwYellowCards.toFixed(3));
+            pointsFromYellowCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
+            totalYellowCards += gwYellowCards;
+            totalPoints += gwPoints;
+          }
+          
+          return {
+            playerId: player.id,
+            playerName: player.web_name,
+            teamName: team?.short_name || 'UNK',
+            position,
+            yellowCards,
+            pointsFromYellowCards,
+            totalYellowCards: parseFloat(totalYellowCards.toFixed(3)),
+            totalPoints: parseFloat(totalPoints.toFixed(3)),
+            averagePerGameweek: parseFloat(expectedYellowCardsPerGameweek.toFixed(3))
+          };
+        });
         
-        return {
-          playerId: player.id,
-          playerName: player.web_name,
-          teamName: team?.short_name || 'UNK',
-          position,
-          yellowCards,
-          pointsFromYellowCards,
-          totalYellowCards: parseFloat(totalYellowCards.toFixed(3)),
-          totalPoints: parseFloat(totalPoints.toFixed(3)),
-          averagePerGameweek: parseFloat(expectedYellowCardsPerGameweek.toFixed(3))
-        };
-      });
-      
-      console.log(`DEBUG: Generated pure yellow card projections for ${yellowCardProjections.length} players for future gameweeks only`);
-      res.json(yellowCardProjections);
+        console.log(`✅ LIVE SUCCESS: Generated pure yellow card projections for ${yellowCardProjections.length} players for future gameweeks only`);
+        return res.json(yellowCardProjections);
+
+      } catch (liveError) {
+        console.warn(`⚠️ LIVE CALCULATION FAILED for player yellow cards projections: ${liveError.message}`);
+        
+        // FALLBACK TO CACHE
+        console.log("🔄 CACHE FALLBACK: Trying cached player yellow cards projections...");
+        try {
+          const cacheResponse = await internalFetch("api/cached/player-yellow-cards-projections");
+          if (cacheResponse.ok) {
+            const cachedData = await cacheResponse.json();
+            console.log(`✅ CACHE SUCCESS: Serving ${cachedData.length} cached player yellow cards projections`);
+            return res.json(cachedData);
+          } else {
+            throw new Error("Cache endpoint failed");
+          }
+        } catch (cacheError) {
+          console.error("❌ CACHE ALSO FAILED:", cacheError.message);
+          throw new Error("Both live calculation and cache failed");
+        }
+      }
     } catch (error) {
-      console.error("Error in player yellow cards projections:", error);
-      res.status(500).json({ error: "Failed to get player yellow cards projections" });
+      console.error("❌ COMPLETE FAILURE in player yellow cards projections:", error);
+      res.status(500).json({ error: "Failed to get player yellow cards projections - both live and cache failed" });
     }
   });
 
-  // Player Red Cards Projections - Pure projections for future gameweeks only
+  // Player Red Cards Projections - API-first with cache fallback
   app.get("/api/player-red-cards-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Red Cards Projections API called - using pure projections for future gameweeks only");
-      
-      // Get FPL bootstrap data for current gameweek info and players
-      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      const fplData = await fplResponse.json();
-      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
-      
-      // Use dynamic gameweek calculation for next 6 gameweeks
-      const { computeNextRange } = await import("../shared/gameweek-utils");
-      const gameweekRange = computeNextRange(fplData.events, 6);
-      const startGameweek = gameweekRange.start;
-      const endGameweek = gameweekRange.end;
-      
-      // Extract red card data for all players using historical data
-      const redCardProjections = fplData.elements.map((player: any) => {
-        const team = fplData.teams.find((t: any) => t.id === player.team);
-        const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
-        const redCards: { [key: string]: number } = {};
-        const pointsFromRedCards: { [key: string]: number } = {};
-        let totalRedCards = 0;
-        let totalPoints = 0;
+      console.log("🚀 API-FIRST: Attempting live calculation for player red cards projections");
+
+      // TRY LIVE CALCULATION FIRST
+      try {
+        console.log("DEBUG: Player Red Cards Projections API called - using pure projections for future gameweeks only");
         
-        // Calculate expected red cards per gameweek using season data
-        const seasonRedCards = player.red_cards || 0;
-        const teamGamesPlayed = currentGameweek; // Average number of games team has played
-        const expectedRedCardsPerGameweek = teamGamesPlayed > 0 ? seasonRedCards / teamGamesPlayed : 0;
+        // Get FPL bootstrap data for current gameweek info and players
+        const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        const fplData = await fplResponse.json();
+        const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
         
-        // Process each gameweek in the next 6 gameweeks range
-        for (let gw = startGameweek; gw <= endGameweek; gw++) {
-          const gwRedCards = expectedRedCardsPerGameweek;
-          const gwPoints = -(gwRedCards * 3); // -3 points per red card
+        // Use dynamic gameweek calculation for next 6 gameweeks
+        const { computeNextRange } = await import("../shared/gameweek-utils");
+        const gameweekRange = computeNextRange(fplData.events, 6);
+        const startGameweek = gameweekRange.start;
+        const endGameweek = gameweekRange.end;
+        
+        // Extract red card data for all players using historical data
+        const redCardProjections = fplData.elements.map((player: any) => {
+          const team = fplData.teams.find((t: any) => t.id === player.team);
+          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
+          const redCards: { [key: string]: number } = {};
+          const pointsFromRedCards: { [key: string]: number } = {};
+          let totalRedCards = 0;
+          let totalPoints = 0;
           
-          redCards[`gw${gw}`] = parseFloat(gwRedCards.toFixed(3));
-          pointsFromRedCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
-          totalRedCards += gwRedCards;
-          totalPoints += gwPoints;
-        }
+          // Calculate expected red cards per gameweek using season data
+          const seasonRedCards = player.red_cards || 0;
+          const teamGamesPlayed = currentGameweek; // Average number of games team has played
+          const expectedRedCardsPerGameweek = teamGamesPlayed > 0 ? seasonRedCards / teamGamesPlayed : 0;
+          
+          // Process each gameweek in the next 6 gameweeks range
+          for (let gw = startGameweek; gw <= endGameweek; gw++) {
+            const gwRedCards = expectedRedCardsPerGameweek;
+            const gwPoints = -(gwRedCards * 3); // -3 points per red card
+            
+            redCards[`gw${gw}`] = parseFloat(gwRedCards.toFixed(3));
+            pointsFromRedCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
+            totalRedCards += gwRedCards;
+            totalPoints += gwPoints;
+          }
+          
+          return {
+            playerId: player.id,
+            playerName: player.web_name,
+            teamName: team?.short_name || 'UNK',
+            position,
+            redCards,
+            pointsFromRedCards,
+            totalRedCards: parseFloat(totalRedCards.toFixed(3)),
+            totalPoints: parseFloat(totalPoints.toFixed(3)),
+            averagePerGameweek: parseFloat(expectedRedCardsPerGameweek.toFixed(3))
+          };
+        });
         
-        return {
-          playerId: player.id,
-          playerName: player.web_name,
-          teamName: team?.short_name || 'UNK',
-          position,
-          redCards,
-          pointsFromRedCards,
-          totalRedCards: parseFloat(totalRedCards.toFixed(3)),
-          totalPoints: parseFloat(totalPoints.toFixed(3)),
-          averagePerGameweek: parseFloat(expectedRedCardsPerGameweek.toFixed(3))
-        };
-      });
-      
-      console.log(`DEBUG: Generated red card projections for ${redCardProjections.length} players using historical data for next 6 gameweeks`);
-      res.json(redCardProjections);
+        console.log(`✅ LIVE SUCCESS: Generated red card projections for ${redCardProjections.length} players using historical data for next 6 gameweeks`);
+        return res.json(redCardProjections);
+
+      } catch (liveError) {
+        console.warn(`⚠️ LIVE CALCULATION FAILED for player red cards projections: ${liveError.message}`);
+        
+        // FALLBACK TO CACHE
+        console.log("🔄 CACHE FALLBACK: Trying cached player red cards projections...");
+        try {
+          const cacheResponse = await internalFetch("api/cached/player-red-cards-projections");
+          if (cacheResponse.ok) {
+            const cachedData = await cacheResponse.json();
+            console.log(`✅ CACHE SUCCESS: Serving ${cachedData.length} cached player red cards projections`);
+            return res.json(cachedData);
+          } else {
+            throw new Error("Cache endpoint failed");
+          }
+        } catch (cacheError) {
+          console.error("❌ CACHE ALSO FAILED:", cacheError.message);
+          throw new Error("Both live calculation and cache failed");
+        }
+      }
     } catch (error) {
-      console.error("Error in player red cards projections:", error);
-      res.status(500).json({ error: "Failed to get player red cards projections" });
+      console.error("❌ COMPLETE FAILURE in player red cards projections:", error);
+      res.status(500).json({ error: "Failed to get player red cards projections - both live and cache failed" });
     }
   });
 
