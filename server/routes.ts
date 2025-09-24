@@ -10839,6 +10839,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: ${playersWithDefensiveData.length} players have current season defensive data`);
       
+      // Count actual completed fixtures for each team instead of assuming all teams played same number of games
+      const teamCompletedFixtures = new Map<number, number>();
+      
+      // Initialize all teams with 0 games
+      fplData.teams.forEach((team: any) => {
+        teamCompletedFixtures.set(team.id, 0);
+      });
+      
+      // Count completed fixtures for each team
+      fixturesData.forEach((fixture: any) => {
+        // A fixture is completed if it has finished flag or if it's from a past gameweek
+        const isCompleted = fixture.finished || fixture.event < currentGameweek;
+        
+        if (isCompleted) {
+          // Count this game for both home and away teams
+          const homeTeamCount = teamCompletedFixtures.get(fixture.team_h) || 0;
+          const awayTeamCount = teamCompletedFixtures.get(fixture.team_a) || 0;
+          
+          teamCompletedFixtures.set(fixture.team_h, homeTeamCount + 1);
+          teamCompletedFixtures.set(fixture.team_a, awayTeamCount + 1);
+        }
+      });
+      
+      console.log(`DEBUG: Team completed fixtures calculated. Example: Team 1 has played ${teamCompletedFixtures.get(1)} games`);
+      
       const defensiveProjections = await Promise.all(
         playersWithDefensiveData.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -10865,8 +10890,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          // Calculate team games played this season (current gameweek indicates completed games)
-          const teamGamesPlayed = Math.max(1, currentGameweek); // If current GW is 5, then 5 games have been played
+          // Get actual completed games for this player's team
+          const teamGamesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1); // Ensure at least 1 to avoid division by zero
           
           // Calculate DC per team game for this player
           const dcPerTeamGame = seasonDefensiveContribution / teamGamesPlayed;
