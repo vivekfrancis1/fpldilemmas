@@ -11525,8 +11525,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get team goals conceded projections as the source of truth from combined endpoint
       const teamProjectionsResponse = await fetch(`http://localhost:5000/api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
-      const teamProjectionsData = await teamProjectionsResponse.json();
-      const teamProjections = teamProjectionsData.goalsAgainst || [];
+      const teamProjections = await teamProjectionsResponse.json();
+      
+      console.log(`DEBUG: Fetched ${teamProjections.length} team projections`);
       
       // Filter to only GKP and DEF (affected by goals conceded)
       const affectedPlayers = fplData.elements.filter((player: any) => 
@@ -11545,17 +11546,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Find team's projected goals conceded data
           const teamGoalData = teamProjections.find((tp: any) => tp.teamShort === team?.short_name);
           
-          // Debug logging for first few players
-          if (player.id <= 5) {
-            console.log(`DEBUG: Goals Conceded - Player ${player.web_name} (${team?.short_name}) - teamGoalData:`, teamGoalData ? 'found' : 'not found');
-            if (teamGoalData && teamGoalData.gameweekProjections) {
-              console.log(`DEBUG: Goals Conceded - Available gameweek keys:`, Object.keys(teamGoalData.gameweekProjections).slice(0, 10));
-              console.log(`DEBUG: Goals Conceded - GW${startGameweek}-${endGameweek} values:`, {
-                [`gw${startGameweek}`]: teamGoalData.gameweekProjections[startGameweek],
-                [`gw${startGameweek+1}`]: teamGoalData.gameweekProjections[startGameweek+1],
-                [`gw${endGameweek}`]: teamGoalData.gameweekProjections[endGameweek]
-              });
-            }
+          // Simple debug for first Arsenal player
+          if (team?.short_name === 'ARS' && player.web_name === 'Raya') {
+            console.log(`DEBUG: Arsenal Raya - teamProjections.length: ${teamProjections.length}`);
+            console.log(`DEBUG: Arsenal Raya - First team in projections:`, teamProjections[0]);
+            console.log(`DEBUG: Arsenal Raya - Looking for teamShort: "${team?.short_name}"`);
+            console.log(`DEBUG: Arsenal Raya - teamGoalData:`, teamGoalData);
           }
           
           // Process each FUTURE gameweek only with pure projections
