@@ -56,11 +56,24 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       ]
     },
     {
-      section: "Top Managers",
+      section: "Player Projections", 
       items: [
-        { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false },
-        { path: "/top50-managers", label: "Top 50 (Current Season)", icon: Trophy, description: "Current top 50 managers from the overall FPL league", popular: false },
-        { path: "/content-creators", label: "Top Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false }
+        { path: "/player-goals-scored-projections", label: "Goals Scored", icon: Trophy, description: "Individual player goal projections", popular: false },
+        { path: "/player-assist-projections", label: "Assists", icon: Zap, description: "Individual player assist projections", popular: false },
+        { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
+        { path: "/player-total-points", label: "Total Points", icon: Target, description: "Complete FPL points projections combining all scoring components" }
+        // { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
+        // { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
+        // { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false }
+      ]
+    },
+    {
+      section: "Team Projections", 
+      items: [
+        { path: "/projected-goals-cs", label: "Goals and Clean Sheets", icon: Target, description: "Projected goals & clean sheets", popular: false },
+        { path: "/team-goal-projections", label: "Best Attacks", icon: BarChart3, description: "Expected team goals", popular: false },
+        { path: "/team-cs-projections", label: "Best Defences", icon: Shield, description: "Clean sheet probabilities", popular: false },
+        { path: "/projected-standings", label: "Standings", icon: Trophy, description: "Final league table projection", popular: false }
       ]
     },
     {
@@ -75,30 +88,17 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       ]
     },
     {
-      section: "Team Projections", 
-      items: [
-        { path: "/projected-goals-cs", label: "Goals and Clean Sheets", icon: Target, description: "Projected goals & clean sheets", popular: false },
-        { path: "/team-goal-projections", label: "Best Attacks", icon: BarChart3, description: "Expected team goals", popular: false },
-        { path: "/team-cs-projections", label: "Best Defences", icon: Shield, description: "Clean sheet probabilities", popular: false },
-        { path: "/projected-standings", label: "Standings", icon: Trophy, description: "Final league table projection", popular: false }
-      ]
-    },
-    {
-      section: "Player Projections", 
-      items: [
-        { path: "/player-goals-scored-projections", label: "Goals Scored", icon: Trophy, description: "Individual player goal projections", popular: false },
-        { path: "/player-assist-projections", label: "Assists", icon: Zap, description: "Individual player assist projections", popular: false },
-        { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
-        { path: "/player-total-points", label: "Total Points", icon: Target, description: "Complete FPL points projections combining all scoring components" }
-        // { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
-        // { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
-        // { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false }
-      ]
-    },
-    {
       section: "Third Party Projection Tools", 
       items: [
         { path: "/openfpl-projections", label: "OpenFPL Player Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false }
+      ]
+    },
+    {
+      section: "Top Managers",
+      items: [
+        { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false },
+        { path: "/top50-managers", label: "Top 50 (Current Season)", icon: Trophy, description: "Current top 50 managers from the overall FPL league", popular: false },
+        { path: "/content-creators", label: "Top Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false }
       ]
     },
     {
