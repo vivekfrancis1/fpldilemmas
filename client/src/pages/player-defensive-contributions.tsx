@@ -102,20 +102,46 @@ export default function PlayerDefensiveContributions() {
 
   // Transform cached data to match expected format with fixture-aware calculations
   const players: PlayerDefensiveData[] = useMemo(() => {
-    if (!defensiveData || !bootstrapData || !fixturesData) return [];
+    if (!defensiveData || !bootstrapData) return [];
+    // Group defensive data by player ID to aggregate per-90 stats
+    const playerMap = new Map();
+    defensiveData.forEach((record: any) => {
+      const playerId = record.playerId;
+      if (!playerMap.has(playerId)) {
+        playerMap.set(playerId, {
+          records: [],
+          totalDC: 0,
+          totalGameweeks: 0
+        });
+      }
+      const playerData = playerMap.get(playerId);
+      playerData.records.push(record);
+      playerData.totalDC += record.defensiveContribution || 0;
+      playerData.totalGameweeks += 1;
+    });
     
     // Create gameweek projections for next 6 gameweeks
     const futureGameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
     
-    // Transform the cached data format to match the expected PlayerDefensiveData interface
-    return defensiveData.map((record: any) => {
-      // Get team ID for this player (we need this to find fixtures)
-      const playerTeamId = record.teamId || bootstrapData.teams?.find((t: any) => t.short_name === record.teamName || t.name === record.teamName)?.id;
+    // Transform grouped data into player projections
+    const transformed = Array.from(playerMap.entries()).map(([playerId, playerData]) => {
+      // Calculate per-90 stats from historical data
+      const dcPer90 = playerData.totalGameweeks > 0 ? playerData.totalDC / playerData.totalGameweeks : 0;
+      
+      // Get player info from bootstrap data
+      const playerInfo = bootstrapData.elements?.find((p: any) => p.id === playerId);
+      const playerTeam = bootstrapData.teams?.find((t: any) => t.id === playerInfo?.team);
+      
+      // Get player name, position, and team
+      const playerName = playerInfo ? `${playerInfo.first_name} ${playerInfo.second_name}` : `Player ${playerId}`;
+      const position = playerInfo ? bootstrapData.element_types?.find((pos: any) => pos.id === playerInfo.element_type)?.singular_name : 'Unknown';
+      const teamName = playerTeam ? playerTeam.short_name : 'Unknown';
+      const playerTeamId = playerInfo?.team || 1;
       
       // Create projections for each future gameweek using fixture-aware calculations
       const gameweekProjections = futureGameweeks.map(gw => {
         // Find the fixture for this team in this gameweek
-        const fixture = fixturesData.find((f: any) => 
+        const fixture = fixturesData?.find((f: any) => 
           f.event === gw && (f.team_h === playerTeamId || f.team_a === playerTeamId)
         );
         
@@ -145,15 +171,14 @@ export default function PlayerDefensiveContributions() {
         const opponentTier = getAttackTier(opponentId);
         
         // Apply new formula: DC per 90 × Attacking tier multiplier of opponent
-        const baseDC = record.defensiveContributionPer90 || 0;
-        const projectedDC = baseDC * attackMultiplier;
+        const projectedDC = dcPer90 * attackMultiplier;
         
         return {
           gameweek: gw,
           defensiveContribution: Math.round(projectedDC * 100) / 100, // Round to 2 decimal places
-          tackles: Math.round((record.tacklesPer90 || 0) * attackMultiplier * 100) / 100,
-          recoveries: Math.round((record.recoveriesPer90 || 0) * attackMultiplier * 100) / 100,
-          cbi: Math.round((record.cbiPer90 || 0) * attackMultiplier * 100) / 100,
+          tackles: Math.round(projectedDC * 0.4 * 100) / 100, // Estimate tackles as 40% of DC
+          recoveries: Math.round(projectedDC * 0.3 * 100) / 100, // Estimate recoveries as 30% of DC
+          cbi: Math.round(projectedDC * 0.3 * 100) / 100, // Estimate CBI as 30% of DC
           opponent: opponent,
           opponentTier: opponentTier,
           fixtureMultiplier: attackMultiplier,
@@ -162,22 +187,24 @@ export default function PlayerDefensiveContributions() {
       });
 
       return {
-        playerId: record.playerId,
-        playerName: record.playerName,
-        position: record.position,
-        teamName: record.teamName || '',
-        teamCode: record.teamCode || 0,
+        playerId: parseInt(playerId),
+        playerName: playerName,
+        position: position,
+        teamName: teamName,
+        teamCode: playerTeam?.code || 0,
         currentSeasonStats: {
-          dcPer90: record.defensiveContributionPer90 || 0,
-          tacklesPer90: record.tacklesPer90 || 0,
-          recoveriesPer90: record.recoveriesPer90 || 0,
-          cbiPer90: record.cbiPer90 || 0,
+          dcPer90: Math.round(dcPer90 * 100) / 100,
+          tacklesPer90: Math.round(dcPer90 * 0.4 * 100) / 100, // Estimated
+          recoveriesPer90: Math.round(dcPer90 * 0.3 * 100) / 100, // Estimated  
+          cbiPer90: Math.round(dcPer90 * 0.3 * 100) / 100, // Estimated
         },
         gameweekProjections,
-        form: record.form || 0,
-        confidence: record.confidence || 0.5,
+        form: playerInfo?.form || 0,
+        confidence: 0.75, // Default confidence
       };
     });
+    
+    return transformed;
   }, [defensiveData, bootstrapData, fixturesData, nextGameweek]);
 
   // Get all gameweeks from the first player's projections (only future gameweeks) - provide fallback
