@@ -11527,7 +11527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let totalPointsResponseCache: Map<string, { data: any[]; timestamp: number }> = new Map();
   const TOTAL_POINTS_RESPONSE_CACHE_DURATION = 60 * 60 * 1000; // 1 hour cache (increased)
 
-  // COMPREHENSIVE PLAYER PROJECTIONS ENDPOINT - ENHANCED with Rate Limiting & Concurrency Control
+  // COMPREHENSIVE PLAYER PROJECTIONS ENDPOINT - API-first with cache and background job fallback
   app.get("/api/comprehensive-player-projections", requireAuth, requireAdmin, async (req, res) => {
     try {
       // CRITICAL FIX: Enforce rate limiting to prevent DoS
@@ -11555,28 +11555,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Return cached response if available and fresh for this specific range
-      const cachedData = totalPointsResponseCache.get(cacheKey);
-      if (cachedData && (now - cachedData.timestamp) < TOTAL_POINTS_RESPONSE_CACHE_DURATION) {
-        console.log(`⚡ CACHE HIT: Serving comprehensive player projections from cache for GW${start}-${end} (${Math.round((now - cachedData.timestamp) / 1000 / 60)}min old)`);
-        return res.json(cachedData.data);
-      }
+      console.log(`🚀 API-FIRST: Attempting live calculation for comprehensive player projections GW${start}-${end}`);
 
-      // Check for existing active job with same parameters
-      const existingJob = findExistingJob(start, end);
-      if (existingJob) {
-        console.log(`🔄 Found existing job ${existingJob.id} for GW${start}-${end}, status: ${existingJob.status}`);
-        return res.status(202).json({
-          message: "Background job already in progress",
-          jobId: existingJob.id,
-          status: existingJob.status,
-          progress: existingJob.progress,
-          statusUrl: `/api/comprehensive-player-projections/status/${existingJob.id}`,
-          estimatedTime: "2-5 minutes",
-          concurrencyInfo: jobQueue.getStatus(),
-          createdAt: existingJob.createdAt,
-          lastUpdated: existingJob.lastUpdated
-        });
+      // TRY LIVE CALCULATION FIRST - Simplified aggregation approach
+      try {
+        console.log(`🔄 LIVE: Fetching individual projection components...`);
+        
+        // Fetch all projection components in parallel with timeout protection
+        const fetchPromises = [
+          internalFetch(`api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
+          internalFetch(`api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
+          internalFetch(`api/player-minutes-projections`), 
+          internalFetch(`api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`),
+          internalFetch(`api/player-defensive-contributions-projections?startGameweek=${start}&endGameweek=${end}`)
+        ];
+
+        // Set a timeout for live calculation (30 seconds max)
+        const results = await Promise.race([
+          Promise.all(fetchPromises),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Live calculation timeout')), 30000))
+        ]) as Response[];
+
+        // Check if all requests succeeded
+        const allSuccessful = results.every(response => response.ok);
+        
+        if (allSuccessful) {
+          console.log(`✅ LIVE: All projection components fetched successfully, aggregating...`);
+          
+          // Parse all responses
+          const [
+            goalsData,
+            assistsData,
+            minutesData,
+            cleansheetsData,
+            defensiveData
+          ] = await Promise.all(results.map(r => r.json()));
+
+          // Simple aggregation - create player map and combine all components
+          const playerProjectionsMap = new Map<string, any>();
+
+          // Add goals data
+          goalsData.forEach((player: any) => {
+            const playerId = player.playerId || player.id;
+            if (!playerProjectionsMap.has(playerId)) {
+              playerProjectionsMap.set(playerId, {
+                playerId,
+                playerName: player.playerName || player.name,
+                team: player.team || player.teamShort,
+                position: player.position,
+                gameweekProjections: {},
+                totalExpectedPoints: 0
+              });
+            }
+            const p = playerProjectionsMap.get(playerId);
+            Object.entries(player.gameweekProjections || {}).forEach(([gw, points]) => {
+              p.gameweekProjections[gw] = (p.gameweekProjections[gw] || 0) + (points as number) * 4; // Goals to points
+            });
+          });
+
+          // Add assists data
+          assistsData.forEach((player: any) => {
+            const playerId = player.playerId || player.id;
+            if (playerProjectionsMap.has(playerId)) {
+              const p = playerProjectionsMap.get(playerId);
+              Object.entries(player.gameweekProjections || {}).forEach(([gw, points]) => {
+                p.gameweekProjections[gw] = (p.gameweekProjections[gw] || 0) + (points as number) * 3; // Assists to points
+              });
+            }
+          });
+
+          // Add clean sheets data (simplified)
+          cleansheetsData.forEach((player: any) => {
+            const playerId = player.playerId || player.id;
+            if (playerProjectionsMap.has(playerId)) {
+              const p = playerProjectionsMap.get(playerId);
+              Object.entries(player.gameweekProjections || {}).forEach(([gw, points]) => {
+                p.gameweekProjections[gw] = (p.gameweekProjections[gw] || 0) + (points as number);
+              });
+            }
+          });
+
+          // Calculate total points for each player
+          const aggregatedProjections = Array.from(playerProjectionsMap.values()).map(player => {
+            player.totalExpectedPoints = Object.values(player.gameweekProjections).reduce((sum: number, points: any) => sum + points, 0);
+            return player;
+          }).sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
+
+          console.log(`✅ LIVE SUCCESS: Aggregated ${aggregatedProjections.length} comprehensive player projections`);
+          
+          // Cache the successful result
+          totalPointsResponseCache.set(cacheKey, { data: aggregatedProjections, timestamp: now });
+          
+          return res.json(aggregatedProjections);
+        } else {
+          throw new Error('Some projection APIs failed');
+        }
+      } catch (liveError) {
+        console.warn(`⚠️ LIVE CALCULATION FAILED: ${liveError.message}, trying cache fallback...`);
+        
+        // FALLBACK TO CACHE
+        const cachedData = totalPointsResponseCache.get(cacheKey);
+        if (cachedData && (now - cachedData.timestamp) < TOTAL_POINTS_RESPONSE_CACHE_DURATION) {
+          console.log(`🔄 CACHE SUCCESS: Serving comprehensive player projections from cache for GW${start}-${end} (${Math.round((now - cachedData.timestamp) / 1000 / 60)}min old)`);
+          return res.json(cachedData.data);
+        }
+
+        console.warn(`⚠️ CACHE ALSO STALE/EMPTY: Falling back to background job system...`);
+        
+        // Check for existing active job with same parameters
+        const existingJob = findExistingJob(start, end);
+        if (existingJob) {
+          console.log(`🔄 Found existing job ${existingJob.id} for GW${start}-${end}, status: ${existingJob.status}`);
+          return res.status(202).json({
+            message: "Background job already in progress",
+            jobId: existingJob.id,
+            status: existingJob.status,
+            progress: existingJob.progress,
+            statusUrl: `/api/comprehensive-player-projections/status/${existingJob.id}`,
+            estimatedTime: "2-5 minutes",
+            concurrencyInfo: jobQueue.getStatus(),
+            createdAt: existingJob.createdAt,
+            lastUpdated: existingJob.lastUpdated
+          });
+        }
       }
 
       // Create new background job
