@@ -472,6 +472,7 @@ export default function PlayerTotalPoints() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLoadGroup, setSelectedLoadGroup] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -611,6 +612,40 @@ export default function PlayerTotalPoints() {
           !player.team.toLowerCase().includes(searchTerm.toLowerCase())) return false;
       return true;
     });
+
+    // Apply Load Group filtering
+    if (selectedLoadGroup !== "all") {
+      // Parse the load group option to determine criteria and position filter
+      const [criteria, count, ...positionParts] = selectedLoadGroup.split(' ');
+      const position = positionParts.length > 0 ? positionParts.join(' ') : null;
+      const limit = parseInt(count);
+      
+      // Filter by position if specified
+      let workingData = [...filtered];
+      if (position) {
+        workingData = workingData.filter(player => {
+          switch (position) {
+            case 'FWDs': return player.position === 'FWD';
+            case 'MIDs': return player.position === 'MID';
+            case 'DEFs': return player.position === 'DEF';
+            case 'GKs': return player.position === 'GKP';
+            default: return true;
+          }
+        });
+      }
+      
+      // Sort by criteria and take top N
+      if (criteria === 'Top') {
+        // Sort by total expected points (descending)
+        workingData.sort((a, b) => (b.totalExpectedPoints || 0) - (a.totalExpectedPoints || 0));
+      } else if (criteria === 'Value') {
+        // Sort by average value (descending)  
+        workingData.sort((a, b) => (b.averageValue || 0) - (a.averageValue || 0));
+      }
+      
+      // Take top N players
+      filtered = workingData.slice(0, limit);
+    }
 
     // Sort data
     filtered.sort((a, b) => {
@@ -799,6 +834,29 @@ export default function PlayerTotalPoints() {
                   {teams.map(team => (
                     <SelectItem key={`team-${team}`} value={team}>{team}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Load Group Filter */}
+            <div className="space-y-2">
+              <Label htmlFor="load-group-filter" className="text-sm font-medium">Load Group</Label>
+              <Select value={selectedLoadGroup} onValueChange={setSelectedLoadGroup}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key="load-group-all" value="all">All Players</SelectItem>
+                  <SelectItem key="load-group-top-50" value="Top 50">Top 50</SelectItem>
+                  <SelectItem key="load-group-top-50-fwds" value="Top 50 FWDs">Top 50 FWDs</SelectItem>
+                  <SelectItem key="load-group-top-50-mids" value="Top 50 MIDs">Top 50 MIDs</SelectItem>
+                  <SelectItem key="load-group-top-50-defs" value="Top 50 DEFs">Top 50 DEFs</SelectItem>
+                  <SelectItem key="load-group-top-50-gks" value="Top 50 GKs">Top 50 GKs</SelectItem>
+                  <SelectItem key="load-group-value-50" value="Value 50">Value 50</SelectItem>
+                  <SelectItem key="load-group-value-50-fwds" value="Value 50 FWDs">Value 50 FWDs</SelectItem>
+                  <SelectItem key="load-group-value-50-mids" value="Value 50 MIDs">Value 50 MIDs</SelectItem>
+                  <SelectItem key="load-group-value-50-defs" value="Value 50 DEFs">Value 50 DEFs</SelectItem>
+                  <SelectItem key="load-group-value-50-gks" value="Value 50 GKs">Value 50 GKs</SelectItem>
                 </SelectContent>
               </Select>
             </div>
