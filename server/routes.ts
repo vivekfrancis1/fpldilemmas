@@ -8493,7 +8493,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get price and ownership from bootstrap data
         const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === playerId);
         const price = bootstrapPlayer ? bootstrapPlayer.now_cost / 10 : 0; // Convert from tenths to actual price
-        const ownership = bootstrapPlayer ? bootstrapPlayer.selected_by_percent : 0;
+        const ownership = bootstrapPlayer ? parseFloat(bootstrapPlayer.selected_by_percent) : 0; // Ensure it's a number
+        
+        // Calculate average expected minutes per gameweek (from minutes player data)
+        const avgMinutesPerGameweek = minutesPlayer?.projectedMinutes ? (minutesPlayer.projectedMinutes / (end - start + 1)) : 0;
+        
+        // Calculate average value (average points per gameweek / price)
+        const avgPointsPerGameweek = totalExpectedPoints / (end - start + 1);
+        const averageValue = price > 0 ? avgPointsPerGameweek / price : 0;
 
         return {
           playerId: playerId,
@@ -8506,7 +8513,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ownership: ownership,
           gameweekProjections,
           totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
-          averagePerGameweek: Math.round((totalExpectedPoints / (end - start + 1)) * 100) / 100,
+          averagePerGameweek: Math.round(avgPointsPerGameweek * 100) / 100,
+          averageValue: Math.round(averageValue * 100) / 100,
+          avgMinutesPerGameweek: Math.round(avgMinutesPerGameweek * 100) / 100,
           pointsFromGoals,
           pointsFromAssists,
           pointsFromCleanSheets,
@@ -11770,7 +11779,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Get price and ownership from bootstrap data
             const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
             const price = bootstrapPlayer ? bootstrapPlayer.now_cost / 10 : 0; // Convert from tenths to actual price
-            const ownership = bootstrapPlayer ? bootstrapPlayer.selected_by_percent : 0;
+            const ownership = bootstrapPlayer ? parseFloat(bootstrapPlayer.selected_by_percent) : 0; // Ensure it's a number
+            
+            // Calculate additional metrics
+            const avgPointsPerGameweek = player.averagePerGameweek || 0;
+            const averageValue = price > 0 ? avgPointsPerGameweek / price : 0;
+            const avgMinutesPerGameweek = 90; // Default assumption for cached data
 
             return {
               playerId: player.playerId,
@@ -11786,6 +11800,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               totalExpectedPoints: player.totalExpectedPoints || 0,
               totalPoints: player.totalExpectedPoints || 0,
               averagePerGameweek: player.averagePerGameweek || 0,
+              averageValue: Math.round(averageValue * 100) / 100,
+              avgMinutesPerGameweek: Math.round(avgMinutesPerGameweek * 100) / 100,
               // Add breakdown fields that frontend expects
               pointsFromGoals: player.pointsFromGoals || {},
               pointsFromAssists: player.pointsFromAssists || {},
