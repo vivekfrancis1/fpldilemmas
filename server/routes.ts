@@ -11280,6 +11280,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to get playing probability (0-1) based on recent form and position
+  async function getPlayerPlayingProbability(player: any, gameweek: number, position: string): Promise<number> {
+    try {
+      // Get player's recent playing time from FPL API
+      const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+      const playerDetail = await playerDetailResponse.json();
+      
+      // Look at last 3 gameweeks for playing time pattern
+      const recentGames = playerDetail.history.slice(-3);
+      const totalMinutes = recentGames.reduce((sum: number, game: any) => sum + (game.minutes || 0), 0);
+      const gamesPlayed = recentGames.filter((game: any) => (game.minutes || 0) > 0).length;
+      
+      // Position-based playing likelihood
+      const positionWeight = {
+        'GKP': 0.9, // Goalkeepers typically play when fit
+        'DEF': 0.8, // Defenders usually start
+        'MID': 0.7, // Midfielders vary more
+        'FWD': 0.6  // Forwards rotate more
+      }[position] || 0.7;
+      
+      // Calculate playing probability based on recent minutes
+      let playingProbability = 0;
+      
+      if (totalMinutes >= 240) { // Played most of last 3 games (90 mins * 3 = 270)
+        playingProbability = 0.95;
+      } else if (totalMinutes >= 180) { // Played 2/3 games substantially
+        playingProbability = 0.8;
+      } else if (totalMinutes >= 90) { // Played at least 1 full game
+        playingProbability = 0.6;
+      } else if (gamesPlayed > 0) { // Had some minutes
+        playingProbability = 0.4;
+      } else { // No recent minutes
+        playingProbability = 0.1;
+      }
+      
+      // Apply position weight
+      playingProbability *= positionWeight;
+      
+      // Return probability clamped between 0.05 and 1.0
+      return Math.max(0.05, Math.min(1.0, playingProbability));
+      
+    } catch (error) {
+      // Fallback: return moderate probability based on position
+      return position === 'GKP' ? 0.25 : 0.15;
+    }
+  }
+
   // Helper function to estimate if player will play based on recent form and position
   async function estimatePlayerWillPlay(player: any, gameweek: number, position: string): Promise<boolean> {
     try {
@@ -11369,23 +11416,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let gwGoalsConceded = 0;
             let gwPoints = 0;
             
-            // Use realistic minutes-based distribution for future gameweeks only
+            // Use team-based projections with playing probability weighting
             if (teamGoalData && teamGoalData.gameweekProjections && teamGoalData.gameweekProjections[gw]) {
               const teamGoalsAgainst = parseFloat(teamGoalData.gameweekProjections[gw]);
               
-              // Realistic modeling: Players who play get the full team goals conceded
-              // Estimate if player will play based on recent playing time and position
-              const willPlay = await estimatePlayerWillPlay(player, gw, position);
+              // Get playing probability estimate (0-1 scale)
+              const playingProbability = await getPlayerPlayingProbability(player, gw, position);
               
-              if (willPlay) {
-                // If player is expected to play, they get the full team goals conceded
-                gwGoalsConceded = teamGoalsAgainst;
-                gwPoints = -(Math.floor(gwGoalsConceded / 2));
-              } else {
-                // If player unlikely to play, they get 0 goals conceded
-                gwGoalsConceded = 0;
-                gwPoints = 0;
-              }
+              // Apply playing probability to team goals conceded
+              // Even bench players get some projection (minimum 10% for squad players)
+              const minProbability = position === 'GKP' ? 0.15 : 0.10; // GKP more likely to get minutes than DEF
+              const adjustedProbability = Math.max(playingProbability, minProbability);
+              
+              gwGoalsConceded = teamGoalsAgainst * adjustedProbability;
+              gwPoints = -(Math.floor(gwGoalsConceded / 2));
             }
             
             goalsConceded[`gw${gw}`] = parseFloat(gwGoalsConceded.toFixed(1));
