@@ -114,8 +114,10 @@ export default function PlayerDefensiveContributions() {
     });
   }, [defensiveData, bootstrapData, nextGameweek]);
 
-  // Get all gameweeks from the first player's projections (only future gameweeks)
-  const allGameweeks = players.length > 0 ? players[0].gameweekProjections.map(gw => gw.gameweek).filter(gw => gw >= nextGameweek) : [];
+  // Get all gameweeks from the first player's projections (only future gameweeks) - provide fallback
+  const allGameweeks = players.length > 0 && players[0].gameweekProjections.length > 0 
+    ? players[0].gameweekProjections.map(gw => gw.gameweek).filter(gw => gw >= nextGameweek)
+    : Array.from({ length: 6 }, (_, i) => nextGameweek + i); // Fallback to next 6 gameweeks
   
   // Set default gameweek range (next 6 gameweeks) on first load
   React.useEffect(() => {
@@ -237,8 +239,8 @@ export default function PlayerDefensiveContributions() {
   }, [playersWithTotals, selectedPosition, selectedTeam, sortBy, sortOrder, showOnlyTopPlayers, gameweekSortColumn, gameweekSortOrder, activeTab]);
 
   // Get unique values for filters
-  const positions = Array.from(new Set(players.map(p => p.position)));
-  const teams = Array.from(new Set(players.map(p => p.teamName))).sort();
+  const positions = Array.from(new Set(players.map(p => p.position).filter(Boolean)));
+  const teams = Array.from(new Set(players.map(p => p.teamName).filter(Boolean))).sort();
 
   const handleSort = (column: string) => {
     // Clear gameweek sorting when sorting by other columns
