@@ -17,8 +17,8 @@ export const getApiBaseUrl = (): string => {
       return productionUrl;
     }
     
-    // Fall back to relative URLs (same origin)
-    return '';
+    // Production domain for fpldilemmas.com
+    return 'https://fpldilemmas.com';
   }
   
   // Development environment - use localhost
@@ -50,11 +50,11 @@ export const internalFetch = async (endpoint: string, options?: RequestInit): Pr
   const baseUrl = getApiBaseUrl();
   
   let url: string;
-  if (!baseUrl) {
-    // Production: use relative URLs that resolve to same origin
+  if (baseUrl === '') {
+    // Fallback case: use relative URLs that resolve to same origin
     url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   } else {
-    // Development: use full localhost URL
+    // Development or production: use full URL
     url = buildApiUrl(endpoint);
   }
   
