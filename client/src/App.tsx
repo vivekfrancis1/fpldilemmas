@@ -59,7 +59,6 @@ import AdminDataPopulation from "./pages/admin-data-population";
 import AdminGameweekCache from "./pages/admin-gameweek-cache";
 import AdminCleanSheetConfig from "./pages/admin-clean-sheet-config";
 import AdminCacheManagement from "./pages/admin-cache-management";
-import DefensiveContributionProjections from "./pages/defensive-contribution-projections";
 import PlayerDefensiveContributions from "./pages/player-defensive-contributions";
 import ProjectionDocumentation from "./pages/projection-documentation";
 import PlayerSaves from "./pages/player-saves";
@@ -133,7 +132,6 @@ function Router() {
         </ProtectedRoute>
       </Route>
       <Route path="/player-assist-projections" component={PlayerAssistProjections} />
-      <Route path="/defensive-contribution-projections" component={DefensiveContributionProjections} />
       <Route path="/player-defensive-contributions" component={PlayerDefensiveContributions} />
       <Route path="/player-saves" component={PlayerSaves} />
       <Route path="/player-goals-conceded" component={PlayerGoalsConceded} />

@@ -134,7 +134,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/player-red-cards", label: "Player Red Cards", icon: Shield, description: "Red card projections", popular: false },
         { path: "/player-bonus-points", label: "Player Bonus Points", icon: Star, description: "Bonus point projections", popular: false },
         { path: "/player-saves", label: "Goalkeeper Saves", icon: Shield, description: "Goalkeeper saves and penalty save projections", popular: false },
-        { path: "/defensive-contribution-projections", label: "Defensive Contributions", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false }
       ]
     },
     {

@@ -92,7 +92,6 @@ class ProjectionCacheWorker {
         this.cacheAssistProjections(), 
         this.cacheCleanSheetProjections(),
         this.cacheMinutesProjections(),
-        this.cacheDefensiveProjections(),
         this.cacheTeamProjections(),
         this.cacheGoalAssistShareData(),
         this.cacheFPLScoringComponents()
@@ -968,88 +967,6 @@ class ProjectionCacheWorker {
     }
   }
   
-  /**
-   * Cache defensive projections from Defensive Contribution API
-   */
-  private async cacheDefensiveProjections(): Promise<void> {
-    try {
-      console.log(`📊 Caching defensive projections...`);
-      const response = await internalFetch('api/defensive-contribution-projections?startGameweek=4&endGameweek=9');
-      
-      if (!response.ok) {
-        throw new Error(`Defensive API returned ${response.status}`);
-      }
-      
-      const responseData = await response.json();
-      console.log(`📥 Retrieved defensive projections response with ${responseData.count} players`);
-      
-      // Extract the data array from the response
-      const data = responseData.data;
-      if (!Array.isArray(data)) {
-        console.log(`📥 No valid defensive projection data array found`);
-        return;
-      }
-      
-      console.log(`📥 Processing ${data.length} defensive projections`);
-      
-      // Clear existing data for this season
-      await db.delete(playerDefensiveProjections)
-        .where(eq(playerDefensiveProjections.season, '2025/26'));
-      
-      // Prepare records for batch insert
-      const records = [];
-      for (const player of data) {
-        if (player && player.gameweekProjections) {
-          for (let gw = 4; gw <= 9; gw++) {
-            // Defensive API uses numeric array indices (gameweek 4 = index 4)
-            const gwData = player.gameweekProjections[gw];
-            if (gwData && gwData.defensiveContribution > 0) {
-              records.push({
-                playerId: player.playerId,
-                gameweek: gw,
-                season: '2025/26',
-                defensiveContribution: Number(gwData.defensiveContribution),
-                points: Number(gwData.points || 0),
-                calculatedAt: new Date()
-              });
-            }
-          }
-        }
-      }
-      
-      // BATCH MINUTES SCALING: Apply minutes scaling to all defensive projections at once
-      if (records.length > 0) {
-        console.log(`🕐 Applying batch minutes scaling to ${records.length} defensive projections...`);
-        const defensiveScalingInput = records.map(record => ({
-          playerId: record.playerId,
-          gameweek: record.gameweek,
-          value: record.defensiveContribution
-        }));
-        
-        const defensiveScaledResults = await applyMinutesScalingBatch(defensiveScalingInput, '2025/26', false);
-        
-        // Update records with scaled values
-        for (let i = 0; i < records.length; i++) {
-          records[i].defensiveContribution = Number(defensiveScaledResults[i].scaledValue);
-        }
-        
-        console.log(`✅ Batch minutes scaling applied to ${records.length} defensive projections`);
-        
-        // Insert in batches
-        for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
-          const batch = records.slice(i, i + this.BATCH_SIZE);
-          await db.insert(playerDefensiveProjections).values(batch);
-          console.log(`📊 Inserted defensive batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(records.length / this.BATCH_SIZE)}`);
-        }
-      }
-      
-      console.log(`✅ Defensive projections cached successfully (${records.length} records)`);
-      
-    } catch (error) {
-      console.error(`❌ Failed to cache defensive projections:`, error);
-      throw error;
-    }
-  }
   
   /**
    * Cache team projections from API
