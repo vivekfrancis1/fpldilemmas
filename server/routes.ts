@@ -10865,8 +10865,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          // Calculate team games played this season (current gameweek - 1, since we're starting from gameweek 1)
-          const teamGamesPlayed = Math.max(1, currentGameweek - 1); // Ensure at least 1 to avoid division by zero
+          // Calculate team games played this season (current gameweek indicates completed games)
+          const teamGamesPlayed = Math.max(1, currentGameweek); // If current GW is 5, then 5 games have been played
           
           // Calculate DC per team game for this player
           const dcPerTeamGame = seasonDefensiveContribution / teamGamesPlayed;
