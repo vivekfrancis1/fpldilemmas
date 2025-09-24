@@ -214,11 +214,17 @@ export default function PlayerDefensiveContributions() {
   
   // Set default gameweek range (next 6 gameweeks) on first load
   React.useEffect(() => {
-    if (allGameweeks.length > 0 && startGameweek === 0) {
-      setStartGameweek(nextGameweek);
-      setEndGameweek(Math.min(nextGameweek + 5, 38));
+    if (allGameweeks.length > 0) {
+      const start = nextGameweek;
+      const end = Math.min(nextGameweek + 5, 38);
+      
+      // Always set to next 6 gameweeks if not already correct
+      if (startGameweek !== start || endGameweek !== end) {
+        setStartGameweek(start);
+        setEndGameweek(end);
+      }
     }
-  }, [allGameweeks, startGameweek, nextGameweek]);
+  }, [allGameweeks, nextGameweek]);
   
   // Filter gameweeks based on selected range
   const gameweeks = allGameweeks.filter(gw => gw >= startGameweek && gw <= endGameweek);
