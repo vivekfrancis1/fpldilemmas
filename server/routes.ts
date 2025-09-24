@@ -10780,6 +10780,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // Player Defensive Contributions Projections - New formula using DC per 90 × attacking tier × minutes
+  app.get("/api/player-defensive-contributions-projections", async (req, res) => {
+    try {
+      console.log("DEBUG: Player Defensive Contributions API called - using new formula: DC per 90 × attacking tier × minutes");
+      
+      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
+      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
+      
+      // Get FPL bootstrap data for current gameweek info and players
+      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const fplData = await fplResponse.json();
+      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
+      const nextGameweek = currentGameweek + 1; // Start from next gameweek
+      
+      console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
+      
+      // Get fixtures data for opponent identification
+      const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+      const fixturesData = await fixturesResponse.json();
+      
+      // Get attacking tier multipliers (same as used in saves projections)
+      const ATTACK_MULTIPLIERS: { [key: number]: number } = {
+        12: 1.35, 13: 1.35, // Liverpool, Man City (elite)
+        1: 1.15, 7: 1.15, 15: 1.15, 18: 1.15, 2: 1.15, // Arsenal, Chelsea, Newcastle, Tottenham, Aston Villa (strong)
+        9: 0.85, 16: 0.85, 19: 0.85, 20: 0.85, // Everton, Nottingham Forest, West Ham, Wolves (weak)
+        3: 0.7, 11: 0.7, 17: 0.7 // Burnley, Leeds, Sunderland (promoted)
+        // All others default to 1.0 (average)
+      };
+
+      const getAttackMultiplier = (teamId: number): number => {
+        return ATTACK_MULTIPLIERS[teamId] || 1.0;
+      };
+      
+      // Get player minutes projections
+      const minutesResponse = await fetch("http://localhost:5000/api/player-minutes-projections");
+      const minutesData = await minutesResponse.json();
+      
+      // Filter to players who have played (have minutes and defensive stats)
+      const players = fplData.elements.filter((player: any) => 
+        player.minutes > 0 && (player.clearances_blocks_interceptions || player.tackles || player.recoveries)
+      );
+      
+      const defensiveProjections = await Promise.all(
+        players.map(async (player: any) => {
+          const team = fplData.teams.find((t: any) => t.id === player.team);
+          const position = fplData.element_types.find((et: any) => et.id === player.element_type);
+          const gameweekProjections: { [key: string]: { dc: number, points: number } } = {};
+          let totalDC = 0;
+          let totalPoints = 0;
+          
+          // Calculate current DC per 90 minutes from season stats
+          const currentSeasonMinutes = player.minutes || 1;
+          const cbi = player.clearances_blocks_interceptions || 0;
+          const tackles = player.tackles || 0;
+          const recoveries = player.recoveries || 0;
+          
+          // Calculate DC based on position (same logic as existing calculateDefensiveContribution)
+          let seasonDefensiveContribution = 0;
+          if (player.element_type === 2) { // Defenders
+            seasonDefensiveContribution = cbi + tackles;
+          } else if (player.element_type === 3 || player.element_type === 4) { // Midfielders and Forwards
+            seasonDefensiveContribution = cbi + tackles + recoveries;
+          } else { // Goalkeepers
+            seasonDefensiveContribution = cbi + tackles;
+          }
+          
+          const dcPer90 = currentSeasonMinutes > 0 ? (seasonDefensiveContribution / currentSeasonMinutes) * 90 : 0;
+          
+          // Process each FUTURE gameweek only
+          for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
+            // Find fixture for this team in this gameweek to get opponent
+            const fixture = fixturesData.find((f: any) => 
+              f.event === gw && (f.team_h === player.team || f.team_a === player.team)
+            );
+            
+            let opponentId = 1; // Default fallback
+            if (fixture) {
+              opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
+            }
+            
+            // Get opponent attacking tier multiplier
+            const attackMultiplier = getAttackMultiplier(opponentId);
+            
+            // Get expected minutes for this player in this gameweek
+            const playerMinutes = minutesData.find((m: any) => m.playerId === player.id);
+            const expectedMinutes = playerMinutes?.gameweekProjections?.[`gw${gw}`] || 
+                                  playerMinutes?.gameweekProjections?.[gw] || 90; // Default to 90 if not found
+            
+            // Apply new formula: DC = Current DC per 90 mins × Attacking tier multiplier × (Expected Minutes/90)
+            const projectedDC = dcPer90 * attackMultiplier * (expectedMinutes / 90);
+            
+            // Calculate points (2 points if DC >= threshold based on position)
+            let points = 0;
+            if (player.element_type === 2 && projectedDC >= 10) { // Defenders: 10+ DC = 2 points
+              points = 2;
+            } else if ((player.element_type === 3 || player.element_type === 4) && projectedDC >= 12) { // Mid/Fwd: 12+ DC = 2 points
+              points = 2;
+            }
+            // Goalkeepers don't get points from defensive contributions
+            
+            gameweekProjections[`gw${gw}`] = {
+              dc: parseFloat(projectedDC.toFixed(1)),
+              points: points
+            };
+            totalDC += projectedDC;
+            totalPoints += points;
+          }
+          
+          return {
+            playerId: player.id,
+            playerName: player.web_name,
+            teamName: team?.short_name || 'UNK',
+            position: position?.singular_name_short || 'UNK',
+            gameweekProjections,
+            totalDefensiveContributions: parseFloat(totalDC.toFixed(1)),
+            totalPoints: totalPoints,
+            averagePerGameweek: parseFloat((totalDC / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(1))
+          };
+        })
+      );
+      
+      console.log(`DEBUG: Generated defensive contributions projections for ${defensiveProjections.length} players using formula: DC per 90 × attacking tier × minutes`);
+      res.json(defensiveProjections);
+    } catch (error) {
+      console.error("Error in player defensive contributions projections:", error);
+      res.status(500).json({ error: "Failed to get player defensive contributions projections" });
+    }
+  });
+
   // Player Goals Conceded Projections - Pure projections for future gameweeks only
   app.get("/api/player-goals-conceded-projections", async (req, res) => {
     try {
