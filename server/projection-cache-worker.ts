@@ -1452,9 +1452,8 @@ class ProjectionCacheWorker {
       // Get dynamic gameweek range (same logic as Player Total Points endpoint)
       const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
       const bootstrap = await bootstrapResponse.json();
-      const currentEvent = bootstrap.events.find((event: any) => event.is_current) || 
-                          bootstrap.events.find((event: any) => event.is_next);
-      const currentGameweek = currentEvent ? currentEvent.id - 1 : 0;
+      const currentEvent = bootstrap.events.find((event: any) => event.is_current);
+      const currentGameweek = currentEvent ? currentEvent.id : 5; // Use actual current gameweek ID
       const startGameweek = currentGameweek + 1;
       const endGameweek = Math.min(startGameweek + 5, 38); // Next 6 gameweeks
       
