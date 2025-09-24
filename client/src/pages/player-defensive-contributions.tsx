@@ -84,11 +84,11 @@ export default function PlayerDefensiveContributions() {
     setGameweekRange({ start, end });
   }, [nextGameweek]);
 
-  // Fetch defensive contribution projections using new formula-based endpoint
+  // Fetch defensive contribution projections using new formula-based endpoint with current season data
   const { data: defensiveData, isLoading } = useQuery({
-    queryKey: ["player-defensive-contributions-projections", gameweekRange.start, gameweekRange.end],
+    queryKey: ["player-defensive-contributions-current-season", gameweekRange.start, gameweekRange.end],
     queryFn: () => fetch(`/api/player-defensive-contributions-projections?startGameweek=${gameweekRange.start}&endGameweek=${gameweekRange.end}`).then(res => res.json()),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1 * 60 * 1000, // 1 minute to see changes faster
   });
 
   // Fetch fixtures for opponent data
@@ -164,8 +164,9 @@ export default function PlayerDefensiveContributions() {
         };
       }).sort((a, b) => a.gameweek - b.gameweek);
       
-      // Calculate per-90 stats (estimate from total averages)
-      const avgDC = player.averagePerGameweek || 0;
+      // Use actual current season stats from API (not legacy averages)
+      const currentDCPer90 = player.dcPer90 || 0;
+      const seasonTotalDC = player.seasonDefensiveContribution || 0;
       
       return {
         playerId: player.playerId,
@@ -174,10 +175,10 @@ export default function PlayerDefensiveContributions() {
         teamName: player.teamName,
         teamCode: 0, // Not provided by API
         currentSeasonStats: {
-          dcPer90: Math.round(avgDC * 100) / 100,
-          tacklesPer90: Math.round(avgDC * 0.4 * 100) / 100, // Estimated
-          recoveriesPer90: Math.round(avgDC * 0.3 * 100) / 100, // Estimated  
-          cbiPer90: Math.round(avgDC * 0.3 * 100) / 100, // Estimated
+          dcPer90: Math.round(currentDCPer90 * 100) / 100,
+          tacklesPer90: Math.round(currentDCPer90 * 0.4 * 100) / 100, // Estimated from current DC per 90
+          recoveriesPer90: Math.round(currentDCPer90 * 0.3 * 100) / 100, // Estimated from current DC per 90  
+          cbiPer90: Math.round(currentDCPer90 * 0.3 * 100) / 100, // Estimated from current DC per 90
         },
         gameweekProjections,
         form: 0, // Not provided by new API
