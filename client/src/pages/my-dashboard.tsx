@@ -494,8 +494,11 @@ export default function MyDashboard() {
     return teamData.entry_history.value / 10;
   };
 
+  // Derive loading state from all data dependencies - prevents stuck loading conditions
   const isLoading = isLoadingManager || isLoadingHistory || isLoadingTeam || isLoadingLeagues || isLoadingTransfers;
   const error = managerError || historyError || teamError || leaguesError || transfersError;
+  const hasAnyData = managerData || historyData || teamData || leaguesData || transfersData;
+  const ready = !isLoading && hasAnyData && searchedId;
 
   return (
     <div className="fpl-page-wrapper">

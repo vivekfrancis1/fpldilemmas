@@ -273,7 +273,8 @@ export default function PlayerGoalsScoredProjections() {
     return 'bg-red-50 text-red-800';
   };
 
-  if (isLoading || playerGoalLoading || startGameweek === null || endGameweek === null) {
+  // Show loading only when actually needed
+  if (!initialized || !bootstrapData || isLoading || playerGoalLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
