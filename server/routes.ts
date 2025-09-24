@@ -7060,6 +7060,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalExpectedPoints += cleanSheetPointsForGW;
         }
 
+        // Create pointsFromCleanSheets field for aggregator compatibility
+        const pointsFromCleanSheets: { [key: string]: number } = {};
+        for (let gw = startGameweek; gw <= endGameweek; gw++) {
+          pointsFromCleanSheets[`gw${gw}`] = gameweekProjections[gw.toString()] || 0;
+        }
+
         playerCleanSheetProjections.push({
           playerId: player.id,
           playerName: player.web_name,
@@ -7068,6 +7074,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: player.now_cost / 10,
           ownership: parseFloat(player.selected_by_percent),
           gameweekProjections,
+          pointsFromCleanSheets,
           totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
           seasonTotalPoints: 0 // Simplified: no season calculations
         });
@@ -8323,7 +8330,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         yellowCardsResponse,
         redCardsResponse,
         bonusPointsResponse,
-        savesResponse
+        savesResponse,
+        defensiveContributionsResponse
       ] = await Promise.all([
         internalFetch(`api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
@@ -8333,7 +8341,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         internalFetch(`api/player-yellow-cards-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-red-cards-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-bonus-points-projections?startGameweek=${start}&endGameweek=${end}`),
-        internalFetch(`api/player-saves-projections?startGameweek=${start}&endGameweek=${end}`)
+        internalFetch(`api/player-saves-projections?startGameweek=${start}&endGameweek=${end}`),
+        internalFetch(`api/player-defensive-contributions-projections?startGameweek=${start}&endGameweek=${end}`)
       ]);
 
       // Check that all APIs responded successfully
@@ -8346,7 +8355,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { name: 'yellow-cards', response: yellowCardsResponse },
         { name: 'red-cards', response: redCardsResponse },
         { name: 'bonus-points', response: bonusPointsResponse },
-        { name: 'saves', response: savesResponse }
+        { name: 'saves', response: savesResponse },
+        { name: 'defensive-contributions', response: defensiveContributionsResponse }
       ];
 
       for (const { name, response } of responses) {
@@ -8365,7 +8375,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         yellowCardsData,
         redCardsData,
         bonusPointsData,
-        savesData
+        savesData,
+        defensiveContributionsData
       ] = await Promise.all([
         goalsResponse.json(),
         assistsResponse.json(),
@@ -8375,10 +8386,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         yellowCardsResponse.json(),
         redCardsResponse.json(),
         bonusPointsResponse.json(),
-        savesResponse.json()
+        savesResponse.json(),
+        defensiveContributionsResponse.json()
       ]);
 
-      console.log(`DEBUG: Retrieved data from ${responses.length} APIs - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Cleansheet: ${cleansheetData.length}, Goals Conceded: ${goalsConcededData.length}, Yellow Cards: ${yellowCardsData.length}, Red Cards: ${redCardsData.length}, Bonus: ${bonusPointsData.length}, Saves: ${savesData.length}`);
+      console.log(`DEBUG: Retrieved data from ${responses.length} APIs - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Cleansheet: ${cleansheetData.length}, Goals Conceded: ${goalsConcededData.length}, Yellow Cards: ${yellowCardsData.length}, Red Cards: ${redCardsData.length}, Bonus: ${bonusPointsData.length}, Saves: ${savesData.length}, Defensive: ${defensiveContributionsData.length}`);
 
       // Create lookup maps for each API data by playerId
       const playerDataMaps = {
@@ -8390,12 +8402,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         yellowCards: new Map(yellowCardsData.map((p: any) => [p.playerId, p])),
         redCards: new Map(redCardsData.map((p: any) => [p.playerId, p])),
         bonusPoints: new Map(bonusPointsData.map((p: any) => [p.playerId, p])),
-        saves: new Map(savesData.map((p: any) => [p.playerId, p]))
+        saves: new Map(savesData.map((p: any) => [p.playerId, p])),
+        defensiveContributions: new Map(defensiveContributionsData.map((p: any) => [p.playerId, p]))
       };
 
       // Get all unique player IDs from all APIs
       const allPlayerIds = new Set<number>();
-      [goalsData, assistsData, cleansheetData, goalsConcededData, yellowCardsData, redCardsData, bonusPointsData, savesData].forEach(data => {
+      [goalsData, assistsData, cleansheetData, goalsConcededData, yellowCardsData, redCardsData, bonusPointsData, savesData, defensiveContributionsData].forEach(data => {
         data.forEach((player: any) => allPlayerIds.add(player.playerId));
       });
 
@@ -8410,6 +8423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const redCardsPlayer = playerDataMaps.redCards.get(playerId);
         const bonusPointsPlayer = playerDataMaps.bonusPoints.get(playerId);
         const savesPlayer = playerDataMaps.saves.get(playerId);
+        const defensiveContributionsPlayer = playerDataMaps.defensiveContributions.get(playerId);
 
         // Use player info from the first available API response
         const basePlayer = goalsPlayer || assistsPlayer || cleansheetPlayer || bonusPointsPlayer || savesPlayer;
@@ -8425,6 +8439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pointsFromRedCards: { [key: string]: number } = {};
         const pointsFromBonus: { [key: string]: number } = {};
         const pointsFromSaves: { [key: string]: number } = {};
+        const pointsFromDefensiveContributions: { [key: string]: number } = {};
 
         let totalExpectedPoints = 0;
 
@@ -8449,6 +8464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const redCardsPts = redCardsPlayer?.pointsFromRedCards?.[gwKey] || 0;
           const bonusPts = bonusPointsPlayer?.pointsFromBonus?.[gwKey] || 0;
           const savesPts = savesPlayer?.pointsFromSaves?.[gwKey] || 0;
+          const defensiveContributionsPts = defensiveContributionsPlayer?.pointsFromDefensiveContributions?.[gwKey] || 0;
           
           // For minutes, use the total points since no gameweek breakdown available
           const minutesPts = minutesPlayer?.pointsFromMinutes || 0;
@@ -8463,10 +8479,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromRedCards[gwKey] = redCardsPts;
           pointsFromBonus[gwKey] = bonusPts;
           pointsFromSaves[gwKey] = savesPts;
+          pointsFromDefensiveContributions[gwKey] = defensiveContributionsPts;
 
           // Total points for this gameweek
           const gwTotal = goalsPts + assistsPts + cleansheetPts + minutesPts + 
-                         goalsConcededPts + yellowCardsPts + redCardsPts + bonusPts + savesPts;
+                         goalsConcededPts + yellowCardsPts + redCardsPts + bonusPts + savesPts + defensiveContributionsPts;
           
           gameweekProjections[gwKey] = Math.round(gwTotal * 100) / 100;
           totalExpectedPoints += gwTotal;
@@ -8493,6 +8510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromRedCards,
           pointsFromBonus,
           pointsFromSaves,
+          pointsFromDefensiveContributions,
           // Component totals
           totalPointsFromGoals: Object.values(pointsFromGoals).reduce((sum: number, pts: number) => sum + pts, 0),
           totalPointsFromAssists: Object.values(pointsFromAssists).reduce((sum: number, pts: number) => sum + pts, 0),
@@ -8502,7 +8520,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalPointsFromYellowCards: Object.values(pointsFromYellowCards).reduce((sum: number, pts: number) => sum + pts, 0),
           totalPointsFromRedCards: Object.values(pointsFromRedCards).reduce((sum: number, pts: number) => sum + pts, 0),
           totalPointsFromBonus: Object.values(pointsFromBonus).reduce((sum: number, pts: number) => sum + pts, 0),
-          totalPointsFromSaves: Object.values(pointsFromSaves).reduce((sum: number, pts: number) => sum + pts, 0)
+          totalPointsFromSaves: Object.values(pointsFromSaves).reduce((sum: number, pts: number) => sum + pts, 0),
+          totalPointsFromDefensiveContributions: Object.values(pointsFromDefensiveContributions).reduce((sum: number, pts: number) => sum + pts, 0)
         };
       })
       .filter(p => p !== null && p.totalExpectedPoints > 0)
@@ -10818,12 +10837,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalPoints += points;
           }
           
+          // Create pointsFromDefensiveContributions field for aggregator compatibility
+          const pointsFromDefensiveContributions: { [key: string]: number } = {};
+          for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
+            pointsFromDefensiveContributions[`gw${gw}`] = gameweekProjections[`gw${gw}`]?.points || 0;
+          }
+
           return {
             playerId: player.id,
             playerName: player.web_name,
             teamName: team?.short_name || 'UNK',
             position: position?.singular_name_short || 'UNK',
             gameweekProjections,
+            pointsFromDefensiveContributions,
             totalDefensiveContributions: parseFloat(totalDC.toFixed(1)),
             totalPoints: totalPoints,
             averagePerGameweek: parseFloat((totalDC / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(1)),
