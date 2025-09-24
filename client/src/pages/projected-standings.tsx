@@ -105,7 +105,7 @@ export default function ProjectedStandings() {
             <h1>Projected Final Standings</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Premier League table based on actual results and projected outcomes for next 12 gameweeks
+            Premier League table based on actual results and projected outcomes for next 6 gameweeks
           </p>
           <div className="mt-6">
             <Button 
