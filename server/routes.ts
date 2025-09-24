@@ -10676,7 +10676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Saves Projections - Pure projection methodology for future gameweeks only
   app.get("/api/player-saves-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Saves Projections API called - using pure projections for future gameweeks only");
+      console.log("DEBUG: Player Saves Projections API called - using new formula: saves per 90 × minutes × opponent attacking tier");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -10689,67 +10689,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
       
-      // Get defense tier classifications from MASTER_TEAM_DEFAULTS
-      const getDefensiveTier = (teamId: number): string => {
-        if (MASTER_TEAM_DEFAULTS.eliteDefenseTeams.includes(teamId)) return 'elite';
-        if (MASTER_TEAM_DEFAULTS.strongDefenseTeams.includes(teamId)) return 'strong';
-        if (MASTER_TEAM_DEFAULTS.weakDefenseTeams.includes(teamId)) return 'weak';
-        if (MASTER_TEAM_DEFAULTS.promotedDefenseTeams.includes(teamId)) return 'promoted';
-        return 'average';
+      // Get fixtures data for opponent identification
+      const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+      const fixturesData = await fixturesResponse.json();
+      
+      // Get attacking tier multipliers (from TEAM_MULTIPLIERS.attack)
+      const ATTACK_MULTIPLIERS: { [key: number]: number } = {
+        12: 1.35, 13: 1.35, // Liverpool, Man City (elite)
+        1: 1.15, 7: 1.15, 15: 1.15, 18: 1.15, 2: 1.15, // Arsenal, Chelsea, Newcastle, Tottenham, Aston Villa (strong)
+        9: 0.85, 16: 0.85, 19: 0.85, 20: 0.85, // Everton, Nottingham Forest, West Ham, Wolves (weak)
+        3: 0.7, 11: 0.7, 17: 0.7 // Burnley, Leeds, Sunderland (promoted)
+        // All others default to 1.0 (average)
+      };
+
+      const getAttackMultiplier = (teamId: number): number => {
+        return ATTACK_MULTIPLIERS[teamId] || 1.0;
       };
       
-      // Defense tier multipliers for saves (more conservative across all tiers)
-      const getDefensiveSavesMultiplier = (tier: string): number => {
-        switch (tier) {
-          case 'elite': return 0.45;      // 55% fewer saves for elite defenses
-          case 'strong': return 0.55;     // 45% fewer saves for strong defenses  
-          case 'average': return 0.70;    // 30% fewer saves for average defenses
-          case 'weak': return 0.85;      // 15% fewer saves for weak defenses
-          case 'promoted': return 1.0;   // Standard saves for promoted defenses
-          default: return 0.70;
-        }
-      };
+      // Get player minutes projections
+      const minutesResponse = await fetch("http://localhost:5000/api/player-minutes-projections");
+      const minutesData = await minutesResponse.json();
       
-      // Filter to only goalkeepers and implement pure projection methodology
+      // Filter to only goalkeepers and implement new formula
       const goalkeepers = fplData.elements.filter((player: any) => player.element_type === 1);
       
       const savesProjections = await Promise.all(
         goalkeepers.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
-          const defensiveTier = getDefensiveTier(player.team);
-          const defensiveSavesMultiplier = getDefensiveSavesMultiplier(defensiveTier);
           const saves: { [key: string]: number } = {};
           const pointsFromSaves: { [key: string]: number } = {};
           let totalSaves = 0;
           let totalPoints = 0;
           
-          // Process each FUTURE gameweek only with pure projections
+          // Calculate average saves per 90 minutes from current season data
+          const currentSeasonSaves = player.saves || 0;
+          const currentSeasonMinutes = player.minutes || 1;
+          const savesPer90 = currentSeasonMinutes > 0 ? (currentSeasonSaves / currentSeasonMinutes) * 90 : 2.5; // Default 2.5 saves per 90
+          
+          // Process each FUTURE gameweek only with new formula
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
-            // Use minutes-based likelihood for playing probability
-            const willPlay = await estimatePlayerWillPlay(player, gw, 'GKP');
+            // Find fixture for this team in this gameweek to get opponent
+            const fixture = fixturesData.find((f: any) => 
+              f.event === gw && (f.team_h === player.team || f.team_a === player.team)
+            );
             
-            let gwSaves = 0;
-            let gwPoints = 0;
-            
-            if (willPlay) {
-              // Player expected to play - calculate realistic saves based on form, opposition, and defense tier
-              const form = parseFloat(player.form || "0");
-              const formMultiplier = Math.max(0.5, Math.min(1.5, form / 5));
-              
-              // Base saves expectation: 1.5-4 saves for a playing goalkeeper (ultra-conservative), adjusted by defense tier
-              const baseSaves = Math.random() * 2.5 + 1.5; // 1.5-4 saves (reduced further)
-              gwSaves = Math.max(0, Math.floor(baseSaves * formMultiplier * defensiveSavesMultiplier));
-              gwPoints = Math.floor(gwSaves / 3);
-            } else {
-              // Player unlikely to play - gets 0 saves
-              gwSaves = 0;
-              gwPoints = 0;
+            let opponentId = 1; // Default fallback
+            if (fixture) {
+              opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
             }
             
-            saves[`gw${gw}`] = parseFloat(gwSaves.toFixed(1));
-            pointsFromSaves[`gw${gw}`] = parseFloat(gwPoints.toFixed(1));
-            totalSaves += gwSaves;
-            totalPoints += gwPoints;
+            // Get opponent attacking tier multiplier
+            const attackMultiplier = getAttackMultiplier(opponentId);
+            
+            // Get expected minutes for this player in this gameweek
+            const playerMinutes = minutesData.find((m: any) => m.playerId === player.id);
+            const expectedMinutes = playerMinutes?.gameweekProjections?.[`gw${gw}`] || 90; // Default to 90 if not found
+            
+            // Apply new formula: Expected saves = average saves per 90 mins × Expected minutes × Attacking tier multiplier of opponent
+            const expectedSaves = (savesPer90 * (expectedMinutes / 90) * attackMultiplier);
+            
+            // Apply new points formula: Points from saves = 0.33 × expected saves
+            const expectedPoints = expectedSaves * 0.33;
+            
+            saves[`gw${gw}`] = parseFloat(expectedSaves.toFixed(1));
+            pointsFromSaves[`gw${gw}`] = parseFloat(expectedPoints.toFixed(1));
+            totalSaves += expectedSaves;
+            totalPoints += expectedPoints;
           }
           
           return {
@@ -10766,7 +10771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-      console.log(`DEBUG: Generated pure saves projections for ${savesProjections.length} goalkeepers for future gameweeks only`);
+      console.log(`DEBUG: Generated saves projections for ${savesProjections.length} goalkeepers using new formula: saves per 90 × minutes × opponent attacking tier`);
       res.json(savesProjections);
     } catch (error) {
       console.error("Error in player saves projections:", error);
