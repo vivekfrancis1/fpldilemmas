@@ -93,7 +93,7 @@ export class DailyProjectionsService {
       // Transform and store data with dynamic gameweeks
       const records = teamData.map((team: any) => ({
         calculationDate: date,
-        teamId: team.id,
+        teamId: team.teamId,
         gameweeks: JSON.stringify(nextGameweeks), // Dynamic next 6 gameweeks
         homeGoals: team.homeGoals?.toString() || '0',
         awayGoals: team.awayGoals?.toString() || '0'
