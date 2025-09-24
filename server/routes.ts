@@ -6940,6 +6940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get current gameweek
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      console.log(`DEBUG: Current gameweek detected as: ${currentGameweek}`);
       
       // Calculate player minutes projections
       const playerMinutesProjections = players.map((player: any) => {
@@ -6950,9 +6951,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const totalMinutes = player.minutes || 0;
         
         // Use team's actual games played (much simpler and more consistent)
-        const teamGamesPlayed = Math.max(currentGameweek - 1, 1); // Games completed by the team
+        const teamGamesPlayed = Math.max(currentGameweek, 1); // Games completed/started by the team
         
         const currentMinutesPerGame = Math.min(90, totalMinutes / teamGamesPlayed); // Cap at 90 minutes per game
+        
+        // Debug logging for Calafiori
+        if (player.web_name === "Calafiori") {
+          console.log(`DEBUG Calafiori: totalMinutes=${totalMinutes}, currentGameweek=${currentGameweek}, teamGamesPlayed=${teamGamesPlayed}, calculation=${totalMinutes}/${teamGamesPlayed}=${totalMinutes/teamGamesPlayed}, final=${currentMinutesPerGame}`);
+        }
         
         // Simplified expected minutes: use current average with no complex calculations
         const expectedMinutesPerGame = currentMinutesPerGame;
