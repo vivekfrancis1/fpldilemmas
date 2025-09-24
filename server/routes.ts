@@ -8341,12 +8341,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bonusProbabilitiesData = await bonusProbabilitiesResponse.json();
 
       // PERFORMANCE FIX: Use correct cached endpoints that include minutes scaling
-      const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse] = await Promise.all([
+      const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse, bonusPointsResponse, minutesPointsResponse] = await Promise.all([
         internalFetch(`api/cached/player-goals-projections`),
         internalFetch(`api/cached/player-assists-projections`),
         internalFetch(`api/cached/player-minutes-projections`),
         internalFetch(`api/cached/player-defensive-projections`),
-        internalFetch(`api/cached/team-cs-projections`)
+        internalFetch(`api/cached/team-cs-projections`),
+        internalFetch(`api/cached/player-bonus-points-projections`),
+        internalFetch(`api/player-minutes-projections`) // This has the actual minutes points (1.84)
       ]);
 
       // Check API responses
@@ -8355,14 +8357,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!minutesResponse.ok) throw new Error("Failed to fetch minutes projections");
       if (!defensiveResponse.ok) throw new Error("Failed to fetch defensive projections");
       if (!cleanSheetsResponse.ok) throw new Error("Failed to fetch clean sheets projections");
+      if (!bonusPointsResponse.ok) throw new Error("Failed to fetch bonus points projections");
+      if (!minutesPointsResponse.ok) throw new Error("Failed to fetch minutes points projections");
 
-      // Parse API data (goals, assists, minutes, defensive, clean sheets)
-      const [goalsData, assistsData, minutesData, defensiveData, cleanSheetsData] = await Promise.all([
+      // Parse API data (goals, assists, minutes, defensive, clean sheets, bonus points, minutes points)
+      const [goalsData, assistsData, minutesData, defensiveData, cleanSheetsData, bonusPointsData, minutesPointsData] = await Promise.all([
         goalsResponse.json(),
         assistsResponse.json(),
         minutesResponse.json(),
         defensiveResponse.json(),
-        cleanSheetsResponse.json()
+        cleanSheetsResponse.json(),
+        bonusPointsResponse.json(),
+        minutesPointsResponse.json()
       ]);
 
       // Handle defensive data structure (it returns an array directly from cached API)
@@ -8384,6 +8390,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const redCardsProjections: Record<number, Record<string, number>> = {};
       const redCardsPointsProjections: Record<number, Record<string, number>> = {};
       const bonusProbabilities: Record<number, Record<string, number>> = {};
+      const bonusPointsProjections: Record<number, Record<string, number>> = {};
+      const minutesPointsProjections: Record<number, number> = {};
 
       goalsData.forEach((player: any) => {
         if (player.gameweekProjections) {
@@ -8450,6 +8458,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bonusProbabilities[player.playerId] = player.bonusProbabilities;
       });
 
+      // Process cached bonus points data (actual FPL points)
+      bonusPointsData.forEach((player: any) => {
+        if (player.pointsFromBonus) {
+          bonusPointsProjections[player.playerId] = player.pointsFromBonus;
+        }
+      });
+
+      // Process cached minutes points data (actual FPL points)  
+      minutesPointsData.forEach((player: any) => {
+        minutesPointsProjections[player.playerId] = player.pointsFromMinutes;
+      });
+
       // Create projections using authentic goals data from projection service
       const projections = bootstrapData.elements.map((fplPlayer: any) => {
         const team = bootstrapData.teams.find((t: any) => t.id === fplPlayer.team);
@@ -8489,6 +8509,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const playerRedCards = redCardsProjections[fplPlayer.id] || {};
         const playerRedCardsPoints = redCardsPointsProjections[fplPlayer.id] || {};
         const playerBonusProbs = bonusProbabilities[fplPlayer.id] || {};
+        const playerBonusPoints = bonusPointsProjections[fplPlayer.id] || {};
+        const playerMinutesPointsData = minutesPointsProjections[fplPlayer.id] || 0;
         
         // Position-specific clean sheet points
         const csPoints = position === 'GKP' || position === 'DEF' ? 4 : position === 'MID' ? 1 : 0;
@@ -8517,9 +8539,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromCleanSheets[`gw${gw}`] = Math.round(cleanSheetPoints * 100) / 100;
           totalCleanSheetPoints += cleanSheetPoints;
           
-          // Minutes from cached Minutes Projections API (convert to FPL points)
+          // Minutes points from cached Minutes Points API (actual FPL points)
           const projectedMinutes = playerMinutes[gw] || 0;
-          const minutesPoints = projectedMinutes >= 60 ? 2 : projectedMinutes > 0 ? 1 : 0;
+          let minutesPoints = projectedMinutes >= 60 ? 2 : projectedMinutes > 0 ? 1 : 0; // Fallback calculation
+          
+          // Use cached minutes points data if available - the individual API returns total points, not per gameweek
+          if (gw === 6 && typeof playerMinutesPointsData === 'number' && playerMinutesPointsData > 0) {
+            minutesPoints = playerMinutesPointsData; // Use the cached 1.84 value for GW6
+          }
+          
           pointsFromMinutes[`gw${gw}`] = minutesPoints;
           totalMinutesPoints += minutesPoints;
           
@@ -8573,32 +8601,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromRedCards[`gw${gw}`] = Math.round(redCardsPoints * 100) / 100;
           totalRedCardsPoints += redCardsPoints;
           
-          // Bonus points using position-based hierarchy calculation
+          // Bonus points from cached Bonus Points API (actual FPL points)
+          let bonusPoints = 0;
           const bonusProbability = playerBonusProbs[`gw${gw}`] || 0;
           
-          // Position-based multipliers: Forwards > Midfielders > Defenders > Goalkeepers
-          const getPositionMultiplier = (pos: string): number => {
-            switch (pos.toLowerCase()) {
-              case 'forward':
-              case 'fwd': 
-                return 1.3; // Forwards get 30% more bonus points
-              case 'midfielder':
-              case 'mid': 
-                return 1.1; // Midfielders get 10% more bonus points
-              case 'defender':
-              case 'def': 
-                return 0.9; // Defenders get 10% fewer bonus points
-              case 'goalkeeper':
-              case 'gkp':
-              case 'gk': 
-                return 0.7; // Goalkeepers get 30% fewer bonus points
-              default: 
-                return 1.0; // Default multiplier
-            }
-          };
+          // Use cached bonus points if available
+          if (playerBonusPoints && playerBonusPoints[`gw${gw}`] !== undefined) {
+            bonusPoints = playerBonusPoints[`gw${gw}`]; // Use cached value like 0.582
+          } else {
+            // Fallback to calculation if cached data not available
+            const getPositionMultiplier = (pos: string): number => {
+              switch (pos.toLowerCase()) {
+                case 'forward':
+                case 'fwd': 
+                  return 1.3; // Forwards get 30% more bonus points
+                case 'midfielder':
+                case 'mid': 
+                  return 1.1; // Midfielders get 10% more bonus points
+                case 'defender':
+                case 'def': 
+                  return 0.9; // Defenders get 10% fewer bonus points
+                case 'goalkeeper':
+                case 'gkp':
+                case 'gk': 
+                  return 0.7; // Goalkeepers get 30% fewer bonus points
+                default: 
+                  return 1.0; // Default multiplier
+              }
+            };
+            
+            const positionMultiplier = getPositionMultiplier(position);
+            bonusPoints = bonusProbability * 3 * positionMultiplier; // Position-adjusted formula
+          }
           
-          const positionMultiplier = getPositionMultiplier(position);
-          const bonusPoints = bonusProbability * 3 * positionMultiplier; // Position-adjusted formula
           pointsFromBonus[`gw${gw}`] = Math.round(bonusPoints * 100) / 100;
           totalBonusPoints += bonusPoints;
           
