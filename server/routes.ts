@@ -10626,13 +10626,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== FPL SCORING COMPONENT ENDPOINTS ====================
   
-  // Player Saves Projections - Pure projection methodology for future gameweeks only
+  // Player Saves Projections - API-first with cache fallback
   app.get("/api/player-saves-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Saves Projections API called - using formula: (season saves / team games) × (minutes/90) × opponent attacking tier");
-      
-      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
-      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
+      console.log("🚀 API-FIRST: Attempting live calculation for player saves projections");
+
+      // TRY LIVE CALCULATION FIRST
+      try {
+        console.log("DEBUG: Player Saves Projections API called - using formula: (season saves / team games) × (minutes/90) × opponent attacking tier");
+        
+        const startGameweek = parseInt(req.query.startGameweek as string) || 4;
+        const endGameweek = parseInt(req.query.endGameweek as string) || 9;
       
       // Get FPL bootstrap data for current gameweek info and players
       const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
@@ -10756,11 +10760,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-      console.log(`DEBUG: Generated saves projections for ${savesProjections.length} goalkeepers using formula: (season saves / team games) × (minutes/90) × opponent attacking tier`);
-      res.json(savesProjections);
+        console.log(`✅ LIVE SUCCESS: Generated saves projections for ${savesProjections.length} goalkeepers using formula: (season saves / team games) × (minutes/90) × opponent attacking tier`);
+        return res.json(savesProjections);
+
+      } catch (liveError) {
+        console.warn(`⚠️ LIVE CALCULATION FAILED for player saves projections: ${liveError.message}`);
+        
+        // FALLBACK TO CACHE
+        console.log("🔄 CACHE FALLBACK: Trying cached player saves projections...");
+        try {
+          const cacheResponse = await internalFetch("api/cached/player-saves-projections");
+          if (cacheResponse.ok) {
+            const cachedData = await cacheResponse.json();
+            console.log(`✅ CACHE SUCCESS: Serving ${cachedData.length} cached player saves projections`);
+            return res.json(cachedData);
+          } else {
+            throw new Error("Cache endpoint failed");
+          }
+        } catch (cacheError) {
+          console.error("❌ CACHE ALSO FAILED:", cacheError.message);
+          throw new Error("Both live calculation and cache failed");
+        }
+      }
     } catch (error) {
-      console.error("Error in player saves projections:", error);
-      res.status(500).json({ error: "Failed to get player saves projections" });
+      console.error("❌ COMPLETE FAILURE in player saves projections:", error);
+      res.status(500).json({ error: "Failed to get player saves projections - both live and cache failed" });
     }
   });
 
