@@ -4,7 +4,6 @@ import { Star, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProtectedRoute from "@/components/protected-route";
 
 interface BootstrapData {
@@ -25,31 +24,11 @@ interface BonusPointsProjection {
   averagePerGameweek: number;
 }
 
-interface BPSProjection {
-  playerId: number;
-  playerName: string;
-  teamName: string;
-  position: string;
-  projectedBPS: { [key: string]: number };
-  totalProjectedBPS: number;
-  averageBPSPerGameweek: number;
-}
-
-interface BonusProbability {
-  playerId: number;
-  playerName: string;
-  teamName: string;
-  position: string;
-  bonusProbabilities: { [key: string]: number };
-  averageProbability: number;
-}
-
 export default function PlayerBonusPoints() {
-  const [activeTab, setActiveTab] = useState("projected-bps");
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"totalBonusPoints" | "totalPoints" | "totalProjectedBPS" | "averageProbability">("totalBonusPoints");
+  const [sortBy, setSortBy] = useState<"totalBonusPoints" | "totalPoints">("totalBonusPoints");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
@@ -57,27 +36,18 @@ export default function PlayerBonusPoints() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Calculate next 6 gameweeks dynamically
-  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 5;
-  const nextGameweeks = Array.from({ length: 6 }, (_, i) => currentGameweek + 1 + i);
-  const startGameweek = nextGameweeks[0];
-  const endGameweek = nextGameweeks[5];
-
-  // API calls for the three different data sets with dynamic gameweek parameters
-  const { data: bpsProjections, isLoading: isLoadingBPS } = useQuery({
-    queryKey: ["/api/player-bps-projections", startGameweek, endGameweek],
-    staleTime: 30 * 60 * 1000,
+  // Simplified API call for bonus points projections (now projects future gameweeks only)
+  const { data: bonusPointsProjections, isLoading: isLoadingProjections } = useQuery<BonusPointsProjection[]>({
+    queryKey: ["/api/player-bonus-points-projections"],
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes for live data
   });
 
-  const { data: bonusProbabilities, isLoading: isLoadingProbabilities } = useQuery({
-    queryKey: ["/api/player-bonus-probabilities", startGameweek, endGameweek],
-    staleTime: 30 * 60 * 1000,
-  });
-
-  const { data: bonusPointsProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-bonus-points-simple", startGameweek, endGameweek],
-    staleTime: 30 * 60 * 1000,
-  });
+  // Extract gameweeks dynamically from API response
+  const gameweeks = bonusPointsProjections && bonusPointsProjections.length > 0 
+    ? Object.keys(bonusPointsProjections[0].bonusPoints).map(gw => parseInt(gw.replace('gw', ''))).sort((a, b) => a - b)
+    : [];
+  
+  const gameweekRange = gameweeks.length > 0 ? `${gameweeks[0]}-${gameweeks[gameweeks.length - 1]}` : "6-11";
 
   const teams = bootstrapData?.teams?.map(team => ({
     id: team.id,
@@ -91,30 +61,23 @@ export default function PlayerBonusPoints() {
     { id: "FWD", name: "Forward" }
   ];
 
-  // Filter function for all three data types
-  const filterAndSort = (data: any[] | undefined, sortKey: string) => {
-    if (!data) return [];
-    return data.filter((item: any) => {
-      const matchesSearch = !searchTerm || 
-        item.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.teamName.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesPosition = positionFilter === "all" || item.position === positionFilter;
-      const matchesTeam = teamFilter === "all" || item.teamName === teamFilter;
-      
-      return matchesSearch && matchesPosition && matchesTeam;
-    }).sort((a: any, b: any) => {
-      const aValue = a[sortKey];
-      const bValue = b[sortKey];
-      return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
-    });
-  };
+  // Filter and sort bonus points projections
+  const filteredBonusPointsProjections = (bonusPointsProjections || []).filter((item: BonusPointsProjection) => {
+    const matchesSearch = !searchTerm || 
+      item.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.teamName.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesPosition = positionFilter === "all" || item.position === positionFilter;
+    const matchesTeam = teamFilter === "all" || item.teamName === teamFilter;
+    
+    return matchesSearch && matchesPosition && matchesTeam;
+  }).sort((a: BonusPointsProjection, b: BonusPointsProjection) => {
+    const aValue = a[sortBy];
+    const bValue = b[sortBy];
+    return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+  });
 
-  const filteredBPSProjections = filterAndSort(bpsProjections as any[], "totalProjectedBPS");
-  const filteredBonusProbabilities = filterAndSort(bonusProbabilities as any[], "averageProbability");
-  const filteredBonusPointsProjections = filterAndSort(bonusPointsProjections as any[], "totalBonusPoints");
-
-  const handleSort = (column: "totalBonusPoints" | "totalPoints" | "totalProjectedBPS" | "averageProbability") => {
+  const handleSort = (column: "totalBonusPoints" | "totalPoints") => {
     if (sortBy === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -128,7 +91,7 @@ export default function PlayerBonusPoints() {
     return sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
   };
 
-  if (isLoadingBootstrap || isLoadingBPS || isLoadingProbabilities || isLoadingProjections) {
+  if (isLoadingBootstrap || isLoadingProjections) {
     return (
       <div className="fpl-page-container">
         <div className="fpl-page-header">
@@ -218,223 +181,55 @@ export default function PlayerBonusPoints() {
           </CardContent>
         </Card>
 
-        {/* Three-Tab Results */}
-        <Tabs defaultValue="projected-bps" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="projected-bps">Projected BPS</TabsTrigger>
-            <TabsTrigger value="bonus-probability">Bonus Probability</TabsTrigger>
-            <TabsTrigger value="bonus-points">Bonus Points</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="projected-bps" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Projected Bonus Point System (BPS) (Gameweeks {startGameweek}-{endGameweek})</CardTitle>
-                <CardDescription>
-                  Raw BPS projections based on historical performance and form multipliers
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="fpl-table">
-                    <thead>
-                      <tr>
-                        <th className="text-left">Player</th>
-                        <th className="text-center">Pos</th>
-                        <th className="text-center">Team</th>
-                        {nextGameweeks.map(gw => (
-                          <th key={gw} className="text-center">GW{gw}</th>
-                        ))}
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("totalProjectedBPS")}>
-                          <div className="flex items-center justify-center gap-1">
-                            Total {getSortIcon("totalProjectedBPS")}
-                          </div>
-                        </th>
-                        <th className="text-center">Avg/GW</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredBPSProjections.map((projection: BPSProjection) => (
-                        <tr key={projection.playerId}>
-                          <td className="font-medium">{projection.playerName}</td>
-                          <td className="text-center text-xs font-semibold">{projection.position}</td>
-                          <td className="text-center text-sm">{projection.teamName}</td>
-                          {nextGameweeks.map(gw => (
-                            <td key={gw} className="text-center">{projection.projectedBPS?.[`gw${gw}`] || '-'}</td>
-                          ))}
-                          <td className="text-center font-semibold text-blue-600">
-                            {projection.totalProjectedBPS}
-                          </td>
-                          <td className="text-center text-sm text-gray-600">
-                            {projection.averageBPSPerGameweek}
-                          </td>
-                        </tr>
+        {/* Simplified Bonus Points Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Player Bonus Points (Gameweeks {gameweekRange})</CardTitle>
+            <CardDescription>
+              Simplified formula: (Player BPS ÷ Total BPS of both teams) × 6 for future gameweeks only
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="fpl-table">
+                <thead>
+                  <tr>
+                    <th className="text-left">Player</th>
+                    <th className="text-center">Pos</th>
+                    <th className="text-center">Team</th>
+                    {gameweeks.map(gw => (
+                      <th key={gw} className="text-center">GW{gw}</th>
+                    ))}
+                    <th className="text-center cursor-pointer" onClick={() => handleSort("totalBonusPoints")}>
+                      <div className="flex items-center justify-center gap-1">
+                        Total {getSortIcon("totalBonusPoints")}
+                      </div>
+                    </th>
+                    <th className="text-center">Avg/GW</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredBonusPointsProjections.map((projection: BonusPointsProjection) => (
+                    <tr key={projection.playerId}>
+                      <td className="font-medium">{projection.playerName}</td>
+                      <td className="text-center text-xs font-semibold">{projection.position}</td>
+                      <td className="text-center text-sm">{projection.teamName}</td>
+                      {gameweeks.map(gw => (
+                        <td key={gw} className="text-center">{projection.bonusPoints?.[`gw${gw}`] || '-'}</td>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="bonus-probability" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Probability of Scoring Bonus Points (Gameweeks {startGameweek}-{endGameweek})</CardTitle>
-                <CardDescription>
-                  Probability calculations based on BPS thresholds (25+ for 1pt, 30+ for 2pts, 35+ for 3pts)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="fpl-table">
-                    <thead>
-                      <tr>
-                        <th className="text-left">Player</th>
-                        <th className="text-center">Pos</th>
-                        <th className="text-center">Team</th>
-                        {nextGameweeks.map(gw => (
-                          <th key={gw} className="text-center">GW{gw}</th>
-                        ))}
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("averageProbability")}>
-                          <div className="flex items-center justify-center gap-1">
-                            Avg % {getSortIcon("averageProbability")}
-                          </div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredBonusProbabilities.map((probability: BonusProbability) => (
-                        <tr key={probability.playerId}>
-                          <td className="font-medium">{probability.playerName}</td>
-                          <td className="text-center text-xs font-semibold">{probability.position}</td>
-                          <td className="text-center text-sm">{probability.teamName}</td>
-                          {nextGameweeks.map(gw => (
-                            <td key={gw} className="text-center">
-                              {probability.bonusProbabilities?.[`gw${gw}`] ? 
-                                (probability.bonusProbabilities[`gw${gw}`] * 100).toFixed(1) + '%' : '-'}
-                            </td>
-                          ))}
-                          <td className="text-center font-semibold text-purple-600">
-                            {(probability.averageProbability * 100).toFixed(1)}%
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="bonus-points" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Final Bonus Points Projections (Gameweeks {startGameweek}-{endGameweek})</CardTitle>
-                <CardDescription>
-                  Final projections with position-based multipliers applied to probability calculations
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="fpl-table">
-                    <thead>
-                      <tr>
-                        <th className="text-left">Player</th>
-                        <th className="text-center">Pos</th>
-                        <th className="text-center">Team</th>
-                        {nextGameweeks.map(gw => (
-                          <th key={gw} className="text-center">GW{gw}</th>
-                        ))}
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("totalBonusPoints")}>
-                          <div className="flex items-center justify-center gap-1">
-                            Total {getSortIcon("totalBonusPoints")}
-                          </div>
-                        </th>
-                        <th className="text-center">Avg/GW</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredBonusPointsProjections.map((projection: BonusPointsProjection) => (
-                        <tr key={projection.playerId}>
-                          <td className="font-medium">{projection.playerName}</td>
-                          <td className="text-center text-xs font-semibold">{projection.position}</td>
-                          <td className="text-center text-sm">{projection.teamName}</td>
-                          {nextGameweeks.map(gw => (
-                            <td key={gw} className="text-center">{projection.bonusPoints?.[`gw${gw}`] || '-'}</td>
-                          ))}
-                          <td className="text-center font-semibold text-yellow-600">
-                            {projection.totalBonusPoints}
-                          </td>
-                          <td className="text-center text-sm text-gray-600">
-                            {projection.averagePerGameweek}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="points" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Points from Bonus (Gameweeks 4-9)</CardTitle>
-                <CardDescription>
-                  FPL points earned from bonus system (1-3 points awarded to top 3 performers per match)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="fpl-table">
-                    <thead>
-                      <tr>
-                        <th className="text-left">Player</th>
-                        <th className="text-center">Pos</th>
-                        <th className="text-center">Team</th>
-                        <th className="text-center">GW4</th>
-                        <th className="text-center">GW5</th>
-                        <th className="text-center">GW6</th>
-                        <th className="text-center">GW7</th>
-                        <th className="text-center">GW8</th>
-                        <th className="text-center">GW9</th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("totalPoints")}>
-                          <div className="flex items-center justify-center gap-1">
-                            Total {getSortIcon("totalPoints")}
-                          </div>
-                        </th>
-                        <th className="text-center">Avg/GW</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredBonusPointsProjections.map((projection: BonusPointsProjection) => (
-                        <tr key={projection.playerId}>
-                          <td className="font-medium">{projection.playerName}</td>
-                          <td className="text-center text-xs font-semibold">{projection.position}</td>
-                          <td className="text-center text-sm">{projection.teamName}</td>
-                          <td className="text-center">{projection.pointsFromBonus.gw4}</td>
-                          <td className="text-center">{projection.pointsFromBonus.gw5}</td>
-                          <td className="text-center">{projection.pointsFromBonus.gw6}</td>
-                          <td className="text-center">{projection.pointsFromBonus.gw7}</td>
-                          <td className="text-center">{projection.pointsFromBonus.gw8}</td>
-                          <td className="text-center">{projection.pointsFromBonus.gw9}</td>
-                          <td className="text-center font-semibold text-green-600">
-                            {projection.totalPoints}
-                          </td>
-                          <td className="text-center text-sm text-gray-600">
-                            {(projection.totalPoints / 6).toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                      <td className="text-center font-semibold text-yellow-600">
+                        {projection.totalBonusPoints}
+                      </td>
+                      <td className="text-center text-sm text-gray-600">
+                        {gameweeks.length > 0 ? (projection.totalBonusPoints / gameweeks.length).toFixed(3) : '0.000'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
     </ProtectedRoute>

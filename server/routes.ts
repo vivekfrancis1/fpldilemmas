@@ -11276,129 +11276,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.min(3.0, bonusPointsProbability * 1.5);
   }
 
-  // Player Bonus Points Projections - Step 3: Final bonus points = probability × 1
+  // Player Bonus Points Projections - Simplified: (Player BPS ÷ Total BPS of both teams) × 6
   app.get("/api/player-bonus-points-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Bonus Points Projections API called - step 3: probability × 1 calculation");
-      
-      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
-      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
+      console.log("DEBUG: Player Bonus Points Projections API called - simplified calculation for future gameweeks only");
       
       // Get FPL bootstrap data for current gameweek info and players
       const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       const fplData = await fplResponse.json();
-      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 1;
       
-      // Extract bonus points data for all players with hybrid methodology
-      const bonusPointsProjections = await Promise.all(
-        fplData.elements.map(async (player: any) => {
-          const team = fplData.teams.find((t: any) => t.id === player.team);
-          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
-          const bonusPoints: { [key: string]: number } = {};
-          const pointsFromBonus: { [key: string]: number } = {};
-          let totalBonusPoints = 0;
-          let totalPoints = 0;
+      // Use dynamic gameweek calculation for next 6 gameweeks
+      const { computeNextRange } = await import("../shared/gameweek-utils");
+      const gameweekRange = computeNextRange(fplData.events, 6);
+      const startGameweek = gameweekRange.start;
+      const endGameweek = gameweekRange.end;
+      
+      // Get fixtures for the gameweek range
+      const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+      const allFixtures = await fixturesResponse.json();
+      
+      // Filter only players with 1+ minutes for meaningful projections
+      const activePlayers = fplData.elements.filter((player: any) => (player.minutes || 0) >= 1);
+      
+      // Extract bonus points data for all active players using simplified methodology
+      const bonusPointsProjections = activePlayers.map((player: any) => {
+        const team = fplData.teams.find((t: any) => t.id === player.team);
+        const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
+        const bonusPoints: { [key: string]: number } = {};
+        const pointsFromBonus: { [key: string]: number } = {};
+        let totalBonusPoints = 0;
+        let totalPoints = 0;
+        
+        const playerSeasonBPS = player.bps || 0; // Player's total BPS this season
+        
+        // Process each FUTURE gameweek only
+        for (let gw = startGameweek; gw <= endGameweek; gw++) {
+          let gwBonusPoints = 0;
+          let gwPoints = 0;
           
-          // Process each gameweek with hybrid methodology
-          for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            let gwBonusPoints = 0;
-            let gwPoints = 0;
+          // Find fixture for this team in this gameweek
+          const fixture = allFixtures.find((f: any) => 
+            f.event === gw && (f.team_h === player.team || f.team_a === player.team)
+          );
+          
+          if (fixture && playerSeasonBPS > 0) {
+            // Get both teams playing in this fixture
+            const homeTeamId = fixture.team_h;
+            const awayTeamId = fixture.team_a;
             
-            if (gw < currentGameweek) {
-              // COMPLETED GAMEWEEKS: Use actual FPL data
-              try {
-                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-                const playerDetail = await playerDetailResponse.json();
-                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
-                
-                if (gameweekData && gameweekData.minutes > 0) {
-                  gwBonusPoints = gameweekData.bonus || 0;
-                  gwPoints = gwBonusPoints; // Bonus points are direct FPL points
-                }
-              } catch (error) {
-                console.log(`Using projection fallback for player ${player.id} GW${gw}: ${error}`);
-                // BPS-based fallback for completed gameweeks
-                const willPlay = await estimatePlayerWillPlay(player, gw, position);
-                
-                if (willPlay) {
-                  gwBonusPoints = calculateBonusPointsFromBPS(player, position);
-                  gwPoints = gwBonusPoints;
-                } else {
-                  gwBonusPoints = 0;
-                  gwPoints = 0;
-                }
-              }
-            } else if (gw === currentGameweek) {
-              // CURRENT GAMEWEEK: Hybrid of actual + projected based on match progress
-              try {
-                const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-                const playerDetail = await playerDetailResponse.json();
-                const gameweekData = playerDetail.history.find((h: any) => h.round === gw);
-                
-                if (gameweekData && gameweekData.minutes > 0) {
-                  // Player has played - use actual data
-                  gwBonusPoints = gameweekData.bonus || 0;
-                  gwPoints = gwBonusPoints;
-                } else {
-                  // Player hasn't played yet - use BPS-based calculation
-                  const willPlay = await estimatePlayerWillPlay(player, gw, position);
-                  
-                  if (willPlay) {
-                    gwBonusPoints = calculateBonusPointsFromBPS(player, position);
-                    gwPoints = gwBonusPoints;
-                  } else {
-                    gwBonusPoints = 0;
-                    gwPoints = 0;
-                  }
-                }
-              } catch (error) {
-                // Fallback to BPS-based calculation
-                const willPlay = await estimatePlayerWillPlay(player, gw, position);
-                
-                if (willPlay) {
-                  gwBonusPoints = calculateBonusPointsFromBPS(player, position);
-                  gwPoints = gwBonusPoints;
-                } else {
-                  gwBonusPoints = 0;
-                  gwPoints = 0;
-                }
-              }
-            } else {
-              // FUTURE GAMEWEEKS: Use realistic bonus distribution (only 3 players per match get bonus)
-              const willPlay = await estimatePlayerWillPlay(player, gw, position);
-              
-              if (willPlay) {
-                // Use BPS-based calculation for future gameweeks
-                gwBonusPoints = calculateBonusPointsFromBPS(player, position);
-                gwPoints = gwBonusPoints;
-              } else {
-                // Player unlikely to play - 0 bonus points
-                gwBonusPoints = 0;
-                gwPoints = 0;
-              }
+            // Calculate total BPS for both teams combined
+            const bothTeamsPlayers = fplData.elements.filter((p: any) => 
+              p.team === homeTeamId || p.team === awayTeamId
+            );
+            
+            const totalBothTeamsBPS = bothTeamsPlayers.reduce((sum: number, p: any) => 
+              sum + (p.bps || 0), 0
+            );
+            
+            if (totalBothTeamsBPS > 0) {
+              // Simple formula: (Player BPS ÷ Total BPS of both teams) × 6
+              gwBonusPoints = (playerSeasonBPS / totalBothTeamsBPS) * 6;
+              gwPoints = gwBonusPoints; // Bonus points are direct FPL points
             }
-            
-            bonusPoints[`gw${gw}`] = parseFloat(gwBonusPoints.toFixed(2));
-            pointsFromBonus[`gw${gw}`] = parseFloat(gwPoints.toFixed(2));
-            totalBonusPoints += gwBonusPoints;
-            totalPoints += gwPoints;
           }
           
-          return {
-            playerId: player.id,
-            playerName: player.web_name,
-            teamName: team?.short_name || 'UNK',
-            position,
-            bonusPoints,
-            pointsFromBonus,
-            totalBonusPoints: parseFloat(totalBonusPoints.toFixed(2)),
-            totalPoints: parseFloat(totalPoints.toFixed(2)),
-            averagePerGameweek: parseFloat((totalBonusPoints / (endGameweek - startGameweek + 1)).toFixed(2))
-          };
-        })
-      );
+          bonusPoints[`gw${gw}`] = parseFloat(gwBonusPoints.toFixed(3));
+          pointsFromBonus[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
+          totalBonusPoints += gwBonusPoints;
+          totalPoints += gwPoints;
+        }
+        
+        const numGameweeks = endGameweek - startGameweek + 1;
+        
+        return {
+          playerId: player.id,
+          playerName: player.web_name,
+          teamName: team?.short_name || 'UNK',
+          position,
+          bonusPoints,
+          pointsFromBonus,
+          totalBonusPoints: parseFloat(totalBonusPoints.toFixed(3)),
+          totalPoints: parseFloat(totalPoints.toFixed(3)),
+          averagePerGameweek: parseFloat((totalBonusPoints / numGameweeks).toFixed(3))
+        };
+      });
       
-      console.log(`DEBUG: Generated hybrid bonus points projections for ${bonusPointsProjections.length} players`);
+      console.log(`DEBUG: Generated simplified bonus points projections for ${bonusPointsProjections.length} players for future gameweeks only`);
       res.json(bonusPointsProjections);
     } catch (error) {
       console.error("Error in player bonus points projections:", error);
