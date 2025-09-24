@@ -12736,9 +12736,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(playerAssistProjections)
         .where(eq(playerAssistProjections.season, '2025/26'));
       
-      // If no cached data, return empty array
+      // If no cached data, fall back to live API
       if (!cachedData || cachedData.length === 0) {
-        return res.json([]);
+        console.log("⚠️ No cached player assists data found, falling back to live API");
+        const liveResponse = await internalFetch('api/player-assist-projections');
+        
+        if (!liveResponse.ok) {
+          throw new Error(`Live assists API failed: ${liveResponse.status}`);
+        }
+        
+        const liveData = await liveResponse.json();
+        console.log(`✅ Fallback successful, returning ${liveData.length} players from live API`);
+        return res.json(liveData);
       }
       
       // Use optimized metadata cache instead of fresh FPL API call
