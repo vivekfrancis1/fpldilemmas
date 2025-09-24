@@ -50,7 +50,7 @@ export class FPLScoringCacheService {
   /**
    * Cache player saves data
    */
-  private async cachePlayerSaves(startGameweek: number = 4, endGameweek: number = 9): Promise<void> {
+  private async cachePlayerSaves(startGameweek: number = 6, endGameweek: number = 11): Promise<void> {
     console.log("📊 Caching player saves data...");
     
     try {
