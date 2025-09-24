@@ -6955,24 +6955,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const currentMinutesPerGame = Math.min(90, totalMinutes / teamGamesPlayed); // Cap at 90 minutes per game
         
-        // Debug logging for Calafiori
-        if (player.web_name === "Calafiori") {
-          console.log(`DEBUG Calafiori: totalMinutes=${totalMinutes}, currentGameweek=${currentGameweek}, teamGamesPlayed=${teamGamesPlayed}, calculation=${totalMinutes}/${teamGamesPlayed}=${totalMinutes/teamGamesPlayed}, final=${currentMinutesPerGame}`);
-        }
         
         // Simplified expected minutes: use current average with no complex calculations
         const expectedMinutesPerGame = currentMinutesPerGame;
         
 
         
-        // Calculate points from minutes based on FPL system
-        let pointsFromMinutes = 0;
-        if (expectedMinutesPerGame >= 60) {
-          pointsFromMinutes = 2; // Full 60+ minutes = 2 points
-        } else if (expectedMinutesPerGame > 0) {
-          pointsFromMinutes = 1; // Any playing time under 60 minutes = 1 point
-        }
-        // 0 minutes = 0 points (default)
+        // Calculate points from minutes as (expected minutes / 90) * 2
+        const pointsFromMinutes = Math.round(((expectedMinutesPerGame / 90) * 2) * 100) / 100; // Round to 2 decimal places
         
         return {
           playerId: player.id,
@@ -6986,8 +6976,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           benchAppearances: Math.max(0, teamGamesPlayed - (player.starts || 0))
         };
       })
-      .filter((player: any) => player.expectedMinutesPerGame >= 0) // Include all players
-      .sort((a: any, b: any) => b.pointsPerGame - a.pointsPerGame); // Sort by points per game descending
+      .filter((player: any) => player.currentMinutes >= 1) // Include only players who have played at least 1 minute
+      .sort((a: any, b: any) => b.pointsFromMinutes - a.pointsFromMinutes); // Sort by points from minutes descending
       
       console.log(`DEBUG: Generated minutes projections for ${playerMinutesProjections.length} players`);
       res.json(playerMinutesProjections);
