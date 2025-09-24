@@ -37,10 +37,16 @@ export default function PlayerRedCards() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Cached API call for red card projections - faster response from database
+  // Get current gameweek and calculate next 6 gameweeks
+  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 5;
+  const nextGameweek = currentGameweek + 1;
+  const gameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
+
+  // Live API call for red card projections for next 6 gameweeks
   const { data: redCardProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/cached/player-red-cards-projections"],
-    staleTime: 30 * 60 * 1000, // Cache for 30 minutes since data is updated twice daily
+    queryKey: [`/api/player-red-cards-projections?startGameweek=${nextGameweek}&endGameweek=${gameweeks[gameweeks.length - 1]}`],
+    enabled: !!nextGameweek && gameweeks.length > 0,
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes for live data
   });
 
   const teams = bootstrapData?.teams?.map(team => ({
