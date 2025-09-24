@@ -4823,8 +4823,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Aggregate expected goals from Team Goal Projections data (RESTORED)
       teamProjectionsData.forEach((team: any) => {
-        if (!teamSeasonTotals[team.id]) {
-          teamSeasonTotals[team.id] = {
+        if (!teamSeasonTotals[team.teamId]) {
+          teamSeasonTotals[team.teamId] = {
             expectedGoals: 0,
             players: {}
           };
@@ -4833,7 +4833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Sum all gameweek projections for this team's season total
         Object.values(team.gameweekProjections || {}).forEach((goals: any) => {
           if (typeof goals === 'number') {
-            teamSeasonTotals[team.id].expectedGoals += goals;
+            teamSeasonTotals[team.teamId].expectedGoals += goals;
           }
         });
       });

@@ -388,8 +388,13 @@ class ProjectionCacheWorker {
         
         if (teamPlayerShares.length === 0) continue;
         
-        // SIMPLIFIED: No position caps or normalization - use raw shares
-        console.log(`DEBUG: Goal share for team ${teamId} GW${gameweek}: ${teamPlayerShares.length} players, no position caps applied`);
+        // SIMPLIFIED: No position caps - use raw shares as-is
+        // The shares are already calculated as (player.goals / teamTotal) * 100
+        // Just log for debugging - no further processing needed
+        console.log(`DEBUG: Goal share for team ${teamId} GW${gameweek}: ${teamPlayerShares.length} players, raw shares preserved`);
+        
+        // Note: Records already have the correct goal values, no modification needed
+        // The data flows through unchanged to maintain raw contributions
       }
       
       console.log(`📊 POSITION CAPPING SUMMARY:`);
@@ -751,8 +756,13 @@ class ProjectionCacheWorker {
         
         if (teamPlayerShares.length === 0) continue;
         
-        // SIMPLIFIED: No position caps or normalization - use raw shares
-        console.log(`DEBUG: Assist share for team ${teamId} GW${gameweek}: ${teamPlayerShares.length} players, no position caps applied`);
+        // SIMPLIFIED: No position caps - use raw shares as-is
+        // The shares are already calculated as (player.assists / teamTotal) * 100
+        // Just log for debugging - no further processing needed
+        console.log(`DEBUG: Assist share for team ${teamId} GW${gameweek}: ${teamPlayerShares.length} players, raw shares preserved`);
+        
+        // Note: Records already have the correct assist values, no modification needed
+        // The data flows through unchanged to maintain raw contributions
       }
       
       console.log(`📊 ASSIST POSITION CAPPING SUMMARY:`);
