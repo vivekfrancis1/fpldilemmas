@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 
 interface PlayerAssistProjection {
@@ -39,6 +40,7 @@ export default function PlayerAssistProjections() {
   // All useState hooks
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [startGameweek, setStartGameweek] = useState<number>(5);
   const [endGameweek, setEndGameweek] = useState<number>(10);
   const [initialized, setInitialized] = useState(false);
@@ -163,6 +165,13 @@ export default function PlayerAssistProjections() {
     if (!playerAssistData) return [];
     
     let filtered = playerAssistData.filter(player => {
+      // Search filter
+      if (searchTerm) {
+        const matchesSearch = player.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            player.teamShort.toLowerCase().includes(searchTerm.toLowerCase());
+        if (!matchesSearch) return false;
+      }
+      
       if (selectedPosition !== "all" && player.position !== selectedPosition) return false;
       if (selectedTeam !== "all" && player.teamShort !== selectedTeam) return false;
       return true;
@@ -231,7 +240,7 @@ export default function PlayerAssistProjections() {
     });
 
     return filtered;
-  }, [playerAssistData, selectedPosition, selectedTeam, startGameweek, endGameweek, sortField, sortDirection]);
+  }, [playerAssistData, searchTerm, selectedPosition, selectedTeam, startGameweek, endGameweek, sortField, sortDirection]);
 
   // Calculate dynamic totals based on selected gameweek range
   const getFilteredTotal = (player: PlayerAssistProjection) => {
@@ -316,6 +325,20 @@ export default function PlayerAssistProjections() {
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex flex-wrap gap-4 items-end">
+              <div className="flex items-center gap-3">
+                <Search className="h-5 w-5 text-green-600" />
+                <label className="text-sm font-semibold text-gray-700">Search:</label>
+                <div className="relative w-64">
+                  <Input
+                    data-testid="input-player-search"
+                    placeholder="Search by player or team name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="border-2 border-gray-200 hover:border-green-400 transition-colors"
+                  />
+                </div>
+              </div>
+              
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-green-600" />
                 <label className="text-sm font-semibold text-gray-700">Position:</label>
