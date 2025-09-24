@@ -8433,8 +8433,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const gwKey = `gw${gw}`;
           
           // Get points from each API for this gameweek
-          const goalsPts = goalsPlayer?.pointsFromGoals?.[gwKey] || 0;
-          const assistsPts = assistsPlayer?.pointsFromAssists?.[gwKey] || 0;
+          // Goals: Calculate points from raw goal count × position multiplier
+          const rawGoals = goalsPlayer?.gameweekProjections?.[gw.toString()] || 0;
+          const goalMultiplier = basePlayer.position === 'Goalkeeper' || basePlayer.position === 'GKP' ? 10 :
+                                basePlayer.position === 'Defender' || basePlayer.position === 'DEF' ? 6 : 
+                                basePlayer.position === 'Midfielder' || basePlayer.position === 'MID' ? 5 : 4;
+          const goalsPts = rawGoals * goalMultiplier;
+          
+          // Assists: Calculate points from raw assist count × 3
+          const rawAssists = assistsPlayer?.gameweekProjections?.[gw.toString()] || 0;
+          const assistsPts = rawAssists * 3;
           const cleansheetPts = cleansheetPlayer?.pointsFromCleanSheets?.[gwKey] || 0;
           const goalsConcededPts = goalsConcededPlayer?.pointsFromGoalsConceded?.[gwKey] || 0;
           const yellowCardsPts = yellowCardsPlayer?.pointsFromYellowCards?.[gwKey] || 0;
