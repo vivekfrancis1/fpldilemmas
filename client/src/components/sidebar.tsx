@@ -61,7 +61,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/player-goals-scored-projections", label: "Goals Scored", icon: Trophy, description: "Individual player goal projections", popular: false },
         { path: "/player-assist-projections", label: "Assists", icon: Zap, description: "Individual player assist projections", popular: false },
         { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
-        { path: "/player-total-points", label: "Total Points", icon: Target, description: "Complete FPL points projections combining all scoring components" }
+        { path: "/player-total-points", label: "Total Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: true }
         // { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
         // { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
         // { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false }
@@ -225,6 +225,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                         {(item as any).new && (
                           <Badge variant="secondary" className="bg-green-500 text-white text-xs px-1.5 py-0.5 font-bold flex-shrink-0">
                             NEW
+                          </Badge>
+                        )}
+                        {(item as any).popular && (
+                          <Badge variant="secondary" className="bg-orange-500 text-white text-xs px-1.5 py-0.5 font-bold flex-shrink-0">
+                            POPULAR
                           </Badge>
                         )}
                       </div>
