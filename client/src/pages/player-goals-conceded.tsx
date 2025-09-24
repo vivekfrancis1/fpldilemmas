@@ -42,10 +42,11 @@ export default function PlayerGoalsConceded() {
   const nextGameweek = currentGameweek + 1;
   const gameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
 
-  // Cached API call for goals conceded projections - faster response from database
+  // Live API call for goals conceded projections for next 6 gameweeks
   const { data: goalsConcededProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/cached/player-goals-conceded-projections"],
-    staleTime: 30 * 60 * 1000, // Cache for 30 minutes since data is updated twice daily
+    queryKey: ["/api/player-goals-conceded-projections", { startGameweek: nextGameweek, endGameweek: gameweeks[gameweeks.length - 1] }],
+    enabled: !!nextGameweek,
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes for live data
   });
 
   const teams = bootstrapData?.teams?.map(team => ({
