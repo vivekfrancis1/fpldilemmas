@@ -36,9 +36,15 @@ export default function PlayerSaves() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Cached API call for saves projections - faster response from database
+  // Calculate next 6 gameweeks dynamically
+  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 5;
+  const nextGameweeks = Array.from({ length: 6 }, (_, i) => currentGameweek + 1 + i);
+  const startGameweek = nextGameweeks[0];
+  const endGameweek = nextGameweeks[5];
+
+  // Cached API call for saves projections - faster response from database with dynamic gameweek parameters
   const { data: savesProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/cached/player-saves-projections"],
+    queryKey: ["/api/cached/player-saves-projections", startGameweek, endGameweek],
     staleTime: 30 * 60 * 1000, // Cache for 30 minutes since data is updated twice daily
   });
 
@@ -47,7 +53,7 @@ export default function PlayerSaves() {
     name: team.short_name
   })) || [];
 
-  const filteredProjections = (savesProjections || []).filter((projection: SavesProjection) => {
+  const filteredProjections = (Array.isArray(savesProjections) ? savesProjections : []).filter((projection: SavesProjection) => {
     const matchesSearch = !searchTerm || 
       projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -161,7 +167,7 @@ export default function PlayerSaves() {
           <TabsContent value="saves" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Expected Saves (Gameweeks 4-9)</CardTitle>
+                <CardTitle>Expected Saves (Gameweeks {startGameweek}-{endGameweek})</CardTitle>
                 <CardDescription>
                   Projected number of saves for each goalkeeper based on opponent strength and team defensive quality
                 </CardDescription>
@@ -173,12 +179,9 @@ export default function PlayerSaves() {
                       <tr>
                         <th className="text-left">Goalkeeper</th>
 
-                        <th className="text-center">GW4</th>
-                        <th className="text-center">GW5</th>
-                        <th className="text-center">GW6</th>
-                        <th className="text-center">GW7</th>
-                        <th className="text-center">GW8</th>
-                        <th className="text-center">GW9</th>
+                        {nextGameweeks.map(gw => (
+                          <th key={gw} className="text-center">GW{gw}</th>
+                        ))}
                         <th className="text-center cursor-pointer" onClick={() => handleSort("totalSaves")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalSaves")}
@@ -199,12 +202,9 @@ export default function PlayerSaves() {
                               </div>
                             </div>
                           </td>
-                          <td className="text-center">{projection.saves.gw4}</td>
-                          <td className="text-center">{projection.saves.gw5}</td>
-                          <td className="text-center">{projection.saves.gw6}</td>
-                          <td className="text-center">{projection.saves.gw7}</td>
-                          <td className="text-center">{projection.saves.gw8}</td>
-                          <td className="text-center">{projection.saves.gw9}</td>
+                          {nextGameweeks.map(gw => (
+                            <td key={gw} className="text-center">{projection.saves?.[`gw${gw}`] || '-'}</td>
+                          ))}
                           <td className="text-center font-semibold text-blue-600">
                             {projection.totalSaves}
                           </td>
@@ -223,7 +223,7 @@ export default function PlayerSaves() {
           <TabsContent value="points" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Points from Saves (Gameweeks 4-9)</CardTitle>
+                <CardTitle>Points from Saves (Gameweeks {startGameweek}-{endGameweek})</CardTitle>
                 <CardDescription>
                   FPL points earned from saves (1 point per 3 saves) plus penalty save bonuses
                 </CardDescription>
@@ -235,12 +235,9 @@ export default function PlayerSaves() {
                       <tr>
                         <th className="text-left">Goalkeeper</th>
 
-                        <th className="text-center">GW4</th>
-                        <th className="text-center">GW5</th>
-                        <th className="text-center">GW6</th>
-                        <th className="text-center">GW7</th>
-                        <th className="text-center">GW8</th>
-                        <th className="text-center">GW9</th>
+                        {nextGameweeks.map(gw => (
+                          <th key={gw} className="text-center">GW{gw}</th>
+                        ))}
                         <th className="text-center cursor-pointer" onClick={() => handleSort("totalPoints")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalPoints")}
@@ -261,17 +258,14 @@ export default function PlayerSaves() {
                               </div>
                             </div>
                           </td>
-                          <td className="text-center">{projection.pointsFromSaves.gw4}</td>
-                          <td className="text-center">{projection.pointsFromSaves.gw5}</td>
-                          <td className="text-center">{projection.pointsFromSaves.gw6}</td>
-                          <td className="text-center">{projection.pointsFromSaves.gw7}</td>
-                          <td className="text-center">{projection.pointsFromSaves.gw8}</td>
-                          <td className="text-center">{projection.pointsFromSaves.gw9}</td>
+                          {nextGameweeks.map(gw => (
+                            <td key={gw} className="text-center">{projection.pointsFromSaves?.[`gw${gw}`] || '-'}</td>
+                          ))}
                           <td className="text-center font-semibold text-green-600">
                             {projection.totalPoints}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {(projection.totalPoints / 6).toFixed(1)}
+                            {(projection.totalPoints / nextGameweeks.length).toFixed(1)}
                           </td>
                         </tr>
                       ))}
