@@ -708,6 +708,31 @@ export default function PlayerStatsTable({
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{player.goals_scored || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-blue-600">{player.assists || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{player.clean_sheets || 0}</td>
+                  {/* Defensive Contribution Fields - positioned after Clean Sheets */}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-orange-600">{player.defensive_contribution || 0}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-yellow-600" data-testid={`text-cbit-points-${player.id}`}>
+                      {(() => {
+                        if (isCbitPointsLoading) {
+                          return <span className="text-gray-400">...</span>;
+                        }
+                        if (isCbitPointsError) {
+                          return <span className="text-gray-400" title="CBIT points data unavailable">N/A</span>;
+                        }
+                        return getCbitPoints(player.id);
+                      })()}
+                    </td>
+                  )}
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700 font-semibold">{formatValue(player.value_season || player.value_form || 0, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.points_per_game || player.form || 0, 'decimal')}</td>
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.form || 0, 'decimal')}</td>
+                  )}
+                  {!isHistoricalSeason && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-purple-700">{formatValue(player.selected_by_percent || 0, 'decimal')}%</td>
+                  )}
                   {/* Expected Stats */}
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-purple-600">{formatValue(player.expected_goals || 0, 'decimal')}</td>
@@ -733,31 +758,6 @@ export default function PlayerStatsTable({
                   )}
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-700">{formatValue(player.expected_goals_conceded_per_90 || 0, 'decimal')}</td>
-                  )}
-                  {/* New Defensive Contribution Fields - 2025/26 Season Only */}
-                  {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-orange-600">{player.defensive_contribution || 0}</td>
-                  )}
-                  {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-yellow-600" data-testid={`text-cbit-points-${player.id}`}>
-                      {(() => {
-                        if (isCbitPointsLoading) {
-                          return <span className="text-gray-400">...</span>;
-                        }
-                        if (isCbitPointsError) {
-                          return <span className="text-gray-400" title="CBIT points data unavailable">N/A</span>;
-                        }
-                        return getCbitPoints(player.id);
-                      })()}
-                    </td>
-                  )}
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700 font-semibold">{formatValue(player.value_season || player.value_form || 0, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.points_per_game || player.form || 0, 'decimal')}</td>
-                  {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.form || 0, 'decimal')}</td>
-                  )}
-                  {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-purple-700">{formatValue(player.selected_by_percent || 0, 'decimal')}%</td>
                   )}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.minutes || 0}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{player.goals_conceded || 0}</td>
