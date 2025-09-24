@@ -85,10 +85,10 @@ export default function PlayerDefensiveContributions() {
       // Create projections for each future gameweek using historical averages
       const gameweekProjections = futureGameweeks.map(gw => ({
         gameweek: gw,
-        defensiveContribution: Math.round((record.defensiveContributionPer90 || 0) * 90 / 90), // Per game projection
-        tackles: Math.round((record.tacklesPer90 || 0) * 90 / 90),
-        recoveries: Math.round((record.recoveriesPer90 || 0) * 90 / 90), 
-        cbi: Math.round((record.cbiPer90 || 0) * 90 / 90),
+        defensiveContribution: Math.round(record.defensiveContributionPer90 || 0), // Per game projection
+        tackles: Math.round(record.tacklesPer90 || 0),
+        recoveries: Math.round(record.recoveriesPer90 || 0), 
+        cbi: Math.round(record.cbiPer90 || 0),
         opponent: "TBD", // Placeholder since we don't have fixture data
         opponentTier: "2", // Default tier
         fixtureMultiplier: 1.0, // Default multiplier
