@@ -13254,8 +13254,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { startGameweek = 4, endGameweek = 9 } = req.query;
       
-      // Get bonus probabilities from our cached API for instant performance
-      const probabilitiesResponse = await internalFetch(`api/cached/player-bonus-probabilities`);
+      // Get bonus probabilities from the live API (not cached bonus points)
+      const probabilitiesResponse = await internalFetch(`api/player-bonus-probabilities`);
       const probabilitiesData = await probabilitiesResponse.json();
       
       // Convert probabilities to final bonus points: Probability × 1
@@ -13288,15 +13288,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const positionMultiplier = getPositionMultiplier(playerData.position);
         
-        Object.keys(playerData.bonusProbabilities).forEach(gwKey => {
-          const probability = playerData.bonusProbabilities[gwKey];
-          const bonusPointsValue = probability * 3.0 * positionMultiplier; // Position-adjusted formula
-          
-          bonusPoints[gwKey] = parseFloat(bonusPointsValue.toFixed(3));
-          pointsFromBonus[gwKey] = parseFloat(bonusPointsValue.toFixed(3));
-          totalBonusPoints += bonusPointsValue;
-          totalPoints += bonusPointsValue;
-        });
+        // Add safety check for bonusProbabilities
+        if (playerData.bonusProbabilities && typeof playerData.bonusProbabilities === 'object') {
+          Object.keys(playerData.bonusProbabilities).forEach(gwKey => {
+            const probability = playerData.bonusProbabilities[gwKey];
+            const bonusPointsValue = probability * 3.0 * positionMultiplier; // Position-adjusted formula
+            
+            bonusPoints[gwKey] = parseFloat(bonusPointsValue.toFixed(3));
+            pointsFromBonus[gwKey] = parseFloat(bonusPointsValue.toFixed(3));
+            totalBonusPoints += bonusPointsValue;
+            totalPoints += bonusPointsValue;
+          });
+        } else {
+          console.warn(`DEBUG: Player ${playerData.playerName} (ID: ${playerData.playerId}) has invalid bonusProbabilities:`, playerData.bonusProbabilities);
+        }
         
         const numGameweeks = parseInt(endGameweek as string) - parseInt(startGameweek as string) + 1;
         
@@ -13309,8 +13314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromBonus,
           totalBonusPoints: parseFloat(totalBonusPoints.toFixed(3)),
           totalPoints: parseFloat(totalPoints.toFixed(3)),
-          averageBonusPerGameweek: parseFloat((totalBonusPoints / numGameweeks).toFixed(3)),
-          averagePointsPerGameweek: parseFloat((totalPoints / numGameweeks).toFixed(3))
+          averagePerGameweek: parseFloat((totalBonusPoints / numGameweeks).toFixed(3))
         };
       });
 
