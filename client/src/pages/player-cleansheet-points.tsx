@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, Calendar, Filter, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import ProtectedRoute from "@/components/protected-route";
+import { computeNextRange } from "@shared/gameweek-utils";
 
 interface PlayerCleanSheetData {
   playerId: number;
@@ -23,13 +24,37 @@ interface PlayerCleanSheetData {
 type SortField = 'playerName' | 'position' | 'team' | 'totalExpectedPoints';
 
 export default function PlayerCleanSheetPoints() {
-  const [startGameweek, setStartGameweek] = useState(4);
-  const [endGameweek, setEndGameweek] = useState(9); // Default 6 gameweeks
+  const [startGameweek, setStartGameweek] = useState(6);
+  const [endGameweek, setEndGameweek] = useState(11); // Default 6 gameweeks
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Fetch bootstrap data to get events for dynamic gameweek calculation
+  const { data: bootstrapData } = useQuery({
+    queryKey: ["/api/bootstrap-static"],
+    queryFn: async () => {
+      const response = await fetch("/api/bootstrap-static");
+      if (!response.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Update gameweek range when bootstrap data is available
+  useEffect(() => {
+    if (bootstrapData?.events) {
+      const nextRange = computeNextRange(bootstrapData.events, 6);
+      if (nextRange.list.length > 0) {
+        setStartGameweek(nextRange.start);
+        setEndGameweek(nextRange.end);
+      }
+    }
+  }, [bootstrapData]);
 
   // Fetch player clean sheet points data
   const { data: cleanSheetData, isLoading, error } = useQuery<PlayerCleanSheetData[]>({
@@ -136,7 +161,7 @@ export default function PlayerCleanSheetPoints() {
             <h1>Player Clean Sheet Points</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Expected clean sheet points per gameweek: Defenders & Goalkeepers (4 pts), Midfielders (1 pt), Forwards (0 pts)
+            Expected clean sheet points for the next 6 gameweeks: Defenders & Goalkeepers (4 pts), Midfielders (1 pt), Forwards (0 pts)
           </p>
         </div>
       </div>
