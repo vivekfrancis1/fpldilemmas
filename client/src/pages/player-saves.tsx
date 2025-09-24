@@ -203,13 +203,13 @@ export default function PlayerSaves() {
                             </div>
                           </td>
                           {nextGameweeks.map(gw => (
-                            <td key={gw} className="text-center">{projection.saves?.[`gw${gw}`] || '-'}</td>
+                            <td key={gw} className="text-center">{projection.saves?.[`gw${gw}`] ? (projection.saves[`gw${gw}`]).toFixed(2) : '-'}</td>
                           ))}
                           <td className="text-center font-semibold text-blue-600">
                             {projection.totalSaves}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {projection.averagePerGameweek.toFixed(1)}
+                            {projection.averagePerGameweek.toFixed(2)}
                           </td>
                         </tr>
                       ))}
@@ -259,13 +259,13 @@ export default function PlayerSaves() {
                             </div>
                           </td>
                           {nextGameweeks.map(gw => (
-                            <td key={gw} className="text-center">{projection.pointsFromSaves?.[`gw${gw}`] || '-'}</td>
+                            <td key={gw} className="text-center">{projection.pointsFromSaves?.[`gw${gw}`] ? (projection.pointsFromSaves[`gw${gw}`]).toFixed(2) : '-'}</td>
                           ))}
                           <td className="text-center font-semibold text-green-600">
                             {projection.totalPoints}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {(projection.totalPoints / nextGameweeks.length).toFixed(1)}
+                            {(projection.totalPoints / nextGameweeks.length).toFixed(2)}
                           </td>
                         </tr>
                       ))}
