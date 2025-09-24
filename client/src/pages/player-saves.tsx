@@ -42,9 +42,9 @@ export default function PlayerSaves() {
   const startGameweek = nextGameweeks[0];
   const endGameweek = nextGameweeks[5];
 
-  // Cached API call for saves projections - faster response from database with dynamic gameweek parameters
+  // Cached API call for saves projections - faster response from database
   const { data: savesProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/cached/player-saves-projections", startGameweek, endGameweek],
+    queryKey: ["/api/cached/player-saves-projections"],
     staleTime: 30 * 60 * 1000, // Cache for 30 minutes since data is updated twice daily
   });
 
