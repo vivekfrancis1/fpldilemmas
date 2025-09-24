@@ -75,26 +75,44 @@ export default function PlayerDefensiveContributions() {
 
   // Transform cached data to match expected format
   const players: PlayerDefensiveData[] = useMemo(() => {
-    if (!defensiveData) return [];
+    if (!defensiveData || !bootstrapData) return [];
+    
+    // Create gameweek projections for next 6 gameweeks
+    const futureGameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
     
     // Transform the cached data format to match the expected PlayerDefensiveData interface
-    return defensiveData.map((record: any) => ({
-      playerId: record.playerId,
-      playerName: record.playerName,
-      position: record.position,
-      teamName: record.teamName || '',
-      teamCode: record.teamCode || 0,
-      currentSeasonStats: {
-        dcPer90: record.defensiveContributionPer90 || 0,
-        tacklesPer90: record.tacklesPer90 || 0,
-        recoveriesPer90: record.recoveriesPer90 || 0,
-        cbiPer90: record.cbiPer90 || 0,
-      },
-      gameweekProjections: [], // Will be populated with projections for future gameweeks
-      form: record.form || 0,
-      confidence: record.confidence || 0.5,
-    }));
-  }, [defensiveData]);
+    return defensiveData.map((record: any) => {
+      // Create projections for each future gameweek using historical averages
+      const gameweekProjections = futureGameweeks.map(gw => ({
+        gameweek: gw,
+        defensiveContribution: Math.round((record.defensiveContributionPer90 || 0) * 90 / 90), // Per game projection
+        tackles: Math.round((record.tacklesPer90 || 0) * 90 / 90),
+        recoveries: Math.round((record.recoveriesPer90 || 0) * 90 / 90), 
+        cbi: Math.round((record.cbiPer90 || 0) * 90 / 90),
+        opponent: "TBD", // Placeholder since we don't have fixture data
+        opponentTier: "2", // Default tier
+        fixtureMultiplier: 1.0, // Default multiplier
+        isProjected: true,
+      }));
+
+      return {
+        playerId: record.playerId,
+        playerName: record.playerName,
+        position: record.position,
+        teamName: record.teamName || '',
+        teamCode: record.teamCode || 0,
+        currentSeasonStats: {
+          dcPer90: record.defensiveContributionPer90 || 0,
+          tacklesPer90: record.tacklesPer90 || 0,
+          recoveriesPer90: record.recoveriesPer90 || 0,
+          cbiPer90: record.cbiPer90 || 0,
+        },
+        gameweekProjections,
+        form: record.form || 0,
+        confidence: record.confidence || 0.5,
+      };
+    });
+  }, [defensiveData, bootstrapData, nextGameweek]);
 
   // Get all gameweeks from the first player's projections (only future gameweeks)
   const allGameweeks = players.length > 0 ? players[0].gameweekProjections.map(gw => gw.gameweek).filter(gw => gw >= nextGameweek) : [];
