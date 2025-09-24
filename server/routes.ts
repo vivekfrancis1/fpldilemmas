@@ -10927,52 +10927,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("DEBUG: Player Red Cards Projections API called - using pure projections for future gameweeks only");
       
-      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
-      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
-      
       // Get FPL bootstrap data for current gameweek info and players
       const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       const fplData = await fplResponse.json();
       const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
-      const nextGameweek = currentGameweek + 1; // Start from next gameweek
       
-      // Extract red card data for all players using pure projections for future gameweeks only
-      const redCardProjections = await Promise.all(
-        fplData.elements.map(async (player: any) => {
-          const team = fplData.teams.find((t: any) => t.id === player.team);
-          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
-          const redCards: { [key: string]: number } = {};
-          const pointsFromRedCards: { [key: string]: number } = {};
-          let totalRedCards = 0;
-          let totalPoints = 0;
-          
-          // Process each FUTURE gameweek only with pure projections
-          for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
-            // Red cards are rare events - use minimal probabilities for future gameweeks only
-            const gwRedCards = parseFloat((Math.random() * 0.01).toFixed(3)); // 0-0.01
-            const gwPoints = -(gwRedCards * 3); // -3 points per red card
-            
-            redCards[`gw${gw}`] = parseFloat(gwRedCards.toFixed(3));
-            pointsFromRedCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
-            totalRedCards += gwRedCards;
-            totalPoints += gwPoints;
-          }
-          
-          return {
-            playerId: player.id,
-            playerName: player.web_name,
-            teamName: team?.short_name || 'UNK',
-            position,
-            redCards,
-            pointsFromRedCards,
-            totalRedCards: parseFloat(totalRedCards.toFixed(3)),
-            totalPoints: parseFloat(totalPoints.toFixed(3)),
-            averagePerGameweek: parseFloat((totalRedCards / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(4))
-          };
-        })
-      );
+      // Use dynamic gameweek calculation for next 6 gameweeks
+      const { computeNextRange } = await import("../shared/gameweek-utils");
+      const gameweekRange = computeNextRange(fplData.events, 6);
+      const startGameweek = gameweekRange.start;
+      const endGameweek = gameweekRange.end;
       
-      console.log(`DEBUG: Generated pure red card projections for ${redCardProjections.length} players for future gameweeks only`);
+      // Extract red card data for all players using historical data
+      const redCardProjections = fplData.elements.map((player: any) => {
+        const team = fplData.teams.find((t: any) => t.id === player.team);
+        const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
+        const redCards: { [key: string]: number } = {};
+        const pointsFromRedCards: { [key: string]: number } = {};
+        let totalRedCards = 0;
+        let totalPoints = 0;
+        
+        // Calculate expected red cards per gameweek using season data
+        const seasonRedCards = player.red_cards || 0;
+        const teamGamesPlayed = currentGameweek; // Average number of games team has played
+        const expectedRedCardsPerGameweek = teamGamesPlayed > 0 ? seasonRedCards / teamGamesPlayed : 0;
+        
+        // Process each gameweek in the next 6 gameweeks range
+        for (let gw = startGameweek; gw <= endGameweek; gw++) {
+          const gwRedCards = expectedRedCardsPerGameweek;
+          const gwPoints = -(gwRedCards * 3); // -3 points per red card
+          
+          redCards[`gw${gw}`] = parseFloat(gwRedCards.toFixed(3));
+          pointsFromRedCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
+          totalRedCards += gwRedCards;
+          totalPoints += gwPoints;
+        }
+        
+        return {
+          playerId: player.id,
+          playerName: player.web_name,
+          teamName: team?.short_name || 'UNK',
+          position,
+          redCards,
+          pointsFromRedCards,
+          totalRedCards: parseFloat(totalRedCards.toFixed(3)),
+          totalPoints: parseFloat(totalPoints.toFixed(3)),
+          averagePerGameweek: parseFloat(expectedRedCardsPerGameweek.toFixed(3))
+        };
+      });
+      
+      console.log(`DEBUG: Generated red card projections for ${redCardProjections.length} players using historical data for next 6 gameweeks`);
       res.json(redCardProjections);
     } catch (error) {
       console.error("Error in player red cards projections:", error);
