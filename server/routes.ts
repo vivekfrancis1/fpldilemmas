@@ -10840,10 +10840,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalDC = 0;
           let totalPoints = 0;
           
-          // Calculate current season DC per 90 from FPL data
-          const currentSeasonMinutes = player.minutes || 1;
-          
-          // Use existing defensive_contribution if available, otherwise calculate from components
+          // Get total season defensive contribution from FPL data
           let seasonDefensiveContribution = player.defensive_contribution || 0;
           
           if (!seasonDefensiveContribution) {
@@ -10861,7 +10858,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          const dcPer90 = currentSeasonMinutes > 0 ? (seasonDefensiveContribution / currentSeasonMinutes) * 90 : 0;
+          // Calculate team games played this season (current gameweek - 1, since we're starting from gameweek 1)
+          const teamGamesPlayed = Math.max(1, currentGameweek - 1); // Ensure at least 1 to avoid division by zero
+          
+          // Calculate DC per team game for this player
+          const dcPerTeamGame = seasonDefensiveContribution / teamGamesPlayed;
           
           // Process each FUTURE gameweek only
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
@@ -10883,8 +10884,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const expectedMinutes = playerMinutes?.gameweekProjections?.[`gw${gw}`] || 
                                   playerMinutes?.gameweekProjections?.[gw] || 90; // Default to 90 if not found
             
-            // Apply new formula: DC = Current DC per 90 mins × Attacking tier multiplier × (Expected Minutes/90)
-            const projectedDC = dcPer90 * attackMultiplier * (expectedMinutes / 90);
+            // Apply user's exact formula: DC = (Total season DC / Team games played) × (Expected minutes/90) × Attacking tier multiplier
+            const projectedDC = dcPerTeamGame * (expectedMinutes / 90) * attackMultiplier;
             
             // Calculate points (2 points if DC >= threshold based on position)
             let points = 0;
@@ -10912,7 +10913,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalDefensiveContributions: parseFloat(totalDC.toFixed(1)),
             totalPoints: totalPoints,
             averagePerGameweek: parseFloat((totalDC / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(1)),
-            dcPer90: dcPer90, // Include for verification
+            dcPer90: dcPerTeamGame, // DC per team game for verification
+            teamGamesPlayed: teamGamesPlayed, // Include for verification
             seasonDefensiveContribution: seasonDefensiveContribution // Include raw DC value
           };
         })
