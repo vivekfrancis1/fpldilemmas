@@ -740,7 +740,7 @@ export default function PlayerTotalPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Positions</SelectItem>
+                  <SelectItem key="all" value="all">All Positions</SelectItem>
                   {positions.map(position => (
                     <SelectItem key={position} value={position}>{position}</SelectItem>
                   ))}
@@ -756,7 +756,7 @@ export default function PlayerTotalPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
+                  <SelectItem key="all" value="all">All Teams</SelectItem>
                   {teams.map(team => (
                     <SelectItem key={team} value={team}>{team}</SelectItem>
                   ))}

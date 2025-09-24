@@ -483,7 +483,7 @@ export class FPLScoringCacheService {
           await new Promise(resolve => setTimeout(resolve, 500));
           
         } catch (error) {
-          console.warn(`⚠️ Error processing gameweek ${gameweek.id}:`, error.message);
+          console.warn(`⚠️ Error processing gameweek ${gameweek.id}:`, error instanceof Error ? error.message : String(error));
           continue;
         }
       }
@@ -633,7 +633,7 @@ export class FPLScoringCacheService {
           await new Promise(resolve => setTimeout(resolve, 500));
           
         } catch (error) {
-          console.warn(`⚠️ Error processing gameweek ${gameweek.id}:`, error.message);
+          console.warn(`⚠️ Error processing gameweek ${gameweek.id}:`, error instanceof Error ? error.message : String(error));
           continue;
         }
       }
@@ -785,7 +785,7 @@ export class FPLScoringCacheService {
           await new Promise(resolve => setTimeout(resolve, 500));
           
         } catch (error) {
-          console.warn(`⚠️ Error processing gameweek ${gameweek.id}:`, error.message);
+          console.warn(`⚠️ Error processing gameweek ${gameweek.id}:`, error instanceof Error ? error.message : String(error));
           continue;
         }
       }
