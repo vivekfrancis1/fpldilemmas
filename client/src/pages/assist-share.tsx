@@ -26,66 +26,18 @@ interface SeasonAssistShareData {
 export default function AssistShare() {
   const queryClient = useQueryClient();
   
-  const [selectedSeason, setSelectedSeason] = useState<string>("current");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000,
   });
 
-  // Calculate current gameweek and gameweek range defaults
-  const { currentGameweek, nextGameweek, defaultEndGameweek } = useMemo(() => {
-    if (!bootstrapData?.events) return { currentGameweek: 3, nextGameweek: 4, defaultEndGameweek: 9 };
-    const currentEvent = bootstrapData.events.find(e => e.is_current);
-    const current = currentEvent ? currentEvent.id : 3;
-    const next = current + 1;
-    const defaultEnd = Math.min(next + 5, 38); // Next 6 gameweeks or up to GW38
-    return { currentGameweek: current, nextGameweek: next, defaultEndGameweek: defaultEnd };
-  }, [bootstrapData]);
-
-  // Gameweek range state (only for current season)
-  const [startGameweek, setStartGameweek] = useState<number>(4); // Will be updated in useEffect
-  const [endGameweek, setEndGameweek] = useState<number>(9); // Will be updated in useEffect
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Update gameweek defaults when bootstrap data loads
-  useEffect(() => {
-    if (bootstrapData && nextGameweek) {
-      setStartGameweek(nextGameweek);
-      setEndGameweek(defaultEndGameweek);
-    }
-  }, [bootstrapData, nextGameweek, defaultEndGameweek]);
-
-  // Validation for gameweek range
-  const isValidGameweekRange = useMemo(() => {
-    if (selectedSeason !== "current") return true; // No validation needed for historical
-    const range = endGameweek - startGameweek + 1;
-    return startGameweek <= endGameweek && range <= 12 && startGameweek >= nextGameweek;
-  }, [startGameweek, endGameweek, selectedSeason, nextGameweek]);
-
-  // Fetch available seasons
-  const { data: seasonsData } = useQuery<string[]>({
-    queryKey: ["/api/seasons"],
-    staleTime: 15 * 60 * 1000,
-  });
-
-  // Fetch assist share data from cached database for ultra-fast loading
+  // Fetch current season assist share data using simplified calculation
   const { data: assistShareData, isLoading: assistShareLoading } = useQuery<SeasonAssistShareData[]>({
-    queryKey: selectedSeason === "current" 
-      ? ["/api/cached/assist-share", startGameweek, endGameweek] 
-      : ["/api/assist-share-historical", selectedSeason],
-    queryFn: selectedSeason === "current" 
-      ? async () => {
-          const response = await fetch(`/api/cached/assist-share?startGw=${startGameweek}&endGw=${endGameweek}`);
-          if (!response.ok) throw new Error('Failed to fetch assist share data');
-          return response.json();
-        }
-      : undefined, // Use default queryFn for historical data
-    enabled: selectedSeason === "current" 
-      ? Boolean(isValidGameweekRange && startGameweek && endGameweek)
-      : Boolean(selectedSeason !== "current" && selectedSeason),
-    staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
+    queryKey: ["/api/assist-share-season"],
+    staleTime: 5 * 60 * 1000, // 5 minutes for fresh data
   });
 
   // Use season assist share data directly from API
@@ -108,32 +60,13 @@ export default function AssistShare() {
   }, [filteredData]);
 
   const handleRefreshData = async () => {
-    console.log('🔄 Assist Share refresh button clicked!');
     setIsRefreshing(true);
-    console.log('🔄 isRefreshing set to true');
     try {
-      // Add a minimum delay to make spinner visible
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Invalidate all assist share related queries
-      console.log('🔄 Invalidating assist share queries...');
-      await queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0] as string;
-          return key?.includes("/api/cached/assist-share") || key?.includes("/api/assist-share-historical");
-        }
-      });
-      // Force refetch current query based on selected season
-      console.log('🔄 Refetching assist share data...');
-      if (selectedSeason === "current") {
-        await queryClient.refetchQueries({ queryKey: ["/api/cached/assist-share", startGameweek, endGameweek] });
-      } else {
-        await queryClient.refetchQueries({ queryKey: ["/api/assist-share-historical", selectedSeason] });
-      }
-      console.log('🔄 Assist share refresh completed!');
+      await queryClient.invalidateQueries({ queryKey: ["/api/assist-share-season"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/assist-share-season"] });
     } finally {
       setIsRefreshing(false);
-      console.log('🔄 isRefreshing set to false');
     }
   };
 
@@ -169,15 +102,10 @@ export default function AssistShare() {
               <Zap className="h-8 w-8 text-green-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              {selectedSeason === "current" 
-                ? `Assist Share Projections for GW${startGameweek}-${endGameweek}` 
-                : `${selectedSeason} Assist Share Analysis`}
+              Assist Share - 2025/26 Season
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              {selectedSeason === "current" 
-                ? `Each player's percentage share of their team's expected assists for gameweeks ${startGameweek}-${endGameweek} using deterministic xA per 90 methodology with real-time FPL data`
-                : `Each player's percentage share of their team's actual assists provided in the ${selectedSeason} season`
-              }
+              Each player's percentage share of their team's assists using current season data (assists + expected assists)
             </p>
             <div className="mt-6">
               <Button
@@ -197,24 +125,9 @@ export default function AssistShare() {
           {/* Controls */}
           <Card className="mb-6">
             <CardContent className="p-6">
-              <div className="flex flex-wrap gap-4 items-end">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-green-600" />
-                  <label className="text-sm font-semibold text-gray-700">Season:</label>
-                  <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-                    <SelectTrigger className="w-44 border-2 border-gray-200 hover:border-green-400 transition-colors">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="current">2025-26 (Projected)</SelectItem>
-                      {seasonsData?.sort((a, b) => b.localeCompare(a)).map(season => (
-                        <SelectItem key={season} value={season}>{season}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
+              <div className="flex flex-wrap gap-4 items-center">
                 <div className="flex items-center gap-2">
+                  <Filter className="h-5 w-5 text-green-600" />
                   <label className="text-sm font-medium text-gray-700">Team:</label>
                   <Select value={selectedTeam} onValueChange={setSelectedTeam}>
                     <SelectTrigger className="w-48">
@@ -231,74 +144,6 @@ export default function AssistShare() {
                   </Select>
                 </div>
 
-                {/* Gameweek Range Controls - Only for Current Season */}
-                {selectedSeason === "current" && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <Target className="h-5 w-5 text-green-600" />
-                      <label className="text-sm font-medium text-gray-700">Start GW:</label>
-                      <Select 
-                        value={startGameweek.toString()} 
-                        onValueChange={(value) => {
-                          const newStart = parseInt(value);
-                          setStartGameweek(newStart);
-                          // Ensure end gameweek is valid and within 12 gameweek limit
-                          if (endGameweek < newStart) {
-                            setEndGameweek(Math.min(newStart + 5, Math.min(newStart + 11, 38)));
-                          } else if (endGameweek - newStart + 1 > 12) {
-                            setEndGameweek(newStart + 11);
-                          }
-                        }}
-                        data-testid="select-start-gameweek"
-                      >
-                        <SelectTrigger className="w-20">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 12 }, (_, i) => {
-                            const gw = nextGameweek + i;
-                            return gw <= 38 ? (
-                              <SelectItem key={gw} value={gw.toString()}>
-                                {gw}
-                              </SelectItem>
-                            ) : null;
-                          }).filter(Boolean)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Trophy className="h-5 w-5 text-green-600" />
-                      <label className="text-sm font-medium text-gray-700">End GW:</label>
-                      <Select 
-                        value={endGameweek.toString()} 
-                        onValueChange={(value) => setEndGameweek(parseInt(value))}
-                        data-testid="select-end-gameweek"
-                      >
-                        <SelectTrigger className="w-20">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: Math.min(12, 38 - startGameweek + 1) }, (_, i) => {
-                            const gw = startGameweek + i;
-                            return gw <= 38 ? (
-                              <SelectItem key={gw} value={gw.toString()}>
-                                {gw}
-                              </SelectItem>
-                            ) : null;
-                          }).filter(Boolean)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Validation Warning */}
-                    {!isValidGameweekRange && (
-                      <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md border border-red-200">
-                        ⚠️ Range: {endGameweek - startGameweek + 1} GWs (max 12). Start must be ≥ GW{nextGameweek}.
-                      </div>
-                    )}
-                  </>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -322,11 +167,11 @@ export default function AssistShare() {
                         <span>{teamData.teamShort}</span>
                       </div>
                       <Badge variant="secondary" className="bg-white text-teal-600">
-                        {selectedSeason === "current" ? `GW${startGameweek}-${endGameweek}` : selectedSeason}
+                        2025/26
                       </Badge>
                     </CardTitle>
                     <div className="text-sm opacity-90">
-                      {selectedSeason === "current" ? "Expected" : "Total"} Assists: <span className="font-bold text-lg">{(teamData?.expectedAssists || 0).toFixed(1)}</span>
+                      Season Total (Assists + xA): <span className="font-bold text-lg">{(teamData?.expectedAssists || 0).toFixed(1)}</span>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4">
@@ -357,7 +202,7 @@ export default function AssistShare() {
                               {(player.assistShare || 0).toFixed(1)}%
                             </span>
                             <span className="text-xs text-gray-500">
-                              {(player.projectedAssists || 0).toFixed(1)} {selectedSeason === "current" ? "proj" : "actual"}
+                              {(player.projectedAssists || 0).toFixed(1)} total
                             </span>
                           </div>
                         </div>
@@ -394,35 +239,21 @@ export default function AssistShare() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    {selectedSeason === "current" ? (
-                      <>
-                        <li>• Season-long assist projections using advanced statistical modeling</li>
-                        <li>• Enhanced with historical assist data from 2016-2024 seasons</li>
-                        <li>• Elite assist providers identified from 5+ year Premier League history</li>
-                        <li>• Advanced creativity metrics and ICT index correlation analysis</li>
-                        <li>• Set piece responsibility and playing time factors included</li>
-                        <li>• All players in a team total 100% with logical consistency</li>
-                      </>
-                    ) : (
-                      <>
-                        <li>• Historical assist data from actual {selectedSeason} season performance</li>
-                        <li>• Shows each player's actual assist contribution to their team</li>
-                        <li>• Based on real match results and official FPL records</li>
-                        <li>• Percentage shares calculated from total team assists scored</li>
-                        <li>• Useful for identifying consistent assist providers over time</li>
-                        <li>• All percentages add up to 100% per team for accuracy</li>
-                      </>
-                    )}
+                    <li>• Simple formula: (Assists + Expected Assists) / Team Total × 100</li>
+                    <li>• Uses current 2025/26 season data only</li>
+                    <li>• Combines actual assists with expected assists for better accuracy</li>
+                    <li>• All players in a team total 100%</li>
+                    <li>• Shows each player's contribution to team's assist output</li>
                   </ul>
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Use Cases</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Identify primary assist providers per team</li>
-                    <li>• Compare creative players across fixtures</li>
-                    <li>• Midfielder and wingback selection support</li>
-                    <li>• Understand team's attacking creativity</li>
-                    <li>• Captain choice for assist hunters</li>
+                    <li>• Identify top assist providers in each team</li>
+                    <li>• Compare players for transfer decisions</li>
+                    <li>• Captain selection based on assist involvement</li>
+                    <li>• Understand team creativity patterns</li>
+                    <li>• Find value picks with high assist share</li>
                   </ul>
                 </div>
               </div>
