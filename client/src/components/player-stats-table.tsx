@@ -451,6 +451,23 @@ export default function PlayerStatsTable({
                   <SortableHeader field="defensive_contribution_points" label="CBIT Pts" />
                 </th>
               )}
+              {/* Key Performance Metrics - positioned after Defensive Contributions */}
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="value_season" label="Value" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="points_per_game" label="Pts/Match" />
+              </th>
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="form" label="Form" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="selected_by_percent" label="Own%" />
+                </th>
+              )}
               {/* Expected Stats */}
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
@@ -491,22 +508,6 @@ export default function PlayerStatsTable({
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="expected_goals_conceded_per_90" label="xGC/90" />
-                </th>
-              )}
-              <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="value_season" label="Value" />
-              </th>
-              <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="points_per_game" label="Pts/Match" />
-              </th>
-              {!isHistoricalSeason && (
-                <th className="px-2 py-3 text-center min-w-[80px]">
-                  <SortableHeader field="form" label="Form" />
-                </th>
-              )}
-              {!isHistoricalSeason && (
-                <th className="px-2 py-3 text-center min-w-[80px]">
-                  <SortableHeader field="selected_by_percent" label="Own%" />
                 </th>
               )}
               <th className="px-2 py-3 text-center min-w-[80px]">
