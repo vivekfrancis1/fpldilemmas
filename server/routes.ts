@@ -5131,48 +5131,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Goals Scored Projections endpoint - DERIVED from goal-share data
+  // Player Goals Scored Projections endpoint - goal share × team goal projections per gameweek
   app.get("/api/player-goals-scored-projections", async (req, res) => {
     try {
-      console.log(`🚀 API DERIVATION: Player Goals Projections derived from goal-share endpoint`);
+      console.log(`🚀 API CALCULATION: Player Goals = Goal Share × Team Goal Projections per gameweek`);
       
-      // Derive data from goal-share endpoint
-      const goalShareResponse = await internalFetch('api/goal-share-season');
+      // Fetch goal share data and team goal projections in parallel
+      const [goalShareResponse, teamProjectionsResponse] = await Promise.all([
+        internalFetch('api/goal-share-season'),
+        internalFetch('api/team-goal-projections')
+      ]);
       
       if (!goalShareResponse.ok) {
         throw new Error(`Failed to fetch goal-share data: ${goalShareResponse.status}`);
       }
       
-      const goalShareData = await goalShareResponse.json();
+      if (!teamProjectionsResponse.ok) {
+        throw new Error(`Failed to fetch team projections: ${teamProjectionsResponse.status}`);
+      }
       
-      // Transform goal-share data into player projections format
+      const goalShareData = await goalShareResponse.json();
+      const teamProjectionsData = await teamProjectionsResponse.json();
+      
+      // Create lookup map for team projections by teamId
+      const teamProjectionsMap: { [teamId: number]: any } = {};
+      teamProjectionsData.forEach((team: any) => {
+        teamProjectionsMap[team.teamId] = team;
+      });
+      
+      // Calculate player projections using formula: goal share × team projections per gameweek
       const playerProjections: any[] = [];
       
       goalShareData.forEach((team: any) => {
-        if (team.players && Array.isArray(team.players)) {
+        const teamProjections = teamProjectionsMap[team.teamId];
+        
+        if (team.players && Array.isArray(team.players) && teamProjections) {
           team.players.forEach((player: any) => {
+            const goalSharePercent = player.goalShare || 0;
+            const gameweekProjections: { [gameweek: string]: number } = {};
+            
+            // Calculate projected goals for each gameweek
+            Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamGoals]) => {
+              gameweekProjections[gameweek] = (goalSharePercent / 100) * (teamGoals as number);
+            });
+            
+            // Calculate total projected goals across all gameweeks
+            const totalProjectedGoals = Object.values(gameweekProjections).reduce((sum, goals) => sum + goals, 0);
+            
             playerProjections.push({
               playerId: player.playerId,
-              playerName: player.playerName || player.name,
+              playerName: player.playerName,
               team: team.teamName,
               teamShort: team.teamShort,
               position: player.position,
-              projectedGoals: player.projectedGoals || 0,
-              goalShare: player.goalShare || 0
+              goalShare: goalSharePercent,
+              gameweekProjections: gameweekProjections,
+              totalProjectedGoals: totalProjectedGoals
             });
           });
         }
       });
       
-      // Sort by projected goals (highest first)
-      playerProjections.sort((a, b) => b.projectedGoals - a.projectedGoals);
+      // Sort by total projected goals (highest first)
+      playerProjections.sort((a, b) => b.totalProjectedGoals - a.totalProjectedGoals);
       
-      console.log(`⚡ Derived ${playerProjections.length} goal projections from goal-share data`);
+      console.log(`⚡ Calculated ${playerProjections.length} player goal projections using goal share × team projections formula`);
       res.json(playerProjections);
       
     } catch (error) {
-      console.error("Error deriving goals projections from goal-share:", error);
-      res.status(500).json({ error: "Failed to derive goal projections" });
+      console.error("Error calculating player goal projections:", error);
+      res.status(500).json({ error: "Failed to calculate player goal projections" });
     }
   });
 
