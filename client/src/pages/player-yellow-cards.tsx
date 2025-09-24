@@ -37,17 +37,18 @@ export default function PlayerYellowCards() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Get current gameweek and calculate next 6 gameweeks
-  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 5;
-  const nextGameweek = currentGameweek + 1;
-  const gameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
-
-  // Live API call for yellow card projections for next 6 gameweeks
+  // Live API call for yellow card projections
   const { data: yellowCardProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: [`/api/player-yellow-cards-projections?startGameweek=${nextGameweek}&endGameweek=${gameweeks[gameweeks.length - 1]}`],
-    enabled: !!nextGameweek && gameweeks.length > 0,
+    queryKey: ["/api/player-yellow-cards-projections"],
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes for live data
   });
+
+  // Extract gameweeks dynamically from API response
+  const gameweeks = yellowCardProjections?.length > 0 
+    ? Object.keys(yellowCardProjections[0].yellowCards).map(gw => parseInt(gw.replace('gw', ''))).sort((a, b) => a - b)
+    : [];
+  
+  const gameweekRange = gameweeks.length > 0 ? `${gameweeks[0]}-${gameweeks[gameweeks.length - 1]}` : "6-11";
 
   const teams = bootstrapData?.teams?.map(team => ({
     id: team.id,
@@ -190,7 +191,7 @@ export default function PlayerYellowCards() {
           <TabsContent value="cards" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Expected Yellow Cards (Gameweeks 4-9)</CardTitle>
+                <CardTitle>Expected Yellow Cards (Gameweeks {gameweekRange})</CardTitle>
                 <CardDescription>
                   Projected yellow card probability based on position and fixture difficulty
                 </CardDescription>
@@ -203,12 +204,9 @@ export default function PlayerYellowCards() {
                         <th className="text-left">Player</th>
                         <th className="text-center">Pos</th>
                         <th className="text-center">Team</th>
-                        <th className="text-center">GW4</th>
-                        <th className="text-center">GW5</th>
-                        <th className="text-center">GW6</th>
-                        <th className="text-center">GW7</th>
-                        <th className="text-center">GW8</th>
-                        <th className="text-center">GW9</th>
+                        {gameweeks.map(gw => (
+                          <th key={gw} className="text-center">GW{gw}</th>
+                        ))}
                         <th className="text-center cursor-pointer" onClick={() => handleSort("totalYellowCards")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalYellowCards")}
@@ -223,12 +221,9 @@ export default function PlayerYellowCards() {
                           <td className="font-medium">{projection.playerName}</td>
                           <td className="text-center text-xs font-semibold">{projection.position}</td>
                           <td className="text-center text-sm">{projection.teamName}</td>
-                          <td className="text-center">{projection.yellowCards.gw4}</td>
-                          <td className="text-center">{projection.yellowCards.gw5}</td>
-                          <td className="text-center">{projection.yellowCards.gw6}</td>
-                          <td className="text-center">{projection.yellowCards.gw7}</td>
-                          <td className="text-center">{projection.yellowCards.gw8}</td>
-                          <td className="text-center">{projection.yellowCards.gw9}</td>
+                          {gameweeks.map(gw => (
+                            <td key={gw} className="text-center">{projection.yellowCards[`gw${gw}`]}</td>
+                          ))}
                           <td className="text-center font-semibold text-yellow-600">
                             {projection.totalYellowCards}
                           </td>
@@ -247,7 +242,7 @@ export default function PlayerYellowCards() {
           <TabsContent value="points" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Points from Yellow Cards (Gameweeks 4-9)</CardTitle>
+                <CardTitle>Points from Yellow Cards (Gameweeks {gameweekRange})</CardTitle>
                 <CardDescription>
                   FPL point penalties (-1 point per yellow card) across all positions
                 </CardDescription>
@@ -260,12 +255,9 @@ export default function PlayerYellowCards() {
                         <th className="text-left">Player</th>
                         <th className="text-center">Pos</th>
                         <th className="text-center">Team</th>
-                        <th className="text-center">GW4</th>
-                        <th className="text-center">GW5</th>
-                        <th className="text-center">GW6</th>
-                        <th className="text-center">GW7</th>
-                        <th className="text-center">GW8</th>
-                        <th className="text-center">GW9</th>
+                        {gameweeks.map(gw => (
+                          <th key={gw} className="text-center">GW{gw}</th>
+                        ))}
                         <th className="text-center cursor-pointer" onClick={() => handleSort("totalPoints")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalPoints")}
@@ -280,17 +272,14 @@ export default function PlayerYellowCards() {
                           <td className="font-medium">{projection.playerName}</td>
                           <td className="text-center text-xs font-semibold">{projection.position}</td>
                           <td className="text-center text-sm">{projection.teamName}</td>
-                          <td className="text-center">{projection.pointsFromYellowCards.gw4}</td>
-                          <td className="text-center">{projection.pointsFromYellowCards.gw5}</td>
-                          <td className="text-center">{projection.pointsFromYellowCards.gw6}</td>
-                          <td className="text-center">{projection.pointsFromYellowCards.gw7}</td>
-                          <td className="text-center">{projection.pointsFromYellowCards.gw8}</td>
-                          <td className="text-center">{projection.pointsFromYellowCards.gw9}</td>
+                          {gameweeks.map(gw => (
+                            <td key={gw} className="text-center">{projection.pointsFromYellowCards[`gw${gw}`]}</td>
+                          ))}
                           <td className="text-center font-semibold text-red-600">
                             {projection.totalPoints}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {(projection.totalPoints / 6).toFixed(2)}
+                            {gameweeks.length > 0 ? (projection.totalPoints / gameweeks.length).toFixed(2) : '0.00'}
                           </td>
                         </tr>
                       ))}
