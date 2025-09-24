@@ -192,7 +192,7 @@ export default function GoalShare() {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="space-y-3">
-                      {team.players.slice(0, 10).map((player, index) => (
+                      {team.players.map((player, index) => (
                         <div key={player.playerId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                           <div className="flex items-center gap-3">
                             <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-blue-600 font-bold text-xs">
@@ -221,13 +221,6 @@ export default function GoalShare() {
                         </div>
                       ))}
                       
-                      {team.players.length > 10 && (
-                        <div className="text-center pt-2">
-                          <Badge variant="outline" className="text-xs text-gray-500">
-                            +{team.players.length - 10} more players
-                          </Badge>
-                        </div>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
