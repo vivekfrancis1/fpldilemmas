@@ -67,18 +67,34 @@ export default function PlayerDefensiveContributions() {
   const [gameweekSortColumn, setGameweekSortColumn] = useState<number | null>(null);
   const [gameweekSortOrder, setGameweekSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Fetch defensive contribution projections
+  // Fetch defensive contribution projections from cache
   const { data: defensiveData, isLoading } = useQuery({
-    queryKey: ["/api/defensive-contribution-projections"],
-    queryFn: async () => {
-      const response = await fetch("/api/defensive-contribution-projections");
-      if (!response.ok) throw new Error("Failed to fetch defensive projections");
-      return response.json();
-    },
+    queryKey: ["/api/cached/player-defensive-projections"],
     staleTime: 15 * 60 * 1000, // 15 minutes
   });
 
-  const players: PlayerDefensiveData[] = defensiveData?.data || [];
+  // Transform cached data to match expected format
+  const players: PlayerDefensiveData[] = useMemo(() => {
+    if (!defensiveData) return [];
+    
+    // Transform the cached data format to match the expected PlayerDefensiveData interface
+    return defensiveData.map((record: any) => ({
+      playerId: record.playerId,
+      playerName: record.playerName,
+      position: record.position,
+      teamName: record.teamName || '',
+      teamCode: record.teamCode || 0,
+      currentSeasonStats: {
+        dcPer90: record.defensiveContributionPer90 || 0,
+        tacklesPer90: record.tacklesPer90 || 0,
+        recoveriesPer90: record.recoveriesPer90 || 0,
+        cbiPer90: record.cbiPer90 || 0,
+      },
+      gameweekProjections: [], // Will be populated with projections for future gameweeks
+      form: record.form || 0,
+      confidence: record.confidence || 0.5,
+    }));
+  }, [defensiveData]);
 
   // Get all gameweeks from the first player's projections (only future gameweeks)
   const allGameweeks = players.length > 0 ? players[0].gameweekProjections.map(gw => gw.gameweek).filter(gw => gw >= nextGameweek) : [];
