@@ -10774,52 +10774,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper function to estimate if player will play based on recent form and position
-  async function estimatePlayerWillPlay(player: any, gameweek: number, position: string): Promise<boolean> {
-    try {
-      // Get player's recent playing time from FPL API
-      const playerDetailResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-      const playerDetail = await playerDetailResponse.json();
-      
-      // Look at last 3 gameweeks for playing time pattern
-      const recentGames = playerDetail.history.slice(-3);
-      const totalMinutes = recentGames.reduce((sum: number, game: any) => sum + (game.minutes || 0), 0);
-      const gamesPlayed = recentGames.filter((game: any) => (game.minutes || 0) > 0).length;
-      
-      // Position-based playing likelihood
-      const positionWeight = {
-        'GKP': 0.9, // Goalkeepers typically play when fit
-        'DEF': 0.8, // Defenders usually start
-        'MID': 0.7, // Midfielders vary more
-        'FWD': 0.6  // Forwards rotate more
-      }[position] || 0.7;
-      
-      // Calculate playing probability based on recent minutes
-      let playingProbability = 0;
-      
-      if (totalMinutes >= 240) { // Played most of last 3 games (90 mins * 3 = 270)
-        playingProbability = 0.95;
-      } else if (totalMinutes >= 180) { // Played 2/3 games substantially
-        playingProbability = 0.8;
-      } else if (totalMinutes >= 90) { // Played at least 1 full game
-        playingProbability = 0.6;
-      } else if (gamesPlayed > 0) { // Had some minutes
-        playingProbability = 0.4;
-      } else { // No recent minutes
-        playingProbability = 0.1;
-      }
-      
-      // Apply position weight
-      playingProbability *= positionWeight;
-      
-      // Return true if probability > 50%
-      return playingProbability > 0.5;
-      
-    } catch (error) {
-      // Fallback: assume regular players will play based on position
-      return position === 'GKP' || position === 'DEF';
-    }
-  }
 
   // Player Goals Conceded Projections - Pure projections for future gameweeks only
   app.get("/api/player-goals-conceded-projections", async (req, res) => {
@@ -10835,72 +10789,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
       const nextGameweek = currentGameweek + 1; // Start from next gameweek
       
-      // Get team goals conceded projections as the source of truth from combined endpoint
-      const teamProjectionsResponse = await fetch(`http://localhost:5000/api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
-      const teamProjections = await teamProjectionsResponse.json();
+      // Get team goals conceded projections and player minutes
+      const [teamProjectionsResponse, playerMinutesResponse] = await Promise.all([
+        fetch(`http://localhost:5000/api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`),
+        fetch("http://localhost:5000/api/player-minutes-projections")
+      ]);
       
+      const teamProjections = await teamProjectionsResponse.json();
+      const playerMinutesData = await playerMinutesResponse.json();
       
       // Filter to only GKP and DEF (affected by goals conceded)
       const affectedPlayers = fplData.elements.filter((player: any) => 
         player.element_type === 1 || player.element_type === 2
       );
       
-      const goalsConcededProjections = await Promise.all(
-        affectedPlayers.map(async (player: any) => {
-          const team = fplData.teams.find((t: any) => t.id === player.team);
-          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'DEF';
-          const goalsConceded: { [key: string]: number } = {};
-          const pointsFromGoalsConceded: { [key: string]: number } = {};
-          let totalGoalsConceded = 0;
-          let totalPoints = 0;
+      const goalsConcededProjections = affectedPlayers.map((player: any) => {
+        const team = fplData.teams.find((t: any) => t.id === player.team);
+        const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'DEF';
+        const goalsConceded: { [key: string]: number } = {};
+        const pointsFromGoalsConceded: { [key: string]: number } = {};
+        let totalGoalsConceded = 0;
+        let totalPoints = 0;
+        
+        // Find player's expected minutes data
+        const playerMinutes = playerMinutesData.find((pm: any) => pm.playerId === player.id);
+        const expectedMinutesPerGame = playerMinutes?.expectedMinutesPerGame || 0;
+        
+        // Find team's projected goals conceded data
+        const teamGoalData = teamProjections.find((tp: any) => tp.teamShort === team?.short_name);
+        
+        // Process each FUTURE gameweek only with pure projections
+        for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
+          let gwGoalsConceded = 0;
+          let gwPoints = 0;
           
-          // Find team's projected goals conceded data
-          const teamGoalData = teamProjections.find((tp: any) => tp.teamShort === team?.short_name);
-          
-          
-          // Process each FUTURE gameweek only with pure projections
-          for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
-            let gwGoalsConceded = 0;
-            let gwPoints = 0;
+          if (teamGoalData && teamGoalData.gameweekProjections && teamGoalData.gameweekProjections[gw]) {
+            const teamGoalsAgainst = parseFloat(teamGoalData.gameweekProjections[gw]);
             
-            // Use realistic minutes-based distribution for future gameweeks only
-            if (teamGoalData && teamGoalData.gameweekProjections && teamGoalData.gameweekProjections[gw]) {
-              const teamGoalsAgainst = parseFloat(teamGoalData.gameweekProjections[gw]);
-              
-              // Realistic modeling: Players who play get the full team goals conceded
-              // Estimate if player will play based on recent playing time and position
-              const willPlay = await estimatePlayerWillPlay(player, gw, position);
-              
-              if (willPlay) {
-                // If player is expected to play, they get the full team goals conceded
-                gwGoalsConceded = teamGoalsAgainst;
-                gwPoints = -(Math.floor(gwGoalsConceded / 2));
-              } else {
-                // If player unlikely to play, they get 0 goals conceded
-                gwGoalsConceded = 0;
-                gwPoints = 0;
-              }
-            }
+            // Player expected goals conceded = (expected minutes / 90) * Team expected goals conceded
+            gwGoalsConceded = (expectedMinutesPerGame / 90) * teamGoalsAgainst;
             
-            goalsConceded[`gw${gw}`] = parseFloat(gwGoalsConceded.toFixed(1));
-            pointsFromGoalsConceded[`gw${gw}`] = parseFloat(gwPoints.toFixed(1));
-            totalGoalsConceded += gwGoalsConceded;
-            totalPoints += gwPoints;
+            // Points from goals conceded = -0.5 * Player expected goals conceded
+            gwPoints = -0.5 * gwGoalsConceded;
           }
           
-          return {
-            playerId: player.id,
-            playerName: player.web_name,
-            teamName: team?.short_name || 'UNK',
-            position,
-            goalsConceded,
-            pointsFromGoalsConceded,
-            totalGoalsConceded: parseFloat(totalGoalsConceded.toFixed(1)),
-            totalPoints: parseFloat(totalPoints.toFixed(1)),
-            averagePerGameweek: parseFloat((totalGoalsConceded / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(1))
-          };
-        })
-      );
+          goalsConceded[`gw${gw}`] = parseFloat(gwGoalsConceded.toFixed(2));
+          pointsFromGoalsConceded[`gw${gw}`] = parseFloat(gwPoints.toFixed(2));
+          totalGoalsConceded += gwGoalsConceded;
+          totalPoints += gwPoints;
+        }
+        
+        return {
+          playerId: player.id,
+          playerName: player.web_name,
+          teamName: team?.short_name || 'UNK',
+          position,
+          goalsConceded,
+          pointsFromGoalsConceded,
+          totalGoalsConceded: parseFloat(totalGoalsConceded.toFixed(2)),
+          totalPoints: parseFloat(totalPoints.toFixed(2)),
+          averagePerGameweek: parseFloat((totalGoalsConceded / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(2))
+        };
+      });
       
       console.log(`DEBUG: Generated pure goals conceded projections for ${goalsConcededProjections.length} players (GKP/DEF) for future gameweeks only`);
       res.json(goalsConcededProjections);
