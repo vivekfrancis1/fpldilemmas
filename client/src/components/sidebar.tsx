@@ -228,8 +228,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                           </Badge>
                         )}
                         {(item as any).popular && (
-                          <Badge variant="secondary" className="bg-green-500 text-white text-xs px-1.5 py-0.5 font-bold flex-shrink-0">
-                            POPULAR
+                          <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-green-600 text-white text-xs px-2 py-1 font-medium rounded-full shadow-sm flex-shrink-0">
+                            Popular
                           </Badge>
                         )}
                       </div>
