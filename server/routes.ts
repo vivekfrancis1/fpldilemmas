@@ -13254,8 +13254,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { startGameweek = 4, endGameweek = 9 } = req.query;
       
-      // Get bonus probabilities from the live API (not cached bonus points)
-      const probabilitiesResponse = await internalFetch(`api/player-bonus-probabilities`);
+      // Get bonus probabilities from the live API (not cached bonus points) with gameweek parameters
+      const probabilitiesResponse = await internalFetch(`api/player-bonus-probabilities?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       const probabilitiesData = await probabilitiesResponse.json();
       
       // Convert probabilities to final bonus points: Probability × 1

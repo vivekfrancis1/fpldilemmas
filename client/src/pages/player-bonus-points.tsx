@@ -57,19 +57,25 @@ export default function PlayerBonusPoints() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // API calls for the three different data sets
+  // Calculate next 6 gameweeks dynamically
+  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 5;
+  const nextGameweeks = Array.from({ length: 6 }, (_, i) => currentGameweek + 1 + i);
+  const startGameweek = nextGameweeks[0];
+  const endGameweek = nextGameweeks[5];
+
+  // API calls for the three different data sets with dynamic gameweek parameters
   const { data: bpsProjections, isLoading: isLoadingBPS } = useQuery({
-    queryKey: ["/api/player-bps-projections"],
+    queryKey: ["/api/player-bps-projections", startGameweek, endGameweek],
     staleTime: 30 * 60 * 1000,
   });
 
   const { data: bonusProbabilities, isLoading: isLoadingProbabilities } = useQuery({
-    queryKey: ["/api/player-bonus-probabilities"],
+    queryKey: ["/api/player-bonus-probabilities", startGameweek, endGameweek],
     staleTime: 30 * 60 * 1000,
   });
 
   const { data: bonusPointsProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-bonus-points-simple"],
+    queryKey: ["/api/player-bonus-points-simple", startGameweek, endGameweek],
     staleTime: 30 * 60 * 1000,
   });
 
@@ -223,7 +229,7 @@ export default function PlayerBonusPoints() {
           <TabsContent value="projected-bps" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Projected Bonus Point System (BPS) (Gameweeks 4-9)</CardTitle>
+                <CardTitle>Projected Bonus Point System (BPS) (Gameweeks {startGameweek}-{endGameweek})</CardTitle>
                 <CardDescription>
                   Raw BPS projections based on historical performance and form multipliers
                 </CardDescription>
@@ -236,12 +242,9 @@ export default function PlayerBonusPoints() {
                         <th className="text-left">Player</th>
                         <th className="text-center">Pos</th>
                         <th className="text-center">Team</th>
-                        <th className="text-center">GW4</th>
-                        <th className="text-center">GW5</th>
-                        <th className="text-center">GW6</th>
-                        <th className="text-center">GW7</th>
-                        <th className="text-center">GW8</th>
-                        <th className="text-center">GW9</th>
+                        {nextGameweeks.map(gw => (
+                          <th key={gw} className="text-center">GW{gw}</th>
+                        ))}
                         <th className="text-center cursor-pointer" onClick={() => handleSort("totalProjectedBPS")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalProjectedBPS")}
@@ -256,12 +259,9 @@ export default function PlayerBonusPoints() {
                           <td className="font-medium">{projection.playerName}</td>
                           <td className="text-center text-xs font-semibold">{projection.position}</td>
                           <td className="text-center text-sm">{projection.teamName}</td>
-                          <td className="text-center">{projection.projectedBPS.gw4}</td>
-                          <td className="text-center">{projection.projectedBPS.gw5}</td>
-                          <td className="text-center">{projection.projectedBPS.gw6}</td>
-                          <td className="text-center">{projection.projectedBPS.gw7}</td>
-                          <td className="text-center">{projection.projectedBPS.gw8}</td>
-                          <td className="text-center">{projection.projectedBPS.gw9}</td>
+                          {nextGameweeks.map(gw => (
+                            <td key={gw} className="text-center">{projection.projectedBPS?.[`gw${gw}`] || '-'}</td>
+                          ))}
                           <td className="text-center font-semibold text-blue-600">
                             {projection.totalProjectedBPS}
                           </td>
@@ -280,7 +280,7 @@ export default function PlayerBonusPoints() {
           <TabsContent value="bonus-probability" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Probability of Scoring Bonus Points (Gameweeks 4-9)</CardTitle>
+                <CardTitle>Probability of Scoring Bonus Points (Gameweeks {startGameweek}-{endGameweek})</CardTitle>
                 <CardDescription>
                   Probability calculations based on BPS thresholds (25+ for 1pt, 30+ for 2pts, 35+ for 3pts)
                 </CardDescription>
@@ -293,12 +293,9 @@ export default function PlayerBonusPoints() {
                         <th className="text-left">Player</th>
                         <th className="text-center">Pos</th>
                         <th className="text-center">Team</th>
-                        <th className="text-center">GW4</th>
-                        <th className="text-center">GW5</th>
-                        <th className="text-center">GW6</th>
-                        <th className="text-center">GW7</th>
-                        <th className="text-center">GW8</th>
-                        <th className="text-center">GW9</th>
+                        {nextGameweeks.map(gw => (
+                          <th key={gw} className="text-center">GW{gw}</th>
+                        ))}
                         <th className="text-center cursor-pointer" onClick={() => handleSort("averageProbability")}>
                           <div className="flex items-center justify-center gap-1">
                             Avg % {getSortIcon("averageProbability")}
@@ -312,12 +309,12 @@ export default function PlayerBonusPoints() {
                           <td className="font-medium">{probability.playerName}</td>
                           <td className="text-center text-xs font-semibold">{probability.position}</td>
                           <td className="text-center text-sm">{probability.teamName}</td>
-                          <td className="text-center">{(probability.bonusProbabilities.gw4 * 100).toFixed(1)}%</td>
-                          <td className="text-center">{(probability.bonusProbabilities.gw5 * 100).toFixed(1)}%</td>
-                          <td className="text-center">{(probability.bonusProbabilities.gw6 * 100).toFixed(1)}%</td>
-                          <td className="text-center">{(probability.bonusProbabilities.gw7 * 100).toFixed(1)}%</td>
-                          <td className="text-center">{(probability.bonusProbabilities.gw8 * 100).toFixed(1)}%</td>
-                          <td className="text-center">{(probability.bonusProbabilities.gw9 * 100).toFixed(1)}%</td>
+                          {nextGameweeks.map(gw => (
+                            <td key={gw} className="text-center">
+                              {probability.bonusProbabilities?.[`gw${gw}`] ? 
+                                (probability.bonusProbabilities[`gw${gw}`] * 100).toFixed(1) + '%' : '-'}
+                            </td>
+                          ))}
                           <td className="text-center font-semibold text-purple-600">
                             {(probability.averageProbability * 100).toFixed(1)}%
                           </td>
@@ -333,9 +330,9 @@ export default function PlayerBonusPoints() {
           <TabsContent value="bonus-points" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Final Bonus Points Projections (Gameweeks 4-9)</CardTitle>
+                <CardTitle>Final Bonus Points Projections (Gameweeks {startGameweek}-{endGameweek})</CardTitle>
                 <CardDescription>
-                  Final projections with 1.5x multiplier applied to probability-based calculations
+                  Final projections with position-based multipliers applied to probability calculations
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -346,12 +343,9 @@ export default function PlayerBonusPoints() {
                         <th className="text-left">Player</th>
                         <th className="text-center">Pos</th>
                         <th className="text-center">Team</th>
-                        <th className="text-center">GW4</th>
-                        <th className="text-center">GW5</th>
-                        <th className="text-center">GW6</th>
-                        <th className="text-center">GW7</th>
-                        <th className="text-center">GW8</th>
-                        <th className="text-center">GW9</th>
+                        {nextGameweeks.map(gw => (
+                          <th key={gw} className="text-center">GW{gw}</th>
+                        ))}
                         <th className="text-center cursor-pointer" onClick={() => handleSort("totalBonusPoints")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalBonusPoints")}
@@ -366,12 +360,9 @@ export default function PlayerBonusPoints() {
                           <td className="font-medium">{projection.playerName}</td>
                           <td className="text-center text-xs font-semibold">{projection.position}</td>
                           <td className="text-center text-sm">{projection.teamName}</td>
-                          <td className="text-center">{projection.bonusPoints.gw4}</td>
-                          <td className="text-center">{projection.bonusPoints.gw5}</td>
-                          <td className="text-center">{projection.bonusPoints.gw6}</td>
-                          <td className="text-center">{projection.bonusPoints.gw7}</td>
-                          <td className="text-center">{projection.bonusPoints.gw8}</td>
-                          <td className="text-center">{projection.bonusPoints.gw9}</td>
+                          {nextGameweeks.map(gw => (
+                            <td key={gw} className="text-center">{projection.bonusPoints?.[`gw${gw}`] || '-'}</td>
+                          ))}
                           <td className="text-center font-semibold text-yellow-600">
                             {projection.totalBonusPoints}
                           </td>
