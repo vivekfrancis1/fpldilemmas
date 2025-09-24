@@ -8743,7 +8743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await projectionCacheWorker.cacheCleanSheetProjections();
           break;
         case 'defensive':
-          await projectionCacheWorker.cacheFPLScoringComponents();
+          await projectionCacheWorker.cacheDefensiveProjections();
           break;
         case 'team':
           await projectionCacheWorker.cacheTeamProjections();

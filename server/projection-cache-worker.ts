@@ -990,6 +990,83 @@ class ProjectionCacheWorker {
   }
 
   /**
+   * Cache defensive contributions projections from API
+   */
+  async cacheDefensiveProjections(): Promise<void> {
+    try {
+      console.log(`📊 Caching defensive contributions projections...`);
+      const response = await internalFetch('api/player-defensive-contributions-projections');
+      
+      if (!response.ok) {
+        throw new Error(`Defensive Contributions API returned ${response.status}`);
+      }
+      
+      const data: any[] = await response.json();
+      console.log(`📥 Retrieved ${data.length} defensive projections`);
+      
+      // Clear existing data for this season
+      await db.delete(playerDefensiveProjections)
+        .where(eq(playerDefensiveProjections.season, '2025/26'));
+      
+      // Prepare records for batch insert - create individual gameweek records
+      const records = [];
+      const gameweekRange = [6, 7, 8, 9, 10, 11]; // Current projection range
+      
+      for (const player of data) {
+        if (player.gameweekProjections && typeof player.gameweekProjections === 'object') {
+          // Extract gameweek data if available
+          for (const gw of gameweekRange) {
+            const gwKey = gw.toString();
+            const defensiveContribution = player.gameweekProjections[gwKey] || player.averagePerGameweek || 0;
+            
+            if (defensiveContribution > 0) {
+              records.push({
+                playerId: player.playerId,
+                gameweek: gw,
+                season: '2025/26',
+                defensiveContribution: Number(defensiveContribution.toFixed(2)),
+                points: 0, // Will be calculated separately if needed
+                calculatedAt: new Date()
+              });
+            }
+          }
+        } else {
+          // Fallback: Use average per gameweek for each gameweek in range
+          const avgDefensive = player.averagePerGameweek || player.defensiveContribution || 0;
+          
+          if (avgDefensive > 0) {
+            for (const gw of gameweekRange) {
+              records.push({
+                playerId: player.playerId,
+                gameweek: gw,
+                season: '2025/26',
+                defensiveContribution: Number(avgDefensive.toFixed(2)),
+                points: 0, // Will be calculated separately if needed
+                calculatedAt: new Date()
+              });
+            }
+          }
+        }
+      }
+      
+      // Insert in batches
+      if (records.length > 0) {
+        for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
+          const batch = records.slice(i, i + this.BATCH_SIZE);
+          await db.insert(playerDefensiveProjections).values(batch);
+          console.log(`📊 Inserted defensive batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(records.length / this.BATCH_SIZE)}`);
+        }
+      }
+      
+      console.log(`✅ Defensive projections cached successfully (${records.length} records)`);
+      
+    } catch (error) {
+      console.error(`❌ Failed to cache defensive projections:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Cache goal and assist share data from API
    */
   async cacheGoalAssistShareData(): Promise<void> {
