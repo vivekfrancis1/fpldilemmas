@@ -10874,47 +10874,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
       const nextGameweek = currentGameweek + 1; // Start from next gameweek
       
-      // Extract yellow card data for all players using pure projections for future gameweeks only
-      const yellowCardProjections = await Promise.all(
-        fplData.elements.map(async (player: any) => {
-          const team = fplData.teams.find((t: any) => t.id === player.team);
-          const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
-          const yellowCards: { [key: string]: number } = {};
-          const pointsFromYellowCards: { [key: string]: number } = {};
-          let totalYellowCards = 0;
-          let totalPoints = 0;
+      // Extract yellow card data for all players using historical data
+      const yellowCardProjections = fplData.elements.map((player: any) => {
+        const team = fplData.teams.find((t: any) => t.id === player.team);
+        const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
+        const yellowCards: { [key: string]: number } = {};
+        const pointsFromYellowCards: { [key: string]: number } = {};
+        let totalYellowCards = 0;
+        let totalPoints = 0;
+        
+        // Calculate expected yellow cards per gameweek using season data
+        const seasonYellowCards = player.yellow_cards || 0;
+        const teamGamesPlayed = currentGameweek; // Average number of games team has played
+        const expectedYellowCardsPerGameweek = teamGamesPlayed > 0 ? seasonYellowCards / teamGamesPlayed : 0;
+        
+        // Process each FUTURE gameweek only with pure projections
+        for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
+          const gwYellowCards = expectedYellowCardsPerGameweek;
+          const gwPoints = -gwYellowCards; // -1 point per yellow card
           
-          // Process each FUTURE gameweek only with pure projections
-          for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
-            // Use position-specific probability calculations for future gameweeks only
-            let cardProbability;
-            if (position === 'DEF') cardProbability = 0.15;
-            else if (position === 'MID') cardProbability = 0.12;
-            else if (position === 'FWD') cardProbability = 0.08;
-            else cardProbability = 0.03;
-            
-            const gwYellowCards = parseFloat((Math.random() * cardProbability).toFixed(2));
-            const gwPoints = -(gwYellowCards);
-            
-            yellowCards[`gw${gw}`] = parseFloat(gwYellowCards.toFixed(2));
-            pointsFromYellowCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(2));
-            totalYellowCards += gwYellowCards;
-            totalPoints += gwPoints;
-          }
-          
-          return {
-            playerId: player.id,
-            playerName: player.web_name,
-            teamName: team?.short_name || 'UNK',
-            position,
-            yellowCards,
-            pointsFromYellowCards,
-            totalYellowCards: parseFloat(totalYellowCards.toFixed(2)),
-            totalPoints: parseFloat(totalPoints.toFixed(2)),
-            averagePerGameweek: parseFloat((totalYellowCards / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(3))
-          };
-        })
-      );
+          yellowCards[`gw${gw}`] = parseFloat(gwYellowCards.toFixed(3));
+          pointsFromYellowCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
+          totalYellowCards += gwYellowCards;
+          totalPoints += gwPoints;
+        }
+        
+        return {
+          playerId: player.id,
+          playerName: player.web_name,
+          teamName: team?.short_name || 'UNK',
+          position,
+          yellowCards,
+          pointsFromYellowCards,
+          totalYellowCards: parseFloat(totalYellowCards.toFixed(3)),
+          totalPoints: parseFloat(totalPoints.toFixed(3)),
+          averagePerGameweek: parseFloat(expectedYellowCardsPerGameweek.toFixed(3))
+        };
+      });
       
       console.log(`DEBUG: Generated pure yellow card projections for ${yellowCardProjections.length} players for future gameweeks only`);
       res.json(yellowCardProjections);
