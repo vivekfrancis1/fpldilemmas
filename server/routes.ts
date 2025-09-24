@@ -7263,75 +7263,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let homeExpected = match.homeTeam.expectedGoals;
         let awayExpected = match.awayTeam.expectedGoals;
         
-        // Option 2: Controlled variance
-        if (upsetConfig.enableControlledVariance) {
-          const homeVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin));
-          const awayVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin));
-          const originalHome = homeExpected;
-          const originalAway = awayExpected;
-          homeExpected *= homeVariance;
-          awayExpected *= awayVariance;
-          console.log(`DEBUG: Variance applied - ${match.homeTeam.shortName} ${originalHome.toFixed(2)} -> ${homeExpected.toFixed(2)} (${homeVariance.toFixed(3)}x), ${match.awayTeam.shortName} ${originalAway.toFixed(2)} -> ${awayExpected.toFixed(2)} (${awayVariance.toFixed(3)}x)`);
-        }
+        // Option 2: Controlled variance - DISABLED for deterministic results
+        // All variance calculations removed to ensure consistent, deterministic outcomes
         
-        // Option 3: Context-based upsets
-        if (upsetConfig.enableContextUpsets) {
-          let homeContextBoost = 1.0;
-          let awayContextBoost = 1.0;
-          
-          // Giant-killing: Lower teams get boost vs top teams
-          const isHomeTopTeam = upsetConfig.topTeamIds.includes(match.homeTeam.id);
-          const isAwayTopTeam = upsetConfig.topTeamIds.includes(match.awayTeam.id);
-          
-          if (!isHomeTopTeam && isAwayTopTeam) {
-            homeContextBoost += upsetConfig.giantKillingBoost;
-          }
-          if (!isAwayTopTeam && isHomeTopTeam) {
-            awayContextBoost += upsetConfig.giantKillingBoost;
-          }
-          
-          // Pressure situations: Top teams get penalty
-          if (Math.random() < upsetConfig.pressureChance) {
-            if (isHomeTopTeam) homeContextBoost -= upsetConfig.pressurePenalty;
-            if (isAwayTopTeam) awayContextBoost -= upsetConfig.pressurePenalty;
-          }
-          
-          // Derby effects: Increase variance for local rivalries
-          const isDerby = Math.random() < upsetConfig.derbyChance;
-          if (isDerby) {
-            const homeExtraVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin + upsetConfig.derbyVarianceBoost));
-            const awayExtraVariance = upsetConfig.varianceMin + (Math.random() * (upsetConfig.varianceMax - upsetConfig.varianceMin + upsetConfig.derbyVarianceBoost));
-            homeContextBoost *= homeExtraVariance;
-            awayContextBoost *= awayExtraVariance;
-          }
-          
-          homeExpected *= homeContextBoost;
-          awayExpected *= awayContextBoost;
-        }
+        // Option 3: Context-based upsets - DISABLED for deterministic results
+        // All random upset logic removed to ensure consistent, deterministic outcomes
         
-        // Option 5: Season-long upset budget
-        if (upsetConfig.enableSeasonUpsetBudget) {
-          if (Math.random() < upsetConfig.upsetBudgetChance) {
-            const upsetBudgetMultiplier = upsetConfig.upsetBudgetMin + (Math.random() * (upsetConfig.upsetBudgetMax - upsetConfig.upsetBudgetMin));
-            homeExpected *= upsetBudgetMultiplier;
-            awayExpected *= upsetBudgetMultiplier;
-          }
-        }
+        // Option 5: Season-long upset budget - DISABLED for deterministic results
+        // All random upset budget logic removed to ensure consistent, deterministic outcomes
         
-        // Option 1: Poisson distribution for final scores
-        function poissonSample(lambda: number): number {
-          if (lambda <= 0) return 0;
-          let L = Math.exp(-lambda);
-          let k = 0;
-          let p = 1;
-          
-          do {
-            k++;
-            p *= Math.random();
-          } while (p > L);
-          
-          return Math.max(0, k - 1);
-        }
+        // Option 1: Poisson distribution - DISABLED for deterministic results
+        // Random sampling removed to ensure consistent, deterministic outcomes
         
         // Final score calculation using configuration
         let homeScore, awayScore;
@@ -7341,7 +7283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         homeScore = Math.max(0, Math.round(homeExpected));
         awayScore = Math.max(0, Math.round(awayExpected));
         
-        console.log(`DEBUG: Final scores - ${match.homeTeam.shortName} ${homeExpected.toFixed(2)} -> ${homeScore}, ${match.awayTeam.shortName} ${awayExpected.toFixed(2)} -> ${awayScore}`);
+        console.log(`DEBUG: Deterministic scores - ${match.homeTeam.shortName} ${homeExpected.toFixed(2)} -> ${homeScore}, ${match.awayTeam.shortName} ${awayExpected.toFixed(2)} -> ${awayScore}`);
         
         // Determine match outcome
         let predictedResult;
