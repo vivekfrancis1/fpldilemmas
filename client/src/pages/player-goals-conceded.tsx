@@ -44,8 +44,8 @@ export default function PlayerGoalsConceded() {
 
   // Live API call for goals conceded projections for next 6 gameweeks
   const { data: goalsConcededProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-goals-conceded-projections", { startGameweek: nextGameweek, endGameweek: gameweeks[gameweeks.length - 1] }],
-    enabled: !!nextGameweek,
+    queryKey: [`/api/player-goals-conceded-projections?startGameweek=${nextGameweek}&endGameweek=${gameweeks[gameweeks.length - 1]}`],
+    enabled: !!nextGameweek && gameweeks.length > 0,
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes for live data
   });
 
