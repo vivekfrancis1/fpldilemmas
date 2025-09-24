@@ -349,7 +349,7 @@ export default function PlayerDefensiveContributions() {
 
   const exportToCSV = () => {
     if (activeTab === "defensive-contributions") {
-      const headers = ['Player', 'Position', 'Team', 'Current DC/90', ...gameweeks.map(gw => `GW${gw}`), 'Total', 'Average'];
+      const headers = ['Player', 'Position', 'Team', 'Current DC/game', ...gameweeks.map(gw => `GW${gw}`), 'Total', 'Average'];
       const rows = filteredPlayers.map(player => [
         player.playerName,
         player.position,
@@ -372,7 +372,7 @@ export default function PlayerDefensiveContributions() {
       a.click();
       URL.revokeObjectURL(url);
     } else {
-      const headers = ['Player', 'Position', 'Team', 'Current DC/90', ...gameweeks.map(gw => `GW${gw} Points`), 'Total Points', 'Average Points'];
+      const headers = ['Player', 'Position', 'Team', 'Current DC/game', ...gameweeks.map(gw => `GW${gw} Points`), 'Total Points', 'Average Points'];
       const rows = filteredPlayers.map(player => [
         player.playerName,
         player.position,
@@ -564,7 +564,7 @@ export default function PlayerDefensiveContributions() {
                   <SelectItem value="total">Total DC</SelectItem>
                   <SelectItem value="average">Average DC</SelectItem>
                   <SelectItem value="points">Total DC Points</SelectItem>
-                  <SelectItem value="current">Current DC/90</SelectItem>
+                  <SelectItem value="current">Current DC/game</SelectItem>
                   <SelectItem value="name">Player Name</SelectItem>
                 </SelectContent>
               </Select>
@@ -652,7 +652,7 @@ export default function PlayerDefensiveContributions() {
                     className="cursor-pointer hover:bg-muted/50 sticky left-[150px] bg-background z-10 min-w-[100px]"
                     onClick={() => handleSort("current")}
                   >
-                    Current/90
+                    Current DC/game
                   </TableHead>
                   {gameweeks.map(gw => (
                     <TableHead 
@@ -750,7 +750,7 @@ export default function PlayerDefensiveContributions() {
                   </TableHead>
 
                   <TableHead className="sticky left-[310px] bg-background z-10 min-w-[100px]">
-                    Current/90
+                    Current DC/game
                   </TableHead>
                   {gameweeks.map(gw => (
                     <TableHead 
