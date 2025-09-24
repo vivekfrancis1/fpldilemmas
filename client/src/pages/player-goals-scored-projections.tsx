@@ -351,7 +351,7 @@ export default function PlayerGoalsScoredProjections() {
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-gray-500" />
                 <label className="text-sm font-medium text-gray-700">From GW:</label>
-                <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                <Select value={startGameweek?.toString() || ""} onValueChange={(value) => setStartGameweek(parseInt(value))}>
                   <SelectTrigger className="w-20">
                     <SelectValue />
                   </SelectTrigger>
@@ -365,12 +365,12 @@ export default function PlayerGoalsScoredProjections() {
 
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-gray-700">To GW:</label>
-                <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                <Select value={endGameweek?.toString() || ""} onValueChange={(value) => setEndGameweek(parseInt(value))}>
                   <SelectTrigger className="w-20">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: Math.max(0, maxAvailableGW - startGameweek + 1) }, (_, i) => i + startGameweek).map(gw => (
+                    {Array.from({ length: Math.max(0, maxAvailableGW - (startGameweek ?? nextGameweek) + 1) }, (_, i) => i + (startGameweek ?? nextGameweek)).map(gw => (
                       <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>

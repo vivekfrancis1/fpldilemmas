@@ -173,14 +173,14 @@ export default function PlayerGoalProjections() {
   }
 
   // Filter and sort players
-  const filteredPlayers = players?.filter((player: PlayerProjection) => {
+  const filteredPlayers = Array.isArray(players) ? players.filter((player: PlayerProjection) => {
     const matchesSearch = player.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
                          player.team.toLowerCase().includes(searchFilter.toLowerCase());
     const matchesPosition = positionFilter === "all" || player.position === positionFilter;
     const matchesTeam = teamFilter === "all" || player.team === teamFilter;
     
     return matchesSearch && matchesPosition && matchesTeam;
-  }) || [];
+  }) : [];
 
   // Sort players
   const sortedPlayers = [...filteredPlayers].sort((a, b) => {
@@ -245,8 +245,8 @@ export default function PlayerGoalProjections() {
   };
 
   // Get unique values for filters
-  const positions = [...new Set(players?.map((p: PlayerProjection) => p.position) || [])];
-  const teams = [...new Set(players?.map((p: PlayerProjection) => p.team) || [])].sort();
+  const positions = Array.isArray(players) ? Array.from(new Set(players.map((p: PlayerProjection) => p.position))) : [];
+  const teams = Array.isArray(players) ? Array.from(new Set(players.map((p: PlayerProjection) => p.team))).sort() : [];
 
   const getPositionBadgeColor = (position: string) => {
     switch (position) {
@@ -382,7 +382,7 @@ export default function PlayerGoalProjections() {
           <EnhancedTable
             data={sortedPlayers}
             columns={createGoalProjectionsColumns()}
-            onSort={handleSort}
+            onSort={handleSort as any}
             sortField={sortField}
             sortDirection={sortDirection}
             loading={isLoading}
