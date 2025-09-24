@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, TrendingUp, Users, Calendar, ArrowUpDown, Target, Filter } from "lucide-react";
+import { Clock, TrendingUp, Users, Calendar, ArrowUpDown, Target, Filter, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import ProtectedRoute from "@/components/protected-route";
 
 interface PlayerMinutesProjection {
@@ -26,6 +27,7 @@ type SortDirection = 'asc' | 'desc';
 export default function PlayerMinutes() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [startGameweek, setStartGameweek] = useState<number>(4); // Default to next gameweek
   const [endGameweek, setEndGameweek] = useState<number>(9); // Default to 6 gameweeks ahead
   const [sortField, setSortField] = useState<SortField>('expectedMinutes');
@@ -57,6 +59,13 @@ export default function PlayerMinutes() {
     if (!playerMinutesData) return [];
     
     let filtered = playerMinutesData.filter(player => {
+      // Search filter
+      if (searchTerm) {
+        const matchesSearch = player.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            player.teamShort.toLowerCase().includes(searchTerm.toLowerCase());
+        if (!matchesSearch) return false;
+      }
+      
       if (selectedPosition !== "all" && player.position !== selectedPosition) return false;
       if (selectedTeam !== "all" && player.teamShort !== selectedTeam) return false;
       if (player.expectedMinutesPerGame < parseInt(minMinutes)) return false;
@@ -106,7 +115,7 @@ export default function PlayerMinutes() {
     });
 
     return filtered;
-  }, [playerMinutesData, selectedPosition, selectedTeam, minMinutes, sortField, sortDirection]);
+  }, [playerMinutesData, searchTerm, selectedPosition, selectedTeam, minMinutes, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -246,6 +255,20 @@ export default function PlayerMinutes() {
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex flex-wrap gap-4 items-end">
+              <div className="flex items-center gap-3">
+                <Search className="h-5 w-5 text-blue-600" />
+                <label className="text-sm font-semibold text-gray-700">Search:</label>
+                <div className="relative w-64">
+                  <Input
+                    data-testid="input-player-search"
+                    placeholder="Search by player or team name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="border-2 border-gray-200 hover:border-blue-400 transition-colors"
+                  />
+                </div>
+              </div>
+              
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-blue-600" />
                 <label className="text-sm font-semibold text-gray-700">Position:</label>
