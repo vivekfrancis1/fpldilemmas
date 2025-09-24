@@ -620,39 +620,27 @@ export default function PlayerTotalPoints() {
       const position = positionParts.length > 0 ? positionParts.join(' ') : null;
       const limit = parseInt(count);
       
-      console.log(`🔍 Load Group Debug: "${selectedLoadGroup}" → criteria=${criteria}, count=${count}, position=${position}`);
-      
-      // Debug: Check unique positions in data and find Haaland
-      const uniquePositions = [...new Set(filtered.map(p => p.position))];
-      const haaland = filtered.find(p => p.name?.toLowerCase().includes('haaland'));
-      console.log(`🔍 Available positions:`, uniquePositions);
-      console.log(`🔍 Haaland found:`, haaland ? `${haaland.name} (${haaland.position}, ${haaland.totalExpectedPoints?.toFixed(1)} pts)` : 'Not found');
-      
       // Filter by position if specified
       let workingData = [...filtered];
       if (position) {
-        const beforeCount = workingData.length;
         workingData = workingData.filter(player => {
           switch (position) {
-            case 'FWDs': return player.position === 'FWD';
-            case 'MIDs': return player.position === 'MID';
-            case 'DEFs': return player.position === 'DEF';
-            case 'GKs': return player.position === 'GKP';
+            case 'FWDs': return player.position === 'Forward' || player.position === 'FWD';
+            case 'MIDs': return player.position === 'Midfielder' || player.position === 'MID';
+            case 'DEFs': return player.position === 'Defender' || player.position === 'DEF';
+            case 'GKs': return player.position === 'Goalkeeper' || player.position === 'GKP';
             default: return true;
           }
         });
-        console.log(`🔍 Position Filter: ${beforeCount} → ${workingData.length} players (position: ${position})`);
       }
       
       // Sort by criteria and take top N
       if (criteria === 'Top') {
         // Sort by total expected points (descending)
         workingData.sort((a, b) => (b.totalExpectedPoints || 0) - (a.totalExpectedPoints || 0));
-        console.log(`🔍 Top 5 ${position || 'players'} by total points:`, workingData.slice(0, 5).map(p => `${p.name} (${p.totalExpectedPoints?.toFixed(1)})`));
       } else if (criteria === 'Value') {
         // Sort by average value (descending)  
         workingData.sort((a, b) => (b.averageValue || 0) - (a.averageValue || 0));
-        console.log(`🔍 Top 5 ${position || 'players'} by value:`, workingData.slice(0, 5).map(p => `${p.name} (${p.averageValue?.toFixed(2)})`));
       }
       
       // Take top N players and return early (don't apply additional sorting)
