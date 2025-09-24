@@ -4760,299 +4760,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let goalShareCache: { data: any, timestamp: number } | null = null;
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  // Ultra-fast Goal Share endpoint - bypasses expensive team projections
+  // Simplified Goal Share endpoint - player's goals+xG divided by team total
   app.get("/api/goal-share-season", async (req, res) => {
     try {
-      // Check database first for ultra-fast response
-      const { dailyProjectionsService } = await import('./daily-projections-job');
-      const dbData = await dailyProjectionsService.getGoalShareFromDB();
-      
-      if (dbData.length > 0) {
-        console.log(`✅ Serving goal share data from database (${dbData.length} teams, ultra-fast!)`);
-        
-        // CRITICAL FIX: Populate savedGoalShareData even when serving from database
-        try {
-          const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-          if (bootstrapResponse.ok) {
-            const bootstrapData = await bootstrapResponse.json();
-            savedGoalShareData = {
-              timestamp: Date.now(),
-              bootstrapData: bootstrapData,
-              response: dbData
-            };
-            console.log(`DEBUG: Updated savedGoalShareData with database-served goal share data`);
-          } else {
-            console.error(`Bootstrap API failed with status: ${bootstrapResponse.status}`);
-          }
-        } catch (error) {
-          console.error(`Error fetching bootstrap data for savedGoalShareData:`, error);
-          // Fallback: Set savedGoalShareData without bootstrap data for now
-          savedGoalShareData = {
-            timestamp: Date.now(),
-            bootstrapData: null, // Will be fetched later if needed
-            response: dbData
-          };
-          console.log(`DEBUG: Set savedGoalShareData without bootstrap data (will fetch later)`);
-        }
-        
-        return res.json(dbData);
-      }
-      
-      // Check memory cache second
-      const EXTENDED_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
-      if (goalShareCache && Date.now() - goalShareCache.timestamp < EXTENDED_CACHE_DURATION) {
+      // Check memory cache first
+      const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+      if (goalShareCache && Date.now() - goalShareCache.timestamp < CACHE_DURATION) {
+        console.log(`✅ Serving goal share data from cache`);
         return res.json(goalShareCache.data);
       }
       
-      
-      // KEEP ORIGINAL LOGIC: Use team projections for accuracy (just optimize with caching)
-      const [bootstrapResponse, teamProjectionsResponse] = await Promise.all([
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        internalFetch("api/team-goal-projections") // Use internal fetch for timeout handling
-      ]);
-      
-      if (!bootstrapResponse.ok || !teamProjectionsResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API or Team Goal Projections");
+      // Fetch bootstrap data
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch FPL bootstrap data");
       }
       
       const bootstrapData = await bootstrapResponse.json();
-      const teamProjectionsData = await teamProjectionsResponse.json();
+      console.log(`DEBUG: Fetched bootstrap data with ${bootstrapData.elements.length} players`);
       
-      // Step 1: Calculate team season totals from Team Goal Projections (ORIGINAL LOGIC)
-      const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: { name: string, position: string, projectedGoals: number } } } } = {};
+      // Calculate team totals: goals_scored + expected_goals
+      const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
       
-      // Aggregate expected goals from Team Goal Projections data (RESTORED)
-      teamProjectionsData.forEach((team: any) => {
-        if (!teamSeasonTotals[team.teamId]) {
-          teamSeasonTotals[team.teamId] = {
-            expectedGoals: 0,
-            players: {}
-          };
-        }
+      // Initialize team totals
+      bootstrapData.teams.forEach((team: any) => {
+        teamTotals[team.id] = {
+          total: 0,
+          name: team.name,
+          short_name: team.short_name
+        };
+      });
+      
+      // Sum up goals + xG for each team
+      bootstrapData.elements.forEach((player: any) => {
+        const goalsScored = parseInt(player.goals_scored || 0);
+        const expectedGoals = parseFloat(player.expected_goals || 0);
+        const playerTotal = goalsScored + expectedGoals;
         
-        // Sum all gameweek projections for this team's season total
-        Object.values(team.gameweekProjections || {}).forEach((goals: any) => {
-          if (typeof goals === 'number') {
-            teamSeasonTotals[team.teamId].expectedGoals += goals;
-          }
-        });
+        if (teamTotals[player.team]) {
+          teamTotals[player.team].total += playerTotal;
+        }
       });
       
+      // Build response with player goal shares
+      const finalResponse: any[] = [];
       
-      // Step 2: OPTION 4 - Batch Processing for massive performance gains
-      const playersWithXG: any[] = [];
-      
-      // OPTION 4: Process players in optimized batches of 100
-      const batchSize = 100;
-      const playerBatches: any[][] = [];
-      for (let i = 0; i < bootstrapData.elements.length; i += batchSize) {
-        playerBatches.push(bootstrapData.elements.slice(i, i + batchSize));
-      }
-      
-      // Process all batches simultaneously for maximum performance
-      const batchResults = playerBatches.map(batch => {
-        return batch.map((player: any) => {
-          // PRIORITIZE ACTUAL GOALS: Use actual goals scored for completed matches
-          const actualGoalsScored = parseInt(player.goals_scored || 0);
-          const totalXG = parseFloat(player.expected_goals || 0);
-          const totalMinutes = parseInt(player.minutes || 0);
-          const xgPer90 = totalMinutes > 0 ? (totalXG / totalMinutes) * 90 : 0;
-          
-          return {
-            id: player.id,
-            team: player.team,
-            name: `${player.first_name} ${player.second_name}`,
-            position: bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown',
-            element_type: player.element_type,
-            minutes: player.minutes,
-            goals_scored: actualGoalsScored,
-            actualGoalsScored, // Explicit field for actual goals
-            totalXG,
-            totalMinutes,
-            xgPer90: Math.round(xgPer90 * 1000) / 1000 // Round to 3 decimal places
-          };
-        });
-      });
-      
-      // OPTION 4: Flatten batch results for super-fast processing
-      playersWithXG.push(...batchResults.flat());
-      
-      console.log(`DEBUG: Processed ${playersWithXG.length} players using bootstrap data`);
-      
-      // Step 3: Expected minutes and sample size adjustments handled by helper functions
-      
-      // SIMPLIFIED xG DISTRIBUTION - No sample size adjustments (Option B)
-      console.log("DEBUG: Using simplified xG distribution - accepting raw data with minor variances");
-      
-      for (const teamIdStr of Object.keys(teamSeasonTotals)) {
+      Object.keys(teamTotals).forEach(teamIdStr => {
         const teamId = parseInt(teamIdStr);
-        const team = bootstrapData.teams.find((t: any) => t.id === teamId);
+        const teamData = teamTotals[teamId];
         
-        if (team && teamSeasonTotals[teamId].expectedGoals > 0) {
-          // Get all players for this team with xG data
-          const teamPlayersWithXG = playersWithXG.filter((p: any) => p.team === teamId);
+        // Skip teams with no goals/xG
+        if (teamData.total === 0) return;
+        
+        const teamPlayers: any[] = [];
+        
+        // Get all players for this team
+        const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
+        
+        teamPlayersList.forEach((player: any) => {
+          const goalsScored = parseInt(player.goals_scored || 0);
+          const expectedGoals = parseFloat(player.expected_goals || 0);
+          const playerTotal = goalsScored + expectedGoals;
           
-          // Filter out departed players and players with insufficient data
-          const qualifiedPlayers = teamPlayersWithXG.filter(p => {
-            // Check if player is departed by name or ID
-            const playerFullName = p.name || '';
-            const shouldExclude = Array.from(DEPARTED_PLAYER_NAMES).some(departedName => 
-              playerFullName.includes(departedName) || 
-              playerFullName.toLowerCase().includes(departedName.toLowerCase())
-            );
+          // Only include players with some contribution
+          if (playerTotal > 0) {
+            const goalShare = (playerTotal / teamData.total) * 100;
+            const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
             
-            if (shouldExclude) {
-              console.log(`DEBUG: Excluding departed player ${playerFullName} from goal share calculations`);
-              return false;
-            }
-            
-            return true; // SIMPLIFIED: Include all players (Option B)
-          });
-          
-          console.log(`DEBUG: Team ${team.name} - simplified processing for ${qualifiedPlayers.length} players`);
-          
-          // Calculate raw contributions using enhanced methodology
-          const playerContributions: { [playerId: number]: { name: string, position: string, contribution: number, xgPer90: number, expectedMinutes: number } } = {};
-          let totalContribution = 0;
-          
-          for (const player of qualifiedPlayers) {
-            // ENHANCED HYBRID APPROACH: Use actual goals + current year xG + last year's xG
-            const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-            const completedGameweeks = currentGameweek - 1; // GW1 is completed
-            const remainingGameweeks = 38 - completedGameweeks;
-            
-            // Calculate goals per game from actual performance
-            const actualGoalsPerGame = completedGameweeks > 0 ? player.actualGoalsScored / completedGameweeks : 0;
-            
-            // ENHANCED xG CALCULATION: Combine current year xG with ACTUAL historical xG data
-            const currentYearXGPer90 = player.xgPer90;
-            
-            // Optimized: Only do intensive historical lookup when cache is empty
-            let historical2024XGPer90 = 0;
-            let historical2023XGPer90 = 0;
-            
-            // Use position-based fallbacks for now - historical data will be added later
-            // This prevents the undefined variable error while maintaining functionality
-            
-            // Simple equal weighting: (current + 2024/25) * 0.5
-            // Fall back to position averages if no historical data found
-            const fallback2024 = historical2024XGPer90 > 0 ? historical2024XGPer90 : 
-              (player.element_type === 1 ? 0.01 : player.element_type === 2 ? 0.06 : player.element_type === 3 ? 0.12 : 0.25);
-              
-            const combinedXGPer90 = (currentYearXGPer90 + fallback2024) * 0.5;
-            
-            // Reduce debug logging for performance
-            if (player.name.includes('Salah') || player.name.includes('Haaland')) {
-              const has2024Data = historical2024XGPer90 > 0;
-              console.log(`DEBUG: ${player.name} xG blend - Current: ${currentYearXGPer90.toFixed(3)}, 2024/25: ${fallback2024.toFixed(3)}${has2024Data ? ' (actual)' : ' (fallback)'}, Average: ${combinedXGPer90.toFixed(3)}`);
-            }
-            
-            // SIMPLIFIED: Use raw xG data without adjustments (adjustments now applied in cache generation)
-            let projectedXGPer90 = combinedXGPer90;
-            
-            // NOTE: Set piece adjustments (penalty/freekick) are now applied during cache generation
-            // in projection-cache-worker.ts to prevent double-counting
-            
-            // PURE PROJECTION: Only projected goals for next 12 gameweeks
-            const expectedMinutes = calculateExpectedMinutes(player, playersWithXG);
-            const projectedSeasonGoals = (projectedXGPer90 / 90) * expectedMinutes * (12 / 38);
-            
-            // Enhanced position multipliers for better goal distribution
-            let positionMultiplier = 1.0;
-            switch (player.element_type) {
-              case 4: // Forward
-                positionMultiplier = 1.25; // Increased significantly for forwards
-                break;
-              case 3: // Midfielder
-                positionMultiplier = 1.15; // Increased for midfielders
-                break;
-              case 2: // Defender
-                positionMultiplier = 0.4; // Kept same
-                break;
-              case 1: // Goalkeeper
-                positionMultiplier = 0.15; // Kept same
-                break;
-            }
-            
-            // ENHANCED minutes weighting to prevent unrealistic projections for bench players
-            const currentMinutes = player.minutes || 0;
-            
-            // PERCENTAGE-BASED minutes restrictions using completed gameweeks
-            const completedGWs = 3; // Update this as season progresses
-            const totalPossibleMinutes = 90 * completedGWs; // 270 minutes for 3 completed GWs
-            const minutesPercentage = (currentMinutes / totalPossibleMinutes) * 100;
-            
-            let minutesRestriction = 1.0;
-            if (minutesPercentage < 1) {
-              minutesRestriction = 0.001; // 0.1% for players with <1% of total possible minutes
-            } else if (minutesPercentage < 5) {
-              minutesRestriction = 0.005; // 0.5% for players with <5% (extreme bench warmers)
-            } else if (minutesPercentage < 15) {
-              minutesRestriction = 0.05; // 5% for players with <15% (squad players)
-            } else if (minutesPercentage < 30) {
-              minutesRestriction = 0.2; // 20% for players with <30% (rotation players)
-            }
-            
-            const maxExpectedMinutes = Math.max(...playersWithXG.map(p => calculateExpectedMinutes(p, playersWithXG)), 1);
-            const basicMinutesWeight = Math.max(0.05, expectedMinutes / maxExpectedMinutes);
-            const finalMinutesWeight = basicMinutesWeight * minutesRestriction;
-            
-            const contribution = projectedSeasonGoals * positionMultiplier * finalMinutesWeight;
-            
-            playerContributions[player.id] = {
-              name: player.name,
-              position: player.position,
-              contribution,
-              xgPer90: projectedXGPer90,
-              expectedMinutes
-            };
-            
-            totalContribution += contribution;
+            teamPlayers.push({
+              playerId: player.id,
+              playerName: `${player.first_name} ${player.second_name}`,
+              position: position,
+              goalShare: Math.round(goalShare * 100) / 100, // Round to 2 decimal places
+              projectedGoals: Math.round(playerTotal * 100) / 100 // goals + xG
+            });
           }
-          
-          // SIMPLE NORMALIZATION (no perfect balance required)
-          const getPositionGoalShareCap = (position: string, playerId?: number): number => {
-            // Special caps for elite players
-            if (playerId === 430) return 40; // Haaland - 40% cap for forwards
-            if (playerId === 381) return 30; // Salah - 30% cap for midfielders
-            
-            switch (position?.toLowerCase()) {
-              case 'goalkeeper': return 2; // Max 2% share for GKs
-              case 'defender': return 10; // Max 10% share for defenders
-              case 'midfielder': return 25; // Max 25% share for midfielders
-              case 'forward': return 30; // Max 30% share for forwards
-              default: return 25;
-            }
-          };
-          
-          // Calculate shares with position caps
-          Object.keys(playerContributions).forEach(playerIdStr => {
-            const playerId = parseInt(playerIdStr);
-            const playerData = playerContributions[playerId];
-            
-            // Calculate raw share based on contribution
-            const rawShare = totalContribution > 0 ? 
-              (playerData.contribution / totalContribution) * teamSeasonTotals[teamId].expectedGoals : 0;
-            
-            // Apply position cap
-            const positionGoalShareCap = getPositionGoalShareCap(playerData.position, playerId);
-            const maxProjectedGoals = (positionGoalShareCap / 100) * teamSeasonTotals[teamId].expectedGoals;
-            const cappedGoals = Math.min(rawShare, maxProjectedGoals);
-            
-            teamSeasonTotals[teamId].players[playerId] = {
-              name: playerData.name,
-              position: playerData.position,
-              projectedGoals: Math.max(0.01, Math.round(cappedGoals * 100) / 100)
-            };
+        });
+        
+        // Sort players by goal share descending
+        teamPlayers.sort((a, b) => b.goalShare - a.goalShare);
+        
+        if (teamPlayers.length > 0) {
+          finalResponse.push({
+            teamId: teamId,
+            teamName: teamData.name,
+            teamShort: teamData.short_name,
+            expectedGoals: Math.round(teamData.total * 100) / 100,
+            players: teamPlayers
           });
         }
-      }
+      });
       
-      console.log("DEBUG: xG per 90 methodology completed successfully");
+      // Sort teams by total goals+xG descending
+      finalResponse.sort((a, b) => b.expectedGoals - a.expectedGoals);
       
-      // Skip legacy code completely - new methodology has been applied
-      // LEGACY CODE DISABLED - xG methodology now used exclusively
+      console.log(`DEBUG: Built simplified goal share response with ${finalResponse.length} teams`);
       
+      // Update cache and savedGoalShareData
+      goalShareCache = {
+        data: finalResponse,
+        timestamp: Date.now()
+      };
+      
+      savedGoalShareData = {
+        timestamp: Date.now(),
+        bootstrapData: bootstrapData,
+        response: finalResponse
+      };
+      
+      return res.json(finalResponse);
+      
+    } catch (error) {
+      console.error(`❌ Failed to generate simplified goal share data:`, error);
+      res.status(500).json({ error: "Failed to generate goal share data" });
+    }
+  });
 
   // Helper function to calculate defensive contribution based on position
   const calculateDefensiveContribution = (elementType: number, cbi: number, tackles: number, recoveries: number): number => {
@@ -5305,67 +5127,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error querying historical player stats:", error);
       res.status(500).json({ error: "Failed to query historical player stats" });
-    }
-  });
-      
-      const response = Object.keys(teamSeasonTotals).map(teamIdStr => {
-        const teamId = parseInt(teamIdStr);
-        const team = bootstrapData.teams.find((t: any) => t.id === teamId);
-        const teamData = teamSeasonTotals[teamId];
-        
-        if (!team) return null;
-        
-        const players = Object.keys(teamData.players).map(playerIdStr => {
-          const playerId = parseInt(playerIdStr);
-          const player = teamData.players[playerId];
-          const goalShare = (player.projectedGoals / teamData.expectedGoals) * 100;
-          
-          return {
-            id: playerId,
-            name: player.name,
-            position: player.position,
-            goalShare: Math.round(goalShare * 10) / 10,
-            projectedGoals: player.projectedGoals
-          };
-        }).sort((a, b) => b.goalShare - a.goalShare);
-        
-        // Debug logging for key players
-        players.forEach(player => {
-          if (player.name && (player.name.includes('Salah') || player.name.includes('Haaland'))) {
-            console.log(`GOAL_SHARE_FROM_TEAM_PROJECTIONS ${player.name}: goalShare=${player.goalShare}%, projectedGoals=${player.projectedGoals}, teamGoals=${teamData.expectedGoals}`);
-          }
-        });
-        
-        return {
-          gameweek: 0, // Season-long data
-          teamId: teamId,
-          teamName: team.name,
-          teamShort: team.short_name,
-          expectedGoals: Math.round(teamData.expectedGoals * 100) / 100,
-          players: players
-        };
-      }).filter(Boolean);
-      
-      
-      // Save the goal share data for use by Player Total Goals tool
-      savedGoalShareData = {
-        timestamp: Date.now(),
-        teamSeasonTotals: teamSeasonTotals,
-        bootstrapData: bootstrapData,
-        response: response
-      };
-      console.log(`DEBUG: Saved 2025/26 goal share data for Player Total Goals tool`);
-      
-      // Cache the response for future requests
-      goalShareCache = {
-        data: response,
-        timestamp: Date.now()
-      };
-      
-      res.json(response);
-    } catch (error) {
-      console.error("Error generating optimized season goal share data:", error);
-      res.status(500).json({ error: "Failed to generate optimized season goal share data" });
     }
   });
 
@@ -10179,28 +9940,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   console.log("✓ Content Creators API routes registered successfully");
-
-  // Helper function to calculate defensive contribution based on position
-  const calculateDefensiveContribution = (elementType: number, cbi: number, tackles: number, recoveries: number): number => {
-    // Defenders: DC = CBI + T
-    if (elementType === 2) {
-      return cbi + tackles;
-    }
-    // Midfielders and Forwards: DC = CBI + T + R
-    else if (elementType === 3 || elementType === 4) {
-      return cbi + tackles + recoveries;
-    }
-    // Goalkeepers: DC = CBI + T (same as defenders)
-    else {
-      return cbi + tackles;
-    }
-  };
-
-  // Helper function to calculate per-90 stats
-  const calculatePer90 = (value: number, minutes: number): number => {
-    if (minutes === 0) return 0;
-    return Math.round((value * 90 / minutes) * 100) / 100;
-  };
 
   // Historical Player Stats Storage API - populates database with previous seasons data
   app.post("/api/historical-player-stats/populate", async (req, res) => {
