@@ -33,7 +33,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { internalFetch, getApiBaseUrl } from "./config";
 import { resultCache } from "./result-cache-service";
-import { applyMinutesScaling, applyMinutesScalingBatch, getExpectedMinutes } from './minutes-scaling-utils';
+// Minutes scaling removed from all player projection tools
 import { syncProjectionService } from './sync-projection-service';
 import { FPLScoringCacheService } from './fpl-scoring-cache-service';
 
@@ -5311,8 +5311,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const projectedTeamGoals = (typeof teamGoals === 'number') ? teamGoals : 0;
             const rawGoalProjection = projectedTeamGoals * (player.goalShare / 100);
             
-            // Apply minutes scaling to the raw goal projection
-            const playerGoalsForGW = await applyMinutesScaling(playerId, gameweek, rawGoalProjection, "2025/26", false);
+            // Use raw goal projection (no minutes scaling)
+            const playerGoalsForGW = rawGoalProjection;
             
             gameweekProjections[gameweek] = Math.round(playerGoalsForGW * 100) / 100;
             totalProjectedGoals += playerGoalsForGW;
@@ -5651,12 +5651,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const projectedTeamAssists = (typeof teamAssists === 'number') ? teamAssists : 0;
                 const rawPlayerAssists = projectedTeamAssists * (playerData.assistShare / 100);
                 
-                // Apply minutes scaling to the raw assist projection
-                const scaledPlayerAssists = await applyMinutesScaling(playerId, gameweek, rawPlayerAssists, "2025/26", false);
+                // Use raw assist projection (no minutes scaling)
+                const playerAssistsForGW = rawPlayerAssists;
                 
-                
-                gameweekProjections[gameweek] = Math.round(scaledPlayerAssists * 100) / 100;
-                totalProjectedAssists += scaledPlayerAssists;
+                gameweekProjections[gameweek] = Math.round(playerAssistsForGW * 100) / 100;
+                totalProjectedAssists += playerAssistsForGW;
               }
               
               // Calculate season total from future gameweeks only
@@ -6113,11 +6112,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const homePlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === homeTeam.id);
             const homePlayerShares = distributeGoalShares(homePlayersInSquad, bootstrapData.element_types);
             
-            // Calculate projected goals for each player with minutes scaling
+            // Calculate projected goals for each player (no minutes scaling)
             for (const player of homePlayerShares) {
               const rawGoalProjection = homeExpectedGoals * player.goalShare / 100;
-              const scaledProjection = await applyMinutesScaling(player.playerId || player.id, targetGameweek, rawGoalProjection, "2025/26", false);
-              player.projectedGoals = Math.round(scaledProjection * 100) / 100;
+              player.projectedGoals = Math.round(rawGoalProjection * 100) / 100;
             }
             
             data.push({
@@ -6133,11 +6131,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const awayPlayersInSquad = bootstrapData.elements.filter((p: any) => p.team === awayTeam.id);
             const awayPlayerShares = distributeGoalShares(awayPlayersInSquad, bootstrapData.element_types);
             
-            // Calculate projected goals for each player with minutes scaling
+            // Calculate projected goals for each player (no minutes scaling)
             for (const player of awayPlayerShares) {
               const rawGoalProjection = awayExpectedGoals * player.goalShare / 100;
-              const scaledProjection = await applyMinutesScaling(player.playerId || player.id, targetGameweek, rawGoalProjection, "2025/26", false);
-              player.projectedGoals = Math.round(scaledProjection * 100) / 100;
+              player.projectedGoals = Math.round(rawGoalProjection * 100) / 100;
             }
             
             data.push({
@@ -10547,42 +10544,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const team = currentData.teams.find((t: any) => t.id === player.team);
         const position = currentData.element_types.find((p: any) => p.id === player.element_type);
         
-        // Apply minutes scaling to convert per-90 rates to expected totals
-        const avgExpectedMinutes = estimatedMinutesPerGW; // Use the same minutes estimation from above
-        const minutesScalingFactor = avgExpectedMinutes / 90;
-        
-        // Convert per-90 rates to expected totals using minutes scaling
-        const scaledDCProjection = await applyMinutesScaling(
-          player.id, 
-          currentGW + 1, // Use next gameweek as representative
-          currentDCPer90 * formFactor,
-          "2025/26",
-          false
-        );
-        
-        const scaledTacklesProjection = await applyMinutesScaling(
-          player.id,
-          currentGW + 1,
-          currentTacklesPer90 * formFactor,
-          "2025/26", 
-          false
-        );
-        
-        const scaledRecoveriesProjection = await applyMinutesScaling(
-          player.id,
-          currentGW + 1,
-          currentRecoveriesPer90 * formFactor,
-          "2025/26",
-          false
-        );
-        
-        const scaledCBIProjection = await applyMinutesScaling(
-          player.id,
-          currentGW + 1,
-          currentCBIPer90 * formFactor,
-          "2025/26",
-          false
-        );
+        // Use direct per-90 rates with form factor (no minutes scaling)
+        const projectedDCPer90 = currentDCPer90 * formFactor;
+        const projectedTacklesPer90 = currentTacklesPer90 * formFactor;
+        const projectedRecoveriesPer90 = currentRecoveriesPer90 * formFactor;
+        const projectedCBIPer90 = currentCBIPer90 * formFactor;
 
         projections.push({
           playerId: player.id,
@@ -10601,14 +10567,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             recoveriesPer90: Math.round(currentRecoveriesPer90 * 100) / 100,
             cbiPer90: Math.round(currentCBIPer90 * 100) / 100
           },
-          // FIXED: Applied minutes scaling to convert per-90 rates to expected totals
-          projectedDefensiveContribution: Math.round(scaledDCProjection * 100) / 100,
-          projectedTackles: Math.round(scaledTacklesProjection * 100) / 100,
-          projectedRecoveries: Math.round(scaledRecoveriesProjection * 100) / 100,
-          projectedCBI: Math.round(scaledCBIProjection * 100) / 100,
-          expectedMinutesPerGameweek: avgExpectedMinutes, // Add this for transparency
+          // Use direct per-90 projections (no minutes scaling)
+          projectedDefensiveContribution: Math.round(projectedDCPer90 * 100) / 100,
+          projectedTackles: Math.round(projectedTacklesPer90 * 100) / 100,
+          projectedRecoveries: Math.round(projectedRecoveriesPer90 * 100) / 100,
+          projectedCBI: Math.round(projectedCBIPer90 * 100) / 100,
           form: Math.round(formFactor * 100) / 100,
-          confidence: Math.round(confidence * 100) / 100,
           gameweekProjections
         });
       }
