@@ -210,7 +210,7 @@ export class StaticCacheService {
           playerName: proj.playerName,
           position: proj.position,
           team: proj.team,
-          totalPoints: proj.totalPoints.toString(),
+          totalPoints: proj.totalPoints?.toString() || "0",
           projectedGoals: proj.projectedGoals?.toString() || "0",
           projectedAssists: proj.projectedAssists?.toString() || "0", 
           projectedMinutes: proj.projectedMinutes?.toString() || "0",
