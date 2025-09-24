@@ -221,7 +221,7 @@ export function EnhancedTable<T = any>({
             ) : (
               data.map((item, index) => (
                 <tr
-                  key={index}
+                  key={`${item.playerId || item.id || index}-${item.name || item.playerName || ''}-${index}`}
                   className={cn(
                     "border-b border-gray-100 hover:bg-gray-50/50 transition-colors",
                     highlightRow && highlightRow(item, index) && "bg-indigo-50 hover:bg-indigo-100/50",
