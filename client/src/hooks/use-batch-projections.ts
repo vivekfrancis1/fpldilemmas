@@ -32,14 +32,14 @@ interface PlayerAssistsProjection {
   playerName: string;
   teamShort?: string;
   position?: string;
-  gameweekProjections: { [gameweek: number]: number };
+  gameweekProjections: { [gameweek: string]: number };
   projectedAssists: number;
   totalProjectedAssists: number;
   assistShare: number;
 }
 
 // Feature flag for batch optimization
-const ENABLE_BATCH_OPTIMIZATION = true;
+const ENABLE_BATCH_OPTIMIZATION = false;
 
 // Utility function to chunk array into smaller batches
 function chunkArray<T>(array: T[], chunkSize: number): T[][] {
