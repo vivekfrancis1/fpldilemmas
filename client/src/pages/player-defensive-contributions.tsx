@@ -606,9 +606,6 @@ export default function PlayerDefensiveContributions() {
                           <div className="text-xs">
                             vs {gw.opponent}
                           </div>
-                          <div className="text-xs font-medium">
-                            {gw.isActual ? 'Actual' : 'Projected'}
-                          </div>
                         </div>
                       </TableCell>
                     ))}
