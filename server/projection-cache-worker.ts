@@ -17,7 +17,7 @@ import {
   getPlayerNameForDebug,
   TeamPlayerShare
 } from "./projection-adjustments";
-import { applyMinutesScaling, applyMinutesScalingBatch } from './minutes-scaling-utils';
+// Removed minutes scaling utils per simplification mandate
 
 interface ProjectionData {
   playerId: number;
@@ -402,22 +402,8 @@ class ProjectionCacheWorker {
       console.log(`   - No normalization applied - shares may exceed position limits`);
       console.log(`✅ Position-based capping completed`);
       
-      // BATCH MINUTES SCALING: Apply minutes scaling to all projections at once
-      console.log(`🕐 Applying batch minutes scaling to ${records.length} goal projections...`);
-      const scalingInput = records.map(record => ({
-        playerId: record.playerId,
-        gameweek: record.gameweek,
-        value: record.goals
-      }));
-      
-      const scaledResults = await applyMinutesScalingBatch(scalingInput, CURRENT_SEASON, false);
-      
-      // Update records with scaled values
-      for (let i = 0; i < records.length; i++) {
-        records[i].goals = Number(scaledResults[i].scaledValue);
-      }
-      
-      console.log(`✅ Batch minutes scaling applied to ${records.length} goal projections`);
+      // Simplified: No minutes scaling - use raw projections directly
+      console.log(`✅ Using raw goal projections without minutes scaling (${records.length} records)`);
       
       // Insert in batches
       for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
@@ -770,22 +756,8 @@ class ProjectionCacheWorker {
       console.log(`   - No normalization applied - shares may exceed position limits`);
       console.log(`✅ Position-based assist capping completed`);
       
-      // BATCH MINUTES SCALING: Apply minutes scaling to all assist projections at once
-      console.log(`🕐 Applying batch minutes scaling to ${records.length} assist projections...`);
-      const assistScalingInput = records.map(record => ({
-        playerId: record.playerId,
-        gameweek: record.gameweek,
-        value: record.assists
-      }));
-      
-      const assistScaledResults = await applyMinutesScalingBatch(assistScalingInput, CURRENT_SEASON, false);
-      
-      // Update records with scaled values
-      for (let i = 0; i < records.length; i++) {
-        records[i].assists = Number(assistScaledResults[i].scaledValue);
-      }
-      
-      console.log(`✅ Batch minutes scaling applied to ${records.length} assist projections`);
+      // Simplified: No minutes scaling - use raw projections directly
+      console.log(`✅ Using raw assist projections without minutes scaling (${records.length} records)`);
       
       // Insert in batches
       for (let i = 0; i < records.length; i += this.BATCH_SIZE) {

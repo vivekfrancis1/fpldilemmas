@@ -1,5 +1,5 @@
 import { projectionService } from "./projection-service";
-import { applyMinutesScaling, applyMinutesScalingBatch, getExpectedMinutes } from './minutes-scaling-utils';
+// Removed minutes scaling utils per simplification mandate
 
 /**
  * Synchronous Projection Calculation Service
