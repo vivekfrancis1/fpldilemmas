@@ -7049,11 +7049,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Clean Sheet Points endpoint - hybrid calculation with actual FPL API data for completed gameweeks
+  // Player Clean Sheet Points endpoint - API-first with cache fallback
   app.get("/api/player-cleansheet-points", async (req, res) => {
     try {
-      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
-      const endGameweek = parseInt(req.query.endGameweek as string) || Math.min(startGameweek + 5, 38); // Default to 6 gameweeks
+      console.log("🚀 API-FIRST: Attempting live calculation for player clean sheet points");
+
+      // TRY LIVE CALCULATION FIRST
+      try {
+        const startGameweek = parseInt(req.query.startGameweek as string) || 4;
+        const endGameweek = parseInt(req.query.endGameweek as string) || Math.min(startGameweek + 5, 38); // Default to 6 gameweeks
       
       // Simplified: Fetch only required data for projections
       console.log(`DEBUG: Fetching data for clean sheet points projections for GW${startGameweek}-${endGameweek}`);
@@ -7145,11 +7149,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sort by total expected points descending
       playerCleanSheetProjections.sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
       
-      console.log(`DEBUG: Generated simplified clean sheet projections for ${playerCleanSheetProjections.length} players for GW${startGameweek}-${endGameweek}`);
-      res.json(playerCleanSheetProjections);
+        console.log(`✅ LIVE SUCCESS: Generated simplified clean sheet projections for ${playerCleanSheetProjections.length} players for GW${startGameweek}-${endGameweek}`);
+        return res.json(playerCleanSheetProjections);
+
+      } catch (liveError) {
+        console.warn(`⚠️ LIVE CALCULATION FAILED for player clean sheet points: ${liveError.message}`);
+        
+        // FALLBACK TO CACHE (no specific cache endpoint available, so this will fail gracefully)
+        console.log("🔄 CACHE FALLBACK: No cached clean sheet points available, failing gracefully...");
+        throw new Error("Live calculation failed and no cache available");
+      }
     } catch (error) {
-      console.error("Error generating player clean sheet points:", error);
-      res.status(500).json({ error: "Failed to generate player clean sheet points" });
+      console.error("❌ COMPLETE FAILURE in player clean sheet points:", error);
+      res.status(500).json({ error: "Failed to generate player clean sheet points - live calculation failed" });
     }
   });
 
@@ -10789,10 +10801,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Player Defensive Contributions Projections - Using accurate historical database DC per 90 data
+  // Player Defensive Contributions Projections - API-first with cache fallback
   app.get("/api/player-defensive-contributions-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Defensive Contributions API called - using accurate historical DB DC per 90 data");
+      console.log("🚀 API-FIRST: Attempting live calculation for player defensive contributions projections");
+
+      // TRY LIVE CALCULATION FIRST
+      try {
+        console.log("DEBUG: Player Defensive Contributions API called - using accurate historical DB DC per 90 data");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -10961,11 +10977,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-      console.log(`DEBUG: Generated defensive contributions projections for ${defensiveProjections.length} players using current season FPL data`);
-      res.json(defensiveProjections);
+        console.log(`✅ LIVE SUCCESS: Generated defensive contributions projections for ${defensiveProjections.length} players using current season FPL data`);
+        return res.json(defensiveProjections);
+
+      } catch (liveError) {
+        console.warn(`⚠️ LIVE CALCULATION FAILED for player defensive contributions projections: ${liveError.message}`);
+        
+        // FALLBACK TO CACHE (no specific cache endpoint available, so this will fail gracefully)
+        console.log("🔄 CACHE FALLBACK: No cached defensive contributions available, failing gracefully...");
+        throw new Error("Live calculation failed and no cache available");
+      }
     } catch (error) {
-      console.error("Error in player defensive contributions projections:", error);
-      res.status(500).json({ error: "Failed to get player defensive contributions projections" });
+      console.error("❌ COMPLETE FAILURE in player defensive contributions projections:", error);
+      res.status(500).json({ error: "Failed to get player defensive contributions projections - live calculation failed" });
     }
   });
 
