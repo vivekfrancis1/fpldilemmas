@@ -631,7 +631,7 @@ export default function PlayerGoalsScoredProjections() {
                           const points = getPointsFromGoals(goals, player.position);
                           return (
                             <td key={gw} className="py-3 px-2 text-center">
-                              {points > 0 ? points.toFixed(1) : "-"}
+                              {points > 0 ? points.toFixed(2) : "-"}
                             </td>
                           );
                         })}
@@ -649,7 +649,7 @@ export default function PlayerGoalsScoredProjections() {
                     </td>
                     {selectedGameweeks.map(gw => (
                       <td key={gw} className="py-3 px-2 text-center font-bold text-blue-600">
-                        {(totalGoals.pointsGameweekTotals[gw] || 0) > 0 ? (totalGoals.pointsGameweekTotals[gw] || 0).toFixed(1) : "-"}
+                        {(totalGoals.pointsGameweekTotals[gw] || 0) > 0 ? (totalGoals.pointsGameweekTotals[gw] || 0).toFixed(2) : "-"}
                       </td>
                     ))}
                     <td className="py-3 px-2 text-center font-bold text-blue-600">
