@@ -643,11 +643,11 @@ export default function PlayerTotalPoints() {
         workingData.sort((a, b) => (b.averageValue || 0) - (a.averageValue || 0));
       }
       
-      // Take top N players
-      filtered = workingData.slice(0, limit);
+      // Take top N players and return early (don't apply additional sorting)
+      return workingData.slice(0, limit);
     }
 
-    // Sort data
+    // Sort data (only if no Load Group filter is active)
     filtered.sort((a, b) => {
       let aValue, bValue;
       
@@ -683,7 +683,7 @@ export default function PlayerTotalPoints() {
     });
 
     return filtered;
-  }, [totalPointsData, selectedPosition, selectedTeam, searchTerm, sortField, sortDirection]);
+  }, [totalPointsData, selectedPosition, selectedTeam, searchTerm, selectedLoadGroup, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
