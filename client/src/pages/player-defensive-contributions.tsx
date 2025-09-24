@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Download, Filter, Clock, Target } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Shield, Download, Filter, Clock, Target, Search } from "lucide-react";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean }>;
@@ -61,6 +62,7 @@ export default function PlayerDefensiveContributions() {
 
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("total");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showOnlyTopPlayers, setShowOnlyTopPlayers] = useState<boolean>(true);
@@ -241,6 +243,14 @@ export default function PlayerDefensiveContributions() {
   const filteredPlayers = useMemo(() => {
     let filtered = playersWithTotals;
 
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(p => 
+        p.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.teamName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
     // Position filter
     if (selectedPosition !== "all") {
       filtered = filtered.filter(p => p.position === selectedPosition);
@@ -307,7 +317,7 @@ export default function PlayerDefensiveContributions() {
     }
 
     return filtered;
-  }, [playersWithTotals, selectedPosition, selectedTeam, sortBy, sortOrder, showOnlyTopPlayers, gameweekSortColumn, gameweekSortOrder, activeTab]);
+  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, sortBy, sortOrder, showOnlyTopPlayers, gameweekSortColumn, gameweekSortOrder, activeTab]);
 
   // Get unique values for filters
   const positions = Array.from(new Set(players.map(p => p.position).filter(Boolean)));
@@ -496,6 +506,20 @@ export default function PlayerDefensiveContributions() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4 items-end">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">Search Players</label>
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  data-testid="input-player-search"
+                  placeholder="Search by player or team name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Position</label>
               <Select value={selectedPosition} onValueChange={setSelectedPosition}>
