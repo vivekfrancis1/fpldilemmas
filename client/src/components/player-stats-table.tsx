@@ -440,6 +440,17 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="clean_sheets" label="CS" />
               </th>
+              {/* Defensive Contribution Fields - positioned after Clean Sheets */}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[90px]">
+                  <SortableHeader field="defensive_contribution" label="Def Contrib" />
+                </th>
+              )}
+              {!isHistoricalSeason && (
+                <th className="px-2 py-3 text-center min-w-[90px]">
+                  <SortableHeader field="defensive_contribution_points" label="CBIT Pts" />
+                </th>
+              )}
               {/* Expected Stats */}
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
@@ -480,17 +491,6 @@ export default function PlayerStatsTable({
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="expected_goals_conceded_per_90" label="xGC/90" />
-                </th>
-              )}
-              {/* New Defensive Contribution Fields - 2025/26 Season Only */}
-              {!isHistoricalSeason && (
-                <th className="px-2 py-3 text-center min-w-[90px]">
-                  <SortableHeader field="defensive_contribution" label="Def Contrib" />
-                </th>
-              )}
-              {!isHistoricalSeason && (
-                <th className="px-2 py-3 text-center min-w-[90px]">
-                  <SortableHeader field="defensive_contribution_points" label="CBIT Pts" />
                 </th>
               )}
               <th className="px-2 py-3 text-center min-w-[80px]">
