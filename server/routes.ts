@@ -8541,12 +8541,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Minutes points from cached Minutes Points API (actual FPL points)
           const projectedMinutes = playerMinutes[gw] || 0;
-          let minutesPoints = projectedMinutes >= 60 ? 2 : projectedMinutes > 0 ? 1 : 0; // Fallback calculation
+          let minutesPoints;
           
-          // Use cached minutes points data if available - the individual API returns total points, not per gameweek
-          if (gw === 6 && typeof playerMinutesPointsData === 'number' && playerMinutesPointsData > 0) {
-            minutesPoints = playerMinutesPointsData; // Use the cached 1.84 value for GW6
-          }
+          // Calculate minutes points using same logic as individual API: ((projectedMinutes / 90) * 2)
+          // This ensures consistency between Player Total Points and individual Minutes API
+          minutesPoints = Math.round(((projectedMinutes / 90) * 2) * 100) / 100;
           
           pointsFromMinutes[`gw${gw}`] = minutesPoints;
           totalMinutesPoints += minutesPoints;
@@ -8609,29 +8608,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (playerBonusPoints && playerBonusPoints[`gw${gw}`] !== undefined) {
             bonusPoints = playerBonusPoints[`gw${gw}`]; // Use cached value like 0.582
           } else {
-            // Fallback to calculation if cached data not available
-            const getPositionMultiplier = (pos: string): number => {
-              switch (pos.toLowerCase()) {
-                case 'forward':
-                case 'fwd': 
-                  return 1.3; // Forwards get 30% more bonus points
-                case 'midfielder':
-                case 'mid': 
-                  return 1.1; // Midfielders get 10% more bonus points
-                case 'defender':
-                case 'def': 
-                  return 0.9; // Defenders get 10% fewer bonus points
-                case 'goalkeeper':
-                case 'gkp':
-                case 'gk': 
-                  return 0.7; // Goalkeepers get 30% fewer bonus points
-                default: 
-                  return 1.0; // Default multiplier
-              }
-            };
-            
-            const positionMultiplier = getPositionMultiplier(position);
-            bonusPoints = bonusProbability * 3 * positionMultiplier; // Position-adjusted formula
+            // Fallback calculation using same logic as individual API: Probability × 1 (simplified)
+            bonusPoints = bonusProbability * 1; // Match individual API logic
           }
           
           pointsFromBonus[`gw${gw}`] = Math.round(bonusPoints * 100) / 100;
