@@ -60,9 +60,6 @@ app.use((req, res, next) => {
     // Seed database with initial data
     await seedContentCreators();
     await seedAdminUser();
-    
-    // Initialize production cache if needed (only runs if cache is empty)
-    await productionCacheInitializer.initializeProductionCache();
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
@@ -92,8 +89,11 @@ app.use((req, res, next) => {
       port,
       host: "0.0.0.0",
       reusePort: true,
-    }, () => {
+    }, async () => {
       log(`serving on port ${port}`);
+      
+      // Initialize production cache after server is running (only runs if cache is empty)
+      await productionCacheInitializer.initializeProductionCache();
       
       // Start schedulers after server is running
       console.log("🚀 Starting schedulers...");

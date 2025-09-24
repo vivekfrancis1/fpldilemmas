@@ -1,0 +1,48 @@
+ Team projections calculation failed: error: null value in column "team_id" of relation "team_projections_daily" violates not-null constraint
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DailyProjectionsService.calculateTeamProjections (/home/runner/workspace/server/daily-projections-job.ts:104:9)
+    at async DailyProjectionsService.runDailyCalculations (/home/runner/workspace/server/daily-projections-job.ts:53:7)
+    at async DailyProjectionsScheduler.runDailyJob (/home/runner/workspace/server/daily-projections-scheduler.ts:80:7)
+    at async DailyProjectionsScheduler.runIfNeeded (/home/runner/workspace/server/daily-projections-scheduler.ts:105:9) {
+  length: 332,
+  severity: 'ERROR',
+  code: '23502',
+  detail: 'Failing row contains (380, 2025-09-24, null, [6,7,8,9,10,11], 0.00, 0.00, 2025-09-24 14:32:52.338378, 2025-09-24 14:32:52.338378).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'team_projections_daily',
+  column: 'team_id',
+  dataType: undefined,
+  constraint: undefined,
+  file: 'execMain.c',
+  line: '2021',
+  routine: 'ExecConstraints'
+}
+❌ Daily projections failed: error: null value in column "team_id" of relation "team_projections_daily" violates not-null constraint
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DailyProjectionsService.calculateTeamProjections (/home/runner/workspace/server/daily-projections-job.ts:104:9)
+    at async DailyProjectionsService.runDailyCalculations (/home/runner/workspace/server/daily-projections-job.ts:53:7)
+    at async DailyProjectionsScheduler.runDailyJob (/home/runner/workspace/server/daily-projections-scheduler.ts:80:7)
+    at async DailyProjectionsScheduler.runIfNeeded (/home/runner/workspace/server/daily-projections-scheduler.ts:105:9) {
+  length: 332,
+  severity: 'ERROR',
+  code: '23502',
+  detail: 'Failing row contains (380, 2025-09-24, null, [6,7,8,9,10,11], 0.00, 0.00, 2025-09-24 14:32:52.338378, 2025-09-24 14:32:52.338378).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'team_projections_daily',
+  column: 'team_id',
+  dataType: undefined,
+  constraint: undefined,
+  file: 'execMain.c',
+  line: '2021',
