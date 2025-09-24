@@ -529,11 +529,11 @@ export default function PlayerAssistProjections() {
                             </td>
                             {dynamicGameweekColumns.map((gw) => (
                               <td key={`points-cell-${player.playerId}-gw${gw}`} className="text-center py-3 px-1">
-                                {((player.gameweekProjections[gw.toString()] || 0) * 3) > 0 ? ((player.gameweekProjections[gw.toString()] || 0) * 3).toFixed(1) : "-"}
+                                {((player.gameweekProjections[gw.toString()] || 0) * 3) > 0 ? ((player.gameweekProjections[gw.toString()] || 0) * 3).toFixed(2) : "-"}
                               </td>
                             ))}
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {filteredGwPoints.toFixed(1)}
+                              {filteredGwPoints.toFixed(2)}
                             </td>
                           </tr>
                           );
