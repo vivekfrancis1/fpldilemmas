@@ -6951,29 +6951,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const totalGames = Math.max(currentGameweek - 1, 1); // Avoid division by zero
         const currentMinutesPerGame = Math.min(90, totalMinutes / totalGames); // Cap at 90 minutes per game
         
-        // Expected minutes estimation based on current form and role
-        let expectedMinutesPerGame = 0;
-        if (currentMinutesPerGame >= 75) {
-          // Regular starter
-          expectedMinutesPerGame = Math.min(90, currentMinutesPerGame * 1.02); // Slight boost for consistent starters, capped at 90
-        } else if (currentMinutesPerGame >= 45) {
-          // Squad rotation player
-          expectedMinutesPerGame = Math.min(90, currentMinutesPerGame * 1.0); // Maintain current rate, capped at 90
-        } else if (currentMinutesPerGame >= 20) {
-          // Substitute/impact player
-          expectedMinutesPerGame = Math.min(60, currentMinutesPerGame * 1.15); // Potential for more opportunities
-        } else if (currentMinutesPerGame >= 5) {
-          // Fringe player
-          expectedMinutesPerGame = Math.min(30, currentMinutesPerGame * 1.2); // Small chance for breakthrough
-        } else {
-          // Rarely plays
-          expectedMinutesPerGame = Math.min(10, currentMinutesPerGame * 1.1);
-        }
-        
-        // Adjust based on form and recent performances
-        const form = parseFloat(player.form) || 0;
-        const formAdjustment = Math.max(0.8, Math.min(1.2, 1 + (form - 5) / 20)); // Form adjustment between 0.8-1.2
-        expectedMinutesPerGame = Math.min(90, expectedMinutesPerGame * formAdjustment); // Apply form adjustment and cap at 90
+        // Simplified expected minutes: use current average with no complex calculations
+        const expectedMinutesPerGame = currentMinutesPerGame;
         
 
         
