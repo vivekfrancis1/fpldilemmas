@@ -622,6 +622,12 @@ export default function PlayerTotalPoints() {
       
       console.log(`🔍 Load Group Debug: "${selectedLoadGroup}" → criteria=${criteria}, count=${count}, position=${position}`);
       
+      // Debug: Check unique positions in data and find Haaland
+      const uniquePositions = [...new Set(filtered.map(p => p.position))];
+      const haaland = filtered.find(p => p.name?.toLowerCase().includes('haaland'));
+      console.log(`🔍 Available positions:`, uniquePositions);
+      console.log(`🔍 Haaland found:`, haaland ? `${haaland.name} (${haaland.position}, ${haaland.totalExpectedPoints?.toFixed(1)} pts)` : 'Not found');
+      
       // Filter by position if specified
       let workingData = [...filtered];
       if (position) {
