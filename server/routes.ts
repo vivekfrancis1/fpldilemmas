@@ -11527,7 +11527,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamProjectionsResponse = await fetch(`http://localhost:5000/api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       const teamProjections = await teamProjectionsResponse.json();
       
-      console.log(`DEBUG: Fetched ${teamProjections.length} team projections`);
       
       // Filter to only GKP and DEF (affected by goals conceded)
       const affectedPlayers = fplData.elements.filter((player: any) => 
@@ -11546,13 +11545,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Find team's projected goals conceded data
           const teamGoalData = teamProjections.find((tp: any) => tp.teamShort === team?.short_name);
           
-          // Simple debug for first Arsenal player
-          if (team?.short_name === 'ARS' && player.web_name === 'Raya') {
-            console.log(`DEBUG: Arsenal Raya - teamProjections.length: ${teamProjections.length}`);
-            console.log(`DEBUG: Arsenal Raya - First team in projections:`, teamProjections[0]);
-            console.log(`DEBUG: Arsenal Raya - Looking for teamShort: "${team?.short_name}"`);
-            console.log(`DEBUG: Arsenal Raya - teamGoalData:`, teamGoalData);
-          }
           
           // Process each FUTURE gameweek only with pure projections
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {

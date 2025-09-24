@@ -37,6 +37,11 @@ export default function PlayerGoalsConceded() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Get current gameweek and calculate next 6 gameweeks
+  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 5;
+  const nextGameweek = currentGameweek + 1;
+  const gameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
+
   // Cached API call for goals conceded projections - faster response from database
   const { data: goalsConcededProjections, isLoading: isLoadingProjections } = useQuery({
     queryKey: ["/api/cached/player-goals-conceded-projections"],
@@ -216,9 +221,9 @@ export default function PlayerGoalsConceded() {
           <TabsContent value="conceded" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Expected Goals Conceded (Gameweeks 4-9)</CardTitle>
+                <CardTitle>Expected Goals Conceded (Next 6 Gameweeks)</CardTitle>
                 <CardDescription>
-                  Projected goals conceded based on team defensive strength vs opponent attack power
+                  Projected goals conceded based on team defensive strength vs opponent attack power for GW{nextGameweek}-{gameweeks[gameweeks.length - 1]}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -241,36 +246,13 @@ export default function PlayerGoalsConceded() {
                             Team {getSortIcon("teamName")}
                           </div>
                         </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("gw4")}>
-                          <div className="flex items-center justify-center gap-1">
-                            GW4 {getSortIcon("gw4")}
-                          </div>
-                        </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("gw5")}>
-                          <div className="flex items-center justify-center gap-1">
-                            GW5 {getSortIcon("gw5")}
-                          </div>
-                        </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("gw6")}>
-                          <div className="flex items-center justify-center gap-1">
-                            GW6 {getSortIcon("gw6")}
-                          </div>
-                        </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("gw7")}>
-                          <div className="flex items-center justify-center gap-1">
-                            GW7 {getSortIcon("gw7")}
-                          </div>
-                        </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("gw8")}>
-                          <div className="flex items-center justify-center gap-1">
-                            GW8 {getSortIcon("gw8")}
-                          </div>
-                        </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("gw9")}>
-                          <div className="flex items-center justify-center gap-1">
-                            GW9 {getSortIcon("gw9")}
-                          </div>
-                        </th>
+                        {gameweeks.map(gw => (
+                          <th key={gw} className="text-center cursor-pointer" onClick={() => handleSort(`gw${gw}`)}>
+                            <div className="flex items-center justify-center gap-1">
+                              GW{gw} {getSortIcon(`gw${gw}`)}
+                            </div>
+                          </th>
+                        ))}
                         <th className="text-center cursor-pointer" onClick={() => handleSort("totalGoalsConceded")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalGoalsConceded")}
@@ -289,12 +271,9 @@ export default function PlayerGoalsConceded() {
                           <td className="font-medium">{projection.playerName}</td>
                           <td className="text-center text-xs font-semibold">{projection.position}</td>
                           <td className="text-center text-sm">{projection.teamName}</td>
-                          <td className="text-center">{projection.goalsConceded.gw4}</td>
-                          <td className="text-center">{projection.goalsConceded.gw5}</td>
-                          <td className="text-center">{projection.goalsConceded.gw6}</td>
-                          <td className="text-center">{projection.goalsConceded.gw7}</td>
-                          <td className="text-center">{projection.goalsConceded.gw8}</td>
-                          <td className="text-center">{projection.goalsConceded.gw9}</td>
+                          {gameweeks.map(gw => (
+                            <td key={gw} className="text-center">{projection.goalsConceded[`gw${gw}`]}</td>
+                          ))}
                           <td className="text-center font-semibold text-red-600">
                             {projection.totalGoalsConceded}
                           </td>
@@ -313,9 +292,9 @@ export default function PlayerGoalsConceded() {
           <TabsContent value="points" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Points from Goals Conceded (Gameweeks 4-9)</CardTitle>
+                <CardTitle>Points from Goals Conceded (Next 6 Gameweeks)</CardTitle>
                 <CardDescription>
-                  FPL point penalties (-1 point for every 2 goals conceded) for goalkeepers and defenders
+                  FPL point penalties (-1 point for every 2 goals conceded) for goalkeepers and defenders for GW{nextGameweek}-{gameweeks[gameweeks.length - 1]}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -338,36 +317,13 @@ export default function PlayerGoalsConceded() {
                             Team {getSortIcon("teamName")}
                           </div>
                         </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("pts_gw4")}>
-                          <div className="flex items-center justify-center gap-1">
-                            GW4 {getSortIcon("pts_gw4")}
-                          </div>
-                        </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("pts_gw5")}>
-                          <div className="flex items-center justify-center gap-1">
-                            GW5 {getSortIcon("pts_gw5")}
-                          </div>
-                        </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("pts_gw6")}>
-                          <div className="flex items-center justify-center gap-1">
-                            GW6 {getSortIcon("pts_gw6")}
-                          </div>
-                        </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("pts_gw7")}>
-                          <div className="flex items-center justify-center gap-1">
-                            GW7 {getSortIcon("pts_gw7")}
-                          </div>
-                        </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("pts_gw8")}>
-                          <div className="flex items-center justify-center gap-1">
-                            GW8 {getSortIcon("pts_gw8")}
-                          </div>
-                        </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("pts_gw9")}>
-                          <div className="flex items-center justify-center gap-1">
-                            GW9 {getSortIcon("pts_gw9")}
-                          </div>
-                        </th>
+                        {gameweeks.map(gw => (
+                          <th key={gw} className="text-center cursor-pointer" onClick={() => handleSort(`pts_gw${gw}`)}>
+                            <div className="flex items-center justify-center gap-1">
+                              GW{gw} {getSortIcon(`pts_gw${gw}`)}
+                            </div>
+                          </th>
+                        ))}
                         <th className="text-center cursor-pointer" onClick={() => handleSort("totalPoints")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalPoints")}
@@ -382,12 +338,9 @@ export default function PlayerGoalsConceded() {
                           <td className="font-medium">{projection.playerName}</td>
                           <td className="text-center text-xs font-semibold">{projection.position}</td>
                           <td className="text-center text-sm">{projection.teamName}</td>
-                          <td className="text-center">{projection.pointsFromGoalsConceded.gw4}</td>
-                          <td className="text-center">{projection.pointsFromGoalsConceded.gw5}</td>
-                          <td className="text-center">{projection.pointsFromGoalsConceded.gw6}</td>
-                          <td className="text-center">{projection.pointsFromGoalsConceded.gw7}</td>
-                          <td className="text-center">{projection.pointsFromGoalsConceded.gw8}</td>
-                          <td className="text-center">{projection.pointsFromGoalsConceded.gw9}</td>
+                          {gameweeks.map(gw => (
+                            <td key={gw} className="text-center">{projection.pointsFromGoalsConceded[`gw${gw}`]}</td>
+                          ))}
                           <td className="text-center font-semibold text-red-600">
                             {projection.totalPoints}
                           </td>
