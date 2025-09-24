@@ -429,7 +429,7 @@ function createPlayerTotalPointsColumns(
       render: (value) => (
         <ValueCell 
           value={value || 0} 
-          format="decimal" 
+          format="number" 
           decimals={2}
           className="font-bold text-purple-800 text-sm"
         />
@@ -444,7 +444,7 @@ function createPlayerTotalPointsColumns(
       render: (value) => (
         <ValueCell 
           value={value || 0} 
-          format="decimal" 
+          format="number" 
           decimals={0}
           className="font-bold text-blue-800 text-sm"
         />
