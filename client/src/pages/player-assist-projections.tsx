@@ -17,7 +17,7 @@ interface PlayerAssistProjection {
   playerName: string;
   teamShort: string;
   position: string;
-  gameweekProjections: { [gameweek: number]: number };
+  gameweekProjections: { [gameweek: string]: number };
   totalProjectedAssists: number;
   assistShare: number;
 }
@@ -172,7 +172,7 @@ export default function PlayerAssistProjections() {
     const getFilteredTotal = (player: PlayerAssistProjection) => {
       let total = 0;
       for (let gw = startGameweek || 0; gw <= (endGameweek || 0); gw++) {
-        total += player.gameweekProjections[gw] || 0;
+        total += player.gameweekProjections[gw.toString()] || 0;
       }
       return total;
     };
@@ -211,8 +211,8 @@ export default function PlayerAssistProjections() {
           if (sortField.startsWith('gw')) {
             const gwNumber = parseInt(sortField.replace('gw', ''));
             if (!isNaN(gwNumber)) {
-              aValue = a.gameweekProjections[gwNumber] || 0;
-              bValue = b.gameweekProjections[gwNumber] || 0;
+              aValue = a.gameweekProjections[gwNumber.toString()] || 0;
+              bValue = b.gameweekProjections[gwNumber.toString()] || 0;
             } else {
               aValue = a.totalProjectedAssists;
               bValue = b.totalProjectedAssists;
@@ -237,7 +237,7 @@ export default function PlayerAssistProjections() {
   const getFilteredTotal = (player: PlayerAssistProjection) => {
     let total = 0;
     for (let gw = startGameweek || 0; gw <= (endGameweek || 0); gw++) {
-      total += player.gameweekProjections[gw] || 0;
+      total += player.gameweekProjections[gw.toString()] || 0;
     }
     return total;
   };
@@ -443,7 +443,7 @@ export default function PlayerAssistProjections() {
                             </td>
                             {dynamicGameweekColumns.map((gw) => (
                               <td key={`assists-cell-${player.playerId}-gw${gw}`} className="text-center py-3 px-1">
-                                {(player.gameweekProjections[gw] || 0) > 0 ? (player.gameweekProjections[gw] || 0).toFixed(2) : "-"}
+                                {(player.gameweekProjections[gw.toString()] || 0) > 0 ? (player.gameweekProjections[gw.toString()] || 0).toFixed(2) : "-"}
                               </td>
                             ))}
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
@@ -506,7 +506,7 @@ export default function PlayerAssistProjections() {
                             </td>
                             {dynamicGameweekColumns.map((gw) => (
                               <td key={`points-cell-${player.playerId}-gw${gw}`} className="text-center py-3 px-1">
-                                {((player.gameweekProjections[gw] || 0) * 3) > 0 ? ((player.gameweekProjections[gw] || 0) * 3).toFixed(1) : "-"}
+                                {((player.gameweekProjections[gw.toString()] || 0) * 3) > 0 ? ((player.gameweekProjections[gw.toString()] || 0) * 3).toFixed(1) : "-"}
                               </td>
                             ))}
                             <td className="text-center py-3 px-1 font-semibold text-green-700">
