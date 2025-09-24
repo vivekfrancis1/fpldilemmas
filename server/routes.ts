@@ -6962,66 +6962,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Minutes Projections endpoint - estimates expected minutes and points per game
+  // Player Minutes Projections endpoint - API-first with cache fallback
   app.get("/api/player-minutes-projections", async (req, res) => {
     try {
-      // Fetch FPL bootstrap data
-      const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      if (!response.ok) {
-        throw new Error("Failed to fetch FPL bootstrap data");
-      }
-      
-      const bootstrapData = await response.json();
-      const players = bootstrapData.elements;
-      const teams = bootstrapData.teams;
-      const positions = bootstrapData.element_types;
-      
-      // Get current gameweek
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
-      console.log(`DEBUG: Current gameweek detected as: ${currentGameweek}`);
-      
-      // Calculate player minutes projections
-      const playerMinutesProjections = players.map((player: any) => {
-        const team = teams.find((t: any) => t.id === player.team);
-        const position = positions.find((p: any) => p.id === player.element_type);
-        
-        // Base minutes calculation on current minutes and team's actual games played
-        const totalMinutes = player.minutes || 0;
-        
-        // Use team's actual games played (much simpler and more consistent)
-        const teamGamesPlayed = Math.max(currentGameweek, 1); // Games completed/started by the team
-        
-        const currentMinutesPerGame = Math.min(90, totalMinutes / teamGamesPlayed); // Cap at 90 minutes per game
-        
-        
-        // Simplified expected minutes: use current average with no complex calculations
-        const expectedMinutesPerGame = currentMinutesPerGame;
-        
+      console.log("🚀 API-FIRST: Attempting live calculation for player minutes projections");
 
+      // TRY LIVE CALCULATION FIRST
+      try {
+        // Fetch FPL bootstrap data
+        const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        if (!response.ok) {
+          throw new Error("Failed to fetch FPL bootstrap data");
+        }
         
-        // Calculate points from minutes as (expected minutes / 90) * 2
-        const pointsFromMinutes = Math.round(((expectedMinutesPerGame / 90) * 2) * 100) / 100; // Round to 2 decimal places
+        const bootstrapData = await response.json();
+        const players = bootstrapData.elements;
+        const teams = bootstrapData.teams;
+        const positions = bootstrapData.element_types;
         
-        return {
-          playerId: player.id,
-          playerName: player.web_name,
-          teamShort: team?.short_name || 'UNK',
-          position: position?.singular_name || 'Unknown',
-          currentMinutes: totalMinutes,
-          currentMinutesPerGame: Math.round(currentMinutesPerGame * 10) / 10,
-          expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
-          pointsFromMinutes: pointsFromMinutes,
-          benchAppearances: Math.max(0, teamGamesPlayed - (player.starts || 0))
-        };
-      })
-      .filter((player: any) => player.currentMinutes >= 1) // Include only players who have played at least 1 minute
-      .sort((a: any, b: any) => b.pointsFromMinutes - a.pointsFromMinutes); // Sort by points from minutes descending
-      
-      console.log(`DEBUG: Generated minutes projections for ${playerMinutesProjections.length} players`);
-      res.json(playerMinutesProjections);
+        // Get current gameweek
+        const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+        console.log(`DEBUG: Current gameweek detected as: ${currentGameweek}`);
+        
+        // Calculate player minutes projections
+        const playerMinutesProjections = players.map((player: any) => {
+          const team = teams.find((t: any) => t.id === player.team);
+          const position = positions.find((p: any) => p.id === player.element_type);
+          
+          // Base minutes calculation on current minutes and team's actual games played
+          const totalMinutes = player.minutes || 0;
+          
+          // Use team's actual games played (much simpler and more consistent)
+          const teamGamesPlayed = Math.max(currentGameweek, 1); // Games completed/started by the team
+          
+          const currentMinutesPerGame = Math.min(90, totalMinutes / teamGamesPlayed); // Cap at 90 minutes per game
+          
+          
+          // Simplified expected minutes: use current average with no complex calculations
+          const expectedMinutesPerGame = currentMinutesPerGame;
+          
+
+          
+          // Calculate points from minutes as (expected minutes / 90) * 2
+          const pointsFromMinutes = Math.round(((expectedMinutesPerGame / 90) * 2) * 100) / 100; // Round to 2 decimal places
+          
+          return {
+            playerId: player.id,
+            playerName: player.web_name,
+            teamShort: team?.short_name || 'UNK',
+            position: position?.singular_name || 'Unknown',
+            currentMinutes: totalMinutes,
+            currentMinutesPerGame: Math.round(currentMinutesPerGame * 10) / 10,
+            expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
+            pointsFromMinutes: pointsFromMinutes,
+            benchAppearances: Math.max(0, teamGamesPlayed - (player.starts || 0))
+          };
+        })
+        .filter((player: any) => player.currentMinutes >= 1) // Include only players who have played at least 1 minute
+        .sort((a: any, b: any) => b.pointsFromMinutes - a.pointsFromMinutes); // Sort by points from minutes descending
+        
+        console.log(`✅ LIVE SUCCESS: Generated minutes projections for ${playerMinutesProjections.length} players`);
+        return res.json(playerMinutesProjections);
+
+      } catch (liveError) {
+        console.warn(`⚠️ LIVE CALCULATION FAILED for player minutes projections: ${liveError.message}`);
+        
+        // FALLBACK TO CACHE
+        console.log("🔄 CACHE FALLBACK: Trying cached player minutes projections...");
+        try {
+          const cacheResponse = await internalFetch("api/cached/player-minutes-projections");
+          if (cacheResponse.ok) {
+            const cachedData = await cacheResponse.json();
+            console.log(`✅ CACHE SUCCESS: Serving ${cachedData.length} cached player minutes projections`);
+            return res.json(cachedData);
+          } else {
+            throw new Error("Cache endpoint failed");
+          }
+        } catch (cacheError) {
+          console.error("❌ CACHE ALSO FAILED:", cacheError.message);
+          throw new Error("Both live calculation and cache failed");
+        }
+      }
     } catch (error) {
-      console.error("Error generating player minutes projections:", error);
-      res.status(500).json({ error: "Failed to generate player minutes projections" });
+      console.error("❌ COMPLETE FAILURE in player minutes projections:", error);
+      res.status(500).json({ error: "Failed to generate player minutes projections - both live and cache failed" });
     }
   });
 
