@@ -22,7 +22,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
       <ValueCell 
         value={gwPoints || 0} 
         format="points" 
-        decimals={1} 
+        decimals={2} 
         colorScheme="points"
         fontWeight="medium"
       />
@@ -36,7 +36,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
           <ValueCell 
             value={gwPoints} 
             format="points" 
-            decimals={1} 
+            decimals={2} 
             colorScheme="points"
             fontWeight="medium"
           />
@@ -53,7 +53,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <ValueCell 
                 value={player.pointsFromGoals?.[gwKey] || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-green-700"
                 fontWeight="medium"
               />
@@ -63,7 +63,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <ValueCell 
                 value={player.pointsFromAssists?.[gwKey] || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-blue-700"
                 fontWeight="medium"
               />
@@ -73,7 +73,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <ValueCell 
                 value={player.pointsFromCleanSheets?.[gwKey] || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-yellow-700"
                 fontWeight="medium"
               />
@@ -83,7 +83,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <ValueCell 
                 value={player.pointsFromDefensiveContributions?.[gwKey] || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-orange-700"
                 fontWeight="medium"
               />
@@ -93,7 +93,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <ValueCell 
                 value={player.pointsFromMinutes?.[gwKey] || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-purple-700"
                 fontWeight="medium"
               />
@@ -103,7 +103,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <ValueCell 
                 value={player.pointsFromBonus?.[gwKey] || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-pink-700"
                 fontWeight="medium"
               />
@@ -113,7 +113,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <ValueCell 
                 value={player.pointsFromSaves?.[gwKey] || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-cyan-700"
                 fontWeight="medium"
               />
@@ -123,7 +123,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <ValueCell 
                 value={player.pointsFromGoalsConceded?.[gwKey] || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-red-600"
                 fontWeight="medium"
               />
@@ -133,7 +133,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <ValueCell 
                 value={player.pointsFromYellowCards?.[gwKey] || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-yellow-600"
                 fontWeight="medium"
               />
@@ -143,7 +143,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <ValueCell 
                 value={player.pointsFromRedCards?.[gwKey] || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-red-700"
                 fontWeight="medium"
               />
@@ -155,7 +155,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
               <ValueCell 
                 value={gwPoints} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-green-800"
                 fontWeight="semibold"
               />
@@ -176,7 +176,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
       <ValueCell 
         value={player.totalExpectedPoints || 0} 
         format="points" 
-        decimals={1} 
+        decimals={2} 
         className="text-green-800"
         fontWeight="bold"
       />
@@ -190,7 +190,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
           <ValueCell 
             value={player.totalExpectedPoints || 0} 
             format="points" 
-            decimals={1} 
+            decimals={2} 
             className="text-green-800"
             fontWeight="bold"
           />
@@ -207,7 +207,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <ValueCell 
                 value={player.totalPointsFromGoals || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-green-700"
                 fontWeight="medium"
               />
@@ -217,7 +217,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <ValueCell 
                 value={player.totalPointsFromAssists || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-blue-700"
                 fontWeight="medium"
               />
@@ -227,7 +227,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <ValueCell 
                 value={player.totalPointsFromCleanSheets || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-yellow-700"
                 fontWeight="medium"
               />
@@ -237,7 +237,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <ValueCell 
                 value={player.totalPointsFromDefensiveContributions || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-orange-700"
                 fontWeight="medium"
               />
@@ -247,7 +247,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <ValueCell 
                 value={player.totalPointsFromMinutes || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-purple-700"
                 fontWeight="medium"
               />
@@ -257,7 +257,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <ValueCell 
                 value={player.totalPointsFromBonus || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-pink-700"
                 fontWeight="medium"
               />
@@ -267,7 +267,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <ValueCell 
                 value={player.totalPointsFromSaves || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-cyan-700"
                 fontWeight="medium"
               />
@@ -277,7 +277,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <ValueCell 
                 value={player.totalPointsFromGoalsConceded || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-red-600"
                 fontWeight="medium"
               />
@@ -287,7 +287,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <ValueCell 
                 value={player.totalPointsFromYellowCards || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-yellow-600"
                 fontWeight="medium"
               />
@@ -297,7 +297,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <ValueCell 
                 value={player.totalPointsFromRedCards || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-red-700"
                 fontWeight="medium"
               />
@@ -309,7 +309,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
               <ValueCell 
                 value={player.totalExpectedPoints || 0} 
                 format="points" 
-                decimals={1} 
+                decimals={2} 
                 className="text-green-800"
                 fontWeight="semibold"
               />
@@ -413,7 +413,7 @@ function createPlayerTotalPointsColumns(
         <ValueCell 
           value={value || 0} 
           format="points" 
-          decimals={1}
+          decimals={2}
           className="font-bold text-orange-800 text-lg"
         />
       )
