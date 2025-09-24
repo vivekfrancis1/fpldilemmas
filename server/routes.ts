@@ -5133,6 +5133,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Player Goals Scored Projections endpoint - API-first with cache fallback
   app.get("/api/player-goals-scored-projections", async (req, res) => {
+    // Add cache-busting headers to prevent 304 responses
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate, private, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString(),
+      'ETag': `"${Date.now()}"`
+    });
+    
     try {
       console.log(`🚀 API-FIRST: Attempting live calculation for Player Goals = Goal Share × Team Goal Projections`);
       
@@ -5539,6 +5548,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Player Assist Projections endpoint - API-first with cache fallback
   app.get("/api/player-assist-projections", async (req, res) => {
+    // Add cache-busting headers to prevent 304 responses
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate, private, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString(),
+      'ETag': `"${Date.now()}"`
+    });
+    
     try {
       console.log(`🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections`);
       
@@ -8356,6 +8374,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const TOTAL_POINTS_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
   
   app.get("/api/player-total-points", async (req, res) => {
+    // Add cache-busting headers to prevent 304 responses
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate, private, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString(),
+      'ETag': `"${Date.now()}"`
+    });
+    
     try {
       console.log("DEBUG: Player Total Points API - aggregating data from individual projection APIs");
       const startTime = Date.now();
@@ -12044,6 +12071,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // CACHED PLAYER TOTAL POINTS - PUBLIC ENDPOINT - serves pre-computed aggregated data
   app.get("/api/cached/player-total-points", async (req, res) => {
+    // Add cache-busting headers to prevent 304 responses
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate, private, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString(),
+      'ETag': `"${Date.now()}"`
+    });
+    
     try {
       // Get current gameweek to determine proper range and fetch bootstrap data for price/ownership
       let currentGameweek = 5; // fallback
