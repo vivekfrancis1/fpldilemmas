@@ -5537,76 +5537,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Assist Projections endpoint - assist share × team assist projections per gameweek
+  // Player Assist Projections endpoint - API-first with cache fallback
   app.get("/api/player-assist-projections", async (req, res) => {
     try {
-      console.log(`🚀 API CALCULATION: Player Assists = Assist Share × Team Assist Projections per gameweek`);
+      console.log(`🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections`);
       
-      // Fetch assist share data and team assist projections in parallel
-      const [assistShareResponse, teamProjectionsResponse] = await Promise.all([
-        internalFetch('api/assist-share-season'),
-        internalFetch('api/team-assist-projections')
-      ]);
-      
-      if (!assistShareResponse.ok) {
-        throw new Error(`Failed to fetch assist-share data: ${assistShareResponse.status}`);
-      }
-      
-      if (!teamProjectionsResponse.ok) {
-        throw new Error(`Failed to fetch team assist projections: ${teamProjectionsResponse.status}`);
-      }
-      
-      const assistShareData = await assistShareResponse.json();
-      const teamProjectionsData = await teamProjectionsResponse.json();
-      
-      // Create lookup map for team projections by teamId
-      const teamProjectionsMap: { [teamId: number]: any } = {};
-      teamProjectionsData.forEach((team: any) => {
-        teamProjectionsMap[team.teamId] = team;
-      });
-      
-      // Calculate player projections using formula: assist share × team projections per gameweek
-      const playerProjections: any[] = [];
-      
-      assistShareData.forEach((team: any) => {
-        const teamProjections = teamProjectionsMap[team.teamId];
+      // TRY LIVE API CALCULATION FIRST
+      try {
+        // Fetch assist share data and team assist projections in parallel
+        const [assistShareResponse, teamProjectionsResponse] = await Promise.all([
+          internalFetch('api/assist-share-season'),
+          internalFetch('api/team-assist-projections')
+        ]);
         
-        if (team.players && Array.isArray(team.players) && teamProjections) {
-          team.players.forEach((player: any) => {
-            const assistSharePercent = player.assistShare || 0;
-            const gameweekProjections: { [gameweek: string]: number } = {};
-            
-            // Calculate projected assists for each gameweek
-            Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamAssists]) => {
-              gameweekProjections[gameweek] = (assistSharePercent / 100) * (teamAssists as number);
-            });
-            
-            // Calculate total projected assists across all gameweeks
-            const totalProjectedAssists = Object.values(gameweekProjections).reduce((sum, assists) => sum + assists, 0);
-            
-            playerProjections.push({
-              playerId: player.playerId,
-              playerName: player.playerName,
-              team: team.teamName,
-              teamShort: team.teamShort,
-              position: player.position,
-              assistShare: assistSharePercent,
-              gameweekProjections: gameweekProjections,
-              totalProjectedAssists: totalProjectedAssists
-            });
+        if (assistShareResponse.ok && teamProjectionsResponse.ok) {
+          const assistShareData = await assistShareResponse.json();
+          const teamProjectionsData = await teamProjectionsResponse.json();
+          
+          // Create lookup map for team projections by teamId
+          const teamProjectionsMap: { [teamId: number]: any } = {};
+          teamProjectionsData.forEach((team: any) => {
+            teamProjectionsMap[team.teamId] = team;
           });
+          
+          // Calculate player projections using formula: assist share × team projections per gameweek
+          const playerProjections: any[] = [];
+          
+          assistShareData.forEach((team: any) => {
+            const teamProjections = teamProjectionsMap[team.teamId];
+            
+            if (team.players && Array.isArray(team.players) && teamProjections) {
+              team.players.forEach((player: any) => {
+                const assistSharePercent = player.assistShare || 0;
+                const gameweekProjections: { [gameweek: string]: number } = {};
+                
+                // Calculate projected assists for each gameweek
+                Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamAssists]) => {
+                  gameweekProjections[gameweek] = (assistSharePercent / 100) * (teamAssists as number);
+                });
+                
+                // Calculate total projected assists across all gameweeks
+                const totalProjectedAssists = Object.values(gameweekProjections).reduce((sum, assists) => sum + assists, 0);
+                
+                playerProjections.push({
+                  playerId: player.playerId,
+                  playerName: player.playerName,
+                  team: team.teamName,
+                  teamShort: team.teamShort,
+                  position: player.position,
+                  assistShare: assistSharePercent,
+                  gameweekProjections: gameweekProjections,
+                  totalProjectedAssists: totalProjectedAssists
+                });
+              });
+            }
+          });
+          
+          // Sort by total projected assists (highest first)
+          playerProjections.sort((a, b) => b.totalProjectedAssists - a.totalProjectedAssists);
+          
+          console.log(`✅ LIVE SUCCESS: Calculated ${playerProjections.length} player assist projections using live APIs`);
+          return res.json(playerProjections);
+        } else {
+          throw new Error(`API response failed: assistShare=${assistShareResponse.status}, teamProjections=${teamProjectionsResponse.status}`);
         }
-      });
-      
-      // Sort by total projected assists (highest first)
-      playerProjections.sort((a, b) => b.totalProjectedAssists - a.totalProjectedAssists);
-      
-      console.log(`⚡ Calculated ${playerProjections.length} player assist projections using assist share × team projections formula`);
-      res.json(playerProjections);
+      } catch (liveError) {
+        console.warn(`⚠️ LIVE API FAILED: ${liveError.message}, attempting cache fallback...`);
+        
+        // FALLBACK TO CACHE
+        try {
+          const cacheResponse = await internalFetch('api/cached/player-assists-projections');
+          if (cacheResponse.ok) {
+            const cachedData = await cacheResponse.json();
+            console.log(`🔄 CACHE SUCCESS: Serving ${cachedData.length} player assist projections from cache`);
+            return res.json(cachedData);
+          } else {
+            throw new Error(`Cache also failed: ${cacheResponse.status}`);
+          }
+        } catch (cacheError) {
+          console.error(`❌ CACHE FAILED: ${cacheError.message}`);
+          throw new Error(`Both live API and cache failed. Live: ${liveError.message}, Cache: ${cacheError.message}`);
+        }
+      }
       
     } catch (error) {
-      console.error("Error calculating player assist projections:", error);
-      res.status(500).json({ error: "Failed to calculate player assist projections" });
+      console.error("❌ COMPLETE FAILURE: Player assist projections unavailable:", error);
+      res.status(500).json({ 
+        error: "Failed to get player assist projections", 
+        details: error.message || "Both live API and cache systems failed"
+      });
     }
   });
 
