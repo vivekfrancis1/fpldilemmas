@@ -10676,7 +10676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Saves Projections - Pure projection methodology for future gameweeks only
   app.get("/api/player-saves-projections", async (req, res) => {
     try {
-      console.log("DEBUG: Player Saves Projections API called - using new formula: saves per 90 × minutes × opponent attacking tier");
+      console.log("DEBUG: Player Saves Projections API called - using formula: (season saves / team games) × (minutes/90) × opponent attacking tier");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -10721,10 +10721,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalSaves = 0;
           let totalPoints = 0;
           
-          // Calculate average saves per 90 minutes from current season data
+          // Get total season saves from current FPL data
           const currentSeasonSaves = player.saves || 0;
-          const currentSeasonMinutes = player.minutes || 1;
-          const savesPer90 = currentSeasonMinutes > 0 ? (currentSeasonSaves / currentSeasonMinutes) * 90 : 2.5; // Default 2.5 saves per 90
+          
+          // Calculate team games played this season (current gameweek - 1)
+          const teamGamesPlayed = Math.max(1, currentGameweek - 1); // Ensure at least 1 to avoid division by zero
+          
+          // Calculate saves per team game for this player
+          const savesPerTeamGame = currentSeasonSaves / teamGamesPlayed;
           
           // Process each FUTURE gameweek only with new formula
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
@@ -10745,8 +10749,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const playerMinutes = minutesData.find((m: any) => m.playerId === player.id);
             const expectedMinutes = playerMinutes?.gameweekProjections?.[`gw${gw}`] || 90; // Default to 90 if not found
             
-            // Apply new formula: Expected saves = average saves per 90 mins × Expected minutes × Attacking tier multiplier of opponent
-            const expectedSaves = (savesPer90 * (expectedMinutes / 90) * attackMultiplier);
+            // Apply user's exact formula: Expected saves = (Total season saves / Team games played) × (Expected minutes/90) × Attacking tier multiplier
+            const expectedSaves = savesPerTeamGame * (expectedMinutes / 90) * attackMultiplier;
             
             // Apply new points formula: Points from saves = 0.33 × expected saves
             const expectedPoints = expectedSaves * 0.33;
@@ -10766,12 +10770,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pointsFromSaves,
             totalSaves: parseFloat(totalSaves.toFixed(1)),
             totalPoints: parseFloat(totalPoints.toFixed(1)),
-            averagePerGameweek: parseFloat((totalSaves / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(1))
+            averagePerGameweek: parseFloat((totalSaves / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(1)),
+            savesPerTeamGame: savesPerTeamGame, // Include for verification
+            teamGamesPlayed: teamGamesPlayed, // Include for verification
+            seasonTotalSaves: currentSeasonSaves // Include raw saves value
           };
         })
       );
       
-      console.log(`DEBUG: Generated saves projections for ${savesProjections.length} goalkeepers using new formula: saves per 90 × minutes × opponent attacking tier`);
+      console.log(`DEBUG: Generated saves projections for ${savesProjections.length} goalkeepers using formula: (season saves / team games) × (minutes/90) × opponent attacking tier`);
       res.json(savesProjections);
     } catch (error) {
       console.error("Error in player saves projections:", error);
