@@ -392,7 +392,7 @@ function createPlayerTotalPointsColumns(
       header: `GW${gw}`,
       sortable: true,
       align: 'center' as const,
-      className: 'min-w-[70px] bg-blue-50/30',
+      className: 'min-w-[48px] bg-blue-50/30',
       render: (_: any, player: PlayerTotalPointsData) => (
         <GameweekPointBreakdownTooltip player={player} gameweek={gw} />
       )
@@ -922,6 +922,7 @@ export default function PlayerTotalPoints() {
                     loading={isLoading}
                     emptyMessage="No players found matching your criteria"
                     stickyHeader={true}
+                    compact={true}
                     maxHeight="80vh"
                     className="shadow-sm"
                   />
