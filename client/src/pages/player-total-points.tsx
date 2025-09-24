@@ -486,20 +486,26 @@ export default function PlayerTotalPoints() {
     enabled: startGameweek !== null && endGameweek !== null, // Only fetch when gameweek values are initialized
   });
 
-  // Data selection logic - prefer cached data but use live data when gameweeks not available
+  // Data selection logic - prefer cached data but use live data when gameweeks not available or data is incomplete
   const totalPointsData = useMemo(() => {
-    // Check if cached data contains the requested gameweek range
+    // Check if cached data contains the requested gameweek range AND has critical fields
     if (cachedTotalPointsData && cachedTotalPointsData.length > 0) {
       const samplePlayer = cachedTotalPointsData[0];
+      
+      // Validate data quality - must have critical fields
+      const hasValidData = samplePlayer.playerName && 
+        samplePlayer.totalExpectedPoints !== undefined && 
+        samplePlayer.pointsFromGoals !== undefined;
+      
       const hasRequestedRange = startGameweek && endGameweek && 
         samplePlayer.gameweekProjections[`gw${startGameweek}`] !== undefined && 
         samplePlayer.gameweekProjections[`gw${endGameweek}`] !== undefined;
       
-      if (hasRequestedRange) {
+      if (hasRequestedRange && hasValidData) {
         return cachedTotalPointsData;
       }
     }
-    // Use live data when cached data doesn't contain requested range or is unavailable
+    // Use live data when cached data doesn't contain requested range, is unavailable, or lacks critical fields
     return liveTotalPointsData;
   }, [cachedTotalPointsData, liveTotalPointsData, startGameweek, endGameweek]);
 
