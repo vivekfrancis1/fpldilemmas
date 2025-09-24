@@ -38,13 +38,13 @@ export default function PlayerYellowCards() {
   });
 
   // Live API call for yellow card projections
-  const { data: yellowCardProjections, isLoading: isLoadingProjections } = useQuery({
+  const { data: yellowCardProjections, isLoading: isLoadingProjections } = useQuery<YellowCardProjection[]>({
     queryKey: ["/api/player-yellow-cards-projections"],
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes for live data
   });
 
   // Extract gameweeks dynamically from API response
-  const gameweeks = yellowCardProjections?.length > 0 
+  const gameweeks = yellowCardProjections && yellowCardProjections.length > 0 
     ? Object.keys(yellowCardProjections[0].yellowCards).map(gw => parseInt(gw.replace('gw', ''))).sort((a, b) => a - b)
     : [];
   
