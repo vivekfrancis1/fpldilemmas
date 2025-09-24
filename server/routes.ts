@@ -10865,14 +10865,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("DEBUG: Player Yellow Cards Projections API called - using pure projections for future gameweeks only");
       
-      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
-      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
-      
       // Get FPL bootstrap data for current gameweek info and players
       const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       const fplData = await fplResponse.json();
       const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
-      const nextGameweek = currentGameweek + 1; // Start from next gameweek
+      
+      // Use dynamic gameweek calculation for next 6 gameweeks
+      const { computeNextRange } = await import("../shared/gameweek-utils");
+      const gameweekRange = computeNextRange(fplData.events, 6);
+      const startGameweek = gameweekRange.start;
+      const endGameweek = gameweekRange.end;
       
       // Extract yellow card data for all players using historical data
       const yellowCardProjections = fplData.elements.map((player: any) => {
@@ -10888,8 +10890,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teamGamesPlayed = currentGameweek; // Average number of games team has played
         const expectedYellowCardsPerGameweek = teamGamesPlayed > 0 ? seasonYellowCards / teamGamesPlayed : 0;
         
-        // Process each FUTURE gameweek only with pure projections
-        for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
+        // Process each gameweek in the next 6 gameweeks range
+        for (let gw = startGameweek; gw <= endGameweek; gw++) {
           const gwYellowCards = expectedYellowCardsPerGameweek;
           const gwPoints = -gwYellowCards; // -1 point per yellow card
           
