@@ -73,27 +73,93 @@ export default function PlayerDefensiveContributions() {
     staleTime: 15 * 60 * 1000, // 15 minutes
   });
 
-  // Transform cached data to match expected format
+  // Fetch fixtures for opponent data
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Team attacking tier multipliers (from TEAM_MULTIPLIERS.attack)
+  const ATTACK_MULTIPLIERS: { [key: number]: number } = {
+    12: 1.35, 13: 1.35, // Liverpool, Man City (elite)
+    1: 1.15, 7: 1.15, 15: 1.15, 18: 1.15, 2: 1.15, // Arsenal, Chelsea, Newcastle, Tottenham, Aston Villa (strong)
+    9: 0.85, 16: 0.85, 19: 0.85, 20: 0.85, // Everton, Nottingham Forest, West Ham, Wolves (weak)
+    3: 0.7, 11: 0.7, 17: 0.7 // Burnley, Leeds, Sunderland (promoted)
+    // All others default to 1.0 (average)
+  };
+
+  const getAttackMultiplier = (teamId: number): number => {
+    return ATTACK_MULTIPLIERS[teamId] || 1.0;
+  };
+
+  const getAttackTier = (teamId: number): string => {
+    if ([12, 13].includes(teamId)) return "Elite";
+    if ([1, 7, 15, 18, 2].includes(teamId)) return "Strong";
+    if ([9, 16, 19, 20].includes(teamId)) return "Weak";
+    if ([3, 11, 17].includes(teamId)) return "Promoted";
+    return "Average";
+  };
+
+  // Transform cached data to match expected format with fixture-aware calculations
   const players: PlayerDefensiveData[] = useMemo(() => {
-    if (!defensiveData || !bootstrapData) return [];
+    if (!defensiveData || !bootstrapData || !fixturesData) return [];
     
     // Create gameweek projections for next 6 gameweeks
     const futureGameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
     
     // Transform the cached data format to match the expected PlayerDefensiveData interface
     return defensiveData.map((record: any) => {
-      // Create projections for each future gameweek using historical averages
-      const gameweekProjections = futureGameweeks.map(gw => ({
-        gameweek: gw,
-        defensiveContribution: Math.round(record.defensiveContributionPer90 || 0), // Per game projection
-        tackles: Math.round(record.tacklesPer90 || 0),
-        recoveries: Math.round(record.recoveriesPer90 || 0), 
-        cbi: Math.round(record.cbiPer90 || 0),
-        opponent: "TBD", // Placeholder since we don't have fixture data
-        opponentTier: "2", // Default tier
-        fixtureMultiplier: 1.0, // Default multiplier
-        isProjected: true,
-      }));
+      // Get team ID for this player (we need this to find fixtures)
+      const playerTeamId = record.teamId || bootstrapData.teams?.find((t: any) => t.short_name === record.teamName || t.name === record.teamName)?.id;
+      
+      // Create projections for each future gameweek using fixture-aware calculations
+      const gameweekProjections = futureGameweeks.map(gw => {
+        // Find the fixture for this team in this gameweek
+        const fixture = fixturesData.find((f: any) => 
+          f.event === gw && (f.team_h === playerTeamId || f.team_a === playerTeamId)
+        );
+        
+        let opponentId: number;
+        let opponent = "TBD";
+        let isHome = false;
+        
+        if (fixture) {
+          // Determine opponent and venue
+          if (fixture.team_h === playerTeamId) {
+            opponentId = fixture.team_a;
+            isHome = true;
+          } else {
+            opponentId = fixture.team_h;
+            isHome = false;
+          }
+          
+          // Get opponent name
+          const opponentTeam = bootstrapData.teams?.find((t: any) => t.id === opponentId);
+          opponent = opponentTeam ? opponentTeam.short_name : "TBD";
+        } else {
+          opponentId = 1; // Default fallback
+        }
+        
+        // Get attacking tier multiplier for opponent
+        const attackMultiplier = getAttackMultiplier(opponentId);
+        const opponentTier = getAttackTier(opponentId);
+        
+        // Apply new formula: DC per 90 × Attacking tier multiplier of opponent
+        const baseDC = record.defensiveContributionPer90 || 0;
+        const projectedDC = baseDC * attackMultiplier;
+        
+        return {
+          gameweek: gw,
+          defensiveContribution: Math.round(projectedDC * 100) / 100, // Round to 2 decimal places
+          tackles: Math.round((record.tacklesPer90 || 0) * attackMultiplier * 100) / 100,
+          recoveries: Math.round((record.recoveriesPer90 || 0) * attackMultiplier * 100) / 100,
+          cbi: Math.round((record.cbiPer90 || 0) * attackMultiplier * 100) / 100,
+          opponent: opponent,
+          opponentTier: opponentTier,
+          fixtureMultiplier: attackMultiplier,
+          isProjected: true,
+        };
+      });
 
       return {
         playerId: record.playerId,
@@ -112,7 +178,7 @@ export default function PlayerDefensiveContributions() {
         confidence: record.confidence || 0.5,
       };
     });
-  }, [defensiveData, bootstrapData, nextGameweek]);
+  }, [defensiveData, bootstrapData, fixturesData, nextGameweek]);
 
   // Get all gameweeks from the first player's projections (only future gameweeks) - provide fallback
   const allGameweeks = players.length > 0 && players[0].gameweekProjections.length > 0 
