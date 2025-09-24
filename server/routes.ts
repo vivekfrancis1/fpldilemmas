@@ -8276,7 +8276,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/player-total-points", async (req, res) => {
     try {
-      // Get dynamic gameweek range (same logic as cached endpoint)
+      console.log("DEBUG: Player Total Points API - aggregating data from individual projection APIs");
+      const startTime = Date.now();
+      
+      // Get current gameweek for proper range
       let currentGameweek = 5; // fallback default
       let dynamicStart = 6;
       let dynamicEnd = 11;
@@ -8309,363 +8312,196 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.json(cached.data);
         }
       }
-      
-      console.log(`DEBUG: Player Total Points API - using comprehensive projection endpoints for GW${start}-${end}`);
-      const startTime = Date.now();
-      
-      // Get bootstrap data for player info
-      const bootstrapResponse2 = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      if (!bootstrapResponse2.ok) {
-        throw new Error("Failed to fetch bootstrap data");
+
+      // Fetch data from all individual projection APIs
+      const [
+        goalsResponse,
+        assistsResponse,
+        minutesResponse,
+        cleansheetResponse,
+        goalsConcededResponse,
+        yellowCardsResponse,
+        redCardsResponse,
+        bonusPointsResponse,
+        savesResponse
+      ] = await Promise.all([
+        internalFetch(`api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
+        internalFetch(`api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
+        internalFetch(`api/player-minutes-projections`), // No gameweek data available
+        internalFetch(`api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`),
+        internalFetch(`api/player-goals-conceded-projections?startGameweek=${start}&endGameweek=${end}`),
+        internalFetch(`api/player-yellow-cards-projections?startGameweek=${start}&endGameweek=${end}`),
+        internalFetch(`api/player-red-cards-projections?startGameweek=${start}&endGameweek=${end}`),
+        internalFetch(`api/player-bonus-points-projections?startGameweek=${start}&endGameweek=${end}`),
+        internalFetch(`api/player-saves-projections?startGameweek=${start}&endGameweek=${end}`)
+      ]);
+
+      // Check that all APIs responded successfully
+      const responses = [
+        { name: 'goals', response: goalsResponse },
+        { name: 'assists', response: assistsResponse },
+        { name: 'minutes', response: minutesResponse },
+        { name: 'cleansheet', response: cleansheetResponse },
+        { name: 'goals-conceded', response: goalsConcededResponse },
+        { name: 'yellow-cards', response: yellowCardsResponse },
+        { name: 'red-cards', response: redCardsResponse },
+        { name: 'bonus-points', response: bonusPointsResponse },
+        { name: 'saves', response: savesResponse }
+      ];
+
+      for (const { name, response } of responses) {
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ${name} projections: ${response.statusText}`);
+        }
       }
-      const bootstrapData = await bootstrapResponse2.json();
-      
-      // Use the currentGameweek already calculated above
-      const nextGameweek = currentGameweek + 1; // Projection APIs start from next gameweek
-      const actualStart = Math.max(start, nextGameweek); // Only process future gameweeks
-      const actualEnd = end;
-      
-      console.log(`DEBUG: Current gameweek: ${currentGameweek}, adjusting range from GW${start}-${end} to GW${actualStart}-${actualEnd} to match projection APIs`);
 
-      // Query database tables directly for maximum performance
-      const [savesData, goalsConcededData, yellowCardsData, redCardsData] = await Promise.all([
-        db.select().from(cachedPlayerSaves),
-        db.select().from(cachedPlayerGoalsConceded), 
-        db.select().from(cachedPlayerYellowCards),
-        db.select().from(cachedPlayerRedCards)
-      ]);
-
-      // Fetch bonus probabilities using the cached endpoint for ultra-fast performance
-      const bonusProbabilitiesResponse = await internalFetch(`api/cached/player-bonus-probabilities`);
-      if (!bonusProbabilitiesResponse.ok) throw new Error("Failed to fetch bonus probabilities");
-      const bonusProbabilitiesData = await bonusProbabilitiesResponse.json();
-
-      // PERFORMANCE FIX: Use correct cached endpoints that include minutes scaling
-      const [goalsResponse, assistsResponse, minutesResponse, defensiveResponse, cleanSheetsResponse, bonusPointsResponse, minutesPointsResponse] = await Promise.all([
-        internalFetch(`api/cached/player-goals-projections`),
-        internalFetch(`api/cached/player-assists-projections`),
-        internalFetch(`api/cached/player-minutes-projections`),
-        internalFetch(`api/cached/player-defensive-projections`),
-        internalFetch(`api/cached/team-cs-projections`),
-        internalFetch(`api/cached/player-bonus-points-projections`),
-        internalFetch(`api/player-minutes-projections`) // This has the actual minutes points (1.84)
-      ]);
-
-      // Check API responses
-      if (!goalsResponse.ok) throw new Error("Failed to fetch goals projections");
-      if (!assistsResponse.ok) throw new Error("Failed to fetch assists projections");
-      if (!minutesResponse.ok) throw new Error("Failed to fetch minutes projections");
-      if (!defensiveResponse.ok) throw new Error("Failed to fetch defensive projections");
-      if (!cleanSheetsResponse.ok) throw new Error("Failed to fetch clean sheets projections");
-      if (!bonusPointsResponse.ok) throw new Error("Failed to fetch bonus points projections");
-      if (!minutesPointsResponse.ok) throw new Error("Failed to fetch minutes points projections");
-
-      // Parse API data (goals, assists, minutes, defensive, clean sheets, bonus points, minutes points)
-      const [goalsData, assistsData, minutesData, defensiveData, cleanSheetsData, bonusPointsData, minutesPointsData] = await Promise.all([
+      // Parse all API responses
+      const [
+        goalsData,
+        assistsData,
+        minutesData,
+        cleansheetData,
+        goalsConcededData,
+        yellowCardsData,
+        redCardsData,
+        bonusPointsData,
+        savesData
+      ] = await Promise.all([
         goalsResponse.json(),
         assistsResponse.json(),
         minutesResponse.json(),
-        defensiveResponse.json(),
-        cleanSheetsResponse.json(),
+        cleansheetResponse.json(),
+        goalsConcededResponse.json(),
+        yellowCardsResponse.json(),
+        redCardsResponse.json(),
         bonusPointsResponse.json(),
-        minutesPointsResponse.json()
+        savesResponse.json()
       ]);
 
-      // Handle defensive data structure (it returns an array directly from cached API)
-      const defensiveDataArray = Array.isArray(defensiveData) ? defensiveData : (defensiveData.data || []);
-      console.log(`DEBUG: Retrieved projection data - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Defensive: ${defensiveDataArray.length}, Clean Sheets: ${cleanSheetsData.length}, DB Saves: ${savesData.length}, DB Goals Conceded: ${goalsConcededData.length}, DB Yellow Cards: ${yellowCardsData.length}, DB Red Cards: ${redCardsData.length}, Bonus Probabilities: ${bonusProbabilitiesData.length}`);
-      
-      // Convert to lookup maps for fast access
-      const goalsProjections: Record<number, Record<number, number>> = {};
-      const assistsProjections: Record<number, Record<number, number>> = {};
-      const minutesProjections: Record<number, Record<number, number>> = {};
-      const defensiveProjections: Record<number, Record<number, { dc: number, points: number }>> = {};
-      const teamCleanSheetProjections: Record<number, Record<number, number>> = {};
-      const savesProjections: Record<number, Record<string, number>> = {};
-      const savesPointsProjections: Record<number, Record<string, number>> = {};
-      const goalsConcededProjections: Record<number, Record<string, number>> = {};
-      const goalsConcededPointsProjections: Record<number, Record<string, number>> = {};
-      const yellowCardsProjections: Record<number, Record<string, number>> = {};
-      const yellowCardsPointsProjections: Record<number, Record<string, number>> = {};
-      const redCardsProjections: Record<number, Record<string, number>> = {};
-      const redCardsPointsProjections: Record<number, Record<string, number>> = {};
-      const bonusProbabilities: Record<number, Record<string, number>> = {};
-      const bonusPointsProjections: Record<number, Record<string, number>> = {};
-      const minutesPointsProjections: Record<number, number> = {};
+      console.log(`DEBUG: Retrieved data from ${responses.length} APIs - Goals: ${goalsData.length}, Assists: ${assistsData.length}, Minutes: ${minutesData.length}, Cleansheet: ${cleansheetData.length}, Goals Conceded: ${goalsConcededData.length}, Yellow Cards: ${yellowCardsData.length}, Red Cards: ${redCardsData.length}, Bonus: ${bonusPointsData.length}, Saves: ${savesData.length}`);
 
-      goalsData.forEach((player: any) => {
-        if (player.gameweekProjections) {
-          goalsProjections[player.playerId] = player.gameweekProjections;
-        }
+      // Create lookup maps for each API data by playerId
+      const playerDataMaps = {
+        goals: new Map(goalsData.map((p: any) => [p.playerId, p])),
+        assists: new Map(assistsData.map((p: any) => [p.playerId, p])),
+        minutes: new Map(minutesData.map((p: any) => [p.playerId, p])),
+        cleansheet: new Map(cleansheetData.map((p: any) => [p.playerId, p])),
+        goalsConceded: new Map(goalsConcededData.map((p: any) => [p.playerId, p])),
+        yellowCards: new Map(yellowCardsData.map((p: any) => [p.playerId, p])),
+        redCards: new Map(redCardsData.map((p: any) => [p.playerId, p])),
+        bonusPoints: new Map(bonusPointsData.map((p: any) => [p.playerId, p])),
+        saves: new Map(savesData.map((p: any) => [p.playerId, p]))
+      };
+
+      // Get all unique player IDs from all APIs
+      const allPlayerIds = new Set<number>();
+      [goalsData, assistsData, cleansheetData, goalsConcededData, yellowCardsData, redCardsData, bonusPointsData, savesData].forEach(data => {
+        data.forEach((player: any) => allPlayerIds.add(player.playerId));
       });
 
-      assistsData.forEach((player: any) => {
-        if (player.gameweekProjections) {
-          assistsProjections[player.playerId] = player.gameweekProjections;
-        }
-      });
+      // Create aggregated projections
+      const projections = Array.from(allPlayerIds).map(playerId => {
+        const goalsPlayer = playerDataMaps.goals.get(playerId);
+        const assistsPlayer = playerDataMaps.assists.get(playerId);
+        const minutesPlayer = playerDataMaps.minutes.get(playerId);
+        const cleansheetPlayer = playerDataMaps.cleansheet.get(playerId);
+        const goalsConcededPlayer = playerDataMaps.goalsConceded.get(playerId);
+        const yellowCardsPlayer = playerDataMaps.yellowCards.get(playerId);
+        const redCardsPlayer = playerDataMaps.redCards.get(playerId);
+        const bonusPointsPlayer = playerDataMaps.bonusPoints.get(playerId);
+        const savesPlayer = playerDataMaps.saves.get(playerId);
 
-      // Transform minutes data from individual records to grouped format
-      minutesData.forEach((record: any) => {
-        if (!minutesProjections[record.playerId]) {
-          minutesProjections[record.playerId] = {};
-        }
-        minutesProjections[record.playerId][record.gameweek] = record.minutes;
-      });
+        // Use player info from the first available API response
+        const basePlayer = goalsPlayer || assistsPlayer || cleansheetPlayer || bonusPointsPlayer || savesPlayer;
+        if (!basePlayer) return null;
 
-      // Transform defensive data from individual records to grouped format
-      defensiveDataArray.forEach((record: any) => {
-        if (!defensiveProjections[record.playerId]) {
-          defensiveProjections[record.playerId] = {};
-        }
-        defensiveProjections[record.playerId][record.gameweek] = {
-          dc: record.defensiveContribution || 0,
-          points: record.points || 0
-        };
-      });
-
-      // Transform clean sheet data from team records to team lookup
-      cleanSheetsData.forEach((record: any) => {
-        if (!teamCleanSheetProjections[record.teamId]) {
-          teamCleanSheetProjections[record.teamId] = {};
-        }
-        teamCleanSheetProjections[record.teamId][record.gameweek] = record.cleanSheetProbability;
-      });
-
-      // Populate FPL scoring component projections from database cache data
-      savesData.forEach((player: any) => {
-        savesProjections[player.playerId] = typeof player.gameweekData === 'string' ? JSON.parse(player.gameweekData) : player.gameweekData;
-        savesPointsProjections[player.playerId] = typeof player.pointsData === 'string' ? JSON.parse(player.pointsData) : player.pointsData;
-      });
-
-      goalsConcededData.forEach((player: any) => {
-        goalsConcededProjections[player.playerId] = typeof player.gameweekData === 'string' ? JSON.parse(player.gameweekData) : player.gameweekData;
-        goalsConcededPointsProjections[player.playerId] = typeof player.pointsData === 'string' ? JSON.parse(player.pointsData) : player.pointsData;
-      });
-
-      yellowCardsData.forEach((player: any) => {
-        yellowCardsProjections[player.playerId] = typeof player.gameweekData === 'string' ? JSON.parse(player.gameweekData) : player.gameweekData;
-        yellowCardsPointsProjections[player.playerId] = typeof player.pointsData === 'string' ? JSON.parse(player.pointsData) : player.pointsData;
-      });
-
-      redCardsData.forEach((player: any) => {
-        redCardsProjections[player.playerId] = typeof player.gameweekData === 'string' ? JSON.parse(player.gameweekData) : player.gameweekData;
-        redCardsPointsProjections[player.playerId] = typeof player.pointsData === 'string' ? JSON.parse(player.pointsData) : player.pointsData;
-      });
-
-      // Process bonus probabilities data with simplified calculation (Probability × 1)
-      bonusProbabilitiesData.forEach((player: any) => {
-        bonusProbabilities[player.playerId] = player.bonusProbabilities;
-      });
-
-      // Process cached bonus points data (actual FPL points)
-      bonusPointsData.forEach((player: any) => {
-        if (player.pointsFromBonus) {
-          bonusPointsProjections[player.playerId] = player.pointsFromBonus;
-        }
-      });
-
-      // Process cached minutes points data (actual FPL points)  
-      minutesPointsData.forEach((player: any) => {
-        minutesPointsProjections[player.playerId] = player.pointsFromMinutes;
-      });
-
-      // Create projections using authentic goals data from projection service
-      const projections = bootstrapData.elements.map((fplPlayer: any) => {
-        const team = bootstrapData.teams.find((t: any) => t.id === fplPlayer.team);
-        const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][fplPlayer.element_type] || 'MID';
-        
-        // FPL scoring system
-        const goalPoints = position === 'GKP' ? 10 : position === 'DEF' ? 6 : position === 'MID' ? 5 : 4;
-        
         const gameweekProjections: { [key: string]: number } = {};
         const pointsFromGoals: { [key: string]: number } = {};
         const pointsFromAssists: { [key: string]: number } = {};
         const pointsFromCleanSheets: { [key: string]: number } = {};
         const pointsFromMinutes: { [key: string]: number } = {};
-        const pointsFromDefensiveContributions: { [key: string]: number } = {};
-        const pointsFromSaves: { [key: string]: number } = {};
         const pointsFromGoalsConceded: { [key: string]: number } = {};
         const pointsFromYellowCards: { [key: string]: number } = {};
         const pointsFromRedCards: { [key: string]: number } = {};
         const pointsFromBonus: { [key: string]: number } = {};
-        
+        const pointsFromSaves: { [key: string]: number } = {};
+
         let totalExpectedPoints = 0;
-        let totalGoalPoints = 0, totalAssistPoints = 0, totalCleanSheetPoints = 0, totalMinutesPoints = 0, totalDefensivePoints = 0;
-        let totalSavesPoints = 0, totalGoalsConcededPoints = 0, totalYellowCardsPoints = 0, totalRedCardsPoints = 0, totalBonusPoints = 0;
-        
-        // Get all cached projection data for this player
-        const playerGoals = goalsProjections[fplPlayer.id] || {};
-        const playerAssists = assistsProjections[fplPlayer.id] || {};
-        const playerMinutes = minutesProjections[fplPlayer.id] || {};
-        const playerDefensive = defensiveProjections[fplPlayer.id] || {};
-        const teamCleanSheets = teamCleanSheetProjections[fplPlayer.team] || {};
-        const playerSaves = savesProjections[fplPlayer.id] || {};
-        const playerSavesPoints = savesPointsProjections[fplPlayer.id] || {};
-        const playerGoalsConceded = goalsConcededProjections[fplPlayer.id] || {};
-        const playerGoalsConcededPoints = goalsConcededPointsProjections[fplPlayer.id] || {};
-        const playerYellowCards = yellowCardsProjections[fplPlayer.id] || {};
-        const playerYellowCardsPoints = yellowCardsPointsProjections[fplPlayer.id] || {};
-        const playerRedCards = redCardsProjections[fplPlayer.id] || {};
-        const playerRedCardsPoints = redCardsPointsProjections[fplPlayer.id] || {};
-        const playerBonusProbs = bonusProbabilities[fplPlayer.id] || {};
-        const playerBonusPoints = bonusPointsProjections[fplPlayer.id] || {};
-        const playerMinutesPointsData = minutesPointsProjections[fplPlayer.id] || 0;
-        
-        // Position-specific clean sheet points
-        const csPoints = position === 'GKP' || position === 'DEF' ? 4 : position === 'MID' ? 1 : 0;
-        
-        for (let gw = actualStart; gw <= actualEnd; gw++) {
-          // Goals from cached Goals Projections API
-          const goals = playerGoals[gw] || 0;
-          const gwGoalPoints = goals * goalPoints;
-          pointsFromGoals[`gw${gw}`] = Math.round(gwGoalPoints * 100) / 100;
-          totalGoalPoints += gwGoalPoints;
+
+        // Sum points for each gameweek from all APIs
+        for (let gw = start; gw <= end; gw++) {
+          const gwKey = `gw${gw}`;
           
-          // Assists from cached Assists Projections API
-          const assists = playerAssists[gw] || 0;
-          const gwAssistPoints = assists * 3;
-          pointsFromAssists[`gw${gw}`] = Math.round(gwAssistPoints * 100) / 100;
-          totalAssistPoints += gwAssistPoints;
+          // Get points from each API for this gameweek
+          const goalsPts = goalsPlayer?.pointsFromGoals?.[gwKey] || 0;
+          const assistsPts = assistsPlayer?.pointsFromAssists?.[gwKey] || 0;
+          const cleansheetPts = cleansheetPlayer?.pointsFromCleanSheets?.[gwKey] || 0;
+          const goalsConcededPts = goalsConcededPlayer?.pointsFromGoalsConceded?.[gwKey] || 0;
+          const yellowCardsPts = yellowCardsPlayer?.pointsFromYellowCards?.[gwKey] || 0;
+          const redCardsPts = redCardsPlayer?.pointsFromRedCards?.[gwKey] || 0;
+          const bonusPts = bonusPointsPlayer?.pointsFromBonus?.[gwKey] || 0;
+          const savesPts = savesPlayer?.pointsFromSaves?.[gwKey] || 0;
           
-          // Clean sheets from cached Team Clean Sheet Projections API
-          let cleanSheetPoints = 0;
-          if (csPoints > 0) {
-            const teamCSProb = teamCleanSheetProjections[fplPlayer.team] ? teamCleanSheetProjections[fplPlayer.team][gw] || 0 : 0;
-            // Convert percentage to decimal probability (API returns percentages like 24.5, need 0.245)
-            const csDecimalProb = teamCSProb / 100;
-            cleanSheetPoints = csDecimalProb * csPoints;
-          }
-          pointsFromCleanSheets[`gw${gw}`] = Math.round(cleanSheetPoints * 100) / 100;
-          totalCleanSheetPoints += cleanSheetPoints;
+          // For minutes, use the total points since no gameweek breakdown available
+          const minutesPts = minutesPlayer?.pointsFromMinutes || 0;
+
+          // Store individual component points
+          pointsFromGoals[gwKey] = goalsPts;
+          pointsFromAssists[gwKey] = assistsPts;
+          pointsFromCleanSheets[gwKey] = cleansheetPts;
+          pointsFromMinutes[gwKey] = minutesPts; // Same for all gameweeks
+          pointsFromGoalsConceded[gwKey] = goalsConcededPts;
+          pointsFromYellowCards[gwKey] = yellowCardsPts;
+          pointsFromRedCards[gwKey] = redCardsPts;
+          pointsFromBonus[gwKey] = bonusPts;
+          pointsFromSaves[gwKey] = savesPts;
+
+          // Total points for this gameweek
+          const gwTotal = goalsPts + assistsPts + cleansheetPts + minutesPts + 
+                         goalsConcededPts + yellowCardsPts + redCardsPts + bonusPts + savesPts;
           
-          // Minutes points from cached Minutes Points API (actual FPL points)
-          const projectedMinutes = playerMinutes[gw] || 0;
-          let minutesPoints;
-          
-          // Calculate minutes points using same logic as individual API: ((projectedMinutes / 90) * 2)
-          // This ensures consistency between Player Total Points and individual Minutes API
-          minutesPoints = Math.round(((projectedMinutes / 90) * 2) * 100) / 100;
-          
-          pointsFromMinutes[`gw${gw}`] = minutesPoints;
-          totalMinutesPoints += minutesPoints;
-          
-          // Debug for first player to understand data structure
-          if (fplPlayer.id === 413) {
-            console.log(`DEBUG: Player ${fplPlayer.web_name} GW${gw} - Minutes: ${projectedMinutes}, Minutes Points: ${minutesPoints}, CS Prob: ${teamCleanSheetProjections[fplPlayer.team] ? teamCleanSheetProjections[fplPlayer.team][gw] || 0 : 0}`);
-          }
-          
-          // Defensive contributions from cached Defensive Projections API
-          // NEW FORMULA: 2 × percentage probability of hitting threshold (≥12 for mid/fwd, ≥10 for def)
-          const defensiveData = playerDefensive[gw];
-          let defensivePoints = 0;
-          
-          if (defensiveData) {
-            // Handle both old format (with dc field) and direct defensive contribution value
-            const dcValue = defensiveData.dc || defensiveData.defensiveContribution || defensiveData;
-            
-            if (dcValue && typeof dcValue === 'number') {
-              // Position-specific thresholds: DEF ≥10, MID/FWD ≥12
-              const threshold = position === 'DEF' ? 10 : 12;
-              
-              // Calculate percentage probability of hitting threshold
-              // Using sigmoid function for smooth probability curve
-              const probabilityOfHittingThreshold = 1 / (1 + Math.exp(-(dcValue - threshold) * 0.5));
-              
-              // Points = 2 × percentage probability 
-              defensivePoints = 2 * probabilityOfHittingThreshold;
-            }
-          }
-          
-          pointsFromDefensiveContributions[`gw${gw}`] = Math.round(defensivePoints * 100) / 100;
-          totalDefensivePoints += defensivePoints;
-          
-          // Saves from cached FPL scoring API (already calculated as FPL points)
-          const savesPoints = playerSavesPoints[`gw${gw}`] || 0;
-          pointsFromSaves[`gw${gw}`] = Math.round(savesPoints * 100) / 100;
-          totalSavesPoints += savesPoints;
-          
-          // Goals conceded from cached FPL scoring API (already calculated as FPL points)
-          const goalsConcededPoints = playerGoalsConcededPoints[`gw${gw}`] || 0;
-          pointsFromGoalsConceded[`gw${gw}`] = Math.round(goalsConcededPoints * 100) / 100;
-          totalGoalsConcededPoints += goalsConcededPoints;
-          
-          // Yellow cards from cached FPL scoring API (already calculated as FPL points)
-          const yellowCardsPoints = playerYellowCardsPoints[`gw${gw}`] || 0;
-          pointsFromYellowCards[`gw${gw}`] = Math.round(yellowCardsPoints * 100) / 100;
-          totalYellowCardsPoints += yellowCardsPoints;
-          
-          // Red cards from cached FPL scoring API (already calculated as FPL points)
-          const redCardsPoints = playerRedCardsPoints[`gw${gw}`] || 0;
-          pointsFromRedCards[`gw${gw}`] = Math.round(redCardsPoints * 100) / 100;
-          totalRedCardsPoints += redCardsPoints;
-          
-          // Bonus points from cached Bonus Points API (actual FPL points)
-          let bonusPoints = 0;
-          const bonusProbability = playerBonusProbs[`gw${gw}`] || 0;
-          
-          // Use cached bonus points if available
-          if (playerBonusPoints && playerBonusPoints[`gw${gw}`] !== undefined) {
-            bonusPoints = playerBonusPoints[`gw${gw}`]; // Use cached value like 0.582
-          } else {
-            // Fallback calculation using same logic as individual API: Probability × 1 (simplified)
-            bonusPoints = bonusProbability * 1; // Match individual API logic
-          }
-          
-          pointsFromBonus[`gw${gw}`] = Math.round(bonusPoints * 100) / 100;
-          totalBonusPoints += bonusPoints;
-          
-          // Total gameweek points using ALL FPL scoring components
-          const gwTotal = gwGoalPoints + gwAssistPoints + cleanSheetPoints + minutesPoints + defensivePoints + 
-                         savesPoints + goalsConcededPoints + yellowCardsPoints + redCardsPoints + bonusPoints;
-          gameweekProjections[`gw${gw}`] = Math.round(gwTotal * 100) / 100;
+          gameweekProjections[gwKey] = Math.round(gwTotal * 100) / 100;
           totalExpectedPoints += gwTotal;
         }
-        
-        // Debug Ekitike specifically
-        if (fplPlayer.web_name.toLowerCase().includes('ekitiké') || fplPlayer.web_name.toLowerCase().includes('ekitike')) {
-          console.log(`DEBUG: Ekitike processed - ID: ${fplPlayer.id}, Goals GW4: ${playerGoals[4] || 0}, Points GW4: ${pointsFromGoals['gw4']}`);
-        }
-        
+
         return {
-          playerId: fplPlayer.id,
-          name: fplPlayer.web_name,
-          fullName: `${fplPlayer.first_name} ${fplPlayer.second_name}`,
-          team: team?.short_name || 'UNK',
-          position: position,
-          price: fplPlayer.now_cost / 10,
-          ownership: parseFloat(fplPlayer.selected_by_percent),
+          playerId: playerId,
+          playerName: basePlayer.playerName || basePlayer.name,
+          name: basePlayer.playerName || basePlayer.name,
+          fullName: basePlayer.fullName || basePlayer.playerName || basePlayer.name,
+          team: basePlayer.teamName || basePlayer.team,
+          position: basePlayer.position,
+          price: basePlayer.price || 0,
+          ownership: basePlayer.ownership || 0,
           gameweekProjections,
           totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
-          seasonTotalPoints: Math.round((totalExpectedPoints / (actualEnd - actualStart + 1)) * 35 * 100) / 100, // GW4-38 remaining
-          averagePerGameweek: Math.round((totalExpectedPoints / (actualEnd - actualStart + 1)) * 100) / 100,
+          averagePerGameweek: Math.round((totalExpectedPoints / (end - start + 1)) * 100) / 100,
           pointsFromGoals,
           pointsFromAssists,
           pointsFromCleanSheets,
           pointsFromMinutes,
-          pointsFromDefensiveContributions,
-          pointsFromSaves,
           pointsFromGoalsConceded,
           pointsFromYellowCards,
           pointsFromRedCards,
           pointsFromBonus,
-          totalPointsFromGoals: Math.round(totalGoalPoints * 100) / 100,
-          totalPointsFromAssists: Math.round(totalAssistPoints * 100) / 100,
-          totalPointsFromCleanSheets: Math.round(totalCleanSheetPoints * 100) / 100,
-          totalPointsFromMinutes: Math.round(totalMinutesPoints * 100) / 100,
-          totalPointsFromDefensiveContributions: Math.round(totalDefensivePoints * 100) / 100,
-          totalPointsFromSaves: Math.round(totalSavesPoints * 100) / 100,
-          totalPointsFromGoalsConceded: Math.round(totalGoalsConcededPoints * 100) / 100,
-          totalPointsFromYellowCards: Math.round(totalYellowCardsPoints * 100) / 100,
-          totalPointsFromRedCards: Math.round(totalRedCardsPoints * 100) / 100,
-          totalPointsFromBonus: Math.round(totalBonusPoints * 100) / 100
+          pointsFromSaves,
+          // Component totals
+          totalPointsFromGoals: Object.values(pointsFromGoals).reduce((sum: number, pts: number) => sum + pts, 0),
+          totalPointsFromAssists: Object.values(pointsFromAssists).reduce((sum: number, pts: number) => sum + pts, 0),
+          totalPointsFromCleanSheets: Object.values(pointsFromCleanSheets).reduce((sum: number, pts: number) => sum + pts, 0),
+          totalPointsFromMinutes: Object.values(pointsFromMinutes).reduce((sum: number, pts: number) => sum + pts, 0),
+          totalPointsFromGoalsConceded: Object.values(pointsFromGoalsConceded).reduce((sum: number, pts: number) => sum + pts, 0),
+          totalPointsFromYellowCards: Object.values(pointsFromYellowCards).reduce((sum: number, pts: number) => sum + pts, 0),
+          totalPointsFromRedCards: Object.values(pointsFromRedCards).reduce((sum: number, pts: number) => sum + pts, 0),
+          totalPointsFromBonus: Object.values(pointsFromBonus).reduce((sum: number, pts: number) => sum + pts, 0),
+          totalPointsFromSaves: Object.values(pointsFromSaves).reduce((sum: number, pts: number) => sum + pts, 0)
         };
       })
-      .filter((p: any) => p.totalExpectedPoints > 0)
+      .filter(p => p !== null && p.totalExpectedPoints > 0)
       .sort((a: any, b: any) => b.totalExpectedPoints - a.totalExpectedPoints);
 
       const duration = Date.now() - startTime;
-      console.log(`DEBUG: Served ${projections.length} comprehensive player projections in ${duration}ms using cache-first individual projection APIs (Goals, Assists, Minutes, Defensive, Clean Sheets)`);
+      console.log(`DEBUG: Aggregated ${projections.length} player total points in ${duration}ms from ${responses.length} individual APIs`);
       
       // Cache the result for 15 minutes
       totalPointsCache.set(cacheKey, {
