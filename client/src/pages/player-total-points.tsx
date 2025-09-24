@@ -451,6 +451,7 @@ export default function PlayerTotalPoints() {
     const nextGW = Math.min((currentGW ?? 3) + 1, 38);
     const maxAvailableGW = Math.min(38, nextGW + 11); // Next 12 gameweeks max
     
+    
     setStartGameweek(nextGW);
     setEndGameweek(Math.min(nextGW + 5, maxAvailableGW)); // Next 6 gameweeks default
     setInitialized(true);
@@ -625,8 +626,8 @@ export default function PlayerTotalPoints() {
     return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
 
-  // Show loading while gameweeks not initialized
-  if (startGameweek === null || endGameweek === null || isLoading) {
+  // Show loading only when actually needed
+  if (!initialized || !bootstrapData || isLoading) {
     return (
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-center py-12">
