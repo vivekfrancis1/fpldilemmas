@@ -10,6 +10,9 @@ import { Shield, Download, Filter, Clock, Target } from "lucide-react";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean }>;
+  elements: Array<{ id: number; first_name: string; second_name: string; team: number; element_type: number; form: number; minutes: number; clearances_blocks_interceptions: number; tackles: number; recoveries: number }>;
+  teams: Array<{ id: number; name: string; short_name: string; code: number }>;
+  element_types: Array<{ id: number; singular_name: string; singular_name_short: string }>;
 }
 
 interface PlayerDefensiveData {
@@ -124,17 +127,17 @@ export default function PlayerDefensiveContributions() {
       const gameweekProjections = Object.entries(player.gameweekProjections || {}).map(([gwKey, projection]: [string, any]) => {
         const gameweek = parseInt(gwKey.replace('gw', ''));
         
-        // Find fixture data for opponent information
-        const fixture = fixturesData?.find((f: any) => 
-          f.event === gameweek && (f.team_h === player.playerId || f.team_a === player.playerId)
-        );
+        // Find fixture data for opponent information  
+        const playerTeam = bootstrapData?.teams?.find((t: any) => t.short_name === player.teamName);
+        const playerTeamId = playerTeam?.id;
+        
+        const fixture = Array.isArray(fixturesData) ? fixturesData.find((f: any) => 
+          f.event === gameweek && (f.team_h === playerTeamId || f.team_a === playerTeamId)
+        ) : null;
         
         let opponent = "TBD";
         let opponentId = 1;
-        if (fixture) {
-          const playerTeam = bootstrapData?.teams?.find((t: any) => t.short_name === player.teamName);
-          const playerTeamId = playerTeam?.id;
-          
+        if (fixture && playerTeamId) {
           if (fixture.team_h === playerTeamId) {
             opponentId = fixture.team_a;
           } else {
