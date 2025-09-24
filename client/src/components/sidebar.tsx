@@ -158,14 +158,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   ];
 
-  // Filter player projection tools for logged out users
-  const filteredNavItems = navItems.filter(section => {
-    // Hide "Player Projections" section for logged out users
-    if (section.section === "Player Projections" && !isAuthenticated) {
-      return false;
-    }
-    return true;
-  });
+  // No filtering needed - all sections visible to all users
+  const filteredNavItems = navItems;
 
   // Combine filtered public and admin navigation items
   const allNavItems = isAdmin ? [...filteredNavItems, ...adminNavItems] : filteredNavItems;
