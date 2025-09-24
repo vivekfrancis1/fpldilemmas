@@ -4758,6 +4758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Add simple caching for goal share data
   let goalShareCache: { data: any, timestamp: number } | null = null;
+  let assistShareCache: { data: any, timestamp: number } | null = null;
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   // Simplified Goal Share endpoint - player's goals+xG divided by team total
@@ -5645,137 +5646,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Season-long Assist Share endpoint - uses Team Assist Projections totals with historical assist data
+  // Simplified Assist Share endpoint - player's assists+xA divided by team total
   app.get("/api/assist-share-season", async (req, res) => {
     try {
-      console.log("DEBUG: Assist Share Season API - BYPASSING DATABASE CACHE - calculating live assist shares with corrected logic...");
+      // Check memory cache first
+      const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+      if (assistShareCache && Date.now() - assistShareCache.timestamp < CACHE_DURATION) {
+        console.log(`✅ Serving assist share data from cache`);
+        return res.json(assistShareCache.data);
+      }
       
-      // TEMPORARY FIX: Skip database cache and force live calculation with corrected logic
-      // This ensures our position caps, inclusion criteria, and epsilon floor are applied
-      
-      console.log("🔄 Calculating live assist shares with corrected data quality fixes...");
-      
-      const [bootstrapResponse, teamAssistProjectionsResponse] = await Promise.all([
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("http://localhost:5000/api/team-assist-projections")
-      ]);
-      
-      if (!bootstrapResponse.ok || !teamAssistProjectionsResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API or Team Assist Projections");
+      // Fetch bootstrap data
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch FPL bootstrap data");
       }
       
       const bootstrapData = await bootstrapResponse.json();
-      const teamAssistProjectionsData = await teamAssistProjectionsResponse.json();
+      console.log(`DEBUG: Fetched bootstrap data with ${bootstrapData.elements.length} players`);
       
-      console.log("DEBUG: Assist Share Season API - calculating live data (no database available)");
+      // Calculate team totals: assists + expected_assists
+      const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
       
-      // Calculate team season totals from Team Assist Projections
-      const teamSeasonTotals: { [teamId: number]: { expectedAssists: number, players: { [playerId: number]: { name: string, position: string, projectedAssists: number } } } } = {};
-      
-      // Aggregate expected assists from Team Assist Projections data using totalAssists field
-      teamAssistProjectionsData.forEach((team: any) => {
-        if (!teamSeasonTotals[team.id]) {
-          teamSeasonTotals[team.id] = {
-            expectedAssists: 0,
-            players: {}
-          };
-        }
-        
-        // Use the totalAssists field directly (more reliable than summing null gameweek values)
-        teamSeasonTotals[team.id].expectedAssists = team.totalAssists || 0;
+      // Initialize team totals
+      bootstrapData.teams.forEach((team: any) => {
+        teamTotals[team.id] = {
+          total: 0,
+          name: team.name,
+          short_name: team.short_name
+        };
       });
       
-      // Debug log to verify correct expected assists values
-      const liverpoolTeam = teamAssistProjectionsData.find((t: any) => t.teamShort === "LIV");
-      const manchesterCityTeam = teamAssistProjectionsData.find((t: any) => t.teamShort === "MCI");
-      
-      if (liverpoolTeam) {
-        console.log(`DEBUG: Liverpool expected assists: ${teamSeasonTotals[liverpoolTeam.id]?.expectedAssists}`);
-      }
-      if (manchesterCityTeam) {
-        console.log(`DEBUG: Manchester City expected assists: ${teamSeasonTotals[manchesterCityTeam.id]?.expectedAssists}`);
-      }
-      
-      console.log("DEBUG: Calculated season totals from Team Assist Projections");
-      
-      // Get current year actual assist data from completed matches
-      const currentYearActualData: any[] = [];
+      // Sum up assists + expected_assists for each team
       bootstrapData.elements.forEach((player: any) => {
-        if (player.assists > 0) {
-          currentYearActualData.push({
-            id: player.id,
-            team: player.team,
-            first_name: player.first_name,
-            second_name: player.second_name,
-            assists_scored: player.assists
+        const assists = parseInt(player.assists || 0);
+        const expectedAssists = parseFloat(player.expected_assists || 0);
+        const playerTotal = assists + expectedAssists;
+        
+        if (teamTotals[player.team]) {
+          teamTotals[player.team].total += playerTotal;
+        }
+      });
+      
+      // Build response with player assist shares
+      const finalResponse: any[] = [];
+      
+      Object.keys(teamTotals).forEach(teamIdStr => {
+        const teamId = parseInt(teamIdStr);
+        const teamData = teamTotals[teamId];
+        
+        // Skip teams with no assists/xA
+        if (teamData.total === 0) return;
+        
+        const teamPlayers: any[] = [];
+        
+        // Get all players for this team
+        const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
+        
+        teamPlayersList.forEach((player: any) => {
+          const assists = parseInt(player.assists || 0);
+          const expectedAssists = parseFloat(player.expected_assists || 0);
+          const playerTotal = assists + expectedAssists;
+          
+          // Only include players with some contribution
+          if (playerTotal > 0) {
+            const assistShare = (playerTotal / teamData.total) * 100;
+            const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
+            
+            teamPlayers.push({
+              playerId: player.id,
+              playerName: `${player.first_name} ${player.second_name}`,
+              position: position,
+              assistShare: Math.round(assistShare * 100) / 100, // Round to 2 decimal places
+              projectedAssists: Math.round(playerTotal * 100) / 100 // assists + xA
+            });
+          }
+        });
+        
+        // Sort players by assist share descending
+        teamPlayers.sort((a, b) => b.assistShare - a.assistShare);
+        
+        if (teamPlayers.length > 0) {
+          finalResponse.push({
+            teamId: teamId,
+            teamName: teamData.name,
+            teamShort: teamData.short_name,
+            expectedAssists: Math.round(teamData.total * 100) / 100,
+            players: teamPlayers
           });
         }
       });
       
-      console.log(`DEBUG: Found ${currentYearActualData.length} players with assists in current season actual data`);
-      const historicalData: { [season: string]: any[] } = {};
-      historicalData["current"] = currentYearActualData;
+      // Sort teams by total assists+xA descending
+      finalResponse.sort((a, b) => b.expectedAssists - a.expectedAssists);
       
-      // Use DYNAMIC previous season cache for ultra-fast performance  
-      const { historicalCacheService } = await import("./historical-cache-service");
-      const previousSeason = "2024/25"; // TODO: Make this dynamic based on current season
-      const cachedPreviousSeasonData = await historicalCacheService.getCached2024Data(); // TODO: Replace with getCachedSeasonData(previousSeason)
+      console.log(`DEBUG: Built simplified assist share response with ${finalResponse.length} teams`);
       
-      console.log(`DEBUG: Using cached ${previousSeason} data (${cachedPreviousSeasonData.length} players) - ultra-fast lookup`);
+      // Update cache
+      assistShareCache = {
+        data: finalResponse,
+        timestamp: Date.now()
+      };
       
-      const historicalXAData: { [season: string]: any[] } = {};
-      historicalData[previousSeason] = cachedPreviousSeasonData;
-      historicalXAData[previousSeason] = cachedPreviousSeasonData;
+      return res.json(finalResponse);
       
-      // Now use the CORRECTED distributeAssistSharesDataDriven function for all teams
-      const response = Object.keys(teamSeasonTotals).map(teamIdStr => {
-        const teamId = parseInt(teamIdStr);
-        const team = bootstrapData.teams.find((t: any) => t.id === teamId);
-        
-        if (!team || teamSeasonTotals[teamId].expectedAssists <= 0) return null;
-        
-        // Get team players
-        const teamPlayers = bootstrapData.elements.filter((p: any) => p.team === teamId);
-        const positions = bootstrapData.element_types;
-        
-        console.log(`DEBUG: Using CORRECTED logic for team ${team.name} with ${teamPlayers.length} players and ${teamSeasonTotals[teamId].expectedAssists} expected assists`);
-        
-        // Call our corrected distribution function that includes position caps, inclusion criteria, and epsilon floor
-        const distributedPlayers = distributeAssistSharesDataDriven(teamPlayers, positions, bootstrapData);
-        
-        if (!distributedPlayers || distributedPlayers.length === 0) {
-          console.log(`DEBUG: No valid assist shares generated for team ${team.name}`);
-          return null;
-        }
-        
-        // Scale the assist shares to match team's expected assists
-        const scaledPlayers = distributedPlayers.map(player => {
-          const projectedAssists = (teamSeasonTotals[teamId].expectedAssists * player.assistShare / 100);
-          return {
-            id: player.id,
-            name: player.name,
-            position: player.position,
-            assistShare: Math.round(player.assistShare * 10) / 10,
-            projectedAssists: Math.round(projectedAssists * 100) / 100
-          };
-        }).filter(player => player.assistShare > 0);
-        
-        console.log(`DEBUG: Team ${team.name} distributed assists among ${scaledPlayers.length} players using CORRECTED logic`);
-        
-        return {
-          teamId: teamId,
-          teamName: team.name,
-          teamShort: team.short_name,
-          expectedAssists: teamSeasonTotals[teamId].expectedAssists,
-          players: scaledPlayers.sort((a, b) => b.assistShare - a.assistShare)
-        };
-      }).filter(team => team !== null);
-      
-      console.log(`DEBUG: Successfully generated CORRECTED assist share data for ${response.length} teams`);
-      res.json(response);
     } catch (error) {
-      console.error("Error generating season assist share data:", error);
-      res.status(500).json({ error: "Failed to generate season assist share data" });
+      console.error(`❌ Failed to generate simplified assist share data:`, error);
+      res.status(500).json({ error: "Failed to generate assist share data" });
     }
   });
 
