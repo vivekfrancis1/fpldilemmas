@@ -535,18 +535,7 @@ export default function PlayerTotalPoints() {
         samplePlayer.totalExpectedPoints !== undefined && 
         hasGameweekData;
       
-      console.log('🔍 Live data validation:', {
-        hasName: !!(samplePlayer.name || samplePlayer.playerName),
-        hasTotalPoints: samplePlayer.totalExpectedPoints !== undefined,
-        hasGameweekData,
-        pointsFromGoalsKeys: Object.keys(samplePlayer.pointsFromGoals || {}),
-        gameweekProjectionsKeys: Object.keys(samplePlayer.gameweekProjections || {}),
-        hasValidLiveData,
-        sampleFields: Object.keys(samplePlayer).slice(0, 10)
-      });
-      
       if (hasValidLiveData) {
-        console.log('✅ Using live data:', liveTotalPointsData.length, 'players');
         return liveTotalPointsData;
       }
     }
@@ -569,34 +558,12 @@ export default function PlayerTotalPoints() {
         samplePlayer.gameweekProjections[`gw${startGameweek}`] !== undefined && 
         samplePlayer.gameweekProjections[`gw${endGameweek}`] !== undefined;
       
-      console.log('🔍 Cached data validation:', {
-        hasName: !!(samplePlayer.name || samplePlayer.playerName),
-        hasTotalPoints: samplePlayer.totalExpectedPoints !== undefined,
-        hasGameweekData,
-        pointsFromGoalsKeys: Object.keys(samplePlayer.pointsFromGoals || {}),
-        gameweekProjectionsKeys: Object.keys(samplePlayer.gameweekProjections || {}),
-        hasValidCachedData,
-        hasRequestedRange,
-        startGameweek,
-        endGameweek,
-        sampleFields: Object.keys(samplePlayer).slice(0, 10)
-      });
-      
       if (hasRequestedRange && hasValidCachedData) {
-        console.log('✅ Using cached data:', cachedTotalPointsData.length, 'players');
         return cachedTotalPointsData;
       }
     }
     
     // PRIORITY 3: Return null if neither data source is available
-    console.log('❌ No valid data available:', {
-      liveTotalPointsData: !!liveTotalPointsData,
-      liveError: !!liveError,
-      cachedTotalPointsData: !!cachedTotalPointsData,
-      cachedError: !!cachedError,
-      liveLoading,
-      cachedLoading
-    });
     return null;
   }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek]);
 
