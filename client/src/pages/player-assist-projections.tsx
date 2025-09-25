@@ -301,7 +301,7 @@ export default function PlayerAssistProjections() {
             <h1>Player Assists</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Projected Assists for each player across all remaining fixtures
+            Projected Assists for each player across all upcoming fixtures
           </p>
           <div className="fpl-page-actions">
             <Button
@@ -417,7 +417,7 @@ export default function PlayerAssistProjections() {
           <Tabs defaultValue="assists" className="space-y-6">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="assists">Assists</TabsTrigger>
-              <TabsTrigger value="points">Points from Assists</TabsTrigger>
+              <TabsTrigger value="points">Assist Points</TabsTrigger>
             </TabsList>
 
             <TabsContent value="assists">
