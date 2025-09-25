@@ -525,12 +525,28 @@ export default function PlayerTotalPoints() {
     if (liveTotalPointsData && liveTotalPointsData.length > 0 && !liveError) {
       const samplePlayer = liveTotalPointsData[0];
       
-      // Validate live data quality - must have critical fields
-      const hasValidLiveData = samplePlayer.playerName && 
+      // Validate live data quality - must have critical fields and actual gameweek data
+      const hasGameweekData = samplePlayer.pointsFromGoals && 
+        Object.keys(samplePlayer.pointsFromGoals).length > 0 &&
+        samplePlayer.gameweekProjections &&
+        Object.keys(samplePlayer.gameweekProjections).length > 0;
+      
+      const hasValidLiveData = (samplePlayer.name || samplePlayer.playerName) && 
         samplePlayer.totalExpectedPoints !== undefined && 
-        samplePlayer.pointsFromGoals !== undefined;
+        hasGameweekData;
+      
+      console.log('🔍 Live data validation:', {
+        hasName: !!(samplePlayer.name || samplePlayer.playerName),
+        hasTotalPoints: samplePlayer.totalExpectedPoints !== undefined,
+        hasGameweekData,
+        pointsFromGoalsKeys: Object.keys(samplePlayer.pointsFromGoals || {}),
+        gameweekProjectionsKeys: Object.keys(samplePlayer.gameweekProjections || {}),
+        hasValidLiveData,
+        sampleFields: Object.keys(samplePlayer).slice(0, 10)
+      });
       
       if (hasValidLiveData) {
+        console.log('✅ Using live data:', liveTotalPointsData.length, 'players');
         return liveTotalPointsData;
       }
     }
@@ -539,21 +555,48 @@ export default function PlayerTotalPoints() {
     if (cachedTotalPointsData && cachedTotalPointsData.length > 0) {
       const samplePlayer = cachedTotalPointsData[0];
       
-      // Validate cached data quality - must have critical fields
-      const hasValidCachedData = samplePlayer.playerName && 
+      // Validate cached data quality - must have critical fields and actual gameweek data
+      const hasGameweekData = samplePlayer.pointsFromGoals && 
+        Object.keys(samplePlayer.pointsFromGoals).length > 0 &&
+        samplePlayer.gameweekProjections &&
+        Object.keys(samplePlayer.gameweekProjections).length > 0;
+      
+      const hasValidCachedData = (samplePlayer.name || samplePlayer.playerName) && 
         samplePlayer.totalExpectedPoints !== undefined && 
-        samplePlayer.pointsFromGoals !== undefined;
+        hasGameweekData;
       
       const hasRequestedRange = startGameweek && endGameweek && 
         samplePlayer.gameweekProjections[`gw${startGameweek}`] !== undefined && 
         samplePlayer.gameweekProjections[`gw${endGameweek}`] !== undefined;
       
+      console.log('🔍 Cached data validation:', {
+        hasName: !!(samplePlayer.name || samplePlayer.playerName),
+        hasTotalPoints: samplePlayer.totalExpectedPoints !== undefined,
+        hasGameweekData,
+        pointsFromGoalsKeys: Object.keys(samplePlayer.pointsFromGoals || {}),
+        gameweekProjectionsKeys: Object.keys(samplePlayer.gameweekProjections || {}),
+        hasValidCachedData,
+        hasRequestedRange,
+        startGameweek,
+        endGameweek,
+        sampleFields: Object.keys(samplePlayer).slice(0, 10)
+      });
+      
       if (hasRequestedRange && hasValidCachedData) {
+        console.log('✅ Using cached data:', cachedTotalPointsData.length, 'players');
         return cachedTotalPointsData;
       }
     }
     
     // PRIORITY 3: Return null if neither data source is available
+    console.log('❌ No valid data available:', {
+      liveTotalPointsData: !!liveTotalPointsData,
+      liveError: !!liveError,
+      cachedTotalPointsData: !!cachedTotalPointsData,
+      cachedError: !!cachedError,
+      liveLoading,
+      cachedLoading
+    });
     return null;
   }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek]);
 
