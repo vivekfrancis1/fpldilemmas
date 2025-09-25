@@ -117,6 +117,23 @@ export default function PlayerProjectionsComparisonModal({
     return bestPlayers.includes(player.playerId || player.id);
   };
 
+  // Helper function to find players with best gameweek projection
+  const getPlayersWithBestGameweekValue = (gameweek: number) => {
+    const values = players.map(player => player.gameweekProjections?.[`gw${gameweek}`] || 0);
+    const bestValue = Math.max(...values);
+    
+    return players
+      .map((player, index) => ({ player, value: values[index] }))
+      .filter(({ value }) => value === bestValue)
+      .map(({ player }) => player.playerId || player.id);
+  };
+
+  // Helper function to check if player has best value for gameweek
+  const isPlayerBestForGameweek = (player: PlayerTotalPointsData, gameweek: number) => {
+    const bestPlayers = getPlayersWithBestGameweekValue(gameweek);
+    return bestPlayers.includes(player.playerId || player.id);
+  };
+
   // Summary stats comparison
   const summaryStats = [
     {
@@ -328,17 +345,36 @@ export default function PlayerProjectionsComparisonModal({
                       Gameweek {gw}
                     </div>
                     <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : `grid-cols-${Math.min(players.length, 4)}`}`}>
-                      {players.map((player) => (
-                        <div key={player.playerId || player.id} className="bg-gray-50 rounded-lg p-3 text-center">
-                          <ValueCell 
-                            value={player.gameweekProjections?.[`gw${gw}`] || 0}
-                            format="points"
-                            decimals={2}
-                            className="text-lg font-semibold"
-                            colorScheme="points"
-                          />
-                        </div>
-                      ))}
+                      {players.map((player) => {
+                        const isBest = isPlayerBestForGameweek(player, gw);
+                        return (
+                          <div 
+                            key={player.playerId || player.id} 
+                            className={`rounded-lg p-3 text-center transition-all duration-200 ${
+                              isBest 
+                                ? 'bg-gradient-to-br from-green-100 to-green-200 border-2 border-green-300 shadow-md' 
+                                : 'bg-gray-50 border border-gray-200'
+                            }`}
+                          >
+                            <ValueCell 
+                              value={player.gameweekProjections?.[`gw${gw}`] || 0}
+                              format="points"
+                              decimals={2}
+                              className={`text-lg font-semibold ${
+                                isBest ? 'text-green-800' : 'text-gray-900'
+                              }`}
+                              colorScheme="points"
+                            />
+                            {isBest && (
+                              <div className="mt-1">
+                                <Badge className="bg-green-600 text-white text-xs">
+                                  Best
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                     <Separator />
                   </div>
