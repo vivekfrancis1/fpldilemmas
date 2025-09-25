@@ -23,6 +23,10 @@ interface TeamGoalsServiceCache {
 let teamGoalsCache: TeamGoalsServiceCache | null = null;
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
+// Cache for current standings data (5 minutes)
+let currentStandingsCache: { data: any[], timestamp: number } | null = null;
+const STANDINGS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export class TeamGoalsService {
   /**
    * Defensive numeric coercion helper - ensures valid numbers with fallbacks
@@ -123,7 +127,7 @@ export class TeamGoalsService {
         });
       }
       
-      const projections = allFixtures.map((fixture: any) => {
+      const projectionsPromises = allFixtures.map(async (fixture: any) => {
         const isHome = fixture.team_h === team.id;
         const opponentId = isHome ? fixture.team_a : fixture.team_h;
         const opponent = teams.find((t: any) => t.id === opponentId);
@@ -133,8 +137,8 @@ export class TeamGoalsService {
           return null;
         }
         
-        // Apply the full 8-phase team goal calculation logic
-        const expectedGoals = TeamGoalsService.calculateFixtureGoals(
+        // Apply the hybrid team goal calculation logic with real xGF/xGA data
+        const expectedGoals = await TeamGoalsService.calculateFixtureGoals(
           team, opponent, fixture, isHome, bootstrapData, fixturesData, 
           bettingData, adminGoalSettings, MASTER_TEAM_DEFAULTS
         );
@@ -156,6 +160,9 @@ export class TeamGoalsService {
         
         return projection;
       }); // No longer need .filter(Boolean) since calculateFixtureGoals guarantees valid numbers
+      
+      // Await all projection calculations
+      const projections = await Promise.all(projectionsPromises);
       
       const totalGoals = projections.reduce((sum: number, p: any) => sum + p.expectedGoals, 0);
       
@@ -198,10 +205,10 @@ export class TeamGoalsService {
   }
   
   /**
-   * Calculate expected goals for a single fixture using performance-based formula
-   * New formula: (team average xG + opponent average xGC) * 0.5 * venue * context
+   * Calculate expected goals for a single fixture using performance-based formula with real xGF/xGA data
+   * New formula: (team average goals + team average xG + opponent average GC + opponent average xGC) * 0.25 * venue * context
    */
-  private static calculateFixtureGoals(
+  private static async calculateFixtureGoals(
     team: any, 
     opponent: any, 
     fixture: any, 
@@ -211,21 +218,21 @@ export class TeamGoalsService {
     bettingData: any,
     adminGoalSettings: any,
     MASTER_TEAM_DEFAULTS: any
-  ): number {
+  ): Promise<number> {
     try {
       // NEW FORMULA: (team average goals + team average xG + opponent average GC + opponent average xGC) * 0.25 * venue * context
       
       // Get team's actual average goals scored per game
       const teamAvgGoals = TeamGoalsService.getTeamAverageGoals(team.id);
       
-      // Get team's average expected goals per game
-      const teamAvgXG = TeamGoalsService.getTeamAverageXG(team.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+      // Get team's average expected goals per game from real FPL data
+      const teamAvgXG = await TeamGoalsService.getTeamAverageXG(team.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
       
       // Get opponent's actual average goals conceded per game
       const opponentAvgGC = TeamGoalsService.getTeamAverageGoalsConceded(opponent.id);
       
-      // Get opponent's average expected goals conceded per game
-      const opponentAvgXGC = TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+      // Get opponent's average expected goals conceded per game from real FPL data
+      const opponentAvgXGC = await TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
       
       // Phase 1: Hybrid performance-based foundation - (actual goals + xG + opponent GC + opponent xGC) * 0.25
       let baseExpectedGoals = (teamAvgGoals + teamAvgXG + opponentAvgGC + opponentAvgXGC) * 0.25;
@@ -352,61 +359,45 @@ export class TeamGoalsService {
   }
   
   /**
-   * Get team's average expected goals per game from team data
+   * Get team's average expected goals per game from real FPL current standings data
    */
-  private static getTeamAverageXG(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): number {
-    // Team-specific xG data based on season performance
-    const teamXGData: Record<number, number> = {
-      // Elite attacking teams
-      13: 1.97, // Man City
-      12: 2.14, // Liverpool  
-      7: 1.95,  // Chelsea
-      1: 1.67,  // Arsenal
+  private static async getTeamAverageXG(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): Promise<number> {
+    try {
+      const standingsData = await TeamGoalsService.getCurrentStandingsData();
+      const teamStanding = standingsData.find((team: any) => team.id === teamId);
       
-      // Strong attacking teams
-      18: 1.67, // Tottenham
-      6: 1.85,  // Brighton
-      15: 1.60, // Newcastle
-      2: 1.47,  // Aston Villa
-      14: 1.45, // Man United
-      
-      // Average attacking teams
-      4: 1.53,  // Bournemouth
-      10: 1.20, // Fulham
-      5: 1.42,  // Brentford
-      16: 1.18, // Nottingham Forest
-      19: 1.27, // West Ham
-      8: 1.06,  // Crystal Palace
-      9: 1.10,  // Everton
-      20: 1.12, // Wolves
-      
-      // Promoted teams
-      3: 0.88,  // Burnley
-      11: 0.95, // Leeds
-      17: 0.85  // Sunderland
-    };
+      if (teamStanding && teamStanding.played > 0) {
+        // Calculate average xGF per game from real FPL data
+        const avgXGF = teamStanding.expectedGoalsFor / teamStanding.played;
+        return Math.round(avgXGF * 100) / 100; // Round to 2 decimal places
+      }
+    } catch (error) {
+      console.warn(`⚠️ Failed to fetch xGF for team ${teamId}, using fallback:`, error);
+    }
     
-    return teamXGData[teamId] || adminGoalSettings.defaultExpectedGoalsPerGame || MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame || 1.3;
+    // Fallback to default if data unavailable
+    return adminGoalSettings.defaultExpectedGoalsPerGame || MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame || 1.3;
   }
   
   /**
-   * Get opponent's average expected goals conceded per game
-   * Based on their defensive strength - better defenses concede fewer goals
+   * Get opponent's average expected goals conceded per game from real FPL current standings data
    */
-  private static getTeamAverageXGC(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): number {
-    // Calculate xGC based on defensive tier
-    const defensiveTier = TeamGoalsService.getDefensiveTier(teamId, adminGoalSettings);
-    const premierLeagueAvg = 1.5; // Average goals per game in Premier League
-    
-    // Defensive strength determines how many goals they typically concede
-    switch (defensiveTier) {
-      case 'elite': return premierLeagueAvg * 0.60;    // Elite defenses concede ~0.9 goals/game
-      case 'strong': return premierLeagueAvg * 0.75;   // Strong defenses concede ~1.1 goals/game  
-      case 'average': return premierLeagueAvg * 1.00;  // Average defenses concede ~1.5 goals/game
-      case 'weak': return premierLeagueAvg * 1.35;     // Weak defenses concede ~2.0 goals/game
-      case 'promoted': return premierLeagueAvg * 1.60; // Promoted teams concede ~2.4 goals/game
-      default: return premierLeagueAvg; // Fallback to league average
+  private static async getTeamAverageXGC(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): Promise<number> {
+    try {
+      const standingsData = await TeamGoalsService.getCurrentStandingsData();
+      const teamStanding = standingsData.find((team: any) => team.id === teamId);
+      
+      if (teamStanding && teamStanding.played > 0) {
+        // Calculate average xGA per game from real FPL data
+        const avgXGA = teamStanding.expectedGoalsAgainst / teamStanding.played;
+        return Math.round(avgXGA * 100) / 100; // Round to 2 decimal places
+      }
+    } catch (error) {
+      console.warn(`⚠️ Failed to fetch xGA for team ${teamId}, using fallback:`, error);
     }
+    
+    // Fallback to premier league average if data unavailable
+    return 1.5; // Premier League average
   }
   
   // Helper methods for tier calculations (kept for other uses)
@@ -584,10 +575,52 @@ export class TeamGoalsService {
   }
   
   /**
+   * Get current standings data with caching
+   */
+  private static async getCurrentStandingsData(): Promise<any[]> {
+    // Check cache first
+    if (currentStandingsCache && 
+        Date.now() - currentStandingsCache.timestamp < STANDINGS_CACHE_DURATION) {
+      return currentStandingsCache.data;
+    }
+    
+    try {
+      // Fetch fresh data from current-standings endpoint
+      const response = await fetch('http://localhost:5000/api/current-standings');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch current standings: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Cache the data
+      currentStandingsCache = {
+        data,
+        timestamp: Date.now()
+      };
+      
+      console.log(`📊 Fetched current standings data for ${data.length} teams`);
+      return data;
+    } catch (error) {
+      console.error('❌ Failed to fetch current standings data:', error);
+      
+      // Return cached data if available, even if stale
+      if (currentStandingsCache) {
+        console.log('📊 Using stale standings cache as fallback');
+        return currentStandingsCache.data;
+      }
+      
+      // Ultimate fallback - empty array
+      return [];
+    }
+  }
+  
+  /**
    * Clear cache - useful for testing or when admin settings change
    */
   static clearCache(): void {
     teamGoalsCache = null;
+    currentStandingsCache = null;
     console.log(`🗑️ TeamGoalsService cache cleared`);
   }
   
