@@ -253,7 +253,10 @@ class ProjectionCacheWorker {
         
         if (team.gameweekProjections) {
           for (let gw = 6; gw <= 11; gw++) {
-            const teamGoal = team.gameweekProjections[gw.toString()];
+            // FIX: Support both formats - string number and "gw" prefix
+            const teamGoal = team.gameweekProjections[gw.toString()] || 
+                           team.gameweekProjections[`gw${gw}`] || 
+                           team.gameweekProjections[gw] || 0;
             if (teamGoal > 0) {
               totalTeamGwKeys++;
               const key = `${tId}-${gw}`;
@@ -603,7 +606,10 @@ class ProjectionCacheWorker {
         
         if (team.gameweekProjections) {
           for (let gw = 6; gw <= 11; gw++) {
-            const teamAssist = team.gameweekProjections[gw.toString()];
+            // FIX: Support both formats - string number and "gw" prefix
+            const teamAssist = team.gameweekProjections[gw.toString()] || 
+                             team.gameweekProjections[`gw${gw}`] || 
+                             team.gameweekProjections[gw] || 0;
             if (teamAssist > 0) {
               totalTeamGwKeys++;
               const key = `${tId}-${gw}`;
