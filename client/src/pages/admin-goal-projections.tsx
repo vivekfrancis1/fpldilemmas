@@ -720,7 +720,7 @@ export default function AdminGoalProjections() {
                 How Team Goal Projections Are Calculated
               </CardTitle>
               <CardDescription>
-                Understanding the 8-phase calculation process that transforms base xG into final goal projections
+                Understanding the hybrid formula that combines real FPL performance data with expected goals to create accurate projections
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -728,46 +728,45 @@ export default function AdminGoalProjections() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 1: Foundation</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 1: Hybrid Foundation</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Average Base xG per Team per Game:</strong> <span className="font-mono text-blue-600">{formData.averageBaseXGPerTeamPerGame || 1.5}</span>
+                        <strong>Formula:</strong> (Team Avg Goals + Real Team xGF + Opponent Avg GC + Real Opponent xGA) × 0.25<br/>
+                        <strong>Data Sources:</strong> Real FPL API performance + Live expected goals statistics<br/>
+                        <strong>Note:</strong> No longer uses synthetic base xG - now exclusively real data
+                      </p>
+                    </div>
+                    
+                    <div className="p-3 border rounded-lg opacity-60">
+                      <h4 className="font-semibold text-sm mb-2">Phase 2: Attack Tiers (RETIRED)</h4>
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Status:</strong> <span className="font-mono text-red-600">No longer used in primary calculation</span><br/>
+                        <strong>Replaced by:</strong> Real xGF data from current FPL standings<br/>
+                        <strong>Note:</strong> Tiers remain available for other projection tools
+                      </p>
+                    </div>
+                    
+                    <div className="p-3 border rounded-lg opacity-60">
+                      <h4 className="font-semibold text-sm mb-2">Phase 3: Defense Tiers (RETIRED)</h4>
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Status:</strong> <span className="font-mono text-red-600">No longer used in primary calculation</span><br/>
+                        <strong>Replaced by:</strong> Real xGA data from current FPL standings<br/>
+                        <strong>Note:</strong> Tiers remain available for other projection tools
                       </p>
                     </div>
                     
                     <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 2: Attacking Tiers</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 2: Venue Adjustments</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Elite:</strong> × <span className="font-mono text-orange-600">{formData.eliteAttackMultiplier || 1.35}</span><br/>
-                        <strong>Strong:</strong> × <span className="font-mono text-orange-600">{formData.strongAttackMultiplier || 1.15}</span><br/>
-                        <strong>Average:</strong> × <span className="font-mono text-orange-600">{formData.averageAttackMultiplier || 1.00}</span><br/>
-                        <strong>Weak:</strong> × <span className="font-mono text-orange-600">{formData.weakAttackMultiplier || 0.85}</span><br/>
-                        <strong>Promoted:</strong> × <span className="font-mono text-orange-600">{formData.promotedAttackMultiplier || 0.7}</span>
-                      </p>
-                    </div>
-                    
-                    <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 3: Defensive Tiers</h4>
-                      <p className="text-sm text-muted-foreground">
-                        <strong>Elite Defense:</strong> × <span className="font-mono text-blue-600">{formData.eliteDefenseMultiplier || 0.7}</span><br/>
-                        <strong>Strong Defense:</strong> × <span className="font-mono text-blue-600">{formData.strongDefenseMultiplier || 0.85}</span><br/>
-                        <strong>Average Defense:</strong> × <span className="font-mono text-blue-600">{formData.averageDefenseMultiplier || 1.0}</span><br/>
-                        <strong>Weak Defense:</strong> × <span className="font-mono text-blue-600">{formData.weakDefenseMultiplier || 1.15}</span><br/>
-                        <strong>Promoted Defense:</strong> × <span className="font-mono text-blue-600">{formData.promotedDefenseMultiplier || 1.3}</span>
-                      </p>
-                    </div>
-                    
-                    <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 4: Venue adjustments</h4>
-                      <p className="text-sm text-muted-foreground">
-                        <strong>Home:</strong> xG × <span className="font-mono text-green-600">{formData.homeAdvantageGoalsMultiplier || 1.16}</span><br/>
-                        <strong>Away:</strong> xG × <span className="font-mono text-red-600">{formData.awayFactorGoalsMultiplier || 0.84}</span>
+                        <strong>Home:</strong> Goals × <span className="font-mono text-green-600">{formData.homeAdvantageGoalsMultiplier || 1.12}</span> (+12%)<br/>
+                        <strong>Away:</strong> Goals × <span className="font-mono text-red-600">{formData.awayFactorGoalsMultiplier || 0.84}</span> (-16%)<br/>
+                        <strong>Updated:</strong> Home advantage reduced from +16% to +12% for more realistic projections
                       </p>
                     </div>
                   </div>
                   
                   <div className="space-y-3">
                     <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 5: Context Multipliers</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 3: Context Multipliers</h4>
                       <p className="text-sm text-muted-foreground">
                         <strong>Derby Matches:</strong> × <span className="font-mono text-purple-600">{formData.derbyGoalsMultiplier || 0.87}</span><br/>
                         <strong>Top Six Battles:</strong> × <span className="font-mono text-purple-600">{formData.topSixGoalsMultiplier || 1.12}</span><br/>
@@ -785,17 +784,18 @@ export default function AdminGoalProjections() {
                       </p>
                     </div>
                     
-                    <div className="p-3 border rounded-lg">
-                      <h4 className="font-semibold text-sm mb-2">Phase 6: Market Bounds</h4>
+                    <div className="p-3 border rounded-lg bg-red-50 border-red-200">
+                      <h4 className="font-semibold text-sm mb-2">Phase 4: Market Bounds (REMOVED)</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Market Floor Multiplier:</strong> <span className="font-mono text-indigo-600">{formData.marketFloorMultiplier || 0.40}</span><br/>
-                        <strong>Market Ceiling Multiplier:</strong> <span className="font-mono text-indigo-600">{formData.marketCeilingMultiplier || 2.0}</span>
+                        <strong>Status:</strong> <span className="font-mono text-red-600">Market bounds completely removed</span><br/>
+                        <strong>Impact:</strong> Projections now flow freely based on pure performance data<br/>
+                        <strong>Result:</strong> Teams can now project below 0.6 or above 3.0 goals when warranted
                       </p>
                     </div>
                     
                     
                     <div className="p-3 border rounded-lg bg-fpl-purple/5">
-                      <h4 className="font-semibold text-sm mb-2">Phase 7: Final Bounds</h4>
+                      <h4 className="font-semibold text-sm mb-2">Phase 4: Final Bounds</h4>
                       <p className="text-sm text-muted-foreground">
                         <strong>Absolute Min Goals:</strong> <span className="font-mono text-gray-600">{formData.absoluteMinGoals || 0.0}</span><br/>
                         <strong>Absolute Max Goals:</strong> <span className="font-mono text-gray-600">{formData.absoluteMaxGoals || 7.0}</span><br/>
@@ -808,7 +808,7 @@ export default function AdminGoalProjections() {
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>Impact:</strong> All teams start from the same base xG foundation (1.35) in Phase 1. Team differences emerge through attacking/defensive tier multipliers, venue factors, and context adjustments applied in subsequent phases. This ensures a fair foundation while allowing team quality differences to be reflected through the layered multiplier system.
+                    <strong>Current System:</strong> Teams no longer use artificial base xG foundations. Instead, projections are built from real performance data (actual goals scored/conceded + expected goals for/against) from the FPL API. This ensures authentic projections that reflect actual team performance and opponent strength without synthetic adjustments.
                   </AlertDescription>
                 </Alert>
               </div>
