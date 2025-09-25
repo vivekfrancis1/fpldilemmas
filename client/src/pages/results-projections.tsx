@@ -284,7 +284,7 @@ export default function ResultsProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Target className="h-8 w-8" />
-            <h1>Results Projections</h1>
+            <h1>Match Predictions</h1>
           </div>
           <p className="fpl-page-subtitle">
             Predicted match results based on sports spread betting markets and statistical analysis
