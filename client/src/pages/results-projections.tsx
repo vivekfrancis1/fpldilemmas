@@ -356,13 +356,13 @@ export default function ResultsProjections() {
                         Predicted Score
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Win Probabilities
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         xG
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Clean Sheets
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Win Probabilities
                       </th>
                     </tr>
                   </thead>
@@ -407,20 +407,6 @@ export default function ResultsProjections() {
                           
                           <td className="px-4 py-4 text-center">
                             <div className="space-y-1">
-                              <div className="flex justify-between text-xs">
-                                <span className="text-blue-600">{match.homeTeam.shortName}: {probabilities.homeWin.toFixed(1)}%</span>
-                              </div>
-                              <div className="flex justify-between text-xs">
-                                <span className="text-gray-600">Draw: {probabilities.draw.toFixed(1)}%</span>
-                              </div>
-                              <div className="flex justify-between text-xs">
-                                <span className="text-red-600">{match.awayTeam.shortName}: {probabilities.awayWin.toFixed(1)}%</span>
-                              </div>
-                            </div>
-                          </td>
-                          
-                          <td className="px-4 py-4 text-center">
-                            <div className="space-y-1">
                               <div className="text-xs">
                                 <span className="text-gray-600">{match.homeTeam.shortName}: {match.homeTeam.expectedGoals.toFixed(2)}</span>
                               </div>
@@ -437,6 +423,20 @@ export default function ResultsProjections() {
                               </div>
                               <div className="text-xs">
                                 <span className="text-red-600">{match.awayTeam.shortName}: {match.awayTeam.cleanSheetOdds.toFixed(1)}%</span>
+                              </div>
+                            </div>
+                          </td>
+                          
+                          <td className="px-4 py-4 text-center">
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span className="text-blue-600">{match.homeTeam.shortName}: {probabilities.homeWin.toFixed(1)}%</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-gray-600">Draw: {probabilities.draw.toFixed(1)}%</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-red-600">{match.awayTeam.shortName}: {probabilities.awayWin.toFixed(1)}%</span>
                               </div>
                             </div>
                           </td>
