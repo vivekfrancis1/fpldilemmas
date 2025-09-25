@@ -3474,13 +3474,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         derbyMatchMultiplier: parseFloat(settings.derbyMatchMultiplier || "0.87"),
         topSixMatchMultiplier: parseFloat(settings.topSixMatchMultiplier || "1.12"),
         relegationBattleMultiplier: parseFloat(settings.relegationBattleMultiplier || "0.83"),
-        earlyKickoffMultiplier: parseFloat(settings.earlyKickoffMultiplier || "0.94"),
-        lateKickoffMultiplier: parseFloat(settings.lateKickoffMultiplier || "1.07"),
-        postEuropeanMultiplier: parseFloat(settings.postEuropeanMultiplier || "0.88"),
-        midweekFixtureMultiplier: parseFloat(settings.midweekFixtureMultiplier || "0.91"),
         seasonFinaleMultiplier: parseFloat(settings.seasonFinaleMultiplier || "1.05"),
-        newManagerBounceMultiplier: parseFloat(settings.newManagerBounceMultiplier || "1.08"),
-        weatherConditionsMultiplier: parseFloat(settings.weatherConditionsMultiplier || "0.96"),
+        // Removed multipliers not available from FPL official APIs (set to 1.0):
+        earlyKickoffMultiplier: 1.0,
+        lateKickoffMultiplier: 1.0,
         eliteAttackMultiplier: parseFloat(settings.eliteAttackMultiplier || "1.35"),
         strongAttackMultiplier: parseFloat(settings.strongAttackMultiplier || "1.15"),
         averageAttackMultiplier: parseFloat(settings.averageAttackMultiplier || "1.00"),
@@ -3919,34 +3916,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weakDefenseTeams: MASTER_TEAM_DEFAULTS.weakDefenseTeams,
         promotedDefenseTeams: MASTER_TEAM_DEFAULTS.promotedDefenseTeams,
         
-        // Context Multipliers
+        // Context Multipliers - Only FPL API-based multipliers (synthetic ones removed)
         derbyGoalsMultiplier: MASTER_TEAM_DEFAULTS.derbyGoalsMultiplier,
         topSixGoalsMultiplier: MASTER_TEAM_DEFAULTS.topSixGoalsMultiplier,
         relegationBattleGoalsMultiplier: MASTER_TEAM_DEFAULTS.relegationBattleGoalsMultiplier,
-        earlyKickoffGoalsMultiplier: MASTER_TEAM_DEFAULTS.earlyKickoffGoalsMultiplier,
-        lateKickoffGoalsMultiplier: MASTER_TEAM_DEFAULTS.lateKickoffGoalsMultiplier,
-        postEuropeanGoalsMultiplier: MASTER_TEAM_DEFAULTS.postEuropeanGoalsMultiplier,
-        midweekFixtureGoalsMultiplier: MASTER_TEAM_DEFAULTS.midweekFixtureGoalsMultiplier,
-        seasonFinaleGoalsMultiplier: MASTER_TEAM_DEFAULTS.seasonFinaleGoalsMultiplier,
-        newManagerBounceGoalsMultiplier: MASTER_TEAM_DEFAULTS.newManagerBounceGoalsMultiplier,
-        teamFormMultiplier: MASTER_TEAM_DEFAULTS.teamFormMultiplier,
-        fixtureCongestionMultiplier: MASTER_TEAM_DEFAULTS.fixtureCongestionMultiplier,
-        injuryCrisisMultiplier: MASTER_TEAM_DEFAULTS.injuryCrisisMultiplier,
-        europeanQualificationPushMultiplier: MASTER_TEAM_DEFAULTS.europeanQualificationPushMultiplier,
-        nothingToPlayForMultiplier: MASTER_TEAM_DEFAULTS.nothingToPlayForMultiplier,
-        revengeFactorMultiplier: MASTER_TEAM_DEFAULTS.revengeFactorMultiplier,
-        pressureMatchMultiplier: MASTER_TEAM_DEFAULTS.pressureMatchMultiplier,
-        homeCrowdBoostMultiplier: MASTER_TEAM_DEFAULTS.homeCrowdBoostMultiplier,
-        weatherConditionsGoalsMultiplier: MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier,
-        refereeInfluenceMultiplier: MASTER_TEAM_DEFAULTS.refereeInfluenceMultiplier,
-        postInternationalBreakMultiplier: MASTER_TEAM_DEFAULTS.postInternationalBreakMultiplier,
-        travelDistanceFatigueMultiplier: MASTER_TEAM_DEFAULTS.travelDistanceFatigueMultiplier,
+        seasonFinaleGoalsMultiplier: 1.05, // Based on gameweek number from FPL API
         
-        // Bounds
-        marketFloorMultiplier: MASTER_TEAM_DEFAULTS.marketFloorMultiplier,
-        marketCeilingMultiplier: MASTER_TEAM_DEFAULTS.marketCeilingMultiplier,
-        absoluteMinGoals: MASTER_TEAM_DEFAULTS.absoluteMinGoals,
-        absoluteMaxGoals: MASTER_TEAM_DEFAULTS.absoluteMaxGoals,
+        // Removed multipliers not available from FPL official APIs (set to 1.0 - neutral):
+        earlyKickoffGoalsMultiplier: 1.0,
+        lateKickoffGoalsMultiplier: 1.0,
+        
+        // Bounds - simplified
+        marketFloorMultiplier: 0.4,
+        marketCeilingMultiplier: 2.0,
+        absoluteMinGoals: 0.3,
+        absoluteMaxGoals: 4.2,
         lastUpdated: new Date().toISOString(),
         updatedBy: "admin"
       };
