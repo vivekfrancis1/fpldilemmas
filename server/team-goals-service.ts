@@ -444,54 +444,21 @@ export class TeamGoalsService {
   ): number {
     let adjustedGoals = baseExpectedGoals;
     
-    // Timing factors (with safe multiplication)
-    const isEarlyKickoff = (fixture.event + team.id) % 7 === 0;
-    const isLateKickoff = (fixture.event + team.id) % 7 === 3;
-    const isMidweekFixture = fixture.event % 4 === 0;
+    // Timing factors (using real FPL API data only - synthetic formulas removed)
+    // Note: Real kickoff time analysis would need to be implemented using fixture.kickoff_time from FPL API
+    // For now, using simplified season context only
     const isSeasonFinale = fixture.event >= 37;
-    const hasNewManager = (team.id + fixture.event) % 20 === 0;
-    
-    if (isEarlyKickoff) {
-      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.earlyKickoffGoalsMultiplier, 0.94);
-    } else if (isLateKickoff) {
-      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.lateKickoffGoalsMultiplier, 1.07);
-    }
-    
-    if (isMidweekFixture) {
-      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.midweekFixtureGoalsMultiplier, 0.91);
-    }
     
     if (isSeasonFinale) {
       adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.seasonFinaleGoalsMultiplier, 1.05);
     }
     
-    if (hasNewManager) {
-      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.newManagerBounceGoalsMultiplier, 1.08);
-    }
-    
-    // Enhanced context multipliers (with safe multiplication)
-    const hasAdverseWeather = (fixture.event + team.id + opponent.id) % 8 === 0;
-    if (hasAdverseWeather) {
-      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, 
-        adminGoalSettings.weatherConditionsGoalsMultiplier || MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier, 
-        1.0);
-    }
-    
-    const isPostInternationalBreak = fixture.event === 4 || fixture.event === 8 || fixture.event === 16 || fixture.event === 29;
-    if (isPostInternationalBreak) {
-      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, 
-        adminGoalSettings.postInternationalBreakMultiplier || MASTER_TEAM_DEFAULTS.postInternationalBreakMultiplier, 
-        1.0);
-    }
-    
-    if (!isHome) {
-      const isLongTrip = (team.id + opponent.id) % 5 === 0;
-      if (isLongTrip) {
-        adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, 
-          adminGoalSettings.travelDistanceFatigueMultiplier || MASTER_TEAM_DEFAULTS.travelDistanceFatigueMultiplier, 
-          1.0);
-      }
-    }
+    // All other context multipliers removed - not available from FPL official APIs:
+    // - Weather conditions (no weather data in FPL API)
+    // - Travel distance fatigue (no geographic data in FPL API) 
+    // - Post-international break (synthetic timing, not FPL data)
+    // - New manager bounce (synthetic calculation, not real manager changes)
+    // - Early/Late kickoff (synthetic calculation - would need real kickoff_time parsing)
     
     return adjustedGoals;
   }

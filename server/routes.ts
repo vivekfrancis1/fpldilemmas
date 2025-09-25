@@ -3747,31 +3747,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     averageDefenseTeams: MASTER_TEAM_DEFAULTS.averageDefenseTeams,
     weakDefenseTeams: MASTER_TEAM_DEFAULTS.weakDefenseTeams,
     promotedDefenseTeams: MASTER_TEAM_DEFAULTS.promotedDefenseTeams,
-    // Context Multipliers - Using team-config.ts centralized configuration
+    // Context Multipliers - Only FPL API-based multipliers (synthetic ones removed)
     derbyGoalsMultiplier: MASTER_TEAM_DEFAULTS.derbyGoalsMultiplier,
     topSixGoalsMultiplier: MASTER_TEAM_DEFAULTS.topSixGoalsMultiplier,
     relegationBattleGoalsMultiplier: MASTER_TEAM_DEFAULTS.relegationBattleGoalsMultiplier,
-    earlyKickoffGoalsMultiplier: MASTER_TEAM_DEFAULTS.earlyKickoffGoalsMultiplier,
-    lateKickoffGoalsMultiplier: MASTER_TEAM_DEFAULTS.lateKickoffGoalsMultiplier,
-    postEuropeanGoalsMultiplier: MASTER_TEAM_DEFAULTS.postEuropeanGoalsMultiplier,
-    midweekFixtureGoalsMultiplier: MASTER_TEAM_DEFAULTS.midweekFixtureGoalsMultiplier,
-    seasonFinaleGoalsMultiplier: MASTER_TEAM_DEFAULTS.seasonFinaleGoalsMultiplier,
-    newManagerBounceGoalsMultiplier: MASTER_TEAM_DEFAULTS.newManagerBounceGoalsMultiplier,
-    teamFormMultiplier: MASTER_TEAM_DEFAULTS.teamFormMultiplier,
-    fixtureCongestionMultiplier: MASTER_TEAM_DEFAULTS.fixtureCongestionMultiplier,
-    injuryCrisisMultiplier: MASTER_TEAM_DEFAULTS.injuryCrisisMultiplier,
-    europeanQualificationPushMultiplier: MASTER_TEAM_DEFAULTS.europeanQualificationPushMultiplier,
-    nothingToPlayForMultiplier: MASTER_TEAM_DEFAULTS.nothingToPlayForMultiplier,
-    revengeFactorMultiplier: MASTER_TEAM_DEFAULTS.revengeFactorMultiplier,
-    pressureMatchMultiplier: MASTER_TEAM_DEFAULTS.pressureMatchMultiplier,
-    homeCrowdBoostMultiplier: MASTER_TEAM_DEFAULTS.homeCrowdBoostMultiplier,
-    weatherConditionsGoalsMultiplier: MASTER_TEAM_DEFAULTS.weatherConditionsGoalsMultiplier,
+    seasonFinaleGoalsMultiplier: 1.05, // Based on gameweek number from FPL API
     
-    // Market Bounds
-    marketFloorMultiplier: MASTER_TEAM_DEFAULTS.marketFloorMultiplier,
-    marketCeilingMultiplier: MASTER_TEAM_DEFAULTS.marketCeilingMultiplier,
-    absoluteMinGoals: MASTER_TEAM_DEFAULTS.absoluteMinGoals,
-    absoluteMaxGoals: MASTER_TEAM_DEFAULTS.absoluteMaxGoals,
+    // Removed multipliers not available from FPL official APIs (set to 1.0 - neutral):
+    earlyKickoffGoalsMultiplier: 1.0,
+    lateKickoffGoalsMultiplier: 1.0,
+    
+    // Market Bounds - simplified
+    marketFloorMultiplier: 0.4,
+    marketCeilingMultiplier: 2.0,
+    absoluteMinGoals: 0.3,
+    absoluteMaxGoals: 4.2,
     lastUpdated: new Date().toISOString(),
     updatedBy: "admin"
   };
@@ -3790,16 +3780,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     averageDefensiveFloor: 18,
     weakDefensiveFloor: 16,
     promotedDefensiveFloor: 15,
+    // Only FPL API-based CS multipliers (synthetic ones removed)
     derbyCSMultiplier: 0.82,
     topSixCSMultiplier: 0.88,
     relegationBattleCSMultiplier: 0.78,
-    earlyKickoffCSMultiplier: 1.06,
-    lateKickoffCSMultiplier: 0.93,
-    postEuropeanCSMultiplier: 0.87,
-    midweekFixtureCSMultiplier: 0.95,
     seasonFinaleCSMultiplier: 0.90,
-    newManagerBounceCSMultiplier: 1.03,
-    weatherConditionsCSMultiplier: 1.02,
+    
+    // Removed multipliers not available from FPL official APIs (set to 1.0 - neutral):
+    earlyKickoffCSMultiplier: 1.0,
+    lateKickoffCSMultiplier: 1.0,
     lastUpdated: new Date().toISOString(),
     updatedBy: "admin"
   };
