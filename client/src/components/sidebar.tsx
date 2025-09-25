@@ -96,12 +96,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       ]
     },
     {
-      section: "Third Party Projection Tools", 
-      items: [
-        { path: "/openfpl-projections", label: "OpenFPL Player Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false }
-      ]
-    },
-    {
       section: "Analysis Tools", 
       items: [
         // { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
@@ -112,6 +106,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   // Admin-only navigation items
   const adminNavItems = [
+    {
+      section: "Third Party Projection Tools", 
+      items: [
+        { path: "/openfpl-projections", label: "OpenFPL Player Projections", icon: BarChart3, description: "ML ensemble predictions", popular: false }
+      ]
+    },
     {
       section: "Admin Tools",
       items: [
