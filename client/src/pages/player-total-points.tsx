@@ -796,31 +796,25 @@ export default function PlayerTotalPoints() {
             </div>
             <div className="fpl-card-content">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-            {/* Gameweek Range */}
+            {/* Load Group Filter */}
             <div className="space-y-2">
-              <Label htmlFor="start-gameweek" className="text-sm font-medium">Start GW</Label>
-              <Select value={startGameweek?.toString() || ''} onValueChange={(value) => setStartGameweek(parseInt(value) || nextGameweek)}>
+              <Label htmlFor="load-group-filter" className="text-sm font-medium">Load Group</Label>
+              <Select value={selectedLoadGroup} onValueChange={setSelectedLoadGroup}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: Math.min(15 - nextGameweek + 1, 12) }, (_, i) => nextGameweek + i).map(gw => (
-                    <SelectItem key={`start-gw-${gw}`} value={gw.toString()}>GW{gw}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="end-gameweek" className="text-sm font-medium">End GW</Label>
-              <Select value={endGameweek?.toString() || ''} onValueChange={(value) => setEndGameweek(parseInt(value) || nextGameweek + 5)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: Math.min(15 - nextGameweek + 1, 12) }, (_, i) => nextGameweek + i).filter(gw => gw >= (startGameweek || nextGameweek)).map(gw => (
-                    <SelectItem key={`end-gw-${gw}`} value={gw.toString()}>GW{gw}</SelectItem>
-                  ))}
+                  <SelectItem key="load-group-all" value="all">All Players</SelectItem>
+                  <SelectItem key="load-group-top-50" value="Top 50">Top 50</SelectItem>
+                  <SelectItem key="load-group-top-50-fwds" value="Top 50 FWDs">Top 50 FWDs</SelectItem>
+                  <SelectItem key="load-group-top-50-mids" value="Top 50 MIDs">Top 50 MIDs</SelectItem>
+                  <SelectItem key="load-group-top-50-defs" value="Top 50 DEFs">Top 50 DEFs</SelectItem>
+                  <SelectItem key="load-group-top-50-gks" value="Top 50 GKs">Top 50 GKs</SelectItem>
+                  <SelectItem key="load-group-value-50" value="Value 50">Value 50</SelectItem>
+                  <SelectItem key="load-group-value-50-fwds" value="Value 50 FWDs">Value 50 FWDs</SelectItem>
+                  <SelectItem key="load-group-value-50-mids" value="Value 50 MIDs">Value 50 MIDs</SelectItem>
+                  <SelectItem key="load-group-value-50-defs" value="Value 50 DEFs">Value 50 DEFs</SelectItem>
+                  <SelectItem key="load-group-value-50-gks" value="Value 50 GKs">Value 50 GKs</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -872,25 +866,31 @@ export default function PlayerTotalPoints() {
               </Select>
             </div>
 
-            {/* Load Group Filter */}
+            {/* Gameweek Range */}
             <div className="space-y-2">
-              <Label htmlFor="load-group-filter" className="text-sm font-medium">Load Group</Label>
-              <Select value={selectedLoadGroup} onValueChange={setSelectedLoadGroup}>
+              <Label htmlFor="start-gameweek" className="text-sm font-medium">Start GW</Label>
+              <Select value={startGameweek?.toString() || ''} onValueChange={(value) => setStartGameweek(parseInt(value) || nextGameweek)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem key="load-group-all" value="all">All Players</SelectItem>
-                  <SelectItem key="load-group-top-50" value="Top 50">Top 50</SelectItem>
-                  <SelectItem key="load-group-top-50-fwds" value="Top 50 FWDs">Top 50 FWDs</SelectItem>
-                  <SelectItem key="load-group-top-50-mids" value="Top 50 MIDs">Top 50 MIDs</SelectItem>
-                  <SelectItem key="load-group-top-50-defs" value="Top 50 DEFs">Top 50 DEFs</SelectItem>
-                  <SelectItem key="load-group-top-50-gks" value="Top 50 GKs">Top 50 GKs</SelectItem>
-                  <SelectItem key="load-group-value-50" value="Value 50">Value 50</SelectItem>
-                  <SelectItem key="load-group-value-50-fwds" value="Value 50 FWDs">Value 50 FWDs</SelectItem>
-                  <SelectItem key="load-group-value-50-mids" value="Value 50 MIDs">Value 50 MIDs</SelectItem>
-                  <SelectItem key="load-group-value-50-defs" value="Value 50 DEFs">Value 50 DEFs</SelectItem>
-                  <SelectItem key="load-group-value-50-gks" value="Value 50 GKs">Value 50 GKs</SelectItem>
+                  {Array.from({ length: Math.min(15 - nextGameweek + 1, 12) }, (_, i) => nextGameweek + i).map(gw => (
+                    <SelectItem key={`start-gw-${gw}`} value={gw.toString()}>GW{gw}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="end-gameweek" className="text-sm font-medium">End GW</Label>
+              <Select value={endGameweek?.toString() || ''} onValueChange={(value) => setEndGameweek(parseInt(value) || nextGameweek + 5)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: Math.min(15 - nextGameweek + 1, 12) }, (_, i) => nextGameweek + i).filter(gw => gw >= (startGameweek || nextGameweek)).map(gw => (
+                    <SelectItem key={`end-gw-${gw}`} value={gw.toString()}>GW{gw}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
