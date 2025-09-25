@@ -530,16 +530,23 @@ export default function PlayerTotalPoints() {
 
   // Handle player comparison
   const handlePlayerCompareClick = (player: PlayerTotalPointsData) => {
-    const playerId = player.playerId || player.id;
-    const isPlayerInList = compareList.some(p => (p.playerId || p.id) === playerId);
+    const playerId = player.playerId;
+    if (!playerId) {
+      console.warn('Player has no valid playerId:', player);
+      return;
+    }
+
+    const isPlayerInList = compareList.some(p => p.playerId === playerId);
     
     if (isPlayerInList) {
       // Remove player from comparison list
-      setCompareList(prev => prev.filter(p => (p.playerId || p.id) !== playerId));
+      setCompareList(prev => prev.filter(p => p.playerId !== playerId));
+      console.log('Removed player from comparison:', player.playerName, 'List length:', compareList.length - 1);
     } else {
       // Add player to comparison list (max 4 for projected data comparison)
       if (compareList.length < 4) {
         setCompareList(prev => [...prev, player]);
+        console.log('Added player to comparison:', player.playerName, 'List length:', compareList.length + 1);
       }
     }
   };
