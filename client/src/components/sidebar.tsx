@@ -70,9 +70,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Team Projections", 
       items: [
-        { path: "/projected-goals-cs", label: "Goals and Clean Sheets", icon: Target, description: "Projected goals & clean sheets", popular: false },
-        { path: "/team-goal-projections", label: "Best Attacks", icon: BarChart3, description: "Expected team goals", popular: false },
-        { path: "/team-cs-projections", label: "Best Defences", icon: Shield, description: "Clean sheet probabilities", popular: false },
+        { path: "/team-goal-projections", label: "Goals", icon: BarChart3, description: "Expected team goals", popular: false },
+        { path: "/team-cs-projections", label: "Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
+        { path: "/projected-goals-cs", label: "Match Predictions", icon: Target, description: "Projected goals & clean sheets", popular: false },
         { path: "/projected-standings", label: "Standings", icon: Trophy, description: "Final league table projection", popular: false }
       ]
     },
