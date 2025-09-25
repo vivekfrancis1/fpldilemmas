@@ -504,26 +504,29 @@ export default function PlayerDefensiveContributions() {
             Filters & Controls
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Search Players</label>
-              <div className="relative w-64">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="space-y-2 sm:col-span-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Search className="h-4 w-4 text-gray-400" />
+                Search Players
+              </label>
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   data-testid="input-player-search"
                   placeholder="Search by player or team name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full"
                 />
               </div>
             </div>
             
-            <div className="flex flex-col gap-2">
+            <div className="space-y-2">
               <label className="text-sm font-medium">Position</label>
               <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -535,10 +538,10 @@ export default function PlayerDefensiveContributions() {
               </Select>
             </div>
             
-            <div className="flex flex-col gap-2">
+            <div className="space-y-2">
               <label className="text-sm font-medium">Team</label>
               <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -550,10 +553,10 @@ export default function PlayerDefensiveContributions() {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="space-y-2">
               <label className="text-sm font-medium">Start GW</label>
               <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                <SelectTrigger className="w-24">
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -564,10 +567,10 @@ export default function PlayerDefensiveContributions() {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="space-y-2">
               <label className="text-sm font-medium">End GW</label>
               <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                <SelectTrigger className="w-24">
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -578,10 +581,10 @@ export default function PlayerDefensiveContributions() {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="space-y-2">
               <label className="text-sm font-medium">Sort By</label>
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -594,9 +597,9 @@ export default function PlayerDefensiveContributions() {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="space-y-2 sm:col-span-2">
               <label className="text-sm font-medium">Quick Select</label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -606,6 +609,7 @@ export default function PlayerDefensiveContributions() {
                       setEndGameweek(Math.min(allGameweeks[0] + 5, allGameweeks[allGameweeks.length - 1]));
                     }
                   }}
+                  className="flex-1"
                 >
                   Next 6 GWs
                 </Button>
@@ -618,23 +622,30 @@ export default function PlayerDefensiveContributions() {
                       setEndGameweek(allGameweeks[allGameweeks.length - 1]);
                     }
                   }}
+                  className="flex-1"
                 >
                   All Season
                 </Button>
               </div>
             </div>
 
-            <Button
-              variant={showOnlyTopPlayers ? "default" : "outline"}
-              onClick={() => setShowOnlyTopPlayers(!showOnlyTopPlayers)}
-            >
-              Top Players Only
-            </Button>
-
-            <Button variant="outline" onClick={exportToCSV} className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Export CSV
-            </Button>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Display Options</label>
+              <div className="flex flex-col gap-2">
+                <Button
+                  variant={showOnlyTopPlayers ? "default" : "outline"}
+                  onClick={() => setShowOnlyTopPlayers(!showOnlyTopPlayers)}
+                  size="sm"
+                  className="w-full"
+                >
+                  Top Players Only
+                </Button>
+                <Button variant="outline" onClick={exportToCSV} className="flex items-center gap-2 w-full" size="sm">
+                  <Download className="h-4 w-4" />
+                  Export CSV
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -661,7 +672,7 @@ export default function PlayerDefensiveContributions() {
             </TabsList>
             
             <TabsContent value="defensive-contributions" className="mt-4">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
             <Table>
               <TableHeader>
                 <TableRow>
