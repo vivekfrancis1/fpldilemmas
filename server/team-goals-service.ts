@@ -260,18 +260,10 @@ export class TeamGoalsService {
         return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
       }
       
-      // Phase 4: Market Bounds (simplified for performance-based calculation)
-      const averageBaseXG = 1.5; // Premier League average
-      const marketFloor = averageBaseXG * TeamGoalsService.num(adminGoalSettings.marketFloorMultiplier, 0.40);
-      const marketCeiling = averageBaseXG * TeamGoalsService.num(adminGoalSettings.marketCeilingMultiplier, 2.0);
+      // REMOVED: Phase 4 (Market Bounds) - No longer constraining projections with market-based limits
+      // This allows projections to reflect pure performance data without artificial constraints
       
-      // Ensure floor <= ceiling, fix if needed
-      const validFloor = Math.min(marketFloor, marketCeiling);
-      const validCeiling = Math.max(marketFloor, marketCeiling);
-      
-      baseExpectedGoals = Math.max(validFloor, Math.min(validCeiling, baseExpectedGoals));
-      
-      // Phase 5: Final Bounds and Validation
+      // Phase 4: Final Bounds and Validation
       const absoluteMin = TeamGoalsService.num(adminGoalSettings.absoluteMinGoals, 0.0);
       const absoluteMax = TeamGoalsService.num(adminGoalSettings.absoluteMaxGoals, 7.0);
       const expectedGoals = Math.max(absoluteMin, Math.min(absoluteMax, baseExpectedGoals));
