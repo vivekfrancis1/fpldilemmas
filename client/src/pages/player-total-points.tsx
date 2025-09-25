@@ -379,10 +379,10 @@ function createPlayerTotalPointsColumns(
       render: (_, player) => (
         <div className="flex items-center gap-2 min-w-[200px]">
           <div className="flex-1">
-            <PlayerNameCell name={player.name} />
+            <PlayerNameCell name={player.playerName || player.name} />
             <div className="flex items-center gap-1 mt-1 mb-1">
               <PositionBadge position={player.position} compact={true} />
-              <TeamBadge team={player.team} compact={true} />
+              <TeamBadge team={player.teamName || player.team} compact={true} />
             </div>
             <div className="text-xs text-gray-500 space-x-2">
               <span className="font-medium">£{(typeof player.price === 'number') ? player.price.toFixed(1) : '0.0'}m</span>
