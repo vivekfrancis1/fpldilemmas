@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Target, TrendingUp, Filter, Calendar, Trophy } from "lucide-react";
+import { Target, TrendingUp, Filter, Calendar, Trophy, Clock } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -206,6 +206,51 @@ export default function ProjectedGoalsCS() {
     return '-';
   };
 
+  const formatKickoffTime = (kickoffTime: string) => {
+    if (!kickoffTime) return '';
+    
+    const date = new Date(kickoffTime);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const matchDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
+    // Calculate days difference
+    const diffTime = matchDate.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Format date and time in user's timezone
+    const dateOptions: Intl.DateTimeFormatOptions = { 
+      month: 'short', 
+      day: 'numeric' 
+    };
+    const timeOptions: Intl.DateTimeFormatOptions = { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    };
+    const dayOptions: Intl.DateTimeFormatOptions = { 
+      weekday: 'short' 
+    };
+    
+    const formattedDate = date.toLocaleDateString('en-US', dateOptions);
+    const formattedTime = date.toLocaleTimeString('en-US', timeOptions);
+    const formattedDay = date.toLocaleDateString('en-US', dayOptions);
+    
+    // Show relative date for near matches
+    let dateDisplay = formattedDate;
+    if (diffDays === 0) {
+      dateDisplay = 'Today';
+    } else if (diffDays === 1) {
+      dateDisplay = 'Tomorrow';
+    } else if (diffDays === -1) {
+      dateDisplay = 'Yesterday';
+    } else if (diffDays > 1 && diffDays <= 7) {
+      dateDisplay = formattedDay;
+    }
+    
+    return `${dateDisplay} • ${formattedTime}`;
+  };
+
   if (isLoading || goalsLoading || csLoading || fixturesLoading) {
     return (
       
@@ -385,6 +430,18 @@ export default function ProjectedGoalsCS() {
                                   className="bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden"
                                   data-testid={`match-row-${match1.homeTeam.shortName}-${match1.awayTeam.shortName}`}
                                 >
+                                  {/* Kickoff Time Header */}
+                                  {match1.kickoffTime && (
+                                    <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-3 py-1.5 border-b border-gray-100">
+                                      <div className="flex items-center justify-center gap-1.5">
+                                        <Clock className="h-3 w-3 text-gray-500" />
+                                        <span className="text-xs font-medium text-gray-700">
+                                          {formatKickoffTime(match1.kickoffTime)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
                                   {/* Home Team - Compact */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50">
                                     <div className="flex items-center gap-2">
@@ -459,6 +516,18 @@ export default function ProjectedGoalsCS() {
                                   className="bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden"
                                   data-testid={`match-row-${match2.homeTeam.shortName}-${match2.awayTeam.shortName}`}
                                 >
+                                  {/* Kickoff Time Header */}
+                                  {match2.kickoffTime && (
+                                    <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-3 py-1.5 border-b border-gray-100">
+                                      <div className="flex items-center justify-center gap-1.5">
+                                        <Clock className="h-3 w-3 text-gray-500" />
+                                        <span className="text-xs font-medium text-gray-700">
+                                          {formatKickoffTime(match2.kickoffTime)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
                                   {/* Home Team - Compact */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50">
                                     <div className="flex items-center gap-2">
