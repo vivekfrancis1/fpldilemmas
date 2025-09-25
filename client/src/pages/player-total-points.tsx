@@ -831,6 +831,10 @@ export default function PlayerTotalPoints() {
                 Complete FPL points projection combining all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points
               </p>
               <div className="fpl-page-actions">
+                {/* Debug: Show compareList state */}
+                <div className="text-xs bg-gray-100 p-2 mb-2 rounded">
+                  DEBUG: compareList.length = {compareList.length}, players: {compareList.map(p => p.playerName || p.name).join(', ')}
+                </div>
                 {/* Compare Players Section */}
                 {compareList.length > 0 && (
                   <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
