@@ -143,7 +143,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/goal-share", label: "Goal Share", icon: Target, description: "Player goal share breakdown by team", popular: false },
         { path: "/assist-share", label: "Assist Share", icon: Zap, description: "Player assist share breakdown by team", popular: false },
         { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
-        { path: "/results-projections", label: "Match Predictions", icon: Calendar, description: "Mathematical match predictions without variance", popular: false },
         { path: "/team-goals-against-projections", label: "Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
       ]
     },
