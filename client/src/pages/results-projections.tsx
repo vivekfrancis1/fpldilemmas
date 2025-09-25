@@ -287,7 +287,7 @@ export default function ResultsProjections() {
             <h1>Match Predictions</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Predicted match results based on sports spread betting markets and statistical analysis
+            Predicted match results based on statistical analysis and mathematical modeling
           </p>
         </div>
       </div>
@@ -459,7 +459,7 @@ export default function ResultsProjections() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Sports spread betting markets</li>
+                    <li>• Mathematical modeling algorithms</li>
                     <li>• Historical team performance data</li>
                     <li>• Form analysis and head-to-head records</li>
                     <li>• Injury reports and team news</li>
