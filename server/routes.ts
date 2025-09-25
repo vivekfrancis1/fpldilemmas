@@ -3409,16 +3409,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamGoalRates,
           teamCleanSheetRates,
           contextMultipliers: {
+            // Only FPL API-based context multipliers - synthetic ones removed
             derby: { goals: adminGoalSettings.derbyGoalsMultiplier, cleanSheets: adminCSSettings.derbyCSMultiplier },
             topSix: { goals: adminGoalSettings.topSixGoalsMultiplier, cleanSheets: adminCSSettings.topSixCSMultiplier },
             relegationBattle: { goals: adminGoalSettings.relegationBattleGoalsMultiplier, cleanSheets: adminCSSettings.relegationBattleCSMultiplier },
-            earlyKickoff: { goals: adminGoalSettings.earlyKickoffGoalsMultiplier, cleanSheets: adminCSSettings.earlyKickoffCSMultiplier },
-            lateKickoff: { goals: adminGoalSettings.lateKickoffGoalsMultiplier, cleanSheets: adminCSSettings.lateKickoffCSMultiplier },
-            postEuropean: { goals: adminGoalSettings.postEuropeanGoalsMultiplier, cleanSheets: adminCSSettings.postEuropeanCSMultiplier },
-            midweekFixture: { goals: adminGoalSettings.midweekFixtureGoalsMultiplier, cleanSheets: adminCSSettings.midweekFixtureCSMultiplier },
-            seasonFinale: { goals: adminGoalSettings.seasonFinaleGoalsMultiplier, cleanSheets: adminCSSettings.seasonFinaleCSMultiplier },
-            newManagerBounce: { goals: adminGoalSettings.newManagerBounceGoalsMultiplier, cleanSheets: adminCSSettings.newManagerBounceCSMultiplier },
-            weatherConditions: { goals: adminGoalSettings.weatherConditionsGoalsMultiplier, cleanSheets: adminCSSettings.weatherConditionsCSMultiplier }
+            seasonFinale: { goals: adminGoalSettings.seasonFinaleGoalsMultiplier, cleanSheets: adminCSSettings.seasonFinaleCSMultiplier }
+            // Removed multipliers not available from FPL official APIs:
+            // - earlyKickoff, lateKickoff (synthetic timing)
+            // - postEuropean (not FPL data)
+            // - midweekFixture (synthetic timing)
+            // - newManagerBounce (synthetic calculation)
+            // - weatherConditions (not FPL data)
           }
         };
       },
