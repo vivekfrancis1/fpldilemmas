@@ -509,7 +509,7 @@ export default function PlayerTotalPoints() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLoadGroup, setSelectedLoadGroup] = useState<string>("all");
+  const [selectedLoadGroup, setSelectedLoadGroup] = useState<string>("Top 50");
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
@@ -882,7 +882,7 @@ export default function PlayerTotalPoints() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Load Group Filter */}
             <div className="space-y-2">
-              <Label htmlFor="load-group-filter" className="text-sm font-medium">Load Group</Label>
+              <Label htmlFor="load-group-filter" className="text-sm font-medium">Group</Label>
               <Select value={selectedLoadGroup} onValueChange={setSelectedLoadGroup}>
                 <SelectTrigger>
                   <SelectValue />
