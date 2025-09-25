@@ -427,14 +427,7 @@ function createPlayerTotalPointsColumns(
           const isMaxForGameweek = playerPoints > 0 && playerPoints === maxPointsForGw;
           
           return (
-            <div className={`relative ${isMaxForGameweek ? 'bg-gradient-to-br from-green-100 to-emerald-100 rounded-md p-1' : ''}`}>
-              {isMaxForGameweek && (
-                <div className="absolute -top-1 -right-1 z-10">
-                  <Badge className="bg-green-600 text-white text-xs px-1.5 py-0.5 h-4 text-[10px] leading-none">
-                    Best
-                  </Badge>
-                </div>
-              )}
+            <div className={`${isMaxForGameweek ? 'bg-gradient-to-br from-green-100 to-emerald-100 rounded-md p-1' : ''}`}>
               <GameweekPointBreakdownTooltip player={player} gameweek={gw} />
             </div>
           );
