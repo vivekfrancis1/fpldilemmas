@@ -371,48 +371,57 @@ export class SpreadBettingCacheService {
     // Start with basic T+S/2 formula as baseline
     const T = totalsData.midpoint;
     const S = spreadsData.midpoint;
-    let homeExpectedGoals = (T + S) / 2;
-    let awayExpectedGoals = (T - S) / 2;
+    
+    // CRITICAL FIX: Correct supremacy interpretation
+    // When S is negative, home team is favored by |S| goals
+    // When S is positive, away team is favored by S goals
+    let homeExpectedGoals = (T - S) / 2;  // Fixed: subtract supremacy for home team
+    let awayExpectedGoals = (T + S) / 2;  // Fixed: add supremacy for away team
 
+    // TEMPORARILY DISABLE COMPLEX ADJUSTMENTS - USE BASIC FORMULA ONLY
+    // The win probability adjustments were causing incorrect calculations
+    // Keeping this simple for now to ensure accurate supremacy interpretation
+    
     // Find best bookmaker with match winner odds for enhanced calculation
-    const winnerOdds = this.extractMatchWinnerOdds(bookmakers);
+    // const winnerOdds = this.extractMatchWinnerOdds(bookmakers);
     
-    if (winnerOdds) {
-      // Convert decimal odds to implied probabilities
-      const homeWinProb = 1 / winnerOdds.home;
-      const awayWinProb = 1 / winnerOdds.away;
-      const drawProb = 1 / winnerOdds.draw;
-      
-      // Normalize probabilities (bookmaker margin)
-      const totalProb = homeWinProb + awayWinProb + drawProb;
-      const normHomeProb = homeWinProb / totalProb;
-      const normAwayProb = awayWinProb / totalProb;
-      
-      // Calculate strength ratio from win probabilities
-      const strengthRatio = normHomeProb / normAwayProb;
-      
-      // Adjust expected goals based on win probability insights
-      // Teams with higher win probability should have slightly higher xG
-      const adjustment = Math.log(strengthRatio) * 0.3; // Moderate adjustment factor
-      
-      homeExpectedGoals = Math.max(0.2, homeExpectedGoals + adjustment);
-      awayExpectedGoals = Math.max(0.2, awayExpectedGoals - adjustment);
-      
-      // Ensure total still approximately matches the total goals line
-      const actualTotal = homeExpectedGoals + awayExpectedGoals;
-      const targetTotal = T;
-      const scaleFactor = targetTotal / actualTotal;
-      
-      homeExpectedGoals *= scaleFactor;
-      awayExpectedGoals *= scaleFactor;
-    }
+    // if (winnerOdds) {
+    //   // Convert decimal odds to implied probabilities
+    //   const homeWinProb = 1 / winnerOdds.home;
+    //   const awayWinProb = 1 / winnerOdds.away;
+    //   const drawProb = 1 / winnerOdds.draw;
+    //   
+    //   // Normalize probabilities (bookmaker margin)
+    //   const totalProb = homeWinProb + awayWinProb + drawProb;
+    //   const normHomeProb = homeWinProb / totalProb;
+    //   const normAwayProb = awayWinProb / totalProb;
+    //   
+    //   // Calculate strength ratio from win probabilities
+    //   const strengthRatio = normHomeProb / normAwayProb;
+    //   
+    //   // Adjust expected goals based on win probability insights
+    //   // Teams with higher win probability should have slightly higher xG
+    //   const adjustment = Math.log(strengthRatio) * 0.3; // Moderate adjustment factor
+    //   
+    //   homeExpectedGoals = Math.max(0.2, homeExpectedGoals + adjustment);
+    //   awayExpectedGoals = Math.max(0.2, awayExpectedGoals - adjustment);
+    //   
+    //   // Ensure total still approximately matches the total goals line
+    //   const actualTotal = homeExpectedGoals + awayExpectedGoals;
+    //   const targetTotal = T;
+    //   const scaleFactor = targetTotal / actualTotal;
+    //   
+    //   homeExpectedGoals *= scaleFactor;
+    //   awayExpectedGoals *= scaleFactor;
+    // }
 
+    // TEMPORARILY DISABLE RANDOM VARIANCE - KEEP CALCULATIONS DETERMINISTIC
     // Add small random variance to prevent identical values (±0.1)
-    const homeVariance = (Math.random() - 0.5) * 0.2;
-    const awayVariance = (Math.random() - 0.5) * 0.2;
+    // const homeVariance = (Math.random() - 0.5) * 0.2;
+    // const awayVariance = (Math.random() - 0.5) * 0.2;
     
-    homeExpectedGoals = Math.max(0.2, Math.min(4.0, homeExpectedGoals + homeVariance));
-    awayExpectedGoals = Math.max(0.2, Math.min(4.0, awayExpectedGoals + awayVariance));
+    homeExpectedGoals = Math.max(0.2, Math.min(4.0, homeExpectedGoals));
+    awayExpectedGoals = Math.max(0.2, Math.min(4.0, awayExpectedGoals));
 
     // Round to 2 decimal places for cleaner display
     return {
