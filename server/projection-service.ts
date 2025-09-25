@@ -43,19 +43,19 @@ class ProjectionService {
   }
 
   /**
-   * Get cached projections from database using direct SQL
+   * Get cached projections from database using the aggregated cache table
    */
   private async getPlayerProjectionsFromDB(startGameweek: number, endGameweek: number): Promise<any[]> {
     try {
+      // Query the correct aggregated cache table
       const projections = await db.execute(sql`
-        SELECT * FROM player_projections 
-        WHERE start_gameweek = ${startGameweek} 
-          AND end_gameweek = ${endGameweek} 
-          AND season = '2025/26'
-        ORDER BY total_points DESC
+        SELECT * FROM cached_player_total_points 
+        WHERE gameweek_range = ${`${startGameweek}-${endGameweek}`}
+        ORDER BY total_expected_points DESC
       `);
 
       if (projections.rows.length === 0) {
+        console.log(`DEBUG: No cached player total points found for GW${startGameweek}-${endGameweek}`);
         return [];
       }
 
@@ -66,36 +66,86 @@ class ProjectionService {
         return [];
       }
 
+      console.log(`🎯 SUCCESS: Found ${projections.rows.length} players in cached_player_total_points table`);
+
       // Transform database format to API format with detailed breakdowns
-      return projections.rows.map((projection: any) => ({
-        playerId: projection.player_id,
-        name: projection.player_name,
-        fullName: projection.player_name,
-        team: projection.team_name,
-        position: ['', 'GKP', 'DEF', 'MID', 'FWD'][projection.element_type] || 'MID',
-        price: projection.current_price / 10,
-        ownership: parseFloat(projection.ownership.toString()),
-        gameweekProjections: projection.total_points_projections,
-        totalExpectedPoints: parseFloat(projection.total_points.toString()),
-        seasonTotalPoints: projection.season_projected_points,
-        averagePerGameweek: parseFloat(projection.average_points_per_gameweek.toString()),
-        // Detailed point breakdowns for granular analysis
-        pointsFromGoals: projection.points_from_goals || {},
-        pointsFromAssists: projection.points_from_assists || {},
-        pointsFromCleanSheets: projection.points_from_clean_sheets || {},
-        pointsFromDefensiveContributions: projection.points_from_defensive_contributions || {},
-        pointsFromMinutes: projection.points_from_minutes || {},
-        pointsFromBonus: projection.points_from_bonus || {},
-        totalPointsFromGoals: parseFloat(projection.total_points_from_goals || 0),
-        totalPointsFromAssists: parseFloat(projection.total_points_from_assists || 0),
-        totalPointsFromCleanSheets: parseFloat(projection.total_points_from_clean_sheets || 0),
-        totalPointsFromDefensiveContributions: parseFloat(projection.total_points_from_defensive_contributions || 0),
-        totalPointsFromMinutes: parseFloat(projection.total_points_from_minutes || 0),
-        totalPointsFromBonus: parseFloat(projection.total_points_from_bonus || 0)
-      }));
+      return projections.rows.map((projection: any) => {
+        // Parse JSON fields safely
+        const gameweekData = projection.gameweek_data ? 
+          (typeof projection.gameweek_data === 'string' ? JSON.parse(projection.gameweek_data) : projection.gameweek_data) : {};
+        
+        const pointsFromGoals = projection.points_from_goals ? 
+          (typeof projection.points_from_goals === 'string' ? JSON.parse(projection.points_from_goals) : projection.points_from_goals) : {};
+        
+        const pointsFromAssists = projection.points_from_assists ? 
+          (typeof projection.points_from_assists === 'string' ? JSON.parse(projection.points_from_assists) : projection.points_from_assists) : {};
+        
+        const pointsFromCleanSheets = projection.points_from_clean_sheets ? 
+          (typeof projection.points_from_clean_sheets === 'string' ? JSON.parse(projection.points_from_clean_sheets) : projection.points_from_clean_sheets) : {};
+        
+        const pointsFromDefensiveContributions = projection.points_from_defensive_contributions ? 
+          (typeof projection.points_from_defensive_contributions === 'string' ? JSON.parse(projection.points_from_defensive_contributions) : projection.points_from_defensive_contributions) : {};
+        
+        const pointsFromMinutes = projection.points_from_minutes ? 
+          (typeof projection.points_from_minutes === 'string' ? JSON.parse(projection.points_from_minutes) : projection.points_from_minutes) : {};
+        
+        const pointsFromBonus = projection.points_from_bonus ? 
+          (typeof projection.points_from_bonus === 'string' ? JSON.parse(projection.points_from_bonus) : projection.points_from_bonus) : {};
+        
+        const pointsFromGoalsConceded = projection.points_from_goals_conceded ? 
+          (typeof projection.points_from_goals_conceded === 'string' ? JSON.parse(projection.points_from_goals_conceded) : projection.points_from_goals_conceded) : {};
+        
+        const pointsFromYellowCards = projection.points_from_yellow_cards ? 
+          (typeof projection.points_from_yellow_cards === 'string' ? JSON.parse(projection.points_from_yellow_cards) : projection.points_from_yellow_cards) : {};
+        
+        const pointsFromRedCards = projection.points_from_red_cards ? 
+          (typeof projection.points_from_red_cards === 'string' ? JSON.parse(projection.points_from_red_cards) : projection.points_from_red_cards) : {};
+        
+        const pointsFromSaves = projection.points_from_saves ? 
+          (typeof projection.points_from_saves === 'string' ? JSON.parse(projection.points_from_saves) : projection.points_from_saves) : {};
+
+        return {
+          playerId: projection.player_id,
+          playerName: projection.player_name,
+          name: projection.player_name,
+          fullName: projection.player_name,
+          teamName: projection.team_name,
+          team: projection.team_name,
+          position: projection.position,
+          price: parseFloat(projection.current_price || 0) / 10,
+          ownership: parseFloat(projection.ownership || 0),
+          gameweekProjections: gameweekData,
+          totalExpectedPoints: parseFloat(projection.total_expected_points?.toString() || 0),
+          totalPoints: parseFloat(projection.total_expected_points?.toString() || 0),
+          averagePerGameweek: parseFloat(projection.average_per_gameweek?.toString() || 0),
+          averageValue: parseFloat(projection.average_value?.toString() || 0),
+          avgMinutesPerGameweek: parseFloat(projection.avg_minutes_per_gameweek?.toString() || 0),
+          // Detailed point breakdowns for granular analysis
+          pointsFromGoals,
+          pointsFromAssists,
+          pointsFromCleanSheets,
+          pointsFromDefensiveContributions,
+          pointsFromMinutes,
+          pointsFromBonus,
+          pointsFromGoalsConceded,
+          pointsFromYellowCards,
+          pointsFromRedCards,
+          pointsFromSaves,
+          totalPointsFromGoals: parseFloat(projection.total_points_from_goals || 0),
+          totalPointsFromAssists: parseFloat(projection.total_points_from_assists || 0),
+          totalPointsFromCleanSheets: parseFloat(projection.total_points_from_clean_sheets || 0),
+          totalPointsFromDefensiveContributions: parseFloat(projection.total_points_from_defensive_contributions || 0),
+          totalPointsFromMinutes: parseFloat(projection.total_points_from_minutes || 0),
+          totalPointsFromBonus: parseFloat(projection.total_points_from_bonus || 0),
+          totalPointsFromGoalsConceded: parseFloat(projection.total_points_from_goals_conceded || 0),
+          totalPointsFromYellowCards: parseFloat(projection.total_points_from_yellow_cards || 0),
+          totalPointsFromRedCards: parseFloat(projection.total_points_from_red_cards || 0),
+          totalPointsFromSaves: parseFloat(projection.total_points_from_saves || 0)
+        };
+      });
 
     } catch (error) {
-      console.error("Error getting cached projections:", error);
+      console.error("Error getting cached projections from cachedPlayerTotalPoints:", error);
       return [];
     }
   }
