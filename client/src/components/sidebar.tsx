@@ -72,7 +72,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/team-goal-projections", label: "Goals", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-cs-projections", label: "Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
-        { path: "/projected-goals-cs", label: "Match Predictions", icon: Target, description: "Projected goals & clean sheets", popular: false },
+        { path: "/projected-goals-cs", label: "Match Predictions", icon: Target, description: "Projected goals & clean sheets", popular: true },
         { path: "/projected-standings", label: "Standings", icon: Trophy, description: "Final league table projection", popular: false }
       ]
     },
@@ -225,7 +225,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                           </Badge>
                         )}
                         {(item as any).popular && (
-                          <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-green-600 text-white text-xs px-2 py-1 font-medium rounded-full shadow-sm flex-shrink-0">
+                          <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-green-600 text-white text-[10px] px-1.5 py-0.5 font-semibold rounded-full shadow-sm flex-shrink-0">
                             Popular
                           </Badge>
                         )}
