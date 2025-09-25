@@ -366,6 +366,7 @@ type SortField = 'name' | 'position' | 'team' | 'totalExpectedPoints' | 'average
 function createPlayerTotalPointsColumns(
   gameweekRange: number[],
   onSort: (field: SortField) => void,
+  maxPointsPerGameweek: { [key: string]: number },
   onPlayerCompareClick?: (player: PlayerTotalPointsData) => void,
   compareList?: PlayerTotalPointsData[],
   maxCompareReached?: boolean
@@ -411,16 +412,35 @@ function createPlayerTotalPointsColumns(
         </div>
       )
     },
-    ...gameweekRange.map(gw => ({
-      key: `gw${gw}`,
-      header: `GW${gw}`,
-      sortable: true,
-      align: 'center' as const,
-      className: 'min-w-[48px] bg-blue-50/30',
-      render: (_: any, player: PlayerTotalPointsData) => (
-        <GameweekPointBreakdownTooltip player={player} gameweek={gw} />
-      )
-    })),
+    ...gameweekRange.map(gw => {
+      const gwKey = `gw${gw}`;
+      const maxPointsForGw = maxPointsPerGameweek[gwKey];
+      
+      return {
+        key: `gw${gw}`,
+        header: `GW${gw}`,
+        sortable: true,
+        align: 'center' as const,
+        className: 'min-w-[48px] bg-blue-50/30',
+        render: (_: any, player: PlayerTotalPointsData) => {
+          const playerPoints = player.gameweekProjections?.[gwKey] || 0;
+          const isMaxForGameweek = playerPoints > 0 && playerPoints === maxPointsForGw;
+          
+          return (
+            <div className={`relative ${isMaxForGameweek ? 'bg-gradient-to-br from-green-100 to-emerald-100 rounded-md p-1' : ''}`}>
+              {isMaxForGameweek && (
+                <div className="absolute -top-1 -right-1 z-10">
+                  <Badge className="bg-green-600 text-white text-xs px-1.5 py-0.5 h-4 text-[10px] leading-none">
+                    Best
+                  </Badge>
+                </div>
+              )}
+              <GameweekPointBreakdownTooltip player={player} gameweek={gw} />
+            </div>
+          );
+        }
+      };
+    }),
     {
       key: 'totalExpectedPoints',
       header: '6GW Total',
@@ -779,6 +799,17 @@ export default function PlayerTotalPoints() {
     return filtered;
   }, [totalPointsData, selectedPosition, selectedTeam, searchTerm, selectedLoadGroup, sortField, sortDirection]);
 
+  // Calculate max points per gameweek for highlighting
+  const maxPointsPerGameweek = useMemo(() => {
+    const maxPoints: { [key: string]: number } = {};
+    gameweekRange.forEach(gw => {
+      const gwKey = `gw${gw}`;
+      const maxForThisGw = Math.max(...filteredAndSortedData.map(player => player.gameweekProjections?.[gwKey] || 0));
+      maxPoints[gwKey] = maxForThisGw;
+    });
+    return maxPoints;
+  }, [gameweekRange, filteredAndSortedData]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -1012,6 +1043,7 @@ export default function PlayerTotalPoints() {
                     columns={createPlayerTotalPointsColumns(
                       gameweekRange, 
                       handleSort, 
+                      maxPointsPerGameweek,
                       handlePlayerCompareClick, 
                       compareList, 
                       maxCompareReached
