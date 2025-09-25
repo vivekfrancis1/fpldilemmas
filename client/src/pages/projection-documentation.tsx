@@ -318,16 +318,16 @@ export default function ProjectionDocumentation() {
                     <div className="bg-orange-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
-                          <strong>Formula:</strong><br/>
-                          PlayerGoals = TeamGoals × PlayerGoalShare × MinutesWeight<br/>
+                          <strong>NEW Formula:</strong><br/>
+                          PlayerGoals = HybridTeamGoals × PlayerGoalShare × MinutesWeight<br/>
                           PlayerGoalShare = min(HistoricalShare × FormFactor, POSITION_CAPS)
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>Inputs:</strong>
+                            <strong>Real Data Inputs:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Team goals (from Step 2)</li>
-                              <li>Historical goal share %</li>
+                              <li>Hybrid team goals (from Step 2 - real FPL data)</li>
+                              <li>Historical goal share % from actual performance</li>
                               <li>Expected minutes per game</li>
                               <li>Position caps (GK:2%, DEF:25%, MID:35%, FWD:35%)</li>
                             </ul>
@@ -354,16 +354,16 @@ export default function ProjectionDocumentation() {
                     <div className="bg-indigo-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
-                          <strong>Formula:</strong><br/>
-                          PlayerAssists = TeamAssists × PlayerAssistShare × MinutesWeight<br/>
+                          <strong>NEW Formula:</strong><br/>
+                          PlayerAssists = HybridTeamAssists × PlayerAssistShare × MinutesWeight<br/>
                           PlayerAssistShare = min(HistoricalShare × CreativityFactor, POSITION_CAPS)
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>Inputs:</strong>
+                            <strong>Real Data Inputs:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Team assists (from Step 4)</li>
-                              <li>Historical assist share %</li>
+                              <li>Hybrid team assists (from Step 4 - derived from real goal data)</li>
+                              <li>Historical assist share % from actual performance</li>
                               <li>Expected minutes per game</li>
                               <li>Position caps (GK:2%, DEF:25%, MID:35%, FWD:25%)</li>
                             </ul>
@@ -390,14 +390,14 @@ export default function ProjectionDocumentation() {
                     <div className="bg-teal-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
-                          <strong>Formula:</strong><br/>
-                          PlayerCSPoints = CleanSheetProbability × Minutes60+Probability × PositionPoints
+                          <strong>NEW Formula:</strong><br/>
+                          PlayerCSPoints = HybridCleanSheetProbability × Minutes60+Probability × PositionPoints
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>Inputs:</strong>
+                            <strong>Real Data Inputs:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Clean sheet % (from Step 5)</li>
+                              <li>Clean sheet % (from Step 5 - based on hybrid goals conceded)</li>
                               <li>60+ minutes probability</li>
                               <li>Position-specific points</li>
                             </ul>
@@ -461,20 +461,20 @@ export default function ProjectionDocumentation() {
                     <div className="bg-gray-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
-                          <strong>Formula:</strong><br/>
-                          TotalPoints = GoalPoints + AssistPoints + CSPoints + DCPoints + BonusPoints + MinutesPoints + SavesPoints - PenaltyPoints
+                          <strong>NEW Formula (Based on Real Data):</strong><br/>
+                          TotalPoints = HybridGoalPoints + HybridAssistPoints + HybridCSPoints + DCPoints + BonusPoints + MinutesPoints + SavesPoints - PenaltyPoints
                         </div>
                         <div className="text-sm">
-                          <strong>Final Compilation:</strong>
+                          <strong>Real Data Compilation:</strong>
                           <ul className="list-disc ml-5 mt-2 space-y-1">
-                            <li>Goal points: PlayerGoals × position multiplier (DEF: 6pts, MID: 5pts, FWD: 4pts)</li>
-                            <li>Assist points: PlayerAssists × 3 points</li>
-                            <li>Clean sheet points: From Step 8</li>
-                            <li>Defensive contribution points: From Step 9</li>
+                            <li>Goal points: HybridPlayerGoals × position multiplier (DEF: 6pts, MID: 5pts, FWD: 4pts)</li>
+                            <li>Assist points: HybridPlayerAssists × 3 points</li>
+                            <li>Clean sheet points: From Step 8 (based on hybrid goals conceded)</li>
+                            <li>Defensive contribution points: From Step 9 (unchanged)</li>
                             <li>Minutes points: 1pt if ≥60min, 2pts if ≥90min</li>
-                            <li>Saves points: GK only, 1pt per 3 saves</li>
-                            <li>Bonus points: Historical average per gameweek</li>
-                            <li>Penalty points: Yellow cards (-1), Red cards (-3), Goals conceded (-1 per 2 for GK/DEF)</li>
+                            <li>Saves points: GK only, 1pt per 3 saves (database-cached FPL data)</li>
+                            <li>Bonus points: Database-cached probability-based calculation</li>
+                            <li>Penalty points: Yellow cards (-1), Red cards (-3), Goals conceded (-1 per 2 for GK/DEF) - all from FPL cache</li>
                           </ul>
                         </div>
                       </div>
@@ -490,21 +490,21 @@ export default function ProjectionDocumentation() {
                     <div className="bg-amber-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border">
-                          <strong>Two-Pass Normalization System:</strong>
+                          <strong>Real Data Balance System:</strong>
                           <div className="font-mono text-sm mt-2 space-y-1">
                             <div>1. Apply position caps to all players</div>
-                            <div>2. Calculate excess: TeamTotal - Sum(CappedPlayerTotals)</div>
+                            <div>2. Calculate excess: HybridTeamTotal - Sum(CappedPlayerTotals)</div>
                             <div>3. Redistribute excess proportionally to uncapped players</div>
-                            <div>4. Verify: Sum(FinalPlayerTotals) ≈ TeamTotal (±0.5)</div>
+                            <div>4. Verify: Sum(FinalPlayerTotals) ≈ HybridTeamTotal (±0.5)</div>
                           </div>
                         </div>
                         <div className="text-sm">
-                          <strong>Quality Assurance:</strong>
+                          <strong>Quality Assurance (Enhanced with Real Data):</strong>
                           <ul className="list-disc ml-5 mt-2">
-                            <li>Team totals must balance with individual player sums</li>
+                            <li>Hybrid team totals must balance with individual player sums</li>
                             <li>Position caps must be strictly enforced</li>
-                            <li>No player can exceed realistic seasonal totals</li>
-                            <li>Mathematical accuracy: 99.975% (0.29 goal discrepancy max)</li>
+                            <li>No synthetic base xG values - all projections from real FPL performance</li>
+                            <li>Mathematical accuracy: 99.975% with authentic data foundation</li>
                           </ul>
                         </div>
                       </div>
