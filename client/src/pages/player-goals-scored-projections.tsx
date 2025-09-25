@@ -345,14 +345,16 @@ export default function PlayerGoalsScoredProjections() {
 
         {/* Controls */}
         <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex flex-wrap gap-4 items-end">
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
               {/* Gameweek Range Filter */}
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-gray-500" />
-                <label className="text-sm font-medium text-gray-700">From GW:</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-gray-500" />
+                  From GW
+                </label>
                 <Select value={startGameweek?.toString() || ""} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                  <SelectTrigger className="w-20">
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -363,10 +365,10 @@ export default function PlayerGoalsScoredProjections() {
                 </Select>
               </div>
 
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">To GW:</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">To GW</label>
                 <Select value={endGameweek?.toString() || ""} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                  <SelectTrigger className="w-20">
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -377,11 +379,13 @@ export default function PlayerGoalsScoredProjections() {
                 </Select>
               </div>
               
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-gray-500" />
-                <label className="text-sm font-medium text-gray-700">Team:</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-gray-500" />
+                  Team
+                </label>
                 <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -395,10 +399,10 @@ export default function PlayerGoalsScoredProjections() {
                 </Select>
               </div>
 
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Position:</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Position</label>
                 <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -412,13 +416,16 @@ export default function PlayerGoalsScoredProjections() {
                 </Select>
               </div>
 
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Search className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Search className="h-4 w-4 text-gray-500" />
+                  Search
+                </label>
                 <Input
                   placeholder="Search players..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-xs"
+                  className="w-full"
                   data-testid="input-search-players"
                 />
               </div>
@@ -453,11 +460,12 @@ export default function PlayerGoalsScoredProjections() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="overflow-x-auto -mx-4 sm:mx-0">
+                  <div className="min-w-full inline-block align-middle">
+                    <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
+                        <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 min-w-[140px] sm:min-w-[180px]">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -473,7 +481,7 @@ export default function PlayerGoalsScoredProjections() {
                           </Button>
                         </th>
                     {selectedGameweeks.map(gw => (
-                      <th key={gw} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                      <th key={gw} className="px-2 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[60px]">
                         <div className="flex items-center justify-center gap-1" onClick={() => handleSort(`gw${gw}`)}>
                           GW{gw}
                           {sortBy === `gw${gw}` && (
@@ -483,7 +491,7 @@ export default function PlayerGoalsScoredProjections() {
                         </div>
                       </th>
                     ))}
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors">
+                    <th className="px-2 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors min-w-[80px]">
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("total")}>
                         {selectedGameweeks.length} GW Total
                         {sortBy === "total" && (
@@ -500,7 +508,7 @@ export default function PlayerGoalsScoredProjections() {
                     
                     return (
                       <tr key={player.playerId} className="hover:bg-gray-50">
-                        <td className="px-4 py-4 sticky left-0 bg-white">
+                        <td className="px-2 sm:px-4 py-2 sm:py-4 sticky left-0 bg-white border-r border-gray-100">
                           <PlayerNameCell 
                             name={player.playerName}
                             position={player.position}
@@ -511,12 +519,12 @@ export default function PlayerGoalsScoredProjections() {
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw.toString()] || 0;
                           return (
-                            <td key={gw} className="px-4 py-4 text-center text-sm font-medium text-gray-900">
+                            <td key={gw} className="px-2 sm:px-4 py-2 sm:py-4 text-center text-sm font-medium text-gray-900">
                               {goals > 0 ? goals.toFixed(2) : "-"}
                             </td>
                           );
                         })}
-                        <td className="px-4 py-4 text-center bg-orange-50">
+                        <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-50">
                           <span className="text-lg font-bold text-orange-900">
                             {selectedTotal.toFixed(2)}
                           </span>
@@ -527,23 +535,24 @@ export default function PlayerGoalsScoredProjections() {
                 </tbody>
                 <tfoot>
                   <tr className="bg-gray-100 border-t-2 border-gray-300 font-semibold">
-                    <td className="px-4 py-4 text-center text-sm font-bold text-gray-700 sticky left-0 bg-gray-100">
+                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center text-sm font-bold text-gray-700 sticky left-0 bg-gray-100 border-r border-gray-200">
                       TOTAL
                     </td>
                     {selectedGameweeks.map(gw => (
-                      <td key={gw} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
+                      <td key={gw} className="px-2 sm:px-4 py-2 sm:py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
                         {(totalGoals.gameweekTotals[gw] || 0) > 0 ? (totalGoals.gameweekTotals[gw] || 0).toFixed(2) : "-"}
                       </td>
                     ))}
-                    <td className="px-4 py-4 text-center bg-orange-100">
+                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100">
                       <span className="text-lg font-bold text-orange-900">
                         {totalGoals.overallTotal.toFixed(2)}
                       </span>
                     </td>
                   </tr>
                 </tfoot>
-              </table>
-            </div>
+                    </table>
+                  </div>
+                </div>
           </CardContent>
         </Card>
       </TabsContent>
@@ -557,11 +566,12 @@ export default function PlayerGoalsScoredProjections() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <div className="min-w-full inline-block align-middle">
+                <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
                   <tr>
-                    <th className="text-left py-3 px-4 font-semibold sticky left-0 bg-gradient-to-r from-blue-600 to-indigo-700 border-r border-blue-500 z-10">
+                    <th className="text-left py-3 px-2 sm:px-4 font-semibold sticky left-0 bg-gradient-to-r from-blue-600 to-indigo-700 border-r border-blue-500 z-10 min-w-[140px] sm:min-w-[180px]">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -577,7 +587,7 @@ export default function PlayerGoalsScoredProjections() {
                       </Button>
                     </th>
                     {selectedGameweeks.map(gw => (
-                      <th key={gw} className="text-center py-3 px-2 font-semibold text-white min-w-[70px]">
+                      <th key={gw} className="text-center py-3 px-2 font-semibold text-white min-w-[60px]">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -593,7 +603,7 @@ export default function PlayerGoalsScoredProjections() {
                         </Button>
                       </th>
                     ))}
-                    <th className="text-center py-3 px-2 font-semibold text-white border-l border-blue-500">
+                    <th className="text-center py-3 px-2 font-semibold text-white border-l border-blue-500 min-w-[80px]">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -619,7 +629,7 @@ export default function PlayerGoalsScoredProjections() {
                     
                     return (
                       <tr key={`${player.playerId}-points`} className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
-                        <td className="py-3 px-4 sticky left-0 bg-white border-r border-gray-200 z-10">
+                        <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-200 z-10">
                           <PlayerNameCell 
                             name={player.playerName}
                             position={player.position}
@@ -631,12 +641,12 @@ export default function PlayerGoalsScoredProjections() {
                           const goals = player.gameweekProjections[gw.toString()] || 0;
                           const points = getPointsFromGoals(goals, player.position);
                           return (
-                            <td key={gw} className="py-3 px-2 text-center">
+                            <td key={gw} className="py-2 sm:py-3 px-2 text-center">
                               {points > 0 ? points.toFixed(2) : "-"}
                             </td>
                           );
                         })}
-                        <td className="py-3 px-2 text-center border-l border-gray-200">
+                        <td className="py-2 sm:py-3 px-2 text-center border-l border-gray-200">
                           {selectedTotal.toFixed(1)}
                         </td>
                       </tr>
@@ -645,20 +655,21 @@ export default function PlayerGoalsScoredProjections() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-gray-200 bg-blue-50">
-                    <td className="py-3 px-4 font-bold text-gray-900 sticky left-0 bg-blue-50 border-r border-gray-200 z-10" colSpan={1}>
+                    <td className="py-2 sm:py-3 px-2 sm:px-4 font-bold text-gray-900 sticky left-0 bg-blue-50 border-r border-gray-200 z-10" colSpan={1}>
                       {selectedGameweeks.length} GW TOTAL
                     </td>
                     {selectedGameweeks.map(gw => (
-                      <td key={gw} className="py-3 px-2 text-center font-bold text-blue-600">
+                      <td key={gw} className="py-2 sm:py-3 px-2 text-center font-bold text-blue-600">
                         {(totalGoals.pointsGameweekTotals[gw] || 0) > 0 ? (totalGoals.pointsGameweekTotals[gw] || 0).toFixed(2) : "-"}
                       </td>
                     ))}
-                    <td className="py-3 px-2 text-center font-bold text-blue-600">
+                    <td className="py-2 sm:py-3 px-2 text-center font-bold text-blue-600">
                       {totalGoals.pointsOverallTotal.toFixed(1)}
                     </td>
                   </tr>
                 </tfoot>
-              </table>
+                </table>
+              </div>
             </div>
           </CardContent>
         </Card>
