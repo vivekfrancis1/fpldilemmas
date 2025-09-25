@@ -1045,44 +1045,45 @@ export default function PlayerTotalPoints() {
           endGameweek={endGameweek || 11}
         />
 
-        {/* Bottom Comparison Popup */}
+        {/* Bottom Right Comparison Popup */}
         {compareList.length > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-blue-500 shadow-lg z-50 animate-in slide-in-from-bottom-2">
-            <div className="container mx-auto px-4 py-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-blue-600 text-white px-3 py-2">
-                      <Users className="h-4 w-4 mr-2" />
-                      {compareList.length} Player{compareList.length === 1 ? '' : 's'} Selected
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-gray-600 max-w-md truncate">
-                    Selected: {compareList.map(p => p.playerName || p.name).join(', ')}
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <Button
-                    onClick={handleCompareModalOpen}
-                    disabled={compareList.length < 2}
-                    className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    data-testid="button-compare-players"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    {compareList.length >= 2 ? 'Compare Players' : 'Select 2+ Players'}
-                  </Button>
-                  <Button
-                    onClick={() => setCompareList([])}
-                    variant="outline"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
-                    data-testid="button-clear-comparison"
-                  >
-                    Clear All
-                  </Button>
-                </div>
-              </div>
+          <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-40 max-w-xs">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-gray-900">Compare Players ({compareList.length}/5)</h3>
+              <button
+                onClick={() => setCompareList([])}
+                className="text-gray-400 hover:text-gray-600 text-sm"
+                data-testid="button-clear-comparison"
+              >
+                Clear
+              </button>
             </div>
+            <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
+              {compareList.map((player) => (
+                <div key={player.playerId || player.id} className="flex items-center justify-between text-sm py-1">
+                  <span className="font-medium text-gray-700 truncate">
+                    {player.playerName || player.name}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const playerId = player.playerId || player.id;
+                      setCompareList(prev => prev.filter(p => (p.playerId || p.id) !== playerId));
+                    }}
+                    className="text-red-400 hover:text-red-600 ml-2"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={handleCompareModalOpen}
+              disabled={compareList.length < 2}
+              className="w-full bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              data-testid="button-compare-players"
+            >
+              Compare {compareList.length < 2 ? `(Need ${2 - compareList.length} more)` : ''}
+            </button>
           </div>
         )}
       </div>
