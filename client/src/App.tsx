@@ -41,7 +41,6 @@ import Top50Managers from "./pages/top50-managers";
 import Top50ManagerTeam from "./pages/top50-manager-team";
 import LeagueComparison from "./pages/league-comparison";
 import PlayerStats from "./pages/player-stats";
-import ResultsProjections from "./pages/results-projections";
 import ResultsAndFixtures from "./pages/results-and-fixtures";
 
 import ProjectedGoalsCS from "./pages/projected-goals-cs";
@@ -98,7 +97,6 @@ function Router() {
       <Route path="/projected-standings" component={ProjectedStandings} />
       <Route path="/current-standings" component={CurrentStandings} />
       <Route path="/predicted-scores" component={PredictedScores} />
-      <Route path="/results-projections" component={ResultsProjections} />
       <Route path="/results-and-fixtures" component={ResultsAndFixtures} />
       <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
       <Route path="/player-minutes">
