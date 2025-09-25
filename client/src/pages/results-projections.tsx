@@ -172,6 +172,26 @@ export default function ResultsProjections() {
       );
   }, [predictionsData, selectedGameweek, selectedTeam]);
 
+  // Group filtered predictions by gameweek for card layout
+  const groupedPredictions = useMemo(() => {
+    const grouped: { [key: string]: typeof filteredPredictions } = {};
+    
+    filteredPredictions.forEach(prediction => {
+      const key = `GW${prediction.gameweek}`;
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
+      grouped[key].push(prediction);
+    });
+    
+    // Sort each group by kickoff time
+    Object.keys(grouped).forEach(key => {
+      grouped[key].sort((a, b) => new Date(a.kickoffTime).getTime() - new Date(b.kickoffTime).getTime());
+    });
+    
+    return grouped;
+  }, [filteredPredictions]);
+
   const formatKickoffTime = (kickoffTime: string) => {
     const date = new Date(kickoffTime);
     return {
@@ -285,98 +305,232 @@ export default function ResultsProjections() {
             </CardContent>
           </Card>
 
-          {/* Results Projections Table */}
-          <Card className="overflow-hidden">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                Match Predictions ({filteredPredictions.length} matches)
+          {/* Results Projections - Card Layout */}
+          <Card className="overflow-hidden shadow-md border-0">
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Trophy className="h-4 w-4" />
+                Match Predictions
+                <Badge className="bg-white/20 text-white border-white/30 ml-auto text-xs">
+                  {filteredPredictions.length} matches
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Kickoff
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Match
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Predicted Score
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        xG
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Clean Sheets
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredPredictions.map((match) => {
-                      const kickoff = formatKickoffTime(match.kickoffTime);
-                      const resultType = getResultType(match.homeTeam.predictedScore, match.awayTeam.predictedScore);
+              <div className="space-y-0">
+                {Object.entries(groupedPredictions).map(([groupKey, predictions]) => {
+                  return (
+                    <div key={groupKey}>
+                      {/* Gameweek Header */}
+                      <div className="bg-gradient-to-r from-gray-100 to-gray-50 px-3 py-1.5 border-b border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm text-gray-800">
+                            GW{predictions[0]?.gameweek}
+                          </span>
+                          <span className="text-xs text-gray-600 font-medium">{predictions.length} matches</span>
+                        </div>
+                      </div>
                       
-                      return (
-                        <tr key={match.id} className="hover:bg-gray-50" data-testid={`prediction-row-${match.id}`}>
-                          <td className="px-4 py-4 text-center text-sm text-gray-900">
-                            <div className="text-sm font-medium">{kickoff.date}</div>
-                            <div className="text-xs text-gray-500">{kickoff.time}</div>
-                            <Badge variant="outline" className="mt-1">
-                              GW{match.gameweek}
-                            </Badge>
-                          </td>
-                          
-                          <td className="px-4 py-4 text-center">
-                            <div className="space-y-1">
-                              <div className="text-sm font-medium text-gray-900">{match.homeTeam.shortName}</div>
-                              <div className="text-xs text-gray-400">vs</div>
-                              <div className="text-sm font-medium text-gray-900">{match.awayTeam.shortName}</div>
+                      {/* Column Headers */}
+                      <div className="px-2 pt-2 pb-1">
+                        <div className="lg:hidden flex items-center justify-end px-3 space-x-2">
+                          <div className="text-center w-[45px]">
+                            <span className="text-xs font-bold text-gray-600">SCORE</span>
+                          </div>
+                          <div className="text-center w-[45px]">
+                            <span className="text-xs font-bold text-gray-600">XG</span>
+                          </div>
+                          <div className="text-center w-[45px]">
+                            <span className="text-xs font-bold text-gray-600">CS%</span>
+                          </div>
+                        </div>
+                        
+                        <div className="hidden lg:grid lg:grid-cols-2 gap-3">
+                          <div className="flex items-center justify-end px-3 space-x-2">
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">SCORE</span>
                             </div>
-                          </td>
-                          
-                          <td className="px-4 py-4 text-center">
-                            <div className="space-y-1 flex flex-col items-center">
-                              <div className="px-3 py-2 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border min-w-[45px] w-[45px] h-[36px] flex items-center justify-center">
-                                {match.homeTeam.predictedScore}
-                              </div>
-                              <div className="text-xs text-gray-400">-</div>
-                              <div className="px-3 py-2 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border min-w-[45px] w-[45px] h-[36px] flex items-center justify-center">
-                                {match.awayTeam.predictedScore}
-                              </div>
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">XG</span>
                             </div>
-                          </td>
-                          
-                          <td className="px-4 py-4 text-center">
-                            <div className="space-y-2 flex flex-col items-center">
-                              <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] w-[45px] h-[24px] flex items-center justify-center ${getGoalsColor(match.homeTeam.expectedGoals)}`}>
-                                {match.homeTeam.expectedGoals.toFixed(2)}
-                              </div>
-                              <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] w-[45px] h-[24px] flex items-center justify-center ${getGoalsColor(match.awayTeam.expectedGoals)}`}>
-                                {match.awayTeam.expectedGoals.toFixed(2)}
-                              </div>
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">CS%</span>
                             </div>
-                          </td>
-                          
-                          <td className="px-4 py-4 text-center">
-                            <div className="space-y-2 flex flex-col items-center">
-                              <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] w-[45px] h-[24px] flex items-center justify-center ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
-                                {match.homeTeam.cleanSheetOdds.toFixed(1)}%
-                              </div>
-                              <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] w-[45px] h-[24px] flex items-center justify-center ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
-                                {match.awayTeam.cleanSheetOdds.toFixed(1)}%
-                              </div>
+                          </div>
+                          <div className="flex items-center justify-end px-3 space-x-2">
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">SCORE</span>
                             </div>
-                          </td>
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">XG</span>
+                            </div>
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">CS%</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Matches arranged in pairs */}
+                      <div className="space-y-3 p-2 pt-0">
+                        {Array.from({ length: Math.ceil(predictions.length / 2) }, (_, pairIndex) => {
+                          const match1 = predictions[pairIndex * 2];
+                          const match2 = predictions[pairIndex * 2 + 1];
                           
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          return (
+                            <div key={`pair-${pairIndex}`} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                              {/* First Match */}
+                              {match1 && (
+                                <div 
+                                  className="bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden"
+                                  data-testid={`match-row-${match1.homeTeam.shortName}-${match1.awayTeam.shortName}`}
+                                >
+                                  {/* Match Header with Kickoff Time */}
+                                  <div className="bg-gray-50 px-3 py-1 border-b border-gray-200">
+                                    <div className="flex items-center justify-center text-xs text-gray-600">
+                                      <span className="font-medium">{formatKickoffTime(match1.kickoffTime).date}</span>
+                                      <span className="mx-2">•</span>
+                                      <span>{formatKickoffTime(match1.kickoffTime).time}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Home Team */}
+                                  <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                      <span className="font-bold text-sm text-gray-800">
+                                        {match1.homeTeam.shortName}
+                                      </span>
+                                      <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(H)</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <div className="text-center w-[45px]">
+                                        <div className="px-2 py-1.5 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border min-w-[45px]">
+                                          {match1.homeTeam.predictedScore}
+                                        </div>
+                                      </div>
+                                      <div className="text-center w-[45px]">
+                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match1.homeTeam.expectedGoals)}`}>
+                                          {match1.homeTeam.expectedGoals.toFixed(2)}
+                                        </div>
+                                      </div>
+                                      <div className="text-center w-[45px]">
+                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match1.homeTeam.cleanSheetOdds)}`}>
+                                          {match1.homeTeam.cleanSheetOdds.toFixed(1)}%
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Away Team */}
+                                  <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-50 to-sky-50">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                      <span className="font-bold text-sm text-gray-800">
+                                        {match1.awayTeam.shortName}
+                                      </span>
+                                      <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(A)</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <div className="text-center w-[45px]">
+                                        <div className="px-2 py-1.5 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border min-w-[45px]">
+                                          {match1.awayTeam.predictedScore}
+                                        </div>
+                                      </div>
+                                      <div className="text-center w-[45px]">
+                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match1.awayTeam.expectedGoals)}`}>
+                                          {match1.awayTeam.expectedGoals.toFixed(2)}
+                                        </div>
+                                      </div>
+                                      <div className="text-center w-[45px]">
+                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match1.awayTeam.cleanSheetOdds)}`}>
+                                          {match1.awayTeam.cleanSheetOdds.toFixed(1)}%
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Second Match */}
+                              {match2 && (
+                                <div 
+                                  className="bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden"
+                                  data-testid={`match-row-${match2.homeTeam.shortName}-${match2.awayTeam.shortName}`}
+                                >
+                                  {/* Match Header with Kickoff Time */}
+                                  <div className="bg-gray-50 px-3 py-1 border-b border-gray-200">
+                                    <div className="flex items-center justify-center text-xs text-gray-600">
+                                      <span className="font-medium">{formatKickoffTime(match2.kickoffTime).date}</span>
+                                      <span className="mx-2">•</span>
+                                      <span>{formatKickoffTime(match2.kickoffTime).time}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Home Team */}
+                                  <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                      <span className="font-bold text-sm text-gray-800">
+                                        {match2.homeTeam.shortName}
+                                      </span>
+                                      <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(H)</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <div className="text-center w-[45px]">
+                                        <div className="px-2 py-1.5 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border min-w-[45px]">
+                                          {match2.homeTeam.predictedScore}
+                                        </div>
+                                      </div>
+                                      <div className="text-center w-[45px]">
+                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match2.homeTeam.expectedGoals)}`}>
+                                          {match2.homeTeam.expectedGoals.toFixed(2)}
+                                        </div>
+                                      </div>
+                                      <div className="text-center w-[45px]">
+                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match2.homeTeam.cleanSheetOdds)}`}>
+                                          {match2.homeTeam.cleanSheetOdds.toFixed(1)}%
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Away Team */}
+                                  <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-50 to-sky-50">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                      <span className="font-bold text-sm text-gray-800">
+                                        {match2.awayTeam.shortName}
+                                      </span>
+                                      <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(A)</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <div className="text-center w-[45px]">
+                                        <div className="px-2 py-1.5 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border min-w-[45px]">
+                                          {match2.awayTeam.predictedScore}
+                                        </div>
+                                      </div>
+                                      <div className="text-center w-[45px]">
+                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match2.awayTeam.expectedGoals)}`}>
+                                          {match2.awayTeam.expectedGoals.toFixed(2)}
+                                        </div>
+                                      </div>
+                                      <div className="text-center w-[45px]">
+                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match2.awayTeam.cleanSheetOdds)}`}>
+                                          {match2.awayTeam.cleanSheetOdds.toFixed(1)}%
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
