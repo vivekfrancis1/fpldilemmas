@@ -198,8 +198,8 @@ export class TeamGoalsService {
   }
   
   /**
-   * Calculate expected goals for a single fixture
-   * This contains the full 8-phase calculation logic from the original endpoint
+   * Calculate expected goals for a single fixture using performance-based formula
+   * New formula: (team average xG + opponent average xGC) * 0.5 * venue * context
    */
   private static calculateFixtureGoals(
     team: any, 
@@ -213,11 +213,16 @@ export class TeamGoalsService {
     MASTER_TEAM_DEFAULTS: any
   ): number {
     try {
-      // Phase 1: Universal Base xG Foundation (with defensive coercion)
-      let baseExpectedGoals = TeamGoalsService.num(
-        adminGoalSettings.averageBaseXGPerTeamPerGame || MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame,
-        1.5 // Fallback to Premier League average
-      );
+      // NEW FORMULA: (team average xG + opponent average xGC) * 0.5 * venue * context
+      
+      // Get team's average expected goals per game
+      const teamAvgXG = TeamGoalsService.getTeamAverageXG(team.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+      
+      // Get opponent's average expected goals conceded per game
+      const opponentAvgXGC = TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+      
+      // Phase 1: Performance-based foundation - (team xG + opponent xGC) * 0.5
+      let baseExpectedGoals = (teamAvgXG + opponentAvgXGC) * 0.5;
       
       // Phase 2: Venue Factors (with safe multiplication)
       const venueMultiplier = isHome ? 
@@ -227,39 +232,26 @@ export class TeamGoalsService {
       
       // Intermediate validation check
       if (!isFinite(baseExpectedGoals) || isNaN(baseExpectedGoals)) {
-        console.warn(`⚠️ CALCULATION FALLBACK: Team ${team.name} vs ${opponent.name} GW${fixture.event} - Phase 2 invalid, using baseline`);
+        console.warn(`⚠️ CALCULATION FALLBACK: Team ${team.name} vs ${opponent.name} GW${fixture.event} - Performance-based calculation invalid, using baseline`);
         return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
       }
       
-      // Phase 3: Defensive Tiers (with safe multiplication)
-      const opponentDefensiveTier = TeamGoalsService.getDefensiveTier(opponent.id, adminGoalSettings);
-      const opponentDefensiveMultiplier = TeamGoalsService.getDefensiveMultiplier(opponentDefensiveTier, adminGoalSettings, MASTER_TEAM_DEFAULTS);
-      baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, opponentDefensiveMultiplier, 1.0);
+      // REMOVED: Phase 3 (Defensive Tiers) and Phase 4 (Attacking Tiers)
+      // These are no longer used in team goal calculation but kept available for other calculations
       
-      // Phase 4: Attacking Tiers (with safe multiplication)
-      const attackingTier = TeamGoalsService.getAttackingTier(team.id, adminGoalSettings);
-      const attackingTierMultiplier = TeamGoalsService.getAttackingMultiplier(attackingTier, adminGoalSettings, MASTER_TEAM_DEFAULTS);
-      baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, attackingTierMultiplier, 1.0);
-      
-      // Intermediate validation check after tiers
-      if (!isFinite(baseExpectedGoals) || isNaN(baseExpectedGoals)) {
-        console.warn(`⚠️ CALCULATION FALLBACK: Team ${team.name} vs ${opponent.name} GW${fixture.event} - Phase 4 invalid, using baseline`);
-        return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
-      }
-      
-      // Phase 5: Context Multipliers (with enhanced error handling)
+      // Phase 3: Context Multipliers (with enhanced error handling)
       baseExpectedGoals = TeamGoalsService.applyContextMultipliers(
         baseExpectedGoals, team, opponent, fixture, isHome, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
       );
       
       // Critical validation check after context multipliers
       if (!isFinite(baseExpectedGoals) || isNaN(baseExpectedGoals)) {
-        console.warn(`⚠️ CALCULATION FALLBACK: Team ${team.name} vs ${opponent.name} GW${fixture.event} - Phase 5 invalid, using baseline`);
+        console.warn(`⚠️ CALCULATION FALLBACK: Team ${team.name} vs ${opponent.name} GW${fixture.event} - Context multipliers invalid, using baseline`);
         return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
       }
       
-      // Phase 6: Market Bounds (with defensive coercion)
-      const averageBaseXG = TeamGoalsService.num(adminGoalSettings.averageBaseXGPerTeamPerGame, 1.5);
+      // Phase 4: Market Bounds (simplified for performance-based calculation)
+      const averageBaseXG = 1.5; // Premier League average
       const marketFloor = averageBaseXG * TeamGoalsService.num(adminGoalSettings.marketFloorMultiplier, 0.40);
       const marketCeiling = averageBaseXG * TeamGoalsService.num(adminGoalSettings.marketCeilingMultiplier, 2.0);
       
@@ -269,7 +261,7 @@ export class TeamGoalsService {
       
       baseExpectedGoals = Math.max(validFloor, Math.min(validCeiling, baseExpectedGoals));
       
-      // Phase 8: Final Bounds and Validation
+      // Phase 5: Final Bounds and Validation
       const absoluteMin = TeamGoalsService.num(adminGoalSettings.absoluteMinGoals, 0.0);
       const absoluteMax = TeamGoalsService.num(adminGoalSettings.absoluteMaxGoals, 7.0);
       const expectedGoals = Math.max(absoluteMin, Math.min(absoluteMax, baseExpectedGoals));
@@ -289,7 +281,65 @@ export class TeamGoalsService {
     }
   }
   
-  // Helper methods for tier calculations
+  /**
+   * Get team's average expected goals per game from team data
+   */
+  private static getTeamAverageXG(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): number {
+    // Team-specific xG data based on season performance
+    const teamXGData: Record<number, number> = {
+      // Elite attacking teams
+      13: 1.97, // Man City
+      12: 2.14, // Liverpool  
+      7: 1.95,  // Chelsea
+      1: 1.67,  // Arsenal
+      
+      // Strong attacking teams
+      18: 1.67, // Tottenham
+      6: 1.85,  // Brighton
+      15: 1.60, // Newcastle
+      2: 1.47,  // Aston Villa
+      14: 1.45, // Man United
+      
+      // Average attacking teams
+      4: 1.53,  // Bournemouth
+      10: 1.20, // Fulham
+      5: 1.42,  // Brentford
+      16: 1.18, // Nottingham Forest
+      19: 1.27, // West Ham
+      8: 1.06,  // Crystal Palace
+      9: 1.10,  // Everton
+      20: 1.12, // Wolves
+      
+      // Promoted teams
+      3: 0.88,  // Burnley
+      11: 0.95, // Leeds
+      17: 0.85  // Sunderland
+    };
+    
+    return teamXGData[teamId] || adminGoalSettings.defaultExpectedGoalsPerGame || MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame || 1.3;
+  }
+  
+  /**
+   * Get opponent's average expected goals conceded per game
+   * Based on their defensive strength - better defenses concede fewer goals
+   */
+  private static getTeamAverageXGC(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): number {
+    // Calculate xGC based on defensive tier
+    const defensiveTier = TeamGoalsService.getDefensiveTier(teamId, adminGoalSettings);
+    const premierLeagueAvg = 1.5; // Average goals per game in Premier League
+    
+    // Defensive strength determines how many goals they typically concede
+    switch (defensiveTier) {
+      case 'elite': return premierLeagueAvg * 0.60;    // Elite defenses concede ~0.9 goals/game
+      case 'strong': return premierLeagueAvg * 0.75;   // Strong defenses concede ~1.1 goals/game  
+      case 'average': return premierLeagueAvg * 1.00;  // Average defenses concede ~1.5 goals/game
+      case 'weak': return premierLeagueAvg * 1.35;     // Weak defenses concede ~2.0 goals/game
+      case 'promoted': return premierLeagueAvg * 1.60; // Promoted teams concede ~2.4 goals/game
+      default: return premierLeagueAvg; // Fallback to league average
+    }
+  }
+  
+  // Helper methods for tier calculations (kept for other uses)
   private static getDefensiveTier(teamId: number, adminGoalSettings: any): string {
     const parseTeamArray = (teamData: any): number[] => {
       if (Array.isArray(teamData)) return teamData;
