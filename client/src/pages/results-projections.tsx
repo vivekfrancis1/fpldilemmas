@@ -333,29 +333,29 @@ export default function ResultsProjections() {
                       
                       {/* Column Headers */}
                       <div className="px-2 pt-2 pb-1">
-                        <div className="lg:hidden flex items-center justify-end px-3 space-x-2">
-                          <div className="text-center w-[45px]">
+                        <div className="lg:hidden flex items-center justify-end px-3 gap-2">
+                          <div className="text-center min-w-[56px]">
                             <span className="text-xs font-bold text-gray-600">XG</span>
                           </div>
-                          <div className="text-center w-[45px]">
+                          <div className="text-center min-w-[56px]">
                             <span className="text-xs font-bold text-gray-600">CS%</span>
                           </div>
                         </div>
                         
                         <div className="hidden lg:grid lg:grid-cols-2 gap-3">
-                          <div className="flex items-center justify-end px-3 space-x-2">
-                            <div className="text-center w-[45px]">
+                          <div className="flex items-center justify-end px-3 gap-2">
+                            <div className="text-center min-w-[56px]">
                               <span className="text-xs font-bold text-gray-600">XG</span>
                             </div>
-                            <div className="text-center w-[45px]">
+                            <div className="text-center min-w-[56px]">
                               <span className="text-xs font-bold text-gray-600">CS%</span>
                             </div>
                           </div>
-                          <div className="flex items-center justify-end px-3 space-x-2">
-                            <div className="text-center w-[45px]">
+                          <div className="flex items-center justify-end px-3 gap-2">
+                            <div className="text-center min-w-[56px]">
                               <span className="text-xs font-bold text-gray-600">XG</span>
                             </div>
-                            <div className="text-center w-[45px]">
+                            <div className="text-center min-w-[56px]">
                               <span className="text-xs font-bold text-gray-600">CS%</span>
                             </div>
                           </div>
@@ -388,25 +388,21 @@ export default function ResultsProjections() {
                                   {/* Home Team */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                      <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0"></div>
                                       <span className="font-bold text-sm text-gray-800">
                                         {match1.homeTeam.shortName}
                                       </span>
                                       <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(H)</span>
-                                      <div className="px-2 py-1.5 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border min-w-[45px] ml-2">
+                                      <div className="flex items-center justify-center px-2 py-1.5 rounded-lg font-semibold text-sm bg-gray-50 text-gray-800 border min-w-[56px] h-8 flex-shrink-0 ml-2">
                                         {match1.homeTeam.predictedScore}
                                       </div>
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                      <div className="text-center w-[45px]">
-                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match1.homeTeam.expectedGoals)}`}>
-                                          {match1.homeTeam.expectedGoals.toFixed(2)}
-                                        </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-sm font-semibold shadow-sm min-w-[56px] h-8 flex-shrink-0 ${getGoalsColor(match1.homeTeam.expectedGoals)}`}>
+                                        {match1.homeTeam.expectedGoals.toFixed(2)}
                                       </div>
-                                      <div className="text-center w-[45px]">
-                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match1.homeTeam.cleanSheetOdds)}`}>
-                                          {match1.homeTeam.cleanSheetOdds.toFixed(1)}%
-                                        </div>
+                                      <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-sm font-semibold shadow-sm min-w-[56px] h-8 flex-shrink-0 ${getCSColor(match1.homeTeam.cleanSheetOdds)}`}>
+                                        {match1.homeTeam.cleanSheetOdds.toFixed(1)}%
                                       </div>
                                     </div>
                                   </div>
@@ -414,25 +410,21 @@ export default function ResultsProjections() {
                                   {/* Away Team */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-50 to-sky-50">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
                                       <span className="font-bold text-sm text-gray-800">
                                         {match1.awayTeam.shortName}
                                       </span>
                                       <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(A)</span>
-                                      <div className="px-2 py-1.5 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border min-w-[45px] ml-2">
+                                      <div className="flex items-center justify-center px-2 py-1.5 rounded-lg font-semibold text-sm bg-gray-50 text-gray-800 border min-w-[56px] h-8 flex-shrink-0 ml-2">
                                         {match1.awayTeam.predictedScore}
                                       </div>
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                      <div className="text-center w-[45px]">
-                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match1.awayTeam.expectedGoals)}`}>
-                                          {match1.awayTeam.expectedGoals.toFixed(2)}
-                                        </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-sm font-semibold shadow-sm min-w-[56px] h-8 flex-shrink-0 ${getGoalsColor(match1.awayTeam.expectedGoals)}`}>
+                                        {match1.awayTeam.expectedGoals.toFixed(2)}
                                       </div>
-                                      <div className="text-center w-[45px]">
-                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match1.awayTeam.cleanSheetOdds)}`}>
-                                          {match1.awayTeam.cleanSheetOdds.toFixed(1)}%
-                                        </div>
+                                      <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-sm font-semibold shadow-sm min-w-[56px] h-8 flex-shrink-0 ${getCSColor(match1.awayTeam.cleanSheetOdds)}`}>
+                                        {match1.awayTeam.cleanSheetOdds.toFixed(1)}%
                                       </div>
                                     </div>
                                   </div>
@@ -457,25 +449,21 @@ export default function ResultsProjections() {
                                   {/* Home Team */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                      <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0"></div>
                                       <span className="font-bold text-sm text-gray-800">
                                         {match2.homeTeam.shortName}
                                       </span>
                                       <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(H)</span>
-                                      <div className="px-2 py-1.5 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border min-w-[45px] ml-2">
+                                      <div className="flex items-center justify-center px-2 py-1.5 rounded-lg font-semibold text-sm bg-gray-50 text-gray-800 border min-w-[56px] h-8 flex-shrink-0 ml-2">
                                         {match2.homeTeam.predictedScore}
                                       </div>
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                      <div className="text-center w-[45px]">
-                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match2.homeTeam.expectedGoals)}`}>
-                                          {match2.homeTeam.expectedGoals.toFixed(2)}
-                                        </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-sm font-semibold shadow-sm min-w-[56px] h-8 flex-shrink-0 ${getGoalsColor(match2.homeTeam.expectedGoals)}`}>
+                                        {match2.homeTeam.expectedGoals.toFixed(2)}
                                       </div>
-                                      <div className="text-center w-[45px]">
-                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match2.homeTeam.cleanSheetOdds)}`}>
-                                          {match2.homeTeam.cleanSheetOdds.toFixed(1)}%
-                                        </div>
+                                      <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-sm font-semibold shadow-sm min-w-[56px] h-8 flex-shrink-0 ${getCSColor(match2.homeTeam.cleanSheetOdds)}`}>
+                                        {match2.homeTeam.cleanSheetOdds.toFixed(1)}%
                                       </div>
                                     </div>
                                   </div>
@@ -483,25 +471,21 @@ export default function ResultsProjections() {
                                   {/* Away Team */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-50 to-sky-50">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
                                       <span className="font-bold text-sm text-gray-800">
                                         {match2.awayTeam.shortName}
                                       </span>
                                       <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(A)</span>
-                                      <div className="px-2 py-1.5 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border min-w-[45px] ml-2">
+                                      <div className="flex items-center justify-center px-2 py-1.5 rounded-lg font-semibold text-sm bg-gray-50 text-gray-800 border min-w-[56px] h-8 flex-shrink-0 ml-2">
                                         {match2.awayTeam.predictedScore}
                                       </div>
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                      <div className="text-center w-[45px]">
-                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match2.awayTeam.expectedGoals)}`}>
-                                          {match2.awayTeam.expectedGoals.toFixed(2)}
-                                        </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-sm font-semibold shadow-sm min-w-[56px] h-8 flex-shrink-0 ${getGoalsColor(match2.awayTeam.expectedGoals)}`}>
+                                        {match2.awayTeam.expectedGoals.toFixed(2)}
                                       </div>
-                                      <div className="text-center w-[45px]">
-                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match2.awayTeam.cleanSheetOdds)}`}>
-                                          {match2.awayTeam.cleanSheetOdds.toFixed(1)}%
-                                        </div>
+                                      <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-sm font-semibold shadow-sm min-w-[56px] h-8 flex-shrink-0 ${getCSColor(match2.awayTeam.cleanSheetOdds)}`}>
+                                        {match2.awayTeam.cleanSheetOdds.toFixed(1)}%
                                       </div>
                                     </div>
                                   </div>
