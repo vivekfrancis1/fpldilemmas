@@ -202,70 +202,6 @@ export default function ResultsProjections() {
     }
   };
 
-  /**
-   * Calculate match result probabilities based on expected goals and predicted scores
-   * 
-   * Algorithm:
-   * 1. Primary factor: Expected goals difference (xG) between teams
-   * 2. Secondary factor: Predicted score difference for final adjustments
-   * 3. Base probabilities calculated from xG (33% each + xG advantage)
-   * 4. Score predictions provide additional boost to favored team
-   * 5. Draw scenarios heavily influenced by xG closeness
-   * 6. Enforces realistic bounds: 8-82% for wins, 12-45% for draws
-   * 
-   * Note: These are calculated probabilities, not sourced from betting markets
-   */
-  const calculateProbabilities = (homeScore: number, awayScore: number, homeXG: number, awayXG: number) => {
-    const scoreDiff = homeScore - awayScore;
-    const xgDiff = homeXG - awayXG;
-    
-    // Base probabilities more influenced by xG than predicted scores
-    let homeWin, draw, awayWin;
-    
-    // Calculate base probabilities primarily from xG difference
-    const xgAdvantage = xgDiff;
-    const baseHomeWin = 33 + (xgAdvantage * 15); // More responsive to xG
-    const baseAwayWin = 33 - (xgAdvantage * 15);
-    const baseDraw = 34 - Math.abs(xgAdvantage * 8); // Draw decreases with bigger xG differences
-    
-    if (scoreDiff > 0) {
-      // Home team predicted to win - combine xG advantage with score prediction
-      homeWin = Math.max(baseHomeWin, 40) + Math.min(20, scoreDiff * 8);
-      awayWin = Math.max(10, baseAwayWin - scoreDiff * 6);
-      draw = 100 - homeWin - awayWin;
-    } else if (scoreDiff < 0) {
-      // Away team predicted to win - combine xG advantage with score prediction
-      awayWin = Math.max(baseAwayWin, 40) + Math.min(20, Math.abs(scoreDiff) * 8);
-      homeWin = Math.max(10, baseHomeWin - Math.abs(scoreDiff) * 6);
-      draw = 100 - homeWin - awayWin;
-    } else {
-      // Draw predicted - rely heavily on xG difference
-      if (Math.abs(xgDiff) < 0.3) {
-        // Very close xG - high draw probability
-        homeWin = 30 + (xgDiff * 10);
-        awayWin = 30 - (xgDiff * 10);
-        draw = 40;
-      } else {
-        // Significant xG difference even with draw prediction
-        homeWin = baseHomeWin;
-        awayWin = baseAwayWin;
-        draw = baseDraw;
-      }
-    }
-    
-    // Normalize to ensure probabilities sum to 100
-    const total = homeWin + draw + awayWin;
-    homeWin = (homeWin / total) * 100;
-    draw = (draw / total) * 100;
-    awayWin = (awayWin / total) * 100;
-    
-    // Apply realistic bounds to prevent extreme probabilities
-    return {
-      homeWin: Math.max(8, Math.min(82, homeWin)),
-      draw: Math.max(12, Math.min(45, draw)),
-      awayWin: Math.max(8, Math.min(82, awayWin))
-    };
-  };
 
   if (isLoading || goalsLoading || csLoading || fixturesLoading) {
     return (
@@ -361,21 +297,12 @@ export default function ResultsProjections() {
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Clean Sheets
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Win Probabilities
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredPredictions.map((match) => {
                       const kickoff = formatKickoffTime(match.kickoffTime);
                       const resultType = getResultType(match.homeTeam.predictedScore, match.awayTeam.predictedScore);
-                      const probabilities = calculateProbabilities(
-                        match.homeTeam.predictedScore,
-                        match.awayTeam.predictedScore,
-                        match.homeTeam.expectedGoals,
-                        match.awayTeam.expectedGoals
-                      );
                       
                       return (
                         <tr key={match.id} className="hover:bg-gray-50" data-testid={`prediction-row-${match.id}`}>
@@ -427,19 +354,6 @@ export default function ResultsProjections() {
                             </div>
                           </td>
                           
-                          <td className="px-4 py-4 text-center">
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-xs">
-                                <span className="text-blue-600">{match.homeTeam.shortName}: {probabilities.homeWin.toFixed(1)}%</span>
-                              </div>
-                              <div className="flex justify-between text-xs">
-                                <span className="text-gray-600">Draw: {probabilities.draw.toFixed(1)}%</span>
-                              </div>
-                              <div className="flex justify-between text-xs">
-                                <span className="text-red-600">{match.awayTeam.shortName}: {probabilities.awayWin.toFixed(1)}%</span>
-                              </div>
-                            </div>
-                          </td>
                         </tr>
                       );
                     })}
