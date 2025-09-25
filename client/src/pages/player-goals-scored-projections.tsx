@@ -324,7 +324,7 @@ export default function PlayerGoalsScoredProjections() {
             <h1>Player Goals Scored Projections</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Projected Goals for each player across all remaining fixtures
+            Projected Goals for each player across all upcoming fixtures
           </p>
           <div className="mt-4">
             <Button
