@@ -543,8 +543,8 @@ export default function PlayerTotalPoints() {
       setCompareList(prev => prev.filter(p => p.playerId !== playerId));
       console.log('Removed player from comparison:', player.playerName, 'List length:', compareList.length - 1);
     } else {
-      // Add player to comparison list (max 4 for projected data comparison)
-      if (compareList.length < 4) {
+      // Add player to comparison list (max 5 for projected data comparison)
+      if (compareList.length < 5) {
         setCompareList(prev => [...prev, player]);
         console.log('Added player to comparison:', player.playerName, 'List length:', compareList.length + 1);
       }
@@ -564,7 +564,7 @@ export default function PlayerTotalPoints() {
   };
 
   // Check if max compare reached
-  const maxCompareReached = compareList.length >= 4;
+  const maxCompareReached = compareList.length >= 5;
 
   // ALL useQuery hooks - cached and live data sources
   const { data: cachedTotalPointsData, isLoading: cachedLoading, error: cachedError } = useQuery<PlayerTotalPointsData[]>({
@@ -833,21 +833,30 @@ export default function PlayerTotalPoints() {
               <div className="fpl-page-actions">
                 {/* Compare Players Section */}
                 {compareList.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-blue-100 text-blue-700 px-3 py-1">
+                  <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <Badge className="bg-blue-600 text-white px-3 py-1">
                       <Users className="h-3 w-3 mr-1" />
                       {compareList.length} selected
                     </Badge>
                     <Button
                       onClick={handleCompareModalOpen}
                       disabled={compareList.length < 2}
-                      variant="outline"
+                      variant="default"
                       size="sm"
-                      className="flex items-center gap-2 bg-blue-600/10 hover:bg-blue-600/20 border-blue-300 text-blue-700 disabled:opacity-50"
+                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
                       data-testid="button-compare-players"
                     >
                       <UserPlus className="h-4 w-4" />
-                      Compare
+                      Compare ({compareList.length >= 2 ? 'Ready' : 'Select 2+'})
+                    </Button>
+                    <Button
+                      onClick={() => setCompareList([])}
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      data-testid="button-clear-comparison"
+                    >
+                      Clear All
                     </Button>
                   </div>
                 )}
