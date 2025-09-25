@@ -145,7 +145,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
         { path: "/results-projections", label: "Results Projections", icon: Calendar, description: "Mathematical match predictions without variance", popular: false },
         { path: "/team-goals-against-projections", label: "Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
-        { path: "/season-projections", label: "Season Projections", icon: Trophy, description: "Full season projections", popular: false }
       ]
     },
     {

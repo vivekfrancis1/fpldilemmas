@@ -51,7 +51,6 @@ import TeamGoalProjections from "./pages/team-goal-projections";
 import TeamGoalsAgainstProjections from "./pages/team-goals-against-projections";
 import TeamAssistProjections from "./pages/team-assist-projections";
 import TeamCSProjections from "./pages/team-cs-projections";
-import SeasonProjections from "./pages/season-projections";
 import AdminGoalProjections from "./pages/admin-goal-projections";
 import AdminUpsetConfig from "./pages/admin-upset-config";
 import Admin from "./pages/admin";
@@ -137,7 +136,6 @@ function Router() {
       <Route path="/player-red-cards" component={PlayerRedCards} />
       <Route path="/player-bonus-points" component={PlayerBonusPoints} />
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
-      <Route path="/season-projections" component={SeasonProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
       <Route path="/admin-clean-sheet-config" component={AdminCleanSheetConfig} />
       <Route path="/admin-upset-config" component={AdminUpsetConfig} />
