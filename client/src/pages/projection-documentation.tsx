@@ -62,18 +62,19 @@ export default function ProjectionDocumentation() {
                     </p>
                   </div>
                   <div className="bg-purple-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-purple-900 mb-2">Pure Projection Methodology</h3>
+                    <h3 className="font-semibold text-purple-900 mb-2">Hybrid Real Data Methodology</h3>
                     <p className="text-sm text-purple-700">
-                      Uses pure projections for upcoming gameweeks only (GW4+) without mixing actual data
+                      Uses real FPL API performance data combined with expected goals statistics for authentic projections
                     </p>
                   </div>
                 </div>
 
                 <Alert>
-                  <Info className="h-4 w-4" />
+                  <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    All projections are updated regularly and use authentic data from the official FPL API. 
-                    The system employs a deterministic approach ensuring consistent results.
+                    <strong>RECENT MAJOR UPDATES:</strong> The projection system has been upgraded with a hybrid formula using real FPL performance data. 
+                    Key changes: Market bounds removed, home advantage reduced to +12%, tier-based calculations replaced with live xGF/xGA data from current standings.
+                    All projections now use authentic data exclusively from the official FPL API.
                   </AlertDescription>
                 </Alert>
               </CardContent>
@@ -92,10 +93,10 @@ export default function ProjectionDocumentation() {
                     <div>
                       <h4 className="font-semibold mb-2">Pure Projection Calculation</h4>
                       <ul className="text-sm space-y-1 text-gray-600">
-                        <li>• Pure projections for upcoming gameweeks only</li>
-                        <li>• No mixing with completed gameweek data</li>
-                        <li>• Forward-looking analysis (GW4+)</li>
-                        <li>• Clean projection methodology</li>
+                        <li>• Hybrid formula using real FPL performance data</li>
+                        <li>• Live expected goals data from current standings</li>
+                        <li>• No synthetic base xG - exclusively real data</li>
+                        <li>• Market bounds completely removed</li>
                       </ul>
                     </div>
                     <div>
@@ -138,23 +139,24 @@ export default function ProjectionDocumentation() {
                       <h3 className="text-lg font-semibold">Configuration Source</h3>
                     </div>
                     <div className="bg-blue-50 p-4 rounded">
-                      <h4 className="font-semibold mb-2">MASTER_TEAM_DEFAULTS (server/routes.ts)</h4>
+                      <h4 className="font-semibold mb-2">MASTER_TEAM_DEFAULTS (server/routes.ts) + Real FPL Data</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
-                          <strong>Team Classifications:</strong>
+                          <strong>Real Data Sources:</strong>
                           <ul className="list-disc ml-5 mt-1">
-                            <li>Attack teams by tier (Elite/Strong/Average/Weak)</li>
-                            <li>Defense teams by tier (Elite/Strong/Average/Weak)</li>
-                            <li>Team multipliers for each tier</li>
+                            <li>FPL current standings API - live xGF/xGA</li>
+                            <li>Team actual goals scored/conceded averages</li>
+                            <li>Dynamic team performance data (5-minute cache)</li>
+                            <li>No synthetic base xG values</li>
                           </ul>
                         </div>
                         <div>
-                          <strong>Base Parameters:</strong>
+                          <strong>Updated Parameters:</strong>
                           <ul className="list-disc ml-5 mt-1">
-                            <li>averageBaseXGPerTeamPerGame: 1.5</li>
-                            <li>homeAdvantageMultiplier: 1.16</li>
-                            <li>awayFactorMultiplier: 0.84</li>
+                            <li>homeAdvantageMultiplier: 1.12 (reduced from 1.16)</li>
+                            <li>awayFactorMultiplier: 0.84 (unchanged)</li>
                             <li>Context multipliers (15+ factors)</li>
+                            <li>Market bounds: REMOVED completely</li>
                           </ul>
                         </div>
                       </div>
@@ -170,23 +172,25 @@ export default function ProjectionDocumentation() {
                     <div className="bg-green-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
-                          <strong>Formula:</strong><br/>
-                          TeamGoals = BaseXG × AttackMultiplier × DefenseMultiplier × VenueFactor × ContextMultipliers
+                          <strong>NEW Hybrid Formula:</strong><br/>
+                          TeamGoals = (TeamAvgGoals + RealTeamxGF + OpponentAvgGC + RealOpponentxGA) × 0.25 × VenueFactor × ContextMultipliers
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>Inputs:</strong>
+                            <strong>Real Data Inputs:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>BaseXG = 1.5 goals per game</li>
-                              <li>Home team attack tier → AttackMultiplier</li>
-                              <li>Away team defense tier → DefenseMultiplier</li>
-                              <li>Venue (H/A) → VenueFactor (1.16/0.84)</li>
+                              <li>Team actual average goals scored per game</li>
+                              <li>Real team xGF from FPL current standings</li>
+                              <li>Opponent actual average goals conceded</li>
+                              <li>Real opponent xGA from FPL current standings</li>
+                              <li>Venue (H/A) → VenueFactor (1.12/0.84) - Updated</li>
                             </ul>
                           </div>
                           <div>
                             <strong>Output:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Expected goals per team per gameweek</li>
+                              <li>Authentic expected goals based on real performance</li>
+                              <li>No artificial market bounds (0.6-3.0 removed)</li>
                               <li>Used for: Player goal projections</li>
                               <li>Used for: Team assists calculation</li>
                               <li>Used for: Match predictions</li>
@@ -206,24 +210,27 @@ export default function ProjectionDocumentation() {
                     <div className="bg-red-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
-                          <strong>Formula:</strong><br/>
-                          GoalsConceded = OpponentGoalsScored<br/>
-                          (Uses opponent's attack strength vs team's defense strength)
+                          <strong>Real Data Formula:</strong><br/>
+                          GoalsConceded = OpponentGoalsScored (calculated using hybrid real data formula)<br/>
+                          (Uses opponent's real performance vs team's real defensive record)
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>Inputs:</strong>
+                            <strong>Real Inputs:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Opponent attack tier</li>
-                              <li>Team defense tier</li>
-                              <li>Venue factor</li>
+                              <li>Opponent actual goals scored average</li>
+                              <li>Opponent real xGF from current standings</li>
+                              <li>Team actual goals conceded average</li>
+                              <li>Team real xGA from current standings</li>
+                              <li>Venue factor (1.12/0.84) - updated</li>
                               <li>Context multipliers</li>
                             </ul>
                           </div>
                           <div>
                             <strong>Output:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Expected goals against per team</li>
+                              <li>Authentic expected goals against per team</li>
+                              <li>Based on real performance, not tiers</li>
                               <li>Used for: Clean sheet calculations</li>
                               <li>Used for: Defensive points</li>
                               <li>Used for: League standings</li>
@@ -545,18 +552,20 @@ export default function ProjectionDocumentation() {
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">2. Team Goal Projection Formula</h3>
+                    <h3 className="text-lg font-semibold mb-4">2. Team Goal Projection Formula (NEW Hybrid Approach)</h3>
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="space-y-3">
                         <div className="font-mono text-sm">
-                          <strong>Goals = BaseXG × AttackMultiplier × DefenseMultiplier × VenueFactor × ContextMultipliers</strong>
+                          <strong>Goals = (TeamAvgGoals + RealTeamxGF + OpponentAvgGC + RealOpponentxGA) × 0.25 × VenueFactor × ContextMultipliers</strong>
                         </div>
                         <div className="text-sm space-y-1">
-                          <p><strong>BaseXG:</strong> 1.5 (average Premier League team goals per game)</p>
-                          <p><strong>AttackMultiplier:</strong> Elite (1.35), Strong (1.15), Average (1.00), Weak (0.85)</p>
-                          <p><strong>DefenseMultiplier:</strong> Elite (0.70), Strong (0.85), Average (1.00), Weak (1.15)</p>
-                          <p><strong>VenueFactor:</strong> Home (1.16), Away (0.84)</p>
+                          <p><strong>TeamAvgGoals:</strong> Actual average goals scored per game from current season</p>
+                          <p><strong>RealTeamxGF:</strong> Live expected goals for from FPL current standings API</p>
+                          <p><strong>OpponentAvgGC:</strong> Opponent's actual average goals conceded per game</p>
+                          <p><strong>RealOpponentxGA:</strong> Live expected goals against from FPL current standings API</p>
+                          <p><strong>VenueFactor:</strong> Home (1.12), Away (0.84) - Updated from 1.16</p>
                           <p><strong>ContextMultipliers:</strong> 15+ situational factors (derby: 0.87, top6: 1.12, etc.)</p>
+                          <p><strong>Market Bounds:</strong> REMOVED - projections flow freely based on pure performance</p>
                         </div>
                       </div>
                     </div>
@@ -673,7 +682,7 @@ export default function ProjectionDocumentation() {
                     <Badge variant="outline">Perfect Mathematical Balance</Badge>
                   </div>
                   <div className="bg-green-50 p-3 rounded text-sm">
-                    <strong>Logic:</strong> Pure projection methodology for upcoming gameweeks only using team goal projections × player goal share × minutes weighting. Enhanced with historical season xG data for ultra-realistic projections with position-specific caps and perfect team balance.
+                    <strong>Logic:</strong> Uses NEW hybrid team goal projections (real FPL data) × player goal share × minutes weighting. Enhanced with historical season xG data for ultra-realistic projections with position-specific caps and perfect team balance. No synthetic base xG values.
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                     <div>API: /api/cached/player-goals-projections</div>
