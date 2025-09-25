@@ -79,7 +79,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Top Managers",
       items: [
-        { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false },
+        { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: true },
         { path: "/top50-managers", label: "Top 50 (Current Season)", icon: Trophy, description: "Current top 50 managers from the overall FPL league", popular: false },
         { path: "/content-creators", label: "Top Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false }
       ]
@@ -87,7 +87,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Basic Tools",
       items: [
-        { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
+        { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: true },
         { path: "/current-standings", label: "Team Statistics", icon: Trophy, description: "Current league table based on completed matches", popular: false },
         { path: "/fixtures", label: "Fixture Difficulty Rating", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
         { path: "/results-and-fixtures", label: "Results and Fixtures", icon: Trophy, description: "Complete Premier League schedule with results", popular: false },
