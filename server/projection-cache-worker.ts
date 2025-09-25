@@ -92,6 +92,7 @@ class ProjectionCacheWorker {
         this.cacheAssistProjections(), 
         this.cacheCleanSheetProjections(),
         this.cacheMinutesProjections(),
+        this.cacheDefensiveProjections(),
         this.cacheTeamProjections(),
         this.cacheGoalAssistShareData(),
         this.cacheFPLScoringComponents()
