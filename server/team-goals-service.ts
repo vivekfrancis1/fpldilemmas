@@ -111,7 +111,7 @@ export class TeamGoalsService {
     
     console.log(`🎯 Calculating team goals for GW${calculatedStartGameweek}-${calculatedEndGameweek}, current GW: ${currentGameweek}`);
     
-    const teamProjections: TeamGoalProjection[] = teams.map((team: any) => {
+    const teamProjections: TeamGoalProjection[] = await Promise.all(teams.map(async (team: any) => {
       // Get fixtures for this team across the specified gameweek range
       const allFixtures = fixturesData
         .filter((f: any) => 
@@ -127,7 +127,7 @@ export class TeamGoalsService {
         });
       }
       
-      const projectionsPromises = allFixtures.map(async (fixture: any) => {
+      const projections = await Promise.all(allFixtures.map(async (fixture: any) => {
         const isHome = fixture.team_h === team.id;
         const opponentId = isHome ? fixture.team_a : fixture.team_h;
         const opponent = teams.find((t: any) => t.id === opponentId);
@@ -159,10 +159,7 @@ export class TeamGoalsService {
         }
         
         return projection;
-      }); // No longer need .filter(Boolean) since calculateFixtureGoals guarantees valid numbers
-      
-      // Await all projection calculations
-      const projections = await Promise.all(projectionsPromises);
+      })); // No longer need .filter(Boolean) since calculateFixtureGoals guarantees valid numbers
       
       const totalGoals = projections.reduce((sum: number, p: any) => sum + p.expectedGoals, 0);
       
@@ -191,7 +188,7 @@ export class TeamGoalsService {
         averageGoalsPerGame,
         confidence
       };
-    });
+    }));
     
     // Cache the results
     teamGoalsCache = {
