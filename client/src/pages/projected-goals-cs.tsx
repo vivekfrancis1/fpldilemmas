@@ -223,7 +223,7 @@ export default function ProjectedGoalsCS() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Target className="h-8 w-8" />
-            <h1>Match Projections</h1>
+            <h1>Match Predictions</h1>
           </div>
           <p className="fpl-page-subtitle">
             Projected goals and clean sheet odds for each match
