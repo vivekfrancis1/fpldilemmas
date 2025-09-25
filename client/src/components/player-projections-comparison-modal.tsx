@@ -116,27 +116,63 @@ export default function PlayerProjectionsComparisonModal({
     },
     {
       key: 'totalPointsFromGoals',
-      label: 'Total Points from Goals',
+      label: 'Points from Goals',
       format: 'points',
       decimals: 2
     },
     {
       key: 'totalPointsFromAssists',
-      label: 'Total Points from Assists',
+      label: 'Points from Assists',
       format: 'points',
       decimals: 2
     },
     {
       key: 'totalPointsFromCleanSheets',
-      label: 'Total Points from Clean Sheets',
+      label: 'Points from Clean Sheets',
       format: 'points',
       decimals: 2
     },
     {
-      key: 'avgMinutesPerGameweek',
-      label: 'Avg Minutes/GW',
-      format: 'number',
-      decimals: 0
+      key: 'totalPointsFromMinutes',
+      label: 'Points from Minutes',
+      format: 'points',
+      decimals: 2
+    },
+    {
+      key: 'totalPointsFromDefensiveContributions',
+      label: 'Points from Defensive Contributions',
+      format: 'points',
+      decimals: 2
+    },
+    {
+      key: 'totalPointsFromSaves',
+      label: 'Points from Saves',
+      format: 'points',
+      decimals: 2
+    },
+    {
+      key: 'totalPointsFromGoalsConceded',
+      label: 'Points from Goals Conceded',
+      format: 'points',
+      decimals: 2
+    },
+    {
+      key: 'totalPointsFromYellowCards',
+      label: 'Points from Yellow Cards',
+      format: 'points',
+      decimals: 2
+    },
+    {
+      key: 'totalPointsFromRedCards',
+      label: 'Points from Red Cards',
+      format: 'points',
+      decimals: 2
+    },
+    {
+      key: 'totalPointsFromBonus',
+      label: 'Points from Bonus',
+      format: 'points',
+      decimals: 2
     }
   ];
 
