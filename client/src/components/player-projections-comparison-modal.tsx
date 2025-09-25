@@ -100,6 +100,23 @@ export default function PlayerProjectionsComparisonModal({
     (_, i) => startGameweek + i
   );
 
+  // Helper function to find players with best value for a given stat
+  const getPlayersWithBestValue = (statKey: string) => {
+    const values = players.map(player => (player as any)[statKey] || 0);
+    const bestValue = Math.max(...values);
+    
+    return players
+      .map((player, index) => ({ player, value: values[index] }))
+      .filter(({ value }) => value === bestValue)
+      .map(({ player }) => player.playerId || player.id);
+  };
+
+  // Helper function to check if player has best value for stat
+  const isPlayerBest = (player: PlayerTotalPointsData, statKey: string) => {
+    const bestPlayers = getPlayersWithBestValue(statKey);
+    return bestPlayers.includes(player.playerId || player.id);
+  };
+
   // Summary stats comparison
   const summaryStats = [
     {
@@ -235,16 +252,35 @@ export default function PlayerProjectionsComparisonModal({
                       {stat.label}
                     </div>
                     <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : `grid-cols-${Math.min(players.length, 4)}`}`}>
-                      {players.map((player) => (
-                        <div key={player.playerId || player.id} className="bg-gray-50 rounded-lg p-3 text-center">
-                          <ValueCell 
-                            value={(player as any)[stat.key] || 0}
-                            format={stat.format as any}
-                            decimals={stat.decimals}
-                            className="text-lg font-semibold"
-                          />
-                        </div>
-                      ))}
+                      {players.map((player) => {
+                        const isBest = isPlayerBest(player, stat.key);
+                        return (
+                          <div 
+                            key={player.playerId || player.id} 
+                            className={`rounded-lg p-3 text-center transition-all duration-200 ${
+                              isBest 
+                                ? 'bg-gradient-to-br from-green-100 to-green-200 border-2 border-green-300 shadow-md' 
+                                : 'bg-gray-50 border border-gray-200'
+                            }`}
+                          >
+                            <ValueCell 
+                              value={(player as any)[stat.key] || 0}
+                              format={stat.format as any}
+                              decimals={stat.decimals}
+                              className={`text-lg font-semibold ${
+                                isBest ? 'text-green-800' : 'text-gray-900'
+                              }`}
+                            />
+                            {isBest && (
+                              <div className="mt-1">
+                                <Badge className="bg-green-600 text-white text-xs">
+                                  Best
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                     <Separator />
                   </div>
