@@ -274,9 +274,13 @@ export function useChartPerformance(config: ChartPerformanceConfig = {}) {
   const [isVisible, setIsVisible] = useState(!enableLazyLoading)
   const [shouldSimplify, setShouldSimplify] = useState(false)
 
-  // Battery-aware performance integration with fallbacks
-  const { batteryInfo, performanceMode } = useBatteryAwarePerformance()
-  const { quality, qualityConfig } = useAdaptiveChartQuality()
+  // Always call hooks consistently - no conditional hook usage
+  const batteryPerformance = useBatteryAwarePerformance()
+  const adaptiveQuality = useAdaptiveChartQuality()
+
+  // Extract values after hooks are called
+  const { batteryInfo, performanceMode } = batteryPerformance
+  const { quality, qualityConfig } = adaptiveQuality
 
   // Combined performance state considering mobile, battery, and device capabilities
   useEffect(() => {
