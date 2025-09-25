@@ -339,34 +339,34 @@ export default function ResultsProjections() {
                           </td>
                           
                           <td className="px-4 py-4 text-center">
-                            <div className="space-y-1">
-                              <div className="px-2 py-1 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border">
+                            <div className="space-y-1 flex flex-col items-center">
+                              <div className="px-3 py-2 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border min-w-[45px] w-[45px] h-[36px] flex items-center justify-center">
                                 {match.homeTeam.predictedScore}
                               </div>
                               <div className="text-xs text-gray-400">-</div>
-                              <div className="px-2 py-1 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border">
+                              <div className="px-3 py-2 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border min-w-[45px] w-[45px] h-[36px] flex items-center justify-center">
                                 {match.awayTeam.predictedScore}
                               </div>
                             </div>
                           </td>
                           
                           <td className="px-4 py-4 text-center">
-                            <div className="space-y-2">
-                              <div className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${getGoalsColor(match.homeTeam.expectedGoals)}`}>
+                            <div className="space-y-2 flex flex-col items-center">
+                              <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] w-[45px] h-[24px] flex items-center justify-center ${getGoalsColor(match.homeTeam.expectedGoals)}`}>
                                 {match.homeTeam.expectedGoals.toFixed(2)}
                               </div>
-                              <div className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${getGoalsColor(match.awayTeam.expectedGoals)}`}>
+                              <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] w-[45px] h-[24px] flex items-center justify-center ${getGoalsColor(match.awayTeam.expectedGoals)}`}>
                                 {match.awayTeam.expectedGoals.toFixed(2)}
                               </div>
                             </div>
                           </td>
                           
                           <td className="px-4 py-4 text-center">
-                            <div className="space-y-2">
-                              <div className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
+                            <div className="space-y-2 flex flex-col items-center">
+                              <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] w-[45px] h-[24px] flex items-center justify-center ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
                                 {match.homeTeam.cleanSheetOdds.toFixed(1)}%
                               </div>
-                              <div className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
+                              <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] w-[45px] h-[24px] flex items-center justify-center ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
                                 {match.awayTeam.cleanSheetOdds.toFixed(1)}%
                               </div>
                             </div>
