@@ -308,10 +308,16 @@ export default function ResultsProjections() {
                         Predicted Score
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        xG
+                        Home xG
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Clean Sheets
+                        Away xG
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Home CS%
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Away CS%
                       </th>
                     </tr>
                   </thead>
@@ -339,46 +345,32 @@ export default function ResultsProjections() {
                           </td>
                           
                           <td className="px-4 py-4 text-center">
-                            <div className={`inline-flex items-center px-3 py-2 rounded-lg font-bold text-lg ${
-                              resultType === 'home-win' ? 'bg-blue-100 text-blue-800' :
-                              resultType === 'away-win' ? 'bg-red-100 text-red-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
+                            <div className="inline-flex items-center px-3 py-2 rounded-lg font-bold text-lg bg-gray-50 text-gray-800 border">
                               {match.homeTeam.predictedScore} - {match.awayTeam.predictedScore}
                             </div>
                           </td>
                           
                           <td className="px-4 py-4 text-center">
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-center">
-                                <span className="text-xs font-medium mr-2">{match.homeTeam.shortName}:</span>
-                                <div className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${getGoalsColor(match.homeTeam.expectedGoals)}`}>
-                                  {match.homeTeam.expectedGoals.toFixed(2)}
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-center">
-                                <span className="text-xs font-medium mr-2">{match.awayTeam.shortName}:</span>
-                                <div className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${getGoalsColor(match.awayTeam.expectedGoals)}`}>
-                                  {match.awayTeam.expectedGoals.toFixed(2)}
-                                </div>
-                              </div>
+                            <div className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${getGoalsColor(match.homeTeam.expectedGoals)}`}>
+                              {match.homeTeam.expectedGoals.toFixed(2)}
                             </div>
                           </td>
                           
                           <td className="px-4 py-4 text-center">
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-center">
-                                <span className="text-xs font-medium mr-2">{match.homeTeam.shortName}:</span>
-                                <div className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
-                                  {match.homeTeam.cleanSheetOdds.toFixed(1)}%
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-center">
-                                <span className="text-xs font-medium mr-2">{match.awayTeam.shortName}:</span>
-                                <div className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
-                                  {match.awayTeam.cleanSheetOdds.toFixed(1)}%
-                                </div>
-                              </div>
+                            <div className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${getGoalsColor(match.awayTeam.expectedGoals)}`}>
+                              {match.awayTeam.expectedGoals.toFixed(2)}
+                            </div>
+                          </td>
+                          
+                          <td className="px-4 py-4 text-center">
+                            <div className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${getCSColor(match.homeTeam.cleanSheetOdds)}`}>
+                              {match.homeTeam.cleanSheetOdds.toFixed(1)}%
+                            </div>
+                          </td>
+                          
+                          <td className="px-4 py-4 text-center">
+                            <div className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${getCSColor(match.awayTeam.cleanSheetOdds)}`}>
+                              {match.awayTeam.cleanSheetOdds.toFixed(1)}%
                             </div>
                           </td>
                           
