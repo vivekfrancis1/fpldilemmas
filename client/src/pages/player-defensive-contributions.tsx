@@ -656,7 +656,7 @@ export default function PlayerDefensiveContributions() {
               </TabsTrigger>
               <TabsTrigger value="points" className="flex items-center gap-2">
                 <Target className="h-4 w-4" />
-                Points from DC
+                DC Points
               </TabsTrigger>
             </TabsList>
             
