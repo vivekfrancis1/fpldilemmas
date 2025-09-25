@@ -481,10 +481,10 @@ export default function PlayerTotalPoints() {
     if (!bootstrapData || initialized) return;
     
     const currentGW = computeCurrentGameweek(bootstrapData.events);
-    const nextGW = Math.min((currentGW ?? 3) + 1, 38);
+    const nextGW = Math.min((currentGW ?? 5) + 1, 38); // Use current gameweek + 1
     const maxAvailableGW = Math.min(38, nextGW + 11); // Next 12 gameweeks max
     
-    
+    // Always start from the next gameweek (future gameweeks only)
     setStartGameweek(nextGW);
     setEndGameweek(Math.min(nextGW + 5, maxAvailableGW)); // Next 6 gameweeks default
     setInitialized(true);
@@ -525,15 +525,9 @@ export default function PlayerTotalPoints() {
     if (liveTotalPointsData && liveTotalPointsData.length > 0 && !liveError) {
       const samplePlayer = liveTotalPointsData[0];
       
-      // Validate live data quality - must have critical fields and actual gameweek data
-      const hasGameweekData = samplePlayer.pointsFromGoals && 
-        Object.keys(samplePlayer.pointsFromGoals).length > 0 &&
-        samplePlayer.gameweekProjections &&
-        Object.keys(samplePlayer.gameweekProjections).length > 0;
-      
+      // Simplified validation - just check for basic required fields
       const hasValidLiveData = (samplePlayer.name || samplePlayer.playerName) && 
-        samplePlayer.totalExpectedPoints !== undefined && 
-        hasGameweekData;
+        samplePlayer.totalExpectedPoints !== undefined;
       
       if (hasValidLiveData) {
         return liveTotalPointsData;
@@ -544,21 +538,11 @@ export default function PlayerTotalPoints() {
     if (cachedTotalPointsData && cachedTotalPointsData.length > 0) {
       const samplePlayer = cachedTotalPointsData[0];
       
-      // Validate cached data quality - must have critical fields and actual gameweek data
-      const hasGameweekData = samplePlayer.pointsFromGoals && 
-        Object.keys(samplePlayer.pointsFromGoals).length > 0 &&
-        samplePlayer.gameweekProjections &&
-        Object.keys(samplePlayer.gameweekProjections).length > 0;
-      
+      // Simplified validation - just check for basic required fields
       const hasValidCachedData = (samplePlayer.name || samplePlayer.playerName) && 
-        samplePlayer.totalExpectedPoints !== undefined && 
-        hasGameweekData;
+        samplePlayer.totalExpectedPoints !== undefined;
       
-      const hasRequestedRange = startGameweek && endGameweek && 
-        samplePlayer.gameweekProjections[`gw${startGameweek}`] !== undefined && 
-        samplePlayer.gameweekProjections[`gw${endGameweek}`] !== undefined;
-      
-      if (hasRequestedRange && hasValidCachedData) {
+      if (hasValidCachedData) {
         return cachedTotalPointsData;
       }
     }
