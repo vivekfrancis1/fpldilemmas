@@ -24,15 +24,18 @@ interface PlayerTotalPointsData {
   id?: number;
   playerName?: string;
   name?: string;
+  fullName?: string;
   position?: string;
   team?: string;
+  teamName?: string;
   teamId?: number;
   totalExpectedPoints?: number;
-  avgExpectedPointsPerGameweek?: number;
-  expectedGoals?: number;
-  expectedAssists?: number;
-  expectedCleanSheets?: number;
+  totalPoints?: number;
+  averagePerGameweek?: number;
+  averageValue?: number;
   avgMinutesPerGameweek?: number;
+  price?: number;
+  ownership?: number;
   gameweekProjections?: { [key: string]: number };
   pointsFromGoals?: { [key: string]: number };
   pointsFromAssists?: { [key: string]: number };
@@ -41,9 +44,19 @@ interface PlayerTotalPointsData {
   pointsFromGoalsConceded?: { [key: string]: number };
   pointsFromYellowCards?: { [key: string]: number };
   pointsFromRedCards?: { [key: string]: number };
-  pointsFromBonusPoints?: { [key: string]: number };
+  pointsFromBonus?: { [key: string]: number };
   pointsFromSaves?: { [key: string]: number };
   pointsFromDefensiveContributions?: { [key: string]: number };
+  totalPointsFromGoals?: number;
+  totalPointsFromAssists?: number;
+  totalPointsFromCleanSheets?: number;
+  totalPointsFromDefensiveContributions?: number;
+  totalPointsFromMinutes?: number;
+  totalPointsFromBonus?: number;
+  totalPointsFromGoalsConceded?: number;
+  totalPointsFromYellowCards?: number;
+  totalPointsFromRedCards?: number;
+  totalPointsFromSaves?: number;
 }
 
 export default function PlayerProjectionsComparisonModal({ 
@@ -64,7 +77,7 @@ export default function PlayerProjectionsComparisonModal({
   };
 
   const getPlayerTeam = (player: PlayerTotalPointsData) => {
-    return player.team || "Unknown";
+    return player.teamName || player.team || "Unknown";
   };
 
   const getPlayerName = (player: PlayerTotalPointsData) => {
@@ -96,27 +109,27 @@ export default function PlayerProjectionsComparisonModal({
       decimals: 2
     },
     {
-      key: 'avgExpectedPointsPerGameweek',
+      key: 'averagePerGameweek',
       label: 'Avg Points/GW',
       format: 'points',
       decimals: 2
     },
     {
-      key: 'expectedGoals',
-      label: 'Expected Goals',
-      format: 'number',
+      key: 'totalPointsFromGoals',
+      label: 'Total Points from Goals',
+      format: 'points',
       decimals: 2
     },
     {
-      key: 'expectedAssists',
-      label: 'Expected Assists',
-      format: 'number',
+      key: 'totalPointsFromAssists',
+      label: 'Total Points from Assists',
+      format: 'points',
       decimals: 2
     },
     {
-      key: 'expectedCleanSheets',
-      label: 'Expected Clean Sheets',
-      format: 'number',
+      key: 'totalPointsFromCleanSheets',
+      label: 'Total Points from Clean Sheets',
+      format: 'points',
       decimals: 2
     },
     {
