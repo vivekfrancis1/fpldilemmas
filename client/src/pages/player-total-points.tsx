@@ -831,39 +831,6 @@ export default function PlayerTotalPoints() {
                 Complete FPL points projection combining all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points
               </p>
               <div className="fpl-page-actions">
-                {/* Debug: Show compareList state */}
-                <div className="text-xs bg-gray-100 p-2 mb-2 rounded">
-                  DEBUG: compareList.length = {compareList.length}, players: {compareList.map(p => p.playerName || p.name).join(', ')}
-                </div>
-                {/* Compare Players Section */}
-                {compareList.length > 0 && (
-                  <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-                    <Badge className="bg-blue-600 text-white px-3 py-1">
-                      <Users className="h-3 w-3 mr-1" />
-                      {compareList.length} selected
-                    </Badge>
-                    <Button
-                      onClick={handleCompareModalOpen}
-                      disabled={compareList.length < 2}
-                      variant="default"
-                      size="sm"
-                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
-                      data-testid="button-compare-players"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      Compare ({compareList.length >= 2 ? 'Ready' : 'Select 2+'})
-                    </Button>
-                    <Button
-                      onClick={() => setCompareList([])}
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      data-testid="button-clear-comparison"
-                    >
-                      Clear All
-                    </Button>
-                  </div>
-                )}
                 <Button
                   onClick={handleRefreshData}
                   disabled={isRefreshing}
@@ -1077,6 +1044,47 @@ export default function PlayerTotalPoints() {
           startGameweek={startGameweek || 6}
           endGameweek={endGameweek || 11}
         />
+
+        {/* Bottom Comparison Popup */}
+        {compareList.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-blue-500 shadow-lg z-50 animate-in slide-in-from-bottom-2">
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-blue-600 text-white px-3 py-2">
+                      <Users className="h-4 w-4 mr-2" />
+                      {compareList.length} Player{compareList.length === 1 ? '' : 's'} Selected
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-gray-600 max-w-md truncate">
+                    Selected: {compareList.map(p => p.playerName || p.name).join(', ')}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={handleCompareModalOpen}
+                    disabled={compareList.length < 2}
+                    className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-testid="button-compare-players"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    {compareList.length >= 2 ? 'Compare Players' : 'Select 2+ Players'}
+                  </Button>
+                  <Button
+                    onClick={() => setCompareList([])}
+                    variant="outline"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
+                    data-testid="button-clear-comparison"
+                  >
+                    Clear All
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
