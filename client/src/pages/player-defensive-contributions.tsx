@@ -597,37 +597,6 @@ export default function PlayerDefensiveContributions() {
               </Select>
             </div>
 
-            <div className="space-y-2 sm:col-span-2">
-              <label className="text-sm font-medium">Quick Select</label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (allGameweeks.length > 0) {
-                      setStartGameweek(allGameweeks[0]);
-                      setEndGameweek(Math.min(allGameweeks[0] + 5, allGameweeks[allGameweeks.length - 1]));
-                    }
-                  }}
-                  className="flex-1"
-                >
-                  Next 6 GWs
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (allGameweeks.length > 0) {
-                      setStartGameweek(allGameweeks[0]);
-                      setEndGameweek(allGameweeks[allGameweeks.length - 1]);
-                    }
-                  }}
-                  className="flex-1"
-                >
-                  All Season
-                </Button>
-              </div>
-            </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Display Options</label>
