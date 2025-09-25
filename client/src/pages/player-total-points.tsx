@@ -530,11 +530,12 @@ export default function PlayerTotalPoints() {
 
   // Handle player comparison
   const handlePlayerCompareClick = (player: PlayerTotalPointsData) => {
-    const isPlayerInList = compareList.some(p => (p.playerId || p.id) === (player.playerId || player.id));
+    const playerId = player.playerId || player.id;
+    const isPlayerInList = compareList.some(p => (p.playerId || p.id) === playerId);
     
     if (isPlayerInList) {
       // Remove player from comparison list
-      setCompareList(prev => prev.filter(p => (p.playerId || p.id) !== (player.playerId || player.id)));
+      setCompareList(prev => prev.filter(p => (p.playerId || p.id) !== playerId));
     } else {
       // Add player to comparison list (max 4 for projected data comparison)
       if (compareList.length < 4) {
