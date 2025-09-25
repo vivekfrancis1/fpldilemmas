@@ -346,11 +346,11 @@ export default function ResultsProjections() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Match
-                      </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Kickoff
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Match
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Predicted Score
@@ -379,20 +379,20 @@ export default function ResultsProjections() {
                       
                       return (
                         <tr key={match.id} className="hover:bg-gray-50" data-testid={`prediction-row-${match.id}`}>
-                          <td className="px-4 py-4">
-                            <div className="flex items-center justify-center gap-3">
-                              <div className="text-sm font-medium text-gray-900">{match.homeTeam.shortName}</div>
-                              <div className="text-xs text-gray-400">vs</div>
-                              <div className="text-sm font-medium text-gray-900">{match.awayTeam.shortName}</div>
-                            </div>
-                          </td>
-                          
                           <td className="px-4 py-4 text-center text-sm text-gray-900">
                             <div className="text-sm font-medium">{kickoff.date}</div>
                             <div className="text-xs text-gray-500">{kickoff.time}</div>
                             <Badge variant="outline" className="mt-1">
                               GW{match.gameweek}
                             </Badge>
+                          </td>
+                          
+                          <td className="px-4 py-4">
+                            <div className="flex items-center justify-center gap-3">
+                              <div className="text-sm font-medium text-gray-900">{match.homeTeam.shortName}</div>
+                              <div className="text-xs text-gray-400">vs</div>
+                              <div className="text-sm font-medium text-gray-900">{match.awayTeam.shortName}</div>
+                            </div>
                           </td>
                           
                           <td className="px-4 py-4 text-center">
