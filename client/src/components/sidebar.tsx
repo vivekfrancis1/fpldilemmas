@@ -61,7 +61,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/player-goals-scored-projections", label: "Goals Scored", icon: Trophy, description: "Individual player goal projections", popular: false },
         { path: "/player-assist-projections", label: "Assists", icon: Zap, description: "Individual player assist projections", popular: false },
         { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
-        { path: "/player-total-points", label: "Total Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: false, new: true }
+        { path: "/player-total-points", label: "Total Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: true }
         // { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
         // { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
         // { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false }
@@ -79,7 +79,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Top Managers",
       items: [
-        { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false, new: true },
+        { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false },
         { path: "/top50-managers", label: "Top 50 (Current Season)", icon: Trophy, description: "Current top 50 managers from the overall FPL league", popular: false },
         { path: "/content-creators", label: "Top Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false }
       ]
@@ -87,7 +87,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Basic Tools",
       items: [
-        { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: true },
+        { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
         { path: "/current-standings", label: "Team Statistics", icon: Trophy, description: "Current league table based on completed matches", popular: false },
         { path: "/fixtures", label: "Fixture Difficulty Rating", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
         { path: "/results-and-fixtures", label: "Results and Fixtures", icon: Trophy, description: "Complete Premier League schedule with results", popular: false },
@@ -225,8 +225,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                           </Badge>
                         )}
                         {(item as any).popular && (
-                          <Badge variant="secondary" className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-[10px] px-1.5 py-0.5 font-semibold rounded-full shadow-sm flex-shrink-0">
-                            POPULAR
+                          <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-green-600 text-white text-[10px] px-1.5 py-0.5 font-semibold rounded-full shadow-sm flex-shrink-0">
+                            Popular
                           </Badge>
                         )}
                       </div>

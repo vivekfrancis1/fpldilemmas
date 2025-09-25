@@ -521,24 +521,9 @@ export default function PlayerTotalPoints() {
 
   // Data selection logic - API-first approach with cache fallback for reliability
   const totalPointsData = useMemo(() => {
-    console.log('🔍 DEBUG: Data Selection Logic Started');
-    console.log('🔍 Live data length:', liveTotalPointsData?.length || 0);
-    console.log('🔍 Cached data length:', cachedTotalPointsData?.length || 0);
-    console.log('🔍 Live error:', liveError);
-    console.log('🔍 Cached error:', cachedError);
-    console.log('🔍 Start GW:', startGameweek, 'End GW:', endGameweek);
-    
     // PRIORITY 1: Use live API data if available and valid (ensures freshest data)
     if (liveTotalPointsData && liveTotalPointsData.length > 0 && !liveError) {
       const samplePlayer = liveTotalPointsData[0];
-      console.log('🔍 Live sample player:', {
-        name: samplePlayer.name || samplePlayer.playerName,
-        totalExpectedPoints: samplePlayer.totalExpectedPoints,
-        hasPointsFromGoals: !!samplePlayer.pointsFromGoals,
-        pointsFromGoalsKeys: samplePlayer.pointsFromGoals ? Object.keys(samplePlayer.pointsFromGoals) : [],
-        hasGameweekProjections: !!samplePlayer.gameweekProjections,
-        gameweekProjectionsKeys: samplePlayer.gameweekProjections ? Object.keys(samplePlayer.gameweekProjections) : []
-      });
       
       // Validate live data quality - must have critical fields and actual gameweek data
       const hasGameweekData = samplePlayer.pointsFromGoals && 
@@ -550,10 +535,7 @@ export default function PlayerTotalPoints() {
         samplePlayer.totalExpectedPoints !== undefined && 
         hasGameweekData;
       
-      console.log('🔍 Live data validation:', { hasGameweekData, hasValidLiveData });
-      
       if (hasValidLiveData) {
-        console.log('✅ Using live data with', liveTotalPointsData.length, 'players');
         return liveTotalPointsData;
       }
     }
@@ -561,12 +543,6 @@ export default function PlayerTotalPoints() {
     // PRIORITY 2: Fall back to cached data if live API fails, is loading, or has errors
     if (cachedTotalPointsData && cachedTotalPointsData.length > 0) {
       const samplePlayer = cachedTotalPointsData[0];
-      console.log('🔍 Cached sample player:', {
-        name: samplePlayer.name || samplePlayer.playerName,
-        totalExpectedPoints: samplePlayer.totalExpectedPoints,
-        hasPointsFromGoals: !!samplePlayer.pointsFromGoals,
-        hasGameweekProjections: !!samplePlayer.gameweekProjections
-      });
       
       // Validate cached data quality - must have critical fields and actual gameweek data
       const hasGameweekData = samplePlayer.pointsFromGoals && 
@@ -582,16 +558,12 @@ export default function PlayerTotalPoints() {
         samplePlayer.gameweekProjections[`gw${startGameweek}`] !== undefined && 
         samplePlayer.gameweekProjections[`gw${endGameweek}`] !== undefined;
       
-      console.log('🔍 Cached data validation:', { hasGameweekData, hasValidCachedData, hasRequestedRange });
-      
       if (hasRequestedRange && hasValidCachedData) {
-        console.log('✅ Using cached data with', cachedTotalPointsData.length, 'players');
         return cachedTotalPointsData;
       }
     }
     
     // PRIORITY 3: Return null if neither data source is available
-    console.log('❌ No valid data source available');
     return null;
   }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek]);
 
