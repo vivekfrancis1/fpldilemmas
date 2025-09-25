@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw } from "lucide-react";
+import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw, UserPlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -475,6 +475,10 @@ export default function PlayerTotalPoints() {
   const [selectedLoadGroup, setSelectedLoadGroup] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  
+  // Comparison state
+  const [compareList, setCompareList] = useState<PlayerTotalPointsData[]>([]);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
 
   // One-time initialization when bootstrap data loads
   useEffect(() => {
@@ -499,6 +503,36 @@ export default function PlayerTotalPoints() {
 
   const nextGameweek = currentGameweek + 1;
   const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
+
+  // Handle player comparison
+  const handlePlayerCompareClick = (player: PlayerTotalPointsData) => {
+    const isPlayerInList = compareList.some(p => (p.playerId || p.id) === (player.playerId || player.id));
+    
+    if (isPlayerInList) {
+      // Remove player from comparison list
+      setCompareList(prev => prev.filter(p => (p.playerId || p.id) !== (player.playerId || player.id)));
+    } else {
+      // Add player to comparison list (max 4 for projected data comparison)
+      if (compareList.length < 4) {
+        setCompareList(prev => [...prev, player]);
+      }
+    }
+  };
+
+  // Handle compare modal open
+  const handleCompareModalOpen = () => {
+    if (compareList.length >= 2) {
+      setIsCompareModalOpen(true);
+    }
+  };
+
+  // Handle compare modal close
+  const handleCompareModalClose = () => {
+    setIsCompareModalOpen(false);
+  };
+
+  // Check if max compare reached
+  const maxCompareReached = compareList.length >= 4;
 
   // ALL useQuery hooks - cached and live data sources
   const { data: cachedTotalPointsData, isLoading: cachedLoading, error: cachedError } = useQuery<PlayerTotalPointsData[]>({
