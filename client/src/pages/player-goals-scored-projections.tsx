@@ -440,7 +440,7 @@ export default function PlayerGoalsScoredProjections() {
             </TabsTrigger>
             <TabsTrigger value="points" className="flex items-center gap-2">
               <Trophy className="h-4 w-4" />
-              Points from Goals
+              Goal Points
             </TabsTrigger>
           </TabsList>
 
