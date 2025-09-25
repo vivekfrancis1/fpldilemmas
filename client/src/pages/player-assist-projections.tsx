@@ -323,27 +323,29 @@ export default function PlayerAssistProjections() {
 
         {/* Filters */}
         <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex flex-wrap gap-4 items-end">
-              <div className="flex items-center gap-3">
-                <Search className="h-5 w-5 text-green-600" />
-                <label className="text-sm font-semibold text-gray-700">Search:</label>
-                <div className="relative w-64">
-                  <Input
-                    data-testid="input-player-search"
-                    placeholder="Search by player or team name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="border-2 border-gray-200 hover:border-green-400 transition-colors"
-                  />
-                </div>
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Search className="h-4 w-4 text-green-600" />
+                  Search
+                </label>
+                <Input
+                  data-testid="input-player-search"
+                  placeholder="Search by player or team name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full border-2 border-gray-200 hover:border-green-400 transition-colors"
+                />
               </div>
               
-              <div className="flex items-center gap-3">
-                <Users className="h-5 w-5 text-green-600" />
-                <label className="text-sm font-semibold text-gray-700">Position:</label>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Users className="h-4 w-4 text-green-600" />
+                  Position
+                </label>
                 <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                  <SelectTrigger className="w-32 border-2 border-gray-200 hover:border-green-400 transition-colors">
+                  <SelectTrigger className="w-full border-2 border-gray-200 hover:border-green-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -355,11 +357,13 @@ export default function PlayerAssistProjections() {
                 </Select>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-green-600" />
-                <label className="text-sm font-semibold text-gray-700">Team:</label>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-green-600" />
+                  Team
+                </label>
                 <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                  <SelectTrigger className="w-32 border-2 border-gray-200 hover:border-green-400 transition-colors">
+                  <SelectTrigger className="w-full border-2 border-gray-200 hover:border-green-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -371,11 +375,13 @@ export default function PlayerAssistProjections() {
                 </Select>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Target className="h-5 w-5 text-green-600" />
-                <label className="text-sm font-semibold text-gray-700">From GW:</label>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Target className="h-4 w-4 text-green-600" />
+                  From GW
+                </label>
                 <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                  <SelectTrigger className="w-20 border-2 border-gray-200 hover:border-green-400 transition-colors">
+                  <SelectTrigger className="w-full border-2 border-gray-200 hover:border-green-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -384,9 +390,12 @@ export default function PlayerAssistProjections() {
                     ))}
                   </SelectContent>
                 </Select>
-                <label className="text-sm font-semibold text-gray-700">To GW:</label>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">To GW</label>
                 <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                  <SelectTrigger className="w-20 border-2 border-gray-200 hover:border-green-400 transition-colors">
+                  <SelectTrigger className="w-full border-2 border-gray-200 hover:border-green-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -397,7 +406,8 @@ export default function PlayerAssistProjections() {
                 </Select>
               </div>
 
-              <div className="ml-auto flex items-center gap-2 text-sm text-gray-600">
+              
+              <div className="flex items-center gap-2 text-sm text-gray-600 sm:col-span-2 lg:col-span-3 xl:col-span-1 justify-center sm:justify-end">
                 <TrendingUp className="h-4 w-4" />
                 <span>{filteredAndSortedData.length} players</span>
               </div>
@@ -429,17 +439,18 @@ export default function PlayerAssistProjections() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
+                  <div className="overflow-x-auto -mx-4 sm:mx-0">
+                    <div className="min-w-full inline-block align-middle">
+                      <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50 border-b">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
+                          <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 min-w-[140px] sm:min-w-[180px] border-r border-gray-100">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
                               Player {getSortIcon('name')}
                             </Button>
                           </th>
                           {dynamicGameweekColumns.map((gw) => (
-                            <th key={`assists-header-gw${gw}`} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th key={`assists-header-gw${gw}`} className="px-2 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[60px]">
                               <Button variant="ghost" size="sm" onClick={() => handleSort(`gw${gw}`)} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
                                 GW{gw} {getSortIcon(`gw${gw}`)}
                               </Button>
@@ -456,7 +467,7 @@ export default function PlayerAssistProjections() {
                         {filteredAndSortedData.map((player, index) => {
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
-                            <td className="py-3 px-1">
+                            <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
                               <PlayerNameCell 
                                 name={player.playerName}
                                 position={player.position}
@@ -465,7 +476,7 @@ export default function PlayerAssistProjections() {
                               />
                             </td>
                             {dynamicGameweekColumns.map((gw) => (
-                              <td key={`assists-cell-${player.playerId}-gw${gw}`} className="text-center py-3 px-1">
+                              <td key={`assists-cell-${player.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
                                 {(player.gameweekProjections[gw.toString()] || 0) > 0 ? (player.gameweekProjections[gw.toString()] || 0).toFixed(2) : "-"}
                               </td>
                             ))}
@@ -476,7 +487,8 @@ export default function PlayerAssistProjections() {
                           );
                         })}
                       </tbody>
-                    </table>
+                      </table>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -519,7 +531,7 @@ export default function PlayerAssistProjections() {
                           const filteredGwPoints = Math.round(getFilteredTotal(player) * 3 * 10) / 10; // 3 points per assist
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
-                            <td className="py-3 px-1">
+                            <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
                               <PlayerNameCell 
                                 name={player.playerName}
                                 position={player.position}
