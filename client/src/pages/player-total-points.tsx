@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
+import PlayerProjectionsComparisonModal from "@/components/player-projections-comparison-modal";
 
 // Gameweek Point Breakdown Tooltip Component
 function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTotalPointsData, gameweek: number }) {
@@ -364,26 +365,49 @@ type SortField = 'name' | 'position' | 'team' | 'totalExpectedPoints' | 'average
 // Create columns configuration for the enhanced table
 function createPlayerTotalPointsColumns(
   gameweekRange: number[],
-  onSort: (field: SortField) => void
+  onSort: (field: SortField) => void,
+  onPlayerCompareClick?: (player: PlayerTotalPointsData) => void,
+  compareList?: PlayerTotalPointsData[],
+  maxCompareReached?: boolean
 ): TableColumn<PlayerTotalPointsData>[] {
   return [
     {
       key: 'name',
       header: 'Player',
       sortable: true,
-      className: 'sticky left-0 bg-white z-10 min-w-[180px]',
+      className: 'sticky left-0 bg-white z-10 min-w-[200px]',
       render: (_, player) => (
-        <div className="min-w-[180px]">
-          <PlayerNameCell name={player.name} />
-          <div className="flex items-center gap-1 mt-1 mb-1">
-            <PositionBadge position={player.position} compact={true} />
-            <TeamBadge team={player.team} compact={true} />
+        <div className="flex items-center gap-2 min-w-[200px]">
+          <div className="flex-1">
+            <PlayerNameCell name={player.name} />
+            <div className="flex items-center gap-1 mt-1 mb-1">
+              <PositionBadge position={player.position} compact={true} />
+              <TeamBadge team={player.team} compact={true} />
+            </div>
+            <div className="text-xs text-gray-500 space-x-2">
+              <span className="font-medium">£{(typeof player.price === 'number') ? player.price.toFixed(1) : '0.0'}m</span>
+              <span className="text-gray-400">•</span>
+              <span>{(typeof player.ownership === 'number') ? player.ownership.toFixed(1) : '0.0'}%</span>
+            </div>
           </div>
-          <div className="text-xs text-gray-500 space-x-2">
-            <span className="font-medium">£{(typeof player.price === 'number') ? player.price.toFixed(1) : '0.0'}m</span>
-            <span className="text-gray-400">•</span>
-            <span>{(typeof player.ownership === 'number') ? player.ownership.toFixed(1) : '0.0'}%</span>
-          </div>
+          {onPlayerCompareClick && (
+            <div className="flex-shrink-0">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onPlayerCompareClick(player)}
+                disabled={maxCompareReached && !compareList?.some(p => (p.playerId || p.id) === (player.playerId || player.id))}
+                className={`h-8 w-8 p-0 hover:bg-blue-50 ${
+                  compareList?.some(p => (p.playerId || p.id) === (player.playerId || player.id))
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-400 hover:text-blue-600'
+                }`}
+                data-testid={`button-compare-${player.playerId || player.id}`}
+              >
+                <UserPlus className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       )
     },
@@ -799,6 +823,26 @@ export default function PlayerTotalPoints() {
                 Complete FPL points projection combining all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points
               </p>
               <div className="fpl-page-actions">
+                {/* Compare Players Section */}
+                {compareList.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-blue-100 text-blue-700 px-3 py-1">
+                      <Users className="h-3 w-3 mr-1" />
+                      {compareList.length} selected
+                    </Badge>
+                    <Button
+                      onClick={handleCompareModalOpen}
+                      disabled={compareList.length < 2}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2 bg-blue-600/10 hover:bg-blue-600/20 border-blue-300 text-blue-700 disabled:opacity-50"
+                      data-testid="button-compare-players"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Compare
+                    </Button>
+                  </div>
+                )}
                 <Button
                   onClick={handleRefreshData}
                   disabled={isRefreshing}
@@ -977,7 +1021,13 @@ export default function PlayerTotalPoints() {
                 <TabsContent value="total" className="mt-0">
                   <EnhancedTable
                     data={filteredAndSortedData}
-                    columns={createPlayerTotalPointsColumns(gameweekRange, handleSort)}
+                    columns={createPlayerTotalPointsColumns(
+                      gameweekRange, 
+                      handleSort, 
+                      handlePlayerCompareClick, 
+                      compareList, 
+                      maxCompareReached
+                    )}
                     onSort={handleSort}
                     sortField={sortField}
                     sortDirection={sortDirection}
@@ -996,6 +1046,16 @@ export default function PlayerTotalPoints() {
             </div>
           )}
         </TooltipProvider>
+
+        {/* Comparison Modal */}
+        <PlayerProjectionsComparisonModal
+          players={compareList}
+          isOpen={isCompareModalOpen}
+          onClose={handleCompareModalClose}
+          bootstrapData={bootstrapData}
+          startGameweek={startGameweek || 6}
+          endGameweek={endGameweek || 11}
+        />
       </div>
     </div>
   );
