@@ -10657,7 +10657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Saves Projections API called - using formula: (season saves / team games) × (minutes/90) × opponent attacking tier");
+        console.log("DEBUG: Player Saves Projections API called - using formula: (season saves / team games) × (minutes/90) × opponent attacking multiplier from current standings");
         
         const startGameweek = parseInt(req.query.startGameweek as string) || 4;
         const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -10674,14 +10674,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const fixturesData = await fixturesResponse.json();
       
-      // Get attacking tier multipliers (from TEAM_MULTIPLIERS.attack)
-      const ATTACK_MULTIPLIERS: { [key: number]: number } = {
-        12: 1.35, 13: 1.35, // Liverpool, Man City (elite)
-        1: 1.15, 7: 1.15, 15: 1.15, 18: 1.15, 2: 1.15, // Arsenal, Chelsea, Newcastle, Tottenham, Aston Villa (strong)
-        9: 0.85, 16: 0.85, 19: 0.85, 20: 0.85, // Everton, Nottingham Forest, West Ham, Wolves (weak)
-        3: 0.7, 11: 0.7, 17: 0.7 // Burnley, Leeds, Sunderland (promoted)
-        // All others default to 1.0 (average)
-      };
+      // Get current standings to calculate dynamic attacking multipliers
+      const standingsResponse = await fetch("http://localhost:5000/api/current-standings");
+      const standingsData = await standingsResponse.json();
+      
+      // Calculate average AGR across all teams
+      const totalAGR = standingsData.reduce((sum: number, team: any) => sum + (team.adjustedGoalRate || 0), 0);
+      const averageAGR = totalAGR / standingsData.length;
+      
+      // Create dynamic attacking multipliers: Team AGR / Average AGR
+      const ATTACK_MULTIPLIERS: { [key: number]: number } = {};
+      standingsData.forEach((team: any) => {
+        const teamAGR = team.adjustedGoalRate || averageAGR; // Fallback to average if null
+        ATTACK_MULTIPLIERS[team.id] = teamAGR / averageAGR;
+      });
 
       const getAttackMultiplier = (teamId: number): number => {
         return ATTACK_MULTIPLIERS[teamId] || 1.0;
@@ -10784,7 +10790,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-        console.log(`✅ LIVE SUCCESS: Generated saves projections for ${savesProjections.length} goalkeepers using formula: (season saves / team games) × (minutes/90) × opponent attacking tier`);
+        console.log(`✅ LIVE SUCCESS: Generated saves projections for ${savesProjections.length} goalkeepers using formula: (season saves / team games) × (minutes/90) × opponent attacking multiplier from current standings`);
         return res.json(savesProjections);
 
       } catch (liveError) {
