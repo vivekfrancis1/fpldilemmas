@@ -110,24 +110,35 @@ const ChartContainer = React.forwardRef<
   // Initialize gesture support
   const [chartTransform, setChartTransform] = React.useState({ scale: 1, translateX: 0, translateY: 0 })
   
-  const { gestureState, gestureHandlers, resetTransform, currentTransform } = useChartGestures({
-    enablePinch: enableGestures && gestureConfig.enablePinch && isMobile,
-    enablePan: enableGestures && gestureConfig.enablePan && isMobile,
-    enableTap: enableGestures && gestureConfig.enableTap && isMobile,
-    onPinch: (scale) => {
-      setChartTransform(prev => ({ ...prev, scale }))
-      gestureConfig.onPinch?.(scale)
+  // Create stable gesture config to avoid hooks re-ordering
+  const stableGestureConfig = React.useMemo(() => ({
+    enablePinch: gestureConfig.enablePinch || false,
+    enablePan: gestureConfig.enablePan || false,
+    enableTap: gestureConfig.enableTap !== false, // Default to true
+    onPinch: (scale: number) => {
+      if (enableGestures && gestureConfig.enablePinch && isMobile) {
+        setChartTransform(prev => ({ ...prev, scale }))
+        gestureConfig.onPinch?.(scale)
+      }
     },
-    onPan: (delta) => {
-      setChartTransform(prev => ({
-        ...prev,
-        translateX: prev.translateX + delta.x,
-        translateY: prev.translateY + delta.y
-      }))
-      gestureConfig.onPan?.(delta)
+    onPan: (delta: { x: number; y: number }) => {
+      if (enableGestures && gestureConfig.enablePan && isMobile) {
+        setChartTransform(prev => ({
+          ...prev,
+          translateX: prev.translateX + delta.x,
+          translateY: prev.translateY + delta.y
+        }))
+        gestureConfig.onPan?.(delta)
+      }
     },
-    onTap: gestureConfig.onTap
-  })
+    onTap: (event: TouchEvent, coordinates: { x: number; y: number }) => {
+      if (enableGestures && gestureConfig.enableTap && isMobile) {
+        gestureConfig.onTap?.(event, coordinates)
+      }
+    }
+  }), [enableGestures, isMobile, gestureConfig])
+  
+  const { gestureState, gestureHandlers, resetTransform, currentTransform } = useChartGestures(stableGestureConfig)
 
   // Update chart transform when gesture transform changes
   React.useEffect(() => {
