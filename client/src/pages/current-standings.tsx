@@ -96,6 +96,70 @@ export default function CurrentStandings() {
     return 0;
   });
 
+  // Calculate totals and averages
+  const calculateSummaryStats = () => {
+    if (!standingsData || standingsData.length === 0) return null;
+    
+    const totals = standingsData.reduce((acc, team) => ({
+      played: acc.played + team.played,
+      wins: acc.wins + team.wins,
+      draws: acc.draws + team.draws,
+      losses: acc.losses + team.losses,
+      goalsFor: acc.goalsFor + team.goalsFor,
+      goalsAgainst: acc.goalsAgainst + team.goalsAgainst,
+      goalDifference: acc.goalDifference + team.goalDifference,
+      points: acc.points + team.points,
+      cleanSheets: acc.cleanSheets + team.cleanSheets,
+      yellowCards: acc.yellowCards + team.yellowCards,
+      redCards: acc.redCards + team.redCards,
+      saves: acc.saves + team.saves,
+      ownGoals: acc.ownGoals + team.ownGoals,
+      penaltiesSaved: acc.penaltiesSaved + team.penaltiesSaved,
+      penaltiesMissed: acc.penaltiesMissed + team.penaltiesMissed,
+      expectedGoalsFor: acc.expectedGoalsFor + team.expectedGoalsFor,
+      expectedGoalsAgainst: acc.expectedGoalsAgainst + team.expectedGoalsAgainst,
+      tackles: acc.tackles + team.tackles,
+      defensiveActions: acc.defensiveActions + team.defensiveActions,
+      adjustedGoalRate: acc.adjustedGoalRate + (team.adjustedGoalRate || 0),
+      adjustedGoalsAgainstRate: acc.adjustedGoalsAgainstRate + (team.adjustedGoalsAgainstRate || 0),
+    }), {
+      played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0,
+      goalDifference: 0, points: 0, cleanSheets: 0, yellowCards: 0, redCards: 0,
+      saves: 0, ownGoals: 0, penaltiesSaved: 0, penaltiesMissed: 0,
+      expectedGoalsFor: 0, expectedGoalsAgainst: 0, tackles: 0, defensiveActions: 0,
+      adjustedGoalRate: 0, adjustedGoalsAgainstRate: 0
+    });
+
+    const teamCount = standingsData.length;
+    const averages = {
+      played: totals.played / teamCount,
+      wins: totals.wins / teamCount,
+      draws: totals.draws / teamCount,
+      losses: totals.losses / teamCount,
+      goalsFor: totals.goalsFor / teamCount,
+      goalsAgainst: totals.goalsAgainst / teamCount,
+      goalDifference: totals.goalDifference / teamCount,
+      points: totals.points / teamCount,
+      cleanSheets: totals.cleanSheets / teamCount,
+      yellowCards: totals.yellowCards / teamCount,
+      redCards: totals.redCards / teamCount,
+      saves: totals.saves / teamCount,
+      ownGoals: totals.ownGoals / teamCount,
+      penaltiesSaved: totals.penaltiesSaved / teamCount,
+      penaltiesMissed: totals.penaltiesMissed / teamCount,
+      expectedGoalsFor: totals.expectedGoalsFor / teamCount,
+      expectedGoalsAgainst: totals.expectedGoalsAgainst / teamCount,
+      tackles: totals.tackles / teamCount,
+      defensiveActions: totals.defensiveActions / teamCount,
+      adjustedGoalRate: totals.adjustedGoalRate / teamCount,
+      adjustedGoalsAgainstRate: totals.adjustedGoalsAgainstRate / teamCount,
+    };
+
+    return { totals, averages };
+  };
+
+  const summaryStats = calculateSummaryStats();
+
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <th 
       className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
@@ -395,6 +459,106 @@ export default function CurrentStandings() {
                       </td>
                     </tr>
                   ))}
+                  
+                  {/* Total Row */}
+                  {summaryStats && (
+                    <tr className="bg-gray-100 border-t-2 border-gray-300 font-semibold" data-testid="totals-row">
+                      {/* Position & Team Info */}
+                      <td className="px-3 py-4 text-center sticky left-0 bg-gray-100 border-r">
+                        <div className="text-xs font-bold text-gray-700">TOT</div>
+                      </td>
+                      <td className="px-4 py-4 sticky left-16 bg-gray-100 border-r min-w-[140px]">
+                        <div className="text-sm font-bold text-gray-900">TOTAL</div>
+                      </td>
+                      
+                      {/* Match Record */}
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-900">{summaryStats.totals.played}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-green-600">{summaryStats.totals.wins}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-600">{summaryStats.totals.draws}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-red-600">{summaryStats.totals.losses}</td>
+                      
+                      {/* Goals */}
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-900 border-l">{summaryStats.totals.goalsFor}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-900">{summaryStats.totals.goalsAgainst}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-900">
+                        <span className={summaryStats.totals.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          {summaryStats.totals.goalDifference >= 0 ? '+' : ''}{summaryStats.totals.goalDifference}
+                        </span>
+                      </td>
+                      
+                      {/* Points */}
+                      <td className="px-3 py-4 text-center text-sm font-bold text-gray-900 border-l bg-blue-100">{summaryStats.totals.points}</td>
+                      
+                      {/* Expected Goals */}
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-600">{summaryStats.totals.expectedGoalsFor.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-500">{summaryStats.totals.expectedGoalsAgainst.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-purple-600">{summaryStats.totals.adjustedGoalRate.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-orange-600">{summaryStats.totals.adjustedGoalsAgainstRate.toFixed(2)}</td>
+                      
+                      {/* Defensive Stats */}
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-teal-600">{summaryStats.totals.tackles}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-teal-500">{summaryStats.totals.defensiveActions}</td>
+                      
+                      {/* Enhanced Statistics */}
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-blue-600 border-l">{summaryStats.totals.cleanSheets}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-yellow-600">{summaryStats.totals.yellowCards}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-red-600">{summaryStats.totals.redCards}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-purple-600 border-l">{summaryStats.totals.saves}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-green-600">{summaryStats.totals.penaltiesSaved}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-orange-600 border-l">{summaryStats.totals.ownGoals}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-red-500">{summaryStats.totals.penaltiesMissed}</td>
+                    </tr>
+                  )}
+                  
+                  {/* Average Row */}
+                  {summaryStats && (
+                    <tr className="bg-blue-50 border-t border-gray-200 font-medium" data-testid="averages-row">
+                      {/* Position & Team Info */}
+                      <td className="px-3 py-4 text-center sticky left-0 bg-blue-50 border-r">
+                        <div className="text-xs font-bold text-blue-700">AVG</div>
+                      </td>
+                      <td className="px-4 py-4 sticky left-16 bg-blue-50 border-r min-w-[140px]">
+                        <div className="text-sm font-bold text-blue-900">AVERAGE</div>
+                      </td>
+                      
+                      {/* Match Record */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-gray-800">{summaryStats.averages.played.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-green-700">{summaryStats.averages.wins.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-gray-700">{summaryStats.averages.draws.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-red-700">{summaryStats.averages.losses.toFixed(1)}</td>
+                      
+                      {/* Goals */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-gray-800 border-l">{summaryStats.averages.goalsFor.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-gray-800">{summaryStats.averages.goalsAgainst.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-gray-800">
+                        <span className={summaryStats.averages.goalDifference >= 0 ? 'text-green-700' : 'text-red-700'}>
+                          {summaryStats.averages.goalDifference >= 0 ? '+' : ''}{summaryStats.averages.goalDifference.toFixed(1)}
+                        </span>
+                      </td>
+                      
+                      {/* Points */}
+                      <td className="px-3 py-4 text-center text-sm font-bold text-blue-900 border-l bg-blue-100">{summaryStats.averages.points.toFixed(1)}</td>
+                      
+                      {/* Expected Goals */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-700">{summaryStats.averages.expectedGoalsFor.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600">{summaryStats.averages.expectedGoalsAgainst.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-purple-700">{summaryStats.averages.adjustedGoalRate.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-orange-700">{summaryStats.averages.adjustedGoalsAgainstRate.toFixed(2)}</td>
+                      
+                      {/* Defensive Stats */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-700">{summaryStats.averages.tackles.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-600">{summaryStats.averages.defensiveActions.toFixed(1)}</td>
+                      
+                      {/* Enhanced Statistics */}
+                      <td className="px-2 py-4 text-center text-sm font-medium text-blue-700 border-l">{summaryStats.averages.cleanSheets.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-yellow-700">{summaryStats.averages.yellowCards.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-red-700">{summaryStats.averages.redCards.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-purple-700 border-l">{summaryStats.averages.saves.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-green-700">{summaryStats.averages.penaltiesSaved.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-orange-700 border-l">{summaryStats.averages.ownGoals.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{summaryStats.averages.penaltiesMissed.toFixed(1)}</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
