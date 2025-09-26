@@ -93,3 +93,45 @@ export function getGameweekValue<T>(obj: Record<string, T> | undefined, gameweek
   // Try both formats for maximum compatibility
   return obj[numericKey] ?? obj[prefixedKey] ?? undefined;
 }
+
+/**
+ * Runtime validation function to detect and warn about key format inconsistencies
+ * This helps catch bugs like the tooltip breakdown issue where data keys don't match UI expectations
+ * @param data - Object with gameweek data
+ * @param source - Source identifier for logging
+ * @param expectedFormat - Expected key format
+ */
+export function validateRuntimeKeyConsistency<T>(
+  data: Record<string, T> | undefined,
+  source: string,
+  expectedFormat: GameweekKeyFormat = 'numeric'
+): void {
+  if (!data || typeof data !== 'object') return;
+  
+  const gameweekKeys = Object.keys(data).filter(key => /^(gw)?\d+$/i.test(key));
+  
+  if (gameweekKeys.length === 0) return; // No gameweek keys to validate
+  
+  let inconsistencyCount = 0;
+  const inconsistencies: string[] = [];
+  
+  for (const key of gameweekKeys) {
+    try {
+      const expectedKey = normalizeGameweekKey(key, expectedFormat);
+      if (key !== expectedKey) {
+        inconsistencies.push(`"${key}" should be "${expectedKey}"`);
+        inconsistencyCount++;
+      }
+    } catch (error) {
+      inconsistencies.push(`Invalid gameweek key: "${key}"`);
+      inconsistencyCount++;
+    }
+  }
+  
+  if (inconsistencyCount > 0) {
+    console.warn(`🔧 KEY FORMAT WARNING [${source}]: Found ${inconsistencyCount} key format inconsistencies:`);
+    inconsistencies.forEach(issue => console.warn(`  - ${issue}`));
+    console.warn(`  Expected format: ${expectedFormat} (e.g., "6" vs "gw6")`);
+    console.warn(`  This may cause data access issues in frontend components`);
+  }
+}
