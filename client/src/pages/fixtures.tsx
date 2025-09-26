@@ -184,15 +184,15 @@ export default function Fixtures() {
 
   // Get color based on dynamic defensive multiplier (for FDR for Attackers)
   const getDefensiveMultiplierColor = (multiplier: number) => {
-    // Color scale: lower multiplier (stronger defense) = green, higher multiplier (weaker defense) = red
+    // Color scale: lower multiplier (stronger defense) = red, higher multiplier (weaker defense) = green
     // Range: 0.6-1.8, with 1.0 being neutral (gray)
     
-    if (multiplier <= 0.8) return 'bg-green-300 text-green-800'; // Strong defense - Hard for attackers - Strong green
-    if (multiplier <= 0.95) return 'bg-green-100 text-green-800'; // Good defense - Light green
+    if (multiplier <= 0.8) return 'bg-red-300 text-red-800'; // Strong defense - Hard for attackers - Strong red
+    if (multiplier <= 0.95) return 'bg-red-100 text-red-800'; // Good defense - Light red
     if (multiplier <= 1.05) return 'bg-gray-100 text-gray-800'; // Average - Gray
-    if (multiplier <= 1.2) return 'bg-red-100 text-red-800'; // Weak defense - Light red
-    if (multiplier <= 1.4) return 'bg-red-200 text-red-800'; // Very weak defense - Medium red
-    return 'bg-red-300 text-red-800'; // Extremely weak defense - Easy for attackers - Strong red
+    if (multiplier <= 1.2) return 'bg-green-100 text-green-800'; // Weak defense - Light green
+    if (multiplier <= 1.4) return 'bg-green-200 text-green-800'; // Very weak defense - Medium green
+    return 'bg-green-300 text-green-800'; // Extremely weak defense - Easy for attackers - Strong green
   };
 
   // Get tier color class (legacy - still used in some places)
@@ -713,11 +713,11 @@ export default function Fixtures() {
             <TabsContent value="attacking" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-300 rounded"></div>
+                  <div className="w-3 h-3 bg-red-300 rounded"></div>
                   <span>Very Hard (strong defense)</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
+                  <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
                   <span>Hard</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -725,11 +725,11 @@ export default function Fixtures() {
                   <span>Average</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
+                  <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
                   <span>Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-300 rounded"></div>
+                  <div className="w-3 h-3 bg-green-300 rounded"></div>
                   <span>Very Easy (weak defense)</span>
                 </div>
                 <div className="text-xs text-gray-600">
