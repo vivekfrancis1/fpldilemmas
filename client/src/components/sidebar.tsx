@@ -70,6 +70,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Team Projections", 
       items: [
+        { path: "/fixtures", label: "Fixture Difficulty Rating", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
         { path: "/team-goal-projections", label: "Goals", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-cs-projections", label: "Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/projected-goals-cs", label: "Match Predictions", icon: Target, description: "Projected goals & clean sheets", popular: true },
@@ -89,7 +90,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
         { path: "/current-standings", label: "Team Statistics", icon: Trophy, description: "Current league table based on completed matches", popular: false },
-        { path: "/fixtures", label: "Fixture Difficulty Rating", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
         { path: "/results-and-fixtures", label: "Results and Match Stats", icon: Trophy, description: "Complete Premier League schedule with results", popular: false },
         { path: "/recent-price-changes", label: "Recent Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
         { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false }
