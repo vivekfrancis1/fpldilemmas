@@ -219,6 +219,7 @@ export class TeamGoalsService {
       // Get opponent's average expected goals conceded per game from current standings
       const opponentAvgXGC = await TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
       
+      
       // Phase 1: Hybrid performance-based foundation - (actual goals + xG + opponent GC + opponent xGC) * 0.25
       let baseExpectedGoals = (teamAvgGoals + teamAvgXG + opponentAvgGC + opponentAvgXGC) * 0.25;
       
@@ -226,15 +227,19 @@ export class TeamGoalsService {
       const venueMultiplier = isHome ? 
         TeamGoalsService.num(adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier, 1.16) :
         TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.84);
+      
+      
       baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, venueMultiplier, 1.0);
       
       
       // REMOVED: All tier-based multipliers - now using dynamic performance-based calculations only
       
       // Phase 3: Context Multipliers (with enhanced error handling)
+      const beforeContextMultipliers = baseExpectedGoals;
       baseExpectedGoals = TeamGoalsService.applyContextMultipliers(
         baseExpectedGoals, team, opponent, fixture, isHome, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
       );
+      
       
       
       // REMOVED: Phase 4 (Market Bounds) - No longer constraining projections with market-based limits
