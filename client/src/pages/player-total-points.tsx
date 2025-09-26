@@ -91,31 +91,75 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
 function parseReturnDate(newsText: string): Date | null {
   if (!newsText) return null;
   
-  // Look for patterns like "Expected back 18 Oct", "Return date 25 Nov", "Due back 03 Dec"
-  const datePattern = /(?:expected back|return date|due back|back)\s+(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i;
-  const match = newsText.match(datePattern);
-  
-  if (!match) return null;
-  
-  const day = parseInt(match[1]);
-  const monthStr = match[2].toLowerCase();
+  // Try multiple patterns for different date formats
+  const patterns = [
+    // "Expected back 18 Oct", "Return date 25 Nov", "Due back 03 Dec"
+    /(?:expected back|return date|due back|back)\s+(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
+    // "Expected back October 25", "Due back November 18"
+    /(?:expected back|return date|due back|back)\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i,
+    // "Expected back 25th October", "Due back 18th November"
+    /(?:expected back|return date|due back|back)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i,
+    // "October 25", "November 18" (simple format)
+    /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i,
+    // "25 October", "18 November" (day first)
+    /(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i
+  ];
   
   const monthMap: { [key: string]: number } = {
-    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+    jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, 
+    apr: 3, april: 3, may: 4, jun: 5, june: 5,
+    jul: 6, july: 6, aug: 7, august: 7, sep: 8, september: 8, 
+    oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11
   };
   
-  const month = monthMap[monthStr];
-  if (month === undefined) return null;
+  for (const pattern of patterns) {
+    const match = newsText.match(pattern);
+    if (match) {
+      let day: number;
+      let monthStr: string;
+      
+      // Handle different match group arrangements
+      if (pattern.source.includes('(\\d{1,2}).*?(january|february')) {
+        // Pattern 3: "25th October"
+        day = parseInt(match[1]);
+        monthStr = match[2].toLowerCase();
+      } else if (pattern.source.includes('(january|february.*?(\\d{1,2})')) {
+        // Pattern 2: "October 25"
+        monthStr = match[1].toLowerCase();
+        day = parseInt(match[2]);
+      } else if (match[1] && match[2]) {
+        // Handle both day-first and month-first patterns
+        const first = match[1];
+        const second = match[2];
+        
+        if (isNaN(parseInt(first))) {
+          // First part is month name
+          monthStr = first.toLowerCase();
+          day = parseInt(second);
+        } else {
+          // First part is day number
+          day = parseInt(first);
+          monthStr = second.toLowerCase();
+        }
+      } else {
+        continue;
+      }
+      
+      const month = monthMap[monthStr];
+      if (month === undefined) continue;
+      
+      // Use current year, but if month is before current month, use next year
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      
+      const year = month < currentMonth ? currentYear + 1 : currentYear;
+      
+      return new Date(year, month, day);
+    }
+  }
   
-  // Use current year, but if month is before current month, use next year
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-  
-  const year = month < currentMonth ? currentYear + 1 : currentYear;
-  
-  return new Date(year, month, day);
+  return null;
 }
 
 function getGameweekFromDate(date: Date, bootstrapData: BootstrapData): number | null {
@@ -140,6 +184,8 @@ function applyAvailabilityAdjustments(
   const chanceOfPlaying = player.chanceOfPlayingNextRound ?? 100;
   const status = player.status || 'a';
   const news = player.news || '';
+  
+  // Apply availability adjustments based on player status
   
   // If fully available, no adjustments needed
   if (chanceOfPlaying >= 100 && status === 'a') {
