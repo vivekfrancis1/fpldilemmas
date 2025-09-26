@@ -11814,16 +11814,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return {
           playerId,
           playerName: goals?.playerName || assists?.playerName || minutes?.playerName || 'Unknown',
-          projectedGoals: goals?.totalProjectedGoals || goals?.averageGoalsPerGameweek * (endGameweek - startGameweek + 1) || 0,
-          projectedAssists: assists?.totalProjectedAssists || assists?.averageAssistsPerGameweek * (endGameweek - startGameweek + 1) || 0,
-          projectedMinutes: minutes?.totalProjectedMinutes || minutes?.averageMinutesPerGameweek * (endGameweek - startGameweek + 1) || 0,
-          projectedCleanSheets: cleanSheets?.totalProjectedCleanSheets || cleanSheets?.averageCleanSheetsPerGameweek * (endGameweek - startGameweek + 1) || 0,
-          projectedDefensiveContributions: defensive?.totalProjectedDefensiveContributions || defensive?.averageDefensiveContributionsPerGameweek * (endGameweek - startGameweek + 1) || 0,
-          projectedSaves: saves?.totalProjectedSaves || saves?.averageSavesPerGameweek * (endGameweek - startGameweek + 1) || 0,
-          projectedGoalsConceded: goalsConceded?.totalProjectedGoalsConceded || goalsConceded?.averageGoalsConcededPerGameweek * (endGameweek - startGameweek + 1) || 0,
-          projectedYellowCards: yellowCards?.totalProjectedYellowCards || yellowCards?.averageYellowCardsPerGameweek * (endGameweek - startGameweek + 1) || 0,
-          projectedRedCards: redCards?.totalProjectedRedCards || redCards?.averageRedCardsPerGameweek * (endGameweek - startGameweek + 1) || 0,
-          projectedBonusPoints: bonus?.totalProjectedBonusPoints || bonus?.averageBonusPointsPerGameweek * (endGameweek - startGameweek + 1) || 0
+          projectedGoals: goals?.totalProjectedGoals || 0,
+          projectedAssists: assists?.totalProjectedAssists || 0,
+          projectedMinutes: minutes?.expectedMinutesPerGame ? minutes.expectedMinutesPerGame * (endGameweek - startGameweek + 1) : 0,
+          projectedCleanSheets: cleanSheets?.totalProjectedCleanSheets || 0,
+          projectedDefensiveContributions: defensive?.totalDefensiveContributions || 0,
+          projectedSaves: saves?.totalSaves || 0,
+          projectedGoalsConceded: goalsConceded?.totalGoalsConceded || 0,
+          projectedYellowCards: yellowCards?.totalYellowCards || 0,
+          projectedRedCards: redCards?.totalRedCards || 0,
+          projectedBonusPoints: bonus?.totalBonusPoints || 0
         };
       });
 
