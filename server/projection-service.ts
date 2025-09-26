@@ -231,7 +231,7 @@ class ProjectionService {
             const rotationRisk = selectedBy > 30 ? 0.95 : selectedBy > 10 ? 0.85 : 0.75; // Popular players less rotated
             const expectedMinutes = Math.min(90, adjustedForm * 15) * injuryRisk * rotationRisk;
             const minutesPoints = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
-            pointsFromMinutes[`gw${gw}`] = minutesPoints;
+            pointsFromMinutes[gw.toString()] = minutesPoints; // Use numeric string for consistency
             totalMinutesPoints += minutesPoints;
             
             // 2. GOALS CALCULATION (per 90 minutes, scaled by expected minutes)
@@ -247,7 +247,7 @@ class ProjectionService {
             }
             
             const gwGoalPoints = goalsExpected * goalPoints;
-            pointsFromGoals[`gw${gw}`] = Math.round(gwGoalPoints * 100) / 100;
+            pointsFromGoals[gw.toString()] = Math.round(gwGoalPoints * 100) / 100; // Use numeric string for consistency
             totalGoalPoints += gwGoalPoints;
             
             // 3. ASSISTS CALCULATION
@@ -263,7 +263,7 @@ class ProjectionService {
             }
             
             const gwAssistPoints = assistsExpected * assistPoints;
-            pointsFromAssists[`gw${gw}`] = Math.round(gwAssistPoints * 100) / 100;
+            pointsFromAssists[gw.toString()] = Math.round(gwAssistPoints * 100) / 100; // Use numeric string for consistency
             totalAssistPoints += gwAssistPoints;
             
             // 4. CLEAN SHEET CALCULATION (defensive strength vs opponent attack)
@@ -281,7 +281,7 @@ class ProjectionService {
             }
             
             const gwCleanSheetPoints = cleanSheetProb * cleanSheetPoints;
-            pointsFromCleanSheets[`gw${gw}`] = Math.round(gwCleanSheetPoints * 100) / 100;
+            pointsFromCleanSheets[gw.toString()] = Math.round(gwCleanSheetPoints * 100) / 100; // Use numeric string for consistency
             
             // 5. SAVES CALCULATION (Goalkeepers Only) - Official FPL Rules: 1pt per 3 saves, 5pts per penalty save
             let savesPoints = 0;
@@ -398,18 +398,18 @@ class ProjectionService {
               const dcProbability = Math.min(estimatedDC / dcThreshold, 1.0); // Probability of reaching threshold
               gwDefensivePoints = dcProbability * 2; // Expected points from defensive contributions
             }
-            pointsFromDefensiveContributions[`gw${gw}`] = Math.round(gwDefensivePoints * 100) / 100;
+            pointsFromDefensiveContributions[gw.toString()] = Math.round(gwDefensivePoints * 100) / 100; // Use numeric string for consistency
             totalDefensivePoints += gwDefensivePoints;
             
             // Store bonus points in the dedicated tracking
-            pointsFromBonus[`gw${gw}`] = Math.round(bonusPoints * 100) / 100;
+            pointsFromBonus[gw.toString()] = Math.round(bonusPoints * 100) / 100; // Use numeric string for consistency
             totalBonusPoints += bonusPoints;
             
             // 11. TOTAL GAMEWEEK POINTS (sum ALL FPL scoring components)
             const gwTotal = gwGoalPoints + gwAssistPoints + gwCleanSheetPoints + gwDefensivePoints + 
                           minutesPoints + savesPoints + goalsConcededPoints + yellowCardPoints + 
                           redCardPoints + bonusPoints;
-            gameweekProjections[`gw${gw}`] = Math.max(Math.round(gwTotal * 100) / 100, 0.0);
+            gameweekProjections[gw.toString()] = Math.max(Math.round(gwTotal * 100) / 100, 0.0); // Use numeric string for consistency
             totalExpectedPoints += gwTotal;
           }
           
