@@ -8575,7 +8575,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const duration = Date.now() - startTime;
       console.log(`DEBUG: Aggregated ${projections.length} player total points in ${duration}ms from ${responses.length} individual APIs`);
       
-      // Cache the result for 15 minutes
+      // 🛡️ CACHE VALIDATION: Only cache if we have meaningful data to prevent race condition corruption
+      if (projections.length === 0) {
+        console.warn(`⚠️ CACHE PROTECTION: Refusing to cache empty player total points data for GW${start}-${end} - likely race condition during initialization`);
+        return res.status(503).json({ error: 'No projection data available - system initializing, please try again' });
+      }
+      
+      if (projections.length < 100) {
+        console.warn(`⚠️ CACHE PROTECTION: Refusing to cache suspiciously low player count (${projections.length}) for GW${start}-${end} - likely data corruption`);
+        return res.status(503).json({ error: 'Insufficient projection data - system initializing, please try again' });
+      }
+      
+      // Cache the result for 15 minutes only if data is valid
       totalPointsCache.set(cacheKey, {
         data: projections,
         timestamp: Date.now()
@@ -12078,8 +12089,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cachedData = totalPointsCache.get(currentCacheKey);
       
       if (cachedData && (Date.now() - cachedData.timestamp) < TOTAL_POINTS_CACHE_DURATION) {
-        console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${cachedData.data.length} players)`);
-        return res.json(cachedData.data);
+        // 🛡️ MEMORY CACHE VALIDATION: Check for corrupted data with empty component breakdowns
+        if (cachedData.data.length > 0) {
+          const samplePlayer = cachedData.data[0];
+          const goalsKeys = Object.keys(samplePlayer.pointsFromGoals || {}).length;
+          const assistsKeys = Object.keys(samplePlayer.pointsFromAssists || {}).length;
+          const cleanSheetsKeys = Object.keys(samplePlayer.pointsFromCleanSheets || {}).length;
+          const hasValidComponents = goalsKeys > 0 || assistsKeys > 0 || cleanSheetsKeys > 0;
+          
+          console.log(`🔍 CACHE DEBUG: Player "${samplePlayer.playerName || 'Unknown'}" - Goals keys: ${goalsKeys}, Assists keys: ${assistsKeys}, CS keys: ${cleanSheetsKeys}, Valid: ${hasValidComponents}`);
+          
+          if (!hasValidComponents) {
+            console.warn(`⚠️ CACHE PROTECTION: Detected corrupted memory cache with empty component breakdowns - clearing corrupted cache`);
+            totalPointsCache.delete(currentCacheKey); // Clear corrupted cache
+            // Continue to fresh calculation
+          } else {
+            console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${cachedData.data.length} players)`);
+            return res.json(cachedData.data);
+          }
+        }
       }
       
       // Serve from new aggregated cache database table
@@ -12144,22 +12172,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           }).sort((a, b) => b.totalPoints - a.totalPoints); // Sort by total points descending
           
-          // Cache the result in memory for faster subsequent access
-          totalPointsCache.set(currentCacheKey, {
-            data: transformedData,
-            timestamp: Date.now()
-          });
-          
-          console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${transformedData.length} players)`);
-          return res.json(transformedData);
+          // 🛡️ CACHE VALIDATION: Detect corrupted database cache with empty component breakdowns
+          if (transformedData.length > 0) {
+            const samplePlayer = transformedData[0];
+            const hasValidComponents = Object.keys(samplePlayer.pointsFromGoals || {}).length > 0 ||
+                                     Object.keys(samplePlayer.pointsFromAssists || {}).length > 0 ||
+                                     Object.keys(samplePlayer.pointsFromCleanSheets || {}).length > 0;
+            
+            if (!hasValidComponents) {
+              console.warn(`⚠️ CACHE PROTECTION: Detected corrupted cached data with empty component breakdowns - serving fresh data instead`);
+              // Don't return corrupted cache, let it fall through to fresh calculation
+            } else {
+              // Cache is valid - serve it
+              totalPointsCache.set(currentCacheKey, {
+                data: transformedData,
+                timestamp: Date.now()
+              });
+              
+              console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${transformedData.length} players)`);
+              return res.json(transformedData);
+            }
+          }
         }
       } catch (dbError) {
         console.error("📦 CACHED: Aggregated database cache failed:", dbError);
       }
       
-      // If no cached data available, return empty array to prevent errors
-      console.log("⚠️ No cached Player Total Points data available - returning empty array");
-      res.json([]);
+      // If no cached data available, fall back to live API calculation
+      console.log("🔄 No valid cached data available - falling back to live API calculation");
+      
+      try {
+        // Call the main player total points API for fresh calculation
+        const liveResponse = await internalFetch(`api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+        
+        if (liveResponse.ok) {
+          const liveData = await liveResponse.json();
+          console.log(`✅ LIVE FALLBACK: Generated fresh Player Total Points for GW${startGameweek}-${endGameweek} (${liveData.length} players)`);
+          return res.json(liveData);
+        } else {
+          throw new Error(`Live API failed with status: ${liveResponse.status}`);
+        }
+      } catch (fallbackError) {
+        console.error("🚨 FALLBACK FAILED: Both cache and live API failed:", fallbackError);
+        res.json([]); // Only return empty array as last resort
+      }
       
     } catch (error) {
       console.error("Error in cached player total points:", error);
