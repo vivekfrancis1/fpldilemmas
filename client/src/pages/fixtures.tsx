@@ -733,7 +733,7 @@ export default function Fixtures() {
                   <span>Very Easy (weak defense)</span>
                 </div>
                 <div className="text-xs text-gray-600">
-                  Dynamic colors based on opponent's defensive performance from current standings
+                  Dynamic colours based on opponent's defensive strength as per current standings
                 </div>
               </div>
 
