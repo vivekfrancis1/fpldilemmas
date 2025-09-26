@@ -179,10 +179,11 @@ export default function CurrentStandings() {
     };
   }) || [];
 
-  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+  const SortableHeader = ({ field, children, tooltip }: { field: SortField; children: React.ReactNode; tooltip: string }) => (
     <th 
       className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
       onClick={() => handleSort(field)}
+      title={tooltip}
       data-testid={`sort-${field}`}
     >
       <div className="flex items-center justify-center gap-1">
@@ -293,6 +294,7 @@ export default function CurrentStandings() {
                     {/* Position & Team Info */}
                     <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r cursor-pointer hover:bg-gray-100 transition-colors"
                         onClick={() => handleSort('position')}
+                        title="League position (1st to 20th)"
                         data-testid="sort-position">
                       <div className="flex items-center justify-center gap-1">
                         Pos
@@ -303,6 +305,7 @@ export default function CurrentStandings() {
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-16 bg-gray-50 z-10 border-r min-w-[140px] cursor-pointer hover:bg-gray-100 transition-colors"
                         onClick={() => handleSort('name')}
+                        title="Team name"
                         data-testid="sort-name">
                       <div className="flex items-center gap-1">
                         Team
@@ -313,14 +316,15 @@ export default function CurrentStandings() {
                     </th>
                     
                     {/* Match Record */}
-                    <SortableHeader field="played">P</SortableHeader>
-                    <SortableHeader field="wins">W</SortableHeader>
-                    <SortableHeader field="draws">D</SortableHeader>
-                    <SortableHeader field="losses">L</SortableHeader>
+                    <SortableHeader field="played" tooltip="Matches played this season">P</SortableHeader>
+                    <SortableHeader field="wins" tooltip="Matches won (3 points each)">W</SortableHeader>
+                    <SortableHeader field="draws" tooltip="Matches drawn (1 point each)">D</SortableHeader>
+                    <SortableHeader field="losses" tooltip="Matches lost (0 points)">L</SortableHeader>
                     
                     {/* Goals */}
                     <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l cursor-pointer hover:bg-gray-100 transition-colors"
                         onClick={() => handleSort('goalsFor')}
+                        title="Goals scored by the team"
                         data-testid="sort-goalsFor">
                       <div className="flex items-center justify-center gap-1">
                         GF
@@ -329,12 +333,13 @@ export default function CurrentStandings() {
                         )}
                       </div>
                     </th>
-                    <SortableHeader field="goalsAgainst">GA</SortableHeader>
-                    <SortableHeader field="goalDifference">GD</SortableHeader>
+                    <SortableHeader field="goalsAgainst" tooltip="Goals conceded by the team">GA</SortableHeader>
+                    <SortableHeader field="goalDifference" tooltip="Goal difference (Goals For - Goals Against)">GD</SortableHeader>
                     
                     {/* Points */}
                     <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
                         onClick={() => handleSort('points')}
+                        title="Total points (3 for win, 1 for draw, 0 for loss)"
                         data-testid="sort-points">
                       <div className="flex items-center justify-center gap-1">
                         Pts
@@ -345,20 +350,21 @@ export default function CurrentStandings() {
                     </th>
                     
                     {/* Expected Goals - After Points */}
-                    <SortableHeader field="expectedGoalsFor">xGF</SortableHeader>
-                    <SortableHeader field="expectedGoalsAgainst">xGA</SortableHeader>
-                    <SortableHeader field="adjustedGoalRate">AGR</SortableHeader>
-                    <SortableHeader field="adjustedGoalsAgainstRate">AGAR</SortableHeader>
-                    <SortableHeader field="attackingMultiplier">Att. Mult.</SortableHeader>
-                    <SortableHeader field="defensiveMultiplier">Def. Mult.</SortableHeader>
+                    <SortableHeader field="expectedGoalsFor" tooltip="Expected Goals For - statistical model of scoring chances">xGF</SortableHeader>
+                    <SortableHeader field="expectedGoalsAgainst" tooltip="Expected Goals Against - statistical model of chances conceded">xGA</SortableHeader>
+                    <SortableHeader field="adjustedGoalRate" tooltip="Adjusted Goal Rate: 0.5 × (Goals For + xGF) per game">AGR</SortableHeader>
+                    <SortableHeader field="adjustedGoalsAgainstRate" tooltip="Adjusted Goals Against Rate: 0.5 × (Goals Against + xGA) per game">AGAR</SortableHeader>
+                    <SortableHeader field="attackingMultiplier" tooltip="Dynamic attacking strength relative to league average (1.0 = average)">Att. Mult.</SortableHeader>
+                    <SortableHeader field="defensiveMultiplier" tooltip="Dynamic defensive strength relative to league average (1.0 = average)">Def. Mult.</SortableHeader>
                     
                     {/* Defensive Stats - After xGA */}
-                    <SortableHeader field="tackles">T</SortableHeader>
-                    <SortableHeader field="defensiveActions">DA</SortableHeader>
+                    <SortableHeader field="tackles" tooltip="Total tackles made by the team">T</SortableHeader>
+                    <SortableHeader field="defensiveActions" tooltip="Defensive actions (interceptions, blocks, clearances)">DA</SortableHeader>
                     
                     {/* Enhanced Statistics */}
                     <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l cursor-pointer hover:bg-gray-100 transition-colors"
                         onClick={() => handleSort('cleanSheets')}
+                        title="Clean sheets (matches without conceding a goal)"
                         data-testid="sort-cleanSheets">
                       <div className="flex items-center justify-center gap-1">
                         CS
@@ -367,12 +373,12 @@ export default function CurrentStandings() {
                         )}
                       </div>
                     </th>
-                    <SortableHeader field="yellowCards">YC</SortableHeader>
-                    <SortableHeader field="redCards">RC</SortableHeader>
-                    <SortableHeader field="saves">Saves</SortableHeader>
-                    <SortableHeader field="penaltiesSaved">PS</SortableHeader>
-                    <SortableHeader field="ownGoals">OG</SortableHeader>
-                    <SortableHeader field="penaltiesMissed">PM</SortableHeader>
+                    <SortableHeader field="yellowCards" tooltip="Yellow cards received by team players">YC</SortableHeader>
+                    <SortableHeader field="redCards" tooltip="Red cards received by team players">RC</SortableHeader>
+                    <SortableHeader field="saves" tooltip="Goalkeeper saves made by the team">Saves</SortableHeader>
+                    <SortableHeader field="penaltiesSaved" tooltip="Penalties saved by team goalkeepers">PS</SortableHeader>
+                    <SortableHeader field="ownGoals" tooltip="Own goals scored by team players">OG</SortableHeader>
+                    <SortableHeader field="penaltiesMissed" tooltip="Penalties missed by team players">PM</SortableHeader>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
