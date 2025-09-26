@@ -72,6 +72,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/fixtures", label: "Fixture Difficulty Rating", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
         { path: "/team-goal-projections", label: "Goals", icon: BarChart3, description: "Expected team goals", popular: false },
+        { path: "/team-goals-against-projections", label: "Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
         { path: "/team-cs-projections", label: "Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/projected-goals-cs", label: "Match Predictions", icon: Target, description: "Projected goals & clean sheets", popular: true },
         { path: "/projected-standings", label: "Standings", icon: Trophy, description: "Final league table projection", popular: false }
@@ -142,8 +143,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/team-assist-projections", label: "Team Assists", icon: Zap, description: "Expected team assists", popular: false },
         { path: "/goal-share", label: "Goal Share", icon: Target, description: "Player goal share breakdown by team", popular: false },
         { path: "/assist-share", label: "Assist Share", icon: Zap, description: "Player assist share breakdown by team", popular: false },
-        { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false },
-        { path: "/team-goals-against-projections", label: "Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
+        { path: "/predicted-scores", label: "Predicted Scores", icon: Target, description: "Match predictions with rounded scores", popular: false }
       ]
     },
     {
