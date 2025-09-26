@@ -77,6 +77,7 @@ export default function PlayerProjectionsComparisonModal({
   // Fetch raw projections data separately - only when modal is open
   const { data: rawProjectionsData, isLoading: rawProjectionsLoading } = useQuery({
     queryKey: ["/api/player-raw-projections", startGameweek, endGameweek],
+    queryFn: () => fetch(`/api/player-raw-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).then(res => res.json()),
     enabled: isOpen && players.length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -93,13 +94,11 @@ export default function PlayerProjectionsComparisonModal({
       projectedGoals: rawData?.projectedGoals || 0,
       projectedAssists: rawData?.projectedAssists || 0,
       projectedMinutes: rawData?.projectedMinutes || 0,
-      projectedCleanSheets: rawData?.projectedCleanSheets || 0,
       projectedDefensiveContributions: rawData?.projectedDefensiveContributions || 0,
       projectedSaves: rawData?.projectedSaves || 0,
       projectedGoalsConceded: rawData?.projectedGoalsConceded || 0,
       projectedYellowCards: rawData?.projectedYellowCards || 0,
-      projectedRedCards: rawData?.projectedRedCards || 0,
-      projectedBonusPoints: rawData?.projectedBonusPoints || 0
+      projectedRedCards: rawData?.projectedRedCards || 0
     };
   });
 
@@ -212,12 +211,6 @@ export default function PlayerProjectionsComparisonModal({
       decimals: 2
     },
     {
-      key: 'totalPointsFromCleanSheets',
-      label: 'Points from Clean Sheets',
-      format: 'points',
-      decimals: 2
-    },
-    {
       key: 'totalPointsFromMinutes',
       label: 'Points from Minutes',
       format: 'points',
@@ -253,12 +246,6 @@ export default function PlayerProjectionsComparisonModal({
       format: 'points',
       decimals: 2
     },
-    {
-      key: 'totalPointsFromBonus',
-      label: 'Points from Bonus',
-      format: 'points',
-      decimals: 2
-    },
     // Raw Projected Statistics
     {
       key: 'projectedGoals',
@@ -269,12 +256,6 @@ export default function PlayerProjectionsComparisonModal({
     {
       key: 'projectedAssists', 
       label: 'Projected Assists',
-      format: 'number',
-      decimals: 2
-    },
-    {
-      key: 'projectedCleanSheets',
-      label: 'Projected Clean Sheets',
       format: 'number',
       decimals: 2
     },
@@ -314,12 +295,6 @@ export default function PlayerProjectionsComparisonModal({
       format: 'number',
       decimals: 2
     },
-    {
-      key: 'projectedBonusPoints',
-      label: 'Projected Bonus Points',
-      format: 'number',
-      decimals: 2
-    }
   ];
 
   // Mobile-responsive content component
