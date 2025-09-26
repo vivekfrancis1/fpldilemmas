@@ -10767,8 +10767,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Apply new points formula: Points from saves = 0.33 × expected saves
             const expectedPoints = expectedSaves * 0.33;
             
-            saves[`gw${gw}`] = parseFloat(expectedSaves.toFixed(1));
-            pointsFromSaves[`gw${gw}`] = parseFloat(expectedPoints.toFixed(1));
+            saves[`gw${gw}`] = parseFloat(expectedSaves.toFixed(3));
+            pointsFromSaves[`gw${gw}`] = parseFloat(expectedPoints.toFixed(3));
             totalSaves += expectedSaves;
             totalPoints += expectedPoints;
           }
@@ -10780,9 +10780,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             position: 'GKP',
             saves,
             pointsFromSaves,
-            totalSaves: parseFloat(totalSaves.toFixed(1)),
-            totalPoints: parseFloat(totalPoints.toFixed(1)),
-            averagePerGameweek: parseFloat((totalSaves / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(1)),
+            totalSaves: parseFloat(totalSaves.toFixed(3)),
+            totalPoints: parseFloat(totalPoints.toFixed(3)),
+            averagePerGameweek: parseFloat((totalSaves / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(3)),
             savesPerTeamGame: savesPerTeamGame, // Include for verification
             teamGamesPlayed: teamGamesPlayed, // Include for verification
             seasonTotalSaves: currentSeasonSaves // Include raw saves value
