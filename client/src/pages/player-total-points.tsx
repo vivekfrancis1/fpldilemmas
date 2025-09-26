@@ -86,6 +86,112 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
     </Tooltip>
   );
 }
+
+// Availability Adjustment Helpers for Frontend
+function parseReturnDate(newsText: string): Date | null {
+  if (!newsText) return null;
+  
+  // Look for patterns like "Expected back 18 Oct", "Return date 25 Nov", "Due back 03 Dec"
+  const datePattern = /(?:expected back|return date|due back|back)\s+(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i;
+  const match = newsText.match(datePattern);
+  
+  if (!match) return null;
+  
+  const day = parseInt(match[1]);
+  const monthStr = match[2].toLowerCase();
+  
+  const monthMap: { [key: string]: number } = {
+    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+  };
+  
+  const month = monthMap[monthStr];
+  if (month === undefined) return null;
+  
+  // Use current year, but if month is before current month, use next year
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  
+  const year = month < currentMonth ? currentYear + 1 : currentYear;
+  
+  return new Date(year, month, day);
+}
+
+function getGameweekFromDate(date: Date, bootstrapData: BootstrapData): number | null {
+  if (!bootstrapData?.events) return null;
+  
+  for (const event of bootstrapData.events) {
+    const deadlineDate = new Date(event.deadline_time);
+    // If the return date is before this gameweek's deadline, player could be available
+    if (date <= deadlineDate) {
+      return event.id;
+    }
+  }
+  
+  return null; // Date is beyond all gameweeks
+}
+
+function applyAvailabilityAdjustments(
+  player: PlayerTotalPointsData,
+  bootstrapData: BootstrapData,
+  currentGameweek: number
+): PlayerTotalPointsData {
+  const chanceOfPlaying = player.chanceOfPlayingNextRound ?? 100;
+  const status = player.status || 'a';
+  const news = player.news || '';
+  
+  // If fully available, no adjustments needed
+  if (chanceOfPlaying >= 100 && status === 'a') {
+    return player;
+  }
+  
+  const adjustedPlayer = { ...player };
+  const adjustedProjections = { ...player.gameweekProjections };
+  
+  if (chanceOfPlaying === 0) {
+    // 0% availability - suspended or injured
+    const returnDate = parseReturnDate(news);
+    
+    if (returnDate) {
+      // Zero out projections for gameweeks before return date
+      const returnGameweek = getGameweekFromDate(returnDate, bootstrapData);
+      
+      Object.keys(adjustedProjections).forEach(gwKey => {
+        const gw = parseInt(gwKey);
+        if (returnGameweek && gw < returnGameweek) {
+          adjustedProjections[gwKey] = 0;
+        }
+      });
+    } else {
+      // No return date - zero out all projections
+      Object.keys(adjustedProjections).forEach(gwKey => {
+        adjustedProjections[gwKey] = 0;
+      });
+    }
+  } else if (chanceOfPlaying === 25 || chanceOfPlaying === 50 || chanceOfPlaying === 75) {
+    // Partial availability - multiply next gameweek only
+    const nextGameweek = (currentGameweek + 1).toString();
+    if (adjustedProjections[nextGameweek] !== undefined) {
+      const multiplier = chanceOfPlaying / 100;
+      adjustedProjections[nextGameweek] = adjustedProjections[nextGameweek] * multiplier;
+    }
+  }
+  
+  // Recalculate totals and averages after adjustments
+  const gameweekCount = Object.keys(adjustedProjections).length;
+  const newTotalExpectedPoints = Object.values(adjustedProjections).reduce((sum, points) => sum + points, 0);
+  const newAveragePerGameweek = gameweekCount > 0 ? newTotalExpectedPoints / gameweekCount : 0;
+  const newAverageValue = player.price > 0 ? newAveragePerGameweek / player.price : 0;
+  
+  adjustedPlayer.gameweekProjections = adjustedProjections;
+  adjustedPlayer.totalExpectedPoints = Math.round(newTotalExpectedPoints * 100) / 100;
+  adjustedPlayer.averagePerGameweek = Math.round(newAveragePerGameweek * 100) / 100;
+  adjustedPlayer.averageValue = Math.round(newAverageValue * 100) / 100;
+  
+  return adjustedPlayer;
+}
+
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 import PlayerProjectionsComparisonModal from "@/components/player-projections-comparison-modal";
 
@@ -685,6 +791,8 @@ export default function PlayerTotalPoints() {
 
   // Data selection logic - API-first approach with cache fallback for reliability
   const totalPointsData = useMemo(() => {
+    let selectedData: PlayerTotalPointsData[] | null = null;
+    
     // PRIORITY 1: Use live API data if available and valid (ensures freshest data)
     if (liveTotalPointsData && liveTotalPointsData.length > 0 && !liveError) {
       const samplePlayer = liveTotalPointsData[0];
@@ -694,12 +802,12 @@ export default function PlayerTotalPoints() {
         samplePlayer.totalExpectedPoints !== undefined;
       
       if (hasValidLiveData) {
-        return liveTotalPointsData;
+        selectedData = liveTotalPointsData;
       }
     }
     
     // PRIORITY 2: Fall back to cached data if live API fails, is loading, or has errors
-    if (cachedTotalPointsData && cachedTotalPointsData.length > 0) {
+    if (!selectedData && cachedTotalPointsData && cachedTotalPointsData.length > 0) {
       const samplePlayer = cachedTotalPointsData[0];
       
       // Simplified validation - just check for basic required fields
@@ -707,13 +815,24 @@ export default function PlayerTotalPoints() {
         samplePlayer.totalExpectedPoints !== undefined;
       
       if (hasValidCachedData) {
-        return cachedTotalPointsData;
+        selectedData = cachedTotalPointsData;
       }
     }
     
     // PRIORITY 3: Return null if neither data source is available
-    return null;
-  }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek]);
+    if (!selectedData) {
+      return null;
+    }
+    
+    // Apply availability adjustments to all players before returning
+    if (bootstrapData && currentGameweek) {
+      return selectedData.map(player => 
+        applyAvailabilityAdjustments(player, bootstrapData, currentGameweek)
+      );
+    }
+    
+    return selectedData;
+  }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek, bootstrapData, currentGameweek]);
 
   // Loading state - API-first loading logic: show loading primarily for live API, fallback to cached loading
   const isLoading = useMemo(() => {
