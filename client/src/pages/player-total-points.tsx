@@ -165,15 +165,32 @@ function parseReturnDate(newsText: string): Date | null {
 function getGameweekFromDate(date: Date, bootstrapData: BootstrapData): number | null {
   if (!bootstrapData?.events) return null;
   
-  for (const event of bootstrapData.events) {
+  // When suspended "until" a date, they return the day after
+  // So if suspended until Oct 25, they're available from Oct 26
+  const actualReturnDate = new Date(date);
+  actualReturnDate.setDate(actualReturnDate.getDate() + 1);
+  
+  const sortedEvents = bootstrapData.events.sort((a, b) => a.id - b.id);
+  
+  for (let i = 0; i < sortedEvents.length; i++) {
+    const event = sortedEvents[i];
     const deadlineDate = new Date(event.deadline_time);
-    // If the return date is before this gameweek's deadline, player could be available
-    if (date <= deadlineDate) {
+    const prevEvent = i > 0 ? sortedEvents[i - 1] : null;
+    const prevDeadline = prevEvent ? new Date(prevEvent.deadline_time) : new Date(0);
+    
+    // If the actual return date falls within this gameweek's period, they return during this GW
+    if (actualReturnDate > prevDeadline && actualReturnDate <= deadlineDate) {
       return event.id;
     }
   }
   
-  return null; // Date is beyond all gameweeks
+  // If date is after all deadlines, return the last gameweek
+  const lastEvent = sortedEvents[sortedEvents.length - 1];
+  if (lastEvent && actualReturnDate > new Date(lastEvent.deadline_time)) {
+    return lastEvent.id;
+  }
+  
+  return null;
 }
 
 function applyAvailabilityAdjustments(
