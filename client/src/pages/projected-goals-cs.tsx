@@ -614,21 +614,22 @@ export default function ProjectedGoalsCS() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">Calculation Methodology</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Team performance analysis</li>
-                    <li>• Historical match data</li>
-                    <li>• Current form and statistics</li>
-                    <li>• Fixture context factors</li>
+                    <li>• Pure performance-based calculations</li>
+                    <li>• Real-time FPL API data integration</li>
+                    <li>• Team averages: goals, xG, goals conceded, xGC</li>
+                    <li>• Venue and context multipliers applied</li>
+                    <li>• No fallback formulas or artificial constraints</li>
                   </ul>
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Key Metrics</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Goals: Projected team goals per match</li>
-                    <li>• CS%: Clean sheet probability percentage</li>
-                    <li>• Result: Match outcome predictions</li>
-                    <li>• Updated regularly throughout the season</li>
+                    <li>• Goals: Performance-based projections per match</li>
+                    <li>• CS%: Probability based on goals against data</li>
+                    <li>• Result: Live calculations from current standings</li>
+                    <li>• Updated with every FPL API refresh</li>
                   </ul>
                 </div>
               </div>
