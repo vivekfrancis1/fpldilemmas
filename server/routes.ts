@@ -3295,46 +3295,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         baseCleanSheetRate: number;
         homeBonus: number;
         cleanSheetConfidence: number;
-        attackingTier: string;
-        defensiveTier: string;
       }> = {
-        // Elite attacking units
-        13: { expectedGoalsPerGame: 1.97, goalVariance: 0.35, goalConfidence: 0.88, baseCleanSheetRate: 0.33, homeBonus: 0.07, cleanSheetConfidence: 0.89, attackingTier: 'elite', defensiveTier: 'elite' }, // Man City
-        1: { expectedGoalsPerGame: 1.67, goalVariance: 0.32, goalConfidence: 0.86, baseCleanSheetRate: 0.39, homeBonus: 0.08, cleanSheetConfidence: 0.93, attackingTier: 'strong', defensiveTier: 'elite' }, // Arsenal
-        12: { expectedGoalsPerGame: 2.14, goalVariance: 0.30, goalConfidence: 0.85, baseCleanSheetRate: 0.36, homeBonus: 0.09, cleanSheetConfidence: 0.91, attackingTier: 'elite', defensiveTier: 'elite' }, // Liverpool
-        7: { expectedGoalsPerGame: 1.95, goalVariance: 0.36, goalConfidence: 0.86, baseCleanSheetRate: 0.14, homeBonus: 0.03, cleanSheetConfidence: 0.60, attackingTier: 'elite', defensiveTier: 'average' }, // Chelsea
+        // Performance-based team data (tiers removed)
+        13: { expectedGoalsPerGame: 1.97, goalVariance: 0.35, goalConfidence: 0.88, baseCleanSheetRate: 0.33, homeBonus: 0.07, cleanSheetConfidence: 0.89 }, // Man City
+        1: { expectedGoalsPerGame: 1.67, goalVariance: 0.32, goalConfidence: 0.86, baseCleanSheetRate: 0.39, homeBonus: 0.08, cleanSheetConfidence: 0.93 }, // Arsenal
+        12: { expectedGoalsPerGame: 2.14, goalVariance: 0.30, goalConfidence: 0.85, baseCleanSheetRate: 0.36, homeBonus: 0.09, cleanSheetConfidence: 0.91 }, // Liverpool
+        7: { expectedGoalsPerGame: 1.95, goalVariance: 0.36, goalConfidence: 0.86, baseCleanSheetRate: 0.14, homeBonus: 0.03, cleanSheetConfidence: 0.60 }, // Chelsea
         
-        // Strong attacking teams
-        18: { expectedGoalsPerGame: 1.67, goalVariance: 0.44, goalConfidence: 0.76, baseCleanSheetRate: 0.11, homeBonus: 0.03, cleanSheetConfidence: 0.54, attackingTier: 'strong', defensiveTier: 'average' }, // Tottenham
-        6: { expectedGoalsPerGame: 1.85, goalVariance: 0.43, goalConfidence: 0.78, baseCleanSheetRate: 0.30, homeBonus: 0.07, cleanSheetConfidence: 0.86, attackingTier: 'strong', defensiveTier: 'strong' }, // Brighton
-        15: { expectedGoalsPerGame: 1.60, goalVariance: 0.40, goalConfidence: 0.76, baseCleanSheetRate: 0.27, homeBonus: 0.07, cleanSheetConfidence: 0.82, attackingTier: 'strong', defensiveTier: 'strong' }, // Newcastle
-        2: { expectedGoalsPerGame: 1.47, goalVariance: 0.42, goalConfidence: 0.74, baseCleanSheetRate: 0.25, homeBonus: 0.06, cleanSheetConfidence: 0.79, attackingTier: 'strong', defensiveTier: 'strong' }, // Aston Villa
-        14: { expectedGoalsPerGame: 1.45, goalVariance: 0.46, goalConfidence: 0.68, baseCleanSheetRate: 0.17, homeBonus: 0.04, cleanSheetConfidence: 0.66, attackingTier: 'strong', defensiveTier: 'average' }, // Man United
         
-        // Average attacking output
-        4: { expectedGoalsPerGame: 1.53, goalVariance: 0.44, goalConfidence: 0.70, baseCleanSheetRate: 0.21, homeBonus: 0.05, cleanSheetConfidence: 0.74, attackingTier: 'average', defensiveTier: 'average' }, // Bournemouth
-        10: { expectedGoalsPerGame: 1.20, goalVariance: 0.46, goalConfidence: 0.64, baseCleanSheetRate: 0.16, homeBonus: 0.04, cleanSheetConfidence: 0.63, attackingTier: 'average', defensiveTier: 'average' }, // Fulham
-        5: { expectedGoalsPerGame: 1.42, goalVariance: 0.44, goalConfidence: 0.61, baseCleanSheetRate: 0.23, homeBonus: 0.06, cleanSheetConfidence: 0.77, attackingTier: 'average', defensiveTier: 'strong' }, // Brentford
-        16: { expectedGoalsPerGame: 1.18, goalVariance: 0.48, goalConfidence: 0.60, baseCleanSheetRate: 0.29, homeBonus: 0.07, cleanSheetConfidence: 0.84, attackingTier: 'average', defensiveTier: 'strong' }, // Nottingham Forest
-        19: { expectedGoalsPerGame: 1.27, goalVariance: 0.50, goalConfidence: 0.58, baseCleanSheetRate: 0.16, homeBonus: 0.04, cleanSheetConfidence: 0.63, attackingTier: 'average', defensiveTier: 'average' }, // West Ham
+        18: { expectedGoalsPerGame: 1.67, goalVariance: 0.44, goalConfidence: 0.76, baseCleanSheetRate: 0.11, homeBonus: 0.03, cleanSheetConfidence: 0.54 }, // Tottenham
+        6: { expectedGoalsPerGame: 1.85, goalVariance: 0.43, goalConfidence: 0.78, baseCleanSheetRate: 0.30, homeBonus: 0.07, cleanSheetConfidence: 0.86 }, // Brighton
+        15: { expectedGoalsPerGame: 1.60, goalVariance: 0.40, goalConfidence: 0.76, baseCleanSheetRate: 0.27, homeBonus: 0.07, cleanSheetConfidence: 0.82 }, // Newcastle
+        2: { expectedGoalsPerGame: 1.47, goalVariance: 0.42, goalConfidence: 0.74, baseCleanSheetRate: 0.25, homeBonus: 0.06, cleanSheetConfidence: 0.79 }, // Aston Villa
+        14: { expectedGoalsPerGame: 1.45, goalVariance: 0.46, goalConfidence: 0.68, baseCleanSheetRate: 0.17, homeBonus: 0.04, cleanSheetConfidence: 0.66 }, // Man United
         
-        // Average attacking output
-        8: { expectedGoalsPerGame: 1.06, goalVariance: 0.48, goalConfidence: 0.55, baseCleanSheetRate: 0.12, homeBonus: 0.03, cleanSheetConfidence: 0.57, attackingTier: 'average', defensiveTier: 'average' }, // Crystal Palace
-        20: { expectedGoalsPerGame: 1.12, goalVariance: 0.52, goalConfidence: 0.50, baseCleanSheetRate: 0.09, homeBonus: 0.02, cleanSheetConfidence: 0.48, attackingTier: 'weak', defensiveTier: 'weak' }, // Wolves
-        9: { expectedGoalsPerGame: 1.10, goalVariance: 0.54, goalConfidence: 0.48, baseCleanSheetRate: 0.20, homeBonus: 0.05, cleanSheetConfidence: 0.71, attackingTier: 'average', defensiveTier: 'strong' }, // Everton
         
-        // Promoted teams (2025/26) - Championship level with no boosts
-        3: { expectedGoalsPerGame: 0.88, goalVariance: 0.58, goalConfidence: 0.38, baseCleanSheetRate: 0.08, homeBonus: 0.02, cleanSheetConfidence: 0.42, attackingTier: 'promoted', defensiveTier: 'promoted' }, // Burnley
-        11: { expectedGoalsPerGame: 0.95, goalVariance: 0.55, goalConfidence: 0.40, baseCleanSheetRate: 0.09, homeBonus: 0.02, cleanSheetConfidence: 0.44, attackingTier: 'promoted', defensiveTier: 'promoted' }, // Leeds
-        17: { expectedGoalsPerGame: 0.85, goalVariance: 0.60, goalConfidence: 0.36, baseCleanSheetRate: 0.06, homeBonus: 0.02, cleanSheetConfidence: 0.40, attackingTier: 'promoted', defensiveTier: 'promoted' }, // Sunderland
+        4: { expectedGoalsPerGame: 1.53, goalVariance: 0.44, goalConfidence: 0.70, baseCleanSheetRate: 0.21, homeBonus: 0.05, cleanSheetConfidence: 0.74 }, // Bournemouth
+        10: { expectedGoalsPerGame: 1.20, goalVariance: 0.46, goalConfidence: 0.64, baseCleanSheetRate: 0.16, homeBonus: 0.04, cleanSheetConfidence: 0.63 }, // Fulham
+        5: { expectedGoalsPerGame: 1.42, goalVariance: 0.44, goalConfidence: 0.61, baseCleanSheetRate: 0.23, homeBonus: 0.06, cleanSheetConfidence: 0.77 }, // Brentford
+        16: { expectedGoalsPerGame: 1.18, goalVariance: 0.48, goalConfidence: 0.60, baseCleanSheetRate: 0.29, homeBonus: 0.07, cleanSheetConfidence: 0.84 }, // Nottingham Forest
+        19: { expectedGoalsPerGame: 1.27, goalVariance: 0.50, goalConfidence: 0.58, baseCleanSheetRate: 0.16, homeBonus: 0.04, cleanSheetConfidence: 0.63 }, // West Ham
+        
+        
+        8: { expectedGoalsPerGame: 1.06, goalVariance: 0.48, goalConfidence: 0.55, baseCleanSheetRate: 0.12, homeBonus: 0.03, cleanSheetConfidence: 0.57 }, // Crystal Palace
+        20: { expectedGoalsPerGame: 1.12, goalVariance: 0.52, goalConfidence: 0.50, baseCleanSheetRate: 0.09, homeBonus: 0.02, cleanSheetConfidence: 0.48 }, // Wolves
+        9: { expectedGoalsPerGame: 1.10, goalVariance: 0.54, goalConfidence: 0.48, baseCleanSheetRate: 0.20, homeBonus: 0.05, cleanSheetConfidence: 0.71 }, // Everton
+        
+        // Promoted teams (2025/26) - Championship level
+        3: { expectedGoalsPerGame: 0.88, goalVariance: 0.58, goalConfidence: 0.38, baseCleanSheetRate: 0.08, homeBonus: 0.02, cleanSheetConfidence: 0.42 }, // Burnley
+        11: { expectedGoalsPerGame: 0.95, goalVariance: 0.55, goalConfidence: 0.40, baseCleanSheetRate: 0.09, homeBonus: 0.02, cleanSheetConfidence: 0.44 }, // Leeds
+        17: { expectedGoalsPerGame: 0.85, goalVariance: 0.60, goalConfidence: 0.36, baseCleanSheetRate: 0.06, homeBonus: 0.02, cleanSheetConfidence: 0.40 }, // Sunderland
       };
       
       // Upsert team data with projection metadata
       const teamInserts = teams.map((team: any) => {
         const metadata = projectionMetadata[team.id] || {
           expectedGoalsPerGame: 1.3, goalVariance: 0.45, goalConfidence: 0.60,
-          baseCleanSheetRate: 0.15, homeBonus: 0.04, cleanSheetConfidence: 0.60,
-          attackingTier: 'average', defensiveTier: 'average'
+          baseCleanSheetRate: 0.15, homeBonus: 0.04, cleanSheetConfidence: 0.60
         };
         
         return {
@@ -3369,9 +3366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expectedGoalsPerGame: adminGoalSettings.defaultExpectedGoalsPerGame,
         variance: adminGoalSettings.defaultTeamVariance,
         baseCleanSheetRate: 0.25, // Generic baseline - could be made configurable
-        homeBonus: 0.05, // Generic home bonus - could be made configurable
-        attackingTier: 'average', // Tiers now determined dynamically from admin team assignments
-        defensiveTier: 'average'  // Tiers now determined dynamically from admin team assignments
+        homeBonus: 0.05 // Generic home bonus - could be made configurable
       };
     });
     return teamMap;
@@ -3478,27 +3473,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Removed multipliers not available from FPL official APIs (set to 1.0):
         earlyKickoffMultiplier: 1.0,
         lateKickoffMultiplier: 1.0,
-        eliteAttackMultiplier: parseFloat(settings.eliteAttackMultiplier || "1.35"),
-        strongAttackMultiplier: parseFloat(settings.strongAttackMultiplier || "1.15"),
-        averageAttackMultiplier: parseFloat(settings.averageAttackMultiplier || "1.00"),
-        weakAttackMultiplier: parseFloat(settings.weakAttackMultiplier || "0.90"),
-        promotedAttackMultiplier: parseFloat(settings.promotedAttackMultiplier || "0.85"),
-        offensiveVarianceEnabled: settings.offensiveVarianceEnabled,
-        eliteAttackingGoals: settings.eliteAttackingGoals,
-        weakAttackingGoals: settings.weakAttackingGoals,
-        eliteDefenseMultiplier: parseFloat(settings.eliteDefenseMultiplier || "0.60"),
-        strongDefenseMultiplier: parseFloat(settings.strongDefenseMultiplier || "0.75"),
-        averageDefenseMultiplier: parseFloat(settings.averageDefenseMultiplier || "1.00"),
-        weakDefenseMultiplier: parseFloat(settings.weakDefenseMultiplier || "1.35"),
-        promotedDefenseMultiplier: parseFloat(settings.promotedDefenseMultiplier || "1.60"),
-        // Parse team assignments from JSON
-        eliteAttackTeams: JSON.parse(settings.eliteAttackTeams || "[]"),
-        strongAttackTeams: JSON.parse(settings.strongAttackTeams || "[]"),
-        averageAttackTeams: JSON.parse(settings.averageAttackTeams || "[]"),
-        weakAttackTeams: JSON.parse(settings.weakAttackTeams || "[]"),
-        promotedAttackTeams: JSON.parse(settings.promotedAttackTeams || "[]"),
-        eliteDefenseTeams: JSON.parse(settings.eliteDefenseTeams || "[]"),
-        strongDefenseTeams: JSON.parse(settings.strongDefenseTeams || "[]"),
+        // REMOVED: All tier-based multipliers and team assignments
+        // Now using dynamic performance-based calculations only
         averageDefenseTeams: JSON.parse(settings.averageDefenseTeams || "[]"),
         weakDefenseTeams: JSON.parse(settings.weakDefenseTeams || "[]"),
         promotedDefenseTeams: JSON.parse(settings.promotedDefenseTeams || "[]"),
@@ -3536,27 +3512,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         seasonFinaleMultiplier: "1.05",
         newManagerBounceMultiplier: "1.08",
         weatherConditionsMultiplier: "0.96",
-        eliteAttackMultiplier: "1.15",
-        strongAttackMultiplier: "1.10",
-        averageAttackMultiplier: "1.00",
-        weakAttackMultiplier: "0.90",
-        promotedAttackMultiplier: "0.85",
-        offensiveVarianceEnabled: false,
-        eliteAttackingGoals: 80,
-        weakAttackingGoals: 35,
-        eliteDefenseMultiplier: "0.60",
-        strongDefenseMultiplier: "0.75",
-        averageDefenseMultiplier: "1.00",
-        weakDefenseMultiplier: "1.35",
-        promotedDefenseMultiplier: "1.60",
-        // Default team assignments (matching current Premier League 2025/26 season)
-        eliteAttackTeams: JSON.stringify(MASTER_TEAM_DEFAULTS.eliteAttackTeams),
-        strongAttackTeams: JSON.stringify(MASTER_TEAM_DEFAULTS.strongAttackTeams),
-        averageAttackTeams: JSON.stringify(MASTER_TEAM_DEFAULTS.averageAttackTeams),
-        weakAttackTeams: JSON.stringify(MASTER_TEAM_DEFAULTS.weakAttackTeams),
-        promotedAttackTeams: JSON.stringify(MASTER_TEAM_DEFAULTS.promotedAttackTeams),
-        eliteDefenseTeams: JSON.stringify(MASTER_TEAM_DEFAULTS.eliteDefenseTeams),
-        strongDefenseTeams: JSON.stringify(MASTER_TEAM_DEFAULTS.strongDefenseTeams),
+        // REMOVED: All tier-based multipliers and team assignments
+        // Now using dynamic performance-based calculations only
         averageDefenseTeams: JSON.stringify(MASTER_TEAM_DEFAULTS.averageDefenseTeams),
         weakDefenseTeams: JSON.stringify(MASTER_TEAM_DEFAULTS.weakDefenseTeams),
         promotedDefenseTeams: JSON.stringify(MASTER_TEAM_DEFAULTS.promotedDefenseTeams),
@@ -3593,18 +3550,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       seasonFinaleMultiplier: 1.05,
       newManagerBounceMultiplier: 1.08,
       weatherConditionsMultiplier: 0.96,
-      eliteAttackMultiplier: 1.30,
-      strongAttackMultiplier: 1.15,
-      averageAttackMultiplier: 1.00,
-      weakAttackMultiplier: 0.85,
-      promotedAttackMultiplier: 0.70,
-      offensiveVarianceEnabled: false,
-      eliteAttackingGoals: 80,
-      weakAttackingGoals: 35,
-      eliteDefenseMultiplier: 0.60,
-      strongDefenseMultiplier: 0.75,
-      averageDefenseMultiplier: 1.00,
-      weakDefenseMultiplier: 1.35,
+      // REMOVED: All tier-based multipliers
+      // Now using dynamic performance-based calculations only
       promotedDefenseMultiplier: 1.60,
       // Team tier assignments (using same defaults as database)
       eliteAttackTeams: MASTER_TEAM_DEFAULTS.eliteAttackTeams,
@@ -3888,19 +3835,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
         awayFactorGoalsMultiplier: 0.88,
         
-        // Attack Multipliers
-        eliteAttackMultiplier: MASTER_TEAM_DEFAULTS.eliteAttackMultiplier,
-        strongAttackMultiplier: MASTER_TEAM_DEFAULTS.strongAttackMultiplier,
-        averageAttackMultiplier: MASTER_TEAM_DEFAULTS.averageAttackMultiplier,
-        weakAttackMultiplier: MASTER_TEAM_DEFAULTS.weakAttackMultiplier,
-        promotedAttackMultiplier: MASTER_TEAM_DEFAULTS.promotedAttackMultiplier,
-        
-        // Attack Team Assignments
-        eliteAttackTeams: MASTER_TEAM_DEFAULTS.eliteAttackTeams,
-        strongAttackTeams: MASTER_TEAM_DEFAULTS.strongAttackTeams,
-        averageAttackTeams: MASTER_TEAM_DEFAULTS.averageAttackTeams,
-        weakAttackTeams: MASTER_TEAM_DEFAULTS.weakAttackTeams,
-        promotedAttackTeams: MASTER_TEAM_DEFAULTS.promotedAttackTeams,
+        // REMOVED: All attack tier multipliers and team assignments
+        // Now using dynamic performance-based calculations only
         
         // Defense Multipliers
         eliteDefenseMultiplier: MASTER_TEAM_DEFAULTS.eliteDefenseMultiplier,
@@ -4138,17 +4074,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Venue Multipliers
       
         awayFactorGoalsMultiplier: 0.88,
-        // Attacking Tier Multipliers
-        eliteAttackMultiplier: 1.15,
-        strongAttackMultiplier: 1.10,
-        averageAttackMultiplier: 1.00,
-        weakAttackMultiplier: 0.90,
-        promotedAttackMultiplier: 0.85,
-        // Attacking Team Assignments
-        eliteAttackTeams: [12, 13, 7], // Liverpool, Man City, Chelsea
-        strongAttackTeams: [15, 18, 2, 1], // Newcastle, Tottenham, Aston Villa, Arsenal
-        weakAttackTeams: [9, 20, 16], // Everton, Wolverhampton, Nottingham Forest
-        promotedAttackTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
+        // REMOVED: All attacking tier multipliers and team assignments
+        // Now using dynamic performance-based calculations only
         // Defensive Tier Multipliers
         eliteDefenseMultiplier: 0.60,
         strongDefenseMultiplier: 0.75,
@@ -13425,20 +13352,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Helper function to get team strength for supremacy calculation
   function getTeamStrength(teamId: number): number {
-    const { 
-      eliteAttackTeams, strongAttackTeams, averageAttackTeams, weakAttackTeams,
-      eliteDefenseTeams, strongDefenseTeams, averageDefenseTeams, weakDefenseTeams
-    } = MASTER_TEAM_DEFAULTS;
+    // SIMPLIFIED: Using basic strength calculation without tier system
+    // Elite teams get higher strength, weaker teams get lower strength
+    const eliteTeams = [1, 12, 13]; // Arsenal, Liverpool, Man City
+    const strongTeams = [2, 6, 7, 14, 15, 18]; // Villa, Brighton, Chelsea, Man United, Newcastle, Spurs
+    const weakTeams = [3, 11, 17, 20]; // Promoted teams and strugglers
     
-    let attackStrength = 3; // Average
-    let defenseStrength = 3; // Average
-    
-    // Attack strength
-    if (eliteAttackTeams.includes(teamId)) attackStrength = 5;
-    else if (strongAttackTeams.includes(teamId)) attackStrength = 4;
-    else if (weakAttackTeams.includes(teamId)) attackStrength = 2;
-    else if (averageAttackTeams.includes(teamId)) attackStrength = 3;
-    else attackStrength = 1; // Promoted teams
+    if (eliteTeams.includes(teamId)) return 8; // High strength
+    if (strongTeams.includes(teamId)) return 6; // Good strength
+    if (weakTeams.includes(teamId)) return 3; // Lower strength
+    return 5; // Average strength
     
     // Defense strength (inverted - lower goals against = higher defense)
     if (eliteDefenseTeams.includes(teamId)) defenseStrength = 5;

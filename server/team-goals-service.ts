@@ -246,8 +246,7 @@ export class TeamGoalsService {
         return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
       }
       
-      // REMOVED: Phase 3 (Defensive Tiers) and Phase 4 (Attacking Tiers)
-      // These are no longer used in team goal calculation but kept available for other calculations
+      // REMOVED: All tier-based multipliers - now using dynamic performance-based calculations only
       
       // Phase 3: Context Multipliers (with enhanced error handling)
       baseExpectedGoals = TeamGoalsService.applyContextMultipliers(
@@ -389,78 +388,6 @@ export class TeamGoalsService {
     return 1.5; // Premier League average
   }
   
-  // Helper methods for tier calculations (kept for other uses)
-  private static getDefensiveTier(teamId: number, adminGoalSettings: any): string {
-    const parseTeamArray = (teamData: any): number[] => {
-      if (Array.isArray(teamData)) return teamData;
-      if (typeof teamData === 'string') {
-        try {
-          return JSON.parse(teamData);
-        } catch {
-          return [];
-        }
-      }
-      return [];
-    };
-
-    const eliteDefenseTeams = parseTeamArray(adminGoalSettings.eliteDefenseTeams);
-    const strongDefenseTeams = parseTeamArray(adminGoalSettings.strongDefenseTeams);
-    const weakDefenseTeams = parseTeamArray(adminGoalSettings.weakDefenseTeams);
-    const promotedDefenseTeams = parseTeamArray(adminGoalSettings.promotedDefenseTeams);
-
-    if (eliteDefenseTeams.includes(teamId)) return 'elite';
-    if (strongDefenseTeams.includes(teamId)) return 'strong';
-    if (weakDefenseTeams.includes(teamId)) return 'weak';
-    if (promotedDefenseTeams.includes(teamId)) return 'promoted';
-    return 'average';
-  }
-  
-  private static getDefensiveMultiplier(tier: string, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): number {
-    switch (tier) {
-      case 'elite': return adminGoalSettings.eliteDefenseMultiplier || MASTER_TEAM_DEFAULTS.eliteDefenseMultiplier;
-      case 'strong': return adminGoalSettings.strongDefenseMultiplier || MASTER_TEAM_DEFAULTS.strongDefenseMultiplier;
-      case 'average': return adminGoalSettings.averageDefenseMultiplier || MASTER_TEAM_DEFAULTS.averageDefenseMultiplier;
-      case 'weak': return adminGoalSettings.weakDefenseMultiplier || MASTER_TEAM_DEFAULTS.weakDefenseMultiplier;
-      case 'promoted': return adminGoalSettings.promotedDefenseMultiplier || MASTER_TEAM_DEFAULTS.promotedDefenseMultiplier;
-      default: return 1.0;
-    }
-  }
-  
-  private static getAttackingTier(teamId: number, adminGoalSettings: any): string {
-    const parseTeamArray = (teamData: any): number[] => {
-      if (Array.isArray(teamData)) return teamData;
-      if (typeof teamData === 'string') {
-        try {
-          return JSON.parse(teamData);
-        } catch {
-          return [];
-        }
-      }
-      return [];
-    };
-
-    const eliteAttackTeams = parseTeamArray(adminGoalSettings.eliteAttackTeams);
-    const strongAttackTeams = parseTeamArray(adminGoalSettings.strongAttackTeams);
-    const weakAttackTeams = parseTeamArray(adminGoalSettings.weakAttackTeams);
-    const promotedAttackTeams = parseTeamArray(adminGoalSettings.promotedAttackTeams);
-    
-    if (eliteAttackTeams.includes(teamId)) return 'elite';
-    if (strongAttackTeams.includes(teamId)) return 'strong';
-    if (weakAttackTeams.includes(teamId)) return 'weak';
-    if (promotedAttackTeams.includes(teamId)) return 'promoted';
-    return 'average';
-  }
-  
-  private static getAttackingMultiplier(tier: string, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): number {
-    switch (tier) {
-      case 'elite': return adminGoalSettings.eliteAttackMultiplier || MASTER_TEAM_DEFAULTS.eliteAttackMultiplier;
-      case 'strong': return adminGoalSettings.strongAttackMultiplier || MASTER_TEAM_DEFAULTS.strongAttackMultiplier;
-      case 'average': return adminGoalSettings.averageAttackMultiplier || MASTER_TEAM_DEFAULTS.averageAttackMultiplier;
-      case 'weak': return adminGoalSettings.weakAttackMultiplier || MASTER_TEAM_DEFAULTS.weakAttackMultiplier;
-      case 'promoted': return adminGoalSettings.promotedAttackMultiplier || MASTER_TEAM_DEFAULTS.promotedAttackMultiplier;
-      default: return 1.0;
-    }
-  }
   
   private static applyContextMultipliers(
     baseExpectedGoals: number,
