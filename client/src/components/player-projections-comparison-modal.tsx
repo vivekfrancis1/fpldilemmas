@@ -239,10 +239,10 @@ export default function PlayerProjectionsComparisonModal({
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Badge className={getPositionColor(getPlayerPosition(player))}>
+                      <Badge className={`${getPositionColor(getPlayerPosition(player))} text-xs px-1.5 py-0.5 h-5`}>
                         {getPlayerPosition(player)}
                       </Badge>
-                      <TeamBadge team={getPlayerTeam(player)} />
+                      <TeamBadge team={getPlayerTeam(player)} compact={true} />
                     </div>
                   </div>
                   <CardTitle className="text-lg font-bold text-gray-900">
@@ -290,7 +290,7 @@ export default function PlayerProjectionsComparisonModal({
                             />
                             {isBest && (
                               <div className="mt-1">
-                                <Badge className="bg-green-600 text-white text-xs">
+                                <Badge className="bg-green-600 text-white text-[10px] px-1 py-0.5 h-4">
                                   Best
                                 </Badge>
                               </div>
@@ -315,10 +315,10 @@ export default function PlayerProjectionsComparisonModal({
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Badge className={getPositionColor(getPlayerPosition(player))}>
+                      <Badge className={`${getPositionColor(getPlayerPosition(player))} text-xs px-1.5 py-0.5 h-5`}>
                         {getPlayerPosition(player)}
                       </Badge>
-                      <TeamBadge team={getPlayerTeam(player)} />
+                      <TeamBadge team={getPlayerTeam(player)} compact={true} />
                     </div>
                   </div>
                   <CardTitle className="text-lg font-bold text-gray-900">
@@ -367,7 +367,7 @@ export default function PlayerProjectionsComparisonModal({
                             />
                             {isBest && (
                               <div className="mt-1">
-                                <Badge className="bg-green-600 text-white text-xs">
+                                <Badge className="bg-green-600 text-white text-[10px] px-1 py-0.5 h-4">
                                   Best
                                 </Badge>
                               </div>
