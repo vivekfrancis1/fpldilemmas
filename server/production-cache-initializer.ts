@@ -1,67 +1,57 @@
 /**
- * Production Cache Initializer
- * Ensures critical cache data is populated when starting in production
- * This runs immediately on startup to prevent slow loading times
+ * Production Cache Initializer with Dependency Management
+ * Eliminates race conditions through proper initialization ordering
+ * Uses InitializationOrchestrator to ensure team data is ready before player aggregation
  */
 
 import { db } from "./db";
 import { playerGoalsProjections, playerAssistProjections, playerMinutesProjections } from "@shared/schema";
 import { internalFetch } from "./config";
 import { sql } from "drizzle-orm";
+import { InitializationOrchestrator, JobDefinition } from "./initialization-orchestrator";
 
 export class ProductionCacheInitializer {
   private readonly INITIALIZATION_TIMEOUT = 5 * 60 * 1000; // 5 minutes max
   
   /**
-   * Initialize critical cache data for production
+   * Initialize critical cache data with dependency management
    */
   async initializeProductionCache(): Promise<void> {
-    console.log("🚀 Starting production cache initialization...");
+    console.log("🚀 Starting dependency-aware cache initialization...");
     
     try {
       // Set overall timeout for initialization
-      const initPromise = this.performInitialization();
+      const initPromise = this.performDependencyAwareInitialization();
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error("Cache initialization timeout")), this.INITIALIZATION_TIMEOUT);
       });
       
       await Promise.race([initPromise, timeoutPromise]);
-      console.log("✅ Production cache initialization completed successfully");
+      console.log("✅ Dependency-aware cache initialization completed successfully");
       
     } catch (error) {
-      console.error("❌ Production cache initialization failed:", error);
+      console.error("❌ Cache initialization failed:", error);
       console.log("⚠️ Application will continue with slower initial loading times");
       // Don't throw - let the app start anyway
     }
   }
   
-  private async performInitialization(): Promise<void> {
+  private async performDependencyAwareInitialization(): Promise<void> {
     // Check which caches need population
     const cacheStatus = await this.checkCacheStatus();
     
     if (cacheStatus.needsInitialization) {
-      console.log("📊 Cache tables are empty or stale - populating essential data...");
+      console.log("📊 Cache tables need population - using dependency-aware initialization...");
       
-      // Populate caches in parallel for speed, but with priorities
-      const essentialCaches = [];
+      // Create orchestrator and define job dependencies
+      const orchestrator = new InitializationOrchestrator();
       
-      if (cacheStatus.goalsEmpty) {
-        essentialCaches.push(this.populateGoalsCache());
-      }
+      // Register jobs with proper dependencies
+      this.registerCacheJobs(orchestrator, cacheStatus);
       
-      if (cacheStatus.assistsEmpty) {
-        essentialCaches.push(this.populateAssistsCache());
-      }
-      
-      if (cacheStatus.minutesEmpty) {
-        essentialCaches.push(this.populateMinutesCache());
-      }
-      
-      // Wait for essential caches to complete
-      if (essentialCaches.length > 0) {
-        await Promise.allSettled(essentialCaches);
-        console.log("🎯 Essential cache population completed");
-      }
+      // Execute all jobs respecting dependencies
+      await orchestrator.executeAll();
+      console.log("🎯 Dependency-aware cache population completed");
     } else {
       console.log("✅ Cache data already present - skipping initialization");
     }
@@ -142,6 +132,90 @@ export class ProductionCacheInitializer {
       }
     } catch (error) {
       console.error("❌ Failed to populate minutes cache:", error);
+    }
+  }
+
+  /**
+   * Register cache population jobs with proper dependencies
+   */
+  private registerCacheJobs(orchestrator: InitializationOrchestrator, cacheStatus: any): void {
+    // Job 1: Bootstrap data (no dependencies)
+    orchestrator.registerJob({
+      id: 'bootstrap-data',
+      name: 'Bootstrap FPL Data',
+      dependencies: [],
+      executor: async () => {
+        // Bootstrap data is loaded via FPL API calls - this is just a placeholder
+        // The actual API calls happen within the projection calculations
+        console.log("📡 Bootstrap data ready (loaded via API calls)");
+      },
+      timeout: 30000 // 30 seconds
+    });
+
+    // Job 2: Team projections (depend on bootstrap data)
+    if (cacheStatus.goalsEmpty) {
+      orchestrator.registerJob({
+        id: 'team-goals',
+        name: 'Team Goal Projections',
+        dependencies: ['bootstrap-data'],
+        executor: () => this.populateGoalsCache(),
+        timeout: 120000 // 2 minutes
+      });
+    }
+
+    if (cacheStatus.assistsEmpty) {
+      orchestrator.registerJob({
+        id: 'team-assists',
+        name: 'Team Assist Projections', 
+        dependencies: ['bootstrap-data'],
+        executor: () => this.populateAssistsCache(),
+        timeout: 120000 // 2 minutes
+      });
+    }
+
+    if (cacheStatus.minutesEmpty) {
+      orchestrator.registerJob({
+        id: 'team-minutes',
+        name: 'Team Minutes Projections',
+        dependencies: ['bootstrap-data'], 
+        executor: () => this.populateMinutesCache(),
+        timeout: 120000 // 2 minutes
+      });
+    }
+
+    // Job 3: Player total points aggregation (depends on all team projections)
+    const teamDependencies: string[] = [];
+    if (cacheStatus.goalsEmpty) teamDependencies.push('team-goals');
+    if (cacheStatus.assistsEmpty) teamDependencies.push('team-assists');
+    if (cacheStatus.minutesEmpty) teamDependencies.push('team-minutes');
+
+    // Only add player aggregation job if there are team dependencies
+    // (if no team data needs updating, player aggregation isn't needed)
+    if (teamDependencies.length > 0) {
+      orchestrator.registerJob({
+        id: 'player-total-points',
+        name: 'Player Total Points Aggregation',
+        dependencies: teamDependencies,
+        executor: () => this.populatePlayerTotalPointsCache(),
+        timeout: 180000 // 3 minutes
+      });
+    }
+  }
+
+  /**
+   * Populate player total points cache by triggering aggregation
+   */
+  private async populatePlayerTotalPointsCache(): Promise<void> {
+    try {
+      console.log("🎯 Populating player total points cache...");
+      const response = await internalFetch("api/player-total-points-projections/full-calculation");
+      if (response.ok) {
+        console.log("✅ Player total points cache populated");
+      } else {
+        throw new Error(`Player total points API failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("❌ Failed to populate player total points cache:", error);
     }
   }
 }
