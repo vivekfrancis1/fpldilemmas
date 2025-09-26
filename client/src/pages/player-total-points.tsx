@@ -93,10 +93,10 @@ function parseReturnDate(newsText: string): Date | null {
   
   // Try multiple patterns for different date formats
   const patterns = [
-    // "Expected back 18 Oct", "Return date 25 Nov", "Due back 03 Dec"
-    /(?:expected back|return date|due back|back)\s+(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
-    // "Expected back October 25", "Due back November 18"
-    /(?:expected back|return date|due back|back)\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i,
+    // "Expected back 18 Oct", "Return date 25 Nov", "Due back 03 Dec", "Suspended until 25 Oct"
+    /(?:expected back|return date|due back|back|suspended until)\s+(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
+    // "Expected back October 25", "Due back November 18", "Suspended until October 25"
+    /(?:expected back|return date|due back|back|suspended until)\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i,
     // "Expected back 25th October", "Due back 18th November"
     /(?:expected back|return date|due back|back)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i,
     // "October 25", "November 18" (simple format)
@@ -187,6 +187,20 @@ function applyAvailabilityAdjustments(
   
   // Apply availability adjustments based on player status
   
+  // Debug logging for Reinildo specifically
+  const playerName = player.playerName || player.name || '';
+  const isReinildo = playerName.toLowerCase().includes('reinildo') || 
+                     playerName.toLowerCase().includes('mandava');
+  
+  if (isReinildo) {
+    console.log(`🎯 REINILDO FOUND - ${playerName}:`, {
+      chanceOfPlaying,
+      status,
+      news,
+      currentGameweek
+    });
+  }
+  
   // If fully available, no adjustments needed
   if (chanceOfPlaying >= 100 && status === 'a') {
     return player;
@@ -201,9 +215,18 @@ function applyAvailabilityAdjustments(
     // 0% availability - suspended or injured
     const returnDate = parseReturnDate(news);
     
+    if (isReinildo) {
+      console.log(`🗓️ REINILDO RETURN DATE - Parsed:`, returnDate);
+    }
+    
     if (returnDate) {
       // Zero out projections for gameweeks before return date
       const returnGameweek = getGameweekFromDate(returnDate, bootstrapData);
+      
+      if (isReinildo) {
+        console.log(`⚽ REINILDO GAMEWEEK - Return GW:`, returnGameweek);
+        console.log(`📋 REINILDO PROJECTIONS - Original keys:`, Object.keys(adjustedProjections));
+      }
       
       Object.keys(adjustedProjections).forEach(gwKey => {
         const gw = parseInt(gwKey);
@@ -217,9 +240,17 @@ function applyAvailabilityAdjustments(
               reason: `Injured/suspended until GW${returnGameweek}`
             };
           }
+          
+          if (isReinildo) {
+            console.log(`🚫 REINILDO ZERO - GW${gw}: ${original} → 0 (before return GW${returnGameweek})`);
+          }
         }
       });
     } else {
+      if (isReinildo) {
+        console.log(`🚫 REINILDO ZERO ALL - No return date parsed, zeroing all gameweeks`);
+      }
+      
       // No return date - zero out all projections
       Object.keys(adjustedProjections).forEach(gwKey => {
         const original = adjustedProjections[gwKey];
