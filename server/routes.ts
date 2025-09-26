@@ -6855,15 +6855,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         adjustedGoalsAgainstRate: team.played > 0 ? (0.5 * (team.goalsAgainst + team.expectedGoalsAgainst)) / team.played : 0
       }));
       
+      // Calculate dynamic attacking multipliers based on offensive performance
+      const totalAGR = standings.reduce((sum, team) => sum + team.adjustedGoalRate, 0);
+      const averageAGR = standings.length > 0 ? totalAGR / standings.length : 1;
+      
+      // Add attacking multiplier to each team
+      const standingsWithMultipliers = standings.map((team: any) => ({
+        ...team,
+        // Calculate attacking multiplier: team's AGR relative to league average
+        // Higher AGR = higher attacking multiplier (more dangerous for defenders to face)
+        // Range roughly 0.6 to 1.8 based on performance relative to average
+        attackingMultiplier: averageAGR > 0 ? 
+          Math.max(0.6, Math.min(1.8, team.adjustedGoalRate / averageAGR)) : 1.0
+      }));
+      
       // Sort by standard Premier League rules
-      standings.sort((a, b) => {
+      standingsWithMultipliers.sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
         if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
         return b.goalsFor - a.goalsFor;
       });
       
       // Add position
-      const enhancedStandings = standings.map((team, index) => ({
+      const enhancedStandings = standingsWithMultipliers.map((team, index) => ({
         ...team,
         position: index + 1
       }));

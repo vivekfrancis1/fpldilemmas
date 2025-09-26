@@ -49,6 +49,12 @@ export default function Fixtures() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Fetch current standings for dynamic attacking multipliers
+  const { data: currentStandings, isLoading: currentStandingsLoading } = useQuery<any[]>({
+    queryKey: ['/api/current-standings'],
+    staleTime: 30 * 60 * 1000, // 30 minutes
+  });
+
 
   // Get current gameweek and available gameweeks
   const { currentGameweek, availableGameweeks } = useMemo(() => {
@@ -91,7 +97,15 @@ export default function Fixtures() {
     }
   };
 
-  // Get attacking tier for a team
+  // Get dynamic attacking multiplier for a team from current standings
+  const getAttackingMultiplier = (teamId: number): number => {
+    if (!currentStandings) return 1.0; // Default neutral multiplier
+    
+    const team = currentStandings.find((team: any) => team.id === teamId);
+    return team?.attackingMultiplier || 1.0;
+  };
+
+  // Get attacking tier for a team (legacy - still used in some places)
   const getAttackingTier = (teamId: number): string => {
     if (!adminSettings) return 'average';
     
@@ -147,7 +161,20 @@ export default function Fixtures() {
     return 'average';
   };
 
-  // Get tier color class
+  // Get color based on dynamic attacking multiplier
+  const getAttackingMultiplierColor = (multiplier: number) => {
+    // Color scale: lower multiplier (easier for defenders) = green, higher multiplier (harder for defenders) = red
+    // Range: 0.6-1.8, with 1.0 being neutral (gray)
+    
+    if (multiplier <= 0.8) return 'bg-green-300 text-green-800'; // Very Easy - Strong green
+    if (multiplier <= 0.95) return 'bg-green-100 text-green-800'; // Easy - Light green
+    if (multiplier <= 1.05) return 'bg-gray-100 text-gray-800'; // Average - Gray
+    if (multiplier <= 1.2) return 'bg-red-100 text-red-800'; // Hard - Light red  
+    if (multiplier <= 1.4) return 'bg-red-200 text-red-800'; // Very Hard - Medium red
+    return 'bg-red-300 text-red-800'; // Extremely Hard - Strong red
+  };
+
+  // Get tier color class (legacy - still used in some places)
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'elite': return 'bg-purple-600 text-white';
@@ -950,29 +977,20 @@ export default function Fixtures() {
                                 }
 
                                 const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
-                                const opponentAttackTier = opponentId ? getAttackingTier(opponentId) : 'average';
+                                const opponentAttackMultiplier = opponentId ? getAttackingMultiplier(opponentId) : 1.0;
                                 
-                                // Color by opponent's attacking tier (exact same colors as Balanced FDR)
-                                const getOpponentAttackColor = (attackTier: string) => {
-                                  switch (attackTier) {
-                                    case 'elite': return 'bg-red-300 text-red-800'; // Very Hard (FDR 5) - light red
-                                    case 'strong': return 'bg-red-100 text-red-800'; // Hard (FDR 4)
-                                    case 'average': return 'bg-gray-100 text-gray-800'; // Medium (FDR 3)
-                                    case 'weak': return 'bg-green-100 text-green-800'; // Easy (FDR 2)
-                                    case 'promoted': return 'bg-green-300 text-green-800'; // Very Easy (FDR 1) - light green
-                                    default: return 'bg-gray-300 text-gray-900';
-                                  }
-                                };
+                                // Color by opponent's dynamic attacking multiplier
+                                const opponentAttackColor = getAttackingMultiplierColor(opponentAttackMultiplier);
                                 
                                 return (
                                   <td key={gw} className={`px-1 py-1 text-center ${
                                     gw === currentGameweek ? 'bg-blue-50' : ''
                                   }`}>
                                     <div 
-                                      className={`px-1 py-1 rounded text-xs font-medium ${getOpponentAttackColor(opponentAttackTier)} ${
+                                      className={`px-1 py-1 rounded text-xs font-medium ${opponentAttackColor} ${
                                         fixture.finished ? 'opacity-50' : ''
                                       }`}
-                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - ${opponentAttackTier} attack`}
+                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Attack: ${opponentAttackMultiplier.toFixed(2)}x`}
                                       data-testid={`defense-fixture-${team.id}-${gw}`}
                                     >
                                       <span className="truncate text-xs font-medium whitespace-nowrap">
