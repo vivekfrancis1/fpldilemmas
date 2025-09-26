@@ -207,6 +207,67 @@ export default function PlayerProjectionsComparisonModal({
       label: 'Points from Bonus',
       format: 'points',
       decimals: 2
+    },
+    // Raw Projected Statistics
+    {
+      key: 'projectedGoals',
+      label: 'Projected Goals',
+      format: 'number',
+      decimals: 2
+    },
+    {
+      key: 'projectedAssists', 
+      label: 'Projected Assists',
+      format: 'number',
+      decimals: 2
+    },
+    {
+      key: 'projectedCleanSheets',
+      label: 'Projected Clean Sheets',
+      format: 'number',
+      decimals: 2
+    },
+    {
+      key: 'projectedMinutes',
+      label: 'Projected Minutes',
+      format: 'number',
+      decimals: 0
+    },
+    {
+      key: 'projectedDefensiveContributions',
+      label: 'Projected Defensive Contributions',
+      format: 'number',
+      decimals: 2
+    },
+    {
+      key: 'projectedSaves',
+      label: 'Projected Saves',
+      format: 'number',
+      decimals: 2
+    },
+    {
+      key: 'projectedGoalsConceded',
+      label: 'Projected Goals Conceded',
+      format: 'number',
+      decimals: 2
+    },
+    {
+      key: 'projectedYellowCards',
+      label: 'Projected Yellow Cards',
+      format: 'number',
+      decimals: 2
+    },
+    {
+      key: 'projectedRedCards',
+      label: 'Projected Red Cards',
+      format: 'number',
+      decimals: 2
+    },
+    {
+      key: 'projectedBonusPoints',
+      label: 'Projected Bonus Points',
+      format: 'number',
+      decimals: 2
     }
   ];
 
