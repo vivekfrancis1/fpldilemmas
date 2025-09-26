@@ -105,6 +105,14 @@ export default function Fixtures() {
     return team?.attackingMultiplier || 1.0;
   };
 
+  // Get dynamic defensive multiplier for a team from current standings
+  const getDefensiveMultiplier = (teamId: number): number => {
+    if (!currentStandings) return 1.0; // Default neutral multiplier
+    
+    const team = currentStandings.find((team: any) => team.id === teamId);
+    return team?.defensiveMultiplier || 1.0;
+  };
+
   // Get attacking tier for a team (legacy - still used in some places)
   const getAttackingTier = (teamId: number): string => {
     if (!adminSettings) return 'average';
@@ -161,7 +169,7 @@ export default function Fixtures() {
     return 'average';
   };
 
-  // Get color based on dynamic attacking multiplier
+  // Get color based on dynamic attacking multiplier (for FDR for Defenders)
   const getAttackingMultiplierColor = (multiplier: number) => {
     // Color scale: lower multiplier (easier for defenders) = green, higher multiplier (harder for defenders) = red
     // Range: 0.6-1.8, with 1.0 being neutral (gray)
@@ -172,6 +180,19 @@ export default function Fixtures() {
     if (multiplier <= 1.2) return 'bg-red-100 text-red-800'; // Hard - Light red  
     if (multiplier <= 1.4) return 'bg-red-200 text-red-800'; // Very Hard - Medium red
     return 'bg-red-300 text-red-800'; // Extremely Hard - Strong red
+  };
+
+  // Get color based on dynamic defensive multiplier (for FDR for Attackers)
+  const getDefensiveMultiplierColor = (multiplier: number) => {
+    // Color scale: lower multiplier (easier for attackers) = red, higher multiplier (harder for attackers) = green
+    // Range: 0.6-1.8, with 1.0 being neutral (gray)
+    
+    if (multiplier <= 0.8) return 'bg-red-300 text-red-800'; // Very Easy for attackers - Strong red
+    if (multiplier <= 0.95) return 'bg-red-100 text-red-800'; // Easy for attackers - Light red
+    if (multiplier <= 1.05) return 'bg-gray-100 text-gray-800'; // Average - Gray
+    if (multiplier <= 1.2) return 'bg-green-100 text-green-800'; // Hard for attackers - Light green
+    if (multiplier <= 1.4) return 'bg-green-200 text-green-800'; // Very Hard for attackers - Medium green
+    return 'bg-green-300 text-green-800'; // Extremely Hard for attackers - Strong green
   };
 
   // Get tier color class (legacy - still used in some places)
@@ -707,27 +728,27 @@ export default function Fixtures() {
             <TabsContent value="attacking" className="space-y-6">
               <div className="flex flex-wrap gap-3 text-xs justify-center">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-300 rounded"></div>
-                  <span>1 Very Easy</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
-                  <span>2 Easy</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
-                  <span>3 Medium</span>
+                  <div className="w-3 h-3 bg-red-300 rounded"></div>
+                  <span>Very Easy (weak defense)</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
-                  <span>4 Hard</span>
+                  <span>Easy</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-300 rounded"></div>
-                  <span>5 Very Hard</span>
+                  <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
+                  <span>Average</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
+                  <span>Hard</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-300 rounded"></div>
+                  <span>Very Hard (strong defense)</span>
                 </div>
                 <div className="text-xs text-gray-600">
-                  Attacking difficulty based on opponent's defensive strength
+                  Dynamic colors based on opponent's defensive performance from current standings
                 </div>
               </div>
 
@@ -819,29 +840,20 @@ export default function Fixtures() {
                                 }
 
                                 const opponentId = bootstrapData?.teams.find(t => t.short_name === fixture.opponent)?.id;
-                                const opponentDefenseTier = opponentId ? getDefensiveTier(opponentId) : 'average';
+                                const opponentDefensiveMultiplier = opponentId ? getDefensiveMultiplier(opponentId) : 1.0;
                                 
-                                // Color by opponent's defensive tier (exact same colors as Balanced FDR)
-                                const getOpponentDefenseColor = (defenseTier: string) => {
-                                  switch (defenseTier) {
-                                    case 'elite': return 'bg-red-300 text-red-800'; // Very Hard (FDR 5) - light red
-                                    case 'strong': return 'bg-red-100 text-red-800'; // Hard (FDR 4)
-                                    case 'average': return 'bg-gray-100 text-gray-800'; // Medium (FDR 3)
-                                    case 'weak': return 'bg-green-100 text-green-800'; // Easy (FDR 2)
-                                    case 'promoted': return 'bg-green-300 text-green-800'; // Very Easy (FDR 1) - light green
-                                    default: return 'bg-gray-300 text-gray-900';
-                                  }
-                                };
+                                // Color by opponent's dynamic defensive multiplier
+                                const opponentDefenseColor = getDefensiveMultiplierColor(opponentDefensiveMultiplier);
                                 
                                 return (
                                   <td key={gw} className={`px-1 py-1 text-center ${
                                     gw === currentGameweek ? 'bg-blue-50' : ''
                                   }`}>
                                     <div 
-                                      className={`px-1 py-1 rounded text-xs font-medium ${getOpponentDefenseColor(opponentDefenseTier)} ${
+                                      className={`px-1 py-1 rounded text-xs font-medium ${opponentDefenseColor} ${
                                         fixture.finished ? 'opacity-50' : ''
                                       }`}
-                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - ${opponentDefenseTier} defense`}
+                                      title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} - Defense: ${opponentDefensiveMultiplier.toFixed(2)}x`}
                                       data-testid={`attack-fixture-${team.id}-${gw}`}
                                     >
                                       <span className="truncate text-xs font-medium whitespace-nowrap">

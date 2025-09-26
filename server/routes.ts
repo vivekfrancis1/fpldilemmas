@@ -6859,14 +6859,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalAGR = standings.reduce((sum, team) => sum + team.adjustedGoalRate, 0);
       const averageAGR = standings.length > 0 ? totalAGR / standings.length : 1;
       
-      // Add attacking multiplier to each team
+      // Calculate average AGAR for defensive multipliers
+      const totalAGAR = standings.reduce((sum, team) => sum + team.adjustedGoalsAgainstRate, 0);
+      const averageAGAR = standings.length > 0 ? totalAGAR / standings.length : 1;
+      
+      // Add attacking and defensive multipliers to each team
       const standingsWithMultipliers = standings.map((team: any) => ({
         ...team,
         // Calculate attacking multiplier: team's AGR relative to league average
         // Higher AGR = higher attacking multiplier (more dangerous for defenders to face)
         // Range roughly 0.6 to 1.8 based on performance relative to average
         attackingMultiplier: averageAGR > 0 ? 
-          Math.max(0.6, Math.min(1.8, team.adjustedGoalRate / averageAGR)) : 1.0
+          Math.max(0.6, Math.min(1.8, team.adjustedGoalRate / averageAGR)) : 1.0,
+        
+        // Calculate defensive multiplier: team's AGAR relative to league average
+        // Lower AGAR = lower defensive multiplier (easier for attackers to score against)
+        // Higher AGAR = higher defensive multiplier (harder for attackers to score against)
+        // Range roughly 0.6 to 1.8 based on defensive performance relative to average
+        defensiveMultiplier: averageAGAR > 0 ? 
+          Math.max(0.6, Math.min(1.8, team.adjustedGoalsAgainstRate / averageAGAR)) : 1.0
       }));
       
       // Sort by standard Premier League rules
