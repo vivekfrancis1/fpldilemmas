@@ -334,7 +334,7 @@ export default function Fixtures() {
       teamAverageAttackingFDR: avgAttackingFDR,
       teamAverageDefensiveFDR: avgDefensiveFDR
     };
-  }, [bootstrapData, fixturesData, gameweekRange, adminSettings]);
+  }, [bootstrapData, fixturesData, gameweekRange, adminSettings, currentStandings]);
 
   const gameweeks = useMemo(() => {
     const gws = [];
