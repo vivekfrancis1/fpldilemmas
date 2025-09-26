@@ -596,7 +596,7 @@ export default function Fixtures() {
                   <span>5 Very Hard</span>
                 </div>
                 <div className="text-xs text-gray-600">
-                  Format: TEAM (H/A)
+                  Colours based on official FPL classification of fixture difficulty rating
                 </div>
               </div>
 
