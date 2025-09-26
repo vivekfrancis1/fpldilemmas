@@ -8546,7 +8546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           averageValue: Math.round(averageValue * 100) / 100,
           avgMinutesPerGameweek: Math.round(avgMinutesPerGameweek * 100) / 100,
           // Add availability status fields from bootstrap data
-          chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round || 100,
+          chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
           status: bootstrapPlayer?.status || 'a',
           news: bootstrapPlayer?.news || '',
           pointsFromGoals,
