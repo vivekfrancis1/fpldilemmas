@@ -1045,6 +1045,31 @@ export default function PlayerTotalPoints() {
       if (selectedTeam !== "all" && player.team !== selectedTeam) return false;
       if (searchTerm && !player.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
           !player.team.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      
+      // Availability filter
+      if (selectedAvailability !== "all") {
+        const chanceOfPlaying = player.chanceOfPlayingNextRound ?? 100;
+        const status = player.status || 'a';
+        
+        switch (selectedAvailability) {
+          case 'available':
+            if (chanceOfPlaying < 100 || status !== 'a') return false;
+            break;
+          case 'partial':
+            if (chanceOfPlaying !== 25 && chanceOfPlaying !== 50 && chanceOfPlaying !== 75) return false;
+            break;
+          case 'suspended':
+            if (status !== 's') return false;
+            break;
+          case 'injured':
+            if (status !== 'i') return false;
+            break;
+          case 'unavailable':
+            if (chanceOfPlaying !== 0) return false;
+            break;
+        }
+      }
+      
       return true;
     });
 
@@ -1118,7 +1143,7 @@ export default function PlayerTotalPoints() {
     });
 
     return filtered;
-  }, [totalPointsData, selectedPosition, selectedTeam, searchTerm, selectedLoadGroup, sortField, sortDirection]);
+  }, [totalPointsData, selectedPosition, selectedTeam, searchTerm, selectedLoadGroup, selectedAvailability, sortField, sortDirection]);
 
   // Calculate max points per gameweek for highlighting
   const maxPointsPerGameweek = useMemo(() => {
