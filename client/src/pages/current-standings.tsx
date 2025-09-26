@@ -351,10 +351,10 @@ export default function CurrentStandings() {
                         {team.expectedGoalsAgainst.toFixed(1)}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-purple-600" data-testid={`adjusted-goal-rate-${team.shortName}`}>
-                        {team.adjustedGoalRate.toFixed(2)}
+                        {team.adjustedGoalRate ? team.adjustedGoalRate.toFixed(2) : '0.00'}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-orange-600" data-testid={`adjusted-goals-against-rate-${team.shortName}`}>
-                        {team.adjustedGoalsAgainstRate.toFixed(2)}
+                        {team.adjustedGoalsAgainstRate ? team.adjustedGoalsAgainstRate.toFixed(2) : '0.00'}
                       </td>
                       
                       {/* Defensive Stats - After xGA */}
