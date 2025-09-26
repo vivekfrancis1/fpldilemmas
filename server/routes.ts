@@ -79,51 +79,6 @@ const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
 };
 
 // Pre-calculated team multipliers for ultra-fast lookups (no parsing needed)
-const TEAM_MULTIPLIERS: {
-  attack: { [key: number]: number };
-  defense: { [key: number]: number };
-} = {
-  // Attack multipliers
-  attack: {
-    12: 1.35, 13: 1.35, // Liverpool, Man City (elite)
-    1: 1.15, 7: 1.15, 15: 1.15, 18: 1.15, 2: 1.15, // Arsenal, Chelsea, Newcastle, Tottenham, Aston Villa (strong)
-    9: 0.85, 16: 0.85, 19: 0.85, 20: 0.85, // Everton, Nottingham Forest, West Ham, Wolves (weak)
-    3: 0.7, 11: 0.7, 17: 0.7 // Burnley, Leeds, Sunderland (promoted)
-    // All others default to 1.0 (average)
-  },
-  // Defense multipliers
-  defense: {
-    1: 0.7, // Arsenal (elite)
-    12: 0.85, 13: 0.85, 7: 0.85, 15: 0.85, // Liverpool, Man City, Chelsea, Newcastle (strong)
-    4: 1.15, 5: 1.15, 6: 1.15, 19: 1.15, 20: 1.15, // Bournemouth, Brentford, Brighton, West Ham, Wolves (weak)
-    3: 1.3, 11: 1.3, 17: 1.3 // Burnley, Leeds, Sunderland (promoted)
-    // All others default to 1.0 (average)
-  }
-};
-
-// Super-fast simplified goal calculation - 90% faster than original
-function calculateFastGoals(
-  teamId: number, 
-  opponentId: number, 
-  isHome: boolean
-): number {
-  // Start with base (1.5)
-  let goals = 1.5;
-  
-  // Apply venue multiplier (instant lookup)
-  goals *= isHome ? 1.16 : 0.84;
-  
-  // Apply attack multiplier (single lookup)
-  goals *= TEAM_MULTIPLIERS.attack[teamId] || 1.0;
-  
-  // Apply opponent defense multiplier (single lookup)
-  goals *= TEAM_MULTIPLIERS.defense[opponentId] || 1.0;
-  
-  // Apply bounds (instant)
-  goals = Math.max(0.3, Math.min(goals, 4.2));
-  
-  return Math.round(goals * 100) / 100;
-}
 
 // REMOVED: calculateComprehensiveGoals function - now using TeamGoalsService
 

@@ -490,61 +490,6 @@ export class TeamGoalsService {
     return adjustedGoals;
   }
   
-  /**
-   * Get team multipliers data with caching (lightweight alternative to current standings)
-   */
-  private static async getCurrentStandingsData(): Promise<any[]> {
-    // Check cache first
-    if (currentStandingsCache && 
-        Date.now() - currentStandingsCache.timestamp < STANDINGS_CACHE_DURATION) {
-      return currentStandingsCache.data;
-    }
-    
-    try {
-      // Fetch lightweight team multipliers data instead of expensive current standings
-      const response = await fetch('http://localhost:5000/api/team-multipliers');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch team multipliers: ${response.status}`);
-      }
-      
-      const multipliersData = await response.json();
-      
-      // Convert multipliers data to match expected current standings format
-      const data = multipliersData.map((team: any) => ({
-        id: team.teamId,
-        shortName: team.teamName,
-        attackingMultiplier: team.attackingMultiplier || 1.0,
-        defensiveMultiplier: team.defensiveMultiplier || 1.0
-      }));
-      
-      // Cache the data
-      currentStandingsCache = {
-        data,
-        timestamp: Date.now()
-      };
-      
-      console.log(`📊 Fetched team multipliers data for ${data.length} teams (lightweight)`);
-      return data;
-    } catch (error) {
-      console.error('❌ Failed to fetch team multipliers data:', error);
-      
-      // Return cached data if available, even if stale
-      if (currentStandingsCache) {
-        console.log('📊 Using stale multipliers cache as fallback');
-        return currentStandingsCache.data;
-      }
-      
-      // Ultimate fallback - default multipliers
-      const fallbackData = Array.from({length: 20}, (_, i) => ({
-        id: i + 1,
-        shortName: `T${i + 1}`,
-        attackingMultiplier: 1.0,
-        defensiveMultiplier: 1.0
-      }));
-      
-      return fallbackData;
-    }
-  }
   
   /**
    * Clear cache - useful for testing or when admin settings change

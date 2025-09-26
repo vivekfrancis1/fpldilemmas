@@ -24,21 +24,6 @@ export const PLAYER_MINUTES_SHORTCUTS = {
   fringe: []
 };
 
-// Simplified team strength multipliers (instant lookup)
-export const TEAM_STRENGTH = {
-  attack: {
-    tier1: [12, 13], // Liverpool, Man City
-    tier2: [1, 7, 15, 18], // Arsenal, Chelsea, Newcastle, Tottenham
-    tier3: [2, 6, 14], // Aston Villa, Brighton, Man United
-    tier4: [] // All others
-  },
-  defense: {
-    tier1: [1], // Arsenal  
-    tier2: [12, 13, 7, 15], // Liverpool, Man City, Chelsea, Newcastle
-    tier3: [2, 6, 18], // Aston Villa, Brighton, Tottenham
-    tier4: [] // All others
-  }
-};
 
 /**
  * Get player expected minutes using shortcuts (10x faster than complex calculations)
@@ -61,40 +46,8 @@ export function getPlayerMinutesShortcut(playerId: number, position: string): nu
   }
 }
 
-/**
- * Get team attacking strength multiplier (instant lookup)
- */
-export function getAttackStrength(teamId: number): number {
-  if (TEAM_STRENGTH.attack.tier1.includes(teamId)) return 1.35;
-  if (TEAM_STRENGTH.attack.tier2.includes(teamId)) return 1.15;
-  if (TEAM_STRENGTH.attack.tier3.includes(teamId)) return 1.05;
-  return 1.0; // Average
-}
 
-/**
- * Get team defensive strength multiplier (instant lookup)
- */
-export function getDefenseStrength(teamId: number): number {
-  if (TEAM_STRENGTH.defense.tier1.includes(teamId)) return 0.7;
-  if (TEAM_STRENGTH.defense.tier2.includes(teamId)) return 0.85;
-  if (TEAM_STRENGTH.defense.tier3.includes(teamId)) return 0.95;
-  return 1.0; // Average
-}
 
-/**
- * Calculate expected goals using shortcuts (90% faster)
- */
-export function calculateGoalsShortcut(
-  attackingTeamId: number,
-  defendingTeamId: number,
-  isHome: boolean
-): number {
-  let goals = 1.5; // Base
-  goals *= isHome ? 1.16 : 0.84; // Venue
-  goals *= getAttackStrength(attackingTeamId); // Attack
-  goals *= getDefenseStrength(defendingTeamId); // Defense
-  return Math.max(0.3, Math.min(goals, 4.2)); // Bounds
-}
 
 /**
  * Get player goal share using shortcuts (no DB queries needed)
@@ -105,12 +58,6 @@ export function getPlayerGoalShareShortcut(playerId: number, teamId: number): nu
     return teamShares[playerId];
   }
   
-  // Default shares by team tier
-  if (TEAM_STRENGTH.attack.tier1.includes(teamId)) {
-    return 8.5; // Top teams have more spread
-  }
-  if (TEAM_STRENGTH.attack.tier2.includes(teamId)) {
-    return 12.0; // Strong teams
-  }
-  return 15.0; // Weaker teams rely more on key players
+  // Default share for players without specific data
+  return 12.0; // Average default share
 }
