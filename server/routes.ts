@@ -10919,7 +10919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Defensive Contributions API called - using accurate historical DB DC per 90 data");
+        console.log("DEBUG: Player Defensive Contributions API called - using formula: Average DC/game × AGR of opponent/1.25");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -10936,20 +10936,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const fixturesData = await fixturesResponse.json();
       
-      // Get attacking multipliers from lightweight team multipliers endpoint
-      const multipliersResponse = await fetch("http://localhost:5000/api/team-multipliers");
-      const multipliersData = await multipliersResponse.json();
-      console.log(`📊 Fetched multiplier data for ${multipliersData.length} teams`);
+      // Calculate AGR (Average Goals Received/Against) for each team
+      const teamGoalsAgainst = new Map<number, number>();
       
-      // Create mapping from team ID to attacking multiplier
-      const attackingMultipliers: { [key: number]: number } = {};
-      multipliersData.forEach((team: any) => {
-        // Use pre-calculated attacking multiplier from lightweight endpoint
-        attackingMultipliers[team.teamId] = team.attackingMultiplier || 1.0;
+      // Initialize all teams with 0 goals against
+      fplData.teams.forEach((team: any) => {
+        teamGoalsAgainst.set(team.id, 0);
+      });
+      
+      // Count goals against for each team from completed fixtures
+      fixturesData.forEach((fixture: any) => {
+        const isCompleted = fixture.finished || fixture.event < currentGameweek;
+        
+        if (isCompleted && fixture.team_h_score !== null && fixture.team_a_score !== null) {
+          // Home team's goals against = away team's goals scored
+          const homeGoalsAgainst = teamGoalsAgainst.get(fixture.team_h) || 0;
+          teamGoalsAgainst.set(fixture.team_h, homeGoalsAgainst + fixture.team_a_score);
+          
+          // Away team's goals against = home team's goals scored  
+          const awayGoalsAgainst = teamGoalsAgainst.get(fixture.team_a) || 0;
+          teamGoalsAgainst.set(fixture.team_a, awayGoalsAgainst + fixture.team_h_score);
+        }
       });
 
-      const getAttackMultiplier = (teamId: number): number => {
-        return attackingMultipliers[teamId] || 1.0;
+      const getOpponentAGR = (teamId: number): number => {
+        const goalsAgainst = teamGoalsAgainst.get(teamId) || 0;
+        const gamesPlayed = Math.max(1, teamCompletedFixtures.get(teamId) || 1);
+        return goalsAgainst / gamesPlayed; // AGR = Average Goals Received (Goals Against per game)
       };
       
       // Get player minutes projections
@@ -11040,16 +11053,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
             }
             
-            // Get opponent attacking tier multiplier
-            const attackMultiplier = getAttackMultiplier(opponentId);
+            // Get opponent's AGR (Average Goals Received/Against per game)
+            const opponentAGR = getOpponentAGR(opponentId);
             
-            // Get expected minutes for this player in this gameweek
-            const playerMinutes = minutesData.find((m: any) => m.playerId === player.id);
-            const expectedMinutes = playerMinutes?.gameweekProjections?.[`gw${gw}`] || 
-                                  playerMinutes?.gameweekProjections?.[gw] || 90; // Default to 90 if not found
-            
-            // Apply user's exact formula: DC = (Total season DC / Team games played) × (Expected minutes/90) × Attacking tier multiplier
-            const projectedDC = dcPerTeamGame * (expectedMinutes / 90) * attackMultiplier;
+            // Apply user's exact formula: Expected DC = Average DC/game × AGR of opponent/1.25
+            const projectedDC = dcPerTeamGame * (opponentAGR / 1.25);
             
             // Calculate points (2 points if DC >= threshold based on position)
             let points = 0;
