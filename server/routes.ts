@@ -8475,7 +8475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Sum points for each gameweek from all APIs
         for (let gw = start; gw <= end; gw++) {
-          const gwKey = `gw${gw}`;
+          const gwKey = gw.toString(); // Use numeric keys for consistency
           
           // Get points from each API for this gameweek
           // Goals: Calculate points from raw goal count × position multiplier
@@ -8488,13 +8488,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Assists: Calculate points from raw assist count × 3
           const rawAssists = assistsPlayer?.gameweekProjections?.[gw.toString()] || 0;
           const assistsPts = rawAssists * 3;
-          const cleansheetPts = cleansheetPlayer?.pointsFromCleanSheets?.[gwKey] || 0;
-          const goalsConcededPts = goalsConcededPlayer?.pointsFromGoalsConceded?.[gwKey] || 0;
-          const yellowCardsPts = yellowCardsPlayer?.pointsFromYellowCards?.[gwKey] || 0;
-          const redCardsPts = redCardsPlayer?.pointsFromRedCards?.[gwKey] || 0;
-          const bonusPts = bonusPointsPlayer?.pointsFromBonus?.[gwKey] || 0;
-          const savesPts = savesPlayer?.pointsFromSaves?.[gwKey] || 0;
-          const defensiveContributionsPts = defensiveContributionsPlayer?.pointsFromDefensiveContributions?.[gwKey] || 0;
+          const gwApiKey = `gw${gw}`; // Component APIs still use "gw6" format
+          const cleansheetPts = cleansheetPlayer?.pointsFromCleanSheets?.[gwApiKey] || 0;
+          const goalsConcededPts = goalsConcededPlayer?.pointsFromGoalsConceded?.[gwApiKey] || 0;
+          const yellowCardsPts = yellowCardsPlayer?.pointsFromYellowCards?.[gwApiKey] || 0;
+          const redCardsPts = redCardsPlayer?.pointsFromRedCards?.[gwApiKey] || 0;
+          const bonusPts = bonusPointsPlayer?.pointsFromBonus?.[gwApiKey] || 0;
+          const savesPts = savesPlayer?.pointsFromSaves?.[gwApiKey] || 0;
+          const defensiveContributionsPts = defensiveContributionsPlayer?.pointsFromDefensiveContributions?.[gwApiKey] || 0;
           
           // For minutes, use the total points since no gameweek breakdown available
           const minutesPts = minutesPlayer?.pointsFromMinutes || 0;
