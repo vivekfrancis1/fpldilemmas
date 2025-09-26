@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ValueCell, PositionBadge, TeamBadge } from "@/components/enhanced-table";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useQuery } from "@tanstack/react-query";
 
 interface PlayerProjectionsComparisonModalProps {
   players: PlayerTotalPointsData[];
@@ -70,7 +71,57 @@ export default function PlayerProjectionsComparisonModal({
   const [activeTab, setActiveTab] = useState("summary");
   const isMobile = useIsMobile();
 
+  // Get player IDs for the query
+  const playerIds = players.map(p => p.playerId || p.id);
+
+  // Fetch raw projections data separately - only when modal is open
+  const { data: rawProjectionsData, isLoading: rawProjectionsLoading } = useQuery({
+    queryKey: ["/api/player-raw-projections", startGameweek, endGameweek],
+    enabled: isOpen && players.length > 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   if (!isOpen || players.length === 0) return null;
+
+  // Create enriched players with raw projection data
+  const enrichedPlayers = players.map(player => {
+    const playerId = player.playerId || player.id;
+    const rawData = rawProjectionsData?.find((p: any) => p.playerId === playerId);
+    
+    return {
+      ...player,
+      projectedGoals: rawData?.projectedGoals || 0,
+      projectedAssists: rawData?.projectedAssists || 0,
+      projectedMinutes: rawData?.projectedMinutes || 0,
+      projectedCleanSheets: rawData?.projectedCleanSheets || 0,
+      projectedDefensiveContributions: rawData?.projectedDefensiveContributions || 0,
+      projectedSaves: rawData?.projectedSaves || 0,
+      projectedGoalsConceded: rawData?.projectedGoalsConceded || 0,
+      projectedYellowCards: rawData?.projectedYellowCards || 0,
+      projectedRedCards: rawData?.projectedRedCards || 0,
+      projectedBonusPoints: rawData?.projectedBonusPoints || 0
+    };
+  });
+
+  // Show loading state while fetching raw projections
+  if (rawProjectionsLoading) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Loading Comparison Data...
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-4 text-lg text-gray-600">Fetching detailed projections...</span>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const getPlayerPosition = (player: PlayerTotalPointsData) => {
     return player.position || "Unknown";
@@ -102,10 +153,10 @@ export default function PlayerProjectionsComparisonModal({
 
   // Helper function to find players with best value for a given stat
   const getPlayersWithBestValue = (statKey: string) => {
-    const values = players.map(player => (player as any)[statKey] || 0);
+    const values = enrichedPlayers.map(player => (player as any)[statKey] || 0);
     const bestValue = Math.max(...values);
     
-    return players
+    return enrichedPlayers
       .map((player, index) => ({ player, value: values[index] }))
       .filter(({ value }) => value === bestValue)
       .map(({ player }) => player.playerId || player.id);
@@ -119,10 +170,10 @@ export default function PlayerProjectionsComparisonModal({
 
   // Helper function to find players with best gameweek projection
   const getPlayersWithBestGameweekValue = (gameweek: number) => {
-    const values = players.map(player => player.gameweekProjections?.[`gw${gameweek}`] || 0);
+    const values = enrichedPlayers.map(player => player.gameweekProjections?.[`gw${gameweek}`] || 0);
     const bestValue = Math.max(...values);
     
-    return players
+    return enrichedPlayers
       .map((player, index) => ({ player, value: values[index] }))
       .filter(({ value }) => value === bestValue)
       .map(({ player }) => player.playerId || player.id);
@@ -294,8 +345,8 @@ export default function PlayerProjectionsComparisonModal({
 
         <TabsContent value="summary" className="space-y-6 mt-6">
           {/* Player Headers */}
-          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : `grid-cols-${Math.min(players.length, 4)}`}`}>
-            {players.map((player) => (
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : `grid-cols-${Math.min(enrichedPlayers.length, 4)}`}`}>
+            {enrichedPlayers.map((player) => (
               <Card key={player.playerId || player.id} className="bg-gradient-to-br from-blue-50 to-slate-50">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">

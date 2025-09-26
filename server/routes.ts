@@ -11720,6 +11720,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let totalPointsResponseCache: Map<string, { data: any[]; timestamp: number }> = new Map();
   const TOTAL_POINTS_RESPONSE_CACHE_DURATION = 60 * 60 * 1000; // 1 hour cache (increased)
 
+  // Raw player projections endpoint for comparison modal
+  app.get("/api/player-raw-projections", async (req, res) => {
+    try {
+      const startGameweek = parseInt(req.query.startGameweek as string) || 6;
+      const endGameweek = parseInt(req.query.endGameweek as string) || 11;
+      const baseUrl = getApiBaseUrl(req);
+
+      console.log(`DEBUG: Fetching raw projections for GW${startGameweek}-${endGameweek}`);
+
+      // Fetch all individual projection endpoints in parallel
+      const [
+        goalsResponse,
+        assistsResponse,
+        minutesResponse,
+        cleanSheetsResponse,
+        defensiveResponse,
+        savesResponse,
+        goalsConcededResponse,
+        yellowCardsResponse,
+        redCardsResponse,
+        bonusResponse
+      ] = await Promise.all([
+        fetch(`${baseUrl}/api/player-goals-scored-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).catch(() => null),
+        fetch(`${baseUrl}/api/player-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).catch(() => null),
+        fetch(`${baseUrl}/api/player-minutes-projections`).catch(() => null),
+        fetch(`${baseUrl}/api/player-cleansheet-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).catch(() => null),
+        fetch(`${baseUrl}/api/player-defensive-contributions-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).catch(() => null),
+        fetch(`${baseUrl}/api/player-saves-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).catch(() => null),
+        fetch(`${baseUrl}/api/player-goals-conceded-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).catch(() => null),
+        fetch(`${baseUrl}/api/player-yellow-cards-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).catch(() => null),
+        fetch(`${baseUrl}/api/player-red-cards-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).catch(() => null),
+        fetch(`${baseUrl}/api/player-bonus-points-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).catch(() => null)
+      ]);
+
+      // Parse responses that succeeded
+      const [
+        goalsData,
+        assistsData,
+        minutesData,
+        cleanSheetsData,
+        defensiveData,
+        savesData,
+        goalsConcededData,
+        yellowCardsData,
+        redCardsData,
+        bonusData
+      ] = await Promise.all([
+        goalsResponse?.ok ? goalsResponse.json().catch(() => []) : [],
+        assistsResponse?.ok ? assistsResponse.json().catch(() => []) : [],
+        minutesResponse?.ok ? minutesResponse.json().catch(() => []) : [],
+        cleanSheetsResponse?.ok ? cleanSheetsResponse.json().catch(() => []) : [],
+        defensiveResponse?.ok ? defensiveResponse.json().catch(() => []) : [],
+        savesResponse?.ok ? savesResponse.json().catch(() => []) : [],
+        goalsConcededResponse?.ok ? goalsConcededResponse.json().catch(() => []) : [],
+        yellowCardsResponse?.ok ? yellowCardsResponse.json().catch(() => []) : [],
+        redCardsResponse?.ok ? redCardsResponse.json().catch(() => []) : [],
+        bonusResponse?.ok ? bonusResponse.json().catch(() => []) : []
+      ]);
+
+      // Create lookup maps by playerId
+      const goalsMap = new Map(goalsData.map((p: any) => [p.playerId, p]));
+      const assistsMap = new Map(assistsData.map((p: any) => [p.playerId, p]));
+      const minutesMap = new Map(minutesData.map((p: any) => [p.playerId, p]));
+      const cleanSheetsMap = new Map(cleanSheetsData.map((p: any) => [p.playerId, p]));
+      const defensiveMap = new Map(defensiveData.map((p: any) => [p.playerId, p]));
+      const savesMap = new Map(savesData.map((p: any) => [p.playerId, p]));
+      const goalsConcededMap = new Map(goalsConcededData.map((p: any) => [p.playerId, p]));
+      const yellowCardsMap = new Map(yellowCardsData.map((p: any) => [p.playerId, p]));
+      const redCardsMap = new Map(redCardsData.map((p: any) => [p.playerId, p]));
+      const bonusMap = new Map(bonusData.map((p: any) => [p.playerId, p]));
+
+      // Get all unique player IDs
+      const allPlayerIds = new Set([
+        ...goalsData.map((p: any) => p.playerId),
+        ...assistsData.map((p: any) => p.playerId),
+        ...minutesData.map((p: any) => p.playerId)
+      ]);
+
+      // Aggregate all raw projections by player
+      const aggregatedData = Array.from(allPlayerIds).map(playerId => {
+        const goals = goalsMap.get(playerId);
+        const assists = assistsMap.get(playerId);
+        const minutes = minutesMap.get(playerId);
+        const cleanSheets = cleanSheetsMap.get(playerId);
+        const defensive = defensiveMap.get(playerId);
+        const saves = savesMap.get(playerId);
+        const goalsConceded = goalsConcededMap.get(playerId);
+        const yellowCards = yellowCardsMap.get(playerId);
+        const redCards = redCardsMap.get(playerId);
+        const bonus = bonusMap.get(playerId);
+
+        return {
+          playerId,
+          playerName: goals?.playerName || assists?.playerName || minutes?.playerName || 'Unknown',
+          projectedGoals: goals?.totalProjectedGoals || goals?.averageGoalsPerGameweek * (endGameweek - startGameweek + 1) || 0,
+          projectedAssists: assists?.totalProjectedAssists || assists?.averageAssistsPerGameweek * (endGameweek - startGameweek + 1) || 0,
+          projectedMinutes: minutes?.totalProjectedMinutes || minutes?.averageMinutesPerGameweek * (endGameweek - startGameweek + 1) || 0,
+          projectedCleanSheets: cleanSheets?.totalProjectedCleanSheets || cleanSheets?.averageCleanSheetsPerGameweek * (endGameweek - startGameweek + 1) || 0,
+          projectedDefensiveContributions: defensive?.totalProjectedDefensiveContributions || defensive?.averageDefensiveContributionsPerGameweek * (endGameweek - startGameweek + 1) || 0,
+          projectedSaves: saves?.totalProjectedSaves || saves?.averageSavesPerGameweek * (endGameweek - startGameweek + 1) || 0,
+          projectedGoalsConceded: goalsConceded?.totalProjectedGoalsConceded || goalsConceded?.averageGoalsConcededPerGameweek * (endGameweek - startGameweek + 1) || 0,
+          projectedYellowCards: yellowCards?.totalProjectedYellowCards || yellowCards?.averageYellowCardsPerGameweek * (endGameweek - startGameweek + 1) || 0,
+          projectedRedCards: redCards?.totalProjectedRedCards || redCards?.averageRedCardsPerGameweek * (endGameweek - startGameweek + 1) || 0,
+          projectedBonusPoints: bonus?.totalProjectedBonusPoints || bonus?.averageBonusPointsPerGameweek * (endGameweek - startGameweek + 1) || 0
+        };
+      });
+
+      console.log(`DEBUG: Aggregated raw projections for ${aggregatedData.length} players`);
+      res.json(aggregatedData);
+
+    } catch (error) {
+      console.error("Error fetching raw player projections:", error);
+      res.status(500).json({ error: "Failed to fetch raw player projections" });
+    }
+  });
+
   // COMPREHENSIVE PLAYER PROJECTIONS ENDPOINT - API-first with cache and background job fallback
   app.get("/api/comprehensive-player-projections", requireAuth, requireAdmin, async (req, res) => {
     try {
