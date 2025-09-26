@@ -187,20 +187,6 @@ function applyAvailabilityAdjustments(
   
   // Apply availability adjustments based on player status
   
-  // Debug logging for Reinildo specifically
-  const playerName = player.playerName || player.name || '';
-  const isReinildo = playerName.toLowerCase().includes('reinildo') || 
-                     playerName.toLowerCase().includes('mandava');
-  
-  if (isReinildo) {
-    console.log(`🎯 REINILDO FOUND - ${playerName}:`, {
-      chanceOfPlaying,
-      status,
-      news,
-      currentGameweek
-    });
-  }
-  
   // If fully available, no adjustments needed
   if (chanceOfPlaying >= 100 && status === 'a') {
     return player;
@@ -215,18 +201,9 @@ function applyAvailabilityAdjustments(
     // 0% availability - suspended or injured
     const returnDate = parseReturnDate(news);
     
-    if (isReinildo) {
-      console.log(`🗓️ REINILDO RETURN DATE - Parsed:`, returnDate);
-    }
-    
     if (returnDate) {
       // Zero out projections for gameweeks before return date
       const returnGameweek = getGameweekFromDate(returnDate, bootstrapData);
-      
-      if (isReinildo) {
-        console.log(`⚽ REINILDO GAMEWEEK - Return GW:`, returnGameweek);
-        console.log(`📋 REINILDO PROJECTIONS - Original keys:`, Object.keys(adjustedProjections));
-      }
       
       Object.keys(adjustedProjections).forEach(gwKey => {
         const gw = parseInt(gwKey);
@@ -240,17 +217,9 @@ function applyAvailabilityAdjustments(
               reason: `Injured/suspended until GW${returnGameweek}`
             };
           }
-          
-          if (isReinildo) {
-            console.log(`🚫 REINILDO ZERO - GW${gw}: ${original} → 0 (before return GW${returnGameweek})`);
-          }
         }
       });
     } else {
-      if (isReinildo) {
-        console.log(`🚫 REINILDO ZERO ALL - No return date parsed, zeroing all gameweeks`);
-      }
-      
       // No return date - zero out all projections
       Object.keys(adjustedProjections).forEach(gwKey => {
         const original = adjustedProjections[gwKey];
