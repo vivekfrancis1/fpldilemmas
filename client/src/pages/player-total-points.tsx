@@ -15,9 +15,8 @@ import PlayerProjectionsComparisonModal from "@/components/player-projections-co
 // Gameweek Point Breakdown Tooltip Component
 function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTotalPointsData, gameweek: number }) {
   const hasBreakdownData = player.pointsFromGoals !== undefined;
-  const gwKey = `gw${gameweek}`;
-  const numericGwKey = gameweek.toString();
-  const gwPoints = player.gameweekProjections?.[numericGwKey];
+  const gwKey = gameweek.toString(); // Use numeric string key format to match API data
+  const gwPoints = player.gameweekProjections?.[gwKey];
   
   if (!hasBreakdownData || !gwPoints) {
     return (
