@@ -1,9 +1,15 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trophy, TrendingUp, Target, Users, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
+import { Trophy, TrendingUp, Target, Users, RefreshCw, ChevronUp, ChevronDown, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CurrentTeamStanding {
   id: number;
@@ -183,15 +189,22 @@ export default function CurrentStandings() {
     <th 
       className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
       onClick={() => handleSort(field)}
-      title={tooltip}
       data-testid={`sort-${field}`}
     >
-      <div className="flex items-center justify-center gap-1">
-        {children}
-        {sortField === field && (
-          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-        )}
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center justify-center gap-1">
+            {children}
+            <Info className="h-3 w-3 opacity-50" />
+            {sortField === field && (
+              sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+            )}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-sm">{tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
     </th>
   );
 
@@ -221,6 +234,7 @@ export default function CurrentStandings() {
   }
 
   return (
+    <TooltipProvider>
     <div className="fpl-page-container">
       {/* Unified Page Header */}
       <div className="fpl-page-header">
@@ -294,25 +308,39 @@ export default function CurrentStandings() {
                     {/* Position & Team Info */}
                     <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r cursor-pointer hover:bg-gray-100 transition-colors"
                         onClick={() => handleSort('position')}
-                        title="League position (1st to 20th)"
                         data-testid="sort-position">
-                      <div className="flex items-center justify-center gap-1">
-                        Pos
-                        {sortField === 'position' && (
-                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                        )}
-                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-center gap-1">
+                            Pos
+                            <Info className="h-3 w-3 opacity-50" />
+                            {sortField === 'position' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-sm">League position (1st to 20th)</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-16 bg-gray-50 z-10 border-r min-w-[140px] cursor-pointer hover:bg-gray-100 transition-colors"
                         onClick={() => handleSort('name')}
-                        title="Team name"
                         data-testid="sort-name">
-                      <div className="flex items-center gap-1">
-                        Team
-                        {sortField === 'name' && (
-                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                        )}
-                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1">
+                            Team
+                            <Info className="h-3 w-3 opacity-50" />
+                            {sortField === 'name' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-sm">Team name</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </th>
                     
                     {/* Match Record */}
@@ -324,14 +352,21 @@ export default function CurrentStandings() {
                     {/* Goals */}
                     <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l cursor-pointer hover:bg-gray-100 transition-colors"
                         onClick={() => handleSort('goalsFor')}
-                        title="Goals scored by the team"
                         data-testid="sort-goalsFor">
-                      <div className="flex items-center justify-center gap-1">
-                        GF
-                        {sortField === 'goalsFor' && (
-                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                        )}
-                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-center gap-1">
+                            GF
+                            <Info className="h-3 w-3 opacity-50" />
+                            {sortField === 'goalsFor' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-sm">Goals scored by the team</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </th>
                     <SortableHeader field="goalsAgainst" tooltip="Goals conceded by the team">GA</SortableHeader>
                     <SortableHeader field="goalDifference" tooltip="Goal difference (Goals For - Goals Against)">GD</SortableHeader>
@@ -339,14 +374,21 @@ export default function CurrentStandings() {
                     {/* Points */}
                     <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
                         onClick={() => handleSort('points')}
-                        title="Total points (3 for win, 1 for draw, 0 for loss)"
                         data-testid="sort-points">
-                      <div className="flex items-center justify-center gap-1">
-                        Pts
-                        {sortField === 'points' && (
-                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                        )}
-                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-center gap-1">
+                            Pts
+                            <Info className="h-3 w-3 opacity-50" />
+                            {sortField === 'points' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-sm">Total points (3 for win, 1 for draw, 0 for loss)</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </th>
                     
                     {/* Expected Goals - After Points */}
@@ -364,14 +406,21 @@ export default function CurrentStandings() {
                     {/* Enhanced Statistics */}
                     <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l cursor-pointer hover:bg-gray-100 transition-colors"
                         onClick={() => handleSort('cleanSheets')}
-                        title="Clean sheets (matches without conceding a goal)"
                         data-testid="sort-cleanSheets">
-                      <div className="flex items-center justify-center gap-1">
-                        CS
-                        {sortField === 'cleanSheets' && (
-                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                        )}
-                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-center gap-1">
+                            CS
+                            <Info className="h-3 w-3 opacity-50" />
+                            {sortField === 'cleanSheets' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-sm">Clean sheets (matches without conceding a goal)</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </th>
                     <SortableHeader field="yellowCards" tooltip="Yellow cards received by team players">YC</SortableHeader>
                     <SortableHeader field="redCards" tooltip="Red cards received by team players">RC</SortableHeader>
@@ -661,5 +710,6 @@ export default function CurrentStandings() {
         </Card>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
