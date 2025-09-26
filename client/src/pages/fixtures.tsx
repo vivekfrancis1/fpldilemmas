@@ -296,18 +296,9 @@ export default function Fixtures() {
           if (fixture) {
             const opponentId = bootstrapData.teams.find(t => t.short_name === fixture.opponent)?.id;
             if (opponentId) {
-              // Calculate attacking difficulty (opponent's defensive tier)
-              const opponentDefenseTier = getDefensiveTier(opponentId);
-              const attackingDifficulty = (() => {
-                switch (opponentDefenseTier) {
-                  case 'elite': return 5;
-                  case 'strong': return 4;
-                  case 'average': return 3;
-                  case 'weak': return 2;
-                  case 'promoted': return 1;
-                  default: return 3;
-                }
-              })();
+              // Calculate attacking difficulty using opponent's dynamic defensive multiplier
+              const opponentDefensiveMultiplier = getDefensiveMultiplier(opponentId);
+              const attackingDifficulty = opponentDefensiveMultiplier;
               
               // Calculate defensive difficulty using opponent's dynamic attacking multiplier
               const opponentAttackingMultiplier = getAttackingMultiplier(opponentId);
@@ -321,7 +312,9 @@ export default function Fixtures() {
         });
         
         if (validFixtures > 0) {
-          avgAttackingFDR[team.id] = parseFloat((totalAttackingDifficulty / validFixtures).toFixed(2));
+          // For attacking FDR: 3 / (Average defensive multiplier of opponents)
+          const avgDefensiveMultiplier = totalAttackingDifficulty / validFixtures;
+          avgAttackingFDR[team.id] = avgDefensiveMultiplier > 0 ? parseFloat((3 / avgDefensiveMultiplier).toFixed(2)) : 0;
           // For defensive FDR: Average attacking multiplier of opponents × 3
           avgDefensiveFDR[team.id] = parseFloat(((totalDefensiveDifficulty / validFixtures) * 3).toFixed(2));
         } else {
