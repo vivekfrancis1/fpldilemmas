@@ -160,6 +160,23 @@ export default function CurrentStandings() {
 
   const summaryStats = calculateSummaryStats();
 
+  // Calculate attacking and defensive multipliers
+  const dataWithMultipliers = sortedData?.map(team => {
+    const attackingMultiplier = summaryStats && summaryStats.averages.adjustedGoalRate > 0 
+      ? (team.adjustedGoalRate || 0) / summaryStats.averages.adjustedGoalRate
+      : 0;
+    
+    const defensiveMultiplier = summaryStats && summaryStats.averages.adjustedGoalsAgainstRate > 0
+      ? (team.adjustedGoalsAgainstRate || 0) / summaryStats.averages.adjustedGoalsAgainstRate
+      : 0;
+    
+    return {
+      ...team,
+      attackingMultiplier,
+      defensiveMultiplier
+    };
+  }) || [];
+
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <th 
       className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
@@ -330,6 +347,16 @@ export default function CurrentStandings() {
                     <SortableHeader field="expectedGoalsAgainst">xGA</SortableHeader>
                     <SortableHeader field="adjustedGoalRate">AGR</SortableHeader>
                     <SortableHeader field="adjustedGoalsAgainstRate">AGAR</SortableHeader>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" data-testid="sort-attacking-multiplier">
+                      <div className="flex items-center justify-center gap-1">
+                        Att. Mult.
+                      </div>
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" data-testid="sort-defensive-multiplier">
+                      <div className="flex items-center justify-center gap-1">
+                        Def. Mult.
+                      </div>
+                    </th>
                     
                     {/* Defensive Stats - After xGA */}
                     <SortableHeader field="tackles">T</SortableHeader>
@@ -355,7 +382,7 @@ export default function CurrentStandings() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedData?.map((team) => (
+                  {dataWithMultipliers?.map((team) => (
                     <tr key={team.id} className="hover:bg-gray-50" data-testid={`current-standing-row-${team.shortName}`}>
                       {/* Position & Team Info */}
                       <td className="px-3 py-4 text-center sticky left-0 bg-white hover:bg-gray-50 border-r">
@@ -419,6 +446,12 @@ export default function CurrentStandings() {
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-orange-600" data-testid={`adjusted-goals-against-rate-${team.shortName}`}>
                         {team.adjustedGoalsAgainstRate ? team.adjustedGoalsAgainstRate.toFixed(2) : '0.00'}
+                      </td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-emerald-600" data-testid={`attacking-multiplier-${team.shortName}`}>
+                        {team.attackingMultiplier.toFixed(2)}
+                      </td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-rose-600" data-testid={`defensive-multiplier-${team.shortName}`}>
+                        {team.defensiveMultiplier.toFixed(2)}
                       </td>
                       
                       {/* Defensive Stats - After xGA */}
@@ -494,6 +527,8 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-500">{summaryStats.totals.expectedGoalsAgainst.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-purple-600">{summaryStats.totals.adjustedGoalRate.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-orange-600">{summaryStats.totals.adjustedGoalsAgainstRate.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-emerald-600">{dataWithMultipliers.reduce((sum, team) => sum + team.attackingMultiplier, 0).toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-rose-600">{dataWithMultipliers.reduce((sum, team) => sum + team.defensiveMultiplier, 0).toFixed(2)}</td>
                       
                       {/* Defensive Stats */}
                       <td className="px-2 py-4 text-center text-sm font-semibold text-teal-600">{summaryStats.totals.tackles}</td>
@@ -544,6 +579,8 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600">{summaryStats.averages.expectedGoalsAgainst.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-purple-700">{summaryStats.averages.adjustedGoalRate.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-orange-700">{summaryStats.averages.adjustedGoalsAgainstRate.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-emerald-700">1.00</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-rose-700">1.00</td>
                       
                       {/* Defensive Stats */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-700">{summaryStats.averages.tackles.toFixed(1)}</td>
