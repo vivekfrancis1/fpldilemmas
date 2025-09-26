@@ -30,8 +30,9 @@ interface CurrentTeamStanding {
   expectedGoalsAgainst: number;
   tackles: number;
   defensiveActions: number;
-  // Calculated field
+  // Calculated fields
   adjustedGoalRate: number;
+  adjustedGoalsAgainstRate: number;
 }
 
 type SortField = keyof CurrentTeamStanding;
@@ -52,10 +53,11 @@ export default function CurrentStandings() {
       }
       const data = await response.json();
       
-      // Calculate adjusted goal rate: 0.5 * (GF + xGF) / Number of games played
+      // Calculate adjusted rates: 0.5 * (GF + xGF) / Number of games played and 0.5 * (GA + xGA) / Number of games played
       return data.map((team: any) => ({
         ...team,
-        adjustedGoalRate: team.played > 0 ? 0.5 * (team.goalsFor + team.expectedGoalsFor) / team.played : 0
+        adjustedGoalRate: team.played > 0 ? 0.5 * (team.goalsFor + team.expectedGoalsFor) / team.played : 0,
+        adjustedGoalsAgainstRate: team.played > 0 ? 0.5 * (team.goalsAgainst + team.expectedGoalsAgainst) / team.played : 0
       }));
     },
   });
@@ -263,6 +265,7 @@ export default function CurrentStandings() {
                     <SortableHeader field="expectedGoalsFor">xGF</SortableHeader>
                     <SortableHeader field="expectedGoalsAgainst">xGA</SortableHeader>
                     <SortableHeader field="adjustedGoalRate">AGR</SortableHeader>
+                    <SortableHeader field="adjustedGoalsAgainstRate">AGAR</SortableHeader>
                     
                     {/* Defensive Stats - After xGA */}
                     <SortableHeader field="tackles">T</SortableHeader>
@@ -350,6 +353,9 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-medium text-purple-600" data-testid={`adjusted-goal-rate-${team.shortName}`}>
                         {team.adjustedGoalRate.toFixed(2)}
                       </td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-orange-600" data-testid={`adjusted-goals-against-rate-${team.shortName}`}>
+                        {team.adjustedGoalsAgainstRate.toFixed(2)}
+                      </td>
                       
                       {/* Defensive Stats - After xGA */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-600" data-testid={`tackles-${team.shortName}`}>
@@ -424,6 +430,7 @@ export default function CurrentStandings() {
                   <li><strong>PM:</strong> Penalties missed</li>
                   <li><strong>xGF/xGA:</strong> Expected Goals For/Against</li>
                   <li><strong>AGR:</strong> Adjusted Goal Rate (0.5 × (GF+xGF)/Games)</li>
+                  <li><strong>AGAR:</strong> Adjusted Goals Against Rate (0.5 × (GA+xGA)/Games)</li>
                   <li><strong>T:</strong> Tackles</li>
                   <li><strong>DA:</strong> Defensive actions</li>
                 </ul>
