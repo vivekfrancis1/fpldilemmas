@@ -16,6 +16,7 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
   const status = player.status || 'a';
   const news = player.news || '';
 
+
   // Only show badge if availability is not 100%
   if (chanceOfPlaying >= 100 && status === 'a') {
     return null;
@@ -59,8 +60,8 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
   return (
     <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
-        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium cursor-help transition-colors hover:opacity-80 ${statusBg} ${statusBorder} border`}>
-          <StatusIcon className={`h-2.5 w-2.5 ${statusColor}`} />
+        <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold cursor-help transition-colors hover:opacity-80 ${statusBg} ${statusBorder} border shadow-sm`}>
+          <StatusIcon className={`h-3 w-3 ${statusColor}`} />
           <span className={statusColor}>
             {chanceOfPlaying}%
           </span>
@@ -460,7 +461,7 @@ function createPlayerTotalPointsColumns(
       render: (_, player) => (
         <div className="flex items-center gap-2 min-w-[200px]">
           <div className="flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <PlayerNameCell name={player.playerName || player.name} />
               <PlayerAvailabilityBadge player={player} />
             </div>
