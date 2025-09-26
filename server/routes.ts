@@ -10744,7 +10744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Saves Projections API called - using formula: Average saves/game × AGR of opponent/1.25");
+        console.log("DEBUG: Player Saves Projections API called - using formula: Average saves/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game");
         
         const startGameweek = parseInt(req.query.startGameweek as string) || 4;
         const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -10761,33 +10761,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const fixturesData = await fixturesResponse.json();
       
-      // Calculate AGR (Average Goals Received/Against) for each team
-      const teamGoalsAgainst = new Map<number, number>();
+      // Calculate AGR (Adjusted Goal Rate) = 0.5 × (GF + XGF) per game for each team
+      const teamGoalsFor = new Map<number, number>();
+      const teamExpectedGoalsFor = new Map<number, number>();
       
-      // Initialize all teams with 0 goals against
+      // Initialize all teams with 0 goals for and expected goals for
       fplData.teams.forEach((team: any) => {
-        teamGoalsAgainst.set(team.id, 0);
+        teamGoalsFor.set(team.id, 0);
+        teamExpectedGoalsFor.set(team.id, 0);
       });
       
-      // Count goals against for each team from completed fixtures
+      // Count actual goals for each team from completed fixtures
       fixturesData.forEach((fixture: any) => {
         const isCompleted = fixture.finished || fixture.event < currentGameweek;
         
         if (isCompleted && fixture.team_h_score !== null && fixture.team_a_score !== null) {
-          // Home team's goals against = away team's goals scored
-          const homeGoalsAgainst = teamGoalsAgainst.get(fixture.team_h) || 0;
-          teamGoalsAgainst.set(fixture.team_h, homeGoalsAgainst + fixture.team_a_score);
+          // Home team goals for = home team score
+          const homeGF = teamGoalsFor.get(fixture.team_h) || 0;
+          teamGoalsFor.set(fixture.team_h, homeGF + fixture.team_h_score);
           
-          // Away team's goals against = home team's goals scored  
-          const awayGoalsAgainst = teamGoalsAgainst.get(fixture.team_a) || 0;
-          teamGoalsAgainst.set(fixture.team_a, awayGoalsAgainst + fixture.team_h_score);
+          // Away team goals for = away team score  
+          const awayGF = teamGoalsFor.get(fixture.team_a) || 0;
+          teamGoalsFor.set(fixture.team_a, awayGF + fixture.team_a_score);
+        }
+      });
+      
+      // Get expected goals for from completed gameweeks (same logic as current-standings)
+      const completedGameweeks = new Set<number>();
+      fixturesData.forEach((fixture: any) => {
+        if ((fixture.finished || fixture.event < currentGameweek) && fixture.event) {
+          completedGameweeks.add(fixture.event);
+        }
+      });
+      
+      // Fetch live data for completed gameweeks to get XGF
+      const liveDataPromises = Array.from(completedGameweeks).map(async (gameweek) => {
+        try {
+          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            return { gameweek, data: liveData };
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch live data for gameweek ${gameweek}:`, error);
+        }
+        return null;
+      });
+      
+      const liveDataResults = await Promise.all(liveDataPromises);
+      
+      // Process live data to calculate XGF for each team
+      const playerToTeamMap = new Map<number, number>();
+      fplData.elements.forEach((player: any) => {
+        playerToTeamMap.set(player.id, player.team);
+      });
+      
+      liveDataResults.forEach((result) => {
+        if (result && result.data && result.data.elements) {
+          Object.entries(result.data.elements).forEach(([playerId, playerData]: [string, any]) => {
+            const teamId = playerToTeamMap.get(parseInt(playerId));
+            if (!teamId) return;
+            
+            const stats = playerData.stats || {};
+            let playerXGF = 0;
+            if (stats.expected_goals) {
+              playerXGF = parseFloat(stats.expected_goals) || 0;
+            } else if (stats.xg) {
+              playerXGF = parseFloat(stats.xg) || 0;
+            }
+            
+            const currentXGF = teamExpectedGoalsFor.get(teamId) || 0;
+            teamExpectedGoalsFor.set(teamId, currentXGF + playerXGF);
+          });
         }
       });
 
       const getOpponentAGR = (teamId: number): number => {
-        const goalsAgainst = teamGoalsAgainst.get(teamId) || 0;
+        const goalsFor = teamGoalsFor.get(teamId) || 0;
+        const expectedGoalsFor = teamExpectedGoalsFor.get(teamId) || 0;
         const gamesPlayed = Math.max(1, teamCompletedFixtures.get(teamId) || 1);
-        return goalsAgainst / gamesPlayed; // AGR = Average Goals Received (Goals Against per game)
+        return 0.5 * (goalsFor + expectedGoalsFor) / gamesPlayed; // AGR = 0.5 × (GF + XGF) per game
       };
       
       // Get player minutes projections
@@ -10919,7 +10972,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Defensive Contributions API called - using formula: Average DC/game × AGR of opponent/1.25");
+        console.log("DEBUG: Player Defensive Contributions API called - using formula: Average DC/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -10936,33 +10989,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const fixturesData = await fixturesResponse.json();
       
-      // Calculate AGR (Average Goals Received/Against) for each team
-      const teamGoalsAgainst = new Map<number, number>();
+      // Calculate AGR (Adjusted Goal Rate) = 0.5 × (GF + XGF) per game for each team
+      const teamGoalsFor = new Map<number, number>();
+      const teamExpectedGoalsFor = new Map<number, number>();
       
-      // Initialize all teams with 0 goals against
+      // Initialize all teams with 0 goals for and expected goals for
       fplData.teams.forEach((team: any) => {
-        teamGoalsAgainst.set(team.id, 0);
+        teamGoalsFor.set(team.id, 0);
+        teamExpectedGoalsFor.set(team.id, 0);
       });
       
-      // Count goals against for each team from completed fixtures
+      // Count actual goals for each team from completed fixtures
       fixturesData.forEach((fixture: any) => {
         const isCompleted = fixture.finished || fixture.event < currentGameweek;
         
         if (isCompleted && fixture.team_h_score !== null && fixture.team_a_score !== null) {
-          // Home team's goals against = away team's goals scored
-          const homeGoalsAgainst = teamGoalsAgainst.get(fixture.team_h) || 0;
-          teamGoalsAgainst.set(fixture.team_h, homeGoalsAgainst + fixture.team_a_score);
+          // Home team goals for = home team score
+          const homeGF = teamGoalsFor.get(fixture.team_h) || 0;
+          teamGoalsFor.set(fixture.team_h, homeGF + fixture.team_h_score);
           
-          // Away team's goals against = home team's goals scored  
-          const awayGoalsAgainst = teamGoalsAgainst.get(fixture.team_a) || 0;
-          teamGoalsAgainst.set(fixture.team_a, awayGoalsAgainst + fixture.team_h_score);
+          // Away team goals for = away team score  
+          const awayGF = teamGoalsFor.get(fixture.team_a) || 0;
+          teamGoalsFor.set(fixture.team_a, awayGF + fixture.team_a_score);
+        }
+      });
+      
+      // Get expected goals for from completed gameweeks (same logic as current-standings)
+      const completedGameweeks = new Set<number>();
+      fixturesData.forEach((fixture: any) => {
+        if ((fixture.finished || fixture.event < currentGameweek) && fixture.event) {
+          completedGameweeks.add(fixture.event);
+        }
+      });
+      
+      // Fetch live data for completed gameweeks to get XGF
+      const liveDataPromises = Array.from(completedGameweeks).map(async (gameweek) => {
+        try {
+          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            return { gameweek, data: liveData };
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch live data for gameweek ${gameweek}:`, error);
+        }
+        return null;
+      });
+      
+      const liveDataResults = await Promise.all(liveDataPromises);
+      
+      // Process live data to calculate XGF for each team
+      const playerToTeamMap = new Map<number, number>();
+      fplData.elements.forEach((player: any) => {
+        playerToTeamMap.set(player.id, player.team);
+      });
+      
+      liveDataResults.forEach((result) => {
+        if (result && result.data && result.data.elements) {
+          Object.entries(result.data.elements).forEach(([playerId, playerData]: [string, any]) => {
+            const teamId = playerToTeamMap.get(parseInt(playerId));
+            if (!teamId) return;
+            
+            const stats = playerData.stats || {};
+            let playerXGF = 0;
+            if (stats.expected_goals) {
+              playerXGF = parseFloat(stats.expected_goals) || 0;
+            } else if (stats.xg) {
+              playerXGF = parseFloat(stats.xg) || 0;
+            }
+            
+            const currentXGF = teamExpectedGoalsFor.get(teamId) || 0;
+            teamExpectedGoalsFor.set(teamId, currentXGF + playerXGF);
+          });
         }
       });
 
       const getOpponentAGR = (teamId: number): number => {
-        const goalsAgainst = teamGoalsAgainst.get(teamId) || 0;
+        const goalsFor = teamGoalsFor.get(teamId) || 0;
+        const expectedGoalsFor = teamExpectedGoalsFor.get(teamId) || 0;
         const gamesPlayed = Math.max(1, teamCompletedFixtures.get(teamId) || 1);
-        return goalsAgainst / gamesPlayed; // AGR = Average Goals Received (Goals Against per game)
+        return 0.5 * (goalsFor + expectedGoalsFor) / gamesPlayed; // AGR = 0.5 × (GF + XGF) per game
       };
       
       // Get player minutes projections
