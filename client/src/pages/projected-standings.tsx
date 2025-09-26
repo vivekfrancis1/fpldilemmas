@@ -102,7 +102,7 @@ export default function ProjectedStandings() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Trophy className="h-8 w-8" />
-            <h1>Projected Final Standings</h1>
+            <h1>Projected Standings</h1>
           </div>
           <p className="fpl-page-subtitle">
             Premier League table based on actual results and projected outcomes for next 6 gameweeks
@@ -175,7 +175,7 @@ export default function ProjectedStandings() {
             <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
               <CardTitle className="flex items-center gap-3 text-xl">
                 <Trophy className="h-6 w-6" />
-                Projected Final Table
+                Projected Table
                 <Badge className="bg-white/20 text-white border-white/30 ml-auto">
                   {totalGameweeks} gameweeks
                 </Badge>
