@@ -6917,40 +6917,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         adjustedGoalsAgainstRate: team.played > 0 ? (0.5 * (team.goalsAgainst + team.expectedGoalsAgainst)) / team.played : 0
       }));
       
-      // Calculate dynamic attacking multipliers based on offensive performance
-      const totalAGR = standings.reduce((sum, team) => sum + team.adjustedGoalRate, 0);
-      const averageAGR = standings.length > 0 ? totalAGR / standings.length : 1;
-      
-      // Calculate average AGAR for defensive multipliers
-      const totalAGAR = standings.reduce((sum, team) => sum + team.adjustedGoalsAgainstRate, 0);
-      const averageAGAR = standings.length > 0 ? totalAGAR / standings.length : 1;
-      
-      // Add attacking and defensive multipliers to each team
-      const standingsWithMultipliers = standings.map((team: any) => ({
-        ...team,
-        // Calculate attacking multiplier: team's AGR relative to league average
-        // Higher AGR = higher attacking multiplier (more dangerous for defenders to face)
-        // Range roughly 0.6 to 1.8 based on performance relative to average
-        attackingMultiplier: averageAGR > 0 ? 
-          Math.max(0.6, Math.min(1.8, team.adjustedGoalRate / averageAGR)) : 1.0,
-        
-        // Calculate defensive multiplier: team's AGAR relative to league average
-        // Lower AGAR = lower defensive multiplier (easier for attackers to score against)
-        // Higher AGAR = higher defensive multiplier (harder for attackers to score against)
-        // Range roughly 0.6 to 1.8 based on defensive performance relative to average
-        defensiveMultiplier: averageAGAR > 0 ? 
-          Math.max(0.6, Math.min(1.8, team.adjustedGoalsAgainstRate / averageAGAR)) : 1.0
-      }));
-      
       // Sort by standard Premier League rules
-      standingsWithMultipliers.sort((a, b) => {
+      standings.sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
         if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
         return b.goalsFor - a.goalsFor;
       });
       
       // Add position
-      const enhancedStandings = standingsWithMultipliers.map((team, index) => ({
+      const enhancedStandings = standings.map((team, index) => ({
         ...team,
         position: index + 1
       }));
@@ -6970,66 +6945,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Lightweight Team Multipliers endpoint - provides only attacking/defensive multipliers without expensive calculations
-  app.get("/api/team-multipliers", async (req, res) => {
-    try {
-      console.log("📊 Team Multipliers API called - providing lightweight multiplier data");
-      
-      // Check if we have current-standings data in cache first
-      const cached = currentStandingsCache.get('detailed_standings');
-      const now = Date.now();
-      
-      if (cached && (now - cached.timestamp) < CURRENT_STANDINGS_CACHE_DURATION) {
-        // Extract multipliers from cached standings data
-        const multipliers = cached.data.map((team: any) => ({
-          teamId: team.id,
-          teamName: team.shortName,
-          attackingMultiplier: team.attackingMultiplier || 1.0,
-          defensiveMultiplier: team.defensiveMultiplier || 1.0
-        }));
-        
-        console.log(`✅ Serving ${multipliers.length} team multipliers from current-standings cache`);
-        return res.json(multipliers);
-      }
-      
-      // Cache miss - provide default multipliers without expensive calculations
-      console.log("🔄 Cache miss - using default multipliers to avoid expensive calculations");
-      
-      try {
-        // Use lightweight FPL bootstrap data for team info
-        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-        if (bootstrapResponse.ok) {
-          const bootstrapData = await bootstrapResponse.json();
-          const defaultMultipliers = bootstrapData.teams.map((team: any) => ({
-            teamId: team.id,
-            teamName: team.short_name,
-            attackingMultiplier: 1.0, // Neutral multiplier when detailed standings unavailable
-            defensiveMultiplier: 1.0
-          }));
-          
-          console.log(`✅ Serving ${defaultMultipliers.length} default team multipliers`);
-          return res.json(defaultMultipliers);
-        }
-        throw new Error("Bootstrap data unavailable");
-      } catch (bootstrapError) {
-        console.warn("⚠️ Bootstrap data unavailable, using hardcoded fallback");
-        // Ultimate fallback: hardcoded team list with neutral multipliers
-        const hardcodedMultipliers = Array.from({length: 20}, (_, i) => ({
-          teamId: i + 1,
-          teamName: `T${i + 1}`,
-          attackingMultiplier: 1.0,
-          defensiveMultiplier: 1.0
-        }));
-        
-        console.log(`✅ Serving ${hardcodedMultipliers.length} hardcoded fallback multipliers`);
-        return res.json(hardcodedMultipliers);
-      }
-      
-    } catch (error) {
-      console.error("❌ Error generating team multipliers:", error);
-      res.status(500).json({ error: "Failed to generate team multipliers" });
-    }
-  });
 
   // Player Minutes Projections endpoint - API-first with cache fallback
   app.get("/api/player-minutes-projections", async (req, res) => {
