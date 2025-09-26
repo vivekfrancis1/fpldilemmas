@@ -347,44 +347,18 @@ export class TeamGoalsService {
   }
   
   /**
-   * Get team's average expected goals per game from real FPL current standings data
+   * Get team's average expected goals per game - using fallback values
    */
   private static async getTeamAverageXG(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): Promise<number> {
-    try {
-      const standingsData = await TeamGoalsService.getCurrentStandingsData();
-      const teamStanding = standingsData.find((team: any) => team.id === teamId);
-      
-      if (teamStanding && teamStanding.played > 0) {
-        // Calculate average xGF per game from real FPL data
-        const avgXGF = teamStanding.expectedGoalsFor / teamStanding.played;
-        return Math.round(avgXGF * 100) / 100; // Round to 2 decimal places
-      }
-    } catch (error) {
-      console.warn(`⚠️ Failed to fetch xGF for team ${teamId}, using fallback:`, error);
-    }
-    
-    // Fallback to default if data unavailable
+    // Use fallback to default values since multiplier data removed
     return adminGoalSettings.defaultExpectedGoalsPerGame || MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame || 1.3;
   }
   
   /**
-   * Get opponent's average expected goals conceded per game from real FPL current standings data
+   * Get opponent's average expected goals conceded per game - using fallback values  
    */
   private static async getTeamAverageXGC(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): Promise<number> {
-    try {
-      const standingsData = await TeamGoalsService.getCurrentStandingsData();
-      const teamStanding = standingsData.find((team: any) => team.id === teamId);
-      
-      if (teamStanding && teamStanding.played > 0) {
-        // Calculate average xGA per game from real FPL data
-        const avgXGA = teamStanding.expectedGoalsAgainst / teamStanding.played;
-        return Math.round(avgXGA * 100) / 100; // Round to 2 decimal places
-      }
-    } catch (error) {
-      console.warn(`⚠️ Failed to fetch xGA for team ${teamId}, using fallback:`, error);
-    }
-    
-    // Fallback to premier league average if data unavailable
+    // Use fallback to premier league average since multiplier data removed
     return 1.5; // Premier League average
   }
   
