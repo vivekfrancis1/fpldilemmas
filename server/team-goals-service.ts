@@ -43,18 +43,6 @@ export class TeamGoalsService {
     return base * TeamGoalsService.num(factor, fallback);
   }
 
-  /**
-   * Deterministic baseline calculator for when calculations fail
-   */
-  private static calculateBaselineFallback(teamId: number, opponentId: number, isHome: boolean): number {
-    // Simple but reliable calculation: 1.5 * venue * basic team strength
-    const venue = isHome ? 1.16 : 0.84;
-    const attackStrength = teamId <= 6 ? 1.15 : (teamId >= 17 ? 0.85 : 1.0); // Elite, average, weak
-    const defenseStrength = opponentId <= 6 ? 0.85 : (opponentId >= 17 ? 1.15 : 1.0); // Elite defense = lower goals
-    
-    const baseline = 1.5 * venue * attackStrength * defenseStrength;
-    return Math.max(0.3, Math.min(4.2, baseline)); // Clamp to reasonable bounds
-  }
 
   /**
    * Get team goal projections for a specific gameweek range
@@ -240,11 +228,6 @@ export class TeamGoalsService {
         TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.84);
       baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, venueMultiplier, 1.0);
       
-      // Intermediate validation check
-      if (!isFinite(baseExpectedGoals) || isNaN(baseExpectedGoals)) {
-        console.warn(`⚠️ CALCULATION FALLBACK: Team ${team.name} vs ${opponent.name} GW${fixture.event} - Performance-based calculation invalid, using baseline`);
-        return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
-      }
       
       // REMOVED: All tier-based multipliers - now using dynamic performance-based calculations only
       
@@ -253,11 +236,6 @@ export class TeamGoalsService {
         baseExpectedGoals, team, opponent, fixture, isHome, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
       );
       
-      // Critical validation check after context multipliers
-      if (!isFinite(baseExpectedGoals) || isNaN(baseExpectedGoals)) {
-        console.warn(`⚠️ CALCULATION FALLBACK: Team ${team.name} vs ${opponent.name} GW${fixture.event} - Context multipliers invalid, using baseline`);
-        return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
-      }
       
       // REMOVED: Phase 4 (Market Bounds) - No longer constraining projections with market-based limits
       // This allows projections to reflect pure performance data without artificial constraints
@@ -267,18 +245,12 @@ export class TeamGoalsService {
       const absoluteMax = TeamGoalsService.num(adminGoalSettings.absoluteMaxGoals, 7.0);
       const expectedGoals = Math.max(absoluteMin, Math.min(absoluteMax, baseExpectedGoals));
       
-      // Final safety check - if still invalid, use baseline
-      if (!isFinite(expectedGoals) || isNaN(expectedGoals)) {
-        console.warn(`⚠️ CALCULATION FALLBACK: Team ${team.name} vs ${opponent.name} GW${fixture.event} - Final result invalid, using baseline`);
-        return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
-      }
       
       return expectedGoals;
       
     } catch (error) {
-      // Ultimate fallback for any unexpected errors
-      console.error(`❌ CALCULATION ERROR: Team ${team.name} vs ${opponent.name} GW${fixture.event} - ${error}, using baseline`);
-      return TeamGoalsService.calculateBaselineFallback(team.id, opponent.id, isHome);
+      console.error(`❌ CALCULATION ERROR: Team ${team.name} vs ${opponent.name} GW${fixture.event} - ${error}`);
+      throw error;
     }
   }
   
@@ -308,8 +280,7 @@ export class TeamGoalsService {
       return standingsData;
     } catch (error) {
       console.error('Failed to fetch current standings:', error);
-      // Return empty array as fallback
-      return [];
+      throw error;
     }
   }
 
@@ -325,10 +296,10 @@ export class TeamGoalsService {
         return teamData.goalsFor / teamData.played;
       }
       
-      return 1.2; // Premier League average fallback
+      throw new Error(`No team data found for team ${teamId} in current standings`);
     } catch (error) {
-      console.warn(`Failed to fetch team average goals for team ${teamId}:`, error);
-      return 1.2; // Fallback value
+      console.error(`Failed to fetch team average goals for team ${teamId}:`, error);
+      throw error;
     }
   }
   
@@ -344,10 +315,10 @@ export class TeamGoalsService {
         return teamData.goalsAgainst / teamData.played;
       }
       
-      return 1.4; // Premier League average fallback
+      throw new Error(`No team data found for team ${teamId} in current standings`);
     } catch (error) {
-      console.warn(`Failed to fetch team average goals conceded for team ${teamId}:`, error);
-      return 1.4; // Fallback value
+      console.error(`Failed to fetch team average goals conceded for team ${teamId}:`, error);
+      throw error;
     }
   }
   
@@ -365,8 +336,8 @@ export class TeamGoalsService {
       
       return adminGoalSettings.defaultExpectedGoalsPerGame || MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame || 1.3;
     } catch (error) {
-      console.warn(`Failed to fetch team average xG for team ${teamId}:`, error);
-      return adminGoalSettings.defaultExpectedGoalsPerGame || MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame || 1.3;
+      console.error(`Failed to fetch team average xG for team ${teamId}:`, error);
+      throw error;
     }
   }
   
@@ -384,8 +355,8 @@ export class TeamGoalsService {
       
       return 1.5; // Premier League average fallback
     } catch (error) {
-      console.warn(`Failed to fetch team average xGC for team ${teamId}:`, error);
-      return 1.5; // Fallback value
+      console.error(`Failed to fetch team average xGC for team ${teamId}:`, error);
+      throw error;
     }
   }
   
