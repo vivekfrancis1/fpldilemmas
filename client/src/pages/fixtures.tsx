@@ -882,7 +882,7 @@ export default function Fixtures() {
                   <span>5 Very Hard</span>
                 </div>
                 <div className="text-xs text-gray-600">
-                  Defensive difficulty based on opponent's attacking strength
+                  Dynamic colours based on opponent's attacking strength as per current standings
                 </div>
               </div>
 
