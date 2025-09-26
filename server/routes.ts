@@ -6995,41 +6995,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(multipliers);
       }
       
-      // Cache miss - get fresh current standings data (this will cache it for future requests)
-      console.log("🔄 Cache miss - fetching fresh current standings for multipliers");
+      // Cache miss - provide default multipliers without expensive calculations
+      console.log("🔄 Cache miss - using default multipliers to avoid expensive calculations");
+      
       try {
-        const standingsResponse = await internalFetch("api/current-standings");
-        if (standingsResponse.ok) {
-          const standingsData = await standingsResponse.json();
-          const multipliers = standingsData.map((team: any) => ({
-            teamId: team.id,
-            teamName: team.shortName,
-            attackingMultiplier: team.attackingMultiplier || 1.0,
-            defensiveMultiplier: team.defensiveMultiplier || 1.0
-          }));
-          
-          console.log(`✅ Generated ${multipliers.length} team multipliers from fresh standings data`);
-          return res.json(multipliers);
-        } else {
-          throw new Error("Current standings API failed");
-        }
-      } catch (standingsError) {
-        console.warn("⚠️ Current standings unavailable, using fallback multipliers");
-        // Fallback: provide default multipliers based on team strength
+        // Use lightweight FPL bootstrap data for team info
         const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
         if (bootstrapResponse.ok) {
           const bootstrapData = await bootstrapResponse.json();
-          const fallbackMultipliers = bootstrapData.teams.map((team: any) => ({
+          const defaultMultipliers = bootstrapData.teams.map((team: any) => ({
             teamId: team.id,
             teamName: team.short_name,
-            attackingMultiplier: 1.0, // Default neutral multiplier
+            attackingMultiplier: 1.0, // Neutral multiplier when detailed standings unavailable
             defensiveMultiplier: 1.0
           }));
           
-          console.log(`✅ Serving ${fallbackMultipliers.length} fallback team multipliers`);
-          return res.json(fallbackMultipliers);
+          console.log(`✅ Serving ${defaultMultipliers.length} default team multipliers`);
+          return res.json(defaultMultipliers);
         }
-        throw new Error("All data sources failed");
+        throw new Error("Bootstrap data unavailable");
+      } catch (bootstrapError) {
+        console.warn("⚠️ Bootstrap data unavailable, using hardcoded fallback");
+        // Ultimate fallback: hardcoded team list with neutral multipliers
+        const hardcodedMultipliers = Array.from({length: 20}, (_, i) => ({
+          teamId: i + 1,
+          teamName: `T${i + 1}`,
+          attackingMultiplier: 1.0,
+          defensiveMultiplier: 1.0
+        }));
+        
+        console.log(`✅ Serving ${hardcodedMultipliers.length} hardcoded fallback multipliers`);
+        return res.json(hardcodedMultipliers);
       }
       
     } catch (error) {
