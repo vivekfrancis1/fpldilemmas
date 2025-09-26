@@ -14,11 +14,19 @@ import { internalFetch } from "./config";
 import { PlayerTotalPointsAggregator } from "./player-total-points-aggregator";
 
 export class FPLScoringCacheService {
+  private static updateLock = false;
   
   /**
    * Fetch and cache all FPL scoring component data
    */
   async updateAllScoringData(startGameweek?: number, endGameweek?: number): Promise<void> {
+    // Prevent concurrent cache updates to avoid race conditions
+    if (FPLScoringCacheService.updateLock) {
+      console.log("⏳ Cache update already in progress, skipping duplicate request");
+      return;
+    }
+    
+    FPLScoringCacheService.updateLock = true;
     // Calculate next 6 gameweeks if not provided
     if (!startGameweek || !endGameweek) {
       const { computeNextRange } = await import('../shared/gameweek-utils');
@@ -53,6 +61,9 @@ export class FPLScoringCacheService {
     } catch (error) {
       console.error("❌ FPL scoring component cache update failed:", error);
       throw error;
+    } finally {
+      // Always release the lock
+      FPLScoringCacheService.updateLock = false;
     }
   }
 
