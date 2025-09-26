@@ -9,6 +9,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { seedContentCreators } from "./seed-database";
 import { seedAdminUser } from "./seed-admin-user";
 import { productionCacheInitializer } from "./production-cache-initializer";
+import { initializeGlobalOrchestrator } from "./routes";
 
 const app = express();
 app.use(express.json());
@@ -92,7 +93,9 @@ app.use((req, res, next) => {
     }, async () => {
       log(`serving on port ${port}`);
       
-      // Initialize production cache after server is running (only runs if cache is empty)
+      // Initialize production cache with dependency management (only runs if cache is empty)
+      console.log("🔧 Initializing dependency orchestrator...");
+      const orchestrator = initializeGlobalOrchestrator();
       await productionCacheInitializer.initializeProductionCache();
       
       // Start schedulers after server is running

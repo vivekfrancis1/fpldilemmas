@@ -35,6 +35,7 @@ import { resultCache } from "./result-cache-service";
 // Minutes scaling removed from all player projection tools
 import { syncProjectionService } from './sync-projection-service';
 import { FPLScoringCacheService } from './fpl-scoring-cache-service';
+import { InitializationOrchestrator } from './initialization-orchestrator';
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -229,6 +230,65 @@ class EnhancedCache {
 
 // Export enhanced totalPointsCache
 export const totalPointsCache = new EnhancedCache(1000, 30 * 60 * 1000); // 1000 entries, 30min TTL
+
+// ========== INITIALIZATION ORCHESTRATOR FOR DEPENDENCY MANAGEMENT ==========
+
+// Global orchestrator instance for checking system readiness
+let globalOrchestrator: InitializationOrchestrator | null = null;
+
+/**
+ * Initialize the global orchestrator (called during app startup)
+ */
+export function initializeGlobalOrchestrator(): InitializationOrchestrator {
+  if (!globalOrchestrator) {
+    globalOrchestrator = new InitializationOrchestrator();
+    console.log("🔧 Global InitializationOrchestrator created");
+  }
+  return globalOrchestrator;
+}
+
+/**
+ * Check if specific components are ready for use
+ */
+function checkReadiness(requiredComponents: string[], endpoint: string): { ready: boolean; missing: string[]; message?: string } {
+  if (!globalOrchestrator) {
+    console.log(`⚠️ ${endpoint}: No orchestrator initialized - allowing request`);
+    return { ready: true, missing: [] };
+  }
+
+  const readinessCheck = globalOrchestrator.isSystemReady(requiredComponents);
+  
+  if (!readinessCheck.ready) {
+    console.log(`🚫 ${endpoint}: System not ready - missing: ${readinessCheck.missing.join(', ')}`);
+    return {
+      ready: false,
+      missing: readinessCheck.missing,
+      message: `Projection system initializing. Missing components: ${readinessCheck.missing.join(', ')}. Please retry in 30-60 seconds.`
+    };
+  }
+
+  return { ready: true, missing: [] };
+}
+
+/**
+ * Express middleware to check readiness before processing request
+ */
+function requireReadiness(requiredComponents: string[], endpoint: string) {
+  return (req: any, res: any, next: any) => {
+    const readinessCheck = checkReadiness(requiredComponents, endpoint);
+    
+    if (!readinessCheck.ready) {
+      return res.status(503).json({
+        error: 'System Initializing',
+        message: readinessCheck.message,
+        missingComponents: readinessCheck.missing,
+        retryAfter: 30
+      });
+    }
+    
+    next();
+  };
+}
 
 // ========== BACKGROUND JOB MANAGEMENT SYSTEM ==========
 
@@ -5133,7 +5193,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // LEGACY ENDPOINT FOR INTERNAL USE ONLY - Full calculation for cache population
-  app.get("/api/player-goals-scored-projections-full-calculation", async (req, res) => {
+  // DEPENDENCY GATE: Requires team goals to be ready before player aggregation
+  app.get("/api/player-goals-scored-projections-full-calculation", 
+    requireReadiness(['bootstrap-data', 'team-goals'], 'player-goals-full-calculation'),
+    async (req, res) => {
     try {
       console.log(`DEBUG: Player Goals Scored Projections API called - using pure projections for next 6 gameweeks only`);
       
@@ -5548,7 +5611,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // LEGACY ENDPOINT FOR INTERNAL USE ONLY - Full calculation for cache population
-  app.get("/api/player-assist-projections-full-calculation", async (req, res) => {
+  app.get("/api/player-assist-projections-full-calculation", 
+    requireReadiness(['bootstrap-data', 'team-assists'], 'player-assists-full-calculation'),
+    async (req, res) => {
     try {
       console.log("DEBUG: Player Assist Projections API called - using pure projections for next 6 gameweeks only");
       
@@ -11698,7 +11763,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const TOTAL_POINTS_RESPONSE_CACHE_DURATION = 60 * 60 * 1000; // 1 hour cache (increased)
 
   // COMPREHENSIVE PLAYER PROJECTIONS ENDPOINT - API-first with cache and background job fallback
-  app.get("/api/comprehensive-player-projections", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/comprehensive-player-projections", requireAuth, requireAdmin, 
+    requireReadiness(['bootstrap-data', 'team-goals', 'team-assists', 'team-minutes'], 'comprehensive-player-projections'),
+    async (req, res) => {
     try {
       // CRITICAL FIX: Enforce rate limiting to prevent DoS
       const clientId = req.session?.user?.id || req.ip || 'anonymous';
