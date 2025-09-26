@@ -86,7 +86,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       ]
     },
     {
-      section: "Basic Tools",
+      section: "Statistics",
       items: [
         { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
         { path: "/current-standings", label: "Team Statistics", icon: Trophy, description: "Current league table based on completed matches", popular: false },
