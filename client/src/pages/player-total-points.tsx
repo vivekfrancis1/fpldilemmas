@@ -16,7 +16,8 @@ import PlayerProjectionsComparisonModal from "@/components/player-projections-co
 function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTotalPointsData, gameweek: number }) {
   const hasBreakdownData = player.pointsFromGoals !== undefined;
   const gwKey = `gw${gameweek}`;
-  const gwPoints = player.gameweekProjections?.[gwKey];
+  const numericGwKey = gameweek.toString();
+  const gwPoints = player.gameweekProjections?.[numericGwKey];
   
   if (!hasBreakdownData || !gwPoints) {
     return (
@@ -414,6 +415,7 @@ function createPlayerTotalPointsColumns(
     },
     ...gameweekRange.map(gw => {
       const gwKey = `gw${gw}`;
+      const numericGwKey = gw.toString();
       const maxPointsForGw = maxPointsPerGameweek[gwKey];
       
       return {
@@ -423,7 +425,7 @@ function createPlayerTotalPointsColumns(
         align: 'center' as const,
         className: 'min-w-[48px] bg-blue-50/30',
         render: (_: any, player: PlayerTotalPointsData) => {
-          const playerPoints = player.gameweekProjections?.[gwKey] || 0;
+          const playerPoints = player.gameweekProjections?.[numericGwKey] || 0;
           const isMaxForGameweek = playerPoints > 0 && playerPoints === maxPointsForGw;
           
           return (
@@ -767,9 +769,9 @@ export default function PlayerTotalPoints() {
       }
       // Handle total points gameweek sorting
       else if (sortField.startsWith('gw')) {
-        const gwKey = sortField; // Use the full "gw4" key format
-        aValue = a.gameweekProjections?.[gwKey] || 0;
-        bValue = b.gameweekProjections?.[gwKey] || 0;
+        const gwNumber = sortField.replace('gw', ''); // Extract numeric part
+        aValue = a.gameweekProjections?.[gwNumber] || 0;
+        bValue = b.gameweekProjections?.[gwNumber] || 0;
       } 
       // Handle regular field sorting
       else {
@@ -797,7 +799,8 @@ export default function PlayerTotalPoints() {
     const maxPoints: { [key: string]: number } = {};
     gameweekRange.forEach(gw => {
       const gwKey = `gw${gw}`;
-      const maxForThisGw = Math.max(...filteredAndSortedData.map(player => player.gameweekProjections?.[gwKey] || 0));
+      const numericGwKey = gw.toString();
+      const maxForThisGw = Math.max(...filteredAndSortedData.map(player => player.gameweekProjections?.[numericGwKey] || 0));
       maxPoints[gwKey] = maxForThisGw;
     });
     return maxPoints;
