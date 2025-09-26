@@ -6973,6 +6973,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Lightweight Team Multipliers endpoint - provides only attacking/defensive multipliers without expensive calculations
+  app.get("/api/team-multipliers", async (req, res) => {
+    try {
+      console.log("📊 Team Multipliers API called - providing lightweight multiplier data");
+      
+      // Check if we have current-standings data in cache first
+      const cached = currentStandingsCache.get('detailed_standings');
+      const now = Date.now();
+      
+      if (cached && (now - cached.timestamp) < CURRENT_STANDINGS_CACHE_DURATION) {
+        // Extract multipliers from cached standings data
+        const multipliers = cached.data.map((team: any) => ({
+          teamId: team.id,
+          teamName: team.shortName,
+          attackingMultiplier: team.attackingMultiplier || 1.0,
+          defensiveMultiplier: team.defensiveMultiplier || 1.0
+        }));
+        
+        console.log(`✅ Serving ${multipliers.length} team multipliers from current-standings cache`);
+        return res.json(multipliers);
+      }
+      
+      // Cache miss - get fresh current standings data (this will cache it for future requests)
+      console.log("🔄 Cache miss - fetching fresh current standings for multipliers");
+      try {
+        const standingsResponse = await internalFetch("api/current-standings");
+        if (standingsResponse.ok) {
+          const standingsData = await standingsResponse.json();
+          const multipliers = standingsData.map((team: any) => ({
+            teamId: team.id,
+            teamName: team.shortName,
+            attackingMultiplier: team.attackingMultiplier || 1.0,
+            defensiveMultiplier: team.defensiveMultiplier || 1.0
+          }));
+          
+          console.log(`✅ Generated ${multipliers.length} team multipliers from fresh standings data`);
+          return res.json(multipliers);
+        } else {
+          throw new Error("Current standings API failed");
+        }
+      } catch (standingsError) {
+        console.warn("⚠️ Current standings unavailable, using fallback multipliers");
+        // Fallback: provide default multipliers based on team strength
+        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        if (bootstrapResponse.ok) {
+          const bootstrapData = await bootstrapResponse.json();
+          const fallbackMultipliers = bootstrapData.teams.map((team: any) => ({
+            teamId: team.id,
+            teamName: team.short_name,
+            attackingMultiplier: 1.0, // Default neutral multiplier
+            defensiveMultiplier: 1.0
+          }));
+          
+          console.log(`✅ Serving ${fallbackMultipliers.length} fallback team multipliers`);
+          return res.json(fallbackMultipliers);
+        }
+        throw new Error("All data sources failed");
+      }
+      
+    } catch (error) {
+      console.error("❌ Error generating team multipliers:", error);
+      res.status(500).json({ error: "Failed to generate team multipliers" });
+    }
+  });
+
   // Player Minutes Projections endpoint - API-first with cache fallback
   app.get("/api/player-minutes-projections", async (req, res) => {
     try {
@@ -10703,19 +10768,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const fixturesData = await fixturesResponse.json();
       
-      // Get current standings to calculate dynamic attacking multipliers
-      const standingsResponse = await fetch("http://localhost:5000/api/current-standings");
-      const standingsData = await standingsResponse.json();
+      // Get team multipliers (lightweight call instead of expensive current-standings)
+      const multipliersResponse = await fetch("http://localhost:5000/api/team-multipliers");
+      const multipliersData = await multipliersResponse.json();
+      console.log(`📊 Fetched multiplier data for ${multipliersData.length} teams`);
       
-      // Calculate average AGR across all teams
-      const totalAGR = standingsData.reduce((sum: number, team: any) => sum + (team.adjustedGoalRate || 0), 0);
-      const averageAGR = totalAGR / standingsData.length;
-      
-      // Create dynamic attacking multipliers: Team AGR / Average AGR
+      // Create dynamic attacking multipliers from lightweight endpoint
       const ATTACK_MULTIPLIERS: { [key: number]: number } = {};
-      standingsData.forEach((team: any) => {
-        const teamAGR = team.adjustedGoalRate || averageAGR; // Fallback to average if null
-        ATTACK_MULTIPLIERS[team.id] = teamAGR / averageAGR;
+      multipliersData.forEach((team: any) => {
+        ATTACK_MULTIPLIERS[team.teamId] = team.attackingMultiplier || 1.0;
       });
 
       const getAttackMultiplier = (teamId: number): number => {
@@ -10872,17 +10933,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const fixturesData = await fixturesResponse.json();
       
-      // Get attacking multipliers from current standings data
-      const currentStandingsResponse = await fetch("http://localhost:5000/api/current-standings");
-      const currentStandingsData = await currentStandingsResponse.json();
+      // Get attacking multipliers from lightweight team multipliers endpoint
+      const multipliersResponse = await fetch("http://localhost:5000/api/team-multipliers");
+      const multipliersData = await multipliersResponse.json();
+      console.log(`📊 Fetched multiplier data for ${multipliersData.length} teams`);
       
       // Create mapping from team ID to attacking multiplier
       const attackingMultipliers: { [key: number]: number } = {};
-      currentStandingsData.forEach((team: any) => {
-        // Calculate attacking multiplier using the same formula as in frontend
-        const attackingMultiplier = team.adjustedGoalRate && team.adjustedGoalRate > 0 ? 
-          team.adjustedGoalRate / (currentStandingsData.reduce((sum: number, t: any) => sum + (t.adjustedGoalRate || 0), 0) / currentStandingsData.length) : 1.0;
-        attackingMultipliers[team.id] = attackingMultiplier;
+      multipliersData.forEach((team: any) => {
+        // Use pre-calculated attacking multiplier from lightweight endpoint
+        attackingMultipliers[team.teamId] = team.attackingMultiplier || 1.0;
       });
 
       const getAttackMultiplier = (teamId: number): number => {
