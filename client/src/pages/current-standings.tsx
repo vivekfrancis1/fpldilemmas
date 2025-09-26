@@ -397,7 +397,7 @@ export default function CurrentStandings() {
                     <SortableHeader field="adjustedGoalRate" tooltip="Adjusted Goal Rate: 0.5 × (Goals For + xGF) per game">AGR</SortableHeader>
                     <SortableHeader field="adjustedGoalsAgainstRate" tooltip="Adjusted Goals Against Rate: 0.5 × (Goals Against + xGA) per game">AGAR</SortableHeader>
                     <SortableHeader field="attackingMultiplier" tooltip="Dynamic attacking strength relative to league average (1.0 = average). Higher the attacking multiplier, higher the chances of goal scored">Att. Mult.</SortableHeader>
-                    <SortableHeader field="defensiveMultiplier" tooltip="Dynamic defensive strength relative to league average (1.0 = average)">Def. Mult.</SortableHeader>
+                    <SortableHeader field="defensiveMultiplier" tooltip="Dynamic defensive strength relative to league average (1.0 = average). Lower the defensive multiplier, lower the chances of conceding goals">Def. Mult.</SortableHeader>
                     
                     {/* Defensive Stats - After xGA */}
                     <SortableHeader field="tackles" tooltip="Total tackles made by the team">T</SortableHeader>
