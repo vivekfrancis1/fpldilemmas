@@ -6761,7 +6761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const [gameweek, liveData] of Array.from(liveDataMap)) {
         if (!liveData || !liveData.elements) continue;
         
-        // Calculate per-gameweek xGF (sum) and xGA (max) for each team
+        // Calculate per-gameweek xGF and xGA (both summed) for each team
         const gameweekTeamXGF = new Map<number, number>();
         const gameweekTeamXGA = new Map<number, number>();
         
@@ -6786,17 +6786,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           gameweekTeamXGF.set(teamId, (gameweekTeamXGF.get(teamId) || 0) + playerXGF);
           
-          // Track max xGA for all players in the team for this gameweek
+          // Sum xGA for all players in the team for this gameweek (same as XGF logic)
           let playerXGA = 0;
           if (stats.expected_goals_conceded) {
             playerXGA = parseFloat(stats.expected_goals_conceded) || 0;
           } else if (stats.xga) {
             playerXGA = parseFloat(stats.xga) || 0;
           }
-          const currentMaxXGA = gameweekTeamXGA.get(teamId) || 0;
-          if (playerXGA > currentMaxXGA) {
-            gameweekTeamXGA.set(teamId, playerXGA);
-          }
+          gameweekTeamXGA.set(teamId, (gameweekTeamXGA.get(teamId) || 0) + playerXGA);
           
           // Aggregate other stats from all players (only do this once, not per gameweek)
           if (gameweek === Math.max(...Array.from(completedGameweeks))) {
