@@ -6716,14 +6716,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const [gameweek, liveData] of Array.from(liveDataMap)) {
         if (!liveData || !liveData.elements) continue;
         
-        // Calculate per-gameweek xGF and xGA (both summed) for each team
+        // Calculate per-gameweek xGF for each team (XGA will be derived from fixtures)
         const gameweekTeamXGF = new Map<number, number>();
-        const gameweekTeamXGA = new Map<number, number>();
         
         // Initialize gameweek totals for all teams
         bootstrapData.teams.forEach((team: any) => {
           gameweekTeamXGF.set(team.id, 0);
-          gameweekTeamXGA.set(team.id, 0);
         });
         
         Object.entries(liveData.elements).forEach(([playerId, playerData]: [string, any]) => {
@@ -6740,15 +6738,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             playerXGF = parseFloat(stats.xg) || 0;
           }
           gameweekTeamXGF.set(teamId, (gameweekTeamXGF.get(teamId) || 0) + playerXGF);
-          
-          // Sum xGA for all players in the team for this gameweek (same as XGF logic)
-          let playerXGA = 0;
-          if (stats.expected_goals_conceded) {
-            playerXGA = parseFloat(stats.expected_goals_conceded) || 0;
-          } else if (stats.xga) {
-            playerXGA = parseFloat(stats.xga) || 0;
-          }
-          gameweekTeamXGA.set(teamId, (gameweekTeamXGA.get(teamId) || 0) + playerXGA);
           
           // Aggregate other stats from all players (only do this once, not per gameweek)
           if (gameweek === Math.max(...Array.from(completedGameweeks))) {
@@ -6774,7 +6763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
         
-        // Add this gameweek's xGF and xGA to season totals
+        // Add this gameweek's xGF to season totals
         for (const [teamId, xgf] of Array.from(gameweekTeamXGF)) {
           const team = teamStandings.get(teamId);
           if (team) {
@@ -6782,12 +6771,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        for (const [teamId, xga] of Array.from(gameweekTeamXGA)) {
-          const team = teamStandings.get(teamId);
-          if (team) {
-            team.expectedGoalsAgainst += xga;
+        // Calculate XGA from fixtures for this gameweek to ensure conservation (total XGF = total XGA)
+        const gameweekFixtures = completedFixtures.filter((fixture: any) => fixture.event === gameweek);
+        gameweekFixtures.forEach((fixture: any) => {
+          const homeTeamId = fixture.team_h;
+          const awayTeamId = fixture.team_a;
+          const homeTeam = teamStandings.get(homeTeamId);
+          const awayTeam = teamStandings.get(awayTeamId);
+          
+          if (homeTeam && awayTeam) {
+            const homeXGF = gameweekTeamXGF.get(homeTeamId) || 0;
+            const awayXGF = gameweekTeamXGF.get(awayTeamId) || 0;
+            
+            // Each team's XGA equals their opponent's XGF in this fixture
+            // Distribute the gameweek XGF proportionally among fixtures for the team
+            const homeTeamFixtures = gameweekFixtures.filter((f: any) => f.team_h === homeTeamId || f.team_a === homeTeamId).length;
+            const awayTeamFixtures = gameweekFixtures.filter((f: any) => f.team_h === awayTeamId || f.team_a === awayTeamId).length;
+            
+            homeTeam.expectedGoalsAgainst += awayXGF / awayTeamFixtures;
+            awayTeam.expectedGoalsAgainst += homeXGF / homeTeamFixtures;
           }
-        }
+        })
       }
       
       // Process completed fixtures with enhanced statistics
@@ -6871,6 +6875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         adjustedGoalRate: team.played > 0 ? (0.5 * (team.goalsFor + team.expectedGoalsFor)) / team.played : 0,
         adjustedGoalsAgainstRate: team.played > 0 ? (0.5 * (team.goalsAgainst + team.expectedGoalsAgainst)) / team.played : 0
       }));
+      
       
       // Sort by standard Premier League rules
       standings.sort((a, b) => {
