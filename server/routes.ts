@@ -6919,10 +6919,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Calculate goal difference and create final enhanced standings
+      // Calculate goal difference, AGR, and AGAR for final enhanced standings
       const standings = Array.from(teamStandings.values()).map((team: any) => ({
         ...team,
-        goalDifference: team.goalsFor - team.goalsAgainst
+        goalDifference: team.goalsFor - team.goalsAgainst,
+        // Calculate Adjusted Goal Rate (AGR) and Adjusted Goals Against Rate (AGAR)
+        adjustedGoalRate: team.played > 0 ? (0.5 * (team.goalsFor + team.expectedGoalsFor)) / team.played : 0,
+        adjustedGoalsAgainstRate: team.played > 0 ? (0.5 * (team.goalsAgainst + team.expectedGoalsAgainst)) / team.played : 0
       }));
       
       // Sort by standard Premier League rules
