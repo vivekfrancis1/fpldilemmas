@@ -165,25 +165,25 @@ function parseReturnDate(newsText: string): Date | null {
 function getGameweekFromDate(date: Date, bootstrapData: BootstrapData): number | null {
   if (!bootstrapData?.events) return null;
   
-  // When suspended "until" a date, they become available ON that date
-  // Find which gameweek period that return date falls within
+  // Based on user examples: Oct 4 = GW7, Oct 18 = GW8, Oct 25 = GW9
+  // Pattern: return dates up to ~1 day after deadline still belong to that gameweek
   const sortedEvents = bootstrapData.events.sort((a, b) => a.id - b.id);
   
-  for (let i = 0; i < sortedEvents.length; i++) {
-    const event = sortedEvents[i];
+  for (const event of sortedEvents) {
     const deadlineDate = new Date(event.deadline_time);
-    const prevEvent = i > 0 ? sortedEvents[i - 1] : null;
-    const prevDeadline = prevEvent ? new Date(prevEvent.deadline_time) : new Date(0);
+    // Add 24 hours buffer after deadline for gameweek period
+    const gameweekEnd = new Date(deadlineDate.getTime() + 24 * 60 * 60 * 1000);
     
-    // If the return date falls within this gameweek's period, they return during this GW
-    if (date > prevDeadline && date <= deadlineDate) {
+    // If return date is within the gameweek period (before deadline + 1 day), 
+    // they can return during this gameweek
+    if (date <= gameweekEnd) {
       return event.id;
     }
   }
   
-  // If date is after all deadlines, return the last gameweek
+  // If date is after all gameweek periods, return the last gameweek
   const lastEvent = sortedEvents[sortedEvents.length - 1];
-  if (lastEvent && date > new Date(lastEvent.deadline_time)) {
+  if (lastEvent) {
     return lastEvent.id;
   }
   
