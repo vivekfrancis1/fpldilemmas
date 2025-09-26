@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) {
-  const chanceOfPlaying = player.chanceOfPlayingNextRound || 100;
+  const chanceOfPlaying = player.chanceOfPlayingNextRound ?? 100;
   const status = player.status || 'a';
   const news = player.news || '';
 
