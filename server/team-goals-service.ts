@@ -219,16 +219,16 @@ export class TeamGoalsService {
     try {
       // NEW FORMULA: (team average goals + team average xG + opponent average GC + opponent average xGC) * 0.25 * venue * context
       
-      // Get team's actual average goals scored per game
-      const teamAvgGoals = TeamGoalsService.getTeamAverageGoals(team.id);
+      // Get team's actual average goals scored per game from current standings
+      const teamAvgGoals = await TeamGoalsService.getTeamAverageGoals(team.id);
       
-      // Get team's average expected goals per game from real FPL data
+      // Get team's average expected goals per game from current standings
       const teamAvgXG = await TeamGoalsService.getTeamAverageXG(team.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
       
-      // Get opponent's actual average goals conceded per game
-      const opponentAvgGC = TeamGoalsService.getTeamAverageGoalsConceded(opponent.id);
+      // Get opponent's actual average goals conceded per game from current standings
+      const opponentAvgGC = await TeamGoalsService.getTeamAverageGoalsConceded(opponent.id);
       
-      // Get opponent's average expected goals conceded per game from real FPL data
+      // Get opponent's average expected goals conceded per game from current standings
       const opponentAvgXGC = await TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
       
       // Phase 1: Hybrid performance-based foundation - (actual goals + xG + opponent GC + opponent xGC) * 0.25
@@ -283,83 +283,110 @@ export class TeamGoalsService {
   }
   
   /**
-   * Get team's actual average goals scored per game from current season data
+   * Fetch current standings data with caching
    */
-  private static getTeamAverageGoals(teamId: number): number {
-    // Season performance data based on actual FPL results through GW5
-    const teamActualGoalsData: Record<number, number> = {
-      // Goals per game through first 5 gameweeks of season
-      1: 1.4,   // Arsenal - 7 goals in 5 games
-      2: 1.2,   // Aston Villa - 6 goals in 5 games  
-      3: 0.6,   // Burnley - 3 goals in 5 games
-      4: 1.8,   // Bournemouth - 9 goals in 5 games
-      5: 1.6,   // Brentford - 8 goals in 5 games
-      6: 1.4,   // Brighton - 7 goals in 5 games
-      7: 2.2,   // Chelsea - 11 goals in 5 games
-      8: 0.8,   // Crystal Palace - 4 goals in 5 games
-      9: 1.0,   // Everton - 5 goals in 5 games
-      10: 1.2,  // Fulham - 6 goals in 5 games
-      11: 0.8,  // Leeds - 4 goals in 5 games
-      12: 2.4,  // Liverpool - 12 goals in 5 games
-      13: 2.0,  // Man City - 10 goals in 5 games
-      14: 1.6,  // Man United - 8 goals in 5 games
-      15: 1.4,  // Newcastle - 7 goals in 5 games
-      16: 1.0,  // Nottingham Forest - 5 goals in 5 games
-      17: 0.6,  // Sunderland - 3 goals in 5 games
-      18: 1.8,  // Tottenham - 9 goals in 5 games
-      19: 1.2,  // West Ham - 6 goals in 5 games
-      20: 0.8   // Wolves - 4 goals in 5 games
-    };
+  private static async fetchCurrentStandings(): Promise<any[]> {
+    // Use existing cache if available and fresh
+    if (currentStandingsCache && Date.now() - currentStandingsCache.timestamp < STANDINGS_CACHE_DURATION) {
+      return currentStandingsCache.data;
+    }
     
-    return teamActualGoalsData[teamId] || 1.2; // Premier League average fallback
+    try {
+      const response = await fetch('http://localhost:5000/api/current-standings');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch current standings: ${response.status}`);
+      }
+      
+      const standingsData = await response.json();
+      
+      // Cache the results
+      currentStandingsCache = {
+        data: standingsData,
+        timestamp: Date.now()
+      };
+      
+      return standingsData;
+    } catch (error) {
+      console.error('Failed to fetch current standings:', error);
+      // Return empty array as fallback
+      return [];
+    }
+  }
+
+  /**
+   * Get team's actual average goals scored per game from current standings data
+   */
+  private static async getTeamAverageGoals(teamId: number): Promise<number> {
+    try {
+      const standingsData = await TeamGoalsService.fetchCurrentStandings();
+      const teamData = standingsData.find((team: any) => team.id === teamId);
+      
+      if (teamData && teamData.played > 0) {
+        return teamData.goalsFor / teamData.played;
+      }
+      
+      return 1.2; // Premier League average fallback
+    } catch (error) {
+      console.warn(`Failed to fetch team average goals for team ${teamId}:`, error);
+      return 1.2; // Fallback value
+    }
   }
   
   /**
-   * Get team's actual average goals conceded per game from current season data
+   * Get team's actual average goals conceded per game from current standings data
    */
-  private static getTeamAverageGoalsConceded(teamId: number): number {
-    // Goals conceded per game through first 5 gameweeks of season
-    const teamActualGCData: Record<number, number> = {
-      // Goals conceded per game through first 5 gameweeks
-      1: 0.8,   // Arsenal - 4 conceded in 5 games
-      2: 1.4,   // Aston Villa - 7 conceded in 5 games
-      3: 2.4,   // Burnley - 12 conceded in 5 games
-      4: 1.6,   // Bournemouth - 8 conceded in 5 games
-      5: 1.0,   // Brentford - 5 conceded in 5 games
-      6: 1.2,   // Brighton - 6 conceded in 5 games
-      7: 1.4,   // Chelsea - 7 conceded in 5 games
-      8: 1.8,   // Crystal Palace - 9 conceded in 5 games
-      9: 1.0,   // Everton - 5 conceded in 5 games
-      10: 1.6,  // Fulham - 8 conceded in 5 games
-      11: 2.2,  // Leeds - 11 conceded in 5 games
-      12: 0.6,  // Liverpool - 3 conceded in 5 games
-      13: 0.8,  // Man City - 4 conceded in 5 games
-      14: 1.8,  // Man United - 9 conceded in 5 games
-      15: 1.2,  // Newcastle - 6 conceded in 5 games
-      16: 1.0,  // Nottingham Forest - 5 conceded in 5 games
-      17: 2.0,  // Sunderland - 10 conceded in 5 games
-      18: 1.6,  // Tottenham - 8 conceded in 5 games
-      19: 1.8,  // West Ham - 9 conceded in 5 games
-      20: 2.0   // Wolves - 10 conceded in 5 games
-    };
-    
-    return teamActualGCData[teamId] || 1.4; // Premier League average fallback
+  private static async getTeamAverageGoalsConceded(teamId: number): Promise<number> {
+    try {
+      const standingsData = await TeamGoalsService.fetchCurrentStandings();
+      const teamData = standingsData.find((team: any) => team.id === teamId);
+      
+      if (teamData && teamData.played > 0) {
+        return teamData.goalsAgainst / teamData.played;
+      }
+      
+      return 1.4; // Premier League average fallback
+    } catch (error) {
+      console.warn(`Failed to fetch team average goals conceded for team ${teamId}:`, error);
+      return 1.4; // Fallback value
+    }
   }
   
   /**
-   * Get team's average expected goals per game - using fallback values
+   * Get team's average expected goals per game from current standings data
    */
   private static async getTeamAverageXG(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): Promise<number> {
-    // Use fallback to default values since multiplier data removed
-    return adminGoalSettings.defaultExpectedGoalsPerGame || MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame || 1.3;
+    try {
+      const standingsData = await TeamGoalsService.fetchCurrentStandings();
+      const teamData = standingsData.find((team: any) => team.id === teamId);
+      
+      if (teamData && teamData.played > 0) {
+        return teamData.expectedGoalsFor / teamData.played;
+      }
+      
+      return adminGoalSettings.defaultExpectedGoalsPerGame || MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame || 1.3;
+    } catch (error) {
+      console.warn(`Failed to fetch team average xG for team ${teamId}:`, error);
+      return adminGoalSettings.defaultExpectedGoalsPerGame || MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame || 1.3;
+    }
   }
   
   /**
-   * Get opponent's average expected goals conceded per game - using fallback values  
+   * Get opponent's average expected goals conceded per game from current standings data  
    */
   private static async getTeamAverageXGC(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): Promise<number> {
-    // Use fallback to premier league average since multiplier data removed
-    return 1.5; // Premier League average
+    try {
+      const standingsData = await TeamGoalsService.fetchCurrentStandings();
+      const teamData = standingsData.find((team: any) => team.id === teamId);
+      
+      if (teamData && teamData.played > 0) {
+        return teamData.expectedGoalsAgainst / teamData.played;
+      }
+      
+      return 1.5; // Premier League average fallback
+    } catch (error) {
+      console.warn(`Failed to fetch team average xGC for team ${teamId}:`, error);
+      return 1.5; // Fallback value
+    }
   }
   
   
