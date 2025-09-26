@@ -39,8 +39,6 @@ interface CurrentTeamStanding {
   // Calculated fields
   adjustedGoalRate: number;
   adjustedGoalsAgainstRate: number;
-  attackingMultiplier: number;
-  defensiveMultiplier: number;
 }
 
 type SortField = keyof CurrentTeamStanding;
@@ -168,22 +166,8 @@ export default function CurrentStandings() {
 
   const summaryStats = calculateSummaryStats();
 
-  // Calculate attacking and defensive multipliers
-  const dataWithMultipliers = sortedData?.map(team => {
-    const attackingMultiplier = summaryStats && summaryStats.averages.adjustedGoalRate > 0 
-      ? (team.adjustedGoalRate || 0) / summaryStats.averages.adjustedGoalRate
-      : 0;
-    
-    const defensiveMultiplier = summaryStats && summaryStats.averages.adjustedGoalsAgainstRate > 0
-      ? (team.adjustedGoalsAgainstRate || 0) / summaryStats.averages.adjustedGoalsAgainstRate
-      : 0;
-    
-    return {
-      ...team,
-      attackingMultiplier,
-      defensiveMultiplier
-    };
-  }) || [];
+  // Use the sorted data without adding multipliers
+  const dataWithMultipliers = sortedData || [];
 
   const SortableHeader = ({ field, children, tooltip }: { field: SortField; children: React.ReactNode; tooltip: string }) => (
     <th 
@@ -396,8 +380,6 @@ export default function CurrentStandings() {
                     <SortableHeader field="expectedGoalsAgainst" tooltip="Expected Goals Against - statistical model of chances conceded">xGA</SortableHeader>
                     <SortableHeader field="adjustedGoalRate" tooltip="Adjusted Goal Rate: 0.5 × (Goals For + xGF) per game">AGR</SortableHeader>
                     <SortableHeader field="adjustedGoalsAgainstRate" tooltip="Adjusted Goals Against Rate: 0.5 × (Goals Against + xGA) per game">AGAR</SortableHeader>
-                    <SortableHeader field="attackingMultiplier" tooltip="Dynamic attacking strength relative to league average (1.0 = average). Higher the attacking multiplier, higher the chances of goal scored">Att. Mult.</SortableHeader>
-                    <SortableHeader field="defensiveMultiplier" tooltip="Dynamic defensive strength relative to league average (1.0 = average). Lower the defensive multiplier, lower the chances of conceding goals">Def. Mult.</SortableHeader>
                     
                     {/* Defensive Stats - After xGA */}
                     <SortableHeader field="tackles" tooltip="Total tackles made by the team">T</SortableHeader>
@@ -496,12 +478,6 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-medium text-orange-600" data-testid={`adjusted-goals-against-rate-${team.shortName}`}>
                         {team.adjustedGoalsAgainstRate ? team.adjustedGoalsAgainstRate.toFixed(2) : '0.00'}
                       </td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-emerald-600" data-testid={`attacking-multiplier-${team.shortName}`}>
-                        {team.attackingMultiplier.toFixed(2)}
-                      </td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-rose-600" data-testid={`defensive-multiplier-${team.shortName}`}>
-                        {team.defensiveMultiplier.toFixed(2)}
-                      </td>
                       
                       {/* Defensive Stats - After xGA */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-600" data-testid={`tackles-${team.shortName}`}>
@@ -576,8 +552,6 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-500">{summaryStats.totals.expectedGoalsAgainst.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-purple-600">{summaryStats.totals.adjustedGoalRate.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-orange-600">{summaryStats.totals.adjustedGoalsAgainstRate.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-emerald-600">{dataWithMultipliers.reduce((sum, team) => sum + team.attackingMultiplier, 0).toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-rose-600">{dataWithMultipliers.reduce((sum, team) => sum + team.defensiveMultiplier, 0).toFixed(2)}</td>
                       
                       {/* Defensive Stats */}
                       <td className="px-2 py-4 text-center text-sm font-semibold text-teal-600">{summaryStats.totals.tackles}</td>
