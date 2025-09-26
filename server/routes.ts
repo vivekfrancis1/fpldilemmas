@@ -32,6 +32,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { internalFetch, getApiBaseUrl } from "./config";
 import { resultCache } from "./result-cache-service";
+import { normalizeGameweekKeys, normalizeGameweekKey } from './gameweek-key-utils';
 // Minutes scaling removed from all player projection tools
 import { syncProjectionService } from './sync-projection-service';
 import { FPLScoringCacheService } from './fpl-scoring-cache-service';

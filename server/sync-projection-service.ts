@@ -145,7 +145,7 @@ class SyncProjectionService {
             
             // Add this gameweek's projection
             const player = playerProjectionMap.get(playerId);
-            player.gameweekProjections[`gw${gameweek}`] = playerSlice.projectedPoints;
+            player.gameweekProjections[gameweek.toString()] = playerSlice.projectedPoints; // Use numeric string for consistency
           }
           console.log(`📊 SYNC SERVICE: Merged ${cachedGameweekData.length} cached player slices for GW${gameweek}`);
         }
@@ -188,7 +188,7 @@ class SyncProjectionService {
     let validationErrors = 0;
     for (const player of finalProjections) {
       for (let gw = startGameweek; gw <= endGameweek; gw++) {
-        const gwKey = `gw${gw}`;
+        const gwKey = gw.toString(); // Use numeric string for consistency
         if (player.gameweekProjections[gwKey] === undefined) {
           console.warn(`⚠️ SYNC SERVICE: Player ${player.playerId} missing data for GW${gw}`);
           validationErrors++;

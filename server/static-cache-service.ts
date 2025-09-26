@@ -141,7 +141,7 @@ export class StaticCacheService {
         const breakdown = (proj.gameweekBreakdown as Record<string, any>) || {};
         
         for (let gw = startGw; gw <= endGw; gw++) {
-          const gwKey = `gw${gw}`;
+          const gwKey = gw.toString(); // Use numeric string for consistency
           if (breakdown[gwKey]) {
             filteredBreakdown[gwKey] = breakdown[gwKey];
           }
