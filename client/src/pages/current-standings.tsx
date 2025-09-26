@@ -33,6 +33,8 @@ interface CurrentTeamStanding {
   // Calculated fields
   adjustedGoalRate: number;
   adjustedGoalsAgainstRate: number;
+  attackingMultiplier: number;
+  defensiveMultiplier: number;
 }
 
 type SortField = keyof CurrentTeamStanding;
@@ -347,16 +349,8 @@ export default function CurrentStandings() {
                     <SortableHeader field="expectedGoalsAgainst">xGA</SortableHeader>
                     <SortableHeader field="adjustedGoalRate">AGR</SortableHeader>
                     <SortableHeader field="adjustedGoalsAgainstRate">AGAR</SortableHeader>
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" data-testid="sort-attacking-multiplier">
-                      <div className="flex items-center justify-center gap-1">
-                        Att. Mult.
-                      </div>
-                    </th>
-                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" data-testid="sort-defensive-multiplier">
-                      <div className="flex items-center justify-center gap-1">
-                        Def. Mult.
-                      </div>
-                    </th>
+                    <SortableHeader field="attackingMultiplier">Att. Mult.</SortableHeader>
+                    <SortableHeader field="defensiveMultiplier">Def. Mult.</SortableHeader>
                     
                     {/* Defensive Stats - After xGA */}
                     <SortableHeader field="tackles">T</SortableHeader>
