@@ -194,6 +194,8 @@ function applyAvailabilityAdjustments(
   
   const adjustedPlayer = { ...player };
   const adjustedProjections = { ...player.gameweekProjections };
+  const originalProjections = { ...player.gameweekProjections };
+  const availabilityAdjustments: { [gameweek: string]: { original: number; adjusted: number; reason: string } } = {};
   
   if (chanceOfPlaying === 0) {
     // 0% availability - suspended or injured
@@ -206,13 +208,29 @@ function applyAvailabilityAdjustments(
       Object.keys(adjustedProjections).forEach(gwKey => {
         const gw = parseInt(gwKey);
         if (returnGameweek && gw < returnGameweek) {
+          const original = adjustedProjections[gwKey];
           adjustedProjections[gwKey] = 0;
+          if (original > 0) {
+            availabilityAdjustments[gwKey] = {
+              original,
+              adjusted: 0,
+              reason: `Injured/suspended until GW${returnGameweek}`
+            };
+          }
         }
       });
     } else {
       // No return date - zero out all projections
       Object.keys(adjustedProjections).forEach(gwKey => {
+        const original = adjustedProjections[gwKey];
         adjustedProjections[gwKey] = 0;
+        if (original > 0) {
+          availabilityAdjustments[gwKey] = {
+            original,
+            adjusted: 0,
+            reason: status === 's' ? 'Suspended' : status === 'i' ? 'Injured' : 'Unavailable'
+          };
+        }
       });
     }
   } else if (chanceOfPlaying === 25 || chanceOfPlaying === 50 || chanceOfPlaying === 75) {
@@ -220,7 +238,16 @@ function applyAvailabilityAdjustments(
     const nextGameweek = (currentGameweek + 1).toString();
     if (adjustedProjections[nextGameweek] !== undefined) {
       const multiplier = chanceOfPlaying / 100;
+      const original = adjustedProjections[nextGameweek];
       adjustedProjections[nextGameweek] = adjustedProjections[nextGameweek] * multiplier;
+      
+      if (original !== adjustedProjections[nextGameweek]) {
+        availabilityAdjustments[nextGameweek] = {
+          original,
+          adjusted: adjustedProjections[nextGameweek],
+          reason: `${chanceOfPlaying}% chance of playing`
+        };
+      }
     }
   }
   
@@ -231,6 +258,8 @@ function applyAvailabilityAdjustments(
   const newAverageValue = player.price > 0 ? newAveragePerGameweek / player.price : 0;
   
   adjustedPlayer.gameweekProjections = adjustedProjections;
+  adjustedPlayer.originalGameweekProjections = originalProjections;
+  adjustedPlayer.availabilityAdjustments = availabilityAdjustments;
   adjustedPlayer.totalExpectedPoints = Math.round(newTotalExpectedPoints * 100) / 100;
   adjustedPlayer.averagePerGameweek = Math.round(newAveragePerGameweek * 100) / 100;
   adjustedPlayer.averageValue = Math.round(newAverageValue * 100) / 100;
@@ -247,22 +276,38 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
   const gwKey = gameweek.toString(); // Use numeric string key format to match API data
   const gwPoints = player.gameweekProjections?.[gwKey];
   
+  // Check for availability adjustments
+  const hasAdjustment = player.availabilityAdjustments?.[gwKey];
+  const originalPoints = player.originalGameweekProjections?.[gwKey];
+  
   if (!hasBreakdownData || !gwPoints) {
     return (
-      <ValueCell 
-        value={gwPoints || 0} 
-        format="points" 
-        decimals={2} 
-        colorScheme="points"
-        fontWeight="medium"
-      />
+      <div className="relative">
+        {hasAdjustment && (
+          <span className="absolute -top-1 -right-1 text-xs bg-orange-500 text-white rounded-full w-3 h-3 flex items-center justify-center" title="Availability adjusted">
+            !
+          </span>
+        )}
+        <ValueCell 
+          value={gwPoints || 0} 
+          format="points" 
+          decimals={2} 
+          colorScheme="points"
+          fontWeight="medium"
+        />
+      </div>
     );
   }
 
   return (
     <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
-        <button className="cursor-help hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+        <button className="cursor-help hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 relative">
+          {hasAdjustment && (
+            <span className="absolute -top-1 -right-1 text-xs bg-orange-500 text-white rounded-full w-3 h-3 flex items-center justify-center" title="Availability adjusted">
+              !
+            </span>
+          )}
           <ValueCell 
             value={gwPoints} 
             format="points" 
@@ -277,6 +322,38 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
             GW{gameweek} Points Breakdown
           </div>
+          
+          {/* Show availability adjustment notice if exists */}
+          {hasAdjustment && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-orange-600 font-semibold">⚠️ Availability Adjusted</span>
+              </div>
+              <div className="text-sm space-y-1">
+                <div className="text-gray-700">{hasAdjustment.reason}</div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Original projection:</span>
+                  <ValueCell 
+                    value={hasAdjustment.original} 
+                    format="points" 
+                    decimals={2} 
+                    className="text-gray-700 line-through"
+                    fontWeight="medium"
+                  />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Adjusted projection:</span>
+                  <ValueCell 
+                    value={hasAdjustment.adjusted} 
+                    format="points" 
+                    decimals={2} 
+                    className="text-orange-700"
+                    fontWeight="semibold"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">⚽ Goals:</span>
