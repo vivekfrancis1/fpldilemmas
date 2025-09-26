@@ -615,7 +615,7 @@ async function processBackgroundJob(jobId: string): Promise<void> {
         }
         
         // Extract only the specific gameweek data for this player
-        const gwKey = `gw${gw}`;
+        const gwKey = gw.toString(); // Use numeric string key for consistency with API data
         const gameweekPoints = player.gameweekProjections[gwKey];
         
         if (gameweekPoints === undefined) {
@@ -749,7 +749,7 @@ function assembleFromIndividualGameweekSlices(startGameweek: number, endGameweek
       
       // Add this gameweek's projection to the player
       const player = playerProjectionMap.get(playerId);
-      const gwKey = `gw${gw}`;
+      const gwKey = gw.toString(); // Use numeric string key for consistency with API data
       player.gameweekProjections[gwKey] = playerSlice.projectedPoints;
       totalSlicesProcessed++;
     }
@@ -768,7 +768,7 @@ function assembleFromIndividualGameweekSlices(startGameweek: number, endGameweek
   
   for (const player of assembledProjections) {
     for (let gw = startGameweek; gw <= endGameweek; gw++) {
-      const gwKey = `gw${gw}`;
+      const gwKey = gw.toString(); // Use numeric string key for consistency with API data
       if (player.gameweekProjections[gwKey] === undefined) {
         console.error(`❌ ASSEMBLY: Player ${player.playerId} missing projection for GW${gw}`);
         validationErrors++;
