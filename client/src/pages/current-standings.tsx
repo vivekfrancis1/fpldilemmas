@@ -30,6 +30,8 @@ interface CurrentTeamStanding {
   expectedGoalsAgainst: number;
   tackles: number;
   defensiveActions: number;
+  // Calculated field
+  adjustedGoalRate: number;
 }
 
 type SortField = keyof CurrentTeamStanding;
@@ -48,7 +50,13 @@ export default function CurrentStandings() {
       if (!response.ok) {
         throw new Error('Failed to fetch current standings');
       }
-      return response.json();
+      const data = await response.json();
+      
+      // Calculate adjusted goal rate: 0.5 * (GF + xGF) / Number of games played
+      return data.map((team: any) => ({
+        ...team,
+        adjustedGoalRate: team.played > 0 ? 0.5 * (team.goalsFor + team.expectedGoalsFor) / team.played : 0
+      }));
     },
   });
 
@@ -254,6 +262,7 @@ export default function CurrentStandings() {
                     {/* Expected Goals - After Points */}
                     <SortableHeader field="expectedGoalsFor">xGF</SortableHeader>
                     <SortableHeader field="expectedGoalsAgainst">xGA</SortableHeader>
+                    <SortableHeader field="adjustedGoalRate">AGR</SortableHeader>
                     
                     {/* Defensive Stats - After xGA */}
                     <SortableHeader field="tackles">T</SortableHeader>
@@ -338,6 +347,9 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-medium text-indigo-500" data-testid={`expected-goals-against-${team.shortName}`}>
                         {team.expectedGoalsAgainst.toFixed(1)}
                       </td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-purple-600" data-testid={`adjusted-goal-rate-${team.shortName}`}>
+                        {team.adjustedGoalRate.toFixed(2)}
+                      </td>
                       
                       {/* Defensive Stats - After xGA */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-600" data-testid={`tackles-${team.shortName}`}>
@@ -411,6 +423,7 @@ export default function CurrentStandings() {
                   <li><strong>OG:</strong> Own goals</li>
                   <li><strong>PM:</strong> Penalties missed</li>
                   <li><strong>xGF/xGA:</strong> Expected Goals For/Against</li>
+                  <li><strong>AGR:</strong> Adjusted Goal Rate (0.5 × (GF+xGF)/Games)</li>
                   <li><strong>T:</strong> Tackles</li>
                   <li><strong>DA:</strong> Defensive actions</li>
                 </ul>
