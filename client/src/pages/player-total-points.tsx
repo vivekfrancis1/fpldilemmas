@@ -10,18 +10,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-// Player Availability Status Component
-function PlayerAvailabilityStatus({ player }: { player: PlayerTotalPointsData }) {
+// Player Availability Badge Component - only shows for players with < 100% availability
+function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) {
   const chanceOfPlaying = player.chanceOfPlayingNextRound || 100;
   const status = player.status || 'a';
   const news = player.news || '';
 
+  // Only show badge if availability is not 100%
+  if (chanceOfPlaying >= 100 && status === 'a') {
+    return null;
+  }
+
   // Determine status display based on chance of playing and status
-  let statusColor = 'text-green-600';
-  let statusBg = 'bg-green-50';
-  let statusIcon = CheckCircle;
-  let statusText = 'Available';
-  let statusBorder = 'border-green-200';
+  let statusColor = 'text-yellow-600';
+  let statusBg = 'bg-yellow-50';
+  let statusIcon = Clock;
+  let statusText = 'Doubtful';
+  let statusBorder = 'border-yellow-200';
 
   if (status === 's' || status === 'suspended') {
     statusColor = 'text-red-600';
@@ -47,12 +52,6 @@ function PlayerAvailabilityStatus({ player }: { player: PlayerTotalPointsData })
     statusIcon = XCircle;
     statusText = 'Unavailable';
     statusBorder = 'border-gray-200';
-  } else if (chanceOfPlaying < 75) {
-    statusColor = 'text-yellow-600';
-    statusBg = 'bg-yellow-50';
-    statusIcon = Clock;
-    statusText = 'Doubtful';
-    statusBorder = 'border-yellow-200';
   }
 
   const StatusIcon = statusIcon;
@@ -60,9 +59,9 @@ function PlayerAvailabilityStatus({ player }: { player: PlayerTotalPointsData })
   return (
     <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
-        <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border ${statusBg} ${statusBorder} cursor-help transition-colors hover:opacity-80`}>
-          <StatusIcon className={`h-3 w-3 ${statusColor}`} />
-          <span className={`text-xs font-medium ${statusColor}`}>
+        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium cursor-help transition-colors hover:opacity-80 ${statusBg} ${statusBorder} border`}>
+          <StatusIcon className={`h-2.5 w-2.5 ${statusColor}`} />
+          <span className={statusColor}>
             {chanceOfPlaying}%
           </span>
         </div>
@@ -461,7 +460,10 @@ function createPlayerTotalPointsColumns(
       render: (_, player) => (
         <div className="flex items-center gap-2 min-w-[200px]">
           <div className="flex-1">
-            <PlayerNameCell name={player.playerName || player.name} />
+            <div className="flex items-center gap-2">
+              <PlayerNameCell name={player.playerName || player.name} />
+              <PlayerAvailabilityBadge player={player} />
+            </div>
             <div className="flex items-center gap-1 mt-1 mb-1">
               <PositionBadge position={player.position} compact={true} />
               <TeamBadge team={player.teamName || player.team} compact={true} />
@@ -516,18 +518,6 @@ function createPlayerTotalPointsColumns(
         }
       };
     }),
-    {
-      key: 'chanceOfPlayingNextRound',
-      header: 'Availability',
-      sortable: true,
-      align: 'center',
-      className: 'min-w-[90px] bg-gradient-to-r from-purple-50 to-indigo-50 border-l border-gray-300',
-      render: (_, player) => (
-        <div className="flex justify-center">
-          <PlayerAvailabilityStatus player={player} />
-        </div>
-      )
-    },
     {
       key: 'totalExpectedPoints',
       header: '6GW Total',
