@@ -10834,17 +10834,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const fixturesData = await fixturesResponse.json();
       
-      // Get attacking tier multipliers (same as used in saves projections)
-      const ATTACK_MULTIPLIERS: { [key: number]: number } = {
-        12: 1.35, 13: 1.35, // Liverpool, Man City (elite)
-        1: 1.15, 7: 1.15, 15: 1.15, 18: 1.15, 2: 1.15, // Arsenal, Chelsea, Newcastle, Tottenham, Aston Villa (strong)
-        9: 0.85, 16: 0.85, 19: 0.85, 20: 0.85, // Everton, Nottingham Forest, West Ham, Wolves (weak)
-        3: 0.7, 11: 0.7, 17: 0.7 // Burnley, Leeds, Sunderland (promoted)
-        // All others default to 1.0 (average)
-      };
+      // Get attacking multipliers from current standings data
+      const currentStandingsResponse = await fetch("http://localhost:5000/api/current-standings");
+      const currentStandingsData = await currentStandingsResponse.json();
+      
+      // Create mapping from team ID to attacking multiplier
+      const attackingMultipliers: { [key: number]: number } = {};
+      currentStandingsData.forEach((team: any) => {
+        // Calculate attacking multiplier using the same formula as in frontend
+        const attackingMultiplier = team.adjustedGoalRate && team.adjustedGoalRate > 0 ? 
+          team.adjustedGoalRate / (currentStandingsData.reduce((sum: number, t: any) => sum + (t.adjustedGoalRate || 0), 0) / currentStandingsData.length) : 1.0;
+        attackingMultipliers[team.id] = attackingMultiplier;
+      });
 
       const getAttackMultiplier = (teamId: number): number => {
-        return ATTACK_MULTIPLIERS[teamId] || 1.0;
+        return attackingMultipliers[teamId] || 1.0;
       };
       
       // Get player minutes projections
