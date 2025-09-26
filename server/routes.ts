@@ -10744,7 +10744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Saves Projections API called - using formula: (season saves / team games) × (minutes/90) × opponent attacking multiplier from current standings");
+        console.log("DEBUG: Player Saves Projections API called - using formula: Average saves/game × AGR of opponent/1.25");
         
         const startGameweek = parseInt(req.query.startGameweek as string) || 4;
         const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -10761,19 +10761,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const fixturesData = await fixturesResponse.json();
       
-      // Get team multipliers (lightweight call instead of expensive current-standings)
-      const multipliersResponse = await fetch("http://localhost:5000/api/team-multipliers");
-      const multipliersData = await multipliersResponse.json();
-      console.log(`📊 Fetched multiplier data for ${multipliersData.length} teams`);
+      // Calculate AGR (Average Goals Received/Against) for each team
+      const teamGoalsAgainst = new Map<number, number>();
       
-      // Create dynamic attacking multipliers from lightweight endpoint
-      const ATTACK_MULTIPLIERS: { [key: number]: number } = {};
-      multipliersData.forEach((team: any) => {
-        ATTACK_MULTIPLIERS[team.teamId] = team.attackingMultiplier || 1.0;
+      // Initialize all teams with 0 goals against
+      fplData.teams.forEach((team: any) => {
+        teamGoalsAgainst.set(team.id, 0);
+      });
+      
+      // Count goals against for each team from completed fixtures
+      fixturesData.forEach((fixture: any) => {
+        const isCompleted = fixture.finished || fixture.event < currentGameweek;
+        
+        if (isCompleted && fixture.team_h_score !== null && fixture.team_a_score !== null) {
+          // Home team's goals against = away team's goals scored
+          const homeGoalsAgainst = teamGoalsAgainst.get(fixture.team_h) || 0;
+          teamGoalsAgainst.set(fixture.team_h, homeGoalsAgainst + fixture.team_a_score);
+          
+          // Away team's goals against = home team's goals scored  
+          const awayGoalsAgainst = teamGoalsAgainst.get(fixture.team_a) || 0;
+          teamGoalsAgainst.set(fixture.team_a, awayGoalsAgainst + fixture.team_h_score);
+        }
       });
 
-      const getAttackMultiplier = (teamId: number): number => {
-        return ATTACK_MULTIPLIERS[teamId] || 1.0;
+      const getOpponentAGR = (teamId: number): number => {
+        const goalsAgainst = teamGoalsAgainst.get(teamId) || 0;
+        const gamesPlayed = Math.max(1, teamCompletedFixtures.get(teamId) || 1);
+        return goalsAgainst / gamesPlayed; // AGR = Average Goals Received (Goals Against per game)
       };
       
       // Get player minutes projections
@@ -10837,15 +10851,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
             }
             
-            // Get opponent attacking tier multiplier
-            const attackMultiplier = getAttackMultiplier(opponentId);
+            // Get opponent's AGR (Average Goals Received/Against per game)
+            const opponentAGR = getOpponentAGR(opponentId);
             
-            // Get expected minutes for this player in this gameweek
-            const playerMinutes = minutesData.find((m: any) => m.playerId === player.id);
-            const expectedMinutes = playerMinutes?.gameweekProjections?.[`gw${gw}`] || 90; // Default to 90 if not found
-            
-            // Apply user's exact formula: Expected saves = (Total season saves / Team games played) × (Expected minutes/90) × Attacking tier multiplier
-            const expectedSaves = savesPerTeamGame * (expectedMinutes / 90) * attackMultiplier;
+            // Apply user's exact formula: Expected saves = Average saves/game × AGR of opponent/1.25
+            const expectedSaves = savesPerTeamGame * (opponentAGR / 1.25);
             
             // Apply new points formula: Points from saves = 0.33 × expected saves
             const expectedPoints = expectedSaves * 0.33;
@@ -10873,7 +10883,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-        console.log(`✅ LIVE SUCCESS: Generated saves projections for ${savesProjections.length} goalkeepers using formula: (season saves / team games) × (minutes/90) × opponent attacking multiplier from current standings`);
+        console.log(`✅ LIVE SUCCESS: Generated saves projections for ${savesProjections.length} goalkeepers using formula: Average saves/game × AGR of opponent/1.25`);
         return res.json(savesProjections);
 
       } catch (liveError) {
