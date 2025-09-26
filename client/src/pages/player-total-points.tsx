@@ -824,6 +824,7 @@ export default function PlayerTotalPoints() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLoadGroup, setSelectedLoadGroup] = useState<string>("Top 50");
+  const [selectedAvailability, setSelectedAvailability] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
@@ -1278,6 +1279,24 @@ export default function PlayerTotalPoints() {
               </Select>
             </div>
 
+            {/* Availability Filter */}
+            <div className="space-y-2">
+              <Label htmlFor="availability-filter" className="text-sm font-medium">Availability</Label>
+              <Select value={selectedAvailability} onValueChange={setSelectedAvailability}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key="availability-all" value="all">All Players</SelectItem>
+                  <SelectItem key="availability-available" value="available">Available (100%)</SelectItem>
+                  <SelectItem key="availability-partial" value="partial">Partially Available</SelectItem>
+                  <SelectItem key="availability-suspended" value="suspended">Suspended</SelectItem>
+                  <SelectItem key="availability-injured" value="injured">Injured</SelectItem>
+                  <SelectItem key="availability-unavailable" value="unavailable">Unavailable (0%)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Gameweek Range */}
             <div className="space-y-2">
               <Label htmlFor="start-gameweek" className="text-sm font-medium">Start GW</Label>
@@ -1313,6 +1332,7 @@ export default function PlayerTotalPoints() {
                 onClick={() => {
                   setSelectedPosition("all");
                   setSelectedTeam("all");
+                  setSelectedAvailability("all");
                   setSearchTerm("");
                 }}
                 className="w-full px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
