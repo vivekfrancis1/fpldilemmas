@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Shield, Download, Filter, Clock, Target, Search } from "lucide-react";
+import { Shield, Filter, Clock, Target, Search } from "lucide-react";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean }>;
@@ -63,9 +63,7 @@ export default function PlayerDefensiveContributions() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [sortBy, setSortBy] = useState<string>("total");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [showOnlyTopPlayers, setShowOnlyTopPlayers] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>("defensive-contributions");
   const [startGameweek, setStartGameweek] = useState<number>(0); // Will be set to current + 1
   const [endGameweek, setEndGameweek] = useState<number>(0); // Will be set to current + 6
@@ -261,42 +259,9 @@ export default function PlayerDefensiveContributions() {
       filtered = filtered.filter(p => p.teamName === selectedTeam);
     }
 
-    // Top players filter (only show players with meaningful contributions)
-    if (showOnlyTopPlayers) {
-      filtered = filtered.filter(p => p.totalDC > 5); // Only players with >5 total DC across 6 gameweeks
-    }
-
-    // Sort
+    // Default sort by total DC
     filtered.sort((a, b) => {
-      let aValue: number, bValue: number;
-      
-      switch (sortBy) {
-        case "total":
-          aValue = a.totalDC;
-          bValue = b.totalDC;
-          break;
-        case "average":
-          aValue = a.avgDC;
-          bValue = b.avgDC;
-          break;
-        case "current":
-          aValue = a.currentSeasonStats.dcPer90;
-          bValue = b.currentSeasonStats.dcPer90;
-          break;
-        case "points":
-          aValue = a.totalDCPoints;
-          bValue = b.totalDCPoints;
-          break;
-        case "name":
-          return sortOrder === "desc" 
-            ? b.playerName.localeCompare(a.playerName)
-            : a.playerName.localeCompare(b.playerName);
-        default:
-          aValue = a.totalDC;
-          bValue = b.totalDC;
-      }
-      
-      return sortOrder === "desc" ? bValue - aValue : aValue - bValue;
+      return b.totalDC - a.totalDC; // Always sort by total DC descending
     });
 
     // Sort by gameweek column if specified
@@ -317,23 +282,12 @@ export default function PlayerDefensiveContributions() {
     }
 
     return filtered;
-  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, sortBy, sortOrder, showOnlyTopPlayers, gameweekSortColumn, gameweekSortOrder, activeTab]);
+  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, gameweekSortColumn, gameweekSortOrder, activeTab]);
 
   // Get unique values for filters
   const positions = Array.from(new Set(players.map(p => p.position).filter(Boolean)));
   const teams = Array.from(new Set(players.map(p => p.teamName).filter(Boolean))).sort();
 
-  const handleSort = (column: string) => {
-    // Clear gameweek sorting when sorting by other columns
-    setGameweekSortColumn(null);
-    
-    if (sortBy === column) {
-      setSortOrder(sortOrder === "desc" ? "asc" : "desc");
-    } else {
-      setSortBy(column);
-      setSortOrder("desc");
-    }
-  };
 
   const handleGameweekSort = (gameweek: number) => {
     // Clear general sorting when sorting by gameweek
@@ -357,55 +311,6 @@ export default function PlayerDefensiveContributions() {
     }
   };
 
-  const exportToCSV = () => {
-    if (activeTab === "defensive-contributions") {
-      const headers = ['Player', 'Position', 'Team', 'Current DC/game', ...gameweeks.map(gw => `GW${gw}`), 'Total', 'Average'];
-      const rows = filteredPlayers.map(player => [
-        player.playerName,
-        player.position,
-        player.teamName,
-        player.currentSeasonStats.dcPer90.toFixed(2),
-        ...player.gameweekProjections.map(gw => gw.defensiveContribution.toFixed(1)),
-        player.totalDC.toFixed(1),
-        player.avgDC.toFixed(1)
-      ]);
-
-      const csvContent = [headers, ...rows]
-        .map(row => row.map(cell => `"${cell}"`).join(','))
-        .join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'defensive-contributions.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    } else {
-      const headers = ['Player', 'Position', 'Team', 'Current DC/game', ...gameweeks.map(gw => `GW${gw} Points`), 'Total Points', 'Average Points'];
-      const rows = filteredPlayers.map(player => [
-        player.playerName,
-        player.position,
-        player.teamName,
-        player.currentSeasonStats.dcPer90.toFixed(2),
-        ...player.gameweekProjections.map(gw => gw.dcPoints),
-        player.totalDCPoints,
-        player.avgDCPoints.toFixed(1)
-      ]);
-
-      const csvContent = [headers, ...rows]
-        .map(row => row.map(cell => `"${cell}"`).join(','))
-        .join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'defensive-contribution-points.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -505,7 +410,7 @@ export default function PlayerDefensiveContributions() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2 sm:col-span-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <Search className="h-4 w-4 text-gray-400" />
@@ -581,40 +486,6 @@ export default function PlayerDefensiveContributions() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sort By</label>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="total">Total DC</SelectItem>
-                  <SelectItem value="average">Average DC</SelectItem>
-                  <SelectItem value="points">Total DC Points</SelectItem>
-                  <SelectItem value="current">Current DC/game</SelectItem>
-                  <SelectItem value="name">Player Name</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Display Options</label>
-              <div className="flex flex-col gap-2">
-                <Button
-                  variant={showOnlyTopPlayers ? "default" : "outline"}
-                  onClick={() => setShowOnlyTopPlayers(!showOnlyTopPlayers)}
-                  size="sm"
-                  className="w-full"
-                >
-                  Top Players Only
-                </Button>
-                <Button variant="outline" onClick={exportToCSV} className="flex items-center gap-2 w-full" size="sm">
-                  <Download className="h-4 w-4" />
-                  Export CSV
-                </Button>
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -645,17 +516,11 @@ export default function PlayerDefensiveContributions() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50 sticky left-0 bg-background z-10 min-w-[150px]"
-                    onClick={() => handleSort("name")}
-                  >
+                  <TableHead className="sticky left-0 bg-background z-10 min-w-[150px]">
                     Player
                   </TableHead>
 
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50 sticky left-[150px] bg-background z-10 min-w-[100px]"
-                    onClick={() => handleSort("current")}
-                  >
+                  <TableHead className="sticky left-[150px] bg-background z-10 min-w-[100px]">
                     Current DC/game
                   </TableHead>
                   {gameweeks.map(gw => (
@@ -674,16 +539,10 @@ export default function PlayerDefensiveContributions() {
                       </div>
                     </TableHead>
                   ))}
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50 text-center min-w-[80px] font-bold"
-                    onClick={() => handleSort("total")}
-                  >
+                  <TableHead className="text-center min-w-[80px] font-bold">
                     Total
                   </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50 text-center min-w-[80px]"
-                    onClick={() => handleSort("average")}
-                  >
+                  <TableHead className="text-center min-w-[80px]">
                     Avg
                   </TableHead>
                 </TableRow>
