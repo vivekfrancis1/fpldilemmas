@@ -146,14 +146,38 @@ export default function BestFreehitTeam() {
       Forward: includedPlayers.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD').length
     };
 
-    // Fill remaining spots with best available players
+    // Helper function to count players by team in current squad
+    const getTeamCounts = () => {
+      const teamCounts: { [teamName: string]: number } = {};
+      squad.forEach(player => {
+        const teamName = player.teamName || '';
+        teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
+      });
+      return teamCounts;
+    };
+
+    // Fill remaining spots with best available players (enforcing 3-players-per-team limit)
     const fillPosition = (position: keyof typeof filteredPlayersByPosition, maxCount: number) => {
       const needed = maxCount - positionCounts[position];
       if (needed > 0) {
         const availablePlayers = filteredPlayersByPosition[position]
           .filter((p: any) => !squad.some(sp => sp.playerId === p.playerId));
-        const toAdd = availablePlayers.slice(0, needed);
-        squad.push(...toAdd);
+        
+        const toAdd: PlayerSnapshot[] = [];
+        for (const player of availablePlayers) {
+          if (toAdd.length >= needed) break;
+          
+          const teamCounts = getTeamCounts();
+          const playerTeam = player.teamName || '';
+          const currentTeamCount = teamCounts[playerTeam] || 0;
+          
+          // Only add player if it doesn't violate the 3-players-per-team constraint
+          if (currentTeamCount < SQUAD_CONSTRAINTS.maxPlayersPerTeam) {
+            toAdd.push(player);
+            squad.push(player);
+          }
+        }
+        
         return toAdd.length;
       }
       return 0;
@@ -222,8 +246,23 @@ export default function BestFreehitTeam() {
         !includedPlayerIds.has(p.playerId) // Don't pick included players (they're already in squad)
       );
       const cheaperAlternatives = allInPosition
-        .filter(p => p.price < expensivePlayer.price && 
-                     !adjustedSquad.some(sq => sq.playerId === p.playerId))
+        .filter(p => {
+          if (p.price >= expensivePlayer.price) return false;
+          if (adjustedSquad.some(sq => sq.playerId === p.playerId)) return false;
+          
+          // Check team constraint: count current team members (excluding the player being replaced)
+          const teamCounts: { [teamName: string]: number } = {};
+          adjustedSquad.forEach(player => {
+            if (player.playerId !== expensivePlayer.playerId) {
+              const teamName = player.teamName || '';
+              teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
+            }
+          });
+          
+          const replacementTeam = p.teamName || '';
+          const currentTeamCount = teamCounts[replacementTeam] || 0;
+          return currentTeamCount < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+        })
         .sort((a, b) => a.price - b.price);
 
       if (cheaperAlternatives.length > 0) {
@@ -258,8 +297,23 @@ export default function BestFreehitTeam() {
           !includedPlayerIds.has(p.playerId) // Don't pick included players (they're already in squad)
         );
         const cheaperAlternatives = allInPosition
-          .filter(p => p.price < expensivePlayer.price && 
-                       !adjustedSquad.some(sq => sq.playerId === p.playerId))
+          .filter(p => {
+            if (p.price >= expensivePlayer.price) return false;
+            if (adjustedSquad.some(sq => sq.playerId === p.playerId)) return false;
+            
+            // Check team constraint: count current team members (excluding the player being replaced)
+            const teamCounts: { [teamName: string]: number } = {};
+            adjustedSquad.forEach(player => {
+              if (player.playerId !== expensivePlayer.playerId) {
+                const teamName = player.teamName || '';
+                teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
+              }
+            });
+            
+            const replacementTeam = p.teamName || '';
+            const currentTeamCount = teamCounts[replacementTeam] || 0;
+            return currentTeamCount < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+          })
           .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)); // Best performing cheaper alternative
 
         if (cheaperAlternatives.length > 0) {
