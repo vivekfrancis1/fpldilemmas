@@ -589,16 +589,21 @@ export default function BestFreehitTeam() {
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Projected Points</p>
                   <p className="text-2xl font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</p>
+                  <p className="text-xs text-muted-foreground">Starting XI with captain (C) doubled</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Team Value</p>
                   <p className="text-2xl font-bold">£{optimalTeam.totalValue.toFixed(1)}m</p>
+                  <p className="text-xs text-muted-foreground">All 15 players</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Captain</p>
+                  <p className="text-sm text-muted-foreground">Captain (Double Points)</p>
                   <p className="text-lg font-bold flex items-center gap-1">
                     <Crown className="h-4 w-4 text-yellow-500" />
                     {optimalTeam.captain.playerName}
+                  </p>
+                  <p className="text-xs text-green-600 font-medium">
+                    {getGameweekPoints(optimalTeam.captain, selectedGameweek).toFixed(1)} × 2 = {(getGameweekPoints(optimalTeam.captain, selectedGameweek) * 2).toFixed(1)} pts
                   </p>
                 </div>
               </div>
