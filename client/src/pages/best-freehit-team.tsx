@@ -716,7 +716,7 @@ export default function BestFreehitTeam() {
                             !includedPlayers.some(ip => ip.playerId === player.playerId) &&
                             !excludedPlayers.some(ep => ep.playerId === player.playerId)
                           )
-                          .slice(0, 100)
+                          .sort((a, b) => a.playerName.localeCompare(b.playerName))
                           .map((player) => (
                             <CommandItem
                               key={player.playerId}
@@ -786,7 +786,7 @@ export default function BestFreehitTeam() {
                             !includedPlayers.some(ip => ip.playerId === player.playerId) &&
                             !excludedPlayers.some(ep => ep.playerId === player.playerId)
                           )
-                          .slice(0, 100)
+                          .sort((a, b) => a.playerName.localeCompare(b.playerName))
                           .map((player) => (
                             <CommandItem
                               key={player.playerId}
