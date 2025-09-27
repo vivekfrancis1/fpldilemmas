@@ -605,7 +605,7 @@ export default function BestWildcardTeam() {
       const gameweekBreakdown: GameweekTeam[] = [];
       let totalOptimizedPoints = 0;
 
-      for (let gw = 6; gw <= 11; gw++) {
+      for (let gw = startGameweek; gw <= endGameweek; gw++) {
         const gameweekOptimization = optimizeStartingXIForGameweek(finalSquad, gw);
         gameweekBreakdown.push({
           gameweek: gw,
