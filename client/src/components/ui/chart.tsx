@@ -122,21 +122,10 @@ const ChartContainer = React.forwardRef<
   return (
     <ChartContext.Provider value={{ 
       config, 
-      gestureState: enableGestures ? gestureState : undefined,
+      gestureState: chartEnv.gestures.state,
       chartTransform: enableGestures ? chartTransform : undefined,
-      resetTransform: enableGestures ? resetTransform : undefined,
-      performance: enablePerformanceOptimizations ? {
-        shouldSimplify: performanceSettings.shouldSimplify,
-        animationDuration: performanceSettings.animationDuration,
-        maxDataPoints: performanceSettings.maxDataPoints,
-        strokeWidth: performanceSettings.strokeWidth,
-        dotSize: performanceSettings.dotSize,
-        showGrid: performanceSettings.showGrid,
-        enableTooltips: performanceSettings.enableTooltips,
-        enableLegend: performanceSettings.enableLegend,
-        performanceMode: performanceSettings.performanceMode,
-        deviceQuality: performanceSettings.deviceQuality
-      } : undefined
+      resetTransform: chartEnv.gestures.resetTransform,
+      performance: chartEnv.performance
     }}>
       <div
         data-chart={chartId}
