@@ -4179,7 +4179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process next 6 gameweeks only for optimized performance  
       const startGameweek = currentGameweek + 1;
       const endGameweek = Math.min(currentGameweek + 6, 38); // Next 6 gameweeks only
-      console.log(`DEBUG: Processing next 12 gameweeks (GW${startGameweek}-${endGameweek}) for team goal projections, current GW: ${currentGameweek}`);
+      console.log(`DEBUG: Processing next 6 gameweeks (GW${startGameweek}-${endGameweek}) for team goal projections, current GW: ${currentGameweek}`);
       
       // Use centralized TeamGoalsService instead of duplicated calculation logic
       const { TeamGoalsService } = await import('./team-goals-service');
@@ -4263,7 +4263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       const endGameweek = Math.min(currentGameweek + 6, 38); // Next 6 gameweeks only
       
-      console.log(`DEBUG: Processing next 12 gameweeks for clean sheets (GW${currentGameweek + 1} to GW${endGameweek}), current GW: ${currentGameweek}`);
+      console.log(`DEBUG: Processing next 6 gameweeks for clean sheets (GW${currentGameweek + 1} to GW${endGameweek}), current GW: ${currentGameweek}`);
       
       // Create lookup map for team Goals Against by gameweek for new formula
       const teamGoalsAgainstMap = new Map();
@@ -6137,7 +6137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const playerShares = [];
     let totalContribution = 0;
 
-    // Pure projection approach - no gameweek calculations needed since we're only projecting next 12 GWs
+    // Pure projection approach - no gameweek calculations needed since we're only projecting next 6 GWs
 
     // Calculate player contributions using data-driven approach
     const playerContributions: { [playerId: number]: { name: string, position: string, contribution: number, xaPer90: number, expectedMinutes: number } } = {};
@@ -6160,15 +6160,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use actual xA data or fallback to position average
       const xAPer90 = currentYearXAPer90 > 0 ? currentYearXAPer90 : fallbackXA;
       
-      // PURE PROJECTION: Only projected assists for next 12 gameweeks
+      // PURE PROJECTION: Only projected assists for next 6 gameweeks
       const expectedMinutes = calculateExpectedMinutes(player, players);
       
       // NOTE: Set piece adjustments (corner/freekick) are now applied during cache generation
       // in projection-cache-worker.ts to prevent double-counting
       const adjustedXAPer90 = xAPer90;
       
-      // PURE PROJECTION: Only projected assists for the next 12 gameweeks
-      const projectedSeasonAssists = (adjustedXAPer90 / 90) * expectedMinutes * (12 / 38);
+      // PURE PROJECTION: Only projected assists for the next 6 gameweeks
+      const projectedSeasonAssists = (adjustedXAPer90 / 90) * expectedMinutes * (6 / 38);
       
       // EQUAL POSITION TREATMENT (as specified by user)
       let positionMultiplier = 1.0;
