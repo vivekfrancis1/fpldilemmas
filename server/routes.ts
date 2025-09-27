@@ -13599,6 +13599,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player Total Points Database Storage API Routes
+  console.log("✓ Registering Player Total Points Database API routes...");
+
+  // Create a new Player Total Points window (dynamic 6-gameweek period)
+  app.post("/api/player-total-points/window", async (req, res) => {
+    try {
+      const { startGameweek, endGameweek, season } = req.body;
+      
+      if (!startGameweek || !endGameweek || !season) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          required: ["startGameweek", "endGameweek", "season"]
+        });
+      }
+
+      console.log(`📊 Creating Player Total Points window: GW${startGameweek}-${endGameweek} (${season})`);
+      
+      const window = await storage.createPlayerTotalPointsWindow(startGameweek, endGameweek, season);
+      
+      res.json({
+        success: true,
+        window,
+        message: `Created window for GW${startGameweek}-${endGameweek}`,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error("❌ Error creating Player Total Points window:", error);
+      res.status(500).json({
+        error: "Failed to create window",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get active Player Total Points window
+  app.get("/api/player-total-points/window/active", async (req, res) => {
+    try {
+      const activeWindow = await storage.getActivePlayerTotalPointsWindow();
+      
+      if (!activeWindow) {
+        return res.status(404).json({
+          error: "No active window found",
+          message: "No active Player Total Points window exists"
+        });
+      }
+
+      res.json({
+        success: true,
+        window: activeWindow,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error("❌ Error getting active window:", error);
+      res.status(500).json({
+        error: "Failed to get active window",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Save Player Total Points snapshots to database
+  app.post("/api/player-total-points/snapshots", async (req, res) => {
+    try {
+      const { windowId, snapshots } = req.body;
+      
+      if (!windowId || !Array.isArray(snapshots)) {
+        return res.status(400).json({
+          error: "Invalid request",
+          message: "windowId and snapshots array are required"
+        });
+      }
+
+      console.log(`💾 Saving ${snapshots.length} Player Total Points snapshots for window ${windowId}`);
+      
+      await storage.savePlayerTotalPointsSnapshots(windowId, snapshots);
+      
+      res.json({
+        success: true,
+        message: `Successfully saved ${snapshots.length} snapshots`,
+        windowId,
+        snapshotCount: snapshots.length,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error("❌ Error saving Player Total Points snapshots:", error);
+      res.status(500).json({
+        error: "Failed to save snapshots",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get Player Total Points snapshots from database
+  app.get("/api/player-total-points/snapshots", async (req, res) => {
+    try {
+      const { windowId } = req.query;
+      
+      console.log(`📊 Retrieving Player Total Points snapshots${windowId ? ` for window ${windowId}` : ' from active window'}`);
+      
+      const snapshots = await storage.getPlayerTotalPointsSnapshots(windowId as string);
+      
+      res.json({
+        success: true,
+        snapshots,
+        count: snapshots.length,
+        windowId: snapshots.length > 0 ? snapshots[0].windowId : null,
+        gameweekRange: snapshots.length > 0 ? `GW${snapshots[0].startGameweek}-${snapshots[0].endGameweek}` : null,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error("❌ Error getting Player Total Points snapshots:", error);
+      res.status(500).json({
+        error: "Failed to get snapshots",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  console.log("✓ Player Total Points Database API routes registered successfully");
+
   const httpServer = createServer(app);
   return httpServer;
 }
