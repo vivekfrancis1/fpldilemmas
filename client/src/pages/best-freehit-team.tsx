@@ -7,8 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Star, Trophy, Users, Zap, Shield, Crown } from "lucide-react";
+import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -61,6 +63,8 @@ export default function BestFreehitTeam() {
   const [optimalTeam, setOptimalTeam] = useState<OptimalTeam | null>(null);
   const [unlimitedBudget, setUnlimitedBudget] = useState<boolean>(true);
   const [budgetConstraint, setBudgetConstraint] = useState<number>(100);
+  const [includedPlayers, setIncludedPlayers] = useState<PlayerSnapshot[]>([]);
+  const [excludedPlayers, setExcludedPlayers] = useState<PlayerSnapshot[]>([]);
 
   // Fetch live Player Total Points data (same as Player Total Points page)
   const { data: liveData, isLoading, error } = useQuery({
@@ -117,29 +121,67 @@ export default function BestFreehitTeam() {
     return player.gameweekBreakdown[gameweek.toString()] || player.gameweekBreakdown[`gw${gameweek}`] || 0;
   };
 
-  // Helper function to build unlimited budget team
+  // Helper function to build unlimited budget team with inclusion/exclusion constraints
   const buildUnlimitedTeam = (playersWithPoints: any[], playersByPosition: any) => {
     console.log('UNLIMITED BUDGET MODE - Top players by GW' + selectedGameweek + ' points:');
-    console.log('Top 2 GKP:', playersByPosition.Goalkeeper.slice(0, 2).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
-    console.log('Top 5 DEF:', playersByPosition.Defender.slice(0, 5).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
-    console.log('Top 5 MID:', playersByPosition.Midfielder.slice(0, 5).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
-    console.log('Top 3 FWD:', playersByPosition.Forward.slice(0, 3).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+    console.log('Included players:', includedPlayers.map(p => p.playerName));
+    console.log('Excluded players:', excludedPlayers.map(p => p.playerName));
 
-    // Unlimited budget: select top players by points for selected gameweek
-    const squad = [
-      ...playersByPosition.Goalkeeper.slice(0, SQUAD_CONSTRAINTS.goalkeepers),
-      ...playersByPosition.Defender.slice(0, SQUAD_CONSTRAINTS.defenders),
-      ...playersByPosition.Midfielder.slice(0, SQUAD_CONSTRAINTS.midfielders),
-      ...playersByPosition.Forward.slice(0, SQUAD_CONSTRAINTS.forwards)
-    ];
+    // Filter out excluded players from all positions
+    const excludedIds = new Set(excludedPlayers.map(p => p.playerId));
+    const filteredPlayersByPosition = {
+      Goalkeeper: playersByPosition.Goalkeeper.filter((p: any) => !excludedIds.has(p.playerId)),
+      Defender: playersByPosition.Defender.filter((p: any) => !excludedIds.has(p.playerId)),
+      Midfielder: playersByPosition.Midfielder.filter((p: any) => !excludedIds.has(p.playerId)),
+      Forward: playersByPosition.Forward.filter((p: any) => !excludedIds.has(p.playerId))
+    };
 
-    // Select starting 11: best players by gameweek points maintaining formation constraints
+    console.log('Top 2 GKP:', filteredPlayersByPosition.Goalkeeper.slice(0, 2).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+    console.log('Top 5 DEF:', filteredPlayersByPosition.Defender.slice(0, 5).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+    console.log('Top 5 MID:', filteredPlayersByPosition.Midfielder.slice(0, 5).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+    console.log('Top 3 FWD:', filteredPlayersByPosition.Forward.slice(0, 3).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+
+    // Start with included players
+    let squad: PlayerSnapshot[] = [...includedPlayers];
+    const positionCounts = {
+      Goalkeeper: includedPlayers.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP').length,
+      Defender: includedPlayers.filter(p => p.position.toLowerCase().includes('defender') || p.position === 'DEF').length,
+      Midfielder: includedPlayers.filter(p => p.position.toLowerCase().includes('midfielder') || p.position === 'MID').length,
+      Forward: includedPlayers.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD').length
+    };
+
+    // Fill remaining spots with best available players
+    const fillPosition = (position: keyof typeof filteredPlayersByPosition, maxCount: number) => {
+      const needed = maxCount - positionCounts[position];
+      if (needed > 0) {
+        const availablePlayers = filteredPlayersByPosition[position]
+          .filter((p: any) => !squad.some(sp => sp.playerId === p.playerId));
+        const toAdd = availablePlayers.slice(0, needed);
+        squad.push(...toAdd);
+        return toAdd.length;
+      }
+      return 0;
+    };
+
+    fillPosition('Goalkeeper', SQUAD_CONSTRAINTS.goalkeepers);
+    fillPosition('Defender', SQUAD_CONSTRAINTS.defenders);
+    fillPosition('Midfielder', SQUAD_CONSTRAINTS.midfielders);
+    fillPosition('Forward', SQUAD_CONSTRAINTS.forwards);
+
+    // Select starting 11: prioritize included players, then best performers
+    const squadByPosition = {
+      Goalkeeper: squad.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP').sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
+      Defender: squad.filter(p => p.position.toLowerCase().includes('defender') || p.position === 'DEF').sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
+      Midfielder: squad.filter(p => p.position.toLowerCase().includes('midfielder') || p.position === 'MID').sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
+      Forward: squad.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD').sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek))
+    };
+
     const starting11 = [
-      playersByPosition.Goalkeeper[0], // 1 GK
-      ...playersByPosition.Defender.slice(0, 4), // 4 DEF (minimum)
-      ...playersByPosition.Midfielder.slice(0, 5), // 5 MID
-      playersByPosition.Forward[0] // 1 FWD
-    ];
+      squadByPosition.Goalkeeper[0], // 1 GK
+      ...squadByPosition.Defender.slice(0, 4), // 4 DEF (minimum)
+      ...squadByPosition.Midfielder.slice(0, 5), // 5 MID
+      squadByPosition.Forward[0] // 1 FWD
+    ].filter(Boolean);
 
     return { squad, starting11 };
   };
@@ -627,6 +669,154 @@ export default function BestFreehitTeam() {
                 />
               </div>
             )}
+          </div>
+
+          {/* Player Inclusion/Exclusion */}
+          <div className="space-y-4 p-4 bg-muted/20 rounded-lg border">
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="h-4 w-4" />
+              <h3 className="text-sm font-medium">Player Constraints</h3>
+            </div>
+
+            {/* Players to Include */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-green-700 dark:text-green-400">
+                Players to Include (Must Have)
+              </Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {includedPlayers.map((player) => (
+                  <Badge
+                    key={player.playerId}
+                    variant="secondary"
+                    className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex items-center gap-1"
+                  >
+                    {player.playerName}
+                    <X 
+                      className="h-3 w-3 cursor-pointer hover:text-green-600" 
+                      onClick={() => setIncludedPlayers(prev => prev.filter(p => p.playerId !== player.playerId))}
+                    />
+                  </Badge>
+                ))}
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add players to include
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search players..." />
+                    <CommandList>
+                      <CommandEmpty>No players found.</CommandEmpty>
+                      <CommandGroup>
+                        {snapshots
+                          .filter(player => 
+                            !includedPlayers.some(ip => ip.playerId === player.playerId) &&
+                            !excludedPlayers.some(ep => ep.playerId === player.playerId)
+                          )
+                          .slice(0, 100)
+                          .map((player) => (
+                            <CommandItem
+                              key={player.playerId}
+                              onSelect={() => {
+                                setIncludedPlayers(prev => [...prev, player]);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <div>
+                                  <span className="font-medium">{player.playerName}</span>
+                                  <span className="text-sm text-muted-foreground ml-2">
+                                    {player.teamName} - {player.position}
+                                  </span>
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  £{player.price}m
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                These players will definitely be included in your squad
+              </p>
+            </div>
+
+            {/* Players to Exclude */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-red-700 dark:text-red-400">
+                Players to Exclude (Avoid)
+              </Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {excludedPlayers.map((player) => (
+                  <Badge
+                    key={player.playerId}
+                    variant="secondary"
+                    className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 flex items-center gap-1"
+                  >
+                    {player.playerName}
+                    <X 
+                      className="h-3 w-3 cursor-pointer hover:text-red-600" 
+                      onClick={() => setExcludedPlayers(prev => prev.filter(p => p.playerId !== player.playerId))}
+                    />
+                  </Badge>
+                ))}
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-start">
+                    <X className="h-4 w-4 mr-2" />
+                    Add players to exclude
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search players..." />
+                    <CommandList>
+                      <CommandEmpty>No players found.</CommandEmpty>
+                      <CommandGroup>
+                        {snapshots
+                          .filter(player => 
+                            !includedPlayers.some(ip => ip.playerId === player.playerId) &&
+                            !excludedPlayers.some(ep => ep.playerId === player.playerId)
+                          )
+                          .slice(0, 100)
+                          .map((player) => (
+                            <CommandItem
+                              key={player.playerId}
+                              onSelect={() => {
+                                setExcludedPlayers(prev => [...prev, player]);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <div>
+                                  <span className="font-medium">{player.playerName}</span>
+                                  <span className="text-sm text-muted-foreground ml-2">
+                                    {player.teamName} - {player.position}
+                                  </span>
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  £{player.price}m
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                These players will never be included in your squad
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
