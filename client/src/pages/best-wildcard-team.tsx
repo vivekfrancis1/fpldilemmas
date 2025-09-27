@@ -236,12 +236,15 @@ export default function BestWildcardTeam() {
           .filter((p: any) => !squad.some(sp => sp.playerId === p.playerId));
         
         const toAdd: PlayerSnapshot[] = [];
+        
+        // Calculate initial counts once before the loop
+        let teamCounts = getTeamCounts();
+        let attackerCounts = getAttackerCounts();
+        let defenderCounts = getDefenderCounts();
+        
         for (const player of availablePlayers) {
           if (toAdd.length >= needed) break;
           
-          const teamCounts = getTeamCounts();
-          const attackerCounts = getAttackerCounts();
-          const defenderCounts = getDefenderCounts();
           const playerTeam = player.teamName || '';
           const currentTeamCount = teamCounts[playerTeam] || 0;
           
@@ -274,6 +277,15 @@ export default function BestWildcardTeam() {
           if (canAddPlayer) {
             toAdd.push(player);
             squad.push(player);
+            
+            // Incrementally update counts for next iteration
+            teamCounts[playerTeam] = (teamCounts[playerTeam] || 0) + 1;
+            if (isAttacker) {
+              attackerCounts[playerTeam] = (attackerCounts[playerTeam] || 0) + 1;
+            }
+            if (isDefender) {
+              defenderCounts[playerTeam] = (defenderCounts[playerTeam] || 0) + 1;
+            }
           }
         }
         
