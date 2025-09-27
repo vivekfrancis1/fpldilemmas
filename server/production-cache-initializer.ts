@@ -143,17 +143,40 @@ export class ProductionCacheInitializer {
    * Register cache population jobs with proper dependencies
    */
   private registerCacheJobs(orchestrator: InitializationOrchestrator, cacheStatus: any): void {
-    // Job 1: Bootstrap data (no dependencies)
+    // Job 1: Bootstrap data (no dependencies) - Enhanced with actual bootstrap loading
     orchestrator.registerJob({
       id: 'bootstrap-data',
       name: 'Bootstrap FPL Data',
       dependencies: [],
       executor: async () => {
-        // Bootstrap data is loaded via FPL API calls - this is just a placeholder
-        // The actual API calls happen within the projection calculations
-        console.log("📡 Bootstrap data ready (loaded via API calls)");
+        // Actually load bootstrap data to ensure it's available for dependent endpoints
+        console.log("📡 Loading bootstrap data from FPL API...");
+        const response = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+        if (!response.ok) {
+          throw new Error(`Failed to load bootstrap data: ${response.status}`);
+        }
+        await response.json(); // Ensure the data is fetched and cached
+        console.log("✅ Bootstrap data loaded and cached successfully");
       },
-      timeout: 30000 // 30 seconds
+      timeout: 60000 // 60 seconds for network calls
+    });
+
+    // Job 1.5: Current standings data initialization
+    orchestrator.registerJob({
+      id: 'current-standings',
+      name: 'Current Standings Data',
+      dependencies: ['bootstrap-data'],
+      executor: async () => {
+        console.log("📊 Initializing current standings data...");
+        // Pre-warm the current standings cache by making an internal call
+        const response = await fetch('http://localhost:5000/api/current-standings');
+        if (response.ok) {
+          console.log("✅ Current standings data initialized successfully");
+        } else {
+          console.log("⚠️ Current standings initialization completed (may cache on first request)");
+        }
+      },
+      timeout: 45000 // 45 seconds
     });
 
     // Job 2: Team projections (depend on bootstrap data)

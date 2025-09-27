@@ -4141,7 +4141,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Team Goal Projections endpoint  
-  app.get("/api/team-goal-projections", async (req, res) => {
+  app.get("/api/team-goal-projections", 
+    requireReadiness(['bootstrap-data'], 'team-goal-projections'),
+    async (req, res) => {
     // FORCE disable all caching to ensure admin changes reflect immediately
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0');
     res.set('Pragma', 'no-cache');
@@ -6607,7 +6609,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const CURRENT_STANDINGS_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
   // Current Standings endpoint - calculates actual Premier League table with detailed statistics from completed matches only
-  app.get("/api/current-standings", async (req, res) => {
+  app.get("/api/current-standings", 
+    requireReadiness(['bootstrap-data', 'current-standings'], 'current-standings'),
+    async (req, res) => {
     try {
       console.log(`DEBUG: Enhanced Current Standings API called - calculating detailed table from completed matches`);
       
@@ -7231,7 +7235,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Team Goals Against Projections endpoint - PERFECT MIRROR IMAGE
-  app.get("/api/team-goals-against-projections", async (req, res) => {
+  app.get("/api/team-goals-against-projections", 
+    requireReadiness(['bootstrap-data', 'team-goals'], 'team-goals-against-projections'),
+    async (req, res) => {
     try {
       console.log(`DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping`);
       
