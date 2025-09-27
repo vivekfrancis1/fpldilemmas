@@ -16,12 +16,12 @@ export class ProductionCacheInitializer {
   /**
    * Initialize critical cache data with dependency management
    */
-  async initializeProductionCache(): Promise<void> {
+  async initializeProductionCache(globalOrchestrator?: InitializationOrchestrator): Promise<void> {
     console.log("🚀 Starting dependency-aware cache initialization...");
     
     try {
       // Set overall timeout for initialization
-      const initPromise = this.performDependencyAwareInitialization();
+      const initPromise = this.performDependencyAwareInitialization(globalOrchestrator);
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error("Cache initialization timeout")), this.INITIALIZATION_TIMEOUT);
       });
@@ -36,22 +36,26 @@ export class ProductionCacheInitializer {
     }
   }
   
-  private async performDependencyAwareInitialization(): Promise<void> {
+  private async performDependencyAwareInitialization(globalOrchestrator?: InitializationOrchestrator): Promise<void> {
     // Check which caches need population
     const cacheStatus = await this.checkCacheStatus();
     
     if (cacheStatus.needsInitialization) {
       console.log("📊 Cache tables need population - using dependency-aware initialization...");
       
-      // Create orchestrator and define job dependencies
-      const orchestrator = new InitializationOrchestrator();
+      // Use global orchestrator if provided, otherwise create new one
+      const orchestrator = globalOrchestrator || new InitializationOrchestrator();
       
       // Register jobs with proper dependencies
       this.registerCacheJobs(orchestrator, cacheStatus);
       
-      // Execute all jobs respecting dependencies
-      await orchestrator.executeAll();
-      console.log("🎯 Dependency-aware cache population completed");
+      // Execute all jobs respecting dependencies (only if using local orchestrator)
+      if (!globalOrchestrator) {
+        await orchestrator.executeAll();
+        console.log("🎯 Dependency-aware cache population completed");
+      } else {
+        console.log("🎯 Cache jobs registered with global orchestrator - will be executed in dependency order");
+      }
     } else {
       console.log("✅ Cache data already present - skipping initialization");
     }

@@ -96,7 +96,13 @@ app.use((req, res, next) => {
       // Initialize production cache with dependency management (only runs if cache is empty)
       console.log("🔧 Initializing dependency orchestrator...");
       const orchestrator = initializeGlobalOrchestrator();
-      await productionCacheInitializer.initializeProductionCache();
+      
+      // Register cache jobs with global orchestrator
+      await productionCacheInitializer.initializeProductionCache(orchestrator);
+      
+      // Execute all dependency jobs before starting schedulers
+      await orchestrator.executeAll();
+      console.log("✅ Global dependency orchestrator execution completed");
       
       // Start schedulers after server is running
       console.log("🚀 Starting schedulers...");
