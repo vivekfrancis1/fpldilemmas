@@ -61,14 +61,36 @@ export default function BestFreehitTeam() {
   const [unlimitedBudget, setUnlimitedBudget] = useState<boolean>(false);
   const [budgetConstraint, setBudgetConstraint] = useState<number>(100);
 
-  // Fetch Player Total Points snapshots
-  const { data: snapshotsData, isLoading, error } = useQuery({
-    queryKey: ['/api/player-total-points/snapshots'],
-    staleTime: 1000 * 60 * 5, // 5 minutes
+  // Fetch live Player Total Points data (same as Player Total Points page)
+  const { data: liveData, isLoading, error } = useQuery({
+    queryKey: ['/api/player-total-points', 6, 11],
+    queryFn: async () => {
+      const response = await fetch('/api/player-total-points?startGameweek=6&endGameweek=11');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch total points: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes for live data
   });
 
-  const snapshots: PlayerSnapshot[] = snapshotsData?.snapshots || [];
-  const gameweekRange = snapshotsData?.gameweekRange || '';
+  const snapshots: PlayerSnapshot[] = liveData ? liveData.map(player => ({
+    playerId: player.playerId || 0,
+    playerName: player.name || player.playerName || '',
+    teamName: player.team || '',
+    position: player.position || '',
+    price: player.price || 0,
+    ownership: player.ownership || 0,
+    totalProjectedPoints: player.totalExpectedPoints || 0,
+    averagePointsPerGameweek: 0,
+    averageValue: 0,
+    averageMinutes: 0,
+    gameweekBreakdown: player.gameweekProjections || {},
+    windowId: '',
+    startGameweek: 6,
+    endGameweek: 11
+  })) : [];
+  const gameweekRange = 'GW6-11';
 
   useEffect(() => {
     if (snapshots.length > 0 && snapshots[0].startGameweek) {
