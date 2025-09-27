@@ -19,16 +19,18 @@ interface ChartDimensions {
   isCompact: boolean
 }
 
-export function useChartResponsive(config: ChartResponsiveConfig = {}): ChartDimensions {
+export function useChartResponsive(config: ChartResponsiveConfig & { isMobile?: boolean } = {}): ChartDimensions {
   const {
     mobileAspectRatio = "auto",
     enableMobileOptimizations = true,
     mobileHeight = 200,
     desktopHeight = 300,
-    breakpoint = 768
+    breakpoint = 768,
+    isMobile: passedIsMobile
   } = config
 
-  const isMobile = useIsMobile()
+  // Use passed mobile state or fallback to direct hook call if not provided
+  const isMobile = passedIsMobile ?? false
   const [dimensions, setDimensions] = useState<ChartDimensions>({
     width: 0,
     height: 0,
@@ -262,15 +264,17 @@ interface ChartPerformanceConfig {
   simplifyOnMobile?: boolean
 }
 
-export function useChartPerformance(config: ChartPerformanceConfig = {}) {
+export function useChartPerformance(config: ChartPerformanceConfig & { isMobile?: boolean } = {}) {
   const {
     enableLazyLoading = true,
     throttleResize = 100,
     reduceAnimations = false,
-    simplifyOnMobile = true
+    simplifyOnMobile = true,
+    isMobile: passedIsMobile
   } = config
 
-  const isMobile = useIsMobile()
+  // Use passed mobile state or fallback to false if not provided
+  const isMobile = passedIsMobile ?? false
   const [isVisible, setIsVisible] = useState(!enableLazyLoading)
   const [shouldSimplify, setShouldSimplify] = useState(false)
 

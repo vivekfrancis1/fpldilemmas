@@ -80,7 +80,8 @@ export function useChartEnvironment(config: ChartEnvironmentConfig = {}) {
   // Always call performance hook - even if optimizations are disabled
   const performanceSystem = useChartPerformance({
     ...performanceConfig,
-    simplifyOnMobile: enablePerformanceOptimizations && performanceConfig.simplifyOnMobile !== false
+    simplifyOnMobile: enablePerformanceOptimizations && performanceConfig.simplifyOnMobile !== false,
+    isMobile // Pass mobile state to avoid duplicate hook calls
   })
 
   // Return stable environment object with all computed values

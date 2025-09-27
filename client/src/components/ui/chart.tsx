@@ -5,7 +5,6 @@ import * as RechartsPrimitive from "recharts"
 
 import { cn } from "@/lib/utils"
 import { useChartEnvironment } from "@/hooks/use-chart-environment"
-import { useIsMobile } from "@/hooks/use-mobile"
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const
@@ -124,7 +123,6 @@ const ChartContainer = React.forwardRef<
   React.useEffect(() => {
     setChartTransform(chartEnv.gestures.currentTransform)
   }, [chartEnv.gestures.currentTransform])
-
 
   return (
     <ChartContext.Provider value={{ 
@@ -323,8 +321,8 @@ const ChartTooltipContent = React.forwardRef<
     },
     ref
   ) => {
-    const { config } = useChart()
-    const isMobile = useIsMobile()
+    const { config, mobile } = useChart()
+    const isMobile = mobile?.isMobile || false
 
     const tooltipLabel = React.useMemo(() => {
       if (hideLabel || !payload?.length) {
@@ -524,8 +522,8 @@ const ChartLegendContent = React.forwardRef<
     { className, hideIcon = false, payload, verticalAlign = "bottom", nameKey, mobileLayout = "horizontal", collapsible = false, maxMobileItems = 4 },
     ref
   ) => {
-    const { config } = useChart()
-    const isMobile = useIsMobile()
+    const { config, mobile } = useChart()
+    const isMobile = mobile?.isMobile || false
     const [isCollapsed, setIsCollapsed] = React.useState(false)
 
     if (!payload?.length) {
@@ -682,7 +680,7 @@ function getPayloadConfigFromPayload(
 // Performance utilities for chart components to consume context
 export function useChartOptimizations() {
   const context = useChart()
-  const isMobile = useIsMobile()
+  const isMobile = context.mobile?.isMobile || false
   
   const optimizeChartData = <T extends Record<string, any>>(
     data: T[], 
