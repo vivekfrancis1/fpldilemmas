@@ -107,7 +107,7 @@ const ChartContainer = React.forwardRef<
     simplifyOnMobile: enablePerformanceOptimizations && performanceConfig.simplifyOnMobile !== false
   })
 
-  // Initialize gesture support
+  // Initialize gesture support - ALWAYS call hooks in same order
   const [chartTransform, setChartTransform] = React.useState({ scale: 1, translateX: 0, translateY: 0 })
   
   // Create stable gesture config to avoid hooks re-ordering - avoid object reference dependency
@@ -145,6 +145,7 @@ const ChartContainer = React.forwardRef<
     }
   }), [enableGestures, isMobile, enablePinch, enablePan, enableTap, onPinch, onPan, onTap])
   
+  // ALWAYS call useChartGestures hook - never conditionally call hooks
   const { gestureState, gestureHandlers, resetTransform, currentTransform } = useChartGestures(stableGestureConfig)
 
   // Update chart transform when gesture transform changes
