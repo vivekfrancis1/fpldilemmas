@@ -224,16 +224,16 @@ export default function BestFreehitTeam() {
       Forward: squad.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD')
     };
 
-    // Try different formation combinations
+    // Try different formation combinations (1 GK + 10 outfield players = 11 total)
     const formations = [
-      { def: 3, mid: 5, fwd: 3 }, // 3-5-3
-      { def: 3, mid: 4, fwd: 4 }, // 3-4-4
-      { def: 4, mid: 5, fwd: 2 }, // 4-5-2
-      { def: 4, mid: 4, fwd: 3 }, // 4-4-3
-      { def: 4, mid: 3, fwd: 4 }, // 4-3-4
-      { def: 5, mid: 4, fwd: 2 }, // 5-4-2
-      { def: 5, mid: 3, fwd: 3 }, // 5-3-3
-      { def: 5, mid: 2, fwd: 4 }  // 5-2-4
+      { def: 3, mid: 5, fwd: 2 }, // 3-5-2 (1+3+5+2=11)
+      { def: 3, mid: 4, fwd: 3 }, // 3-4-3 (1+3+4+3=11)
+      { def: 4, mid: 5, fwd: 1 }, // 4-5-1 (1+4+5+1=11)
+      { def: 4, mid: 4, fwd: 2 }, // 4-4-2 (1+4+4+2=11)
+      { def: 4, mid: 3, fwd: 3 }, // 4-3-3 (1+4+3+3=11)
+      { def: 5, mid: 4, fwd: 1 }, // 5-4-1 (1+5+4+1=11)
+      { def: 5, mid: 3, fwd: 2 }, // 5-3-2 (1+5+3+2=11)
+      { def: 3, mid: 3, fwd: 4 }  // 3-3-4 (1+3+3+4=11)
     ];
 
     let bestTeam: PlayerSnapshot[] = [];
