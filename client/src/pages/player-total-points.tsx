@@ -700,19 +700,19 @@ function createPlayerTotalPointsColumns(
       key: 'name',
       header: 'Player',
       sortable: true,
-      className: 'sticky left-0 bg-white z-10 min-w-[200px]',
+      className: 'sticky left-0 bg-white z-10 min-w-[140px] md:min-w-[200px]',
       render: (_, player) => (
-        <div className="flex items-center gap-2 min-w-[200px]">
+        <div className="flex items-center gap-1 md:gap-2 min-w-[140px] md:min-w-[200px]">
           <div className="flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 md:gap-2 flex-wrap">
               <PlayerNameCell name={player.playerName || player.name} />
               <PlayerAvailabilityBadge player={player} />
             </div>
-            <div className="flex items-center gap-1 mt-1 mb-1">
+            <div className="flex items-center gap-1 mt-0.5 md:mt-1 mb-0.5 md:mb-1">
               <PositionBadge position={player.position} compact={true} />
               <TeamBadge team={player.teamName || player.team} compact={true} />
             </div>
-            <div className="text-xs text-gray-500 space-x-2">
+            <div className="text-xs text-gray-500 space-x-1 md:space-x-2">
               <span className="font-medium">£{(typeof player.price === 'number') ? player.price.toFixed(1) : '0.0'}m</span>
               <span className="text-gray-400">•</span>
               <span>{(typeof player.ownership === 'number') ? player.ownership.toFixed(1) : '0.0'}%</span>
@@ -725,14 +725,14 @@ function createPlayerTotalPointsColumns(
                 variant="ghost"
                 onClick={() => onPlayerCompareClick(player)}
                 disabled={maxCompareReached && !compareList?.some(p => (p.playerId || p.id) === (player.playerId || player.id))}
-                className={`h-8 w-8 p-0 hover:bg-blue-50 ${
+                className={`h-6 w-6 md:h-8 md:w-8 p-0 hover:bg-blue-50 ${
                   compareList?.some(p => (p.playerId || p.id) === (player.playerId || player.id))
                     ? 'bg-blue-100 text-blue-700'
                     : 'text-gray-400 hover:text-blue-600'
                 }`}
                 data-testid={`button-compare-${player.playerId || player.id}`}
               >
-                <UserPlus className="h-4 w-4" />
+                <UserPlus className="h-3 w-3 md:h-4 md:w-4" />
               </Button>
             </div>
           )}
@@ -767,7 +767,7 @@ function createPlayerTotalPointsColumns(
       header: '6GW Total',
       sortable: true,
       align: 'center',
-      className: 'min-w-[100px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300',
+      className: 'min-w-[90px] md:min-w-[100px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300',
       render: (_, player) => <RangeTotalBreakdownTooltip player={player} />
     },
     {
