@@ -66,11 +66,11 @@ export default function BestFreehitTeam() {
   const [includedPlayers, setIncludedPlayers] = useState<PlayerSnapshot[]>([]);
   const [excludedPlayers, setExcludedPlayers] = useState<PlayerSnapshot[]>([]);
 
-  // Fetch live Player Total Points data (same as Player Total Points page)
+  // Fetch live Player Total Points data for selected gameweek
   const { data: liveData, isLoading, error } = useQuery({
-    queryKey: ['/api/player-total-points', 6, 11],
+    queryKey: ['/api/player-total-points', selectedGameweek, selectedGameweek],
     queryFn: async () => {
-      const response = await fetch('/api/player-total-points?startGameweek=6&endGameweek=11');
+      const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch total points: ${response.statusText}`);
       }
@@ -92,24 +92,20 @@ export default function BestFreehitTeam() {
     averageMinutes: 0,
     gameweekBreakdown: player.gameweekProjections || {},
     windowId: '',
-    startGameweek: 6,
-    endGameweek: 11
+    startGameweek: selectedGameweek,
+    endGameweek: selectedGameweek
   })) : [];
-  const gameweekRange = 'GW6-11';
+  const gameweekRange = `GW${selectedGameweek}`;
 
+  // Clear optimal team when gameweek changes
   useEffect(() => {
-    if (snapshots.length > 0 && snapshots[0].startGameweek) {
-      setSelectedGameweek(snapshots[0].startGameweek);
-    }
-  }, [snapshots]);
+    setOptimalTeam(null);
+  }, [selectedGameweek]);
 
-  // Get gameweek options
+  // Get gameweek options (fixed range for freehit optimization)
   const getGameweekOptions = () => {
-    if (snapshots.length === 0) return [];
-    const startGw = snapshots[0].startGameweek;
-    const endGw = snapshots[0].endGameweek;
     const options = [];
-    for (let gw = startGw; gw <= endGw; gw++) {
+    for (let gw = 6; gw <= 11; gw++) {
       options.push(gw);
     }
     return options;
