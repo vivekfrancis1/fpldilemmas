@@ -5,6 +5,7 @@ import * as RechartsPrimitive from "recharts"
 
 import { cn } from "@/lib/utils"
 import { useChartEnvironment } from "@/hooks/use-chart-environment"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const
@@ -21,6 +22,12 @@ export type ChartConfig = {
 
 type ChartContextProps = {
   config: ChartConfig
+  mobile?: {
+    isMobile: boolean
+    aspectRatio: string
+    enableOptimizations: boolean
+    showLegend: boolean
+  }
   gestureState?: {
     isGesturing: boolean
     scale: number
@@ -121,7 +128,8 @@ const ChartContainer = React.forwardRef<
 
   return (
     <ChartContext.Provider value={{ 
-      config, 
+      config,
+      mobile: chartEnv.mobile,
       gestureState: chartEnv.gestures.state,
       chartTransform: enableGestures ? chartTransform : undefined,
       resetTransform: chartEnv.gestures.resetTransform,
