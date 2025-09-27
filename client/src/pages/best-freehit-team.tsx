@@ -107,6 +107,7 @@ export default function BestFreehitTeam() {
       console.log('Starting optimization for gameweek:', selectedGameweek);
       console.log('Total snapshots:', snapshots.length);
       console.log('Sample snapshot:', snapshots[0]);
+      console.log('Unlimited budget mode:', unlimitedBudget);
 
       // Sort players by gameweek points for selected gameweek
       const playersWithPoints = snapshots.map(player => {
@@ -127,7 +128,7 @@ export default function BestFreehitTeam() {
       const uniquePositions = [...new Set(snapshots.map(p => p.position))];
       console.log('Unique positions in data:', uniquePositions);
 
-      // Group by position (using flexible matching)
+      // Group by position and sort by selected gameweek points only
       const playersByPosition = {
         Goalkeeper: playersWithPoints.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP').sort((a, b) => b.gameweekPoints - a.gameweekPoints),
         Defender: playersWithPoints.filter(p => p.position.toLowerCase().includes('defender') || p.position === 'DEF').sort((a, b) => b.gameweekPoints - a.gameweekPoints),
@@ -160,6 +161,12 @@ export default function BestFreehitTeam() {
 
       if (unlimitedBudget) {
         // Unlimited budget: simply pick top players by position based on projected points
+        console.log('UNLIMITED BUDGET MODE - Top players by GW' + selectedGameweek + ' points:');
+        console.log('Top 2 GKP:', playersByPosition.Goalkeeper.slice(0, 2).map(p => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+        console.log('Top 5 DEF:', playersByPosition.Defender.slice(0, 5).map(p => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+        console.log('Top 5 MID:', playersByPosition.Midfielder.slice(0, 5).map(p => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+        console.log('Top 3 FWD:', playersByPosition.Forward.slice(0, 3).map(p => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+        
         squad = [
           ...playersByPosition.Goalkeeper.slice(0, SQUAD_CONSTRAINTS.goalkeepers),
           ...playersByPosition.Defender.slice(0, SQUAD_CONSTRAINTS.defenders),
