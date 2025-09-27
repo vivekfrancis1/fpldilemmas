@@ -1,4 +1,4 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
 import { eq, sql, inArray, desc } from "drizzle-orm";
@@ -81,6 +81,39 @@ export interface IStorage {
   addPriceChange(priceChange: InsertPriceChange): Promise<PriceChange>;
   getLatestPlayerPrice(playerId: number): Promise<{ price: number; date: string } | null>;
   detectPriceChanges(currentPrices: Array<{ playerId: number; price: number; playerName: string; teamId?: number; teamName?: string; position?: string; ownership: number; transfersIn: number; transfersOut: number; totalSeasonChange: number }>): Promise<InsertPriceChange[]>;
+  
+  // Player Total Points Window operations
+  createPlayerTotalPointsWindow(startGameweek: number, endGameweek: number, season: string): Promise<{ windowId: string; }>;
+  getActivePlayerTotalPointsWindow(): Promise<{ windowId: string; startGameweek: number; endGameweek: number; } | null>;
+  savePlayerTotalPointsSnapshots(windowId: string, snapshots: Array<{
+    playerId: number;
+    playerName: string;
+    teamName: string;
+    position: string;
+    price: number;
+    ownership: number;
+    totalProjectedPoints: number;
+    averagePointsPerGameweek: number;
+    averageValue: number;
+    averageMinutes: number;
+    gameweekBreakdown: any;
+  }>): Promise<void>;
+  getPlayerTotalPointsSnapshots(windowId?: string): Promise<Array<{
+    playerId: number;
+    playerName: string;
+    teamName: string;
+    position: string;
+    price: number;
+    ownership: number;
+    totalProjectedPoints: number;
+    averagePointsPerGameweek: number;
+    averageValue: number;
+    averageMinutes: number;
+    gameweekBreakdown: any;
+    windowId: string;
+    startGameweek: number;
+    endGameweek: number;
+  }>>;
   
 }
 
@@ -408,6 +441,50 @@ export class MemStorage implements IStorage {
   }
 
   async detectPriceChanges(currentPrices: Array<{ playerId: number; price: number; playerName: string; teamId?: number; teamName?: string; position?: string; ownership: number; transfersIn: number; transfersOut: number; totalSeasonChange: number }>): Promise<InsertPriceChange[]> {
+    return [];
+  }
+
+  // Player Total Points Window operations (in-memory stubs)
+  async createPlayerTotalPointsWindow(startGameweek: number, endGameweek: number, season: string): Promise<{ windowId: string; }> {
+    throw new Error("MemStorage: Player Total Points window operations not supported. Use DatabaseStorage.");
+  }
+
+  async getActivePlayerTotalPointsWindow(): Promise<{ windowId: string; startGameweek: number; endGameweek: number; } | null> {
+    return null;
+  }
+
+  async savePlayerTotalPointsSnapshots(windowId: string, snapshots: Array<{
+    playerId: number;
+    playerName: string;
+    teamName: string;
+    position: string;
+    price: number;
+    ownership: number;
+    totalProjectedPoints: number;
+    averagePointsPerGameweek: number;
+    averageValue: number;
+    averageMinutes: number;
+    gameweekBreakdown: any;
+  }>): Promise<void> {
+    throw new Error("MemStorage: Player Total Points snapshot operations not supported. Use DatabaseStorage.");
+  }
+
+  async getPlayerTotalPointsSnapshots(windowId?: string): Promise<Array<{
+    playerId: number;
+    playerName: string;
+    teamName: string;
+    position: string;
+    price: number;
+    ownership: number;
+    totalProjectedPoints: number;
+    averagePointsPerGameweek: number;
+    averageValue: number;
+    averageMinutes: number;
+    gameweekBreakdown: any;
+    windowId: string;
+    startGameweek: number;
+    endGameweek: number;
+  }>> {
     return [];
   }
 
@@ -1386,6 +1463,184 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error removing price change ${id}:`, error);
       throw error;
+    }
+  }
+
+  // Player Total Points Window operations
+  async createPlayerTotalPointsWindow(startGameweek: number, endGameweek: number, season: string): Promise<{ windowId: string; }> {
+    try {
+      console.log(`📊 Creating Player Total Points window for GW${startGameweek}-${endGameweek} (${season})`);
+      
+      // First, mark all existing windows as inactive
+      await db
+        .update(playerTotalPointsWindows)
+        .set({ isActive: false });
+      
+      // Create new window
+      const [window] = await db
+        .insert(playerTotalPointsWindows)
+        .values({
+          startGameweek,
+          endGameweek,
+          season,
+          isActive: true,
+        })
+        .returning({ windowId: playerTotalPointsWindows.windowId });
+      
+      console.log(`✅ Created Player Total Points window: ${window.windowId}`);
+      return window;
+    } catch (error) {
+      console.error("Error creating Player Total Points window:", error);
+      throw error;
+    }
+  }
+
+  async getActivePlayerTotalPointsWindow(): Promise<{ windowId: string; startGameweek: number; endGameweek: number; } | null> {
+    try {
+      const [activeWindow] = await db
+        .select({
+          windowId: playerTotalPointsWindows.windowId,
+          startGameweek: playerTotalPointsWindows.startGameweek,
+          endGameweek: playerTotalPointsWindows.endGameweek,
+        })
+        .from(playerTotalPointsWindows)
+        .where(eq(playerTotalPointsWindows.isActive, true))
+        .limit(1);
+      
+      return activeWindow || null;
+    } catch (error) {
+      console.error("Error getting active Player Total Points window:", error);
+      return null;
+    }
+  }
+
+  async savePlayerTotalPointsSnapshots(windowId: string, snapshots: Array<{
+    playerId: number;
+    playerName: string;
+    teamName: string;
+    position: string;
+    price: number;
+    ownership: number;
+    totalProjectedPoints: number;
+    averagePointsPerGameweek: number;
+    averageValue: number;
+    averageMinutes: number;
+    gameweekBreakdown: any;
+  }>): Promise<void> {
+    try {
+      console.log(`💾 Saving ${snapshots.length} Player Total Points snapshots for window ${windowId}`);
+      
+      // Clear existing snapshots for this window
+      await db
+        .delete(playerTotalPointsSnapshots)
+        .where(eq(playerTotalPointsSnapshots.windowId, windowId));
+      
+      if (snapshots.length > 0) {
+        // Insert new snapshots
+        await db
+          .insert(playerTotalPointsSnapshots)
+          .values(snapshots.map(snapshot => ({
+            windowId,
+            playerId: snapshot.playerId,
+            playerName: snapshot.playerName,
+            teamName: snapshot.teamName,
+            position: snapshot.position,
+            price: snapshot.price.toString(),
+            ownership: snapshot.ownership.toString(),
+            totalProjectedPoints: snapshot.totalProjectedPoints.toString(),
+            averagePointsPerGameweek: snapshot.averagePointsPerGameweek.toString(),
+            averageValue: snapshot.averageValue.toString(),
+            averageMinutes: snapshot.averageMinutes.toString(),
+            gameweekBreakdown: snapshot.gameweekBreakdown,
+          })));
+      }
+      
+      // Update window record count
+      await db
+        .update(playerTotalPointsWindows)
+        .set({ 
+          recordCount: snapshots.length,
+          fetchedAt: new Date(),
+        })
+        .where(eq(playerTotalPointsWindows.windowId, windowId));
+      
+      console.log(`✅ Successfully saved ${snapshots.length} Player Total Points snapshots`);
+    } catch (error) {
+      console.error("Error saving Player Total Points snapshots:", error);
+      throw error;
+    }
+  }
+
+  async getPlayerTotalPointsSnapshots(windowId?: string): Promise<Array<{
+    playerId: number;
+    playerName: string;
+    teamName: string;
+    position: string;
+    price: number;
+    ownership: number;
+    totalProjectedPoints: number;
+    averagePointsPerGameweek: number;
+    averageValue: number;
+    averageMinutes: number;
+    gameweekBreakdown: any;
+    windowId: string;
+    startGameweek: number;
+    endGameweek: number;
+  }>> {
+    try {
+      let query = db
+        .select({
+          playerId: playerTotalPointsSnapshots.playerId,
+          playerName: playerTotalPointsSnapshots.playerName,
+          teamName: playerTotalPointsSnapshots.teamName,
+          position: playerTotalPointsSnapshots.position,
+          price: playerTotalPointsSnapshots.price,
+          ownership: playerTotalPointsSnapshots.ownership,
+          totalProjectedPoints: playerTotalPointsSnapshots.totalProjectedPoints,
+          averagePointsPerGameweek: playerTotalPointsSnapshots.averagePointsPerGameweek,
+          averageValue: playerTotalPointsSnapshots.averageValue,
+          averageMinutes: playerTotalPointsSnapshots.averageMinutes,
+          gameweekBreakdown: playerTotalPointsSnapshots.gameweekBreakdown,
+          windowId: playerTotalPointsSnapshots.windowId,
+          startGameweek: playerTotalPointsWindows.startGameweek,
+          endGameweek: playerTotalPointsWindows.endGameweek,
+        })
+        .from(playerTotalPointsSnapshots)
+        .innerJoin(
+          playerTotalPointsWindows,
+          eq(playerTotalPointsSnapshots.windowId, playerTotalPointsWindows.windowId)
+        );
+      
+      if (windowId) {
+        query = query.where(eq(playerTotalPointsSnapshots.windowId, windowId));
+      } else {
+        // Get snapshots from the active window
+        query = query.where(eq(playerTotalPointsWindows.isActive, true));
+      }
+      
+      const results = await query.orderBy(desc(playerTotalPointsSnapshots.totalProjectedPoints));
+      
+      console.log(`📊 Retrieved ${results.length} Player Total Points snapshots`);
+      
+      return results.map(result => ({
+        playerId: result.playerId,
+        playerName: result.playerName,
+        teamName: result.teamName,
+        position: result.position,
+        price: parseFloat(result.price),
+        ownership: parseFloat(result.ownership),
+        totalProjectedPoints: parseFloat(result.totalProjectedPoints),
+        averagePointsPerGameweek: parseFloat(result.averagePointsPerGameweek),
+        averageValue: parseFloat(result.averageValue),
+        averageMinutes: parseFloat(result.averageMinutes),
+        gameweekBreakdown: result.gameweekBreakdown,
+        windowId: result.windowId,
+        startGameweek: result.startGameweek,
+        endGameweek: result.endGameweek,
+      }));
+    } catch (error) {
+      console.error("Error getting Player Total Points snapshots:", error);
+      return [];
     }
   }
 
