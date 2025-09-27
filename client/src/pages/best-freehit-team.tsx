@@ -59,7 +59,7 @@ export default function BestFreehitTeam() {
   const [selectedGameweek, setSelectedGameweek] = useState<number>(6);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimalTeam, setOptimalTeam] = useState<OptimalTeam | null>(null);
-  const [unlimitedBudget, setUnlimitedBudget] = useState<boolean>(false);
+  const [unlimitedBudget, setUnlimitedBudget] = useState<boolean>(true);
   const [budgetConstraint, setBudgetConstraint] = useState<number>(100);
 
   // Fetch live Player Total Points data (same as Player Total Points page)
@@ -115,6 +115,118 @@ export default function BestFreehitTeam() {
   const getGameweekPoints = (player: PlayerSnapshot, gameweek: number): number => {
     // Try numeric key first (this contains the total points), then string variants
     return player.gameweekBreakdown[gameweek.toString()] || player.gameweekBreakdown[`gw${gameweek}`] || 0;
+  };
+
+  // Helper function to build unlimited budget team
+  const buildUnlimitedTeam = (playersWithPoints: any[], playersByPosition: any) => {
+    console.log('UNLIMITED BUDGET MODE - Top players by GW' + selectedGameweek + ' points:');
+    console.log('Top 2 GKP:', playersByPosition.Goalkeeper.slice(0, 2).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+    console.log('Top 5 DEF:', playersByPosition.Defender.slice(0, 5).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+    console.log('Top 5 MID:', playersByPosition.Midfielder.slice(0, 5).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+    console.log('Top 3 FWD:', playersByPosition.Forward.slice(0, 3).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
+
+    // Unlimited budget: select top players by points for selected gameweek
+    const squad = [
+      ...playersByPosition.Goalkeeper.slice(0, SQUAD_CONSTRAINTS.goalkeepers),
+      ...playersByPosition.Defender.slice(0, SQUAD_CONSTRAINTS.defenders),
+      ...playersByPosition.Midfielder.slice(0, SQUAD_CONSTRAINTS.midfielders),
+      ...playersByPosition.Forward.slice(0, SQUAD_CONSTRAINTS.forwards)
+    ];
+
+    // Select starting 11: best players by gameweek points maintaining formation constraints
+    const starting11 = [
+      playersByPosition.Goalkeeper[0], // 1 GK
+      ...playersByPosition.Defender.slice(0, 4), // 4 DEF (minimum)
+      ...playersByPosition.Midfielder.slice(0, 5), // 5 MID
+      playersByPosition.Forward[0] // 1 FWD
+    ];
+
+    return { squad, starting11 };
+  };
+
+  // Helper function to adjust team for budget constraints
+  const adjustTeamForBudget = (unlimitedSquad: PlayerSnapshot[], unlimitedStarting11: PlayerSnapshot[], budget: number) => {
+    const currentValue = unlimitedSquad.reduce((total, player) => total + player.price, 0);
+    
+    if (budget >= currentValue) {
+      // Budget is sufficient for unlimited team
+      console.log(`Budget ${budget}m >= unlimited team value ${currentValue.toFixed(1)}m - using unlimited team`);
+      return { squad: unlimitedSquad, starting11: unlimitedStarting11 };
+    }
+
+    console.log(`Budget ${budget}m < unlimited team value ${currentValue.toFixed(1)}m - making adjustments`);
+    
+    let adjustedSquad = [...unlimitedSquad];
+    let adjustedStarting11 = [...unlimitedStarting11];
+    let savings = currentValue - budget;
+
+    // Step 1: Replace bench players with cheaper alternatives (prioritize bench changes)
+    const benchPlayers = adjustedSquad.filter(player => 
+      !adjustedStarting11.some(starter => starter.playerId === player.playerId)
+    );
+
+    // Sort bench by price (most expensive first for replacement)
+    const expensiveBench = benchPlayers.sort((a, b) => b.price - a.price);
+
+    for (const expensivePlayer of expensiveBench) {
+      if (savings <= 0) break;
+
+      const position = expensivePlayer.position;
+      const allInPosition = snapshots.filter(p => p.position === position);
+      const cheaperAlternatives = allInPosition
+        .filter(p => p.price < expensivePlayer.price && 
+                     !adjustedSquad.some(sq => sq.playerId === p.playerId))
+        .sort((a, b) => a.price - b.price);
+
+      if (cheaperAlternatives.length > 0) {
+        const replacement = cheaperAlternatives[0];
+        const savedAmount = expensivePlayer.price - replacement.price;
+        
+        if (savedAmount > 0) {
+          // Replace expensive bench player with cheaper alternative
+          adjustedSquad = adjustedSquad.map(p => 
+            p.playerId === expensivePlayer.playerId ? replacement : p
+          );
+          savings -= savedAmount;
+          console.log(`Replaced bench ${expensivePlayer.playerName} (£${expensivePlayer.price}m) with ${replacement.playerName} (£${replacement.price}m) - saved £${savedAmount.toFixed(1)}m`);
+        }
+      }
+    }
+
+    // Step 2: If still over budget, replace starting 11 players (most expensive first)
+    if (savings > 0) {
+      const expensiveStarters = adjustedStarting11.sort((a, b) => b.price - a.price);
+
+      for (const expensivePlayer of expensiveStarters) {
+        if (savings <= 0) break;
+
+        const position = expensivePlayer.position;
+        const allInPosition = snapshots.filter(p => p.position === position);
+        const cheaperAlternatives = allInPosition
+          .filter(p => p.price < expensivePlayer.price && 
+                       !adjustedSquad.some(sq => sq.playerId === p.playerId))
+          .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)); // Best performing cheaper alternative
+
+        if (cheaperAlternatives.length > 0) {
+          const replacement = cheaperAlternatives[0];
+          const savedAmount = expensivePlayer.price - replacement.price;
+          
+          if (savedAmount > 0) {
+            // Replace expensive starting player with cheaper alternative
+            adjustedSquad = adjustedSquad.map(p => 
+              p.playerId === expensivePlayer.playerId ? replacement : p
+            );
+            adjustedStarting11 = adjustedStarting11.map(p => 
+              p.playerId === expensivePlayer.playerId ? replacement : p
+            );
+            savings -= savedAmount;
+            console.log(`Replaced starter ${expensivePlayer.playerName} (£${expensivePlayer.price}m) with ${replacement.playerName} (£${replacement.price}m) - saved £${savedAmount.toFixed(1)}m`);
+          }
+        }
+      }
+    }
+
+    return { squad: adjustedSquad, starting11: adjustedStarting11 };
   };
 
   // Optimize team selection
@@ -180,31 +292,25 @@ export default function BestFreehitTeam() {
         throw new Error(`Not enough forwards (need ${SQUAD_CONSTRAINTS.forwards}, found ${playersByPosition.Forward.length})`);
       }
 
-      let squad: PlayerSnapshot[] = [];
+      // Step 1: Always build unlimited budget team first (this is our reference point)
+      const { squad: unlimitedSquad, starting11: unlimitedStarting11 } = buildUnlimitedTeam(playersWithPoints, playersByPosition);
+
+      let squad: PlayerSnapshot[];
+      let starting11: PlayerSnapshot[];
 
       if (unlimitedBudget) {
-        // Unlimited budget: simply pick top players by position based on projected points
-        console.log('UNLIMITED BUDGET MODE - Top players by GW' + selectedGameweek + ' points:');
-        console.log('Top 2 GKP:', playersByPosition.Goalkeeper.slice(0, 2).map(p => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
-        console.log('Top 5 DEF:', playersByPosition.Defender.slice(0, 5).map(p => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
-        console.log('Top 5 MID:', playersByPosition.Midfielder.slice(0, 5).map(p => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
-        console.log('Top 3 FWD:', playersByPosition.Forward.slice(0, 3).map(p => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
-        
-        squad = [
-          ...playersByPosition.Goalkeeper.slice(0, SQUAD_CONSTRAINTS.goalkeepers),
-          ...playersByPosition.Defender.slice(0, SQUAD_CONSTRAINTS.defenders),
-          ...playersByPosition.Midfielder.slice(0, SQUAD_CONSTRAINTS.midfielders),
-          ...playersByPosition.Forward.slice(0, SQUAD_CONSTRAINTS.forwards)
-        ];
+        // Use unlimited team directly
+        squad = unlimitedSquad;
+        starting11 = unlimitedStarting11;
       } else {
-        // Budget-constrained optimization
-        squad = optimizeWithBudgetConstraint(playersByPosition, budgetConstraint);
+        // Use unlimited team as reference and adjust for budget (prioritize bench changes)
+        const adjusted = adjustTeamForBudget(unlimitedSquad, unlimitedStarting11, budgetConstraint);
+        squad = adjusted.squad;
+        starting11 = adjusted.starting11;
       }
 
       console.log('Selected squad size:', squad.length);
-
-      // Find optimal starting 11 from squad
-      const starting11 = findOptimalStarting11(squad);
+      console.log('Starting 11 size:', starting11.length);
       
       if (starting11.length === 0) {
         throw new Error('Failed to select starting 11');
@@ -489,10 +595,10 @@ export default function BestFreehitTeam() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <Label htmlFor="unlimited-budget" className="text-sm font-medium">
-                  Unlimited Budget Mode
+                  {unlimitedBudget ? 'Unlimited Budget (Default)' : 'Budget Optimization Mode'}
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  {unlimitedBudget ? 'Select top players by projected points (no budget limit)' : 'Optimize team within budget constraints'}
+                  {unlimitedBudget ? 'Select top players by projected points (no budget limit)' : 'Optimize within budget using unlimited team as reference'}
                 </p>
               </div>
               <Switch
