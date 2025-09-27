@@ -202,9 +202,15 @@ export default function BestFreehitTeam() {
     let adjustedStarting11 = [...unlimitedStarting11];
     let savings = currentValue - budget;
 
+    // Create sets for quick lookup of constraint players
+    const includedPlayerIds = new Set(includedPlayers.map(p => p.playerId));
+    const excludedPlayerIds = new Set(excludedPlayers.map(p => p.playerId));
+
     // Step 1: Replace bench players with cheaper alternatives (prioritize bench changes)
+    // Only consider players that are NOT in the included list
     const benchPlayers = adjustedSquad.filter(player => 
-      !adjustedStarting11.some(starter => starter.playerId === player.playerId)
+      !adjustedStarting11.some(starter => starter.playerId === player.playerId) &&
+      !includedPlayerIds.has(player.playerId) // NEVER replace included players
     );
 
     // Sort bench by price (most expensive first for replacement)
@@ -214,7 +220,11 @@ export default function BestFreehitTeam() {
       if (savings <= 0) break;
 
       const position = expensivePlayer.position;
-      const allInPosition = snapshots.filter(p => p.position === position);
+      const allInPosition = snapshots.filter(p => 
+        p.position === position &&
+        !excludedPlayerIds.has(p.playerId) && // NEVER pick excluded players
+        !includedPlayerIds.has(p.playerId) // Don't pick included players (they're already in squad)
+      );
       const cheaperAlternatives = allInPosition
         .filter(p => p.price < expensivePlayer.price && 
                      !adjustedSquad.some(sq => sq.playerId === p.playerId))
@@ -236,14 +246,21 @@ export default function BestFreehitTeam() {
     }
 
     // Step 2: If still over budget, replace starting 11 players (most expensive first)
+    // Only consider players that are NOT in the included list
     if (savings > 0) {
-      const expensiveStarters = adjustedStarting11.sort((a, b) => b.price - a.price);
+      const expensiveStarters = adjustedStarting11
+        .filter(player => !includedPlayerIds.has(player.playerId)) // NEVER replace included players
+        .sort((a, b) => b.price - a.price);
 
       for (const expensivePlayer of expensiveStarters) {
         if (savings <= 0) break;
 
         const position = expensivePlayer.position;
-        const allInPosition = snapshots.filter(p => p.position === position);
+        const allInPosition = snapshots.filter(p => 
+          p.position === position &&
+          !excludedPlayerIds.has(p.playerId) && // NEVER pick excluded players
+          !includedPlayerIds.has(p.playerId) // Don't pick included players (they're already in squad)
+        );
         const cheaperAlternatives = allInPosition
           .filter(p => p.price < expensivePlayer.price && 
                        !adjustedSquad.some(sq => sq.playerId === p.playerId))
