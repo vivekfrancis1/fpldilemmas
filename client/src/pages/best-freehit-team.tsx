@@ -85,7 +85,8 @@ export default function BestFreehitTeam() {
 
   // Get points for specific gameweek
   const getGameweekPoints = (player: PlayerSnapshot, gameweek: number): number => {
-    return player.gameweekBreakdown[`gw${gameweek}`] || player.gameweekBreakdown[gameweek.toString()] || 0;
+    // Try numeric key first (this contains the total points), then string variants
+    return player.gameweekBreakdown[gameweek.toString()] || player.gameweekBreakdown[`gw${gameweek}`] || 0;
   };
 
   // Optimize team selection
