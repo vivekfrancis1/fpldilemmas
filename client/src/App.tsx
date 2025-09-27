@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { initGA } from "../lib/analytics";
 import { useAnalytics } from "../hooks/use-analytics";
 import { ErrorBoundary } from "react-error-boundary";
+import { useErrorMonitoring } from "./hooks/use-error-monitoring";
 import NotFound from "@/pages/not-found";
 import ProtectedRoute from "@/components/protected-route";
 import Fixtures from "./pages/fixtures";
@@ -165,43 +166,129 @@ function Router() {
   );
 }
 
-// Error fallback component
+// Enhanced Error fallback component with React hooks error detection
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   console.error('App Error:', error);
   
+  // Detect React hooks violations and other common errors
+  const isHooksError = error.message.includes('hooks') || 
+                      error.message.includes('Hook') ||
+                      error.message.includes('useEffect') ||
+                      error.message.includes('useState') ||
+                      error.message.includes('useQuery') ||
+                      error.message.includes('Invalid hook call');
+                      
+  const isRenderError = error.message.includes('render') ||
+                       error.message.includes('key') ||
+                       error.stack?.includes('render');
+
+  const getErrorCategory = () => {
+    if (isHooksError) return 'React Hooks Error';
+    if (isRenderError) return 'Rendering Error';
+    return 'Application Error';
+  };
+
+  const getErrorAdvice = () => {
+    if (isHooksError) {
+      return 'This appears to be a React hooks error. Try refreshing the page to reset the component state.';
+    }
+    if (isRenderError) {
+      return 'This appears to be a rendering error. The page state may have become corrupted.';
+    }
+    return 'An unexpected error occurred. Please try the recovery options below.';
+  };
+
+  const handlePageReload = () => {
+    window.location.reload();
+  };
+
   return (
-    <div style={{ 
-      padding: '20px', 
-      textAlign: 'center', 
-      backgroundColor: '#fff',
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center'
-    }}>
-      <h1 style={{ color: '#dc2626', marginBottom: '16px' }}>Application Error</h1>
-      <p style={{ marginBottom: '16px', color: '#6b7280' }}>
-        Something went wrong: {error.message}
-      </p>
-      <button 
-        onClick={resetErrorBoundary}
-        style={{
-          padding: '8px 16px',
-          backgroundColor: '#3b82f6',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}
-      >
-        Try Again
-      </button>
+    <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4">
+      <div className="max-w-lg w-full text-center space-y-6">
+        {/* Error Icon */}
+        <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+          <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        </div>
+
+        {/* Error Title */}
+        <div>
+          <h1 className="text-2xl font-bold text-red-600 mb-2">{getErrorCategory()}</h1>
+          <p className="text-lg text-gray-700 mb-4">Something went wrong</p>
+        </div>
+
+        {/* Error Details */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-left">
+          <h3 className="font-semibold text-gray-900 mb-2">Error Details:</h3>
+          <p className="text-sm text-gray-700 mb-3">{getErrorAdvice()}</p>
+          <details className="text-sm">
+            <summary className="cursor-pointer text-gray-600 hover:text-gray-800 font-medium">
+              Technical Details (Click to expand)
+            </summary>
+            <div className="mt-2 p-3 bg-gray-100 rounded border">
+              <p className="font-mono text-xs text-red-700 break-words">
+                {error.message}
+              </p>
+              {error.stack && (
+                <pre className="mt-2 font-mono text-xs text-gray-600 overflow-x-auto whitespace-pre-wrap max-h-32">
+                  {error.stack}
+                </pre>
+              )}
+            </div>
+          </details>
+        </div>
+
+        {/* Recovery Options */}
+        <div className="space-y-3">
+          <h3 className="font-semibold text-gray-900">Recovery Options:</h3>
+          
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button 
+              onClick={resetErrorBoundary}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              data-testid="button-retry-error"
+            >
+              Try Again
+            </button>
+            
+            <button 
+              onClick={handlePageReload}
+              className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              data-testid="button-reload-page"
+            >
+              Reload Page
+            </button>
+          </div>
+          
+          <p className="text-sm text-gray-500 mt-4">
+            If the error persists, try refreshing your browser or clearing your cache.
+          </p>
+        </div>
+
+        {/* Navigation Link */}
+        <div className="pt-4 border-t border-gray-200">
+          <a 
+            href="/" 
+            className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+            data-testid="link-home"
+          >
+            ← Return to Home Page
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
 
 function App() {
+  // Initialize error monitoring for React hooks violations and other errors
+  const { getErrorStats, isMonitoringActive } = useErrorMonitoring({
+    enableConsoleMonitoring: true,
+    enableGlobalErrorHandling: true,
+    reportToAnalytics: true
+  });
+
   // Initialize Google Analytics when app loads
   useEffect(() => {
     // Verify required environment variable is present
@@ -211,6 +298,13 @@ function App() {
       initGA();
     }
   }, []);
+
+  // Log error monitoring status in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && isMonitoringActive) {
+      console.log('🔍 Error monitoring activated for React hooks violations and common errors');
+    }
+  }, [isMonitoringActive]);
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback} onError={(error) => console.error('ErrorBoundary caught:', error)}>
